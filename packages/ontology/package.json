@@ -1,0 +1,34 @@
+{
+  "name": "@memo/ontology",
+  "version": "2.0.0",
+  "description": "MEMO MBSE Ontology — 60+ SysML v2 entity types and 16 relationship types. Publishable as SysAnd .kpar package.",
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "pack:kpar": "npx tsx scripts/pack-kpar.ts",
+    "clean": "rm -rf lib/ dist/"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "tsx": "^4.19.0",
+    "typescript": "~5.5.0"
+  },
+  "files": [
+    "lib/",
+    "sysml/"
+  ],
+  "keywords": [
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "ontology",
+    "medical-device",
+    "sysand"
+  ],
+  "license": "Apache-2.0"
+}

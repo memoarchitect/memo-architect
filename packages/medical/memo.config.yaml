@@ -1,0 +1,806 @@
+# @memo/medical — CoSMA-layered domain configuration (Comprehensive)
+# Medical device MBSE domain: ISO 14971, IEC 62304, IEC 62366
+# 60+ entity kinds across 9 layers, 16 relationship types, 15 closure rules
+#
+# This config is copied to .memo/config.yaml by `memo init medical <name>`.
+# Projects inherit all layers, kinds, relationships, and closure rules.
+
+projectName: "@memo/medical"
+projectType: device
+
+ontologies:
+  - name: memo-ontology
+    version: "^2.0.0"
+
+extends: "@memo/ontology"
+
+# ─── CoSMA Visualization Layers ───────────────────────────────────────────────
+
+cosmaLayers:
+  - id: business
+    label: Business Analysis
+    color: "#8E44AD"
+
+  - id: requirements
+    label: Requirements
+    color: "#4A90D9"
+
+  - id: risk
+    label: Risk Management
+    color: "#E74C3C"
+
+  - id: functional
+    label: Functional Analysis
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical Architecture
+    color: "#7B68EE"
+
+  - id: physical
+    label: Physical Architecture
+    color: "#95A5A6"
+
+  - id: software
+    label: Software Architecture
+    color: "#F39C12"
+
+  - id: interfaces
+    label: Interfaces & Ports
+    color: "#1ABC9C"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"
+
+  - id: ui
+    label: UI Wireframe
+    color: "#3498DB"
+
+# ─── Entity Kind Definitions ──────────────────────────────────────────────────
+# Each kind maps to a SysML v2 construct and belongs to a CoSMA layer.
+
+kinds:
+  # ── Business Analysis ────────────────────────────────────────────────────
+  Actor:
+    label: Actor
+    layer: business
+    sysmlConstruct: part def
+
+  Stakeholder:
+    label: Stakeholder
+    layer: business
+    sysmlConstruct: part def
+
+  Goal:
+    label: Goal
+    layer: business
+    sysmlConstruct: part def
+
+  Concern:
+    label: Concern
+    layer: business
+    sysmlConstruct: part def
+
+  Responsibility:
+    label: Responsibility
+    layer: business
+    sysmlConstruct: part def
+
+  Capability:
+    label: Capability
+    layer: business
+    sysmlConstruct: part def
+
+  # ── Requirements ─────────────────────────────────────────────────────────
+  UserNeed:
+    label: User Need
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SystemRequirement:
+    label: System Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SoftwareRequirement:
+    label: Software Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  HardwareRequirement:
+    label: Hardware Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  DesignSpecification:
+    label: Design Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  OtherRequirement:
+    label: Other Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  # ── Risk Management (ALL are requirement def) ───────────────────────────
+  Hazard:
+    label: Hazard
+    layer: risk
+    sysmlConstruct: requirement def
+
+  HazardousSituation:
+    label: Hazardous Situation
+    layer: risk
+    sysmlConstruct: requirement def
+
+  Harm:
+    label: Harm
+    layer: risk
+    sysmlConstruct: requirement def
+    defaultAttributes:
+      severity: "Serious"
+
+  Risk:
+    label: Risk
+    layer: risk
+    sysmlConstruct: requirement def
+    defaultAttributes:
+      riskAcceptance: "NeedsReview"
+
+  RiskControl:
+    label: Risk Control
+    layer: risk
+    sysmlConstruct: requirement def
+
+  SafetyGoal:
+    label: Safety Goal
+    layer: risk
+    sysmlConstruct: requirement def
+
+  # ── Functional Analysis ──────────────────────────────────────────────────
+  SystemFunction:
+    label: System Function
+    layer: functional
+    sysmlConstruct: action def
+
+  ComponentFunction:
+    label: Component Function
+    layer: functional
+    sysmlConstruct: action def
+
+  UserActivity:
+    label: User Activity
+    layer: functional
+    sysmlConstruct: action def
+
+  UIFunction:
+    label: UI Function
+    layer: functional
+    sysmlConstruct: action def
+
+  UseCase:
+    label: Use Case
+    layer: functional
+    sysmlConstruct: part def
+
+  Scenario:
+    label: Scenario
+    layer: functional
+    sysmlConstruct: action def
+
+  # ── Logical Architecture ─────────────────────────────────────────────────
+  System:
+    label: System
+    layer: logical
+    sysmlConstruct: part def
+
+  SystemExternal:
+    label: External System
+    layer: logical
+    sysmlConstruct: part def
+
+  Subsystem:
+    label: Subsystem
+    layer: logical
+    sysmlConstruct: part def
+
+  Component:
+    label: Component
+    layer: logical
+    sysmlConstruct: part def
+
+  LogicalComponent:
+    label: Logical Component
+    layer: logical
+    sysmlConstruct: part def
+
+  LogicalComponentExternal:
+    label: External Logical Component
+    layer: logical
+    sysmlConstruct: part def
+
+  EnvironmentElement:
+    label: Environment Element
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureDecision:
+    label: Architecture Decision
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureRationale:
+    label: Architecture Rationale
+    layer: logical
+    sysmlConstruct: part def
+
+  QualityAttribute:
+    label: Quality Attribute
+    layer: logical
+    sysmlConstruct: part def
+
+  Question:
+    label: Question
+    layer: logical
+    sysmlConstruct: part def
+
+  # ── Physical Architecture ────────────────────────────────────────────────
+  PhysicalComponent:
+    label: Physical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  ElectricalComponent:
+    label: Electrical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  MechanicalComponent:
+    label: Mechanical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  Catheter:
+    label: Catheter
+    layer: physical
+    sysmlConstruct: part def
+
+  PhysicalModule:
+    label: Physical Module
+    layer: physical
+    sysmlConstruct: part def
+
+  HardwareNode:
+    label: Hardware Node
+    layer: physical
+    sysmlConstruct: part def
+
+  ComputingDevice:
+    label: Computing Device
+    layer: physical
+    sysmlConstruct: part def
+
+  FPGA:
+    label: FPGA
+    layer: physical
+    sysmlConstruct: part def
+
+  Microcontroller:
+    label: Microcontroller
+    layer: physical
+    sysmlConstruct: part def
+
+  SingleBoardComputer:
+    label: Single Board Computer
+    layer: physical
+    sysmlConstruct: part def
+
+  # ── Software Architecture ────────────────────────────────────────────────
+  Software:
+    label: Software
+    layer: software
+    sysmlConstruct: part def
+    defaultAttributes:
+      safetyClassification: "A"
+
+  SoftwareComponent:
+    label: Software Component
+    layer: software
+    sysmlConstruct: part def
+
+  SoftwareModule:
+    label: Software Module
+    layer: software
+    sysmlConstruct: part def
+
+  Firmware:
+    label: Firmware
+    layer: software
+    sysmlConstruct: part def
+
+  Docker:
+    label: Docker
+    layer: software
+    sysmlConstruct: part def
+
+  OperatingSystem:
+    label: Operating System
+    layer: software
+    sysmlConstruct: part def
+
+  RosNode:
+    label: ROS Node
+    layer: software
+    sysmlConstruct: part def
+
+  # ── Interfaces & Ports ───────────────────────────────────────────────────
+  Port:
+    label: Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortEthernet:
+    label: Ethernet Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortUSB:
+    label: USB Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortSerial:
+    label: Serial Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortPower:
+    label: Power Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  Interface:
+    label: Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareInterface:
+    label: Software Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareProvidedInterface:
+    label: Provided Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareRequiredInterface:
+    label: Required Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosTopic:
+    label: ROS Topic
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosService:
+    label: ROS Service
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  # ── UI Wireframe ─────────────────────────────────────────────────────────
+  UIScreen:
+    label: UI Screen
+    layer: ui
+    sysmlConstruct: part def
+
+  UIPanel:
+    label: UI Panel
+    layer: ui
+    sysmlConstruct: part def
+
+  UIElement:
+    label: UI Element
+    layer: ui
+    sysmlConstruct: part def
+
+  # ── Verification ─────────────────────────────────────────────────────────
+  Test:
+    label: Test
+    layer: verification
+    sysmlConstruct: part def
+
+  # ── Cross-cutting ────────────────────────────────────────────────────────
+  Standard:
+    label: Standard
+    layer: requirements
+    sysmlConstruct: part def
+
+  RegulatoryRequirement:
+    label: Regulatory Requirement
+    layer: requirements
+    sysmlConstruct: part def
+
+  DataType:
+    label: Data Type
+    layer: interfaces
+    sysmlConstruct: attribute def
+
+# ─── Relationship Type Definitions ────────────────────────────────────────────
+
+relationshipTypes:
+  - name: aggregation
+    label: Aggregation
+    layer: logical
+    color: "#7B68EE"
+
+  - name: association
+    label: Association
+    layer: logical
+    color: "#9B59B6"
+
+  - name: traceTo
+    label: Trace To
+    layer: requirements
+    color: "#4A90D9"
+
+  - name: trace
+    label: Trace
+    layer: requirements
+    color: "#3498DB"
+
+  - name: allocateTo
+    label: Allocate To
+    layer: functional
+    color: "#E67E22"
+
+  - name: composedOf
+    label: Composed Of
+    layer: logical
+    color: "#8E44AD"
+
+  - name: dependency
+    label: Dependency
+    layer: logical
+    color: "#95A5A6"
+
+  - name: realization
+    label: Realization
+    layer: logical
+    color: "#2C3E50"
+
+  - name: satisfy
+    label: Satisfies
+    layer: requirements
+    color: "#2ECC71"
+
+  - name: verify
+    label: Verifies
+    layer: verification
+    color: "#27AE60"
+
+  - name: mitigates
+    label: Mitigates
+    layer: risk
+    color: "#E74C3C"
+
+  - name: causes
+    label: Causes
+    layer: risk
+    color: "#C0392B"
+
+  - name: leadsTo
+    label: Leads To
+    layer: risk
+    color: "#E74C3C"
+
+  - name: identifies
+    label: Identifies
+    layer: risk
+    color: "#D35400"
+
+  - name: extend
+    label: Extends
+    layer: functional
+    color: "#F39C12"
+
+  - name: include
+    label: Includes
+    layer: functional
+    color: "#F1C40F"
+
+# ─── Backward-Compatible Flat Relationship List ──────────────────────────────
+
+relationships:
+  - aggregation
+  - association
+  - traceTo
+  - trace
+  - allocateTo
+  - composedOf
+  - dependency
+  - realization
+  - satisfy
+  - verify
+  - mitigates
+  - causes
+  - leadsTo
+  - identifies
+  - extend
+  - include
+
+# ─── Closure Rules ────────────────────────────────────────────────────────────
+
+closureRules:
+  # Risk management (ISO 14971)
+  - id: CR-MED-001
+    description: "Every Hazard must have at least one mitigates relationship (ISO 14971 §6)"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      min: 1
+    severity: error
+
+  - id: CR-MED-002
+    description: "Every Hazard must trace to at least one SystemFunction or UseCase"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: traceTo
+      min: 1
+    severity: error
+
+  - id: CR-MED-003
+    description: "Every RiskControl must be verified by at least one Test"
+    entity: RiskControl
+    rule:
+      type: requireRelationship
+      relationship: verify
+      min: 1
+    severity: error
+
+  - id: CR-MED-004
+    description: "Every Risk must identify at least one Hazard"
+    entity: Risk
+    rule:
+      type: requireRelationship
+      relationship: identifies
+      min: 1
+    severity: error
+
+  - id: CR-MED-005
+    description: "Every HazardousSituation must be caused by a Hazard"
+    entity: HazardousSituation
+    rule:
+      type: requireRelationship
+      relationship: causes
+      min: 1
+    severity: error
+
+  - id: CR-MED-006
+    description: "Every Harm must be led to by a HazardousSituation"
+    entity: Harm
+    rule:
+      type: requireRelationship
+      relationship: leadsTo
+      min: 1
+    severity: warning
+
+  # Requirements traceability (IEC 62304)
+  - id: CR-MED-007
+    description: "Every SoftwareRequirement must trace to a SystemRequirement"
+    entity: SoftwareRequirement
+    rule:
+      type: requireRelationship
+      relationship: traceTo
+      min: 1
+    severity: error
+
+  - id: CR-MED-008
+    description: "Every SystemRequirement must trace to a UserNeed"
+    entity: SystemRequirement
+    rule:
+      type: requireRelationship
+      relationship: traceTo
+      min: 1
+    severity: warning
+
+  - id: CR-MED-009
+    description: "Every SystemRequirement should be satisfied by a Component"
+    entity: SystemRequirement
+    rule:
+      type: requireRelationship
+      relationship: satisfy
+      min: 1
+    severity: warning
+
+  # Architecture completeness
+  - id: CR-MED-010
+    description: "Every SystemFunction must be allocated to a Component or Software"
+    entity: SystemFunction
+    rule:
+      type: requireRelationship
+      relationship: allocateTo
+      min: 1
+    severity: error
+
+  - id: CR-MED-011
+    description: "Every Software must have a safetyClassification attribute"
+    entity: Software
+    rule:
+      type: requireAttribute
+      attribute: safetyClassification
+    severity: error
+
+  - id: CR-MED-012
+    description: "Every UseCase must trace to at least one Scenario"
+    entity: UseCase
+    rule:
+      type: requireRelationship
+      relationship: traceTo
+      min: 1
+    severity: warning
+
+  # Verification
+  - id: CR-MED-013
+    description: "Every SystemRequirement must be verified by at least one Test"
+    entity: SystemRequirement
+    rule:
+      type: requireRelationship
+      relationship: verify
+      min: 1
+    severity: warning
+
+  - id: CR-MED-014
+    description: "Every SoftwareRequirement must be verified by at least one Test"
+    entity: SoftwareRequirement
+    rule:
+      type: requireRelationship
+      relationship: verify
+      min: 1
+    severity: warning
+
+  - id: CR-MED-015
+    description: "Every UserNeed must trace to at least one UseCase"
+    entity: UserNeed
+    rule:
+      type: requireRelationship
+      relationship: traceTo
+      min: 1
+    severity: warning
+
+# ─── Viewpoints ───────────────────────────────────────────────────────────────
+
+viewpoints:
+  - id: risk-overview
+    label: Risk Overview (ISO 14971)
+    visibleKinds:
+      - Hazard
+      - HazardousSituation
+      - Harm
+      - Risk
+      - RiskControl
+      - SafetyGoal
+    visibleRelationships:
+      - mitigates
+      - causes
+      - leadsTo
+      - identifies
+    visibleLayers:
+      - risk
+
+  - id: requirements-trace
+    label: Requirements Traceability
+    visibleKinds:
+      - UserNeed
+      - SystemRequirement
+      - SoftwareRequirement
+      - HardwareRequirement
+      - DesignSpecification
+    visibleRelationships:
+      - traceTo
+      - trace
+      - satisfy
+    visibleLayers:
+      - requirements
+
+  - id: architecture-view
+    label: System Architecture
+    visibleKinds:
+      - System
+      - SystemExternal
+      - Subsystem
+      - Component
+      - LogicalComponent
+      - LogicalComponentExternal
+      - SystemFunction
+      - ComponentFunction
+    visibleRelationships:
+      - aggregation
+      - composedOf
+      - allocateTo
+      - association
+    visibleLayers:
+      - logical
+      - functional
+
+  - id: software-view
+    label: Software Architecture
+    visibleKinds:
+      - Software
+      - SoftwareComponent
+      - SoftwareModule
+      - Firmware
+      - Docker
+      - OperatingSystem
+      - RosNode
+      - SoftwareInterface
+      - RosTopic
+      - RosService
+    visibleRelationships:
+      - aggregation
+      - composedOf
+      - dependency
+      - realization
+    visibleLayers:
+      - software
+      - interfaces
+
+  - id: physical-view
+    label: Physical Architecture
+    visibleKinds:
+      - PhysicalComponent
+      - ElectricalComponent
+      - MechanicalComponent
+      - HardwareNode
+      - ComputingDevice
+      - PhysicalModule
+    visibleRelationships:
+      - aggregation
+      - composedOf
+      - association
+    visibleLayers:
+      - physical
+
+  - id: v-and-v
+    label: Verification & Validation
+    visibleKinds:
+      - Test
+      - SystemRequirement
+      - SoftwareRequirement
+      - RiskControl
+    visibleRelationships:
+      - verify
+      - satisfy
+      - traceTo
+    visibleLayers:
+      - verification
+      - requirements
+
+  - id: use-case-view
+    label: Use Case View
+    visibleKinds:
+      - Actor
+      - UseCase
+      - Scenario
+      - UserActivity
+      - UserNeed
+    visibleRelationships:
+      - association
+      - traceTo
+      - extend
+      - include
+    visibleLayers:
+      - business
+      - functional
+
+# ─── First Run Configuration ─────────────────────────────────────────────────
+
+firstRun:
+  template: infusion-pump
+  promptForMetadata: true
+  scaffoldFiles:
+    - infusion-pump.sysml

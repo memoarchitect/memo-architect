@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+lib/
+out/
+*.tsbuildinfo
+
+# Generated (Langium)
+packages/core/src/language/generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Test
+coverage/
+
+# Layouts (auto-generated, optional to version)
+.memo/layouts/
+
+# SysAnd local cache
+.sysand/
+
+# Built kpar archives
+*.kpar
+
+# Generated TextMate grammar
+packages/core/syntaxes/

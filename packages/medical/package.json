@@ -1,0 +1,33 @@
+{
+  "name": "@memo/medical",
+  "version": "2.0.0",
+  "description": "MEMO Medical Device Domain Package — ISO 14971 + IEC 62304 closure rules, viewpoints, workflows, and templates",
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "clean": "rm -rf lib/"
+  },
+  "dependencies": {
+    "@memo/ontology": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.5.0",
+    "vitest": "^2.1.0"
+  },
+  "files": [
+    "lib/",
+    "src/",
+    "templates/"
+  ],
+  "keywords": [
+    "medical-device",
+    "iso-14971",
+    "iec-62304",
+    "mbse",
+    "sysml-v2"
+  ],
+  "license": "Apache-2.0"
+}
