@@ -1,5 +1,38 @@
 // @memo/core — public API
+
+// ─── Language (generated parser + AST) ──────────────────────────────────────
 export * from './language/generated/ast.js';
 export * from './language/generated/module.js';
 export * from './language/memo-sysml-module.js';
-export * from './model/index.js';
+
+// ─── Model (config, semantic, builder) ──────────────────────────────────────
+// Re-export config types selectively to avoid name collision with AST's
+// ViewpointDefinition (generated from grammar) vs config's ViewpointDefinition.
+export {
+    type ProjectType,
+    type CosmaLayer,
+    type RelationshipType,
+    type SysMLConstruct,
+    type KindDefinition,
+    type ClosureRule,
+    type ClosureRuleDefinition,
+    type RuleCondition,
+    type ViewpointDefinition as MEMOViewpointDefinition,
+    type WorkflowStep,
+    type WorkflowDefinition,
+    type FirstRunConfig,
+    type OntologyReference,
+    type MEMOConfig,
+} from './model/config.js';
+export * from './model/config-loader.js';
+export * from './model/semantic.js';
+export * from './model/parser-utils.js';
+export * from './model/builder.js';
+
+// ─── Validation + Completeness ──────────────────────────────────────────────
+export * from './validator/types.js';
+export * from './validator/rule-engine.js';
+export * from './completeness/tracker.js';
+
+// ─── Protocol (WebSocket messages) ──────────────────────────────────────────
+export * from './protocol/messages.js';

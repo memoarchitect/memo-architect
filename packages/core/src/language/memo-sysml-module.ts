@@ -2,6 +2,7 @@ import {
     createDefaultCoreModule,
     createDefaultSharedCoreModule,
     type DefaultSharedCoreModuleContext,
+    EmptyFileSystem,
     inject,
     type LangiumCoreServices,
     type LangiumSharedCoreServices,
@@ -35,7 +36,7 @@ export const MemoSysMLModule: Module<MemoSysMLServices, PartialLangiumCoreServic
  * Create the full set of services for the MemoSysML language.
  * Used by both the CLI and the LSP server.
  */
-export function createMemoSysMLServices(context: DefaultSharedCoreModuleContext = {}): {
+export function createMemoSysMLServices(context: DefaultSharedCoreModuleContext = EmptyFileSystem): {
     shared: LangiumSharedCoreServices;
     MemoSysML: MemoSysMLServices;
 } {

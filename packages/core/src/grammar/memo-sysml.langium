@@ -111,7 +111,7 @@ ConnectionBodyMember:
     EndDeclaration | DefinitionBodyMember;
 
 EndDeclaration:
-    'end' name=FeatureName multiplicity=Multiplicity? ';';
+    'end' name=FeatureName (':' type=QualifiedName)? multiplicity=Multiplicity? ';';
 
 Multiplicity:
     '[' lower=INT '..' (upper=INT | unbounded?='*') ']'

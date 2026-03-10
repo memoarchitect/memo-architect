@@ -258,6 +258,57 @@ describe('ConnectionDefinition', () => {
         expect(connDef.body[0].$type).toBe('DocComment');
         expect(connDef.body[1].$type).toBe('EndDeclaration');
     });
+
+    it('parses connection def with typed ends', async () => {
+        const model = await parseValid(`
+            package Test {
+                connection def Mitigates {
+                    doc /* A risk control mitigates a hazard. */
+                    end control : RiskControl [1];
+                    end hazard : Hazard [1];
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const connDef = pkg.members[0] as ConnectionDefinition;
+        expect(connDef.name).toBe('Mitigates');
+        expect(connDef.body).toHaveLength(3); // doc + 2 ends
+
+        const end1 = connDef.body[1] as EndDeclaration;
+        expect(end1.$type).toBe('EndDeclaration');
+        expect(end1.name).toBe('control');
+        expect(end1.type).toBe('RiskControl');
+        expect(end1.multiplicity?.exact).toBe(1);
+
+        const end2 = connDef.body[2] as EndDeclaration;
+        expect(end2.name).toBe('hazard');
+        expect(end2.type).toBe('Hazard');
+        expect(end2.multiplicity?.exact).toBe(1);
+    });
+
+    it('parses connection def with mixed typed and untyped ends', async () => {
+        const model = await parseValid(`
+            package Test {
+                connection def Satisfy {
+                    end satisfiedBy[1];
+                    end satisfies : Requirement [1];
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const connDef = pkg.members[0] as ConnectionDefinition;
+        expect(connDef.body).toHaveLength(2);
+
+        const end1 = connDef.body[0] as EndDeclaration;
+        expect(end1.name).toBe('satisfiedBy');
+        expect(end1.type).toBeUndefined();
+        expect(end1.multiplicity?.exact).toBe(1);
+
+        const end2 = connDef.body[1] as EndDeclaration;
+        expect(end2.name).toBe('satisfies');
+        expect(end2.type).toBe('Requirement');
+        expect(end2.multiplicity?.exact).toBe(1);
+    });
 });
 
 describe('EnumDefinition', () => {

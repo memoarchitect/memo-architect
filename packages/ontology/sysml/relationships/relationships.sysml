@@ -60,37 +60,37 @@ package MEMO_Ontology_Relationships {
     connection def Satisfy {
         doc /* A requirement is satisfied by a design element. */
         end satisfiedBy[1];
-        end satisfies[1];
+        end satisfies : Requirement [1];
     }
 
     connection def Verify {
         doc /* A test verifies a requirement. */
         end verifiedBy[1];
-        end verifies[1];
+        end verifies : Requirement [1];
     }
 
     connection def Mitigates {
         doc /* A risk control mitigates a hazard or risk. */
-        end control[1];
-        end hazard[1];
+        end control : RiskControl [1];
+        end hazard : Hazard [1];
     }
 
     connection def Causes {
         doc /* A hazard causes a hazardous situation. */
-        end hazard[1];
-        end situation[1];
+        end hazard : Hazard [1];
+        end situation : HazardousSituation [1];
     }
 
     connection def LeadsTo {
         doc /* A hazardous situation leads to harm. */
-        end situation[1];
-        end harm[1];
+        end situation : HazardousSituation [1];
+        end harm : Harm [1];
     }
 
     connection def Identifies {
         doc /* A risk assessment identifies a hazard. */
-        end risk[1];
-        end hazard[1];
+        end risk : Risk [1];
+        end hazard : Hazard [1];
     }
 
     // UseCase relationships
