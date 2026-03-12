@@ -1,0 +1,114 @@
+# MEMO — Model-Based Systems Engineering for Medical Devices
+
+A Git-native, models-as-code MBSE tool for medical device systems engineering. Author models in **standard SysML v2**, validate against **ISO 14971** and **IEC 62304** closure rules, and track regulatory completeness — all from a single CLI and web interface.
+
+## Why MEMO?
+
+MBSE tools are either too complex (Cameo, Enterprise Architect — months of training) or too generic (no regulatory compliance). MEMO bridges the gap:
+
+- **SysML v2 as the single format** — no proprietary DSL, standard tooling interop
+- **GUI-first, text-friendly** — web app for guided workflows, VS Code + LSP for power users
+- **Completeness-driven** — dashboards show regulatory readiness, not just model structure
+- **Zero-config for domain users** — `memo init medical my-pump` gives a ready-to-go project
+
+## Quick Start
+
+```bash
+# Prerequisites: Node.js >= 20, pnpm >= 9
+pnpm install
+pnpm run build
+
+# Scaffold a new medical device project
+npx memo init my-pump
+
+# Validate model against ISO 14971 / IEC 62304 closure rules
+cd my-pump
+npx memo validate
+
+# Launch the web app with live reload
+npx memo dev
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `memo init <name>` | Scaffold a new MEMO device project |
+| `memo dev` | Start web app with hot-reload (Vite + WebSocket) |
+| `memo validate` | Run closure rules, show completeness % |
+| `memo build` | Build static HTML site with embedded model |
+| `memo export json` | Export full model as JSON |
+| `memo export dot` | Export model as Graphviz DOT |
+
+## Web App Features
+
+- **Completeness bar** — always-visible regulatory readiness % (per CoSMA layer)
+- **Viewpoint tabs** — Risk Overview, Requirements Traceability, Architecture, Software, V&V, and more
+- **Model explorer** — hierarchical tree grouped by layer and kind
+- **Diagram canvas** — ELK auto-layout with ReactFlow, color-coded by layer
+- **Properties panel** — element details, relationships, and validation guidance
+- **Gap bar** — actionable violations with click-to-select
+
+## Monorepo Structure
+
+```
+memo/
+├── packages/
+│   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
+│   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
+│   ├── web/         @memo/web      — React + ReactFlow web app
+│   ├── ontology/    @memo/ontology — Base SysML v2 type definitions (60+ types, 16 relationships)
+│   └── medical/     @memo/medical  — Medical domain config (15 closure rules, 7 viewpoints)
+├── examples/
+│   └── infusion-pump/              — Complete working example (74 elements)
+└── docs/                           — MkDocs documentation site
+```
+
+## Architecture
+
+```
+.sysml files (chokidar watch)
+  → Langium parser (SysML v2 subset)
+  → Semantic model (MemoModel)
+  → Closure rule engine (15 ISO 14971 / IEC 62304 rules)
+  → Completeness tracker (per-layer %)
+  → WebSocket broadcast → React web app
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Monorepo | Turborepo + pnpm |
+| Parser + LSP | Langium (SysML v2 subset grammar) |
+| CLI | Commander.js |
+| Dev server | Vite + chokidar + WebSocket |
+| Web UI | React 18 + ReactFlow + Zustand |
+| Layout | ELK.js (layered auto-layout) |
+| Styling | Tailwind CSS 4 |
+| Testing | Vitest (69 tests) |
+
+## Development
+
+```bash
+pnpm install
+pnpm run build        # Build all packages
+pnpm run test         # Run all tests (69 passing)
+pnpm run type-check   # TypeScript type checking
+
+# Run the example project
+cd examples/infusion-pump
+npx memo dev
+```
+
+## Documentation
+
+```bash
+# Serve docs locally (requires Python + pdm)
+pdm install
+pnpm run docs:serve
+```
+
+## License
+
+All rights reserved.
