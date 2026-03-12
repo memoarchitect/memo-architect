@@ -78,15 +78,38 @@ export interface MemoModel {
     incoming: Map<string, MemoRelationship[]>;
 }
 
+/** Viewpoint definition (serializable subset of config) */
+export interface ViewpointDTO {
+    id: string;
+    label: string;
+    visibleKinds: string[];
+    visibleRelationships: string[];
+    visibleLayers: string[];
+}
+
+/** CoSMA layer info (serializable subset of config) */
+export interface CosmaLayerDTO {
+    id: string;
+    label: string;
+    color: string;
+}
+
 /** Serializable version of MemoModel for JSON transport */
 export interface MemoModelDTO {
     elements: Record<string, MemoElement>;
     relationships: MemoRelationship[];
     errors: ParseError[];
+    /** Viewpoint definitions from config (for client-side filtering) */
+    viewpoints?: ViewpointDTO[];
+    /** CoSMA layer definitions from config */
+    cosmaLayers?: CosmaLayerDTO[];
 }
 
 /** Convert MemoModel to a plain JSON-serializable object */
-export function modelToDTO(model: MemoModel): MemoModelDTO {
+export function modelToDTO(
+    model: MemoModel,
+    options?: { viewpoints?: ViewpointDTO[]; cosmaLayers?: CosmaLayerDTO[] }
+): MemoModelDTO {
     const elements: Record<string, MemoElement> = {};
     for (const [id, el] of model.elements) {
         elements[id] = el;
@@ -95,6 +118,8 @@ export function modelToDTO(model: MemoModel): MemoModelDTO {
         elements,
         relationships: model.relationships,
         errors: model.errors,
+        viewpoints: options?.viewpoints,
+        cosmaLayers: options?.cosmaLayers,
     };
 }
 

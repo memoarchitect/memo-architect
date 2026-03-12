@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf lib/"
   },
@@ -24,6 +24,9 @@
     "yaml": "^2.5.0",
     "glob": "^11.0.0"
   },
+  "files": [
+    "lib/"
+  ],
   "devDependencies": {
     "@types/ws": "^8.5.0",
     "typescript": "~5.5.0",

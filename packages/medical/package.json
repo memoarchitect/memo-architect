@@ -7,7 +7,7 @@
   "types": "./lib/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf lib/"
   },
   "dependencies": {
@@ -20,7 +20,8 @@
   "files": [
     "lib/",
     "src/",
-    "templates/"
+    "templates/",
+    "memo.config.yaml"
   ],
   "keywords": [
     "medical-device",

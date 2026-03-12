@@ -20,7 +20,8 @@
   },
   "files": [
     "lib/",
-    "sysml/"
+    "sysml/",
+    "memo.config.yaml"
   ],
   "keywords": [
     "sysml",

@@ -10,7 +10,11 @@
     "test:coverage": "turbo test:coverage",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "docs:serve": "pdm run docs-serve",
+    "docs:build": "pdm run docs-build",
+    "setup": "pnpm install && pnpm run build && pdm install",
+    "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {
     "turbo": "^2.3.0",

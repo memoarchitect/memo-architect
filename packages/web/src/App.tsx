@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useModelStore } from './store/model-store';
-import { connectWebSocket } from './store/ws-client';
+import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { Sidebar } from './components/Sidebar';
 import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
+import { PropertiesPanel } from './components/PropertiesPanel';
 import { DiagramCanvas } from './views/DiagramCanvas';
 
 export function App() {
@@ -11,7 +12,10 @@ export function App() {
     const model = useModelStore(s => s.model);
 
     useEffect(() => {
-        connectWebSocket();
+        // Try embedded data first (static build), fall back to WebSocket (dev server)
+        if (!loadEmbeddedData()) {
+            connectWebSocket();
+        }
     }, []);
 
     return (
@@ -39,6 +43,9 @@ export function App() {
                     )}
                     {model && <DiagramCanvas />}
                 </div>
+
+                {/* Properties panel */}
+                <PropertiesPanel />
             </div>
 
             {/* Gap bar (violations) */}

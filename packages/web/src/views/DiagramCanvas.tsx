@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
     ReactFlow,
     Background,
@@ -10,24 +10,36 @@ import {
     type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import type { MemoElement } from '@memo/core';
 import { useModelStore } from '../store/model-store';
 import { computeLayout } from './layout';
 
 export function DiagramCanvas() {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
+    const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectElement = useModelStore(s => s.selectElement);
 
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isLayouting, setIsLayouting] = useState(false);
 
-    // Recompute layout when model changes
+    // Build viewpoint filter from selected viewpoint
+    const viewpointFilter = useMemo(() => {
+        if (!selectedViewpointId || !model?.viewpoints) return undefined;
+        const vp = model.viewpoints.find(v => v.id === selectedViewpointId);
+        if (!vp) return undefined;
+        const kinds = new Set(vp.visibleKinds);
+        const layers = new Set(vp.visibleLayers);
+        return (el: MemoElement) => kinds.has(el.kind) || layers.has(el.layer);
+    }, [selectedViewpointId, model?.viewpoints]);
+
+    // Recompute layout when model or viewpoint changes
     useEffect(() => {
         if (!model) return;
 
         setIsLayouting(true);
-        computeLayout(model)
+        computeLayout(model, { viewpointFilter })
             .then(({ nodes: n, edges: e }) => {
                 setNodes(n);
                 setEdges(e);
@@ -37,7 +49,7 @@ export function DiagramCanvas() {
                 console.error('Layout error:', err);
                 setIsLayouting(false);
             });
-    }, [model]);
+    }, [model, viewpointFilter]);
 
     // Highlight selected element
     useEffect(() => {

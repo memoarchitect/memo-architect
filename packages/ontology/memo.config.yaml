@@ -1,0 +1,11 @@
+# @memo/ontology — Base ontology configuration
+# Defines the shared SysML v2 type system. Domain configs (e.g. @memo/medical)
+# extend this to inherit relationship types and base kinds.
+
+projectName: "@memo/ontology"
+projectType: ontology
+
+cosmaLayers: []
+kinds: {}
+relationshipTypes: []
+closureRules: []

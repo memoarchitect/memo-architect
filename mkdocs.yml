@@ -1,0 +1,88 @@
+site_name: MEMO — Model-Based Systems Engineering
+site_description: SysML v2 powered MBSE tool for medical device development
+site_author: Somesh Kashyap
+repo_url: https://github.com/someshkashyap/memo
+repo_name: someshkashyap/memo
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: pink
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: pink
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - CLI Reference: getting-started/cli-reference.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Monorepo Structure: architecture/monorepo.md
+      - Data Flow: architecture/data-flow.md
+      - WebSocket Protocol: architecture/websocket-protocol.md
+  - Design:
+      - Ontology & Type System: design/ontology.md
+      - CoSMA Layers: design/cosma-layers.md
+      - Viewpoints: design/viewpoints.md
+      - Closure Rules & Validation: design/closure-rules.md
+      - Configuration System: design/configuration.md
+  - Configuration:
+      - memo.config.yaml Reference: config/reference.md
+      - Medical Domain: config/medical-domain.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Roadmap: development/roadmap.md
+  - ADR:
+      - ADR-1-1 Entity Type Mapping: adr/ADR-1-1-entity-type-mapping.md
+      - ADR-1-2 Relationship Representation: adr/ADR-1-2-relationship-representation.md
+      - ADR-1-3 Ontology Package Structure: adr/ADR-1-3-ontology-package-structure.md
+      - ADR-1-4 Closure Rule Representation: adr/ADR-1-4-closure-rule-representation.md
+      - ADR-1-5 Domain Config Extension: adr/ADR-1-5-domain-config-extension.md

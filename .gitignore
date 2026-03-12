@@ -38,3 +38,9 @@ coverage/
 
 # Generated TextMate grammar
 packages/core/syntaxes/
+
+# Python (pdm / mkdocs)
+.venv/
+__pypackages__/
+site/
+*.egg-info/

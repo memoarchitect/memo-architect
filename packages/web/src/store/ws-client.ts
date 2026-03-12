@@ -2,15 +2,49 @@
 //
 // Connects to the CLI dev server WebSocket and dispatches messages
 // to the Zustand store. Auto-reconnects on disconnect.
+//
+// For static builds (memo build), model data is embedded in the HTML as
+// window.__MEMO_DATA__. If present, we load from that instead of WebSocket.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
 import type { ServerMessage } from '@memo/core';
 
+/** Embedded data injected by `memo build` */
+interface EmbeddedData {
+    model: any;
+    validation: any;
+    completeness: any;
+}
+
+declare global {
+    interface Window {
+        __MEMO_DATA__?: EmbeddedData;
+    }
+}
+
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Load embedded data if available (static build), otherwise connect WebSocket.
+ */
+export function loadEmbeddedData(): boolean {
+    const data = window.__MEMO_DATA__;
+    if (!data) return false;
+
+    const store = useModelStore.getState();
+    store.setConnected(true);
+    if (data.model) store.setModel(data.model);
+    if (data.validation) store.setValidation(data.validation);
+    if (data.completeness) store.setCompleteness(data.completeness);
+    return true;
+}
+
 export function connectWebSocket(url?: string): void {
+    // If running as a static build, don't connect WebSocket
+    if (window.__MEMO_DATA__) return;
+
     const wsUrl = url || `ws://${window.location.host}`;
 
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {

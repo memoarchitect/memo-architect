@@ -12,7 +12,7 @@ import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
 import { evaluateClosureRules } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
-import type { ServerMessage } from '@memo/core';
+import type { ServerMessage, ViewpointDTO, CosmaLayerDTO } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { createDevServer } from '../server/dev-server.js';
 import { createFileWatcher } from '../server/file-watcher.js';
@@ -65,9 +65,24 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             `${validation.violations.length} violations, ${completeness.overall}% complete`
         ));
 
+        // Map config viewpoints/cosmaLayers to DTOs
+        const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({
+            id: vp.id,
+            label: vp.label,
+            visibleKinds: vp.visibleKinds,
+            visibleRelationships: vp.visibleRelationships,
+            visibleLayers: vp.visibleLayers,
+        }));
+
+        const cosmaLayers: CosmaLayerDTO[] | undefined = config.cosmaLayers?.map(cl => ({
+            id: cl.id,
+            label: cl.label,
+            color: cl.color,
+        }));
+
         return {
             messages: [
-                { type: 'model:update', payload: modelToDTO(model) },
+                { type: 'model:update', payload: modelToDTO(model, { viewpoints, cosmaLayers }) },
                 { type: 'validation:update', payload: validation },
                 { type: 'completeness:update', payload: completeness },
             ],
