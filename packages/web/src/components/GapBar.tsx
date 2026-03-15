@@ -1,15 +1,9 @@
 import { useModelStore } from '../store/model-store';
 
-const SEVERITY_COLORS = {
-    error: 'text-red-400 bg-red-500/10',
-    warning: 'text-amber-400 bg-amber-500/10',
-    info: 'text-blue-400 bg-blue-500/10',
-};
-
-const SEVERITY_ICONS = {
-    error: '✖',
-    warning: '⚠',
-    info: 'ℹ',
+const SEVERITY_STYLES: Record<string, { color: string; bg: string; icon: string }> = {
+    error: { color: '#DC2626', bg: '#FEF2F2', icon: '✖' },
+    warning: { color: '#D97706', bg: '#FFFBEB', icon: '⚠' },
+    info: { color: '#2563EB', bg: '#EFF6FF', icon: 'ℹ' },
 };
 
 export function GapBar() {
@@ -18,8 +12,8 @@ export function GapBar() {
 
     if (!validation || validation.violations.length === 0) {
         return (
-            <div className="h-7 bg-slate-800 border-t border-slate-700 flex items-center px-4">
-                <span className="text-xs text-emerald-400">
+            <div className="h-8 flex items-center px-4" style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E0' }}>
+                <span className="text-xs" style={{ color: '#10B981' }}>
                     {validation ? '✓ No violations' : 'Waiting for validation...'}
                 </span>
             </div>
@@ -30,36 +24,40 @@ export function GapBar() {
     const warnings = validation.violations.filter(v => v.severity === 'warning');
 
     return (
-        <div className="bg-slate-800 border-t border-slate-700">
+        <div style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E0' }}>
             {/* Summary bar */}
-            <div className="h-7 flex items-center px-4 gap-3 text-xs">
+            <div className="h-8 flex items-center px-4 gap-3 text-xs">
                 {errors.length > 0 && (
-                    <span className="text-red-400">{errors.length} errors</span>
+                    <span style={{ color: '#DC2626' }}>{errors.length} errors</span>
                 )}
                 {warnings.length > 0 && (
-                    <span className="text-amber-400">{warnings.length} warnings</span>
+                    <span style={{ color: '#D97706' }}>{warnings.length} warnings</span>
                 )}
-                <span className="text-slate-500 ml-auto">
+                <span className="ml-auto" style={{ color: '#9CA3AF' }}>
                     {validation.rulesEvaluated} rules | {validation.rulesPassed} passed
                 </span>
             </div>
 
-            {/* Scrollable violation list (max 4 rows visible) */}
-            <div className="max-h-28 overflow-y-auto border-t border-slate-700/50">
-                {validation.violations.map((v, i) => (
-                    <div
-                        key={`${v.ruleId}-${v.elementId}-${i}`}
-                        className={`flex items-center gap-2 px-4 py-1 text-xs cursor-pointer hover:bg-slate-700/30 ${
-                            SEVERITY_COLORS[v.severity]
-                        }`}
-                        onClick={() => selectElement(v.elementId)}
-                    >
-                        <span>{SEVERITY_ICONS[v.severity]}</span>
-                        <span className="text-slate-500">[{v.ruleId}]</span>
-                        <span className="font-medium">{v.elementKind}/{v.elementName}</span>
-                        <span className="text-slate-400 truncate flex-1">{v.description}</span>
-                    </div>
-                ))}
+            {/* Scrollable violation list */}
+            <div className="max-h-28 overflow-y-auto" style={{ borderTop: '1px solid #EDEDEA' }}>
+                {validation.violations.map((v, i) => {
+                    const sev = SEVERITY_STYLES[v.severity] || SEVERITY_STYLES.info;
+                    return (
+                        <div
+                            key={`${v.ruleId}-${v.elementId}-${i}`}
+                            className="flex items-center gap-2 px-4 py-1.5 text-xs cursor-pointer transition-colors"
+                            style={{ color: sev.color }}
+                            onMouseEnter={e => (e.currentTarget.style.background = sev.bg)}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            onClick={() => selectElement(v.elementId)}
+                        >
+                            <span>{sev.icon}</span>
+                            <span style={{ color: '#9CA3AF' }}>[{v.ruleId}]</span>
+                            <span className="font-medium">{v.elementKind}/{v.elementName}</span>
+                            <span className="truncate flex-1" style={{ color: '#6B7280' }}>{v.description}</span>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

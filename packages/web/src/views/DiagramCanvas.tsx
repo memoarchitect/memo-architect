@@ -18,21 +18,37 @@ export function DiagramCanvas() {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
+    const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const selectElement = useModelStore(s => s.selectElement);
 
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isLayouting, setIsLayouting] = useState(false);
 
-    // Build viewpoint filter from selected viewpoint
+    // Build viewpoint filter from selected viewpoint + hidden layers
     const viewpointFilter = useMemo(() => {
-        if (!selectedViewpointId || !model?.viewpoints) return undefined;
-        const vp = model.viewpoints.find(v => v.id === selectedViewpointId);
-        if (!vp) return undefined;
-        const kinds = new Set(vp.visibleKinds);
-        const layers = new Set(vp.visibleLayers);
-        return (el: MemoElement) => kinds.has(el.kind) || layers.has(el.layer);
-    }, [selectedViewpointId, model?.viewpoints]);
+        const hasViewpoint = selectedViewpointId && model?.viewpoints;
+        const hasHidden = hiddenLayers.size > 0;
+
+        if (!hasViewpoint && !hasHidden) return undefined;
+
+        const vp = hasViewpoint
+            ? model!.viewpoints!.find(v => v.id === selectedViewpointId)
+            : undefined;
+
+        const vpKinds = vp ? new Set(vp.visibleKinds) : undefined;
+        const vpLayers = vp ? new Set(vp.visibleLayers) : undefined;
+
+        return (el: MemoElement) => {
+            // Layer toggle: hide if layer is toggled off
+            if (hiddenLayers.has(el.layer)) return false;
+            // Viewpoint filter
+            if (vpKinds && vpLayers) {
+                return vpKinds.has(el.kind) || vpLayers.has(el.layer);
+            }
+            return true;
+        };
+    }, [selectedViewpointId, model?.viewpoints, hiddenLayers]);
 
     // Recompute layout when model or viewpoint changes
     useEffect(() => {
@@ -60,10 +76,10 @@ export function DiagramCanvas() {
             style: {
                 ...n.style,
                 boxShadow: n.id === selectedElementId
-                    ? `0 0 16px ${(n.data as any).color || '#e94560'}`
+                    ? `0 0 0 2px #2DD4A8, 0 4px 12px rgba(45, 212, 168, 0.3)`
                     : undefined,
                 opacity: selectedElementId
-                    ? (n.id === selectedElementId ? 1 : 0.4)
+                    ? (n.id === selectedElementId ? 1 : 0.35)
                     : 1,
             },
         })));
@@ -85,7 +101,10 @@ export function DiagramCanvas() {
     return (
         <div className="flex-1 relative">
             {isLayouting && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-slate-800 px-3 py-1 rounded-full text-xs text-slate-400 border border-slate-700">
+                <div
+                    className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 rounded-full text-xs font-medium"
+                    style={{ background: '#FFFFFF', color: '#6B7280', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                >
                     Computing layout...
                 </div>
             )}
@@ -100,23 +119,14 @@ export function DiagramCanvas() {
                 minZoom={0.1}
                 maxZoom={3}
                 proOptions={{ hideAttribution: true }}
-                style={{ background: '#0f172a' }}
+                style={{ background: '#F7F7F5' }}
             >
-                <Background color="#1e293b" gap={20} />
-                <Controls
-                    style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                    }}
-                />
+                <Background color="#E5E5E0" gap={20} size={1} />
+                <Controls />
                 <MiniMap
-                    style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                    }}
-                    nodeColor={(node) => (node.data as any)?.color || '#666'}
-                    maskColor="rgba(15, 23, 42, 0.6)"
+                    style={{ background: '#FFFFFF' }}
+                    nodeColor={(node) => (node.data as any)?.color || '#ccc'}
+                    maskColor="rgba(247, 247, 245, 0.7)"
                 />
             </ReactFlow>
         </div>

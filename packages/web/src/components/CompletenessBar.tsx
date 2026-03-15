@@ -5,8 +5,8 @@ export function CompletenessBar() {
 
     if (!completeness) {
         return (
-            <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center px-4">
-                <span className="text-xs text-slate-500">Loading completeness...</span>
+            <div className="h-9 flex items-center px-4" style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E5E0' }}>
+                <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading completeness...</span>
             </div>
         );
     }
@@ -14,16 +14,16 @@ export function CompletenessBar() {
     const visibleLayers = completeness.layers.filter(l => l.totalElements > 0);
 
     return (
-        <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center">
-            {/* Overall */}
-            <div className="px-3 flex items-center gap-2 border-r border-slate-700 h-full">
-                <span className="text-xs font-semibold text-slate-300">
+        <div className="h-9 flex items-center" style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E5E0' }}>
+            {/* Overall percentage */}
+            <div className="px-4 flex items-center gap-2 h-full" style={{ borderRight: '1px solid #E5E5E0' }}>
+                <span className="text-xs font-semibold" style={{ color: '#1B3A4B' }}>
                     {completeness.overall}%
                 </span>
             </div>
 
             {/* Per-layer segments */}
-            <div className="flex-1 flex items-center h-full px-2 gap-px">
+            <div className="flex-1 flex items-center h-full px-3 gap-1">
                 {visibleLayers.map(layer => {
                     const width = Math.max(
                         (layer.totalElements / completeness.totalElements) * 100,
@@ -32,15 +32,20 @@ export function CompletenessBar() {
                     return (
                         <div
                             key={layer.layerId}
-                            className="relative h-4 rounded-sm overflow-hidden"
-                            style={{ width: `${width}%`, backgroundColor: layer.layerColor + '33' }}
+                            className="relative h-3 overflow-hidden"
+                            style={{
+                                width: `${width}%`,
+                                backgroundColor: layer.layerColor + '20',
+                                borderRadius: '6px',
+                            }}
                             title={`${layer.layerLabel}: ${layer.percentage}% (${layer.completeElements}/${layer.totalElements})`}
                         >
                             <div
-                                className="h-full rounded-sm transition-all duration-500"
+                                className="h-full transition-all duration-500"
                                 style={{
                                     width: `${layer.percentage}%`,
                                     backgroundColor: layer.layerColor,
+                                    borderRadius: '6px',
                                 }}
                             />
                         </div>
@@ -49,7 +54,7 @@ export function CompletenessBar() {
             </div>
 
             {/* Summary */}
-            <div className="px-3 text-xs text-slate-500 border-l border-slate-700 h-full flex items-center">
+            <div className="px-4 text-xs h-full flex items-center" style={{ color: '#9CA3AF', borderLeft: '1px solid #E5E5E0' }}>
                 {completeness.completeElements}/{completeness.totalElements}
             </div>
         </div>

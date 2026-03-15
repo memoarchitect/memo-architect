@@ -1,27 +1,5 @@
-// ─── Properties Panel ─────────────────────────────────────────────────────────
-//
-// Shows details and guidance for the selected element. When an element is
-// selected (via diagram click or sidebar), this panel displays:
-//   - Element identity (name, kind, construct, layer)
-//   - All attributes
-//   - Relationships (incoming + outgoing)
-//   - Validation violations with actionable guidance
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
-
-const LAYER_COLORS: Record<string, string> = {
-    business: '#8E44AD',
-    requirements: '#4A90D9',
-    risk: '#E74C3C',
-    functional: '#E67E22',
-    logical: '#7B68EE',
-    physical: '#95A5A6',
-    software: '#F39C12',
-    interfaces: '#1ABC9C',
-    verification: '#2ECC71',
-    ui: '#3498DB',
-};
+import { LAYER_COLORS } from '../constants';
 
 export function PropertiesPanel() {
     const model = useModelStore(s => s.model);
@@ -31,8 +9,8 @@ export function PropertiesPanel() {
 
     if (!selectedElementId || !model) {
         return (
-            <div className="w-64 bg-slate-800/50 border-l border-slate-700 p-4 flex items-center justify-center">
-                <span className="text-xs text-slate-500 text-center">
+            <div className="w-72 p-4 flex items-center justify-center" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+                <span className="text-xs text-center" style={{ color: '#9CA3AF' }}>
                     Select an element to view properties
                 </span>
             </div>
@@ -42,8 +20,8 @@ export function PropertiesPanel() {
     const element = model.elements[selectedElementId];
     if (!element) {
         return (
-            <div className="w-64 bg-slate-800/50 border-l border-slate-700 p-4">
-                <span className="text-xs text-slate-500">Element not found</span>
+            <div className="w-72 p-4" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+                <span className="text-xs" style={{ color: '#9CA3AF' }}>Element not found</span>
             </div>
         );
     }
@@ -53,7 +31,6 @@ export function PropertiesPanel() {
     const incoming = relationships.filter(r => r.targetId === selectedElementId);
     const layerColor = LAYER_COLORS[element.layer] || '#666';
 
-    // Find violations for this element
     const violations = validation?.violations.filter(
         v => v.elementId === selectedElementId
     ) || [];
@@ -62,24 +39,24 @@ export function PropertiesPanel() {
         ([k]) => k !== 'name'
     );
 
+    const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
+
     return (
-        <div className="w-64 bg-slate-800/50 border-l border-slate-700 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="p-3 border-b border-slate-700">
-                <div className="flex items-center gap-2 mb-1">
-                    <span
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ background: layerColor }}
-                    />
-                    <span className="text-sm font-semibold text-slate-100 truncate">
+        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+            {/* Header with layer color accent */}
+            <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${layerColor}` }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
                         {element.name}
                     </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="px-1.5 py-0.5 rounded bg-slate-700/60">{element.kind}</span>
-                    <span className="text-slate-600">{element.construct}</span>
+                <div className="flex items-center gap-2 text-xs">
+                    <span className="px-2 py-0.5 rounded-md font-medium" style={{ background: layerColor + '18', color: layerColor }}>
+                        {element.kind}
+                    </span>
+                    <span style={{ color: '#9CA3AF' }}>{element.construct}</span>
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>
                     {element.layer} layer
                 </div>
             </div>
@@ -88,9 +65,9 @@ export function PropertiesPanel() {
             <div className="flex-1 overflow-y-auto">
                 {/* Doc */}
                 {element.doc && (
-                    <div className="p-3 border-b border-slate-700/50">
-                        <div className="text-xs text-slate-500 mb-1">Description</div>
-                        <div className="text-xs text-slate-300 leading-relaxed">
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Description</div>
+                        <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>
                             {element.doc}
                         </div>
                     </div>
@@ -98,13 +75,13 @@ export function PropertiesPanel() {
 
                 {/* Attributes */}
                 {attrs.length > 0 && (
-                    <div className="p-3 border-b border-slate-700/50">
-                        <div className="text-xs text-slate-500 mb-1.5">Attributes</div>
-                        <div className="space-y-1">
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Attributes</div>
+                        <div className="space-y-1.5">
                             {attrs.map(([key, value]) => (
                                 <div key={key} className="flex text-xs">
-                                    <span className="text-slate-400 min-w-[80px]">{key}</span>
-                                    <span className="text-slate-200 truncate">{value}</span>
+                                    <span className="min-w-[80px]" style={{ color: '#6B7280' }}>{key}</span>
+                                    <span className="truncate" style={{ color: '#1a1a1a' }}>{value}</span>
                                 </div>
                             ))}
                         </div>
@@ -113,8 +90,8 @@ export function PropertiesPanel() {
 
                 {/* Relationships */}
                 {relationships.length > 0 && (
-                    <div className="p-3 border-b border-slate-700/50">
-                        <div className="text-xs text-slate-500 mb-1.5">
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>
                             Relationships ({relationships.length})
                         </div>
                         <div className="space-y-1">
@@ -123,12 +100,14 @@ export function PropertiesPanel() {
                                 return (
                                     <div
                                         key={rel.id}
-                                        className="flex items-center gap-1 text-xs cursor-pointer hover:bg-slate-700/30 rounded px-1 py-0.5"
+                                        className="flex items-center gap-1.5 text-xs cursor-pointer rounded-md px-2 py-1 transition-colors"
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         onClick={() => selectElement(rel.targetId)}
                                     >
-                                        <span className="text-slate-500">&rarr;</span>
-                                        <span className="text-blue-400">{rel.type}</span>
-                                        <span className="text-slate-300 truncate">
+                                        <span style={{ color: '#9CA3AF' }}>&rarr;</span>
+                                        <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                        <span className="truncate" style={{ color: '#374151' }}>
                                             {target?.name || rel.targetId}
                                         </span>
                                     </div>
@@ -139,12 +118,14 @@ export function PropertiesPanel() {
                                 return (
                                     <div
                                         key={rel.id}
-                                        className="flex items-center gap-1 text-xs cursor-pointer hover:bg-slate-700/30 rounded px-1 py-0.5"
+                                        className="flex items-center gap-1.5 text-xs cursor-pointer rounded-md px-2 py-1 transition-colors"
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         onClick={() => selectElement(rel.sourceId)}
                                     >
-                                        <span className="text-slate-500">&larr;</span>
-                                        <span className="text-emerald-400">{rel.type}</span>
-                                        <span className="text-slate-300 truncate">
+                                        <span style={{ color: '#9CA3AF' }}>&larr;</span>
+                                        <span style={{ color: '#10B981' }}>{rel.type}</span>
+                                        <span className="truncate" style={{ color: '#374151' }}>
                                             {source?.name || rel.sourceId}
                                         </span>
                                     </div>
@@ -156,28 +137,29 @@ export function PropertiesPanel() {
 
                 {/* Violations / Guidance */}
                 {violations.length > 0 && (
-                    <div className="p-3 border-b border-slate-700/50">
-                        <div className="text-xs text-slate-500 mb-1.5">Guidance</div>
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Guidance</div>
                         <div className="space-y-2">
                             {violations.map((v, i) => (
                                 <div
                                     key={`${v.ruleId}-${i}`}
-                                    className={`text-xs p-2 rounded ${
-                                        v.severity === 'error'
-                                            ? 'bg-red-500/10 border border-red-500/20'
-                                            : v.severity === 'warning'
-                                            ? 'bg-amber-500/10 border border-amber-500/20'
-                                            : 'bg-blue-500/10 border border-blue-500/20'
-                                    }`}
+                                    className="text-xs p-2.5 rounded-lg"
+                                    style={{
+                                        background: v.severity === 'error' ? '#FEF2F2'
+                                            : v.severity === 'warning' ? '#FFFBEB' : '#EFF6FF',
+                                        border: `1px solid ${
+                                            v.severity === 'error' ? '#FECACA'
+                                            : v.severity === 'warning' ? '#FDE68A' : '#BFDBFE'
+                                        }`,
+                                    }}
                                 >
-                                    <div className={
-                                        v.severity === 'error' ? 'text-red-300' :
-                                        v.severity === 'warning' ? 'text-amber-300' :
-                                        'text-blue-300'
-                                    }>
+                                    <div style={{
+                                        color: v.severity === 'error' ? '#DC2626'
+                                            : v.severity === 'warning' ? '#D97706' : '#2563EB',
+                                    }}>
                                         {v.description}
                                     </div>
-                                    <div className="text-slate-500 mt-0.5">[{v.ruleId}]</div>
+                                    <div className="mt-0.5" style={{ color: '#9CA3AF' }}>[{v.ruleId}]</div>
                                 </div>
                             ))}
                         </div>
@@ -186,15 +168,15 @@ export function PropertiesPanel() {
 
                 {/* No violations = compliant */}
                 {violations.length === 0 && (
-                    <div className="p-3">
-                        <div className="text-xs text-emerald-400/60 flex items-center gap-1">
+                    <div className="p-4">
+                        <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
                             <span>&#10003;</span> All rules satisfied
                         </div>
                     </div>
                 )}
 
                 {/* Source file */}
-                <div className="p-3 text-xs text-slate-600">
+                <div className="p-4 text-xs" style={{ color: '#D1D5DB' }}>
                     {element.file}
                 </div>
             </div>

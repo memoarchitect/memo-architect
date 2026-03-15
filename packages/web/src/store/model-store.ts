@@ -24,6 +24,7 @@ export interface ModelState {
     selectedViewpointId: string | null;
     searchTerm: string;
     sidebarCollapsed: boolean;
+    hiddenLayers: Set<string>;
 
     // ─── Actions ──────────────────────────────────────────────────────────
     setModel: (model: MemoModelDTO) => void;
@@ -34,6 +35,7 @@ export interface ModelState {
     selectViewpoint: (id: string | null) => void;
     setSearchTerm: (term: string) => void;
     toggleSidebar: () => void;
+    toggleLayerVisibility: (layer: string) => void;
 }
 
 export const useModelStore = create<ModelState>((set) => ({
@@ -48,6 +50,7 @@ export const useModelStore = create<ModelState>((set) => ({
     selectedViewpointId: null,
     searchTerm: '',
     sidebarCollapsed: false,
+    hiddenLayers: new Set<string>(),
 
     // Actions
     setModel: (model) => set({ model }),
@@ -58,6 +61,12 @@ export const useModelStore = create<ModelState>((set) => ({
     selectViewpoint: (id) => set({ selectedViewpointId: id }),
     setSearchTerm: (term) => set({ searchTerm: term }),
     toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+    toggleLayerVisibility: (layer) => set((s) => {
+        const next = new Set(s.hiddenLayers);
+        if (next.has(layer)) next.delete(layer);
+        else next.add(layer);
+        return { hiddenLayers: next };
+    }),
 }));
 
 // ─── Derived selectors ──────────────────────────────────────────────────────

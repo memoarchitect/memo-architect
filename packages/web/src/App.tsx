@@ -19,7 +19,7 @@ export function App() {
     }, []);
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-slate-200">
+        <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
             {/* Completeness bar */}
             <CompletenessBar />
 
@@ -31,13 +31,13 @@ export function App() {
                 {/* Diagram area */}
                 <div className="flex-1 flex flex-col">
                     {!connected && (
-                        <div className="bg-amber-900/40 text-amber-200 px-4 py-2 text-sm flex items-center gap-2">
+                        <div className="px-4 py-2 text-sm flex items-center gap-2" style={{ background: '#FEF3C7', color: '#92400E', borderBottom: '1px solid #FDE68A' }}>
                             <span className="animate-pulse">&#9679;</span>
                             Connecting to dev server...
                         </div>
                     )}
                     {connected && !model && (
-                        <div className="flex-1 flex items-center justify-center text-slate-500">
+                        <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                             Waiting for model data...
                         </div>
                     )}

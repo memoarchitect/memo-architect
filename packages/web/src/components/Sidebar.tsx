@@ -1,21 +1,6 @@
-import { useMemo } from 'react';
-import { useModelStore, getElementsByLayer } from '../store/model-store';
+import { useModelStore } from '../store/model-store';
 import { ModelExplorer } from './ModelExplorer';
 import { ViewpointSelector } from './ViewpointSelector';
-
-// CoSMA layer colors
-const LAYER_COLORS: Record<string, string> = {
-    business: '#8E44AD',
-    requirements: '#4A90D9',
-    risk: '#E74C3C',
-    functional: '#E67E22',
-    logical: '#7B68EE',
-    physical: '#95A5A6',
-    software: '#F39C12',
-    interfaces: '#1ABC9C',
-    verification: '#2ECC71',
-    ui: '#3498DB',
-};
 
 export function Sidebar() {
     const model = useModelStore(s => s.model);
@@ -30,11 +15,12 @@ export function Sidebar() {
     if (sidebarCollapsed) {
         return (
             <div
-                className="w-8 bg-slate-800 border-r border-slate-700 cursor-pointer flex items-start justify-center pt-4 hover:bg-slate-750"
+                className="w-10 cursor-pointer flex items-start justify-center pt-4"
+                style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}
                 onClick={toggleSidebar}
                 title="Expand sidebar"
             >
-                <span className="text-slate-500 text-xs transform -rotate-90 whitespace-nowrap mt-8">
+                <span className="text-xs transform -rotate-90 whitespace-nowrap mt-8" style={{ color: '#9CA3AF' }}>
                     Model Explorer
                 </span>
             </div>
@@ -42,30 +28,40 @@ export function Sidebar() {
     }
 
     return (
-        <div className="w-72 bg-slate-800 border-r border-slate-700 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
-                <div>
-                    <h1 className="text-sm font-semibold text-rose-400">MEMO</h1>
-                    <p className="text-xs text-slate-500">{elementCount} elements | {relCount} relationships</p>
+        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+            {/* Header with hero gradient */}
+            <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>MEMO</h1>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            {elementCount} elements &middot; {relCount} relationships
+                        </p>
+                    </div>
+                    <button
+                        onClick={toggleSidebar}
+                        className="text-xs px-1.5 py-0.5 rounded-md transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.5)' }}
+                        title="Collapse sidebar"
+                    >
+                        &#9664;
+                    </button>
                 </div>
-                <button
-                    onClick={toggleSidebar}
-                    className="text-slate-500 hover:text-slate-300 text-xs px-1"
-                    title="Collapse sidebar"
-                >
-                    ◀
-                </button>
             </div>
 
             {/* Search */}
-            <div className="px-3 py-2">
+            <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #E5E5E0' }}>
                 <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search elements..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-slate-300 placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                    className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-shadow"
+                    style={{
+                        background: '#F7F7F5',
+                        border: '1px solid #E5E5E0',
+                        color: '#1a1a1a',
+                    }}
                 />
             </div>
 
