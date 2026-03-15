@@ -89,7 +89,7 @@ memo dev
 
 ## Project Status
 
-MEMO is in active development. Phase 1 (parser, ontology, config) and Phase 2 (CLI, web app, live reload, validation) are complete. See the [Roadmap](development/roadmap.md) for what's next.
+MEMO is in active development. Phase 1 (parser, ontology, config) and Phase 2 (CLI, web app, live reload, validation) are complete. Phase 3 (polish & core features) is next, followed by Phase 4 (behavior viewpoint & functional flow analysis with DSM), Phase 5 (build, export & advanced features), Phase 6 (LLM integration), Phase 7 (ecosystem), and Phase 8 (CI & cloud). See the [Roadmap](development/roadmap.md) for details.
 
 ---
 
