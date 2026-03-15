@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { MEMOConfig } from './config.js';
+import type { MEMOConfig, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
 
@@ -39,6 +39,9 @@ export function loadConfig(filePath: string): MEMOConfig {
         projectType: parsed.projectType ?? 'device',
         extends: parsed.extends,
         ontologies: parsed.ontologies,
+        ontologyMetadata: parsed.ontologyMetadata,
+        externalOntologies: parsed.externalOntologies,
+        libraries: parsed.libraries,
         cosmaLayers: parsed.cosmaLayers ?? [],
         kinds: parsed.kinds ?? {},
         relationshipTypes: parsed.relationshipTypes ?? [],
@@ -70,27 +73,86 @@ export function resolveConfig(
     return mergeConfigs(resolvedParent, config);
 }
 
-/** Deep-merge parent into child. Child takes precedence. */
+/** Deduplicate an array by a key function. Last occurrence wins. */
+function dedup<T>(arr: T[], key: (item: T) => string): T[] {
+    const seen = new Map<string, T>();
+    for (const item of arr) {
+        seen.set(key(item), item);
+    }
+    return Array.from(seen.values());
+}
+
+/** Merge viewpoints: deduplicate by id, and merge diagrams within shared viewpoints */
+function mergeViewpoints(
+    parentVps: ViewpointDefinition[] | undefined,
+    childVps: ViewpointDefinition[] | undefined
+): ViewpointDefinition[] | undefined {
+    if (!parentVps && !childVps) return undefined;
+    if (!parentVps) return childVps;
+    if (!childVps) return parentVps;
+
+    const merged = new Map<string, ViewpointDefinition>();
+    for (const vp of parentVps) {
+        merged.set(vp.id, { ...vp });
+    }
+    for (const vp of childVps) {
+        if (merged.has(vp.id)) {
+            // Child overrides parent viewpoint, but merge diagrams
+            const parent = merged.get(vp.id)!;
+            const parentDiagrams = parent.diagrams ?? [];
+            const childDiagrams = vp.diagrams ?? [];
+            const mergedDiagrams = dedup(
+                [...parentDiagrams, ...childDiagrams],
+                d => d.id
+            );
+            merged.set(vp.id, {
+                ...vp,
+                diagrams: mergedDiagrams.length > 0 ? mergedDiagrams : undefined,
+                supportedDiagramTypes: vp.supportedDiagramTypes ?? parent.supportedDiagramTypes,
+            });
+        } else {
+            merged.set(vp.id, { ...vp });
+        }
+    }
+    return Array.from(merged.values());
+}
+
+/** Deep-merge parent into child. Child takes precedence. Arrays are deduped. */
 function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
     return {
         projectName: child.projectName,
         projectType: child.projectType,
         extends: child.extends,
         ontologies: child.ontologies ?? parent.ontologies,
-        cosmaLayers: [
-            ...(parent.cosmaLayers ?? []),
-            ...(child.cosmaLayers ?? []),
-        ],
+        ontologyMetadata: child.ontologyMetadata ?? parent.ontologyMetadata,
+        externalOntologies: [
+            ...(parent.externalOntologies ?? []),
+            ...(child.externalOntologies ?? []),
+        ].length > 0 ? [
+            ...(parent.externalOntologies ?? []),
+            ...(child.externalOntologies ?? []),
+        ] : undefined,
+        libraries: [
+            ...(parent.libraries ?? []),
+            ...(child.libraries ?? []),
+        ].length > 0 ? [
+            ...(parent.libraries ?? []),
+            ...(child.libraries ?? []),
+        ] : undefined,
+        cosmaLayers: dedup(
+            [...(parent.cosmaLayers ?? []), ...(child.cosmaLayers ?? [])],
+            l => l.id
+        ),
         kinds: { ...parent.kinds, ...child.kinds },
-        relationshipTypes: [
-            ...parent.relationshipTypes,
-            ...child.relationshipTypes,
-        ],
-        closureRules: [
-            ...parent.closureRules,
-            ...child.closureRules,
-        ],
-        viewpoints: child.viewpoints ?? parent.viewpoints,
+        relationshipTypes: dedup(
+            [...parent.relationshipTypes, ...child.relationshipTypes],
+            r => r.name
+        ),
+        closureRules: dedup(
+            [...parent.closureRules, ...child.closureRules],
+            r => r.id
+        ),
+        viewpoints: mergeViewpoints(parent.viewpoints, child.viewpoints),
         workflows: child.workflows ?? parent.workflows,
         firstRun: child.firstRun ?? parent.firstRun,
     };

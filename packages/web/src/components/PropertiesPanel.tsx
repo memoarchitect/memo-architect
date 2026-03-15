@@ -1,17 +1,132 @@
-import { useModelStore, getRelationshipsForElement } from '../store/model-store';
-import { LAYER_COLORS } from '../constants';
+import { useModelStore, getRelationshipsForElement, getDiagram } from '../store/model-store';
+import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
+
+function DiagramProperties() {
+    const model = useModelStore(s => s.model);
+    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const diagram = getDiagram(model, selectedDiagramId);
+
+    if (!diagram) return null;
+
+    const meta = DIAGRAM_TYPE_META[diagram.diagramType];
+    const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
+
+    return (
+        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+            {/* Header */}
+            <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${meta?.color || '#6B7280'}` }}>
+                <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
+                    {diagram.name}
+                </div>
+                <div className="flex items-center gap-2 text-xs mt-1.5">
+                    {meta && (
+                        <span className="px-2 py-0.5 rounded-md font-medium"
+                            style={{ background: meta.color + '18', color: meta.color }}>
+                            {meta.code}
+                        </span>
+                    )}
+                    <span style={{ color: '#9CA3AF' }}>{meta?.fullName || diagram.diagramType}</span>
+                </div>
+                {diagram.auto && (
+                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Auto-generated</div>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+                {/* Description */}
+                {diagram.description && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Description</div>
+                        <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>
+                            {diagram.description}
+                        </div>
+                    </div>
+                )}
+
+                {/* Metadata */}
+                <div className="p-4" style={sectionStyle}>
+                    <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Details</div>
+                    <div className="space-y-1.5">
+                        <div className="flex text-xs">
+                            <span className="min-w-[80px]" style={{ color: '#6B7280' }}>ID</span>
+                            <span className="truncate font-mono" style={{ color: '#1a1a1a', fontSize: '10px' }}>{diagram.id}</span>
+                        </div>
+                        <div className="flex text-xs">
+                            <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Viewpoint</span>
+                            <span style={{ color: '#1a1a1a' }}>{diagram.viewpointId}</span>
+                        </div>
+                        <div className="flex text-xs">
+                            <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Type</span>
+                            <span style={{ color: '#1a1a1a' }}>{diagram.diagramType}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Custom properties */}
+                {diagram.properties && Object.keys(diagram.properties).length > 0 && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Properties</div>
+                        <div className="space-y-1.5">
+                            {Object.entries(diagram.properties).map(([key, value]) => (
+                                <div key={key} className="flex text-xs">
+                                    <span className="min-w-[80px]" style={{ color: '#6B7280' }}>{key}</span>
+                                    <span className="truncate" style={{ color: '#1a1a1a' }}>{value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Element IDs filter */}
+                {diagram.elementIds && diagram.elementIds.length > 0 && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>
+                            Scoped Elements ({diagram.elementIds.length})
+                        </div>
+                        <div className="text-xs" style={{ color: '#6B7280' }}>
+                            {diagram.elementIds.join(', ')}
+                        </div>
+                    </div>
+                )}
+
+                {/* Relationship types filter */}
+                {diagram.relationshipTypes && diagram.relationshipTypes.length > 0 && (
+                    <div className="p-4">
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>
+                            Relationship Types
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                            {diagram.relationshipTypes.map(rt => (
+                                <span key={rt} className="px-1.5 py-0.5 rounded text-xs"
+                                    style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '10px' }}>
+                                    {rt}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export function PropertiesPanel() {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
+    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const validation = useModelStore(s => s.validation);
     const selectElement = useModelStore(s => s.selectElement);
+
+    // Show diagram properties when a diagram is selected and no element is selected
+    if (selectedDiagramId && !selectedElementId) {
+        return <DiagramProperties />;
+    }
 
     if (!selectedElementId || !model) {
         return (
             <div className="w-72 p-4 flex items-center justify-center" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
                 <span className="text-xs text-center" style={{ color: '#9CA3AF' }}>
-                    Select an element to view properties
+                    Select an element or diagram to view properties
                 </span>
             </div>
         );
@@ -88,7 +203,7 @@ export function PropertiesPanel() {
                     </div>
                 )}
 
-                {/* Relationships */}
+                {/* Relationships — enhanced with element kind */}
                 {relationships.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
                         <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>
@@ -97,6 +212,7 @@ export function PropertiesPanel() {
                         <div className="space-y-1">
                             {outgoing.map(rel => {
                                 const target = model.elements[rel.targetId];
+                                const tColor = target ? (LAYER_COLORS[target.layer] || '#666') : '#666';
                                 return (
                                     <div
                                         key={rel.id}
@@ -106,15 +222,24 @@ export function PropertiesPanel() {
                                         onClick={() => selectElement(rel.targetId)}
                                     >
                                         <span style={{ color: '#9CA3AF' }}>&rarr;</span>
-                                        <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                        <span className="px-1 py-0.5 rounded" style={{ color: '#2563EB', background: '#EFF6FF', fontSize: '10px' }}>
+                                            {rel.type}
+                                        </span>
                                         <span className="truncate" style={{ color: '#374151' }}>
                                             {target?.name || rel.targetId}
                                         </span>
+                                        {target && (
+                                            <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
+                                                style={{ background: tColor + '15', color: tColor, fontSize: '9px' }}>
+                                                {target.kind}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })}
                             {incoming.map(rel => {
                                 const source = model.elements[rel.sourceId];
+                                const sColor = source ? (LAYER_COLORS[source.layer] || '#666') : '#666';
                                 return (
                                     <div
                                         key={rel.id}
@@ -124,10 +249,18 @@ export function PropertiesPanel() {
                                         onClick={() => selectElement(rel.sourceId)}
                                     >
                                         <span style={{ color: '#9CA3AF' }}>&larr;</span>
-                                        <span style={{ color: '#10B981' }}>{rel.type}</span>
+                                        <span className="px-1 py-0.5 rounded" style={{ color: '#10B981', background: '#ECFDF5', fontSize: '10px' }}>
+                                            {rel.type}
+                                        </span>
                                         <span className="truncate" style={{ color: '#374151' }}>
                                             {source?.name || rel.sourceId}
                                         </span>
+                                        {source && (
+                                            <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
+                                                style={{ background: sColor + '15', color: sColor, fontSize: '9px' }}>
+                                                {source.kind}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })}

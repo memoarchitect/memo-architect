@@ -12,7 +12,8 @@ export type ServerMessage =
     | ModelUpdateMessage
     | ValidationUpdateMessage
     | CompletenessUpdateMessage
-    | ErrorMessage;
+    | ErrorMessage
+    | ImportResultMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -37,8 +38,97 @@ export interface ErrorMessage {
 // ─── Client → Server ────────────────────────────────────────────────────────
 
 export type ClientMessage =
-    | RequestRefreshMessage;
+    | RequestRefreshMessage
+    | ElementUpdateMessage
+    | AddRelationshipMessage
+    | CsvImportMessage
+    | DiagramCreateMessage
+    | DiagramUpdateMessage
+    | DiagramDeleteMessage;
 
 export interface RequestRefreshMessage {
     type: 'request:refresh';
+}
+
+/** Client requests an element field update (2-way sync) */
+export interface ElementUpdateMessage {
+    type: 'element:update';
+    payload: {
+        elementId: string;
+        doc?: string;
+        attributes?: Record<string, string>;
+    };
+}
+
+/** Client requests a new relationship between two elements */
+export interface AddRelationshipMessage {
+    type: 'relationship:add';
+    payload: {
+        sourceId: string;
+        targetId: string;
+        type: string;
+    };
+}
+
+/** Client sends CSV data for bulk import of elements and/or relationships */
+export interface CsvImportMessage {
+    type: 'csv:import';
+    payload: {
+        /** CSV text for elements (optional — can import only relationships) */
+        elementsCsv?: string;
+        /** CSV text for relationships (optional — can import only elements) */
+        relationshipsCsv?: string;
+        /** Target package name for generated SysML file */
+        packageName?: string;
+        /** Target .sysml file path (relative to project root) */
+        targetFile?: string;
+    };
+}
+
+/** Client creates a new user diagram under a viewpoint */
+export interface DiagramCreateMessage {
+    type: 'diagram:create';
+    payload: {
+        id: string;
+        name: string;
+        diagramType: string;
+        viewpointId: string;
+        description?: string;
+        properties?: Record<string, string>;
+        elementIds?: string[];
+        relationshipTypes?: string[];
+    };
+}
+
+/** Client updates an existing diagram's metadata */
+export interface DiagramUpdateMessage {
+    type: 'diagram:update';
+    payload: {
+        id: string;
+        name?: string;
+        description?: string;
+        properties?: Record<string, string>;
+        elementIds?: string[];
+        relationshipTypes?: string[];
+    };
+}
+
+/** Client deletes a user-created diagram */
+export interface DiagramDeleteMessage {
+    type: 'diagram:delete';
+    payload: { id: string };
+}
+
+/** Server responds with CSV import results */
+export interface ImportResultMessage {
+    type: 'import:result';
+    payload: {
+        success: boolean;
+        elementsImported: number;
+        relationshipsImported: number;
+        errors: string[];
+        warnings: string[];
+        /** Path to generated .sysml file */
+        generatedFile?: string;
+    };
 }

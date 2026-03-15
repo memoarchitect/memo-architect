@@ -46,6 +46,9 @@ export interface LayerCompleteness {
     percentage: number;
 }
 
+/** Per-element completeness status */
+export type ElementStatus = 'complete' | 'warning' | 'error';
+
 /** Overall completeness report */
 export interface CompletenessReport {
     /** Per-layer completeness */
@@ -56,4 +59,6 @@ export interface CompletenessReport {
     totalElements: number;
     /** Complete elements (no violations) */
     completeElements: number;
+    /** Per-element status: complete (no violations), warning (warnings only), error (has errors) */
+    elementStatus: Record<string, ElementStatus>;
 }

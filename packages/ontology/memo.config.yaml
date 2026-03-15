@@ -1,11 +1,501 @@
-# @memo/ontology — Base ontology configuration
-# Defines the shared SysML v2 type system. Domain configs (e.g. @memo/medical)
-# extend this to inherit relationship types and base kinds.
+# @memo/ontology — Base MBSE ontology configuration
+# Domain-agnostic systems engineering concepts. Domain configs (e.g. @memo/medical)
+# extend this to add domain-specific kinds, rules, and viewpoints.
+#
+# Contains universal MBSE concepts: business analysis, requirements, functional
+# analysis, logical/physical/software architecture, interfaces, and verification.
 
 projectName: "@memo/ontology"
 projectType: ontology
 
-cosmaLayers: []
-kinds: {}
-relationshipTypes: []
+ontologyMetadata:
+  id: "@memo/ontology"
+  version: "2.0.0"
+  description: "Base MBSE ontology with universal systems engineering concepts"
+  author: "SysAnd"
+  license: "Apache-2.0"
+  tags:
+    - mbse
+    - sysml-v2
+    - systems-engineering
+
+# ─── CoSMA Visualization Layers ───────────────────────────────────────────────
+
+cosmaLayers:
+  - id: business
+    label: Business Analysis
+    color: "#8E44AD"
+
+  - id: requirements
+    label: Requirements
+    color: "#4A90D9"
+
+  - id: functional
+    label: Functional Analysis
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical Architecture
+    color: "#7B68EE"
+
+  - id: physical
+    label: Physical Architecture
+    color: "#95A5A6"
+
+  - id: software
+    label: Software Architecture
+    color: "#F39C12"
+
+  - id: interfaces
+    label: Interfaces & Ports
+    color: "#1ABC9C"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"
+
+# ─── Entity Kind Definitions ──────────────────────────────────────────────────
+# Universal MBSE kinds that apply to any systems engineering domain.
+
+kinds:
+  # ── Business Analysis ────────────────────────────────────────────────────
+  Actor:
+    label: Actor
+    layer: business
+    sysmlConstruct: part def
+
+  Stakeholder:
+    label: Stakeholder
+    layer: business
+    sysmlConstruct: part def
+
+  Goal:
+    label: Goal
+    layer: business
+    sysmlConstruct: part def
+
+  Concern:
+    label: Concern
+    layer: business
+    sysmlConstruct: part def
+
+  Responsibility:
+    label: Responsibility
+    layer: business
+    sysmlConstruct: part def
+
+  Capability:
+    label: Capability
+    layer: business
+    sysmlConstruct: part def
+
+  # ── Requirements ─────────────────────────────────────────────────────────
+  UserNeed:
+    label: User Need
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SystemRequirement:
+    label: System Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SoftwareRequirement:
+    label: Software Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  HardwareRequirement:
+    label: Hardware Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  DesignSpecification:
+    label: Design Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  OtherRequirement:
+    label: Other Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  Standard:
+    label: Standard
+    layer: requirements
+    sysmlConstruct: part def
+
+  RegulatoryRequirement:
+    label: Regulatory Requirement
+    layer: requirements
+    sysmlConstruct: part def
+
+  # ── Functional Analysis ──────────────────────────────────────────────────
+  SystemFunction:
+    label: System Function
+    layer: functional
+    sysmlConstruct: action def
+
+  ComponentFunction:
+    label: Component Function
+    layer: functional
+    sysmlConstruct: action def
+
+  UserActivity:
+    label: User Activity
+    layer: functional
+    sysmlConstruct: action def
+
+  UseCase:
+    label: Use Case
+    layer: functional
+    sysmlConstruct: part def
+
+  Scenario:
+    label: Scenario
+    layer: functional
+    sysmlConstruct: action def
+
+  # ── Logical Architecture ─────────────────────────────────────────────────
+  System:
+    label: System
+    layer: logical
+    sysmlConstruct: part def
+
+  SystemExternal:
+    label: External System
+    layer: logical
+    sysmlConstruct: part def
+
+  Subsystem:
+    label: Subsystem
+    layer: logical
+    sysmlConstruct: part def
+
+  Component:
+    label: Component
+    layer: logical
+    sysmlConstruct: part def
+
+  LogicalComponent:
+    label: Logical Component
+    layer: logical
+    sysmlConstruct: part def
+
+  LogicalComponentExternal:
+    label: External Logical Component
+    layer: logical
+    sysmlConstruct: part def
+
+  EnvironmentElement:
+    label: Environment Element
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureDecision:
+    label: Architecture Decision
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureRationale:
+    label: Architecture Rationale
+    layer: logical
+    sysmlConstruct: part def
+
+  QualityAttribute:
+    label: Quality Attribute
+    layer: logical
+    sysmlConstruct: part def
+
+  Question:
+    label: Question
+    layer: logical
+    sysmlConstruct: part def
+
+  # ── Physical Architecture ────────────────────────────────────────────────
+  PhysicalComponent:
+    label: Physical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  ElectricalComponent:
+    label: Electrical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  MechanicalComponent:
+    label: Mechanical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  PhysicalModule:
+    label: Physical Module
+    layer: physical
+    sysmlConstruct: part def
+
+  HardwareNode:
+    label: Hardware Node
+    layer: physical
+    sysmlConstruct: part def
+
+  ComputingDevice:
+    label: Computing Device
+    layer: physical
+    sysmlConstruct: part def
+
+  # ── Software Architecture ────────────────────────────────────────────────
+  Software:
+    label: Software
+    layer: software
+    sysmlConstruct: part def
+
+  SoftwareComponent:
+    label: Software Component
+    layer: software
+    sysmlConstruct: part def
+
+  SoftwareModule:
+    label: Software Module
+    layer: software
+    sysmlConstruct: part def
+
+  # ── Interfaces & Ports ───────────────────────────────────────────────────
+  Port:
+    label: Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortEthernet:
+    label: Ethernet Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortUSB:
+    label: USB Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortSerial:
+    label: Serial Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortPower:
+    label: Power Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  Interface:
+    label: Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareInterface:
+    label: Software Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareProvidedInterface:
+    label: Provided Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareRequiredInterface:
+    label: Required Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  DataType:
+    label: Data Type
+    layer: interfaces
+    sysmlConstruct: attribute def
+
+  # ── Verification ─────────────────────────────────────────────────────────
+  Test:
+    label: Test
+    layer: verification
+    sysmlConstruct: part def
+
+# ─── Relationship Type Definitions ────────────────────────────────────────────
+# Universal relationship types for systems engineering.
+
+relationshipTypes:
+  - name: aggregation
+    label: Aggregation
+    layer: logical
+    color: "#7B68EE"
+
+  - name: association
+    label: Association
+    layer: logical
+    color: "#9B59B6"
+
+  - name: traceTo
+    label: Trace To
+    layer: requirements
+    color: "#4A90D9"
+
+  - name: trace
+    label: Trace
+    layer: requirements
+    color: "#3498DB"
+
+  - name: allocateTo
+    label: Allocate To
+    layer: functional
+    color: "#E67E22"
+
+  - name: composedOf
+    label: Composed Of
+    layer: logical
+    color: "#8E44AD"
+
+  - name: dependency
+    label: Dependency
+    layer: logical
+    color: "#95A5A6"
+
+  - name: realization
+    label: Realization
+    layer: logical
+    color: "#2C3E50"
+
+  - name: satisfy
+    label: Satisfies
+    layer: requirements
+    color: "#2ECC71"
+
+  - name: verify
+    label: Verifies
+    layer: verification
+    color: "#27AE60"
+
+  - name: extend
+    label: Extends
+    layer: functional
+    color: "#F39C12"
+
+  - name: include
+    label: Includes
+    layer: functional
+    color: "#F1C40F"
+
+# ─── Backward-Compatible Flat Relationship List ──────────────────────────────
+
+relationships:
+  - aggregation
+  - association
+  - traceTo
+  - trace
+  - allocateTo
+  - composedOf
+  - dependency
+  - realization
+  - satisfy
+  - verify
+  - extend
+  - include
+
+# ─── Viewpoints ───────────────────────────────────────────────────────────────
+# Universal viewpoints for systems engineering.
+
+viewpoints:
+  - id: architecture-view
+    label: System Architecture
+    supportedDiagramTypes: [bdd, ibd, act, pkg]
+    visibleKinds:
+      - System
+      - SystemExternal
+      - Subsystem
+      - Component
+      - LogicalComponent
+      - LogicalComponentExternal
+      - SystemFunction
+      - ComponentFunction
+    visibleRelationships:
+      - aggregation
+      - composedOf
+      - allocateTo
+      - association
+    visibleLayers:
+      - logical
+      - functional
+    diagrams:
+      - id: diag-arch-allocation
+        name: Functional Allocation
+        diagramType: bdd
+        viewpointId: architecture-view
+        auto: true
+        description: Functions allocated to logical components
+
+  - id: requirements-trace
+    label: Requirements Traceability
+    supportedDiagramTypes: [req, pkg]
+    visibleKinds:
+      - UserNeed
+      - SystemRequirement
+      - SoftwareRequirement
+      - HardwareRequirement
+      - DesignSpecification
+    visibleRelationships:
+      - traceTo
+      - trace
+      - satisfy
+    visibleLayers:
+      - requirements
+    diagrams:
+      - id: diag-req-traceability
+        name: Traceability Chain
+        diagramType: req
+        viewpointId: requirements-trace
+        auto: true
+        description: UserNeed to SystemReq to SoftwareReq trace chain
+
+  - id: use-case-view
+    label: Use Case View
+    supportedDiagramTypes: [ucd, act, pkg]
+    visibleKinds:
+      - Actor
+      - UseCase
+      - Scenario
+      - UserActivity
+      - UserNeed
+    visibleRelationships:
+      - association
+      - traceTo
+      - extend
+      - include
+    visibleLayers:
+      - business
+      - functional
+    diagrams:
+      - id: diag-uc-overview
+        name: Use Case Overview
+        diagramType: ucd
+        viewpointId: use-case-view
+        auto: true
+        description: Actors and use cases with associations
+
+  - id: v-and-v
+    label: Verification & Validation
+    supportedDiagramTypes: [req, par, pkg]
+    visibleKinds:
+      - Test
+      - SystemRequirement
+      - SoftwareRequirement
+    visibleRelationships:
+      - verify
+      - satisfy
+      - traceTo
+    visibleLayers:
+      - verification
+      - requirements
+    diagrams:
+      - id: diag-vv-coverage
+        name: Test Coverage
+        diagramType: req
+        viewpointId: v-and-v
+        auto: true
+        description: Requirements verified by tests
+
 closureRules: []

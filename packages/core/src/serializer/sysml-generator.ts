@@ -1,0 +1,107 @@
+// ─── SysML v2 Text Generator ─────────────────────────────────────────────────
+//
+// Generates valid SysML v2 text from imported elements and relationships.
+// Used by CSV import to produce .sysml files that the parser can roundtrip.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { CsvElement, CsvRelationship } from './csv-io.js';
+
+// Generate a SysML usage block for a single element.
+// Example: requirement hazard_001 : Hazard { doc /​* text *​/ attribute redefines name = "..."; }
+export function generateUsage(element: CsvElement): string {
+    const lines: string[] = [];
+    const indent = '    ';
+
+    // Usage header: <construct> <id> : <kind> {
+    lines.push(`${element.construct} ${element.id} : ${element.kind} {`);
+
+    // Doc comment
+    if (element.doc) {
+        lines.push(`${indent}doc /* ${element.doc} */`);
+    }
+
+    // Name attribute (always emit if different from id)
+    if (element.name && element.name !== element.id) {
+        lines.push(`${indent}attribute redefines name = "${escapeString(element.name)}";`);
+    }
+
+    // Dynamic attributes
+    for (const [key, value] of Object.entries(element.attributes)) {
+        if (key === 'name') continue; // already handled above
+        lines.push(`${indent}attribute redefines ${key} = "${escapeString(value)}";`);
+    }
+
+    lines.push('}');
+    return lines.join('\n');
+}
+
+/**
+ * Generate a SysML connection usage for a relationship.
+ *
+ * Example output:
+ * ```sysml
+ * connection : Mitigates connect control ::> risk_control_001 to hazard ::> hazard_001;
+ * ```
+ */
+export function generateConnection(rel: CsvRelationship): string {
+    const typeName = capitalizeFirst(rel.type);
+    return `connection : ${typeName} connect ${rel.sourceEnd} ::> ${rel.sourceId} to ${rel.targetEnd} ::> ${rel.targetId};`;
+}
+
+/**
+ * Generate a complete .sysml file from elements and relationships.
+ *
+ * @param elements - Parsed elements from CSV
+ * @param relationships - Parsed relationships from CSV
+ * @param packageName - SysML package name (e.g. "imported_elements")
+ */
+export function generateFile(
+    elements: CsvElement[],
+    relationships: CsvRelationship[],
+    packageName: string
+): string {
+    const lines: string[] = [];
+
+    lines.push(`package ${packageName} {`);
+    lines.push('');
+
+    // Group elements by kind for readability
+    const byKind = new Map<string, CsvElement[]>();
+    for (const el of elements) {
+        if (!byKind.has(el.kind)) byKind.set(el.kind, []);
+        byKind.get(el.kind)!.push(el);
+    }
+
+    for (const [kind, kindElements] of byKind) {
+        lines.push(`    // ── ${kind} ──`);
+        for (const el of kindElements) {
+            const usageLines = generateUsage(el).split('\n');
+            for (const ul of usageLines) {
+                lines.push(`    ${ul}`);
+            }
+            lines.push('');
+        }
+    }
+
+    // Relationships
+    if (relationships.length > 0) {
+        lines.push('    // ── Relationships ──');
+        for (const rel of relationships) {
+            lines.push(`    ${generateConnection(rel)}`);
+        }
+        lines.push('');
+    }
+
+    lines.push('}');
+    return lines.join('\n') + '\n';
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function escapeString(s: string): string {
+    return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function capitalizeFirst(s: string): string {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}

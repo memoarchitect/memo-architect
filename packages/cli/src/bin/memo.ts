@@ -8,6 +8,8 @@
 //   memo build          — Build static HTML site with embedded model
 //   memo export json    — Export model as JSON
 //   memo export dot     — Export model as Graphviz DOT
+//   memo ontology show  — Show resolved ontology summary
+//   memo ontology export— Export ontology as OWL/RDF
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Command } from 'commander';
@@ -16,6 +18,8 @@ import { devCommand } from '../commands/dev.js';
 import { initCommand } from '../commands/init.js';
 import { buildCommand } from '../commands/build.js';
 import { exportJsonCommand, exportDotCommand } from '../commands/export.js';
+import { ontologyShowCommand, ontologyExportOwlCommand } from '../commands/ontology.js';
+import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
 
 const program = new Command();
 
@@ -82,6 +86,78 @@ exportCmd
     .option('--viewpoint <id>', 'Filter by viewpoint ID')
     .action(async (options: { output: string; viewpoint?: string }) => {
         await exportDotCommand(options);
+    });
+
+// ─── memo ontology ──────────────────────────────────────────────────────────
+
+const ontologyCmd = program
+    .command('ontology')
+    .description('Ontology management commands');
+
+ontologyCmd
+    .command('show')
+    .description('Show resolved ontology summary (kinds, relationships, rules)')
+    .action(async () => {
+        await ontologyShowCommand();
+    });
+
+const ontologyExportCmd = ontologyCmd
+    .command('export')
+    .description('Export ontology to standard formats');
+
+ontologyExportCmd
+    .command('owl')
+    .description('Export ontology as OWL/RDF (Turtle)')
+    .option('-o, --output <file>', 'Output file path')
+    .option('--namespace <uri>', 'Ontology namespace URI', 'https://sysand.dev/ontology/memo#')
+    .action(async (options: { output?: string; namespace?: string }) => {
+        await ontologyExportOwlCommand({ ...options, format: 'turtle' });
+    });
+
+ontologyExportCmd
+    .command('xml')
+    .description('Export ontology as OWL/RDF (XML)')
+    .option('-o, --output <file>', 'Output file path')
+    .option('--namespace <uri>', 'Ontology namespace URI', 'https://sysand.dev/ontology/memo#')
+    .action(async (options: { output?: string; namespace?: string }) => {
+        await ontologyExportOwlCommand({ ...options, format: 'xml' });
+    });
+
+// ─── memo import ──────────────────────────────────────────────────────────
+
+const importCmd = program
+    .command('import')
+    .description('Import elements and relationships from CSV files');
+
+importCmd
+    .command('csv')
+    .description('Import elements from a CSV file (generates .sysml)')
+    .argument('<file>', 'CSV file path')
+    .option('-o, --output <file>', 'Output .sysml file path')
+    .option('--package <name>', 'SysML package name')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (file: string, options: { output?: string; package?: string; dryRun?: boolean }) => {
+        await importCsvCommand(file, options);
+    });
+
+importCmd
+    .command('csv-rel')
+    .description('Import relationships from a CSV file (generates .sysml)')
+    .argument('<file>', 'CSV file path')
+    .option('-o, --output <file>', 'Output .sysml file path')
+    .option('--package <name>', 'SysML package name')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (file: string, options: { output?: string; package?: string; dryRun?: boolean }) => {
+        await importRelCsvCommand(file, options);
+    });
+
+importCmd
+    .command('template')
+    .description('Generate a template CSV based on the ontology (elements or relationships)')
+    .argument('<type>', 'Template type: "elements" or "relationships"')
+    .option('-o, --output <file>', 'Output CSV file path')
+    .action(async (type: string, options: { output?: string }) => {
+        await importTemplateCommand(type, options);
     });
 
 program.parse();

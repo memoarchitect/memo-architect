@@ -32,73 +32,96 @@
 - [x] Config resolver for `@memo/ontology` extends chain
 - [x] 69 tests passing (60 core + 9 CLI E2E)
 
+### Phase 3 — Modular Ontology & Multi-Mode Web App
+
+- [x] **Modular ontology architecture** — Base `@memo/ontology` (45 kinds, 8 layers, 12 relationships, 4 viewpoints) + `@memo/medical` extends with domain-specific additions
+- [x] **Ontology metadata** — `OntologyMetadata` type with id, version, description, author, license, tags
+- [x] **Config merge deduplication** — `dedup()` for cosmaLayers (by id), relationshipTypes (by name), closureRules (by id)
+- [x] **External ontology types** — `ExternalOntologyRef` and `LibraryRef` type definitions for future OWL/JSON-LD/SysAnd imports
+- [x] **4-mode web app** — Mode switcher with Catalog, Diagram, Scenarios, Ontology tabs
+- [x] **Catalog Explorer** — Tree browser with layer/kind/file grouping, element detail center panel, properties panel
+- [x] **Diagramming mode** — Viewpoint-first sidebar (ViewpointBrowser), ELK.js diagram canvas, properties panel
+- [x] **Scenario Catalog** — Filters Scenario/UseCase/UserActivity elements, grouped tree, linked elements
+- [x] **Ontology Viewer** — Tree View + Graph View, grouping by layer/construct/source, show/hide groups, 45 kinds across 11 groups
+- [x] **OWL/RDF export** — `exportToOwlTurtle()` and `exportToOwlXml()` in `@memo/ontology`
+- [x] **Ontology CLI commands** — `memo ontology show`, `memo ontology export owl`, `memo ontology export xml`
+- [x] **Properties panel** — Shared across modes with element attributes, relationships (clickable navigation), violations/guidance
+
+### Phase 4A — CSV Import/Export & SysML Generation
+
+- [x] **CSV import/export module** — Ontology-aware CSV parsing with kind validation, construct auto-derivation, dynamic attribute columns
+- [x] **SysML generator** — Generate valid SysML v2 files from imported CSV elements and relationships
+- [x] **CSV CLI commands** — `memo import csv`, `memo import csv-rel`, `memo import template`
+- [x] **CSV template generation** — Auto-generate CSV templates from ontology kinds and relationship types
+- [x] **WebSocket CSV import protocol** — `csv:import` client→server and `import:result` server→client messages
+- [x] **22 tests** for CSV roundtrip, validation, edge cases, SysML generation
+
 ---
 
 ## In Progress / Next Up
 
-### Phase 3 — Polish & Core Features
+### Phase 4 — Multi-File SysML & Cross-File Resolution
 
-- [ ] **CoSMA layer toggle UI** — Layer DTOs are sent to the client but no toggle UI lets you show/hide individual layers
-- [ ] **Sidebar viewpoint-aware filtering** — ModelExplorer doesn't filter by viewpoint yet (only the diagram does)
-- [ ] **Diagram node custom components** — Currently uses styled divs; should have proper node components with icons and kind badges
-- [ ] **Edge labels and tooltips** — Relationship edges show type labels but no hover tooltips with details
-- [ ] **Element detail panel** — Click an element in the diagram to see full attributes, relationships, and violations
+- [ ] **Cross-file import resolution** — Build package registry from parsed documents, resolve `ImportDeclaration` paths
+- [ ] **SysML v2 `library` keyword** — Mark packages as `library package` (definitions only, no instances)
+- [ ] **Wildcard and named imports** — Support both `::*` and `::SpecificType` import syntax
+- [ ] **Multi-file model splitting** — Convention for splitting device models across files (risk, requirements, architecture)
 
-### Phase 4 — Behavior Viewpoint & Functional Flow Analysis
+### Phase 5 — Behavior Viewpoint & Functional Flow Analysis
 
-#### 4a. Functional Flow Diagram
+#### 5a. Functional Flow Diagram
 - [ ] **`FunctionalFlow` relationship type** — Source function → target function, with flow type (information/energy/matter)
 - [ ] **`OperationalFlow` relationship type** — User activity ↔ system function flows
 - [ ] **Behavior Viewpoint** — New viewpoint showing `UserActivity`, `SystemFunction`, `ComponentFunction`, `Scenario` with flow relationships
 - [ ] **Directed graph rendering** — Left-to-right sequential flow with swim lanes for user vs. system
 - [ ] **Flow annotations** — Data/signal labels on edges
 
-#### 4b. Functional Breakdown Structure (FBS)
+#### 5b. Functional Breakdown Structure (FBS)
 - [ ] **`decomposedBy` relationship type** — Parent function → child function decomposition
 - [ ] **FBS tree diagram** — Hierarchical decomposition view of system functions
 - [ ] **View toggle** — Switch between FBS tree view and functional flow view within the Behavior Viewpoint
 
-#### 4c. DSM Analysis
-- [ ] **DSM matrix computation** — Build N×N matrix from `FunctionalFlow` relationships (rows/columns = functions, cells = dependencies)
+#### 5c. DSM Analysis
+- [ ] **DSM matrix computation** — Build N×N matrix from `FunctionalFlow` relationships
 - [ ] **Interactive DSM view** — Color-coded matrix in the web app with hover details
-- [ ] **Clustering algorithm** — Component-based DSM partitioning to suggest function groupings → logical subsystem candidates
-- [ ] **Allocation overlay** — Show which functions are allocated to which subsystem; highlight unallocated functions and cross-subsystem flows
+- [ ] **Clustering algorithm** — Component-based DSM partitioning to suggest function groupings
+- [ ] **Allocation overlay** — Show which functions are allocated to which subsystem
 
-#### 4d. Functional ↔ Logical Consistency
-- [ ] **Closure rule**: "Every SystemFunction must have at least one FunctionalFlow" (warning)
-- [ ] **Closure rule**: "Every AllocateTo target must be a Subsystem or LogicalComponent"
-- [ ] **Consistency analysis**: Cross-subsystem functional flows must have corresponding logical interfaces (per Samares pattern)
-- [ ] **Consistency visualization** — Overlay functional flows on logical architecture, highlighting missing logical interfaces
+#### 5d. Functional ↔ Logical Consistency
+- [ ] **Closure rules** for functional flow and allocation consistency
+- [ ] **Consistency visualization** — Overlay functional flows on logical architecture
 
-### Phase 5 — Build, Export & Advanced Features
+### Phase 6 — Build, Export & Advanced Features
 
-- [ ] **`memo build` command** — Static HTML report with embedded diagram for sharing
-- [ ] **`.kpar` packaging** — Package model as SysAnd-compatible archive (script exists in `@memo/ontology`)
-- [ ] **PDF export** — Generate compliance documentation PDF
-- [ ] **Workflow wizard** — Guided step-by-step workflows (placeholder at `packages/web/src/workflows/`)
-- [ ] **Ontology editor** — Visual editor for kinds and relationships (placeholder at `packages/web/src/ontology-editor/`)
+- [ ] **`memo build` command** — Static HTML report with embedded diagram
+- [ ] **`.kpar` packaging** — SysAnd-compatible archive
+- [ ] **PDF export** — Compliance documentation PDF
+- [ ] **Ontology editor** — Visual editor for kinds and relationships
+- [ ] **Scenario editor** — Text-driven scenario editor with element linking, future diagram sync
 - [ ] **Multi-file navigation** — Click-through from diagram to source `.sysml` file and line
-- [ ] **Diff view** — Show what changed between rebuilds
+- [ ] **Diff view** — Show changes between rebuilds
 - [ ] **VS Code extension** — Language server with autocomplete, go-to-definition, diagnostics
 
-### Phase 6 — LLM Integration
+### Phase 7 — LLM Integration
 
-- [ ] **Model Q&A** — Ask natural language questions about the model ("Which hazards have no risk control?", "Show me all unverified requirements")
-- [ ] **Completeness assistant** — LLM suggests missing elements, relationships, or attributes based on closure rule violations
-- [ ] **Model generation** — Generate SysML v2 elements from natural language descriptions ("Add a hazard for battery overheating")
-- [ ] **Impact analysis** — "If I change this requirement, what tests and risk controls are affected?"
-- [ ] **Report drafting** — LLM generates regulatory narratives from model data (e.g., ISO 14971 risk report sections)
+- [ ] **Model Q&A** — Natural language questions about the model
+- [ ] **Completeness assistant** — LLM suggests missing elements based on closure rule violations
+- [ ] **Model generation** — Generate SysML v2 from natural language descriptions
+- [ ] **Impact analysis** — Change propagation analysis
+- [ ] **Report drafting** — LLM generates regulatory narratives from model data
 
-### Phase 7 — Ecosystem
+### Phase 8 — Ecosystem
 
 - [ ] **Additional domain packages** — Automotive (ISO 26262), aerospace (DO-178C)
 - [ ] **Plugin system** — Custom rule types, visualizations, exporters
+- [ ] **Element libraries** — Reusable standard component libraries (USB, Logging, PowerDown)
+- [ ] **External ontology imports** — OWL/JSON-LD/SysAnd ontology integration
 - [ ] **Import from EA/Cameo** — Migration tools from Enterprise Architect or Cameo
 
-### Phase 8 — CI & Cloud
+### Phase 9 — CI & Cloud
 
-- [ ] **CI integration** — `memo validate` returns exit code 1 on errors; wire into GitHub Actions
-- [ ] **Cloud deployment** — Hosted version with user accounts and project storage
+- [ ] **CI integration** — `memo validate` returns exit code 1 on errors; GitHub Actions
+- [ ] **Cloud deployment** — Hosted version with user accounts
 - [ ] **Collaboration** — Multi-user editing with conflict resolution
 
 ---
@@ -107,6 +130,6 @@
 
 | Issue | Priority | Notes |
 |---|---|---|
-| Web bundle size (1.7 MB) | Low | Consider code splitting for ReactFlow/ELK |
+| Web bundle size (1.8 MB) | Low | Consider code splitting for ReactFlow/ELK |
 | No web component tests | Medium | `@memo/web` has no test infrastructure yet |
-| Hardcoded layer colors in layout.ts | Low | Should read from `cosmaLayers` in the DTO |
+| Small viewport layout overlap | Low | 3-panel layouts need min-width breakpoints |

@@ -95,6 +95,31 @@ export interface RuleCondition {
     values: string[];
 }
 
+/** SysML v2 diagram type classification */
+export type DiagramType = 'bdd' | 'ibd' | 'req' | 'ucd' | 'act' | 'pkg' | 'par' | 'risk';
+
+/** Diagram definition — a named, typed view within a viewpoint */
+export interface DiagramDefinition {
+    /** Unique diagram identifier, e.g. "diag-risk-chain" */
+    id: string;
+    /** Human-readable name, e.g. "Risk Mitigation Chain" */
+    name: string;
+    /** SysML v2 diagram type */
+    diagramType: DiagramType;
+    /** Parent viewpoint ID this diagram belongs to */
+    viewpointId: string;
+    /** Whether this diagram is auto-generated from the viewpoint */
+    auto: boolean;
+    /** Description / purpose of this diagram (used in doc generation) */
+    description?: string;
+    /** Additional metadata properties (free-form, for doc generation) */
+    properties?: Record<string, string>;
+    /** Optional override: specific element IDs to include (subset of viewpoint) */
+    elementIds?: string[];
+    /** Optional override: specific relationship types to show */
+    relationshipTypes?: string[];
+}
+
 /** Viewpoint definition for filtered model views */
 export interface ViewpointDefinition {
     /** Unique viewpoint identifier */
@@ -107,6 +132,10 @@ export interface ViewpointDefinition {
     visibleRelationships: string[];
     /** CoSMA layers visible in this viewpoint */
     visibleLayers: string[];
+    /** SysML v2 diagram types supported by this viewpoint */
+    supportedDiagramTypes?: DiagramType[];
+    /** Auto-generated diagrams for this viewpoint */
+    diagrams?: DiagramDefinition[];
 }
 
 /** Guided workflow step for wizard-like interactions */
@@ -149,6 +178,42 @@ export interface OntologyReference {
     version: string;
 }
 
+/** Self-describing metadata for an ontology package */
+export interface OntologyMetadata {
+    /** Package identifier, e.g. "@memo/ontology" */
+    id: string;
+    /** Semver version */
+    version: string;
+    /** Human-readable description */
+    description: string;
+    /** Author or organization */
+    author?: string;
+    /** License identifier, e.g. "Apache-2.0" */
+    license?: string;
+    /** Searchable tags, e.g. ["medical", "ISO-14971"] */
+    tags?: string[];
+}
+
+/** Reference to an external ontology (OWL, JSON-LD, or SysAnd format) */
+export interface ExternalOntologyRef {
+    /** Import format */
+    source: 'owl' | 'jsonld' | 'sysand';
+    /** File path or URL to the ontology */
+    uri: string;
+    /** Namespace prefix, e.g. "fma" */
+    prefix: string;
+    /** Import only these classes/concepts (empty = import all) */
+    subset?: string[];
+}
+
+/** Reference to a reusable element library */
+export interface LibraryRef {
+    /** Package name, e.g. "@sysand/std-library" */
+    package: string;
+    /** Import only these categories, e.g. ["USB", "Logging"] */
+    categories?: string[];
+}
+
 /**
  * MEMOConfig — the complete project/domain configuration.
  *
@@ -168,6 +233,15 @@ export interface MEMOConfig {
 
     /** Ontology references (device projects only) */
     ontologies?: OntologyReference[];
+
+    /** Self-describing metadata for ontology packages */
+    ontologyMetadata?: OntologyMetadata;
+
+    /** External ontology imports (OWL, JSON-LD, SysAnd) */
+    externalOntologies?: ExternalOntologyRef[];
+
+    /** Reusable element library imports */
+    libraries?: LibraryRef[];
 
     /** CoSMA visualization layers */
     cosmaLayers?: CosmaLayer[];

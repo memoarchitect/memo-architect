@@ -85,6 +85,20 @@ export interface ViewpointDTO {
     visibleKinds: string[];
     visibleRelationships: string[];
     visibleLayers: string[];
+    supportedDiagramTypes?: string[];
+}
+
+/** Diagram definition (serializable for WebSocket transport) */
+export interface DiagramDTO {
+    id: string;
+    name: string;
+    diagramType: string;
+    viewpointId: string;
+    auto: boolean;
+    description?: string;
+    properties?: Record<string, string>;
+    elementIds?: string[];
+    relationshipTypes?: string[];
 }
 
 /** CoSMA layer info (serializable subset of config) */
@@ -92,6 +106,20 @@ export interface CosmaLayerDTO {
     id: string;
     label: string;
     color: string;
+}
+
+/** Model metadata for version/attribution */
+export interface ModelMetadata {
+    /** Project name from config */
+    projectName?: string;
+    /** Semantic version (from config or auto-incremented) */
+    version?: string;
+    /** Git user name (from git config) */
+    gitUser?: string;
+    /** Git branch name */
+    gitBranch?: string;
+    /** Last commit short hash */
+    gitCommitShort?: string;
 }
 
 /** Serializable version of MemoModel for JSON transport */
@@ -103,12 +131,16 @@ export interface MemoModelDTO {
     viewpoints?: ViewpointDTO[];
     /** CoSMA layer definitions from config */
     cosmaLayers?: CosmaLayerDTO[];
+    /** Diagram definitions from config viewpoints */
+    diagrams?: DiagramDTO[];
+    /** Model metadata for versioning and attribution */
+    metadata?: ModelMetadata;
 }
 
 /** Convert MemoModel to a plain JSON-serializable object */
 export function modelToDTO(
     model: MemoModel,
-    options?: { viewpoints?: ViewpointDTO[]; cosmaLayers?: CosmaLayerDTO[] }
+    options?: { viewpoints?: ViewpointDTO[]; cosmaLayers?: CosmaLayerDTO[]; diagrams?: DiagramDTO[] }
 ): MemoModelDTO {
     const elements: Record<string, MemoElement> = {};
     for (const [id, el] of model.elements) {
@@ -120,6 +152,7 @@ export function modelToDTO(
         errors: model.errors,
         viewpoints: options?.viewpoints,
         cosmaLayers: options?.cosmaLayers,
+        diagrams: options?.diagrams,
     };
 }
 

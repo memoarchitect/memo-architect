@@ -107,3 +107,23 @@ export function requestRefresh(): void {
         ws.send(JSON.stringify({ type: 'request:refresh' }));
     }
 }
+
+/** Send an element update to the CLI server for 2-way sync */
+export function sendElementUpdate(elementId: string, update: { doc?: string; attributes?: Record<string, string> }): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'element:update',
+            payload: { elementId, ...update },
+        }));
+    }
+}
+
+/** Send a new relationship request to the CLI server */
+export function sendAddRelationship(sourceId: string, targetId: string, relType: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'relationship:add',
+            payload: { sourceId, targetId, type: relType },
+        }));
+    }
+}

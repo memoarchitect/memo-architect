@@ -8,14 +8,28 @@
 
 import { resolve } from 'node:path';
 import { readdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
 import { evaluateClosureRules } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
-import type { ServerMessage, ViewpointDTO, CosmaLayerDTO } from '@memo/core';
+import type { ServerMessage, ViewpointDTO, CosmaLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { createDevServer } from '../server/dev-server.js';
 import { createFileWatcher } from '../server/file-watcher.js';
+
+/** Gather git info for model metadata */
+function getGitInfo(cwd: string): Partial<ModelMetadata> {
+    const git = (cmd: string) => {
+        try { return execSync(cmd, { cwd, encoding: 'utf8', timeout: 3000 }).trim(); }
+        catch { return undefined; }
+    };
+    return {
+        gitUser: git('git config user.name') || undefined,
+        gitBranch: git('git rev-parse --abbrev-ref HEAD') || undefined,
+        gitCommitShort: git('git rev-parse --short HEAD') || undefined,
+    };
+}
 
 function findSysmlFiles(dir: string): string[] {
     const files: string[] = [];
@@ -48,12 +62,15 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     }
 
     const config = loadAndResolveConfig(configPath);
+    const gitInfo = getGitInfo(cwd);
+    let buildCount = 0;
     console.log(chalk.gray(`Project: ${config.projectName}`));
 
     // 2. Initial parse + build
     async function rebuild(): Promise<{
         messages: ServerMessage[];
     }> {
+        buildCount++;
         const sysmlFiles = findSysmlFiles(cwd);
         const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
         const model = buildMemoModel(documents, config, errors);
@@ -72,7 +89,43 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             visibleKinds: vp.visibleKinds,
             visibleRelationships: vp.visibleRelationships,
             visibleLayers: vp.visibleLayers,
+            supportedDiagramTypes: vp.supportedDiagramTypes,
         }));
+
+        // Collect all diagrams from viewpoints + Model Viewpoint auto-diagrams
+        const diagrams: DiagramDTO[] = [
+            // Model Viewpoint auto-diagrams
+            {
+                id: 'diag-model-context', name: 'System Context', diagramType: 'bdd',
+                viewpointId: '__model', auto: true,
+                description: 'Top-level system with external actors and systems',
+            },
+            {
+                id: 'diag-model-decomposition', name: 'System Decomposition', diagramType: 'bdd',
+                viewpointId: '__model', auto: true,
+                description: 'System broken down into subsystems and components',
+            },
+        ];
+        // Add diagrams from config viewpoints
+        if (config.viewpoints) {
+            for (const vp of config.viewpoints) {
+                if (vp.diagrams) {
+                    for (const d of vp.diagrams) {
+                        diagrams.push({
+                            id: d.id,
+                            name: d.name,
+                            diagramType: d.diagramType,
+                            viewpointId: d.viewpointId,
+                            auto: d.auto,
+                            description: d.description,
+                            properties: d.properties,
+                            elementIds: d.elementIds,
+                            relationshipTypes: d.relationshipTypes,
+                        });
+                    }
+                }
+            }
+        }
 
         const cosmaLayers: CosmaLayerDTO[] | undefined = config.cosmaLayers?.map(cl => ({
             id: cl.id,
@@ -80,9 +133,20 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             color: cl.color,
         }));
 
+        // Build metadata with version
+        const baseVersion = config.ontologyMetadata?.version || '0.1.0';
+        const metadata: ModelMetadata = {
+            projectName: config.projectName,
+            version: `${baseVersion}-dev.${buildCount}`,
+            ...gitInfo,
+        };
+
+        const dto = modelToDTO(model, { viewpoints, cosmaLayers, diagrams });
+        dto.metadata = metadata;
+
         return {
             messages: [
-                { type: 'model:update', payload: modelToDTO(model, { viewpoints, cosmaLayers }) },
+                { type: 'model:update', payload: dto },
                 { type: 'validation:update', payload: validation },
                 { type: 'completeness:update', payload: completeness },
             ],

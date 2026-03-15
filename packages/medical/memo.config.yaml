@@ -1,9 +1,13 @@
-# @memo/medical — CoSMA-layered domain configuration (Comprehensive)
-# Medical device MBSE domain: ISO 14971, IEC 62304, IEC 62366
-# 60+ entity kinds across 9 layers, 16 relationship types, 15 closure rules
+# @memo/medical — Medical Device Domain Configuration (Comprehensive)
+# ISO 14971 risk management, IEC 62304 software lifecycle, IEC 62366 usability
 #
-# This config is copied to .memo/config.yaml by `memo init medical <name>`.
-# Projects inherit all layers, kinds, relationships, and closure rules.
+# Extends @memo/ontology (base MBSE) with medical-device-specific:
+#   - Risk management layer + kinds (Hazard, Harm, RiskControl, etc.)
+#   - UI wireframe layer + kinds
+#   - Specialized hardware (FPGA, Catheter, Microcontroller)
+#   - Specialized software (Firmware, Docker, ROS)
+#   - 15 closure rules (ISO 14971 + IEC 62304)
+#   - Medical-specific viewpoints
 
 projectName: "@memo/medical"
 projectType: device
@@ -14,116 +18,34 @@ ontologies:
 
 extends: "@memo/ontology"
 
-# ─── CoSMA Visualization Layers ───────────────────────────────────────────────
+ontologyMetadata:
+  id: "@memo/medical"
+  version: "2.0.0"
+  description: "Comprehensive medical device ontology — ISO 14971, IEC 62304, IEC 62366"
+  author: "SysAnd"
+  license: "Apache-2.0"
+  tags:
+    - medical-device
+    - ISO-14971
+    - IEC-62304
+    - IEC-62366
+
+# ─── Additional CoSMA Layers (medical-specific) ──────────────────────────────
 
 cosmaLayers:
-  - id: business
-    label: Business Analysis
-    color: "#8E44AD"
-
-  - id: requirements
-    label: Requirements
-    color: "#4A90D9"
-
   - id: risk
     label: Risk Management
     color: "#E74C3C"
-
-  - id: functional
-    label: Functional Analysis
-    color: "#E67E22"
-
-  - id: logical
-    label: Logical Architecture
-    color: "#7B68EE"
-
-  - id: physical
-    label: Physical Architecture
-    color: "#95A5A6"
-
-  - id: software
-    label: Software Architecture
-    color: "#F39C12"
-
-  - id: interfaces
-    label: Interfaces & Ports
-    color: "#1ABC9C"
-
-  - id: verification
-    label: Verification
-    color: "#2ECC71"
 
   - id: ui
     label: UI Wireframe
     color: "#3498DB"
 
-# ─── Entity Kind Definitions ──────────────────────────────────────────────────
-# Each kind maps to a SysML v2 construct and belongs to a CoSMA layer.
+# ─── Medical-Specific Entity Kinds ───────────────────────────────────────────
+# Only kinds NOT already in @memo/ontology base.
 
 kinds:
-  # ── Business Analysis ────────────────────────────────────────────────────
-  Actor:
-    label: Actor
-    layer: business
-    sysmlConstruct: part def
-
-  Stakeholder:
-    label: Stakeholder
-    layer: business
-    sysmlConstruct: part def
-
-  Goal:
-    label: Goal
-    layer: business
-    sysmlConstruct: part def
-
-  Concern:
-    label: Concern
-    layer: business
-    sysmlConstruct: part def
-
-  Responsibility:
-    label: Responsibility
-    layer: business
-    sysmlConstruct: part def
-
-  Capability:
-    label: Capability
-    layer: business
-    sysmlConstruct: part def
-
-  # ── Requirements ─────────────────────────────────────────────────────────
-  UserNeed:
-    label: User Need
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  SystemRequirement:
-    label: System Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  SoftwareRequirement:
-    label: Software Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  HardwareRequirement:
-    label: Hardware Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  DesignSpecification:
-    label: Design Specification
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  OtherRequirement:
-    label: Other Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  # ── Risk Management (ALL are requirement def) ───────────────────────────
+  # ── Risk Management (ISO 14971) ────────────────────────────────────────
   Hazard:
     label: Hazard
     layer: risk
@@ -158,126 +80,15 @@ kinds:
     layer: risk
     sysmlConstruct: requirement def
 
-  # ── Functional Analysis ──────────────────────────────────────────────────
-  SystemFunction:
-    label: System Function
-    layer: functional
-    sysmlConstruct: action def
-
-  ComponentFunction:
-    label: Component Function
-    layer: functional
-    sysmlConstruct: action def
-
-  UserActivity:
-    label: User Activity
-    layer: functional
-    sysmlConstruct: action def
-
+  # ── Functional (medical-specific) ──────────────────────────────────────
   UIFunction:
     label: UI Function
     layer: functional
     sysmlConstruct: action def
 
-  UseCase:
-    label: Use Case
-    layer: functional
-    sysmlConstruct: part def
-
-  Scenario:
-    label: Scenario
-    layer: functional
-    sysmlConstruct: action def
-
-  # ── Logical Architecture ─────────────────────────────────────────────────
-  System:
-    label: System
-    layer: logical
-    sysmlConstruct: part def
-
-  SystemExternal:
-    label: External System
-    layer: logical
-    sysmlConstruct: part def
-
-  Subsystem:
-    label: Subsystem
-    layer: logical
-    sysmlConstruct: part def
-
-  Component:
-    label: Component
-    layer: logical
-    sysmlConstruct: part def
-
-  LogicalComponent:
-    label: Logical Component
-    layer: logical
-    sysmlConstruct: part def
-
-  LogicalComponentExternal:
-    label: External Logical Component
-    layer: logical
-    sysmlConstruct: part def
-
-  EnvironmentElement:
-    label: Environment Element
-    layer: logical
-    sysmlConstruct: part def
-
-  ArchitectureDecision:
-    label: Architecture Decision
-    layer: logical
-    sysmlConstruct: part def
-
-  ArchitectureRationale:
-    label: Architecture Rationale
-    layer: logical
-    sysmlConstruct: part def
-
-  QualityAttribute:
-    label: Quality Attribute
-    layer: logical
-    sysmlConstruct: part def
-
-  Question:
-    label: Question
-    layer: logical
-    sysmlConstruct: part def
-
-  # ── Physical Architecture ────────────────────────────────────────────────
-  PhysicalComponent:
-    label: Physical Component
-    layer: physical
-    sysmlConstruct: part def
-
-  ElectricalComponent:
-    label: Electrical Component
-    layer: physical
-    sysmlConstruct: part def
-
-  MechanicalComponent:
-    label: Mechanical Component
-    layer: physical
-    sysmlConstruct: part def
-
+  # ── Physical (specialized hardware) ────────────────────────────────────
   Catheter:
     label: Catheter
-    layer: physical
-    sysmlConstruct: part def
-
-  PhysicalModule:
-    label: Physical Module
-    layer: physical
-    sysmlConstruct: part def
-
-  HardwareNode:
-    label: Hardware Node
-    layer: physical
-    sysmlConstruct: part def
-
-  ComputingDevice:
-    label: Computing Device
     layer: physical
     sysmlConstruct: part def
 
@@ -296,23 +107,13 @@ kinds:
     layer: physical
     sysmlConstruct: part def
 
-  # ── Software Architecture ────────────────────────────────────────────────
+  # ── Software (specialized) ─────────────────────────────────────────────
   Software:
     label: Software
     layer: software
     sysmlConstruct: part def
     defaultAttributes:
       safetyClassification: "A"
-
-  SoftwareComponent:
-    label: Software Component
-    layer: software
-    sysmlConstruct: part def
-
-  SoftwareModule:
-    label: Software Module
-    layer: software
-    sysmlConstruct: part def
 
   Firmware:
     label: Firmware
@@ -334,52 +135,7 @@ kinds:
     layer: software
     sysmlConstruct: part def
 
-  # ── Interfaces & Ports ───────────────────────────────────────────────────
-  Port:
-    label: Port
-    layer: interfaces
-    sysmlConstruct: port def
-
-  PortEthernet:
-    label: Ethernet Port
-    layer: interfaces
-    sysmlConstruct: port def
-
-  PortUSB:
-    label: USB Port
-    layer: interfaces
-    sysmlConstruct: port def
-
-  PortSerial:
-    label: Serial Port
-    layer: interfaces
-    sysmlConstruct: port def
-
-  PortPower:
-    label: Power Port
-    layer: interfaces
-    sysmlConstruct: port def
-
-  Interface:
-    label: Interface
-    layer: interfaces
-    sysmlConstruct: interface def
-
-  SoftwareInterface:
-    label: Software Interface
-    layer: interfaces
-    sysmlConstruct: interface def
-
-  SoftwareProvidedInterface:
-    label: Provided Interface
-    layer: interfaces
-    sysmlConstruct: interface def
-
-  SoftwareRequiredInterface:
-    label: Required Interface
-    layer: interfaces
-    sysmlConstruct: interface def
-
+  # ── Interfaces (specialized) ───────────────────────────────────────────
   RosTopic:
     label: ROS Topic
     layer: interfaces
@@ -390,7 +146,7 @@ kinds:
     layer: interfaces
     sysmlConstruct: interface def
 
-  # ── UI Wireframe ─────────────────────────────────────────────────────────
+  # ── UI Wireframe ───────────────────────────────────────────────────────
   UIScreen:
     label: UI Screen
     layer: ui
@@ -406,81 +162,9 @@ kinds:
     layer: ui
     sysmlConstruct: part def
 
-  # ── Verification ─────────────────────────────────────────────────────────
-  Test:
-    label: Test
-    layer: verification
-    sysmlConstruct: part def
-
-  # ── Cross-cutting ────────────────────────────────────────────────────────
-  Standard:
-    label: Standard
-    layer: requirements
-    sysmlConstruct: part def
-
-  RegulatoryRequirement:
-    label: Regulatory Requirement
-    layer: requirements
-    sysmlConstruct: part def
-
-  DataType:
-    label: Data Type
-    layer: interfaces
-    sysmlConstruct: attribute def
-
-# ─── Relationship Type Definitions ────────────────────────────────────────────
+# ─── Medical-Specific Relationship Types ─────────────────────────────────────
 
 relationshipTypes:
-  - name: aggregation
-    label: Aggregation
-    layer: logical
-    color: "#7B68EE"
-
-  - name: association
-    label: Association
-    layer: logical
-    color: "#9B59B6"
-
-  - name: traceTo
-    label: Trace To
-    layer: requirements
-    color: "#4A90D9"
-
-  - name: trace
-    label: Trace
-    layer: requirements
-    color: "#3498DB"
-
-  - name: allocateTo
-    label: Allocate To
-    layer: functional
-    color: "#E67E22"
-
-  - name: composedOf
-    label: Composed Of
-    layer: logical
-    color: "#8E44AD"
-
-  - name: dependency
-    label: Dependency
-    layer: logical
-    color: "#95A5A6"
-
-  - name: realization
-    label: Realization
-    layer: logical
-    color: "#2C3E50"
-
-  - name: satisfy
-    label: Satisfies
-    layer: requirements
-    color: "#2ECC71"
-
-  - name: verify
-    label: Verifies
-    layer: verification
-    color: "#27AE60"
-
   - name: mitigates
     label: Mitigates
     layer: risk
@@ -501,35 +185,13 @@ relationshipTypes:
     layer: risk
     color: "#D35400"
 
-  - name: extend
-    label: Extends
-    layer: functional
-    color: "#F39C12"
-
-  - name: include
-    label: Includes
-    layer: functional
-    color: "#F1C40F"
-
 # ─── Backward-Compatible Flat Relationship List ──────────────────────────────
 
 relationships:
-  - aggregation
-  - association
-  - traceTo
-  - trace
-  - allocateTo
-  - composedOf
-  - dependency
-  - realization
-  - satisfy
-  - verify
   - mitigates
   - causes
   - leadsTo
   - identifies
-  - extend
-  - include
 
 # ─── Closure Rules ────────────────────────────────────────────────────────────
 
@@ -673,10 +335,13 @@ closureRules:
     severity: warning
 
 # ─── Viewpoints ───────────────────────────────────────────────────────────────
+# Medical-specific viewpoints. Base viewpoints (architecture-view, requirements-trace,
+# use-case-view, v-and-v) are inherited from @memo/ontology.
 
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
+    supportedDiagramTypes: [risk, req, pkg]
     visibleKinds:
       - Hazard
       - HazardousSituation
@@ -691,44 +356,17 @@ viewpoints:
       - identifies
     visibleLayers:
       - risk
-
-  - id: requirements-trace
-    label: Requirements Traceability
-    visibleKinds:
-      - UserNeed
-      - SystemRequirement
-      - SoftwareRequirement
-      - HardwareRequirement
-      - DesignSpecification
-    visibleRelationships:
-      - traceTo
-      - trace
-      - satisfy
-    visibleLayers:
-      - requirements
-
-  - id: architecture-view
-    label: System Architecture
-    visibleKinds:
-      - System
-      - SystemExternal
-      - Subsystem
-      - Component
-      - LogicalComponent
-      - LogicalComponentExternal
-      - SystemFunction
-      - ComponentFunction
-    visibleRelationships:
-      - aggregation
-      - composedOf
-      - allocateTo
-      - association
-    visibleLayers:
-      - logical
-      - functional
+    diagrams:
+      - id: diag-risk-chain
+        name: Risk Mitigation Chain
+        diagramType: risk
+        viewpointId: risk-overview
+        auto: true
+        description: Hazard to RiskControl to Test mitigation chain
 
   - id: software-view
     label: Software Architecture
+    supportedDiagramTypes: [bdd, ibd, pkg]
     visibleKinds:
       - Software
       - SoftwareComponent
@@ -748,9 +386,17 @@ viewpoints:
     visibleLayers:
       - software
       - interfaces
+    diagrams:
+      - id: diag-sw-decomposition
+        name: Software Decomposition
+        diagramType: bdd
+        viewpointId: software-view
+        auto: true
+        description: Software components and modules hierarchy
 
   - id: physical-view
     label: Physical Architecture
+    supportedDiagramTypes: [bdd, ibd, pkg]
     visibleKinds:
       - PhysicalComponent
       - ElectricalComponent
@@ -764,38 +410,13 @@ viewpoints:
       - association
     visibleLayers:
       - physical
-
-  - id: v-and-v
-    label: Verification & Validation
-    visibleKinds:
-      - Test
-      - SystemRequirement
-      - SoftwareRequirement
-      - RiskControl
-    visibleRelationships:
-      - verify
-      - satisfy
-      - traceTo
-    visibleLayers:
-      - verification
-      - requirements
-
-  - id: use-case-view
-    label: Use Case View
-    visibleKinds:
-      - Actor
-      - UseCase
-      - Scenario
-      - UserActivity
-      - UserNeed
-    visibleRelationships:
-      - association
-      - traceTo
-      - extend
-      - include
-    visibleLayers:
-      - business
-      - functional
+    diagrams:
+      - id: diag-phy-bom
+        name: Physical BOM
+        diagramType: bdd
+        viewpointId: physical-view
+        auto: true
+        description: Physical components and hardware nodes
 
 # ─── First Run Configuration ─────────────────────────────────────────────────
 

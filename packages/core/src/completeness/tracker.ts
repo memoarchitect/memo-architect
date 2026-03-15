@@ -6,7 +6,7 @@
 
 import type { MEMOConfig } from '../model/config.js';
 import type { MemoModel } from '../model/semantic.js';
-import type { ValidationResult, CompletenessReport, LayerCompleteness } from '../validator/types.js';
+import type { ValidationResult, CompletenessReport, LayerCompleteness, ElementStatus } from '../validator/types.js';
 
 /**
  * Compute completeness from model + validation results.
@@ -19,11 +19,26 @@ export function computeCompleteness(
     validation: ValidationResult,
     config: MEMOConfig
 ): CompletenessReport {
-    // Build set of element IDs with error violations
+    // Build sets of element IDs by violation severity
     const elementsWithErrors = new Set<string>();
+    const elementsWithWarnings = new Set<string>();
     for (const v of validation.violations) {
         if (v.severity === 'error') {
             elementsWithErrors.add(v.elementId);
+        } else if (v.severity === 'warning') {
+            elementsWithWarnings.add(v.elementId);
+        }
+    }
+
+    // Build per-element status map
+    const elementStatus: Record<string, ElementStatus> = {};
+    for (const el of model.elements.values()) {
+        if (elementsWithErrors.has(el.id)) {
+            elementStatus[el.id] = 'error';
+        } else if (elementsWithWarnings.has(el.id)) {
+            elementStatus[el.id] = 'warning';
+        } else {
+            elementStatus[el.id] = 'complete';
         }
     }
 
@@ -59,5 +74,6 @@ export function computeCompleteness(
         overall: totalElements > 0 ? Math.round((completeElements / totalElements) * 100) : 100,
         totalElements,
         completeElements,
+        elementStatus,
     };
 }

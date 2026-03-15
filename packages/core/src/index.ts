@@ -22,6 +22,8 @@ export {
     type WorkflowDefinition,
     type FirstRunConfig,
     type OntologyReference,
+    type DiagramType,
+    type DiagramDefinition,
     type MEMOConfig,
 } from './model/config.js';
 export * from './model/config-loader.js';
@@ -33,6 +35,13 @@ export * from './model/builder.js';
 export * from './validator/types.js';
 export * from './validator/rule-engine.js';
 export * from './completeness/tracker.js';
+
+// ─── Analysis ────────────────────────────────────────────────────────────────
+export * from './analysis/impact.js';
+
+// ─── Serializer (CSV import/export, SysML generation) ───────────────────────
+export * from './serializer/csv-io.js';
+export * from './serializer/sysml-generator.js';
 
 // ─── Protocol (WebSocket messages) ──────────────────────────────────────────
 export * from './protocol/messages.js';
