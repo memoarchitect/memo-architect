@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
     ReactFlow,
+    ReactFlowProvider,
     Background,
     Controls,
     MiniMap,
     useNodesState,
     useEdgesState,
+    useReactFlow,
     type Node,
     type Edge,
 } from '@xyflow/react';
@@ -15,17 +17,19 @@ import { useModelStore, getDiagram } from '../store/model-store';
 import { DIAGRAM_TYPE_META } from '../constants';
 import { computeLayout } from './layout';
 
-export function DiagramCanvas() {
+function DiagramCanvasInner() {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const selectElement = useModelStore(s => s.selectElement);
+    const { fitView } = useReactFlow();
 
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isLayouting, setIsLayouting] = useState(false);
+    const [layoutVersion, setLayoutVersion] = useState(0);
 
     // Get the selected diagram (if any)
     const selectedDiagram = getDiagram(model, selectedDiagramId);
@@ -76,12 +80,22 @@ export function DiagramCanvas() {
                 setNodes(n);
                 setEdges(e);
                 setIsLayouting(false);
+                setLayoutVersion(v => v + 1);
             })
             .catch(err => {
                 console.error('Layout error:', err);
                 setIsLayouting(false);
             });
     }, [model, viewpointFilter]);
+
+    // Re-fit view after layout updates — delayed to let ReactFlow internalize nodes
+    useEffect(() => {
+        if (layoutVersion === 0) return;
+        const timer = setTimeout(() => {
+            fitView({ padding: 0.15, maxZoom: 1.5, duration: 300 });
+        }, 200);
+        return () => clearTimeout(timer);
+    }, [layoutVersion, fitView]);
 
     // Highlight selected element
     useEffect(() => {
@@ -150,7 +164,8 @@ export function DiagramCanvas() {
                 onNodeClick={onNodeClick}
                 onPaneClick={onPaneClick}
                 fitView
-                minZoom={0.1}
+                fitViewOptions={{ padding: 0.15, maxZoom: 1.5 }}
+                minZoom={0.2}
                 maxZoom={3}
                 proOptions={{ hideAttribution: true }}
                 style={{ background: '#F7F7F5' }}
@@ -164,5 +179,14 @@ export function DiagramCanvas() {
                 />
             </ReactFlow>
         </div>
+    );
+}
+
+// Wrap in ReactFlowProvider so useReactFlow() works
+export function DiagramCanvas() {
+    return (
+        <ReactFlowProvider>
+            <DiagramCanvasInner />
+        </ReactFlowProvider>
     );
 }

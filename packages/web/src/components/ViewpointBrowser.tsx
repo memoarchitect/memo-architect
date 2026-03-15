@@ -133,7 +133,7 @@ export function ViewpointBrowser() {
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
 
     return (
-        <div className="flex flex-col overflow-hidden" style={{ width: '300px', minWidth: '260px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
             {/* Header */}
             <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
                 <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Viewpoints</h1>

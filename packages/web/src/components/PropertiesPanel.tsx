@@ -12,7 +12,7 @@ function DiagramProperties() {
     const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
 
     return (
-        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
             {/* Header */}
             <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${meta?.color || '#6B7280'}` }}>
                 <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
@@ -157,7 +157,7 @@ export function PropertiesPanel() {
     const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
 
     return (
-        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
             {/* Header with layer color accent */}
             <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${layerColor}` }}>
                 <div className="flex items-center gap-2 mb-1.5">

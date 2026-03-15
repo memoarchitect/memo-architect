@@ -31,20 +31,33 @@ export async function computeLayout(
         r => visibleIds.has(r.sourceId) && visibleIds.has(r.targetId)
     );
 
-    // Build ELK graph
+    // Choose direction based on element count — vertical for smaller sets,
+    // horizontal for very large models to avoid extreme height
+    const direction = visibleElements.length > 60 ? 'RIGHT' : 'DOWN';
+
+    // Tighter spacing for compact layout
+    const nodeSpacing = visibleElements.length > 40 ? '20' : '30';
+    const layerSpacing = visibleElements.length > 40 ? '50' : '60';
+
+    // Build ELK graph — flat layout with relationship-driven layering
     const elkGraph = {
         id: 'root',
         layoutOptions: {
             'elk.algorithm': 'layered',
-            'elk.direction': 'RIGHT',
-            'elk.spacing.nodeNode': '40',
-            'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+            'elk.direction': direction,
+            'elk.spacing.nodeNode': nodeSpacing,
+            'elk.layered.spacing.nodeNodeBetweenLayers': layerSpacing,
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+            'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+            // Wrap long chains to prevent extreme width/height
+            'elk.layered.wrapping.strategy': 'MULTI_EDGE',
+            'elk.layered.wrapping.additionalEdgeSpacing': '20',
         },
         children: visibleElements.map(el => ({
             id: el.id,
-            width: Math.max(el.name.length * 8 + 48, 130),
-            height: 48,
+            width: Math.max(el.name.length * 7 + 32, 100),
+            height: 36,
         })),
         edges: visibleRelationships.map((rel, i) => ({
             id: `e-${i}`,
@@ -56,7 +69,7 @@ export async function computeLayout(
     // Run ELK layout
     const layouted = await elk.layout(elkGraph);
 
-    // Convert to ReactFlow nodes — rounded-rect cards with layer-color left border
+    // Convert to ReactFlow nodes — compact cards with layer-color left border
     const nodes: Node[] = (layouted.children || []).map(child => {
         const el = model.elements[child.id];
         const color = LAYER_COLORS[el?.layer] || '#666';
@@ -76,12 +89,12 @@ export async function computeLayout(
                 borderTop: '1px solid #E5E5E0',
                 borderRight: '1px solid #E5E5E0',
                 borderBottom: '1px solid #E5E5E0',
-                borderRadius: '10px',
+                borderRadius: '8px',
                 color: '#1a1a1a',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 500,
-                padding: '10px 14px',
-                minWidth: '100px',
+                padding: '6px 10px',
+                minWidth: '80px',
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
             },
         };
@@ -100,7 +113,7 @@ export async function computeLayout(
             strokeWidth: 1.5,
         },
         labelStyle: {
-            fontSize: '10px',
+            fontSize: '9px',
             fill: '#6B7280',
             fontWeight: 500,
         },

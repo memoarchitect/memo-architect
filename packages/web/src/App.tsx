@@ -109,7 +109,7 @@ export function App() {
                 return (
                     <>
                         <ViewpointBrowser />
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
                             <DiagramCanvas />
                         </div>
                         <PropertiesPanel />
