@@ -77,6 +77,13 @@ nav:
   - Configuration:
       - memo.config.yaml Reference: config/reference.md
       - Medical Domain: config/medical-domain.md
+  - Guides:
+      - Overview: guides/index.md
+      - Starting a New Project: guides/new-project.md
+      - Importing Existing Data: guides/importing-data.md
+      - Modeling Your Device: guides/modeling-guide.md
+      - Validation & Closure Rules: guides/validation.md
+      - Viewpoints & Diagrams: guides/viewpoints-diagrams.md
   - Development:
       - Contributing: development/contributing.md
       - Roadmap: development/roadmap.md

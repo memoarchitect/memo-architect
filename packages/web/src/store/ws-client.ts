@@ -25,6 +25,8 @@ declare global {
 
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_DELAY = 10000; // Cap at 10s
 
 /**
  * Load embedded data if available (static build), otherwise connect WebSocket.
@@ -56,6 +58,7 @@ export function connectWebSocket(url?: string): void {
 
     ws.onopen = () => {
         store.setConnected(true);
+        reconnectAttempts = 0;
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -74,8 +77,10 @@ export function connectWebSocket(url?: string): void {
     ws.onclose = () => {
         store.setConnected(false);
         ws = null;
-        // Auto-reconnect after 2 seconds
-        reconnectTimer = setTimeout(() => connectWebSocket(url), 2000);
+        // Exponential backoff: 2s, 4s, 8s, capped at 10s
+        reconnectAttempts++;
+        const delay = Math.min(2000 * Math.pow(2, reconnectAttempts - 1), MAX_RECONNECT_DELAY);
+        reconnectTimer = setTimeout(() => connectWebSocket(url), delay);
     };
 
     ws.onerror = () => {

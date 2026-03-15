@@ -153,6 +153,13 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         };
     }
 
+    const sysmlCount = findSysmlFiles(cwd).length;
+    if (sysmlCount === 0) {
+        console.log(chalk.yellow('  ⚠ No .sysml files found in this directory.'));
+        console.log(chalk.gray('  Create model files in a model/ subdirectory, or run:'));
+        console.log(chalk.gray('    memo init <project-name>'));
+        console.log(chalk.gray('    memo import template elements\n'));
+    }
     console.log(chalk.gray('  Building model...'));
     const initial = await rebuild();
 
