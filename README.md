@@ -18,16 +18,28 @@ MBSE tools are either too complex (Cameo, Enterprise Architect — months of tra
 pnpm install
 pnpm run build
 
-# Scaffold a new medical device project
-npx memo init my-pump
-
-# Validate model against ISO 14971 / IEC 62304 closure rules
-cd my-pump
-npx memo validate
-
-# Launch the web app with live reload
-npx memo dev
+# Run the infusion-pump example with live reload
+pnpm example:dev
+# → opens http://localhost:3000 with 74 elements, 92% completeness
 ```
+
+### CLI Usage
+
+The `memo` CLI is provided by `@memo/cli`. From the repo root, use the `pnpm memo` shortcut:
+
+```bash
+# Run any CLI command via pnpm
+pnpm memo validate              # Validate the model in the current directory
+pnpm memo dev                   # Start dev server (run from a project directory)
+pnpm memo init my-pump          # Scaffold a new project
+pnpm memo export json           # Export model as JSON
+
+# Or invoke the CLI directly with node
+node packages/cli/lib/bin/memo.js dev --port 3000
+```
+
+> **Note:** `npx memo` does not work in this monorepo because the CLI package
+> is a workspace dependency, not globally installed. Use `pnpm memo` instead.
 
 ## CLI Commands
 
@@ -92,13 +104,16 @@ memo/
 
 ```bash
 pnpm install
-pnpm run build        # Build all packages
+pnpm run build        # Build all packages (Turborepo cached)
 pnpm run test         # Run all tests (69 passing)
 pnpm run type-check   # TypeScript type checking
 
-# Run the example project
+# Run the example project (from the repo root)
+pnpm example:dev
+
+# Or run from the example directory
 cd examples/infusion-pump
-npx memo dev
+node ../../packages/cli/lib/bin/memo.js dev
 ```
 
 ## Documentation

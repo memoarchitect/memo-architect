@@ -13,6 +13,8 @@
     "clean": "turbo clean",
     "docs:serve": "pdm run docs-serve",
     "docs:build": "pdm run docs-build",
+    "memo": "node packages/cli/lib/bin/memo.js",
+    "example:dev": "cd examples/infusion-pump && node ../../packages/cli/lib/bin/memo.js dev --port 3000",
     "setup": "pnpm install && pnpm run build && pdm install",
     "preinstall": "npx only-allow pnpm"
   },
