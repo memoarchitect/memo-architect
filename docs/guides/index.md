@@ -12,10 +12,16 @@ cloning the repo to passing design reviews with complete traceability.
 - **Quality / regulatory engineers** who need to demonstrate closure
   (ISO 14971, IEC 62304) before submission.
 
+!!! tip "New to MEMO?"
+    Start with the **[Medical Device Quick Start Tutorial](medical-device-tutorial.md)** —
+    a single end-to-end walkthrough that takes you from cloning the repo to achieving
+    full ISO traceability with your existing data.
+
 ## Guides
 
 | Guide | What you'll learn |
 |-------|-------------------|
+| [Medical Device Tutorial](medical-device-tutorial.md) | **End-to-end tutorial** — import CSV data, build traceability, validate closure |
 | [Starting a New Project](new-project.md) | Scaffold a project, understand the folder layout, run the dev server |
 | [Importing Existing Data](importing-data.md) | Bring requirements, hazards, and components from CSV into MEMO |
 | [Modeling Your Device](modeling-guide.md) | Write SysML elements, add relationships, organize by CoSMA layers |

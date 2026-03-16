@@ -92,7 +92,7 @@ function DiagramCanvasInner() {
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.15, maxZoom: 1.5, duration: 300 });
+            fitView({ padding: 0.08, maxZoom: 2, duration: 300 });
         }, 200);
         return () => clearTimeout(timer);
     }, [layoutVersion, fitView]);
@@ -138,7 +138,7 @@ function DiagramCanvasInner() {
                 >
                     {diagramMeta && (
                         <span className="px-1.5 py-0.5 rounded font-semibold"
-                            style={{ background: diagramMeta.color + '20', color: diagramMeta.color, fontSize: '9px' }}>
+                            style={{ background: diagramMeta.color + '20', color: diagramMeta.color, fontSize: '10px' }}>
                             {diagramMeta.code}
                         </span>
                     )}
@@ -164,7 +164,7 @@ function DiagramCanvasInner() {
                 onNodeClick={onNodeClick}
                 onPaneClick={onPaneClick}
                 fitView
-                fitViewOptions={{ padding: 0.15, maxZoom: 1.5 }}
+                fitViewOptions={{ padding: 0.08, maxZoom: 2 }}
                 minZoom={0.2}
                 maxZoom={3}
                 proOptions={{ hideAttribution: true }}

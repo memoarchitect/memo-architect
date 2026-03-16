@@ -56,8 +56,8 @@ export async function computeLayout(
         },
         children: visibleElements.map(el => ({
             id: el.id,
-            width: Math.max(el.name.length * 7 + 32, 100),
-            height: 36,
+            width: Math.max(el.name.length * 8 + 40, 120),
+            height: 44,
         })),
         edges: visibleRelationships.map((rel, i) => ({
             id: `e-${i}`,
@@ -91,10 +91,10 @@ export async function computeLayout(
                 borderBottom: '1px solid #E5E5E0',
                 borderRadius: '8px',
                 color: '#1a1a1a',
-                fontSize: '11px',
+                fontSize: '13px',
                 fontWeight: 500,
-                padding: '6px 10px',
-                minWidth: '80px',
+                padding: '8px 14px',
+                minWidth: '100px',
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
             },
         };
@@ -113,7 +113,7 @@ export async function computeLayout(
             strokeWidth: 1.5,
         },
         labelStyle: {
-            fontSize: '9px',
+            fontSize: '10px',
             fill: '#6B7280',
             fontWeight: 500,
         },

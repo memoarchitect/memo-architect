@@ -31,7 +31,7 @@ function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
             style={{
                 background: meta.color + '20',
                 color: meta.color,
-                fontSize: '8px',
+                fontSize: '10px',
             }}
             title={meta.fullName}
         >
@@ -60,7 +60,7 @@ function DiagramRow({ diag, isSelected, onSelect }: {
             <DiagramTypeBadge diagramType={diag.diagramType} />
             {diag.auto && (
                 <span className="px-1 py-0.5 rounded text-xs"
-                    style={{ background: '#F0F0ED', color: '#9CA3AF', fontSize: '7px', fontWeight: 600 }}>
+                    style={{ background: '#F0F0ED', color: '#9CA3AF', fontSize: '9px', fontWeight: 600 }}>
                     AUTO
                 </span>
             )}
@@ -133,7 +133,7 @@ export function ViewpointBrowser() {
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
             {/* Header */}
             <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
                 <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Viewpoints</h1>
@@ -204,7 +204,7 @@ export function ViewpointBrowser() {
                                         {els.map(el => (
                                             <div
                                                 key={el.id}
-                                                className="px-3 py-0.5 ml-3 cursor-pointer truncate"
+                                                className="px-3 py-1 ml-3 cursor-pointer truncate"
                                                 style={{
                                                     borderRadius: '4px',
                                                     background: selectedElementId === el.id ? '#2DD4A818' : 'transparent',
@@ -301,7 +301,7 @@ export function ViewpointBrowser() {
                                                     {!isHidden && els.map(el => (
                                                         <div
                                                             key={el.id}
-                                                            className="px-3 py-0.5 ml-3 cursor-pointer truncate"
+                                                            className="px-3 py-1 ml-3 cursor-pointer truncate"
                                                             style={{
                                                                 borderRadius: '4px',
                                                                 background: selectedElementId === el.id ? '#2DD4A818' : 'transparent',
@@ -330,7 +330,7 @@ export function ViewpointBrowser() {
             <div className="px-3 py-2" style={{ borderTop: '1px solid #E5E5E0', background: '#FAFAF8' }}>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#9CA3AF' }}>
                     {Object.entries(DIAGRAM_TYPE_META).map(([key, meta]) => (
-                        <span key={key} className="px-1 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: '8px', fontWeight: 600 }}>
+                        <span key={key} className="px-1 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: '10px', fontWeight: 600 }}>
                             {meta.code}
                         </span>
                     ))}

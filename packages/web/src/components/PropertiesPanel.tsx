@@ -12,7 +12,7 @@ function DiagramProperties() {
     const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
             {/* Header */}
             <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${meta?.color || '#6B7280'}` }}>
                 <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
@@ -49,7 +49,7 @@ function DiagramProperties() {
                     <div className="space-y-1.5">
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>ID</span>
-                            <span className="truncate font-mono" style={{ color: '#1a1a1a', fontSize: '10px' }}>{diagram.id}</span>
+                            <span className="truncate font-mono" style={{ color: '#1a1a1a', fontSize: '11px' }}>{diagram.id}</span>
                         </div>
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Viewpoint</span>
@@ -98,7 +98,7 @@ function DiagramProperties() {
                         <div className="flex flex-wrap gap-1">
                             {diagram.relationshipTypes.map(rt => (
                                 <span key={rt} className="px-1.5 py-0.5 rounded text-xs"
-                                    style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '10px' }}>
+                                    style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '11px' }}>
                                     {rt}
                                 </span>
                             ))}
@@ -124,7 +124,7 @@ export function PropertiesPanel() {
 
     if (!selectedElementId || !model) {
         return (
-            <div className="w-72 p-4 flex items-center justify-center" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+            <div className="p-4 flex items-center justify-center" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
                 <span className="text-xs text-center" style={{ color: '#9CA3AF' }}>
                     Select an element or diagram to view properties
                 </span>
@@ -135,7 +135,7 @@ export function PropertiesPanel() {
     const element = model.elements[selectedElementId];
     if (!element) {
         return (
-            <div className="w-72 p-4" style={{ background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+            <div className="p-4" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
                 <span className="text-xs" style={{ color: '#9CA3AF' }}>Element not found</span>
             </div>
         );
@@ -157,7 +157,7 @@ export function PropertiesPanel() {
     const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '260px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
             {/* Header with layer color accent */}
             <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${layerColor}` }}>
                 <div className="flex items-center gap-2 mb-1.5">
@@ -222,7 +222,7 @@ export function PropertiesPanel() {
                                         onClick={() => selectElement(rel.targetId)}
                                     >
                                         <span style={{ color: '#9CA3AF' }}>&rarr;</span>
-                                        <span className="px-1 py-0.5 rounded" style={{ color: '#2563EB', background: '#EFF6FF', fontSize: '10px' }}>
+                                        <span className="px-1 py-0.5 rounded" style={{ color: '#2563EB', background: '#EFF6FF', fontSize: '11px' }}>
                                             {rel.type}
                                         </span>
                                         <span className="truncate" style={{ color: '#374151' }}>
@@ -230,7 +230,7 @@ export function PropertiesPanel() {
                                         </span>
                                         {target && (
                                             <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
-                                                style={{ background: tColor + '15', color: tColor, fontSize: '9px' }}>
+                                                style={{ background: tColor + '15', color: tColor, fontSize: '10px' }}>
                                                 {target.kind}
                                             </span>
                                         )}
@@ -249,7 +249,7 @@ export function PropertiesPanel() {
                                         onClick={() => selectElement(rel.sourceId)}
                                     >
                                         <span style={{ color: '#9CA3AF' }}>&larr;</span>
-                                        <span className="px-1 py-0.5 rounded" style={{ color: '#10B981', background: '#ECFDF5', fontSize: '10px' }}>
+                                        <span className="px-1 py-0.5 rounded" style={{ color: '#10B981', background: '#ECFDF5', fontSize: '11px' }}>
                                             {rel.type}
                                         </span>
                                         <span className="truncate" style={{ color: '#374151' }}>
@@ -257,7 +257,7 @@ export function PropertiesPanel() {
                                         </span>
                                         {source && (
                                             <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
-                                                style={{ background: sColor + '15', color: sColor, fontSize: '9px' }}>
+                                                style={{ background: sColor + '15', color: sColor, fontSize: '10px' }}>
                                                 {source.kind}
                                             </span>
                                         )}

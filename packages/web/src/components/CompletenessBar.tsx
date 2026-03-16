@@ -63,7 +63,7 @@ export function CompletenessBar() {
                 <span className="text-xs" style={{ color: '#9CA3AF' }}>
                     {completeness.completeElements}/{completeness.totalElements}
                 </span>
-                <span style={{ color: '#D1D5DB', fontSize: '9px' }}>{'\u25BE'}</span>
+                <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{'\u25BE'}</span>
             </div>
         );
     }
@@ -115,7 +115,7 @@ export function CompletenessBar() {
 
                 <div className="flex items-center gap-2 text-xs" style={{ color: '#9CA3AF', borderLeft: '1px solid #E5E5E0', paddingLeft: '12px', height: '100%' }}>
                     <span>{completeness.completeElements}/{completeness.totalElements}</span>
-                    <span style={{ fontSize: '9px' }}>{'\u25B4'}</span>
+                    <span style={{ fontSize: '10px' }}>{'\u25B4'}</span>
                 </div>
             </div>
 

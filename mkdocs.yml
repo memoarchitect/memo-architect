@@ -79,6 +79,7 @@ nav:
       - Medical Domain: config/medical-domain.md
   - Guides:
       - Overview: guides/index.md
+      - "Tutorial: Medical Device Quick Start": guides/medical-device-tutorial.md
       - Starting a New Project: guides/new-project.md
       - Importing Existing Data: guides/importing-data.md
       - Modeling Your Device: guides/modeling-guide.md

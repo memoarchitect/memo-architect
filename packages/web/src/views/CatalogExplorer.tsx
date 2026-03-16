@@ -418,18 +418,18 @@ export function CatalogExplorer() {
                     onContextMenu={ctxTarget ? (e) => handleContextMenu(e, ctxTarget) : undefined}
                 >
                     <span style={{
-                        color: '#B0B0A8', fontSize: '8px', width: '10px', textAlign: 'center',
+                        color: '#B0B0A8', fontSize: '9px', width: '12px', textAlign: 'center',
                         transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
                         display: 'inline-block', transition: 'transform 0.1s',
                     }}>{'\u25B6'}</span>
 
-                    <span style={{ color: node.color, fontSize: isVCycle ? '10px' : '9px', width: '12px', textAlign: 'center' }}>
+                    <span style={{ color: node.color, fontSize: isVCycle ? '11px' : '10px', width: '14px', textAlign: 'center' }}>
                         {isVCycle ? '\u25A0' : isKind ? '\u25CB' : isGroup ? '\u2500' : '\u2022'}
                     </span>
 
                     <span className="flex-1 truncate" style={{
                         color: isVCycle ? '#1B3A4B' : '#4B5563',
-                        fontSize: '11px',
+                        fontSize: '13px',
                         fontWeight: isVCycle ? 600 : isKind ? 500 : 400,
                     }}>
                         {node.label}
@@ -472,7 +472,7 @@ export function CatalogExplorer() {
                 className="flex items-center gap-1.5 cursor-pointer select-none"
                 style={{
                     paddingLeft: `${10 + node.depth * 14}px`,
-                    paddingRight: '10px', paddingTop: '3px', paddingBottom: '3px',
+                    paddingRight: '10px', paddingTop: '4px', paddingBottom: '4px',
                     background: isSelected ? '#2DD4A80D' : 'transparent',
                     borderLeft: isSelected ? '2px solid #2DD4A8' : '2px solid transparent',
                 }}
@@ -487,7 +487,7 @@ export function CatalogExplorer() {
                     title={status === 'complete' ? 'No violations' : status === 'warning' ? 'Has warnings' : 'Has errors'} />
 
                 <span className="flex-1 truncate" style={{
-                    color: isSelected ? '#1B3A4B' : '#4B5563', fontSize: '11px',
+                    color: isSelected ? '#1B3A4B' : '#4B5563', fontSize: '13px',
                     fontWeight: isSelected ? 500 : 400,
                 }}>{node.label}</span>
 
@@ -699,7 +699,7 @@ export function CatalogExplorer() {
                                     </span>
                                     <span className="ml-auto px-1.5 py-0.5 rounded"
                                         style={{ background: (LAYER_COLORS[node.layer] || '#666') + '12',
-                                                 color: LAYER_COLORS[node.layer] || '#666', fontSize: '9px' }}>
+                                                 color: LAYER_COLORS[node.layer] || '#666', fontSize: '10px' }}>
                                         {node.kind}
                                     </span>
                                     <span className="tabular-nums" style={{ color: '#D1D5DB', fontSize: '9px' }}>d{node.depth}</span>
@@ -717,7 +717,7 @@ export function CatalogExplorer() {
         <div className="flex flex-1 overflow-hidden">
             {/* ─── Left: Tree explorer ─────────────────────────────────── */}
             <div className="flex flex-col overflow-hidden"
-                style={{ width: '360px', minWidth: '300px', maxWidth: '440px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+                style={{ width: '380px', minWidth: '320px', maxWidth: '480px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
 
                 {/* Header */}
                 <div className="px-3 py-2 flex items-center gap-2"
@@ -980,7 +980,7 @@ export function CatalogExplorer() {
             {/* ─── Right: Discussion sidebar ───────────────────────────── */}
             {showDiscussion && selectedElement && (
                 <div className="flex flex-col overflow-hidden"
-                    style={{ width: '280px', minWidth: '240px', background: '#FFFFFF', borderLeft: '1px solid #E5E5E0' }}>
+                    style={{ width: '320px', minWidth: '280px', background: '#FFFFFF', borderLeft: '1px solid #E5E5E0' }}>
                     <div className="px-3 py-2 flex items-center gap-2" style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E0' }}>
                         <span className="text-xs font-semibold flex-1" style={{ color: '#1B3A4B' }}>Discussion</span>
                         <button className="text-xs" style={{ color: '#9CA3AF' }} onClick={() => setShowDiscussion(false)}>{'\u2715'}</button>

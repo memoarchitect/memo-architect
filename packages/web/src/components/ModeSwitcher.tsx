@@ -21,7 +21,7 @@ export function ModeSwitcher() {
             style={{ background: '#1B3A4B', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
         >
             {/* Logo */}
-            <span className="text-xs font-bold mr-2" style={{ color: '#2DD4A8', letterSpacing: '0.08em' }}>memo</span>
+            <span className="text-sm font-bold mr-2" style={{ color: '#2DD4A8', letterSpacing: '0.08em' }}>memo</span>
 
             {MODES.map(mode => (
                 <button
