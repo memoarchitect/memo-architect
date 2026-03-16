@@ -56,9 +56,38 @@
 - [x] **WebSocket CSV import protocol** — `csv:import` client→server and `import:result` server→client messages
 - [x] **22 tests** for CSV roundtrip, validation, edge cases, SysML generation
 
+### Phase 4B — First-Class Diagram System
+
+- [x] **DiagramType & DiagramDefinition** types in core config
+- [x] **DiagramDTO** in semantic model transport layer
+- [x] **Diagram CRUD protocol** — Create/Update/Delete messages over WebSocket
+- [x] **Config-driven diagrams** — Viewpoints declare `supportedDiagramTypes` and `diagrams` arrays
+- [x] **Auto-generated diagrams** — Model Viewpoint auto-generates Context + Decomposition BDDs
+- [x] **SysML v2 diagram types** — BDD, IBD, REQ, UCD, ACT, PKG, PAR, RISK with color badges
+- [x] **ViewpointBrowser rewrite** — Diagrams rendered from model DTO, type badges, auto indicators
+- [x] **DiagramCanvas filtering** — selectedDiagramId drives viewpoint filter + diagram header overlay
+- [x] **PropertiesPanel** — Shows diagram properties when diagram selected (no element)
+- [x] **Diagram store selectors** — `getDiagram()`, `getDiagramsForViewpoint()`, `selectDiagram()`
+- [x] **Config mergeViewpoints()** — Deduplicates viewpoints by ID, merges diagrams within shared viewpoints
+- [x] **Medical + ontology configs** — 7 viewpoints with diagram definitions
+- [x] **DIAGRAM_TYPE_META** constant — Replaces old DiagramDef with per-type metadata (code, label, fullName, color)
+
+### Phase 4C — Documentation
+
+- [x] **Medical Device Quick Start Tutorial** — End-to-end guide: setup → CSV import → traceability → validation → CI
+- [x] **mkdocs guide structure** — Tutorial added as first guide in nav with callout on index
+
 ---
 
 ## In Progress / Next Up
+
+### Phase 4D — UI Polish (Backlog)
+
+- [ ] **Collapsible left sidebar** — Toggle sidebar open/closed for more diagram space
+- [ ] **Git user identity in top-right** — Show git user.name / user.email from config
+- [ ] **Vertical completeness bar** — Collapsible vertical bar (left edge) for better scalability
+- [ ] **UI font/size tuning** — Larger fonts and wider panels for high-res displays (committed but needs browser cache clear)
+- [ ] **Comments/discussion panel** — Element-level annotation/comment sidebar
 
 ### Phase 4 — Multi-File SysML & Cross-File Resolution
 
