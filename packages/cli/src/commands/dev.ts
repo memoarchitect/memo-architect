@@ -105,6 +105,12 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 viewpointId: '__model', auto: true,
                 description: 'System broken down into subsystems and components',
             },
+            {
+                id: 'diag-model-physical-decomp', name: 'Physical Decomposition', diagramType: 'ibd',
+                viewpointId: '__model', auto: true,
+                description: 'Physical system breakdown — nested containment (IBD) or tree (SBS)',
+                properties: { layoutStyle: 'ibd' },
+            },
         ];
         // Add diagrams from config viewpoints
         if (config.viewpoints) {

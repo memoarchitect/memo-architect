@@ -447,6 +447,28 @@ package InfusionPump {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // PHYSICAL DECOMPOSITION — System composition hierarchy
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // System → Subsystems
+    connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> controlSubsystem;
+    connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> pumpSubsystem;
+    connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> uiSubsystem;
+
+    // Control Electronics → Components
+    connection : ComposedOf connect whole ::> controlSubsystem to part ::> mainPCB;
+    connection : ComposedOf connect whole ::> controlSubsystem to part ::> mainProcessor;
+    connection : ComposedOf connect whole ::> controlSubsystem to part ::> pressureSensor;
+
+    // Pump Mechanism → Components
+    connection : ComposedOf connect whole ::> pumpSubsystem to part ::> stepperMotor;
+    connection : ComposedOf connect whole ::> pumpSubsystem to part ::> pumpHousing;
+    connection : ComposedOf connect whole ::> pumpSubsystem to part ::> antiFreeFlowMechanism;
+
+    // User Interface → Components
+    connection : ComposedOf connect whole ::> uiSubsystem to part ::> displayAssembly;
+
+    // ═══════════════════════════════════════════════════════════════════════
     // TRACEABILITY — Cross-layer relationships
     // ═══════════════════════════════════════════════════════════════════════
 

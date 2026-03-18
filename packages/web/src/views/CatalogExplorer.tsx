@@ -429,7 +429,7 @@ export function CatalogExplorer() {
 
                     <span className="flex-1 truncate" style={{
                         color: isVCycle ? '#1B3A4B' : '#4B5563',
-                        fontSize: '13px',
+                        fontSize: '16px',
                         fontWeight: isVCycle ? 600 : isKind ? 500 : 400,
                     }}>
                         {node.label}
@@ -487,7 +487,7 @@ export function CatalogExplorer() {
                     title={status === 'complete' ? 'No violations' : status === 'warning' ? 'Has warnings' : 'Has errors'} />
 
                 <span className="flex-1 truncate" style={{
-                    color: isSelected ? '#1B3A4B' : '#4B5563', fontSize: '13px',
+                    color: isSelected ? '#1B3A4B' : '#4B5563', fontSize: '16px',
                     fontWeight: isSelected ? 500 : 400,
                 }}>{node.label}</span>
 
@@ -717,12 +717,12 @@ export function CatalogExplorer() {
         <div className="flex flex-1 overflow-hidden">
             {/* ─── Left: Tree explorer ─────────────────────────────────── */}
             <div className="flex flex-col overflow-hidden"
-                style={{ width: '380px', minWidth: '320px', maxWidth: '480px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+                style={{ width: '440px', minWidth: '380px', maxWidth: '540px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
 
                 {/* Header */}
                 <div className="px-3 py-2 flex items-center gap-2"
                     style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E0' }}>
-                    <span className="text-xs font-semibold flex-1" style={{ color: '#1B3A4B' }}>Explorer</span>
+                    <span className="text-base font-semibold flex-1" style={{ color: '#1B3A4B' }}>Explorer</span>
                     {metadata?.version && (
                         <span className="text-xs tabular-nums px-1.5 py-0.5 rounded"
                             style={{ background: '#F0F0ED', color: '#9CA3AF', fontSize: '10px' }}>v{metadata.version}</span>
@@ -742,7 +742,7 @@ export function CatalogExplorer() {
                         <span style={{ color: '#B0B0A8', fontSize: '11px' }}>{'\u2315'}</span>
                         <input type="text" placeholder="Search elements..." value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="flex-1 text-xs bg-transparent focus:outline-none" style={{ color: '#1a1a1a' }} />
+                            className="flex-1 text-base bg-transparent focus:outline-none" style={{ color: '#1a1a1a' }} />
                         {searchTerm && <button className="text-xs" style={{ color: '#B0B0A8' }} onClick={() => setSearchTerm('')}>{'\u2715'}</button>}
                     </div>
                 </div>
@@ -797,11 +797,12 @@ export function CatalogExplorer() {
             {/* ─── Center: Element detail ──────────────────────────────── */}
             <div className="flex-1 overflow-y-auto" style={{ background: '#F7F7F5' }}>
                 {!selectedElement ? (
-                    <div className="flex items-center justify-center h-full" style={{ color: '#B0B0A8' }}>
-                        <div className="text-center">
-                            <div className="text-3xl mb-3" style={{ opacity: 0.12 }}>{'\u2630'}</div>
-                            <div className="text-sm">Select an element</div>
-                        </div>
+                    <div className="flex flex-col items-center justify-center h-full" style={{ color: '#B0B0A8', paddingTop: '6%' }}>
+                        <img src="/logo.png" alt="" style={{
+                            width: '60%', maxWidth: 700, minWidth: 250,
+                            opacity: 0.25,
+                        }} />
+                        <div className="text-base mt-2">Select an element</div>
                     </div>
                 ) : (
                     <div className="p-5 max-w-2xl">

@@ -9,12 +9,31 @@ const SEVERITY_STYLES: Record<string, { color: string; bg: string; icon: string 
 export function GapBar() {
     const validation = useModelStore(s => s.validation);
     const selectElement = useModelStore(s => s.selectElement);
+    const model = useModelStore(s => s.model);
+    const metadata = model?.metadata;
+    const count = model ? Object.keys(model.elements).length : 0;
+
+    const gitInfo = metadata?.gitUser ? (
+        <>
+            @{metadata.gitUser}
+            {metadata.gitBranch && <> &middot; {metadata.gitBranch}</>}
+            {metadata.gitCommitShort && (
+                <span style={{ marginLeft: '4px', fontFamily: 'monospace', fontSize: '10px' }}>
+                    {metadata.gitCommitShort}
+                </span>
+            )}
+        </>
+    ) : null;
 
     if (!validation || validation.violations.length === 0) {
         return (
             <div className="h-8 flex items-center px-4" style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E0' }}>
                 <span className="text-xs" style={{ color: '#10B981' }}>
                     {validation ? '✓ No violations' : 'Waiting for validation...'}
+                </span>
+                <span className="ml-auto text-xs" style={{ color: '#9CA3AF' }}>
+                    {count} elements
+                    {gitInfo && <> | {gitInfo}</>}
                 </span>
             </div>
         );
@@ -34,7 +53,8 @@ export function GapBar() {
                     <span style={{ color: '#D97706' }}>{warnings.length} warnings</span>
                 )}
                 <span className="ml-auto" style={{ color: '#9CA3AF' }}>
-                    {validation.rulesEvaluated} rules | {validation.rulesPassed} passed
+                    {validation.rulesEvaluated} rules | {validation.rulesPassed} passed | {count} elements
+                    {gitInfo && <> | {gitInfo}</>}
                 </span>
             </div>
 

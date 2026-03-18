@@ -28,13 +28,13 @@ export function Sidebar() {
     }
 
     return (
-        <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden" style={{ width: 440, background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
             {/* Header with hero gradient */}
-            <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
+            <div className="px-5 py-4" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>MEMO</h1>
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                        <h1 className="text-xl font-bold tracking-wide" style={{ color: '#2DD4A8' }}>MEMO</h1>
+                        <p className="text-lg mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
                             {elementCount} elements &middot; {relCount} relationships
                         </p>
                     </div>
@@ -56,7 +56,7 @@ export function Sidebar() {
                     placeholder="Search elements..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-shadow"
+                    className="w-full px-4 py-3 text-xl rounded-lg focus:outline-none transition-shadow"
                     style={{
                         background: '#F7F7F5',
                         border: '1px solid #E5E5E0',

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useModelStore, getDiagramsForViewpoint } from '../store/model-store';
-import { LAYER_COLORS, LAYER_ORDER, DIAGRAM_TYPE_META } from '../constants';
-import type { MemoElement, DiagramDTO } from '@memo/core';
+import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
+import type { DiagramDTO } from '@memo/core';
 
 /** Additional viewpoints that should always appear even if not defined in config */
 const EXTRA_VIEWPOINTS = [
@@ -45,6 +45,11 @@ function DiagramRow({ diag, isSelected, onSelect }: {
     isSelected: boolean;
     onSelect: () => void;
 }) {
+    const meta = DIAGRAM_TYPE_META[diag.diagramType];
+    const typeName = meta?.fullName ?? diag.diagramType;
+    const elCount = diag.elementIds?.length ?? 0;
+    const tooltip = [typeName, diag.description].filter(Boolean).join(' — ');
+
     return (
         <div
             className="flex items-center gap-2 px-2 py-1 cursor-pointer"
@@ -55,7 +60,7 @@ function DiagramRow({ diag, isSelected, onSelect }: {
             onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
             onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
             onClick={onSelect}
-            title={diag.description}
+            title={tooltip}
         >
             <DiagramTypeBadge diagramType={diag.diagramType} />
             {diag.auto && (
@@ -65,6 +70,12 @@ function DiagramRow({ diag, isSelected, onSelect }: {
                 </span>
             )}
             <span className="truncate flex-1" style={{ color: '#374151' }}>{diag.name}</span>
+            {elCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-xs"
+                    style={{ background: '#F0F0ED', color: '#6B7280', fontSize: '9px', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
+                    {elCount}
+                </span>
+            )}
         </div>
     );
 }
@@ -73,14 +84,12 @@ export function ViewpointBrowser() {
     const model = useModelStore(s => s.model);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
-    const selectedElementId = useModelStore(s => s.selectedElementId);
-    const selectElement = useModelStore(s => s.selectElement);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const selectDiagram = useModelStore(s => s.selectDiagram);
-    const hiddenLayers = useModelStore(s => s.hiddenLayers);
-    const toggleLayerVisibility = useModelStore(s => s.toggleLayerVisibility);
     const searchTerm = useModelStore(s => s.searchTerm);
     const setSearchTerm = useModelStore(s => s.setSearchTerm);
+    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
 
     const [expandedViewpoints, setExpandedViewpoints] = useState<Set<string>>(new Set(['__model']));
 
@@ -101,28 +110,12 @@ export function ViewpointBrowser() {
         });
     };
 
-    // Get elements visible in a viewpoint
-    const getViewpointElements = (vpId: string | null): MemoElement[] => {
-        if (!model) return [];
-        const allEls = Object.values(model.elements);
-        if (!vpId || vpId === '__model') {
-            return allEls.filter(e =>
-                ['System', 'SystemExternal', 'Actor', 'Subsystem'].includes(e.kind)
-            );
-        }
-        const vp = viewpoints.find(v => v.id === vpId);
-        if (!vp) return allEls;
-        const visKinds = new Set(vp.visibleKinds);
-        const visLayers = new Set(vp.visibleLayers);
-        return allEls.filter(e => visKinds.has(e.kind) || visLayers.has(e.layer));
-    };
-
-    const filterBySearch = (els: MemoElement[]): MemoElement[] => {
-        if (!searchTerm) return els;
+    const filterDiagramsBySearch = (diagrams: DiagramDTO[]): DiagramDTO[] => {
+        if (!searchTerm) return diagrams;
         const lower = searchTerm.toLowerCase();
-        return els.filter(e =>
-            e.name.toLowerCase().includes(lower) ||
-            e.kind.toLowerCase().includes(lower)
+        return diagrams.filter(d =>
+            d.name.toLowerCase().includes(lower) ||
+            d.diagramType.toLowerCase().includes(lower)
         );
     };
 
@@ -132,21 +125,52 @@ export function ViewpointBrowser() {
     // Get diagrams from model DTO
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
 
+    if (sidebarCollapsed) {
+        return (
+            <div
+                className="flex flex-col items-center flex-shrink-0 cursor-pointer"
+                style={{ width: '40px', background: 'linear-gradient(180deg, #1B3A4B, #2D6A7A)', borderRight: '1px solid #E5E5E0' }}
+                onClick={toggleSidebar}
+                title="Expand sidebar"
+            >
+                <div className="py-3" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{'\u25B8'}</div>
+                <div style={{
+                    writingMode: 'vertical-rl', textOrientation: 'mixed',
+                    color: '#2DD4A8', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
+                }}>
+                    Viewpoints
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
             {/* Header */}
-            <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
-                <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Viewpoints</h1>
-                <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                    {elementCount} elements &middot; {relCount} relationships
-                </p>
+            <div className="flex items-center gap-2 px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
+                <div className="flex-1">
+                    <h1 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Viewpoints</h1>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                        {elementCount} elements &middot; {relCount} relationships
+                    </p>
+                </div>
+                <button
+                    onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
+                    className="flex items-center justify-center"
+                    style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', width: '24px', height: '24px', borderRadius: '4px' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                    title="Collapse sidebar"
+                >
+                    {'\u25C2'}
+                </button>
             </div>
 
             {/* Search */}
             <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #E5E5E0' }}>
                 <input
                     type="text"
-                    placeholder="Search elements..."
+                    placeholder="Search diagrams..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"
@@ -172,14 +196,14 @@ export function ViewpointBrowser() {
                         <span className="font-medium flex-1" style={{ color: selectedViewpointId === null ? '#1B3A4B' : '#374151' }}>
                             Model Viewpoint
                         </span>
-                        <span style={{ color: '#9CA3AF' }}>{getViewpointElements(null).length}</span>
+                        <span style={{ color: '#9CA3AF' }}>{modelDiagrams.length}</span>
                         <span style={{ color: '#D1D5DB' }}>{expandedViewpoints.has('__model') ? '\u25BE' : '\u25B8'}</span>
                     </div>
 
-                    {/* Model viewpoint diagrams + elements */}
+                    {/* Model viewpoint diagrams */}
                     {expandedViewpoints.has('__model') && (
                         <div className="ml-4">
-                            {modelDiagrams.map(diag => (
+                            {filterDiagramsBySearch(modelDiagrams).map(diag => (
                                 <DiagramRow
                                     key={diag.id}
                                     diag={diag}
@@ -187,40 +211,6 @@ export function ViewpointBrowser() {
                                     onSelect={() => selectDiagram(diag.id)}
                                 />
                             ))}
-
-                            {selectedViewpointId === null && (() => {
-                                const modelEls = filterBySearch(getViewpointElements(null));
-                                const layerMap = new Map<string, MemoElement[]>();
-                                for (const el of modelEls) {
-                                    if (!layerMap.has(el.layer)) layerMap.set(el.layer, []);
-                                    layerMap.get(el.layer)!.push(el);
-                                }
-                                return [...layerMap.entries()].map(([layer, els]) => (
-                                    <div key={layer} className="ml-2">
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5">
-                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LAYER_COLORS[layer] || '#666' }} />
-                                            <span className="capitalize flex-1" style={{ color: '#9CA3AF' }}>{layer}</span>
-                                        </div>
-                                        {els.map(el => (
-                                            <div
-                                                key={el.id}
-                                                className="px-3 py-1 ml-3 cursor-pointer truncate"
-                                                style={{
-                                                    borderRadius: '4px',
-                                                    background: selectedElementId === el.id ? '#2DD4A818' : 'transparent',
-                                                    color: selectedElementId === el.id ? '#1B3A4B' : '#374151',
-                                                    fontWeight: selectedElementId === el.id ? 500 : 400,
-                                                }}
-                                                onMouseEnter={e => { if (selectedElementId !== el.id) e.currentTarget.style.background = '#F0F0ED'; }}
-                                                onMouseLeave={e => { if (selectedElementId !== el.id) e.currentTarget.style.background = 'transparent'; }}
-                                                onClick={(e) => { e.stopPropagation(); selectElement(el.id); }}
-                                            >
-                                                {el.name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ));
-                            })()}
                         </div>
                     )}
                 </div>
@@ -229,8 +219,7 @@ export function ViewpointBrowser() {
                 {viewpoints.map(vp => {
                     const isSelected = selectedViewpointId === vp.id;
                     const isExpanded = expandedViewpoints.has(vp.id);
-                    const vpElements = filterBySearch(getViewpointElements(vp.id));
-                    const vpColor = vp.visibleLayers[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || '#6B7280') : '#6B7280';
+                    const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || '#6B7280') : '#6B7280';
                     const diagrams = getDiagramsForViewpoint(model, vp.id);
 
                     return (
@@ -249,76 +238,21 @@ export function ViewpointBrowser() {
                                 <span className="font-medium flex-1 truncate" style={{ color: isSelected ? '#1B3A4B' : '#374151' }}>
                                     {vp.label}
                                 </span>
-                                <span style={{ color: '#9CA3AF' }}>{vpElements.length}</span>
+                                <span style={{ color: '#9CA3AF' }}>{diagrams.length}</span>
                                 <span style={{ color: '#D1D5DB' }}>{isExpanded ? '\u25BE' : '\u25B8'}</span>
                             </div>
 
-                            {/* Expanded: show diagrams + elements grouped by layer */}
+                            {/* Expanded: show diagrams */}
                             {isExpanded && isSelected && (
                                 <div className="ml-4">
-                                    {/* Diagrams for this viewpoint */}
-                                    {diagrams.length > 0 && (
-                                        <div className="mb-1">
-                                            {diagrams.map(diag => (
-                                                <DiagramRow
-                                                    key={diag.id}
-                                                    diag={diag}
-                                                    isSelected={selectedDiagramId === diag.id}
-                                                    onSelect={() => selectDiagram(diag.id)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Elements by layer */}
-                                    {(() => {
-                                        const layerMap = new Map<string, MemoElement[]>();
-                                        for (const el of vpElements) {
-                                            if (!layerMap.has(el.layer)) layerMap.set(el.layer, []);
-                                            layerMap.get(el.layer)!.push(el);
-                                        }
-                                        const sortedLayers = [...layerMap.keys()].sort((a, b) => {
-                                            const ai = LAYER_ORDER.indexOf(a as any);
-                                            const bi = LAYER_ORDER.indexOf(b as any);
-                                            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-                                        });
-                                        return sortedLayers.map(layer => {
-                                            const els = layerMap.get(layer)!;
-                                            const lColor = LAYER_COLORS[layer] || '#666';
-                                            const isHidden = hiddenLayers.has(layer);
-                                            return (
-                                                <div key={layer}>
-                                                    <div className="flex items-center gap-1.5 px-2 py-0.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lColor, opacity: isHidden ? 0.3 : 1 }} />
-                                                        <span className="capitalize flex-1" style={{ color: '#9CA3AF' }}>{layer}</span>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer); }}
-                                                            style={{ color: isHidden ? '#D1D5DB' : '#9CA3AF', fontSize: '10px' }}
-                                                        >
-                                                            {isHidden ? '\u25CB' : '\u25CF'}
-                                                        </button>
-                                                    </div>
-                                                    {!isHidden && els.map(el => (
-                                                        <div
-                                                            key={el.id}
-                                                            className="px-3 py-1 ml-3 cursor-pointer truncate"
-                                                            style={{
-                                                                borderRadius: '4px',
-                                                                background: selectedElementId === el.id ? '#2DD4A818' : 'transparent',
-                                                                color: selectedElementId === el.id ? '#1B3A4B' : '#374151',
-                                                                fontWeight: selectedElementId === el.id ? 500 : 400,
-                                                            }}
-                                                            onMouseEnter={e => { if (selectedElementId !== el.id) e.currentTarget.style.background = '#F0F0ED'; }}
-                                                            onMouseLeave={e => { if (selectedElementId !== el.id) e.currentTarget.style.background = 'transparent'; }}
-                                                            onClick={(e) => { e.stopPropagation(); selectElement(el.id); }}
-                                                        >
-                                                            {el.name}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        });
-                                    })()}
+                                    {filterDiagramsBySearch(diagrams).map(diag => (
+                                        <DiagramRow
+                                            key={diag.id}
+                                            diag={diag}
+                                            isSelected={selectedDiagramId === diag.id}
+                                            onSelect={() => selectDiagram(diag.id)}
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </div>

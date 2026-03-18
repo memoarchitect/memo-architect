@@ -171,3 +171,14 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     par:  { code: 'PAR',  label: 'PAR',  fullName: 'Parametric Diagram',       color: '#2ECC71' },
     risk: { code: 'RISK', label: 'RISK', fullName: 'Risk Diagram',             color: '#E74C3C' },
 };
+
+// ─── Containment Depth Colors ────────────────────────────────────────────────
+// Background tints for nested containment diagram levels.
+
+export const CONTAINMENT_DEPTH_COLORS = [
+    '#FFFFFF',   // depth 0 — white
+    '#f8fafc',   // depth 1 — slate-50
+    '#f0f9ff',   // depth 2 — sky-50
+    '#fdf2f8',   // depth 3 — pink-50
+    '#f0fdf4',   // depth 4 — green-50
+];

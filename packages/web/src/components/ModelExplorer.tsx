@@ -43,7 +43,7 @@ export function ModelExplorer() {
     };
 
     return (
-        <div className="text-xs py-1">
+        <div className="text-xl py-1">
             {sortedLayers.map(layer => {
                 const elements = filterElements(byLayer.get(layer) || []);
                 if (elements.length === 0) return null;

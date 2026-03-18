@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -15,7 +15,13 @@ import '@xyflow/react/dist/style.css';
 import type { MemoElement } from '@memo/core';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { DIAGRAM_TYPE_META } from '../constants';
-import { computeLayout } from './layout';
+import {
+    computeLayout,
+    computeDecompositionLayout,
+    computeContainmentLayout,
+    buildDecompositionTree,
+} from './layout';
+import { DecompositionNode } from './DecompositionNode';
 
 function DiagramCanvasInner() {
     const model = useModelStore(s => s.model);
@@ -31,13 +37,79 @@ function DiagramCanvasInner() {
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutVersion, setLayoutVersion] = useState(0);
 
+    // Decomposition diagram state
+    const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
+
+    // Interactive state for decomposition/containment diagrams
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+    const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
+    const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+
+    // Register custom node types
+    const nodeTypes = useMemo(() => ({ decompositionNode: DecompositionNode }), []);
+
     // Get the selected diagram (if any)
     const selectedDiagram = getDiagram(model, selectedDiagramId);
     const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
+    const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
+
+    // Interactive callbacks
+    const toggleExpand = useCallback((nodeId: string) => {
+        setExpandedNodes(prev => {
+            const next = new Set(prev);
+            if (next.has(nodeId)) next.delete(nodeId);
+            else next.add(nodeId);
+            return next;
+        });
+    }, []);
+
+    const toggleDirection = useCallback((nodeId: string) => {
+        // Clear position cache for descendants to force re-layout
+        if (model) {
+            const tree = buildDecompositionTree(model);
+            const clearDescendants = (id: string) => {
+                positionCacheRef.current.delete(id);
+                for (const cid of (tree.childrenMap.get(id) || [])) {
+                    clearDescendants(cid);
+                }
+            };
+            clearDescendants(nodeId);
+        }
+        setNodeDirections(prev => {
+            const next = new Map(prev);
+            const current = next.get(nodeId) || 'vertical';
+            next.set(nodeId, current === 'vertical' ? 'horizontal' : 'vertical');
+            return next;
+        });
+    }, [model]);
+
+    const expandAll = useCallback(() => {
+        if (!model) return;
+        const tree = buildDecompositionTree(model);
+        const allIds = new Set<string>();
+        const collectAll = (id: string) => {
+            allIds.add(id);
+            for (const cid of (tree.childrenMap.get(id) || [])) {
+                if (tree.elements.has(cid)) collectAll(cid);
+            }
+        };
+        for (const rootId of tree.roots) {
+            if (tree.elements.has(rootId)) collectAll(rootId);
+        }
+        setExpandedNodes(allIds);
+    }, [model]);
+
+    const collapseAll = useCallback(() => {
+        setExpandedNodes(new Set());
+    }, []);
+
+    const resetLayout = useCallback(() => {
+        positionCacheRef.current.clear();
+        setLayoutVersion(v => v + 1);
+    }, []);
 
     // Build viewpoint filter from selected viewpoint/diagram + hidden layers
     const viewpointFilter = useMemo(() => {
-        // Determine effective viewpoint: diagram's viewpoint takes precedence
         const effectiveVpId = selectedDiagram?.viewpointId === '__model'
             ? null
             : (selectedDiagram?.viewpointId || selectedViewpointId);
@@ -58,11 +130,8 @@ function DiagramCanvasInner() {
         const vpLayers = vp ? new Set(vp.visibleLayers) : undefined;
 
         return (el: MemoElement) => {
-            // Layer toggle: hide if layer is toggled off
             if (hiddenLayers.has(el.layer)) return false;
-            // Diagram element subset filter
             if (diagramElementIds) return diagramElementIds.has(el.id);
-            // Viewpoint filter
             if (vpKinds && vpLayers) {
                 return vpKinds.has(el.kind) || vpLayers.has(el.layer);
             }
@@ -70,25 +139,53 @@ function DiagramCanvasInner() {
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
 
-    // Recompute layout when model or viewpoint changes
+    // Recompute layout when model, viewpoint, or interactive state changes
     useEffect(() => {
         if (!model) return;
 
-        setIsLayouting(true);
-        computeLayout(model, { viewpointFilter })
-            .then(({ nodes: n, edges: e }) => {
-                setNodes(n);
-                setEdges(e);
-                setIsLayouting(false);
+        if (isDecompDiagram) {
+            if (layoutStyle === 'decomposition') {
+                setIsLayouting(true);
+                computeDecompositionLayout(model, {
+                    expandedNodes,
+                    nodeDirections,
+                    callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+                }).then(({ nodes: n, edges: e }) => {
+                    setNodes(n);
+                    setEdges(e);
+                    setIsLayouting(false);
+                    setLayoutVersion(v => v + 1);
+                }).catch(err => {
+                    console.error('Layout error:', err);
+                    setIsLayouting(false);
+                });
+            } else {
+                // Containment — synchronous
+                const result = computeContainmentLayout(model, {
+                    expandedNodes,
+                    callbacks: { onToggleExpand: toggleExpand },
+                });
+                setNodes(result.nodes);
+                setEdges(result.edges);
                 setLayoutVersion(v => v + 1);
-            })
-            .catch(err => {
-                console.error('Layout error:', err);
-                setIsLayouting(false);
-            });
-    }, [model, viewpointFilter]);
+            }
+        } else {
+            setIsLayouting(true);
+            computeLayout(model, { viewpointFilter })
+                .then(({ nodes: n, edges: e }) => {
+                    setNodes(n);
+                    setEdges(e);
+                    setIsLayouting(false);
+                    setLayoutVersion(v => v + 1);
+                })
+                .catch(err => {
+                    console.error('Layout error:', err);
+                    setIsLayouting(false);
+                });
+        }
+    }, [model, viewpointFilter, isDecompDiagram, layoutStyle, expandedNodes, nodeDirections, toggleExpand, toggleDirection]);
 
-    // Re-fit view after layout updates — delayed to let ReactFlow internalize nodes
+    // Re-fit view after layout updates
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
@@ -100,7 +197,6 @@ function DiagramCanvasInner() {
     // Highlight selected element
     useEffect(() => {
         if (!selectedElementId) return;
-
         setNodes(prev => prev.map(n => ({
             ...n,
             style: {
@@ -121,12 +217,15 @@ function DiagramCanvasInner() {
 
     const onPaneClick = useCallback(() => {
         selectElement(null);
-        // Reset opacity
         setNodes(prev => prev.map(n => ({
             ...n,
             style: { ...n.style, opacity: 1, boxShadow: undefined },
         })));
     }, [selectElement]);
+
+    const onNodeDragStop = useCallback((_: any, node: Node) => {
+        positionCacheRef.current.set(node.id, node.position);
+    }, []);
 
     return (
         <div className="flex-1 relative">
@@ -146,6 +245,52 @@ function DiagramCanvasInner() {
                     {selectedDiagram.auto && (
                         <span style={{ color: '#9CA3AF', fontSize: '9px' }}>AUTO</span>
                     )}
+
+                    {/* Decomposition controls */}
+                    {isDecompDiagram && (
+                        <>
+                            <span style={{ color: '#E5E5E0' }}>|</span>
+                            {/* Containment / Decomposition toggle */}
+                            <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
+                                {(['containment', 'decomposition'] as const).map(style => (
+                                    <button
+                                        key={style}
+                                        onClick={() => {
+                                            setLayoutStyle(style);
+                                            positionCacheRef.current.clear();
+                                        }}
+                                        className="px-2 py-0.5 text-xs font-medium"
+                                        style={{
+                                            background: layoutStyle === style ? '#1B3A4B' : '#FFFFFF',
+                                            color: layoutStyle === style ? '#FFFFFF' : '#6B7280',
+                                        }}
+                                    >
+                                        {style === 'containment' ? 'Containment' : 'Decomposition'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <span style={{ color: '#E5E5E0' }}>|</span>
+
+                            {/* Expand All / Collapse All */}
+                            <button
+                                onClick={expandAll}
+                                className="px-2 py-0.5 text-xs font-medium rounded"
+                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                title="Expand all nodes"
+                            >
+                                Expand All
+                            </button>
+                            <button
+                                onClick={collapseAll}
+                                className="px-2 py-0.5 text-xs font-medium rounded"
+                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                title="Collapse all nodes"
+                            >
+                                Collapse All
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
             {isLayouting && (
@@ -159,10 +304,12 @@ function DiagramCanvasInner() {
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
+                nodeTypes={nodeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={onNodeClick}
                 onPaneClick={onPaneClick}
+                onNodeDragStop={onNodeDragStop}
                 fitView
                 fitViewOptions={{ padding: 0.08, maxZoom: 2 }}
                 minZoom={0.2}
@@ -174,7 +321,7 @@ function DiagramCanvasInner() {
                 <Controls />
                 <MiniMap
                     style={{ background: '#FFFFFF' }}
-                    nodeColor={(node) => (node.data as any)?.color || '#ccc'}
+                    nodeColor={(node) => (node.data as any)?.color || (node.data as any)?.layerColor || '#ccc'}
                     maskColor="rgba(247, 247, 245, 0.7)"
                 />
             </ReactFlow>
