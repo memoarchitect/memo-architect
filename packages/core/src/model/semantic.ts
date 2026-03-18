@@ -19,6 +19,8 @@ export interface MemoElement {
     layer: string;
     /** Source file path (relative) */
     file: string;
+    /** Containing package qualified name, e.g. "InfusionPump" */
+    package?: string;
     /** All attributes as key-value pairs */
     attributes: Record<string, string>;
     /** Doc comment if present */

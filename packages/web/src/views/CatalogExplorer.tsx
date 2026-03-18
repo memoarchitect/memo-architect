@@ -29,6 +29,8 @@ export function CatalogExplorer() {
     const validation = useModelStore(s => s.validation);
     const completeness = useModelStore(s => s.completeness);
     const tagFilters = useModelStore(s => s.tagFilters);
+    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const toggleTagFilter = useModelStore(s => s.toggleTagFilter);
     const clearTagFilters = useModelStore(s => s.clearTagFilters);
 
@@ -716,6 +718,23 @@ export function CatalogExplorer() {
     return (
         <div className="flex flex-1 overflow-hidden">
             {/* ─── Left: Tree explorer ─────────────────────────────────── */}
+            {sidebarCollapsed && (
+                <div
+                    className="flex flex-col items-center flex-shrink-0 cursor-pointer"
+                    style={{ width: '40px', background: '#FAFAF8', borderRight: '1px solid #E5E5E0' }}
+                    onClick={toggleSidebar}
+                    title="Expand sidebar"
+                >
+                    <div className="py-3" style={{ color: '#9CA3AF', fontSize: '14px' }}>{'\u25B8'}</div>
+                    <div style={{
+                        writingMode: 'vertical-rl', textOrientation: 'mixed',
+                        color: '#1B3A4B', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
+                    }}>
+                        Explorer
+                    </div>
+                </div>
+            )}
+            {!sidebarCollapsed && (
             <div className="flex flex-col overflow-hidden"
                 style={{ width: '440px', minWidth: '380px', maxWidth: '540px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
 
@@ -733,6 +752,16 @@ export function CatalogExplorer() {
                         style={{ color: '#B0B0A8', fontSize: '10px' }} title="Expand all">{'\u229E'}</button>
                     <button onClick={collapseAll} className="px-1 py-0.5 rounded"
                         style={{ color: '#B0B0A8', fontSize: '10px' }} title="Collapse all">{'\u229F'}</button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
+                        className="px-1 py-0.5 rounded"
+                        style={{ color: '#B0B0A8', fontSize: '12px' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#1B3A4B'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#B0B0A8'}
+                        title="Collapse sidebar"
+                    >
+                        {'\u25C2'}
+                    </button>
                 </div>
 
                 {/* Search */}
@@ -793,6 +822,7 @@ export function CatalogExplorer() {
                     )}
                 </div>
             </div>
+            )}
 
             {/* ─── Center: Element detail ──────────────────────────────── */}
             <div className="flex-1 overflow-y-auto" style={{ background: '#F7F7F5' }}>

@@ -28,7 +28,7 @@ NamespaceMember:
 // ─── Package ─────────────────────────────────────────────────────────────────
 
 PackageDeclaration:
-    'package' name=QualifiedName '{'
+    isLibrary?='library'? 'package' name=QualifiedName '{'
         members+=PackageMember*
     '}';
 

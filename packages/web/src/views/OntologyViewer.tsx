@@ -31,6 +31,8 @@ export function OntologyViewer() {
     const toggleGroupCollapsed = useModelStore(s => s.toggleGroupCollapsed);
     const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const toggleLayerVisibility = useModelStore(s => s.toggleLayerVisibility);
+    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedKind, setSelectedKind] = useState<string | null>(null);
@@ -142,12 +144,41 @@ export function OntologyViewer() {
     return (
         <div className="flex flex-1 overflow-hidden">
             {/* Left: Ontology tree */}
+            {sidebarCollapsed && (
+                <div
+                    className="flex flex-col items-center flex-shrink-0 cursor-pointer"
+                    style={{ width: '40px', background: 'linear-gradient(180deg, #1B3A4B, #2D6A7A)', borderRight: '1px solid #E5E5E0' }}
+                    onClick={toggleSidebar}
+                    title="Expand sidebar"
+                >
+                    <div className="py-3" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{'\u25B8'}</div>
+                    <div style={{
+                        writingMode: 'vertical-rl', textOrientation: 'mixed',
+                        color: '#2DD4A8', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
+                    }}>
+                        Ontology
+                    </div>
+                </div>
+            )}
+            {!sidebarCollapsed && (
             <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
-                <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
-                    <h2 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Ontology</h2>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                        {kinds.length} kinds &middot; {relationships.length} relationships
-                    </p>
+                <div className="px-4 py-3 flex items-center" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
+                    <div className="flex-1">
+                        <h2 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Ontology</h2>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            {kinds.length} kinds &middot; {relationships.length} relationships
+                        </p>
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
+                        className="flex items-center justify-center"
+                        style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', width: '24px', height: '24px', borderRadius: '4px' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                        title="Collapse sidebar"
+                    >
+                        {'\u25C2'}
+                    </button>
                 </div>
                 <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #E5E5E0' }}>
                     <input
@@ -226,6 +257,7 @@ export function OntologyViewer() {
                     })}
                 </div>
             </div>
+            )}
 
             {/* Center: Ontology graph or tree detail */}
             <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#F7F7F5' }}>

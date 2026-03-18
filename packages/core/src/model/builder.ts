@@ -6,7 +6,8 @@
 // Key design decisions:
 //   - usage.type (e.g. "Hazard") is matched against config.kinds for layer info
 //   - ConnectionUsage.type (e.g. "Mitigates") → lowercase → matches config.relationshipTypes
-//   - No cross-file reference resolution for MVP
+//   - PackageRegistry tracks cross-file packages and resolves imports
+//   - Connections are deferred until all elements are extracted (two-pass)
 //   - Doc comments are extracted from usage bodies
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,16 @@ import type {
     ParseError,
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
+import { PackageRegistry } from './package-registry.js';
 
 let relationshipCounter = 0;
+
+/** Deferred connection to resolve after all elements are extracted */
+interface DeferredConnection {
+    conn: ConnectionUsage;
+    filePath: string;
+    packageName: string;
+}
 
 /**
  * Build a MemoModel from parsed documents and config.
@@ -48,10 +57,22 @@ export function buildMemoModel(
     const elements = new Map<string, MemoElement>();
     const relationships: MemoRelationship[] = [];
     const errors: ParseError[] = [...parseErrors];
+    const deferredConnections: DeferredConnection[] = [];
 
+    // Phase 1: Build package registry from all documents
+    const registry = new PackageRegistry();
+    registry.buildFromDocuments(documents);
+
+    // Phase 2: Extract elements from all documents (populates registry)
     for (const { document, filePath } of documents) {
         const model = document.parseResult.value;
-        extractFromModel(model, filePath, config, elements, relationships, errors);
+        extractFromModel(model, filePath, config, elements, deferredConnections, errors, registry);
+    }
+
+    // Phase 3: Resolve connections using the registry (all elements now known)
+    const allElementIds = new Set(elements.keys());
+    for (const { conn, filePath, packageName } of deferredConnections) {
+        resolveConnection(conn, filePath, packageName, config, relationships, registry, allElementIds);
     }
 
     // Build indexes
@@ -95,12 +116,13 @@ function extractFromModel(
     filePath: string,
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
-    relationships: MemoRelationship[],
-    errors: ParseError[]
+    deferredConnections: DeferredConnection[],
+    errors: ParseError[],
+    registry: PackageRegistry
 ): void {
     for (const member of model.members) {
         if (member.$type === 'PackageDeclaration') {
-            extractFromPackage(member as PackageDeclaration, filePath, config, elements, relationships, errors);
+            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, errors, registry);
         }
     }
 }
@@ -108,30 +130,39 @@ function extractFromModel(
 function extractFromPackage(
     pkg: PackageDeclaration,
     filePath: string,
+    parentPackage: string,
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
-    relationships: MemoRelationship[],
-    errors: ParseError[]
+    deferredConnections: DeferredConnection[],
+    errors: ParseError[],
+    registry: PackageRegistry
 ): void {
+    const packageName = parentPackage ? `${parentPackage}::${pkg.name}` : pkg.name;
+
     for (const member of pkg.members) {
         switch (member.$type) {
             case 'PackageDeclaration':
-                extractFromPackage(member as PackageDeclaration, filePath, config, elements, relationships, errors);
+                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, errors, registry);
                 break;
             case 'PartUsage':
-                extractUsage(member as PartUsage, 'part', filePath, config, elements);
+                extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry);
                 break;
             case 'RequirementUsage':
-                extractUsage(member as RequirementUsage, 'requirement', filePath, config, elements);
+                extractUsage(member as RequirementUsage, 'requirement', filePath, packageName, config, elements, registry);
                 break;
             case 'ActionUsage':
-                extractUsage(member as ActionUsage, 'action', filePath, config, elements);
+                extractUsage(member as ActionUsage, 'action', filePath, packageName, config, elements, registry);
                 break;
             case 'PortUsage':
-                extractUsage(member as PortUsage, 'port', filePath, config, elements);
+                extractUsage(member as PortUsage, 'port', filePath, packageName, config, elements, registry);
                 break;
             case 'ConnectionUsage':
-                extractConnection(member as ConnectionUsage, filePath, config, relationships);
+                // Defer connection resolution until all elements are extracted
+                deferredConnections.push({
+                    conn: member as ConnectionUsage,
+                    filePath,
+                    packageName,
+                });
                 break;
             // Definitions (part def, interface def, etc.) inside packages are
             // ontology-level — we don't extract them as model elements in device projects
@@ -145,12 +176,25 @@ function extractUsage(
     usage: UsageNode,
     construct: string,
     filePath: string,
+    packageName: string,
     config: MEMOConfig,
-    elements: Map<string, MemoElement>
+    elements: Map<string, MemoElement>,
+    registry: PackageRegistry
 ): void {
     const id = usage.name;
     const typeName = usage.type; // e.g. "Hazard", "SystemRequirement"
     const kindDef = typeName ? config.kinds[typeName] : undefined;
+
+    // If type has a qualified name, try just the local part for kind lookup
+    let resolvedKind = typeName || 'Unknown';
+    if (typeName && !kindDef && typeName.includes('::')) {
+        const localType = typeName.split('::').pop()!;
+        if (config.kinds[localType]) {
+            resolvedKind = localType;
+        }
+    }
+
+    const finalKindDef = config.kinds[resolvedKind];
 
     const attributes = extractAttributes(usage.body);
     const doc = extractDocComment(usage.body);
@@ -161,31 +205,40 @@ function extractUsage(
     const element: MemoElement = {
         id,
         name: displayName,
-        kind: typeName || 'Unknown',
+        kind: resolvedKind,
         construct,
-        layer: kindDef?.layer || 'unknown',
+        layer: finalKindDef?.layer || 'unknown',
         file: filePath,
+        package: packageName || undefined,
         attributes,
         doc,
     };
 
     elements.set(id, element);
+    registry.registerElement(id, packageName);
 }
 
-function extractConnection(
+function resolveConnection(
     conn: ConnectionUsage,
     filePath: string,
+    packageName: string,
     config: MEMOConfig,
-    relationships: MemoRelationship[]
+    relationships: MemoRelationship[],
+    registry: PackageRegistry,
+    allElementIds: Set<string>
 ): void {
     const typeName = conn.type; // e.g. "Mitigates", "TraceTo"
     if (!typeName) return;
+    if (!conn.source || !conn.target) return;
 
     // Normalize: "Mitigates" → "mitigates", "TraceTo" → "traceTo"
     const normalizedType = normalizeRelType(typeName);
 
-    const sourceId = resolveRef(conn.source.ref);
-    const targetId = resolveRef(conn.target.ref);
+    // Resolve source and target using registry for cross-file resolution
+    const sourceId = registry.resolveElementId(conn.source.ref, packageName, allElementIds)
+        || resolveRef(conn.source.ref);
+    const targetId = registry.resolveElementId(conn.target.ref, packageName, allElementIds)
+        || resolveRef(conn.target.ref);
     if (!sourceId || !targetId) return;
 
     const rel: MemoRelationship = {

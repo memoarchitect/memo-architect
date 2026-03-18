@@ -77,24 +77,26 @@
 - [x] **Medical Device Quick Start Tutorial** — End-to-end guide: setup → CSV import → traceability → validation → CI
 - [x] **mkdocs guide structure** — Tutorial added as first guide in nav with callout on index
 
----
+### Phase 4D — UI Polish
 
-## In Progress / Next Up
-
-### Phase 4D — UI Polish (Backlog)
-
-- [ ] **Collapsible left sidebar** — Toggle sidebar open/closed for more diagram space
-- [ ] **Git user identity in top-right** — Show git user.name / user.email from config
-- [ ] **Vertical completeness bar** — Collapsible vertical bar (left edge) for better scalability
-- [ ] **UI font/size tuning** — Larger fonts and wider panels for high-res displays (committed but needs browser cache clear)
-- [ ] **Comments/discussion panel** — Element-level annotation/comment sidebar
+- [x] **Git user identity in status bar** — GapBar shows git user.name / user.email + branch
+- [x] **Vertical completeness bar** — Collapsible compact tab by default
+- [x] **UI font/size tuning** — 440px sidebar, 16px catalog fonts, text-xl diagram
+- [x] **Branding** — MEMO chat-bubble logo, favicon, brain watermark
+- [x] **Decomposition/containment diagram modes** — BDD + IBD auto-generated diagrams
+- [x] **Collapsible left sidebar** — Toggle sidebar open/closed across all 4 modes (40px collapsed strip with vertical label)
+- [x] **Comments/discussion panel** — Element-level annotation/comment sidebar with git user attribution, dirty tracking, and WebSocket persistence
 
 ### Phase 4 — Multi-File SysML & Cross-File Resolution
 
-- [ ] **Cross-file import resolution** — Build package registry from parsed documents, resolve `ImportDeclaration` paths
-- [ ] **SysML v2 `library` keyword** — Mark packages as `library package` (definitions only, no instances)
-- [ ] **Wildcard and named imports** — Support both `::*` and `::SpecificType` import syntax
-- [ ] **Multi-file model splitting** — Convention for splitting device models across files (risk, requirements, architecture)
+- [x] **Cross-file import resolution** — PackageRegistry tracks packages across files, two-pass builder defers connections, resolves via imports
+- [x] **SysML v2 `library` keyword** — Grammar supports `library package` (definitions only, `isLibrary` tracked in registry)
+- [x] **Wildcard and named imports** — Full `::*` and `::SpecificType` import syntax with registry-based resolution
+- [x] **Multi-file model splitting** — Convention with example split files (risk/, requirements/, architecture/) and 100 passing tests
+
+---
+
+## In Progress / Next Up
 
 ### Phase 5 — Behavior Viewpoint & Functional Flow Analysis
 
