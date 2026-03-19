@@ -71,3 +71,21 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #9CA3AF;
 }
+
+/* Node & edge transitions for smooth interactions */
+.react-flow__node {
+    transition: box-shadow 200ms ease, transform 200ms ease, opacity 200ms ease;
+}
+
+.react-flow__edge path {
+    transition: stroke-width 150ms ease;
+}
+
+.react-flow__edge:hover path {
+    stroke-width: 3px;
+}
+
+/* Handle visibility on hover */
+.react-flow__node:hover .react-flow__handle {
+    opacity: 1 !important;
+}

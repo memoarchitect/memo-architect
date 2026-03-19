@@ -59,7 +59,7 @@ function ActionFlowDiagramInner() {
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.1, maxZoom: 1.5, duration: 300 });
+            fitView({ padding: 0.1, maxZoom: 1.5, duration: 500 });
         }, 200);
         return () => clearTimeout(timer);
     }, [layoutVersion, fitView]);
@@ -72,7 +72,7 @@ function ActionFlowDiagramInner() {
             style: {
                 ...n.style,
                 opacity: selectedElementId
-                    ? (n.id === selectedElementId ? 1 : 0.4)
+                    ? (n.id === selectedElementId ? 1 : 0.5)
                     : 1,
             },
         })));
@@ -162,9 +162,13 @@ function ActionFlowDiagramInner() {
                 fitView
                 minZoom={0.2}
                 maxZoom={3}
+                zoomOnScroll
+                panOnScroll
+                panOnScrollMode={"free" as any}
                 proOptions={{ hideAttribution: true }}
+                style={{ background: '#F7F7F5' }}
             >
-                <Background color="#E5E5E0" gap={20} size={1} />
+                <Background color="#EAEAE6" gap={20} size={1} />
                 <Controls
                     position="top-right"
                     style={{ top: '12px', right: '12px' }}

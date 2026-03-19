@@ -410,6 +410,11 @@ relationshipTypes:
     layer: behavior
     color: "#95A5A6"
 
+  - name: decomposedBy
+    label: Decomposed By
+    layer: functional
+    color: "#D35400"
+
 # ─── Backward-Compatible Flat Relationship List ──────────────────────────────
 
 relationships:
@@ -427,38 +432,131 @@ relationships:
   - include
   - flow
   - succession
+  - decomposedBy
 
 # ─── Viewpoints ───────────────────────────────────────────────────────────────
 # Universal viewpoints for systems engineering.
 
 viewpoints:
-  - id: architecture-view
-    label: System Architecture
-    supportedDiagramTypes: [bdd, ibd, act, pkg]
+  # Context Viewpoint — system boundary, external actors/systems (ISO 42010 / Asensus)
+  - id: context-view
+    label: System Context
+    supportedDiagramTypes: [bdd, pkg]
     visibleKinds:
       - System
       - SystemExternal
+      - Actor
+      - Stakeholder
+      - EnvironmentElement
+    visibleRelationships:
+      - association
+      - dependency
+    visibleLayers:
+      - logical
+      - business
+    diagrams:
+      - id: diag-ctx-overview
+        name: System Context
+        diagramType: bdd
+        viewpointId: context-view
+        auto: true
+        description: System boundary with external actors and interfacing systems
+
+  # Functional Viewpoint — what the system needs to do (functions, allocation)
+  - id: functional-view
+    label: Functional Analysis
+    supportedDiagramTypes: [bdd, act, pkg]
+    visibleKinds:
+      - SystemFunction
+      - ComponentFunction
+      - System
+      - Subsystem
+      - Component
+    visibleRelationships:
+      - allocateTo
+      - traceTo
+      - composedOf
+      - decomposedBy
+    visibleLayers:
+      - functional
+      - logical
+    diagrams:
+      - id: diag-fbs-tree
+        name: Functional Breakdown (FBS)
+        diagramType: bdd
+        viewpointId: functional-view
+        auto: true
+        description: Hierarchical function decomposition tree — parent functions broken into sub-functions
+        properties:
+          layoutStyle: fbs
+      - id: diag-func-allocation
+        name: Functional Allocation
+        diagramType: bdd
+        viewpointId: functional-view
+        auto: true
+        description: Functions allocated to logical components
+
+  # Logical Viewpoint — how the system is decomposed (subsystems, components, interfaces)
+  - id: logical-view
+    label: Logical Architecture
+    supportedDiagramTypes: [bdd, ibd, pkg]
+    visibleKinds:
+      - System
       - Subsystem
       - Component
       - LogicalComponent
       - LogicalComponentExternal
-      - SystemFunction
-      - ComponentFunction
     visibleRelationships:
       - aggregation
       - composedOf
-      - allocateTo
       - association
     visibleLayers:
       - logical
-      - functional
     diagrams:
-      - id: diag-arch-allocation
-        name: Functional Allocation
+      - id: diag-logical-decomposition
+        name: System Decomposition
         diagramType: bdd
-        viewpointId: architecture-view
+        viewpointId: logical-view
         auto: true
-        description: Functions allocated to logical components
+        description: System broken down into subsystems and components
+      - id: diag-logical-ibd
+        name: Internal Block Diagram
+        diagramType: ibd
+        viewpointId: logical-view
+        auto: true
+        description: Internal structure — subsystem interconnections and interfaces
+        properties:
+          layoutStyle: ibd
+
+  # Interface Viewpoint — ports, interfaces, data types
+  - id: interface-view
+    label: Interfaces & Ports
+    supportedDiagramTypes: [bdd, ibd, pkg]
+    visibleKinds:
+      - Port
+      - PortEthernet
+      - PortUSB
+      - PortSerial
+      - PortPower
+      - Interface
+      - SoftwareInterface
+      - SoftwareProvidedInterface
+      - SoftwareRequiredInterface
+      - DataType
+      - RosTopic
+      - RosService
+    visibleRelationships:
+      - association
+      - dependency
+    visibleLayers:
+      - interfaces
+    diagrams:
+      - id: diag-iface-overview
+        name: Interface Overview
+        diagramType: bdd
+        viewpointId: interface-view
+        auto: true
+        description: System ports, interfaces, and data types
 
   - id: requirements-trace
     label: Requirements Traceability

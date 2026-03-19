@@ -47,6 +47,7 @@ export const REL_COLORS: Record<string, string> = {
     allocateTo: '#E67E22',
     aggregation: '#7B68EE',
     composedOf: '#8E44AD',
+    decomposedBy: '#D35400',
     flow: '#3498DB',
     succession: '#95A5A6',
 };

@@ -3,25 +3,10 @@ import { useModelStore, getDiagramsForViewpoint } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import type { DiagramDTO } from '@memo/core';
 
-/** Additional viewpoints that should always appear even if not defined in config */
-const EXTRA_VIEWPOINTS = [
-    {
-        id: 'interface-view',
-        label: 'Interface View',
-        visibleKinds: ['Port', 'PortEthernet', 'PortUSB', 'PortSerial', 'PortPower',
-            'Interface', 'SoftwareInterface', 'SoftwareProvidedInterface',
-            'SoftwareRequiredInterface', 'DataType', 'RosTopic', 'RosService'],
-        visibleRelationships: ['association', 'dependency'],
-        visibleLayers: ['interfaces'],
-    },
-    {
-        id: 'business-view',
-        label: 'Business Analysis',
-        visibleKinds: ['Actor', 'Stakeholder', 'Goal', 'Concern', 'Responsibility', 'Capability'],
-        visibleRelationships: ['association', 'traceTo'],
-        visibleLayers: ['business'],
-    },
-];
+/** Additional viewpoints that should always appear even if not defined in config.
+ *  Note: interface-view and context-view are now in the base ontology config.
+ *  Only keep truly universal extras here that might not be in any config. */
+const EXTRA_VIEWPOINTS: { id: string; label: string; visibleKinds: string[]; visibleRelationships: string[]; visibleLayers: string[] }[] = [];
 
 function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
     const meta = DIAGRAM_TYPE_META[diagramType];
@@ -243,7 +228,7 @@ export function ViewpointBrowser() {
                             </div>
 
                             {/* Expanded: show diagrams */}
-                            {isExpanded && isSelected && (
+                            {isExpanded && (
                                 <div className="ml-4">
                                     {filterDiagramsBySearch(diagrams).map(diag => (
                                         <DiagramRow

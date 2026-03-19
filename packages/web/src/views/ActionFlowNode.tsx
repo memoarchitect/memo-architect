@@ -1,15 +1,17 @@
 // ─── ActionFlowNode ──────────────────────────────────────────────────────────
 //
 // Custom ReactFlow node for Action Flow Diagrams.
-// Renders action nodes as rounded rectangles with:
+// Renders action nodes as polished rounded cards with:
 //   - Input ports (left edge) and output ports (right edge)
 //   - Color-coding by allocation lane/layer
+//   - Drop shadows, hover lift, subtle gradients
 //   - Start/Done pseudo-nodes with UML activity diagram styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { MemoElement, ActionParameter } from '@memo/core';
+import { SHADOW, RADIUS, FONT } from '../styles/tokens';
 
 export interface ActionFlowNodeData {
     element?: MemoElement;
@@ -26,13 +28,15 @@ export interface ActionFlowNodeData {
 function ActionFlowNodeInner({ data }: NodeProps) {
     const d = data as unknown as ActionFlowNodeData;
     const { nodeType, label, laneColor, layerColor, inPorts, outPorts } = d;
+    const [hovered, setHovered] = useState(false);
 
     // Start node: filled circle
     if (nodeType === 'start') {
         return (
             <div style={{
-                width: 24, height: 24, borderRadius: '50%',
+                width: 28, height: 28, borderRadius: '50%',
                 background: '#374151', border: '2px solid #374151',
+                boxShadow: SHADOW.sm,
             }}>
                 <Handle type="source" position={Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
             </div>
@@ -43,40 +47,44 @@ function ActionFlowNodeInner({ data }: NodeProps) {
     if (nodeType === 'done') {
         return (
             <div style={{
-                width: 24, height: 24, borderRadius: '50%',
+                width: 28, height: 28, borderRadius: '50%',
                 background: '#FFFFFF', border: '3px solid #374151',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: SHADOW.sm,
             }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#374151' }} />
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} />
                 <Handle type="target" position={Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
             </div>
         );
     }
 
-    // Action node: rounded rectangle with ports
+    // Action node: polished rounded card with ports
+    const color = laneColor || layerColor || '#9CA3AF';
     const portHeight = 18;
-    const headerHeight = 36;
-    const totalInHeight = inPorts.length * portHeight;
-    const totalOutHeight = outPorts.length * portHeight;
-    const bodyHeight = Math.max(totalInHeight, totalOutHeight, 0);
-    const nodeHeight = headerHeight + bodyHeight + (bodyHeight > 0 ? 8 : 0);
+    const bodyHeight = Math.max(inPorts.length * portHeight, outPorts.length * portHeight, 0);
 
     return (
-        <div style={{
-            background: '#FFFFFF',
-            border: `2px solid ${laneColor || layerColor || '#9CA3AF'}`,
-            borderRadius: '10px',
-            minWidth: '140px',
-            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
-            overflow: 'hidden',
-        }}>
-            {/* Header: action name */}
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                background: '#FFFFFF',
+                border: `2px solid ${color}`,
+                borderRadius: RADIUS.lg,
+                minWidth: '140px',
+                boxShadow: hovered ? SHADOW.hover : SHADOW.md,
+                transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+                transition: `box-shadow 200ms ease, transform 200ms ease`,
+                overflow: 'hidden',
+            }}
+        >
+            {/* Header: action name with subtle gradient */}
             <div style={{
                 padding: '8px 14px',
-                fontSize: '13px',
+                fontSize: FONT.md,
                 fontWeight: 600,
                 color: '#1a1a1a',
-                background: (laneColor || layerColor || '#9CA3AF') + '12',
+                background: `linear-gradient(180deg, ${color}14 0%, ${color}08 100%)`,
                 borderBottom: bodyHeight > 0 ? '1px solid #E5E5E0' : 'none',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
@@ -89,25 +97,31 @@ function ActionFlowNodeInner({ data }: NodeProps) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                     {/* Input ports (left) */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        {inPorts.map((port, i) => (
+                        {inPorts.map((port) => (
                             <div key={`in-${port}`} style={{
-                                fontSize: '10px', color: '#6B7280', paddingLeft: '8px',
-                                display: 'flex', alignItems: 'center', height: `${portHeight}px`,
+                                fontSize: FONT.badge, color: '#6B7280', paddingLeft: '8px',
+                                display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
                             }}>
-                                <span style={{ color: '#3498DB', marginRight: '3px' }}>{'\u25B6'}</span>
+                                <span style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    background: '#3498DB', flexShrink: 0,
+                                }} />
                                 {port}
                             </div>
                         ))}
                     </div>
                     {/* Output ports (right) */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                        {outPorts.map((port, i) => (
+                        {outPorts.map((port) => (
                             <div key={`out-${port}`} style={{
-                                fontSize: '10px', color: '#6B7280', paddingRight: '8px',
-                                display: 'flex', alignItems: 'center', height: `${portHeight}px`,
+                                fontSize: FONT.badge, color: '#6B7280', paddingRight: '8px',
+                                display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
                             }}>
                                 {port}
-                                <span style={{ color: '#E67E22', marginLeft: '3px' }}>{'\u25B6'}</span>
+                                <span style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    background: '#E67E22', flexShrink: 0,
+                                }} />
                             </div>
                         ))}
                     </div>
@@ -127,9 +141,9 @@ function ActionFlowNodeInner({ data }: NodeProps) {
 
             {/* Handles for edges */}
             <Handle type="target" position={Position.Left}
-                style={{ background: laneColor || '#9CA3AF', width: 8, height: 8 }} />
+                style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
             <Handle type="source" position={Position.Right}
-                style={{ background: laneColor || '#9CA3AF', width: 8, height: 8 }} />
+                style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
         </div>
     );
 }

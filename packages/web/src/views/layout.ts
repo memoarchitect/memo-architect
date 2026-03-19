@@ -8,6 +8,7 @@ import ELK from 'elkjs/lib/elk.bundled.js';
 import type { Node, Edge } from '@xyflow/react';
 import type { MemoElement, MemoRelationship, MemoModelDTO, ActionParameter } from '@memo/core';
 import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } from '../constants';
+import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import type { ActionFlowNodeData } from './ActionFlowNode';
 
@@ -71,7 +72,7 @@ export async function computeLayout(
     // Run ELK layout
     const layouted = await elk.layout(elkGraph);
 
-    // Convert to ReactFlow nodes — compact cards with layer-color left border
+    // Convert to ReactFlow nodes — polished cards with layer-color left border
     const nodes: Node[] = (layouted.children || []).map(child => {
         const el = model.elements[child.id];
         const color = LAYER_COLORS[el?.layer] || '#666';
@@ -91,33 +92,42 @@ export async function computeLayout(
                 borderTop: '1px solid #E5E5E0',
                 borderRight: '1px solid #E5E5E0',
                 borderBottom: '1px solid #E5E5E0',
-                borderRadius: '8px',
+                borderRadius: RADIUS.md,
                 color: '#1a1a1a',
                 fontSize: '13px',
                 fontWeight: 500,
                 padding: '8px 14px',
                 minWidth: '100px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                boxShadow: SHADOW.md,
             },
         };
     });
 
-    // Convert to ReactFlow edges
+    // Convert to ReactFlow edges — bezier curves with polished label backgrounds
     const edges: Edge[] = visibleRelationships.map((rel, i) => ({
         id: `e-${i}`,
         source: rel.sourceId,
         target: rel.targetId,
         label: rel.type,
-        type: 'smoothstep',
-        animated: rel.type === 'mitigates' || rel.type === 'verify',
+        type: 'default',
+        animated: rel.type === 'flow',
         style: {
             stroke: REL_COLORS[rel.type] || '#9CA3AF',
-            strokeWidth: 1.5,
+            strokeWidth: EDGE.defaultWidth,
         },
         labelStyle: {
             fontSize: '10px',
             fill: '#6B7280',
             fontWeight: 500,
+        },
+        labelBgPadding: EDGE.labelBgPadding,
+        labelBgBorderRadius: EDGE.labelBgRadius,
+        labelBgStyle: EDGE.labelBgStyle,
+        markerEnd: {
+            type: 'arrowclosed' as any,
+            color: REL_COLORS[rel.type] || '#9CA3AF',
+            width: EDGE.arrowSize,
+            height: EDGE.arrowSize,
         },
     }));
 
@@ -276,13 +286,13 @@ export async function computeIBDLayout(
                 borderTop: '1px solid #E5E5E0',
                 borderRight: '1px solid #E5E5E0',
                 borderBottom: '1px solid #E5E5E0',
-                borderRadius: '8px',
+                borderRadius: RADIUS.md,
                 color: '#1a1a1a',
-                fontSize: '13px',
+                fontSize: FONT.md,
                 fontWeight: 500,
                 padding: '8px 14px',
                 minWidth: '100px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                boxShadow: SHADOW.md,
             },
         };
 
@@ -381,13 +391,13 @@ export async function computeTreeLayout(
                 borderTop: '1px solid #E5E5E0',
                 borderRight: '1px solid #E5E5E0',
                 borderBottom: '1px solid #E5E5E0',
-                borderRadius: '8px',
+                borderRadius: RADIUS.md,
                 color: '#1a1a1a',
-                fontSize: '13px',
+                fontSize: FONT.md,
                 fontWeight: 500,
                 padding: '8px 14px',
                 minWidth: '100px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                boxShadow: SHADOW.md,
             },
         };
     });
@@ -397,15 +407,24 @@ export async function computeTreeLayout(
         source: te.sources[0],
         target: te.targets[0],
         label: 'composedOf',
-        type: 'smoothstep',
+        type: 'default',
         style: {
             stroke: REL_COLORS['composedOf'] || '#8E44AD',
-            strokeWidth: 1.5,
+            strokeWidth: EDGE.defaultWidth,
         },
         labelStyle: {
-            fontSize: '10px',
+            fontSize: FONT.badge,
             fill: '#6B7280',
             fontWeight: 500,
+        },
+        labelBgPadding: EDGE.labelBgPadding,
+        labelBgBorderRadius: EDGE.labelBgRadius,
+        labelBgStyle: EDGE.labelBgStyle,
+        markerEnd: {
+            type: 'arrowclosed' as any,
+            color: REL_COLORS['composedOf'] || '#8E44AD',
+            width: EDGE.arrowSize,
+            height: EDGE.arrowSize,
         },
     }));
 
@@ -492,8 +511,14 @@ export async function computeDecompositionLayout(
             id: `decomp-e-${i}`, source: e.parentId, target: e.childId,
             sourceHandle: parentDir === 'vertical' ? 'bottom' : 'right',
             targetHandle: parentDir === 'vertical' ? 'top' : 'left',
-            type: 'smoothstep',
-            style: { stroke: REL_COLORS['composedOf'] || '#8E44AD', strokeWidth: 1.5 },
+            type: 'default',
+            style: { stroke: REL_COLORS['composedOf'] || '#8E44AD', strokeWidth: EDGE.defaultWidth },
+            markerEnd: {
+                type: 'arrowclosed' as any,
+                color: REL_COLORS['composedOf'] || '#8E44AD',
+                width: EDGE.arrowSize,
+                height: EDGE.arrowSize,
+            },
         };
     });
 
@@ -606,6 +631,149 @@ export function computeContainmentLayout(
     }
 
     return { nodes: allNodes, edges: [] };
+}
+
+// ─── Functional Breakdown Structure (FBS) Layout ────────────────────────────
+//
+// Builds a decomposition tree from functional kinds (SystemFunction,
+// ComponentFunction) linked by decomposedBy/composedOf relationships.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Functional kinds eligible for FBS diagrams */
+const FUNCTIONAL_KINDS = new Set<string>();
+for (const g of SEMANTIC_GROUPS) {
+    if (g.id === 'functions') {
+        for (const k of g.kinds) FUNCTIONAL_KINDS.add(k);
+    }
+}
+
+export interface FunctionalTree {
+    roots: string[];
+    childrenMap: Map<string, string[]>;
+    elements: Map<string, MemoElement>;
+}
+
+export function buildFunctionalTree(model: MemoModelDTO): FunctionalTree {
+    const elements = new Map<string, MemoElement>();
+    for (const el of Object.values(model.elements)) {
+        if (FUNCTIONAL_KINDS.has(el.kind)) {
+            elements.set(el.id, el);
+        }
+    }
+
+    // Build parent→children map from decomposedBy/composedOf relationships
+    const childrenMap = new Map<string, string[]>();
+    const hasParent = new Set<string>();
+
+    for (const rel of model.relationships) {
+        // decomposedBy: source=parent, target=child (parent decomposedBy child)
+        // composedOf:   source=parent, target=child (parent composedOf child)
+        if ((rel.type === 'decomposedBy' || rel.type === 'composedOf') &&
+            elements.has(rel.sourceId) && elements.has(rel.targetId)) {
+            if (!childrenMap.has(rel.sourceId)) childrenMap.set(rel.sourceId, []);
+            childrenMap.get(rel.sourceId)!.push(rel.targetId);
+            hasParent.add(rel.targetId);
+        }
+    }
+
+    const roots = [...elements.keys()].filter(id => !hasParent.has(id));
+    return { roots, childrenMap, elements };
+}
+
+/**
+ * FBS layout with interactive expand/collapse — mirrors computeDecompositionLayout
+ * but operates on functional elements rather than structural ones.
+ */
+export async function computeFBSLayout(
+    model: MemoModelDTO,
+    options: {
+        expandedNodes: Set<string>;
+        nodeDirections: Map<string, 'vertical' | 'horizontal'>;
+        callbacks: {
+            onToggleExpand: (id: string) => void;
+            onToggleDirection: (id: string) => void;
+        };
+    }
+): Promise<LayoutResult> {
+    const tree = buildFunctionalTree(model);
+    if (tree.roots.length === 0) return { nodes: [], edges: [] };
+
+    const visibleIds = new Set<string>();
+    const visibleEdges: { parentId: string; childId: string }[] = [];
+
+    function collectVisible(id: string) {
+        if (!tree.elements.has(id)) return;
+        visibleIds.add(id);
+        if (options.expandedNodes.has(id)) {
+            for (const childId of (tree.childrenMap.get(id) || [])) {
+                if (tree.elements.has(childId)) {
+                    visibleEdges.push({ parentId: id, childId });
+                    collectVisible(childId);
+                }
+            }
+        }
+    }
+    for (const rootId of tree.roots) collectVisible(rootId);
+
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'mrtree',
+            'elk.direction': 'DOWN',
+            'elk.spacing.nodeNode': '40',
+            'elk.mrtree.searchOrder': 'DFS',
+        },
+        children: [...visibleIds].map(id => {
+            const el = tree.elements.get(id)!;
+            return { id, width: Math.max(el.name.length * 8 + 80, 220), height: 56 };
+        }),
+        edges: visibleEdges.map((e, i) => ({
+            id: `fbs-${i}`, sources: [e.parentId], targets: [e.childId],
+        })),
+    };
+
+    const layouted = await elk.layout(elkGraph);
+
+    const nodes: Node[] = (layouted.children || []).map(child => {
+        const el = tree.elements.get(child.id)!;
+        const color = LAYER_COLORS[el.layer] || '#E67E22';
+        const childCount = (tree.childrenMap.get(child.id) || []).length;
+        const direction = options.nodeDirections.get(child.id) || 'vertical';
+
+        const nodeData: DecompositionNodeData = {
+            element: el, layerColor: color,
+            isExpanded: options.expandedNodes.has(child.id),
+            hasChildren: childCount > 0, childCount, direction,
+            onToggleExpand: () => options.callbacks.onToggleExpand(child.id),
+            onToggleDirection: () => options.callbacks.onToggleDirection(child.id),
+            showDirectionButton: true, label: el.name,
+        };
+
+        return {
+            id: child.id, type: 'decompositionNode',
+            position: { x: child.x || 0, y: child.y || 0 },
+            data: nodeData as any,
+        };
+    });
+
+    const edges: Edge[] = visibleEdges.map((e, i) => {
+        const parentDir = options.nodeDirections.get(e.parentId) || 'vertical';
+        return {
+            id: `fbs-e-${i}`, source: e.parentId, target: e.childId,
+            sourceHandle: parentDir === 'vertical' ? 'bottom' : 'right',
+            targetHandle: parentDir === 'vertical' ? 'top' : 'left',
+            type: 'default',
+            style: { stroke: REL_COLORS['decomposedBy'] || '#D35400', strokeWidth: EDGE.defaultWidth },
+            markerEnd: {
+                type: 'arrowclosed' as any,
+                color: REL_COLORS['decomposedBy'] || '#D35400',
+                width: EDGE.arrowSize,
+                height: EDGE.arrowSize,
+            },
+        };
+    });
+
+    return { nodes, edges };
 }
 
 // ─── Action Flow Layout ─────────────────────────────────────────────────────
@@ -839,7 +1007,7 @@ export async function computeActionFlowLayout(
     // Convert to ReactFlow edges
     const edges: Edge[] = [];
 
-    // Flow edges: solid, labeled with item type
+    // Flow edges: bezier, animated, labeled with item type
     for (const rel of flowRels) {
         if (!actionIds.has(rel.sourceId) || !actionIds.has(rel.targetId)) continue;
         const isSignalOrInfo = rel.flowItem
@@ -851,27 +1019,31 @@ export async function computeActionFlowLayout(
             source: rel.sourceId,
             target: rel.targetId,
             label: rel.flowItem || '',
-            type: 'smoothstep',
-            animated: false,
+            type: 'default',
+            animated: true,
             style: {
                 stroke: '#3498DB',
-                strokeWidth: 2,
+                strokeWidth: EDGE.flowWidth,
                 strokeDasharray: isSignalOrInfo ? '6 3' : undefined,
             },
             labelStyle: {
-                fontSize: '10px',
+                fontSize: FONT.badge,
                 fill: '#4A90D9',
                 fontWeight: 600,
             },
-            labelBgStyle: {
-                fill: '#FFFFFF',
-                fillOpacity: 0.85,
+            labelBgStyle: EDGE.labelBgStyle,
+            labelBgPadding: EDGE.labelBgPadding,
+            labelBgBorderRadius: EDGE.labelBgRadius,
+            markerEnd: {
+                type: 'arrowclosed' as any,
+                color: '#3498DB',
+                width: EDGE.arrowSize,
+                height: EDGE.arrowSize,
             },
-            labelBgPadding: [4, 6] as [number, number],
         });
     }
 
-    // Succession edges: thin gray arrows
+    // Succession edges: smoothstep (right-angle routing for temporal ordering)
     for (const rel of succRels) {
         if (!actionIds.has(rel.sourceId) || !actionIds.has(rel.targetId)) continue;
         edges.push({
@@ -882,7 +1054,7 @@ export async function computeActionFlowLayout(
             animated: false,
             style: {
                 stroke: '#D1D5DB',
-                strokeWidth: 1,
+                strokeWidth: EDGE.successionWidth,
                 strokeDasharray: '4 4',
             },
             markerEnd: {

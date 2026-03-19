@@ -93,23 +93,15 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         }));
 
         // Collect all diagrams from viewpoints + Model Viewpoint auto-diagrams
+        // Note: context/decomposition diagrams are now defined in viewpoint configs
+        // (context-view, logical-view). Model Viewpoint only holds diagrams that
+        // don't fit a specific viewpoint.
         const diagrams: DiagramDTO[] = [
-            // Model Viewpoint auto-diagrams
+            // Model Viewpoint — cross-cutting overview diagram
             {
-                id: 'diag-model-context', name: 'System Context', diagramType: 'bdd',
+                id: 'diag-model-overview', name: 'Full Model Overview', diagramType: 'bdd',
                 viewpointId: '__model', auto: true,
-                description: 'Top-level system with external actors and systems',
-            },
-            {
-                id: 'diag-model-decomposition', name: 'System Decomposition', diagramType: 'bdd',
-                viewpointId: '__model', auto: true,
-                description: 'System broken down into subsystems and components',
-            },
-            {
-                id: 'diag-model-physical-decomp', name: 'Physical Decomposition', diagramType: 'ibd',
-                viewpointId: '__model', auto: true,
-                description: 'Physical system breakdown — nested containment (IBD) or tree (SBS)',
-                properties: { layoutStyle: 'ibd' },
+                description: 'All model elements — unfiltered view across all layers',
             },
         ];
         // Add diagrams from config viewpoints

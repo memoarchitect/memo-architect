@@ -102,16 +102,26 @@
 - [x] **Phase 5d: Behavior validation & completeness** — `behavior-validator.ts` with BV-001 (unallocated action warning), BV-002 (orphan action warning), BV-003 (incompatible flow type error); `validateModel()` composer; `actionType` attribute on usages for definition lookup; 6 validation tests
 - [x] **Example models** — Infusion pump behavior (6 action defs, flows, successions, allocations), irrigation pump (structure + behavior with parallel branches)
 
+### Phase 5e — UI Polish & Viewpoint Restructuring
+
+- [x] **Design system tokens** — `styles/tokens.ts` with SHADOW, RADIUS, FONT, EDGE, TRANSITION constants for consistent rendering
+- [x] **Viewpoint config restructuring** — Split monolithic `architecture-view` into ISO 42010–aligned viewpoints: `context-view`, `functional-view`, `logical-view`, `interface-view`; moved hardcoded EXTRA_VIEWPOINTS into ontology config
+- [x] **Node polish** — Drop shadows, hover lift, smooth transitions on DecompositionNode and ActionFlowNode; CSS transitions for edges and handles
+- [x] **Diagram canvas UX** — Empty state placeholder, scroll-to-zoom + pan-on-scroll, softer background grid, longer fitView animations
+- [x] **Medical domain viewpoints** — Safety Analysis viewpoint, Physical Containment IBD diagram, Model Viewpoint reduced to single cross-cutting overview
+
+### Phase 6a — Functional Breakdown Structure (FBS)
+
+- [x] **`decomposedBy` relationship type** — Parent function → child function decomposition in ontology config + REL_COLORS
+- [x] **FBS tree diagram** — `buildFunctionalTree()` + `computeFBSLayout()` in layout.ts; interactive expand/collapse tree for functional kinds using ELK MRTree algorithm
+- [x] **FBS diagram integration** — `diag-fbs-tree` auto-diagram in functional-view with `layoutStyle: fbs`; DiagramCanvas routes FBS to dedicated layout with expand/collapse controls
+- [x] **Example models** — Infusion pump FBS: 4 SystemFunctions decomposed into 5 ComponentFunctions via `DecomposedBy` connections
+
 ---
 
 ## In Progress / Next Up
 
 ### Phase 6 — DSM & Functional Analysis
-
-#### 6a. Functional Breakdown Structure (FBS)
-- [ ] **`decomposedBy` relationship type** — Parent function → child function decomposition
-- [ ] **FBS tree diagram** — Hierarchical decomposition view of system functions
-- [ ] **View toggle** — Switch between FBS tree view and action flow view
 
 #### 6b. DSM Analysis
 - [ ] **DSM matrix computation** — Build N×N matrix from flow relationships

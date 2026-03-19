@@ -2,12 +2,13 @@
 //
 // Custom ReactFlow node for decomposition/containment diagrams.
 // Supports expand/collapse, per-node direction toggle, layer-color styling,
-// and depth-based background tinting for containment mode.
+// depth-based background tinting, drop shadows, and hover lift.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { MemoElement } from '@memo/core';
+import { SHADOW, RADIUS, FONT } from '../styles/tokens';
 
 export interface DecompositionNodeData {
     element: MemoElement;
@@ -27,36 +28,38 @@ export interface DecompositionNodeData {
 function DecompositionNodeInner({ data }: NodeProps) {
     const d = data as unknown as DecompositionNodeData;
     const {
-        element,
-        layerColor,
-        isExpanded,
-        hasChildren,
-        childCount,
-        direction,
-        onToggleExpand,
-        onToggleDirection,
-        showDirectionButton,
-        depthBgColor,
-        isContainer,
+        element, layerColor, isExpanded, hasChildren, childCount,
+        direction, onToggleExpand, onToggleDirection, showDirectionButton,
+        depthBgColor, isContainer,
     } = d;
+    const [hovered, setHovered] = useState(false);
 
     const dirLabel = direction === 'vertical' ? 'V' : 'H';
+    const isExpandedContainer = isContainer && isExpanded;
 
     return (
-        <div style={{
-            background: isContainer && isExpanded ? (depthBgColor || 'transparent') : '#FFFFFF',
-            borderLeft: isContainer && isExpanded ? `2px solid ${layerColor}40` : `3px solid ${layerColor}`,
-            borderTop: `1px solid ${isContainer && isExpanded ? layerColor + '30' : '#E5E5E0'}`,
-            borderRight: `1px solid ${isContainer && isExpanded ? layerColor + '30' : '#E5E5E0'}`,
-            borderBottom: `1px solid ${isContainer && isExpanded ? layerColor + '30' : '#E5E5E0'}`,
-            borderRadius: isContainer && isExpanded ? '10px' : '8px',
-            padding: isContainer && isExpanded ? '0' : '8px 12px',
-            minWidth: isContainer && isExpanded ? undefined : '200px',
-            boxShadow: isContainer && isExpanded ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            width: '100%',
-            height: '100%',
-            boxSizing: 'border-box' as const,
-        }}>
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                background: isExpandedContainer
+                    ? `linear-gradient(180deg, ${depthBgColor || 'transparent'}, ${depthBgColor || 'transparent'})`
+                    : '#FFFFFF',
+                borderLeft: isExpandedContainer ? `2px solid ${layerColor}40` : `3px solid ${layerColor}`,
+                borderTop: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
+                borderRight: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
+                borderBottom: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
+                borderRadius: isExpandedContainer ? RADIUS.lg : RADIUS.md,
+                padding: isExpandedContainer ? '0' : '8px 12px',
+                minWidth: isExpandedContainer ? undefined : '200px',
+                boxShadow: isExpandedContainer ? 'none' : (hovered ? SHADOW.hover : SHADOW.md),
+                transform: isExpandedContainer ? 'none' : (hovered ? 'translateY(-1px)' : 'translateY(0)'),
+                transition: 'box-shadow 200ms ease, transform 200ms ease',
+                width: '100%',
+                height: '100%',
+                boxSizing: 'border-box' as const,
+            }}
+        >
             {/* Handles — hidden by default, visible on hover via CSS */}
             <Handle type="target" position={Position.Top} id="top" style={handleStyle} />
             <Handle type="source" position={Position.Bottom} id="bottom" style={handleStyle} />
@@ -68,7 +71,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: isContainer && isExpanded ? '8px 12px' : '0',
+                padding: isExpandedContainer ? '8px 12px' : '0',
             }}>
                 {/* Expand/Collapse button */}
                 {hasChildren && (
@@ -81,7 +84,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                             border: `1.5px solid ${layerColor}`,
                             background: isExpanded ? layerColor + '20' : 'transparent',
                             color: layerColor,
-                            fontSize: '13px',
+                            fontSize: FONT.md,
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
@@ -90,10 +93,11 @@ function DecompositionNodeInner({ data }: NodeProps) {
                             lineHeight: 1,
                             padding: 0,
                             flexShrink: 0,
+                            transition: 'background 200ms ease, color 200ms ease',
                         }}
                         title={isExpanded ? 'Collapse' : 'Expand'}
                     >
-                        {isExpanded ? '−' : '+'}
+                        {isExpanded ? '\u2212' : '+'}
                     </button>
                 )}
 
@@ -116,6 +120,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                             justifyContent: 'center',
                             padding: 0,
                             flexShrink: 0,
+                            transition: 'background 200ms ease',
                         }}
                         title={`Direction: ${direction}. Click to toggle`}
                     >
@@ -134,9 +139,9 @@ function DecompositionNodeInner({ data }: NodeProps) {
 
                 {/* Element name */}
                 <span style={{
-                    fontSize: '13px',
+                    fontSize: FONT.md,
                     fontWeight: 600,
-                    color: isContainer && isExpanded ? layerColor : '#1a1a1a',
+                    color: isExpandedContainer ? layerColor : '#1a1a1a',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -146,7 +151,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
             </div>
 
             {/* Kind subtitle + children count */}
-            {!(isContainer && isExpanded) && (
+            {!isExpandedContainer && (
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -154,7 +159,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     marginTop: '3px',
                     paddingLeft: hasChildren ? '26px' : '14px',
                 }}>
-                    <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
+                    <span style={{ fontSize: FONT.badge, color: '#9CA3AF' }}>
                         {element.kind}
                     </span>
                     {hasChildren && (

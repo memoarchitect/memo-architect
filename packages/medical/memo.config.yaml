@@ -335,8 +335,9 @@ closureRules:
     severity: warning
 
 # ─── Viewpoints ───────────────────────────────────────────────────────────────
-# Medical-specific viewpoints. Base viewpoints (architecture-view, requirements-trace,
-# use-case-view, v-and-v) are inherited from @memo/ontology.
+# Medical-specific viewpoints. Base viewpoints (context-view, functional-view,
+# logical-view, interface-view, requirements-trace, use-case-view, v-and-v,
+# behavior-view) are inherited from @memo/ontology.
 
 viewpoints:
   - id: risk-overview
@@ -363,6 +364,35 @@ viewpoints:
         viewpointId: risk-overview
         auto: true
         description: Hazard to RiskControl to Test mitigation chain
+
+  # Safety Viewpoint — distinct from risk per Asensus/GPCA: how the system
+  # provides safety, illustrated via safety goals, controls, and mitigations
+  - id: safety-view
+    label: Safety Analysis
+    supportedDiagramTypes: [bdd, req, pkg]
+    visibleKinds:
+      - SafetyGoal
+      - RiskControl
+      - Hazard
+      - SystemFunction
+      - ComponentFunction
+      - Test
+    visibleRelationships:
+      - mitigates
+      - allocateTo
+      - traceTo
+      - verify
+    visibleLayers:
+      - risk
+      - functional
+      - verification
+    diagrams:
+      - id: diag-safety-mitigation
+        name: Safety Mitigation
+        diagramType: bdd
+        viewpointId: safety-view
+        auto: true
+        description: Safety goals linked to risk controls, functions, and verification tests
 
   - id: software-view
     label: Software Architecture
@@ -417,6 +447,14 @@ viewpoints:
         viewpointId: physical-view
         auto: true
         description: Physical components and hardware nodes
+      - id: diag-phy-containment
+        name: Physical Containment
+        diagramType: ibd
+        viewpointId: physical-view
+        auto: true
+        description: Physical system breakdown — nested containment view
+        properties:
+          layoutStyle: ibd
 
 # ─── First Run Configuration ─────────────────────────────────────────────────
 

@@ -276,6 +276,36 @@ package InfusionPump {
         attribute redefines name = "Acknowledge Alarm";
     }
 
+    // Component Functions — sub-functions for alarm management
+    action cfPrioritizeAlarm : ComponentFunction {
+        attribute redefines name = "Prioritize Alarm";
+    }
+
+    action cfEscalateAlarm : ComponentFunction {
+        attribute redefines name = "Escalate Alarm";
+    }
+
+    action cfRenderDisplay : ComponentFunction {
+        attribute redefines name = "Render Display Data";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FUNCTIONAL DECOMPOSITION — FBS hierarchy (SystemFunction → ComponentFunction)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Regulate Flow Rate → Calculate Motor Step Rate
+    connection : DecomposedBy connect parent ::> sfRegulateFlow to child ::> cfCalculateStepRate;
+
+    // Detect Occlusion → Read Pressure Sensor
+    connection : DecomposedBy connect parent ::> sfDetectOcclusion to child ::> cfReadPressureSensor;
+
+    // Manage Alarms → Prioritize Alarm, Escalate Alarm
+    connection : DecomposedBy connect parent ::> sfManageAlarms to child ::> cfPrioritizeAlarm;
+    connection : DecomposedBy connect parent ::> sfManageAlarms to child ::> cfEscalateAlarm;
+
+    // Display Status → Render Display Data
+    connection : DecomposedBy connect parent ::> sfDisplayStatus to child ::> cfRenderDisplay;
+
     // ═══════════════════════════════════════════════════════════════════════
     // LOGICAL ARCHITECTURE LAYER — System decomposition
     // ═══════════════════════════════════════════════════════════════════════

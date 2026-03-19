@@ -19,7 +19,9 @@ import {
     computeLayout,
     computeDecompositionLayout,
     computeContainmentLayout,
+    computeFBSLayout,
     buildDecompositionTree,
+    buildFunctionalTree,
 } from './layout';
 import { DecompositionNode } from './DecompositionNode';
 
@@ -37,8 +39,9 @@ function DiagramCanvasInner() {
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutVersion, setLayoutVersion] = useState(0);
 
-    // Decomposition diagram state
+    // Decomposition/FBS diagram state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
+    const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
 
     // Interactive state for decomposition/containment diagrams
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -66,7 +69,7 @@ function DiagramCanvasInner() {
     const toggleDirection = useCallback((nodeId: string) => {
         // Clear position cache for descendants to force re-layout
         if (model) {
-            const tree = buildDecompositionTree(model);
+            const tree = isFBSDiagram ? buildFunctionalTree(model) : buildDecompositionTree(model);
             const clearDescendants = (id: string) => {
                 positionCacheRef.current.delete(id);
                 for (const cid of (tree.childrenMap.get(id) || [])) {
@@ -81,11 +84,11 @@ function DiagramCanvasInner() {
             next.set(nodeId, current === 'vertical' ? 'horizontal' : 'vertical');
             return next;
         });
-    }, [model]);
+    }, [model, isFBSDiagram]);
 
     const expandAll = useCallback(() => {
         if (!model) return;
-        const tree = buildDecompositionTree(model);
+        const tree = isFBSDiagram ? buildFunctionalTree(model) : buildDecompositionTree(model);
         const allIds = new Set<string>();
         const collectAll = (id: string) => {
             allIds.add(id);
@@ -97,7 +100,7 @@ function DiagramCanvasInner() {
             if (tree.elements.has(rootId)) collectAll(rootId);
         }
         setExpandedNodes(allIds);
-    }, [model]);
+    }, [model, isFBSDiagram]);
 
     const collapseAll = useCallback(() => {
         setExpandedNodes(new Set());
@@ -143,7 +146,23 @@ function DiagramCanvasInner() {
     useEffect(() => {
         if (!model) return;
 
-        if (isDecompDiagram) {
+        if (isFBSDiagram) {
+            // FBS layout — functional tree with expand/collapse
+            setIsLayouting(true);
+            computeFBSLayout(model, {
+                expandedNodes,
+                nodeDirections,
+                callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+            }).then(({ nodes: n, edges: e }) => {
+                setNodes(n);
+                setEdges(e);
+                setIsLayouting(false);
+                setLayoutVersion(v => v + 1);
+            }).catch(err => {
+                console.error('FBS layout error:', err);
+                setIsLayouting(false);
+            });
+        } else if (isDecompDiagram) {
             if (layoutStyle === 'decomposition') {
                 setIsLayouting(true);
                 computeDecompositionLayout(model, {
@@ -183,13 +202,13 @@ function DiagramCanvasInner() {
                     setIsLayouting(false);
                 });
         }
-    }, [model, viewpointFilter, isDecompDiagram, layoutStyle, expandedNodes, nodeDirections, toggleExpand, toggleDirection]);
+    }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle, expandedNodes, nodeDirections, toggleExpand, toggleDirection]);
 
     // Re-fit view after layout updates
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.08, maxZoom: 2, duration: 300 });
+            fitView({ padding: 0.08, maxZoom: 2, duration: 500 });
         }, 200);
         return () => clearTimeout(timer);
     }, [layoutVersion, fitView]);
@@ -205,7 +224,7 @@ function DiagramCanvasInner() {
                     ? `0 0 0 2px #2DD4A8, 0 4px 12px rgba(45, 212, 168, 0.3)`
                     : undefined,
                 opacity: selectedElementId
-                    ? (n.id === selectedElementId ? 1 : 0.35)
+                    ? (n.id === selectedElementId ? 1 : 0.5)
                     : 1,
             },
         })));
@@ -227,6 +246,22 @@ function DiagramCanvasInner() {
         positionCacheRef.current.set(node.id, node.position);
     }, []);
 
+    if (!selectedDiagram && nodes.length === 0 && !isLayouting) {
+        return (
+            <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
+                <div className="text-center" style={{ maxWidth: '320px' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '16px', opacity: 0.4 }}>{'\u{1F4CA}'}</div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                        Select a Diagram
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.6 }}>
+                        Choose a diagram from the sidebar to visualize your model elements and relationships.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 relative">
             {/* Diagram header */}
@@ -246,8 +281,31 @@ function DiagramCanvasInner() {
                         <span style={{ color: '#9CA3AF', fontSize: '9px' }}>AUTO</span>
                     )}
 
+                    {/* FBS controls */}
+                    {isFBSDiagram && (
+                        <>
+                            <span style={{ color: '#E5E5E0' }}>|</span>
+                            <button
+                                onClick={expandAll}
+                                className="px-2 py-0.5 text-xs font-medium rounded"
+                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                title="Expand all functions"
+                            >
+                                Expand All
+                            </button>
+                            <button
+                                onClick={collapseAll}
+                                className="px-2 py-0.5 text-xs font-medium rounded"
+                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                title="Collapse all functions"
+                            >
+                                Collapse All
+                            </button>
+                        </>
+                    )}
+
                     {/* Decomposition controls */}
-                    {isDecompDiagram && (
+                    {isDecompDiagram && !isFBSDiagram && (
                         <>
                             <span style={{ color: '#E5E5E0' }}>|</span>
                             {/* Containment / Decomposition toggle */}
@@ -314,10 +372,13 @@ function DiagramCanvasInner() {
                 fitViewOptions={{ padding: 0.08, maxZoom: 2 }}
                 minZoom={0.2}
                 maxZoom={3}
+                zoomOnScroll
+                panOnScroll
+                panOnScrollMode={"free" as any}
                 proOptions={{ hideAttribution: true }}
                 style={{ background: '#F7F7F5' }}
             >
-                <Background color="#E5E5E0" gap={20} size={1} />
+                <Background color="#EAEAE6" gap={20} size={1} />
                 <Controls />
                 <MiniMap
                     style={{ background: '#FFFFFF' }}
