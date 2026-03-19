@@ -21,6 +21,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
+import { FONT } from '../styles/tokens';
 import { computeActionFlowLayout } from './layout';
 import { ActionFlowNode } from './ActionFlowNode';
 
@@ -103,10 +104,10 @@ function ActionFlowDiagramInner() {
             <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                 <div className="text-center max-w-md">
                     <div style={{ fontSize: '32px', marginBottom: '12px' }}>{'\u2699\uFE0F'}</div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: FONT.lg, fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
                         No Behavior Elements
                     </h3>
-                    <p style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ fontSize: FONT.md, lineHeight: '1.6' }}>
                         Add <code>action def</code> and <code>flow</code> constructs to your model
                         to see the Action Flow Diagram.
                     </p>
@@ -123,11 +124,11 @@ function ActionFlowDiagramInner() {
                 style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
             >
                 <span className="px-1.5 py-0.5 rounded font-semibold"
-                    style={{ background: '#FF6B6B20', color: '#FF6B6B', fontSize: '10px' }}>
+                    style={{ background: '#FF6B6B20', color: '#FF6B6B', fontSize: FONT.badge }}>
                     AFD
                 </span>
                 <span className="font-medium" style={{ color: '#1a1a1a' }}>Action Flow Diagram</span>
-                <span style={{ color: '#9CA3AF', fontSize: '10px' }}>
+                <span style={{ color: '#9CA3AF', fontSize: FONT.badge }}>
                     {nodes.length} nodes · {edges.length} edges
                 </span>
             </div>

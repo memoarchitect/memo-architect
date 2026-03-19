@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useModelStore, getDiagramsForViewpoint } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
+import { FONT } from '../styles/tokens';
 import type { DiagramDTO } from '@memo/core';
 
 /** Additional viewpoints that should always appear even if not defined in config.
@@ -16,7 +17,7 @@ function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
             style={{
                 background: meta.color + '20',
                 color: meta.color,
-                fontSize: '10px',
+                fontSize: FONT.badge,
             }}
             title={meta.fullName}
         >
@@ -249,7 +250,7 @@ export function ViewpointBrowser() {
             <div className="px-3 py-2" style={{ borderTop: '1px solid #E5E5E0', background: '#FAFAF8' }}>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#9CA3AF' }}>
                     {Object.entries(DIAGRAM_TYPE_META).map(([key, meta]) => (
-                        <span key={key} className="px-1 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: '10px', fontWeight: 600 }}>
+                        <span key={key} className="px-1 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: FONT.badge, fontWeight: 600 }}>
                             {meta.code}
                         </span>
                     ))}

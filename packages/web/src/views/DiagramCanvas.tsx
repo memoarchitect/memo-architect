@@ -15,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 import type { MemoElement } from '@memo/core';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { DIAGRAM_TYPE_META } from '../constants';
+import { FONT } from '../styles/tokens';
 import {
     computeLayout,
     computeDecompositionLayout,
@@ -39,6 +40,11 @@ function DiagramCanvasInner() {
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutVersion, setLayoutVersion] = useState(0);
 
+    // Get the selected diagram (if any)
+    const selectedDiagram = getDiagram(model, selectedDiagramId);
+    const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
+    const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
+
     // Decomposition/FBS diagram state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
     const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
@@ -50,11 +56,6 @@ function DiagramCanvasInner() {
 
     // Register custom node types
     const nodeTypes = useMemo(() => ({ decompositionNode: DecompositionNode }), []);
-
-    // Get the selected diagram (if any)
-    const selectedDiagram = getDiagram(model, selectedDiagramId);
-    const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
-    const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
 
     // Interactive callbacks
     const toggleExpand = useCallback((nodeId: string) => {
@@ -251,10 +252,10 @@ function DiagramCanvasInner() {
             <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
                 <div className="text-center" style={{ maxWidth: '320px' }}>
                     <div style={{ fontSize: '40px', marginBottom: '16px', opacity: 0.4 }}>{'\u{1F4CA}'}</div>
-                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: FONT.lg, fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
                         Select a Diagram
                     </h3>
-                    <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: FONT.md, color: '#9CA3AF', lineHeight: 1.6 }}>
                         Choose a diagram from the sidebar to visualize your model elements and relationships.
                     </p>
                 </div>
@@ -272,13 +273,13 @@ function DiagramCanvasInner() {
                 >
                     {diagramMeta && (
                         <span className="px-1.5 py-0.5 rounded font-semibold"
-                            style={{ background: diagramMeta.color + '20', color: diagramMeta.color, fontSize: '10px' }}>
+                            style={{ background: diagramMeta.color + '20', color: diagramMeta.color, fontSize: FONT.badge }}>
                             {diagramMeta.code}
                         </span>
                     )}
                     <span className="font-medium" style={{ color: '#1a1a1a' }}>{selectedDiagram.name}</span>
                     {selectedDiagram.auto && (
-                        <span style={{ color: '#9CA3AF', fontSize: '9px' }}>AUTO</span>
+                        <span style={{ color: '#9CA3AF', fontSize: '9px' }}>auto</span>
                     )}
 
                     {/* FBS controls */}

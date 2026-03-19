@@ -1,5 +1,24 @@
 # Roadmap
 
+## Architecture Vision
+
+MEMO follows the **ISO/IEC/IEEE 42010** architecture description standard and draws from the **Arcadia/Capella** MBSE methodology. The tool is designed for **medical device development** per ISO 14971, IEC 62304, and ISO 15288.
+
+**Core principle:** Viewpoint → View → Model. Views (diagrams) are organized under viewpoints, not as separate application modes. The app uses a unified canvas that renders any view type (BDD, IBD, ACT, AFD, REQ, etc.) based on selection.
+
+**Target UI Architecture:**
+- **Left Panel:** Model Explorer (elements by kind/layer) + View Explorer (views under viewpoints)
+- **Center:** Unified Canvas (renders selected view)
+- **Right Panel:** Properties Panel (element or view properties)
+- **Toolbar:** Analysis Tools (DSM, Consistency, FMEA) + Create View button
+
+**Reference documents:**
+- `/Users/someshkashyap/Downloads/System Architecture Document-wip.pdf` — ISO 42010 template
+- `/Users/someshkashyap/Downloads/System Architecture Overview.pdf` — Viewpoint/view examples
+- `/Users/someshkashyap/EA/NewMDG/AfferaMDG.qea` — Sparx EA MDG profile (78 stereotypes)
+
+---
+
 ## Completed
 
 ### Phase 1 — Foundation
@@ -34,26 +53,24 @@
 
 ### Phase 3 — Modular Ontology & Multi-Mode Web App
 
-- [x] **Modular ontology architecture** — Base `@memo/ontology` (45 kinds, 8 layers, 12 relationships, 4 viewpoints) + `@memo/medical` extends with domain-specific additions
+- [x] **Modular ontology architecture** — Base `@memo/ontology` + `@memo/medical` extends
 - [x] **Ontology metadata** — `OntologyMetadata` type with id, version, description, author, license, tags
-- [x] **Config merge deduplication** — `dedup()` for cosmaLayers (by id), relationshipTypes (by name), closureRules (by id)
-- [x] **External ontology types** — `ExternalOntologyRef` and `LibraryRef` type definitions for future OWL/JSON-LD/SysAnd imports
+- [x] **Config merge deduplication** — `dedup()` for cosmaLayers, relationshipTypes, closureRules
+- [x] **External ontology types** — `ExternalOntologyRef` and `LibraryRef` type definitions
 - [x] **4-mode web app** — Mode switcher with Catalog, Diagram, Scenarios, Ontology tabs
-- [x] **Catalog Explorer** — Tree browser with layer/kind/file grouping, element detail center panel, properties panel
-- [x] **Diagramming mode** — Viewpoint-first sidebar (ViewpointBrowser), ELK.js diagram canvas, properties panel
-- [x] **Scenario Catalog** — Filters Scenario/UseCase/UserActivity elements, grouped tree, linked elements
-- [x] **Ontology Viewer** — Tree View + Graph View, grouping by layer/construct/source, show/hide groups, 45 kinds across 11 groups
-- [x] **OWL/RDF export** — `exportToOwlTurtle()` and `exportToOwlXml()` in `@memo/ontology`
-- [x] **Ontology CLI commands** — `memo ontology show`, `memo ontology export owl`, `memo ontology export xml`
-- [x] **Properties panel** — Shared across modes with element attributes, relationships (clickable navigation), violations/guidance
+- [x] **Catalog Explorer** — Tree browser with layer/kind/file grouping
+- [x] **Diagramming mode** — Viewpoint-first sidebar, ELK.js diagram canvas, properties panel
+- [x] **Scenario Catalog** — Filters Scenario/UseCase/UserActivity elements
+- [x] **Ontology Viewer** — Tree View + Graph View with grouping
+- [x] **OWL/RDF export** — `exportToOwlTurtle()` and `exportToOwlXml()`
+- [x] **Ontology CLI commands** — `memo ontology show`, `memo ontology export owl/xml`
+- [x] **Properties panel** — Shared across modes with element attributes, relationships, violations
 
 ### Phase 4A — CSV Import/Export & SysML Generation
 
-- [x] **CSV import/export module** — Ontology-aware CSV parsing with kind validation, construct auto-derivation, dynamic attribute columns
-- [x] **SysML generator** — Generate valid SysML v2 files from imported CSV elements and relationships
+- [x] **CSV import/export** — Ontology-aware parsing with kind validation, construct auto-derivation
+- [x] **SysML generator** — Generate valid SysML v2 files from imported CSV
 - [x] **CSV CLI commands** — `memo import csv`, `memo import csv-rel`, `memo import template`
-- [x] **CSV template generation** — Auto-generate CSV templates from ontology kinds and relationship types
-- [x] **WebSocket CSV import protocol** — `csv:import` client→server and `import:result` server→client messages
 - [x] **22 tests** for CSV roundtrip, validation, edge cases, SysML generation
 
 ### Phase 4B — First-Class Diagram System
@@ -65,108 +82,134 @@
 - [x] **Auto-generated diagrams** — Model Viewpoint auto-generates Context + Decomposition BDDs
 - [x] **SysML v2 diagram types** — BDD, IBD, REQ, UCD, ACT, PKG, PAR, RISK with color badges
 - [x] **ViewpointBrowser rewrite** — Diagrams rendered from model DTO, type badges, auto indicators
-- [x] **DiagramCanvas filtering** — selectedDiagramId drives viewpoint filter + diagram header overlay
-- [x] **PropertiesPanel** — Shows diagram properties when diagram selected (no element)
-- [x] **Diagram store selectors** — `getDiagram()`, `getDiagramsForViewpoint()`, `selectDiagram()`
-- [x] **Config mergeViewpoints()** — Deduplicates viewpoints by ID, merges diagrams within shared viewpoints
-- [x] **Medical + ontology configs** — 7 viewpoints with diagram definitions
-- [x] **DIAGRAM_TYPE_META** constant — Replaces old DiagramDef with per-type metadata (code, label, fullName, color)
 
 ### Phase 4C — Documentation
 
 - [x] **Medical Device Quick Start Tutorial** — End-to-end guide: setup → CSV import → traceability → validation → CI
-- [x] **mkdocs guide structure** — Tutorial added as first guide in nav with callout on index
 
 ### Phase 4D — UI Polish
 
 - [x] **Git user identity in status bar** — GapBar shows git user.name / user.email + branch
-- [x] **Vertical completeness bar** — Collapsible compact tab by default
-- [x] **UI font/size tuning** — 440px sidebar, 16px catalog fonts, text-xl diagram
+- [x] **Vertical completeness bar** — Collapsible compact tab
 - [x] **Branding** — MEMO chat-bubble logo, favicon, brain watermark
 - [x] **Decomposition/containment diagram modes** — BDD + IBD auto-generated diagrams
-- [x] **Collapsible left sidebar** — Toggle sidebar open/closed across all 4 modes (40px collapsed strip with vertical label)
-- [x] **Comments/discussion panel** — Element-level annotation/comment sidebar with git user attribution, dirty tracking, and WebSocket persistence
+- [x] **Collapsible left sidebar** — Toggle sidebar with vertical label
+- [x] **Comments/discussion panel** — Element-level annotations with git user attribution
 
 ### Phase 4 — Multi-File SysML & Cross-File Resolution
 
-- [x] **Cross-file import resolution** — PackageRegistry tracks packages across files, two-pass builder defers connections, resolves via imports
-- [x] **SysML v2 `library` keyword** — Grammar supports `library package` (definitions only, `isLibrary` tracked in registry)
-- [x] **Wildcard and named imports** — Full `::*` and `::SpecificType` import syntax with registry-based resolution
-- [x] **Multi-file model splitting** — Convention with example split files (risk/, requirements/, architecture/) and 100 passing tests
+- [x] **Cross-file import resolution** — PackageRegistry, two-pass builder, deferred connections
+- [x] **SysML v2 `library` keyword** — Grammar supports `library package`
+- [x] **Wildcard and named imports** — `::*` and `::SpecificType` syntax
+- [x] **Multi-file model splitting** — Convention with example split files, 100 passing tests
 
 ### Phase 5 — Behavior Viewpoint (SysML v2 Actions & Flows)
 
-- [x] **Phase 5a: Behavior grammar & semantic model** — `action def`, `action usage`, `item def`, `flow`, `succession`, `allocate` in Langium grammar; `ActionParameter`, `parentAction`, `allocatedTo`, `flowItem` in semantic model; two-pass builder with deferred flow/succession/allocate resolution; 30 behavior tests
-- [x] **Phase 5b: Action Flow Diagram renderer** — `ActionFlowDiagram` component with ELK.js layered layout, swim lanes by allocation target, flow edges (solid/dashed by material/signal), succession edges, start/done pseudo-nodes, custom `ActionFlowNode` with port badges
-- [x] **Phase 5c: Viewpoint integration** — Action Flow mode in ModeSwitcher, `actionflow` route in App, parameters & allocation display in PropertiesPanel, behavior layer/kinds/viewpoint in base ontology config, `flow`/`succession` relationship types
-- [x] **Phase 5d: Behavior validation & completeness** — `behavior-validator.ts` with BV-001 (unallocated action warning), BV-002 (orphan action warning), BV-003 (incompatible flow type error); `validateModel()` composer; `actionType` attribute on usages for definition lookup; 6 validation tests
-- [x] **Example models** — Infusion pump behavior (6 action defs, flows, successions, allocations), irrigation pump (structure + behavior with parallel branches)
+- [x] **Phase 5a: Behavior grammar** — `action def`, `item def`, `flow`, `succession`, `allocate`; 30 tests
+- [x] **Phase 5b: Action Flow Diagram** — ELK.js swimlane layout, flow/succession edges, ActionFlowNode
+- [x] **Phase 5c: Viewpoint integration** — Action Flow mode, behavior-view viewpoint, PropertiesPanel
+- [x] **Phase 5d: Behavior validation** — BV-001/002/003 rules, `validateModel()` composer; 6 tests
+- [x] **Example models** — Infusion pump behavior, irrigation pump with parallel branches
 
 ### Phase 5e — UI Polish & Viewpoint Restructuring
 
-- [x] **Design system tokens** — `styles/tokens.ts` with SHADOW, RADIUS, FONT, EDGE, TRANSITION constants for consistent rendering
-- [x] **Viewpoint config restructuring** — Split monolithic `architecture-view` into ISO 42010–aligned viewpoints: `context-view`, `functional-view`, `logical-view`, `interface-view`; moved hardcoded EXTRA_VIEWPOINTS into ontology config
-- [x] **Node polish** — Drop shadows, hover lift, smooth transitions on DecompositionNode and ActionFlowNode; CSS transitions for edges and handles
-- [x] **Diagram canvas UX** — Empty state placeholder, scroll-to-zoom + pan-on-scroll, softer background grid, longer fitView animations
-- [x] **Medical domain viewpoints** — Safety Analysis viewpoint, Physical Containment IBD diagram, Model Viewpoint reduced to single cross-cutting overview
+- [x] **Design system tokens** — `styles/tokens.ts` with SHADOW, RADIUS, FONT, EDGE, TRANSITION
+- [x] **Viewpoint config restructuring** — ISO 42010 viewpoints: context/functional/logical/interface
+- [x] **Node polish** — Drop shadows, hover lift, smooth transitions
+- [x] **Medical domain viewpoints** — Safety Analysis, Physical Containment, Model Viewpoint
 
 ### Phase 6a — Functional Breakdown Structure (FBS)
 
-- [x] **`decomposedBy` relationship type** — Parent function → child function decomposition in ontology config + REL_COLORS
-- [x] **FBS tree diagram** — `buildFunctionalTree()` + `computeFBSLayout()` in layout.ts; interactive expand/collapse tree for functional kinds using ELK MRTree algorithm
-- [x] **FBS diagram integration** — `diag-fbs-tree` auto-diagram in functional-view with `layoutStyle: fbs`; DiagramCanvas routes FBS to dedicated layout with expand/collapse controls
-- [x] **Example models** — Infusion pump FBS: 4 SystemFunctions decomposed into 5 ComponentFunctions via `DecomposedBy` connections
+- [x] **`decomposedBy` relationship type** — Function decomposition in ontology config
+- [x] **FBS tree diagram** — `buildFunctionalTree()` + `computeFBSLayout()` with ELK MRTree
+- [x] **FBS diagram integration** — `diag-fbs-tree` auto-diagram in functional-view
 
 ### Phase 6b — DSM Analysis
 
-- [x] **DSM matrix computation** — `computeDSM()` builds N×N matrix from model relationships; filters by element kinds and relationship types; `DSMCell` records count, types, flowItems per dependency
-- [x] **Clustering algorithm** — Union-find connected component detection; `reorderDSM()` groups clustered elements for band minimization
-- [x] **Interactive DSM view** — `DSMView` component with color-coded matrix cells, rotated column headers, hover tooltips with relationship details, element selection on click
-- [x] **Allocation overlay** — Toggle to show allocated-to badges on row labels
-- [x] **DSM toolbar** — Kind filter (Functions/Behavior/All), cluster toggle, allocation overlay toggle, dependency count
-- [x] **9 DSM tests** — Matrix construction, flow/decomposedBy cell recording, diagonal empty, clustering, custom filters, reordering, empty/no-match models
+- [x] **DSM matrix computation** — `computeDSM()` N×N matrix with kind/relationship filters
+- [x] **Clustering algorithm** — Union-find connected component detection
+- [x] **Interactive DSM view** — Color-coded matrix, hover tooltips, allocation overlay
+- [x] **9 DSM tests**
 
-### Phase 6c — Functional ↔ Logical Consistency
+### Phase 6c — Functional-Logical Consistency + Visual Polish
 
-- [x] **Consistency analysis** — `analyzeConsistency()` identifies unallocated functions, components with no functions, and cross-component flows that imply interface needs
-- [x] **Consistency panel in DSM view** — Clickable issue list with severity badges, allocation coverage percentage, issue type tags (unallocated / cross-boundary / no functions)
+- [x] **Consistency analysis** — Unallocated functions, cross-component flows, interface needs
+- [x] **Consistency panel in DSM view** — Clickable issue list with severity badges
+- [x] **Bezier edges** — All edge types except succession (stays smoothstep for temporal ordering)
+- [x] **FONT tokens** — Applied across PropertiesPanel, ViewpointBrowser, DiagramCanvas, ActionFlowDiagram
+- [x] **CSS transitions** — Edge hover, node transitions
 
 ---
 
 ## In Progress / Next Up
 
-### Phase 7 — Build, Export & Advanced Features
+### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
-- [ ] **`memo build` command** — Static HTML report with embedded diagram
-- [ ] **`.kpar` packaging** — SysAnd-compatible archive
-- [ ] **PDF export** — Compliance documentation PDF
-- [ ] **Ontology editor** — Visual editor for kinds and relationships
-- [ ] **Scenario editor** — Text-driven scenario editor with element linking, future diagram sync
-- [ ] **Multi-file navigation** — Click-through from diagram to source `.sysml` file and line
-- [ ] **Diff view** — Show changes between rebuilds
-- [ ] **VS Code extension** — Language server with autocomplete, go-to-definition, diagnostics
+Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
 
-### Phase 8 — LLM Integration
+- [ ] **Model Explorer panel** — Elements grouped by kind/layer/package (replaces Catalog mode)
+- [ ] **View Explorer panel** — Views organized under viewpoints in tree (replaces ViewpointBrowser)
+- [ ] **Unified Canvas** — Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ, etc.)
+- [ ] **View creation** — Users can create new views under any viewpoint
+- [ ] **Auto-generated views** — Grouped under viewpoint (e.g., "Auto: Physical Decomposition" under physical-view)
+- [ ] **Tools panel** — DSM, Consistency Analysis, FMEA accessible from toolbar icon (replaces DSM mode)
+- [ ] **Breadcrumb navigation** — Viewpoint > View path above canvas
+- [ ] **Remove separate ActionFlow mode** — AFD becomes a view type under behavior-view
+- [ ] **Remove separate DSM mode** — DSM becomes a tool in toolbar
+- [ ] **Remove separate Scenario mode** — Scenarios become views under behavioral viewpoints
 
-- [ ] **Model Q&A** — Natural language questions about the model
-- [ ] **Completeness assistant** — LLM suggests missing elements based on closure rule violations
-- [ ] **Model generation** — Generate SysML v2 from natural language descriptions
-- [ ] **Impact analysis** — Change propagation analysis
-- [ ] **Report drafting** — LLM generates regulatory narratives from model data
+### Phase 7a — Core MBSE Capabilities **[CRITICAL]**
 
-### Phase 9 — Ecosystem
+- [ ] **Element Libraries (M34)** — Reusable standard component libraries (`library package`)
+- [ ] **External Ontology Import (M35)** — OWL/JSON-LD/SysAnd import for interoperability
+- [ ] **Ontology Editor (M4)** — Visual editor for kinds, relationships, layers, closure rules
+- [ ] **Relationship/Traceability Matrix (M6)** — N×N matrix with presets (ISO 14971/IEC 62304)
+- [ ] **FMEA + Risk Analysis (M9)** — ISO 14971 FMEA table with risk chains
 
-- [ ] **Additional domain packages** — Automotive (ISO 26262), aerospace (DO-178C)
-- [ ] **Plugin system** — Custom rule types, visualizations, exporters
-- [ ] **Element libraries** — Reusable standard component libraries (USB, Logging, PowerDown)
-- [ ] **External ontology imports** — OWL/JSON-LD/SysAnd ontology integration
-- [ ] **Import from EA/Cameo** — Migration tools from Enterprise Architect or Cameo
+### Phase 7b — Compliance & Productivity **[HIGH]**
 
-### Phase 10 — CI & Cloud
+- [ ] **DHF Generator Engine (M14)** — Design History File data generator + HTML renderer
+- [ ] **DHF Web Preview (M15)** — DHF preview mode in web app
+- [ ] **CI Integration (M19)** — `memo validate` with exit code + JSON/JUnit output
+- [ ] **Cmd+K Search (M12)** — Global fuzzy search command palette
+- [ ] **Properties Tabs + Editing (M10)** — Inline editing of element properties
+- [ ] **Static Build + Export (M20)** — `memo build` command, .kpar packaging
 
-- [ ] **CI integration** — `memo validate` returns exit code 1 on errors; GitHub Actions
-- [ ] **Cloud deployment** — Hosted version with user accounts
-- [ ] **Collaboration** — Multi-user editing with conflict resolution
+### Phase 8 — Enhanced Experience **[MEDIUM]**
+
+- [ ] **Custom Viewpoints UI (M5)** — CRUD for viewpoints
+- [ ] **Right-Click Context Menus (M7)** — Diagram nodes and browser rows
+- [ ] **Tabular View (M8)** — Spreadsheet view of elements
+- [ ] **Focus Mode (M13)** — Ego-graph focus on selected node
+- [ ] **Scenario Editor + Diff (M22)** — Source navigation, model diff
+- [ ] **VS Code Extension (M26)** — LSP for .sysml files
+- [ ] **Statistics Dashboard (M21)** — Model statistics cards
+
+### Phase 9 — LLM Integration **[LOW]**
+
+- [ ] **Model Q&A (M29)** — Natural language questions about the model
+- [ ] **Completeness assistant** — LLM suggests missing elements
+- [ ] **Model generation (M30)** — Generate SysML v2 from natural language
+- [ ] **Report drafting** — LLM generates regulatory narratives
+
+### Phase 10 — Ecosystem **[LOW]**
+
+- [ ] **Domain Packages (M31)** — Automotive (ISO 26262), Aerospace (DO-178C)
+- [ ] **Plugin System (M28)** — Custom rules, visualizations, exporters
+- [ ] **EA/Cameo Import (M27)** — Migration tools from Enterprise Architect, Cameo
+- [ ] **Cloud + Collaboration (M32)** — Hosted deployment, real-time sync
+
+---
+
+## Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **View-centric, not mode-centric** | ISO 42010 organizes architecture as Viewpoint → View → Model. All diagram types are views under viewpoints, not separate app modes. |
+| **DSM/FMEA are tools, not views** | Analysis tools (DSM, consistency, FMEA) are accessed from a toolbar, not as separate modes. They operate on the model and can be invoked from CLI too. |
+| **Activity diagrams are views** | Action Flow Diagram is a view type (AFD) under behavior-view, not a top-level mode. |
+| **Arcadia-aligned layers** | Operational Analysis → Functional Need → Logical Architecture → Physical Architecture, following Capella/Arcadia methodology. |
+| **30 concrete viewpoints** | Based on Starman SA taxonomy: Domain (Clinical, Business, Jobs, Capability, Environment), Behavioral (Use Case, Usability, Stakeholder Need, Risk, Requirement), Functional, Logical (Data, Control), Implementational (Hardware, Software, Timing, Network, Security, Deployment), Operational (Communication, Development, Service, Manufacturing, Execution, Process). |
 
 ---
 
@@ -177,3 +220,4 @@
 | Web bundle size (1.8 MB) | Low | Consider code splitting for ReactFlow/ELK |
 | No web component tests | Medium | `@memo/web` has no test infrastructure yet |
 | Small viewport layout overlap | Low | 3-panel layouts need min-width breakpoints |
+| 6-mode architecture needs replacement | Critical | Current modes (catalog, diagram, actionflow, dsm, scenario, ontology) don't match ISO 42010. Phase 7 addresses this. |
