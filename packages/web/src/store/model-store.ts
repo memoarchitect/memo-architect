@@ -13,7 +13,7 @@ import type {
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 
-export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow';
+export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm';
 export type GroupBy = 'layer' | 'kind' | 'construct' | 'source';
 export type CatalogGroupBy = 'semantic';  // V-Cycle is the only sensible top-level grouping
 

@@ -39,6 +39,7 @@ export * from './completeness/tracker.js';
 
 // ─── Analysis ────────────────────────────────────────────────────────────────
 export * from './analysis/impact.js';
+export * from './analysis/dsm.js';
 
 // ─── Serializer (CSV import/export, SysML generation) ───────────────────────
 export * from './serializer/csv-io.js';

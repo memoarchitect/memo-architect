@@ -117,17 +117,20 @@
 - [x] **FBS diagram integration** — `diag-fbs-tree` auto-diagram in functional-view with `layoutStyle: fbs`; DiagramCanvas routes FBS to dedicated layout with expand/collapse controls
 - [x] **Example models** — Infusion pump FBS: 4 SystemFunctions decomposed into 5 ComponentFunctions via `DecomposedBy` connections
 
+### Phase 6b — DSM Analysis
+
+- [x] **DSM matrix computation** — `computeDSM()` builds N×N matrix from model relationships; filters by element kinds and relationship types; `DSMCell` records count, types, flowItems per dependency
+- [x] **Clustering algorithm** — Union-find connected component detection; `reorderDSM()` groups clustered elements for band minimization
+- [x] **Interactive DSM view** — `DSMView` component with color-coded matrix cells, rotated column headers, hover tooltips with relationship details, element selection on click
+- [x] **Allocation overlay** — Toggle to show allocated-to badges on row labels
+- [x] **DSM toolbar** — Kind filter (Functions/Behavior/All), cluster toggle, allocation overlay toggle, dependency count
+- [x] **9 DSM tests** — Matrix construction, flow/decomposedBy cell recording, diagonal empty, clustering, custom filters, reordering, empty/no-match models
+
 ---
 
 ## In Progress / Next Up
 
 ### Phase 6 — DSM & Functional Analysis
-
-#### 6b. DSM Analysis
-- [ ] **DSM matrix computation** — Build N×N matrix from flow relationships
-- [ ] **Interactive DSM view** — Color-coded matrix in the web app with hover details
-- [ ] **Clustering algorithm** — Component-based DSM partitioning to suggest function groupings
-- [ ] **Allocation overlay** — Show which functions are allocated to which subsystem
 
 #### 6c. Functional ↔ Logical Consistency
 - [ ] **Consistency visualization** — Overlay functional flows on logical architecture

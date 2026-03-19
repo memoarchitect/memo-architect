@@ -4,6 +4,7 @@ const MODES: { id: AppMode; label: string; icon: string }[] = [
     { id: 'catalog', label: 'Model Explorer', icon: '\u2630' },
     { id: 'diagram', label: 'Diagram', icon: '\u25A6' },
     { id: 'actionflow', label: 'Action Flow', icon: '\u21C6' },
+    { id: 'dsm', label: 'DSM', icon: '\u25A4' },
     { id: 'scenario', label: 'Scenarios', icon: '\u25B6' },
     { id: 'ontology', label: 'Ontology', icon: '\u25C9' },
 ];

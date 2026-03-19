@@ -11,6 +11,7 @@ import { ScenarioCatalog } from './views/ScenarioCatalog';
 import { OntologyViewer } from './views/OntologyViewer';
 import { ViewpointBrowser } from './components/ViewpointBrowser';
 import { ActionFlowDiagram } from './views/ActionFlowDiagram';
+import { DSMView } from './views/DSMView';
 
 export function App() {
     const connected = useModelStore(s => s.connected);
@@ -127,6 +128,13 @@ export function App() {
                 return (
                     <>
                         <ActionFlowDiagram />
+                        <PropertiesPanel />
+                    </>
+                );
+            case 'dsm':
+                return (
+                    <>
+                        <DSMView />
                         <PropertiesPanel />
                     </>
                 );
