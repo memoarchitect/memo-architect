@@ -1,10 +1,15 @@
 // =============================================================================
 // MEMO SysML v2 Grammar — Langium definition
 //
-// Covers the SysML v2 subset needed for MEMO medical device modeling:
-//   package, part def, requirement def, action def, port def, interface def,
-//   connection def, attribute def, enum def, viewpoint def, view def,
-//   import, specialization (:>), typed connections, doc comments
+// Covers the SysML v2 subset needed for MEMO systems engineering modeling:
+//   package, part def, requirement def, action def, item def, port def,
+//   interface def, connection def, attribute def, enum def,
+//   viewpoint def, view def, import, specialization (:>),
+//   typed connections, doc comments
+//
+// Behavior constructs (Phase 5):
+//   action def with in/out/inout parameters, action usage (composite),
+//   flow connection usage, succession usage, allocate usage, item def
 //
 // Design notes:
 //   - DOC_COMMENT is a non-hidden terminal that captures `doc /* ... */`
@@ -38,6 +43,7 @@ PackageMember:
     | DefinitionMember
     | UsageMember
     | ConnectionUsage
+    | AllocateUsage
     | DocComment;
 
 // ─── Import ──────────────────────────────────────────────────────────────────
@@ -56,6 +62,7 @@ DefinitionMember:
     PartDefinition
     | RequirementDefinition
     | ActionDefinition
+    | ItemDefinition
     | PortDefinition
     | InterfaceDefinition
     | ConnectionDefinition
@@ -74,6 +81,10 @@ RequirementDefinition:
 
 ActionDefinition:
     'action' 'def' name=ID specialization=Specialization?
+    ('{' body+=ActionDefBodyMember* '}' | ';');
+
+ItemDefinition:
+    'item' 'def' name=ID specialization=Specialization?
     ('{' body+=DefinitionBodyMember* '}' | ';');
 
 PortDefinition:
@@ -138,9 +149,11 @@ RequirementUsage:
     'requirement' name=ID ':' type=QualifiedName
     ('{' body+=UsageBodyMember* '}' | ';');
 
+// ActionUsage supports both typed (action name : Type;) and composite
+// (action name { nested-actions, flows, successions }) forms.
 ActionUsage:
-    'action' name=ID ':' type=QualifiedName
-    ('{' body+=UsageBodyMember* '}' | ';');
+    'action' name=ID (':' type=QualifiedName)?
+    ('{' body+=ActionUsageBodyMember* '}' | ';');
 
 PortUsage:
     'port' name=ID ':' type=QualifiedName
@@ -155,6 +168,52 @@ ConnectionUsage:
 
 ConnectionEnd:
     endName=FeatureName '::>' ref=QualifiedName;
+
+// ─── Behavior: Action definition body ───────────────────────────────────────
+// Action defs can have in/out/inout parameters plus regular body members
+
+ActionDefBodyMember:
+    ActionParameterMember | DefinitionBodyMember;
+
+ActionParameterMember:
+    direction=('in' | 'out' | 'inout') name=ID ':' type=QualifiedName ';';
+
+// ─── Behavior: Action usage body ────────────────────────────────────────────
+// Composite actions contain nested actions, flow connections, successions
+
+ActionUsageBodyMember:
+    ActionUsage | FlowConnectionUsage | SuccessionUsage | UsageBodyMember;
+
+// ─── Behavior: Flow connection usage ────────────────────────────────────────
+// Syntax: flow of ItemType from source.port to target.port ;
+
+FlowConnectionUsage:
+    'flow' 'of' itemType=QualifiedName 'from' source=FlowEnd 'to' target=FlowEnd ';';
+
+FlowEnd:
+    ref=DottedName;
+
+// Dot-separated qualified name for flow endpoints (e.g. receive.prescription)
+DottedName returns string:
+    ID ('.' ID)*;
+
+// ─── Behavior: Succession usage ─────────────────────────────────────────────
+// Syntax: first start then action1 then action2 then done ;
+
+SuccessionUsage:
+    'first' steps+=SuccessionStep ('then' steps+=SuccessionStep)+ ';';
+
+SuccessionStep:
+    ref=SuccessionRef;
+
+SuccessionRef returns string:
+    'start' | 'done' | ID;
+
+// ─── Behavior: Allocate usage ───────────────────────────────────────────────
+// Syntax: allocate actionUsage to partUsage ;
+
+AllocateUsage:
+    'allocate' source=QualifiedName 'to' target=QualifiedName ';';
 
 // ─── Body members ────────────────────────────────────────────────────────────
 

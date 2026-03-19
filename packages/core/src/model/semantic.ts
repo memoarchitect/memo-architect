@@ -5,7 +5,20 @@
 // decoupled from Langium's AST nodes so they can be sent over WebSocket.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** A model element (part, requirement, action, port, etc.) */
+/** Direction of an action parameter */
+export type ParameterDirection = 'in' | 'out' | 'inout';
+
+/** A typed parameter on an action definition */
+export interface ActionParameter {
+    /** Parameter name */
+    name: string;
+    /** Direction: in, out, or inout */
+    direction: ParameterDirection;
+    /** Type name (qualified) */
+    type: string;
+}
+
+/** A model element (part, requirement, action, port, item, etc.) */
 export interface MemoElement {
     /** Unique element identifier (usage name from SysML) */
     id: string;
@@ -13,7 +26,7 @@ export interface MemoElement {
     name: string;
     /** The kind key matching config.kinds, e.g. "Hazard", "SystemRequirement" */
     kind: string;
-    /** SysML v2 construct: 'part', 'requirement', 'action', 'port' */
+    /** SysML v2 construct: 'part', 'requirement', 'action', 'port', 'item' */
     construct: string;
     /** CoSMA layer from config, e.g. "risk", "requirements" */
     layer: string;
@@ -25,13 +38,19 @@ export interface MemoElement {
     attributes: Record<string, string>;
     /** Doc comment if present */
     doc?: string;
+    /** Action parameters (for ActionDefinition elements) */
+    parameters?: ActionParameter[];
+    /** Parent action ID (for nested action usages) */
+    parentAction?: string;
+    /** Structural part this action is allocated to (from allocate statements) */
+    allocatedTo?: string;
 }
 
 /** A typed relationship between two elements */
 export interface MemoRelationship {
     /** Unique relationship id (auto-generated) */
     id: string;
-    /** Relationship type name (lowercase), e.g. "mitigates", "traceTo" */
+    /** Relationship type name (lowercase), e.g. "mitigates", "traceTo", "flow", "succession" */
     type: string;
     /** Source element id */
     sourceId: string;
@@ -43,6 +62,8 @@ export interface MemoRelationship {
     targetEnd: string;
     /** Source file path (relative) */
     file: string;
+    /** Item type being transported (for flow relationships) */
+    flowItem?: string;
 }
 
 /** A parse error from a specific file */

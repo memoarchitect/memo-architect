@@ -8,6 +8,7 @@ export const LAYER_COLORS: Record<string, string> = {
     requirements: '#4A90D9',
     risk: '#E74C3C',
     functional: '#E67E22',
+    behavior: '#FF6B6B',
     logical: '#7B68EE',
     physical: '#95A5A6',
     software: '#F39C12',
@@ -21,6 +22,7 @@ export const LAYER_LABELS: Record<string, string> = {
     requirements: 'Requirements',
     risk: 'Risk Management',
     functional: 'Functional Analysis',
+    behavior: 'Behavior',
     logical: 'Logical Architecture',
     physical: 'Physical Architecture',
     software: 'Software Architecture',
@@ -30,7 +32,7 @@ export const LAYER_LABELS: Record<string, string> = {
 };
 
 export const LAYER_ORDER = [
-    'business', 'requirements', 'risk', 'functional', 'logical',
+    'business', 'requirements', 'risk', 'functional', 'behavior', 'logical',
     'physical', 'software', 'interfaces', 'verification', 'ui',
 ] as const;
 
@@ -45,6 +47,8 @@ export const REL_COLORS: Record<string, string> = {
     allocateTo: '#E67E22',
     aggregation: '#7B68EE',
     composedOf: '#8E44AD',
+    flow: '#3498DB',
+    succession: '#95A5A6',
 };
 
 // ─── Semantic V-Cycle Grouping ──────────────────────────────────────────────
@@ -84,6 +88,12 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         label: 'Functions',
         color: '#D35400',
         kinds: ['SystemFunction', 'ComponentFunction'],
+    },
+    {
+        id: 'behavior',
+        label: 'Behavior',
+        color: '#FF6B6B',
+        kinds: ['ActionDefinition', 'ActionUsage', 'ItemDefinition'],
     },
     {
         id: 'logical',
@@ -167,6 +177,7 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     req:  { code: 'REQ',  label: 'REQ',  fullName: 'Requirements Diagram',     color: '#4A90D9' },
     ucd:  { code: 'UCD',  label: 'UCD',  fullName: 'Use Case Diagram',         color: '#E67E22' },
     act:  { code: 'ACT',  label: 'ACT',  fullName: 'Activity Diagram',         color: '#F39C12' },
+    afd:  { code: 'AFD',  label: 'AFD',  fullName: 'Action Flow Diagram',      color: '#FF6B6B' },
     pkg:  { code: 'PKG',  label: 'PKG',  fullName: 'Package Diagram',          color: '#95A5A6' },
     par:  { code: 'PAR',  label: 'PAR',  fullName: 'Parametric Diagram',       color: '#2ECC71' },
     risk: { code: 'RISK', label: 'RISK', fullName: 'Risk Diagram',             color: '#E74C3C' },

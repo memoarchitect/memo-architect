@@ -9,6 +9,14 @@
 //   - PackageRegistry tracks cross-file packages and resolves imports
 //   - Connections are deferred until all elements are extracted (two-pass)
 //   - Doc comments are extracted from usage bodies
+//
+// Phase 5 additions:
+//   - ActionDefinition bodies extract parameters (in/out/inout)
+//   - ActionUsage supports composite actions with nested actions
+//   - FlowConnectionUsage → MemoRelationship of type "flow" with flowItem
+//   - SuccessionUsage → MemoRelationship pairs of type "succession"
+//   - AllocateUsage → MemoRelationship of type "allocateTo"
+//   - ItemDefinition → MemoElement with construct "item"
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type {
@@ -25,6 +33,12 @@ import type {
     IntValue,
     BooleanValue,
     EnumValue,
+    ActionDefinition,
+    ItemDefinition,
+    ActionParameterMember,
+    FlowConnectionUsage,
+    SuccessionUsage,
+    AllocateUsage,
 } from '../language/generated/ast.js';
 import type { MEMOConfig, KindDefinition } from './config.js';
 import type {
@@ -32,6 +46,7 @@ import type {
     MemoRelationship,
     MemoModel,
     ParseError,
+    ActionParameter,
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
 import { PackageRegistry } from './package-registry.js';
@@ -41,6 +56,29 @@ let relationshipCounter = 0;
 /** Deferred connection to resolve after all elements are extracted */
 interface DeferredConnection {
     conn: ConnectionUsage;
+    filePath: string;
+    packageName: string;
+}
+
+/** Deferred flow to resolve after all elements are extracted */
+interface DeferredFlow {
+    flow: FlowConnectionUsage;
+    filePath: string;
+    packageName: string;
+    parentActionId?: string;
+}
+
+/** Deferred succession to resolve after all elements are extracted */
+interface DeferredSuccession {
+    succession: SuccessionUsage;
+    filePath: string;
+    packageName: string;
+    parentActionId?: string;
+}
+
+/** Deferred allocate to resolve after all elements are extracted */
+interface DeferredAllocate {
+    allocate: AllocateUsage;
     filePath: string;
     packageName: string;
 }
@@ -58,6 +96,9 @@ export function buildMemoModel(
     const relationships: MemoRelationship[] = [];
     const errors: ParseError[] = [...parseErrors];
     const deferredConnections: DeferredConnection[] = [];
+    const deferredFlows: DeferredFlow[] = [];
+    const deferredSuccessions: DeferredSuccession[] = [];
+    const deferredAllocates: DeferredAllocate[] = [];
 
     // Phase 1: Build package registry from all documents
     const registry = new PackageRegistry();
@@ -66,13 +107,28 @@ export function buildMemoModel(
     // Phase 2: Extract elements from all documents (populates registry)
     for (const { document, filePath } of documents) {
         const model = document.parseResult.value;
-        extractFromModel(model, filePath, config, elements, deferredConnections, errors, registry);
+        extractFromModel(model, filePath, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
     }
 
     // Phase 3: Resolve connections using the registry (all elements now known)
     const allElementIds = new Set(elements.keys());
     for (const { conn, filePath, packageName } of deferredConnections) {
         resolveConnection(conn, filePath, packageName, config, relationships, registry, allElementIds);
+    }
+
+    // Phase 3b: Resolve flow connections
+    for (const { flow, filePath, packageName, parentActionId } of deferredFlows) {
+        resolveFlowConnection(flow, filePath, packageName, parentActionId, relationships, allElementIds);
+    }
+
+    // Phase 3c: Resolve successions
+    for (const { succession, filePath, packageName, parentActionId } of deferredSuccessions) {
+        resolveSuccession(succession, filePath, packageName, parentActionId, relationships, allElementIds);
+    }
+
+    // Phase 3d: Resolve allocations
+    for (const { allocate, filePath, packageName } of deferredAllocates) {
+        resolveAllocate(allocate, filePath, packageName, elements, relationships, registry, allElementIds);
     }
 
     // Build indexes
@@ -117,12 +173,15 @@ function extractFromModel(
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
     deferredConnections: DeferredConnection[],
+    deferredFlows: DeferredFlow[],
+    deferredSuccessions: DeferredSuccession[],
+    deferredAllocates: DeferredAllocate[],
     errors: ParseError[],
     registry: PackageRegistry
 ): void {
     for (const member of model.members) {
         if (member.$type === 'PackageDeclaration') {
-            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, errors, registry);
+            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
         }
     }
 }
@@ -134,6 +193,9 @@ function extractFromPackage(
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
     deferredConnections: DeferredConnection[],
+    deferredFlows: DeferredFlow[],
+    deferredSuccessions: DeferredSuccession[],
+    deferredAllocates: DeferredAllocate[],
     errors: ParseError[],
     registry: PackageRegistry
 ): void {
@@ -142,7 +204,7 @@ function extractFromPackage(
     for (const member of pkg.members) {
         switch (member.$type) {
             case 'PackageDeclaration':
-                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, errors, registry);
+                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
                 break;
             case 'PartUsage':
                 extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry);
@@ -151,7 +213,7 @@ function extractFromPackage(
                 extractUsage(member as RequirementUsage, 'requirement', filePath, packageName, config, elements, registry);
                 break;
             case 'ActionUsage':
-                extractUsage(member as ActionUsage, 'action', filePath, packageName, config, elements, registry);
+                extractActionUsage(member as ActionUsage, filePath, packageName, config, elements, deferredFlows, deferredSuccessions, registry);
                 break;
             case 'PortUsage':
                 extractUsage(member as PortUsage, 'port', filePath, packageName, config, elements, registry);
@@ -164,7 +226,21 @@ function extractFromPackage(
                     packageName,
                 });
                 break;
-            // Definitions (part def, interface def, etc.) inside packages are
+            case 'AllocateUsage':
+                deferredAllocates.push({
+                    allocate: member as AllocateUsage,
+                    filePath,
+                    packageName,
+                });
+                break;
+            // ─── Definition members ─────────────────────────────────────
+            case 'ActionDefinition':
+                extractActionDefinition(member as ActionDefinition, filePath, packageName, config, elements, registry);
+                break;
+            case 'ItemDefinition':
+                extractItemDefinition(member as ItemDefinition, filePath, packageName, config, elements, registry);
+                break;
+            // Other definitions (part def, interface def, etc.) inside packages are
             // ontology-level — we don't extract them as model elements in device projects
         }
     }
@@ -218,6 +294,171 @@ function extractUsage(
     registry.registerElement(id, packageName);
 }
 
+/**
+ * Extract an ActionDefinition as a MemoElement with parameters.
+ */
+function extractActionDefinition(
+    actionDef: ActionDefinition,
+    filePath: string,
+    packageName: string,
+    config: MEMOConfig,
+    elements: Map<string, MemoElement>,
+    registry: PackageRegistry
+): void {
+    const id = actionDef.name;
+
+    // Extract parameters from body
+    const parameters: ActionParameter[] = [];
+    const bodyMembers = actionDef.body || [];
+    for (const member of bodyMembers) {
+        if (member.$type === 'ActionParameterMember') {
+            const param = member as ActionParameterMember;
+            parameters.push({
+                name: param.name,
+                direction: param.direction as ActionParameter['direction'],
+                type: param.type,
+            });
+        }
+    }
+
+    const attributes = extractAttributes(bodyMembers);
+    const doc = extractDocComment(bodyMembers);
+
+    const element: MemoElement = {
+        id,
+        name: id,
+        kind: 'ActionDefinition',
+        construct: 'action',
+        layer: 'behavior',
+        file: filePath,
+        package: packageName || undefined,
+        attributes,
+        doc,
+        parameters: parameters.length > 0 ? parameters : undefined,
+    };
+
+    elements.set(id, element);
+    registry.registerElement(id, packageName);
+}
+
+/**
+ * Extract an ItemDefinition as a MemoElement.
+ */
+function extractItemDefinition(
+    itemDef: ItemDefinition,
+    filePath: string,
+    packageName: string,
+    config: MEMOConfig,
+    elements: Map<string, MemoElement>,
+    registry: PackageRegistry
+): void {
+    const id = itemDef.name;
+
+    const attributes = extractAttributes(itemDef.body);
+    const doc = extractDocComment(itemDef.body);
+
+    const element: MemoElement = {
+        id,
+        name: id,
+        kind: 'ItemDefinition',
+        construct: 'item',
+        layer: 'behavior',
+        file: filePath,
+        package: packageName || undefined,
+        attributes,
+        doc,
+    };
+
+    elements.set(id, element);
+    registry.registerElement(id, packageName);
+}
+
+/**
+ * Extract an ActionUsage, including nested actions, flows, and successions.
+ * Supports both typed (action name : Type;) and composite (action name { ... }) forms.
+ */
+function extractActionUsage(
+    usage: ActionUsage,
+    filePath: string,
+    packageName: string,
+    config: MEMOConfig,
+    elements: Map<string, MemoElement>,
+    deferredFlows: DeferredFlow[],
+    deferredSuccessions: DeferredSuccession[],
+    registry: PackageRegistry,
+    parentActionId?: string
+): void {
+    const id = usage.name;
+    const typeName = usage.type;
+
+    // Determine kind: try config lookup first, then fall back to behavior kinds
+    let kind = 'ActionUsage';
+    let layer = 'behavior';
+    if (typeName) {
+        const kindDef = config.kinds[typeName];
+        if (kindDef) {
+            kind = typeName;
+            layer = kindDef.layer || 'behavior';
+        } else if (typeName.includes('::')) {
+            const localType = typeName.split('::').pop()!;
+            if (config.kinds[localType]) {
+                kind = localType;
+                layer = config.kinds[localType].layer || 'behavior';
+            }
+        }
+    }
+
+    const bodyMembers = usage.body || [];
+    const attributes = extractAttributes(bodyMembers);
+    const doc = extractDocComment(bodyMembers);
+    const displayName = attributes['name'] || attributes['title'] || id;
+
+    const element: MemoElement = {
+        id,
+        name: displayName,
+        kind,
+        construct: 'action',
+        layer,
+        file: filePath,
+        package: packageName || undefined,
+        attributes,
+        doc,
+        parentAction: parentActionId,
+    };
+
+    elements.set(id, element);
+    registry.registerElement(id, packageName);
+
+    // Walk body for nested behavior members
+    for (const member of bodyMembers) {
+        switch (member.$type) {
+            case 'ActionUsage':
+                // Nested action usage — recursive extraction
+                extractActionUsage(
+                    member as ActionUsage, filePath, packageName, config,
+                    elements, deferredFlows, deferredSuccessions, registry, id
+                );
+                break;
+            case 'FlowConnectionUsage':
+                deferredFlows.push({
+                    flow: member as FlowConnectionUsage,
+                    filePath,
+                    packageName,
+                    parentActionId: id,
+                });
+                break;
+            case 'SuccessionUsage':
+                deferredSuccessions.push({
+                    succession: member as SuccessionUsage,
+                    filePath,
+                    packageName,
+                    parentActionId: id,
+                });
+                break;
+        }
+    }
+}
+
 function resolveConnection(
     conn: ConnectionUsage,
     filePath: string,
@@ -248,6 +489,136 @@ function resolveConnection(
         sourceEnd: conn.source.endName,
         targetId,
         targetEnd: conn.target.endName,
+        file: filePath,
+    };
+
+    relationships.push(rel);
+}
+
+/**
+ * Resolve a flow connection usage into a MemoRelationship.
+ * Flow endpoints use dot notation: "actionName.paramName"
+ */
+function resolveFlowConnection(
+    flow: FlowConnectionUsage,
+    filePath: string,
+    packageName: string,
+    parentActionId: string | undefined,
+    relationships: MemoRelationship[],
+    allElementIds: Set<string>
+): void {
+    const sourceRef = flow.source?.ref;
+    const targetRef = flow.target?.ref;
+    if (!sourceRef || !targetRef) return;
+
+    // Parse dot notation: "receive.prescription" → actionId="receive", port="prescription"
+    const sourceParts = sourceRef.split('.');
+    const targetParts = targetRef.split('.');
+
+    const sourceActionId = sourceParts[0];
+    const sourcePort = sourceParts.length > 1 ? sourceParts.slice(1).join('.') : '';
+    const targetActionId = targetParts[0];
+    const targetPort = targetParts.length > 1 ? targetParts.slice(1).join('.') : '';
+
+    // Only create relationship if both endpoints reference known elements
+    if (!allElementIds.has(sourceActionId) || !allElementIds.has(targetActionId)) return;
+
+    const rel: MemoRelationship = {
+        id: `rel-${++relationshipCounter}`,
+        type: 'flow',
+        sourceId: sourceActionId,
+        sourceEnd: sourcePort,
+        targetId: targetActionId,
+        targetEnd: targetPort,
+        file: filePath,
+        flowItem: flow.itemType || undefined,
+    };
+
+    relationships.push(rel);
+}
+
+/**
+ * Resolve a succession usage into pairs of MemoRelationships.
+ * "first start then A then B then done" → (start→A), (A→B), (B→done)
+ */
+function resolveSuccession(
+    succession: SuccessionUsage,
+    filePath: string,
+    packageName: string,
+    parentActionId: string | undefined,
+    relationships: MemoRelationship[],
+    allElementIds: Set<string>
+): void {
+    const steps = succession.steps || [];
+    if (steps.length < 2) return;
+
+    for (let i = 0; i < steps.length - 1; i++) {
+        const fromRef = steps[i].ref;
+        const toRef = steps[i + 1].ref;
+
+        // "start" and "done" are pseudo-elements; use parent action as context
+        const sourceId = fromRef === 'start'
+            ? (parentActionId ? `${parentActionId}__start` : '__start')
+            : fromRef;
+        const targetId = toRef === 'done'
+            ? (parentActionId ? `${parentActionId}__done` : '__done')
+            : toRef;
+
+        // Skip if neither endpoint is a known element (allow start/done pseudo-elements)
+        const sourceKnown = fromRef === 'start' || allElementIds.has(sourceId);
+        const targetKnown = toRef === 'done' || allElementIds.has(targetId);
+        if (!sourceKnown || !targetKnown) continue;
+
+        const rel: MemoRelationship = {
+            id: `rel-${++relationshipCounter}`,
+            type: 'succession',
+            sourceId,
+            sourceEnd: '',
+            targetId,
+            targetEnd: '',
+            file: filePath,
+        };
+
+        relationships.push(rel);
+    }
+}
+
+/**
+ * Resolve an allocate usage into a MemoRelationship and set allocatedTo on the element.
+ */
+function resolveAllocate(
+    allocate: AllocateUsage,
+    filePath: string,
+    packageName: string,
+    elements: Map<string, MemoElement>,
+    relationships: MemoRelationship[],
+    registry: PackageRegistry,
+    allElementIds: Set<string>
+): void {
+    const sourceRef = allocate.source;
+    const targetRef = allocate.target;
+    if (!sourceRef || !targetRef) return;
+
+    // Resolve references
+    const sourceId = registry.resolveElementId(sourceRef, packageName, allElementIds)
+        || resolveRef(sourceRef);
+    const targetId = registry.resolveElementId(targetRef, packageName, allElementIds)
+        || resolveRef(targetRef);
+    if (!sourceId || !targetId) return;
+
+    // Set allocatedTo on the source element
+    const sourceEl = elements.get(sourceId);
+    if (sourceEl) {
+        sourceEl.allocatedTo = targetId;
+    }
+
+    const rel: MemoRelationship = {
+        id: `rel-${++relationshipCounter}`,
+        type: 'allocateTo',
+        sourceId,
+        sourceEnd: 'action',
+        targetId,
+        targetEnd: 'part',
         file: filePath,
     };
 
