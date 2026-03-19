@@ -10,6 +10,7 @@ import { CatalogExplorer } from './views/CatalogExplorer';
 import { ScenarioCatalog } from './views/ScenarioCatalog';
 import { OntologyViewer } from './views/OntologyViewer';
 import { ViewpointBrowser } from './components/ViewpointBrowser';
+import { ActionFlowDiagram } from './views/ActionFlowDiagram';
 
 export function App() {
     const connected = useModelStore(s => s.connected);
@@ -119,6 +120,13 @@ export function App() {
                 return (
                     <>
                         <ScenarioCatalog />
+                        <PropertiesPanel />
+                    </>
+                );
+            case 'actionflow':
+                return (
+                    <>
+                        <ActionFlowDiagram />
                         <PropertiesPanel />
                     </>
                 );

@@ -188,6 +188,46 @@ export function PropertiesPanel() {
                     </div>
                 )}
 
+                {/* Action Parameters (for ActionDefinition elements) */}
+                {element.parameters && element.parameters.length > 0 && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Parameters</div>
+                        <div className="space-y-1.5">
+                            {element.parameters.map((param: any) => (
+                                <div key={param.name} className="flex items-center gap-2 text-xs">
+                                    <span className="px-1.5 py-0.5 rounded font-mono"
+                                        style={{
+                                            fontSize: '10px',
+                                            background: param.direction === 'in' ? '#EFF6FF' : param.direction === 'out' ? '#FFF7ED' : '#F0FDF4',
+                                            color: param.direction === 'in' ? '#2563EB' : param.direction === 'out' ? '#EA580C' : '#16A34A',
+                                        }}>
+                                        {param.direction}
+                                    </span>
+                                    <span style={{ color: '#374151', fontWeight: 500 }}>{param.name}</span>
+                                    <span style={{ color: '#9CA3AF' }}>:</span>
+                                    <span style={{ color: '#6B7280' }}>{param.type}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Allocation target */}
+                {element.allocatedTo && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Allocated To</div>
+                        <div
+                            className="text-xs cursor-pointer px-2 py-1 rounded-md transition-colors"
+                            style={{ color: '#E67E22' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#FFF7ED')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            onClick={() => selectElement(element.allocatedTo!)}
+                        >
+                            {'\u2192'} {model.elements[element.allocatedTo]?.name || element.allocatedTo}
+                        </div>
+                    </div>
+                )}
+
                 {/* Attributes */}
                 {attrs.length > 0 && (
                     <div className="p-4" style={sectionStyle}>

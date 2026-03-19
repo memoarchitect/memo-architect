@@ -50,6 +50,10 @@ cosmaLayers:
     label: Interfaces & Ports
     color: "#1ABC9C"
 
+  - id: behavior
+    label: Behavior
+    color: "#FF6B6B"
+
   - id: verification
     label: Verification
     color: "#2ECC71"
@@ -155,6 +159,22 @@ kinds:
     label: Scenario
     layer: functional
     sysmlConstruct: action def
+
+  # ── Behavior ────────────────────────────────────────────────────────────
+  ActionDefinition:
+    label: Action Definition
+    layer: behavior
+    sysmlConstruct: action def
+
+  ActionUsage:
+    label: Action Usage
+    layer: behavior
+    sysmlConstruct: action usage
+
+  ItemDefinition:
+    label: Item Definition
+    layer: behavior
+    sysmlConstruct: item def
 
   # ── Logical Architecture ─────────────────────────────────────────────────
   System:
@@ -380,6 +400,16 @@ relationshipTypes:
     layer: functional
     color: "#F1C40F"
 
+  - name: flow
+    label: Flow
+    layer: behavior
+    color: "#3498DB"
+
+  - name: succession
+    label: Succession
+    layer: behavior
+    color: "#95A5A6"
+
 # ─── Backward-Compatible Flat Relationship List ──────────────────────────────
 
 relationships:
@@ -395,6 +425,8 @@ relationships:
   - verify
   - extend
   - include
+  - flow
+  - succession
 
 # ─── Viewpoints ───────────────────────────────────────────────────────────────
 # Universal viewpoints for systems engineering.
@@ -497,5 +529,26 @@ viewpoints:
         viewpointId: v-and-v
         auto: true
         description: Requirements verified by tests
+
+  - id: behavior-view
+    label: Behavior View
+    supportedDiagramTypes: [afd, act]
+    visibleKinds:
+      - ActionDefinition
+      - ActionUsage
+      - ItemDefinition
+    visibleRelationships:
+      - flow
+      - succession
+      - allocateTo
+    visibleLayers:
+      - behavior
+    diagrams:
+      - id: diag-behavior-flow
+        name: Action Flow
+        diagramType: afd
+        viewpointId: behavior-view
+        auto: true
+        description: Action definitions with flows, successions, and allocations
 
 closureRules: []
