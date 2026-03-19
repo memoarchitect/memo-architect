@@ -94,35 +94,35 @@
 - [x] **Wildcard and named imports** — Full `::*` and `::SpecificType` import syntax with registry-based resolution
 - [x] **Multi-file model splitting** — Convention with example split files (risk/, requirements/, architecture/) and 100 passing tests
 
+### Phase 5 — Behavior Viewpoint (SysML v2 Actions & Flows)
+
+- [x] **Phase 5a: Behavior grammar & semantic model** — `action def`, `action usage`, `item def`, `flow`, `succession`, `allocate` in Langium grammar; `ActionParameter`, `parentAction`, `allocatedTo`, `flowItem` in semantic model; two-pass builder with deferred flow/succession/allocate resolution; 30 behavior tests
+- [x] **Phase 5b: Action Flow Diagram renderer** — `ActionFlowDiagram` component with ELK.js layered layout, swim lanes by allocation target, flow edges (solid/dashed by material/signal), succession edges, start/done pseudo-nodes, custom `ActionFlowNode` with port badges
+- [x] **Phase 5c: Viewpoint integration** — Action Flow mode in ModeSwitcher, `actionflow` route in App, parameters & allocation display in PropertiesPanel, behavior layer/kinds/viewpoint in base ontology config, `flow`/`succession` relationship types
+- [x] **Phase 5d: Behavior validation & completeness** — `behavior-validator.ts` with BV-001 (unallocated action warning), BV-002 (orphan action warning), BV-003 (incompatible flow type error); `validateModel()` composer; `actionType` attribute on usages for definition lookup; 6 validation tests
+- [x] **Example models** — Infusion pump behavior (6 action defs, flows, successions, allocations), irrigation pump (structure + behavior with parallel branches)
+
 ---
 
 ## In Progress / Next Up
 
-### Phase 5 — Behavior Viewpoint & Functional Flow Analysis
+### Phase 6 — DSM & Functional Analysis
 
-#### 5a. Functional Flow Diagram
-- [ ] **`FunctionalFlow` relationship type** — Source function → target function, with flow type (information/energy/matter)
-- [ ] **`OperationalFlow` relationship type** — User activity ↔ system function flows
-- [ ] **Behavior Viewpoint** — New viewpoint showing `UserActivity`, `SystemFunction`, `ComponentFunction`, `Scenario` with flow relationships
-- [ ] **Directed graph rendering** — Left-to-right sequential flow with swim lanes for user vs. system
-- [ ] **Flow annotations** — Data/signal labels on edges
-
-#### 5b. Functional Breakdown Structure (FBS)
+#### 6a. Functional Breakdown Structure (FBS)
 - [ ] **`decomposedBy` relationship type** — Parent function → child function decomposition
 - [ ] **FBS tree diagram** — Hierarchical decomposition view of system functions
-- [ ] **View toggle** — Switch between FBS tree view and functional flow view within the Behavior Viewpoint
+- [ ] **View toggle** — Switch between FBS tree view and action flow view
 
-#### 5c. DSM Analysis
-- [ ] **DSM matrix computation** — Build N×N matrix from `FunctionalFlow` relationships
+#### 6b. DSM Analysis
+- [ ] **DSM matrix computation** — Build N×N matrix from flow relationships
 - [ ] **Interactive DSM view** — Color-coded matrix in the web app with hover details
 - [ ] **Clustering algorithm** — Component-based DSM partitioning to suggest function groupings
 - [ ] **Allocation overlay** — Show which functions are allocated to which subsystem
 
-#### 5d. Functional ↔ Logical Consistency
-- [ ] **Closure rules** for functional flow and allocation consistency
+#### 6c. Functional ↔ Logical Consistency
 - [ ] **Consistency visualization** — Overlay functional flows on logical architecture
 
-### Phase 6 — Build, Export & Advanced Features
+### Phase 7 — Build, Export & Advanced Features
 
 - [ ] **`memo build` command** — Static HTML report with embedded diagram
 - [ ] **`.kpar` packaging** — SysAnd-compatible archive
@@ -133,7 +133,7 @@
 - [ ] **Diff view** — Show changes between rebuilds
 - [ ] **VS Code extension** — Language server with autocomplete, go-to-definition, diagnostics
 
-### Phase 7 — LLM Integration
+### Phase 8 — LLM Integration
 
 - [ ] **Model Q&A** — Natural language questions about the model
 - [ ] **Completeness assistant** — LLM suggests missing elements based on closure rule violations
@@ -141,7 +141,7 @@
 - [ ] **Impact analysis** — Change propagation analysis
 - [ ] **Report drafting** — LLM generates regulatory narratives from model data
 
-### Phase 8 — Ecosystem
+### Phase 9 — Ecosystem
 
 - [ ] **Additional domain packages** — Automotive (ISO 26262), aerospace (DO-178C)
 - [ ] **Plugin system** — Custom rule types, visualizations, exporters
@@ -149,7 +149,7 @@
 - [ ] **External ontology imports** — OWL/JSON-LD/SysAnd ontology integration
 - [ ] **Import from EA/Cameo** — Migration tools from Enterprise Architect or Cameo
 
-### Phase 9 — CI & Cloud
+### Phase 10 — CI & Cloud
 
 - [ ] **CI integration** — `memo validate` returns exit code 1 on errors; GitHub Actions
 - [ ] **Cloud deployment** — Hosted version with user accounts
