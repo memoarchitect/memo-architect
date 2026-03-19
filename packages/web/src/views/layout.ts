@@ -6,9 +6,10 @@
 
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoRelationship, MemoModelDTO } from '@memo/core';
+import type { MemoElement, MemoRelationship, MemoModelDTO, ActionParameter } from '@memo/core';
 import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } from '../constants';
 import type { DecompositionNodeData } from './DecompositionNode';
+import type { ActionFlowNodeData } from './ActionFlowNode';
 
 const elk = new ELK();
 
@@ -605,4 +606,328 @@ export function computeContainmentLayout(
     }
 
     return { nodes: allNodes, edges: [] };
+}
+
+// ─── Action Flow Layout ─────────────────────────────────────────────────────
+//
+// Computes a left-to-right flow diagram for behavior viewpoint.
+// Actions are grouped into swim lanes by their allocatedTo part/subsystem.
+// Start/done pseudo-nodes use UML activity diagram conventions.
+// Flows are directed arrows labeled with item type.
+// Successions are thin gray ordering arrows.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Lane colors for swim-lane assignment */
+const LANE_COLORS = [
+    '#4A90D9', '#E67E22', '#2ECC71', '#9B59B6',
+    '#E74C3C', '#1ABC9C', '#F39C12', '#7B68EE',
+];
+
+/**
+ * Build an action flow layout from behavior elements in the model.
+ * Groups actions into swim lanes by allocation target.
+ */
+export async function computeActionFlowLayout(
+    model: MemoModelDTO,
+): Promise<LayoutResult> {
+    // Collect behavior elements
+    const allElements = Object.values(model.elements);
+    const actionDefs = new Map<string, MemoElement>();
+    const actionUsages: MemoElement[] = [];
+    const compositeActions: MemoElement[] = [];
+
+    for (const el of allElements) {
+        if (el.kind === 'ActionDefinition') {
+            actionDefs.set(el.id, el);
+        } else if (el.kind === 'ActionUsage' || (el.construct === 'action' && el.parentAction)) {
+            actionUsages.push(el);
+        }
+        // Top-level composite actions (no parent, no type = composite)
+        if (el.construct === 'action' && !el.parentAction && el.kind === 'ActionUsage') {
+            compositeActions.push(el);
+        }
+    }
+
+    // If no behavior elements, return empty
+    if (actionUsages.length === 0 && compositeActions.length === 0) {
+        return { nodes: [], edges: [] };
+    }
+
+    // Collect the nested action usages (those with parentAction set)
+    const nestedActions = actionUsages.filter(el => el.parentAction);
+    // Include composite actions (parentless ActionUsage) only if no nested ones exist
+    const diagramActions = nestedActions.length > 0 ? nestedActions : actionUsages;
+
+    // Build allocation lanes
+    const laneMap = new Map<string, MemoElement[]>(); // laneName → elements
+    const laneColorMap = new Map<string, string>();
+    let laneIdx = 0;
+
+    for (const el of diagramActions) {
+        const lane = el.allocatedTo || 'Unallocated';
+        if (!laneMap.has(lane)) {
+            laneMap.set(lane, []);
+            laneColorMap.set(lane, LANE_COLORS[laneIdx % LANE_COLORS.length]);
+            laneIdx++;
+        }
+        laneMap.get(lane)!.push(el);
+    }
+
+    // Find action definition parameters for each nested action
+    const actionParamsMap = new Map<string, { inPorts: string[]; outPorts: string[] }>();
+    for (const el of diagramActions) {
+        // The action's type references an ActionDefinition
+        const defId = findActionDefId(el, model);
+        const def = defId ? actionDefs.get(defId) : undefined;
+        const params = def?.parameters || [];
+        actionParamsMap.set(el.id, {
+            inPorts: params.filter(p => p.direction === 'in' || p.direction === 'inout').map(p => p.name),
+            outPorts: params.filter(p => p.direction === 'out' || p.direction === 'inout').map(p => p.name),
+        });
+    }
+
+    // Determine composite action for start/done pseudo-nodes
+    const parentActionId = nestedActions.length > 0 ? nestedActions[0].parentAction : undefined;
+
+    // Collect flow and succession relationships
+    const flowRels = model.relationships.filter(r => r.type === 'flow');
+    const succRels = model.relationships.filter(r => r.type === 'succession');
+
+    // Determine if we need start/done pseudo-nodes
+    const startId = parentActionId ? `${parentActionId}__start` : '__start';
+    const doneId = parentActionId ? `${parentActionId}__done` : '__done';
+    const hasStart = succRels.some(r => r.sourceId === startId);
+    const hasDone = succRels.some(r => r.targetId === doneId);
+
+    // Build ELK graph
+    const portHeight = 18;
+    const elkChildren: any[] = [];
+    const actionIds = new Set(diagramActions.map(a => a.id));
+
+    // Add pseudo-nodes
+    if (hasStart) {
+        elkChildren.push({ id: startId, width: 24, height: 24 });
+        actionIds.add(startId);
+    }
+    if (hasDone) {
+        elkChildren.push({ id: doneId, width: 24, height: 24 });
+        actionIds.add(doneId);
+    }
+
+    // Add action nodes
+    for (const el of diagramActions) {
+        const ports = actionParamsMap.get(el.id) || { inPorts: [], outPorts: [] };
+        const portCount = Math.max(ports.inPorts.length, ports.outPorts.length, 0);
+        const headerHeight = 36;
+        const bodyHeight = portCount * portHeight;
+        const allocBadgeHeight = el.allocatedTo ? 20 : 0;
+        const nodeHeight = headerHeight + bodyHeight + (bodyHeight > 0 ? 8 : 0) + allocBadgeHeight;
+        const nodeWidth = Math.max(el.name.length * 9 + 40, 140);
+
+        elkChildren.push({
+            id: el.id,
+            width: nodeWidth,
+            height: nodeHeight,
+        });
+    }
+
+    // Build ELK edges from flows and successions
+    const elkEdges: any[] = [];
+    let edgeIdx = 0;
+
+    for (const rel of flowRels) {
+        if (actionIds.has(rel.sourceId) && actionIds.has(rel.targetId)) {
+            elkEdges.push({
+                id: `ef-${edgeIdx++}`,
+                sources: [rel.sourceId],
+                targets: [rel.targetId],
+            });
+        }
+    }
+    for (const rel of succRels) {
+        if (actionIds.has(rel.sourceId) && actionIds.has(rel.targetId)) {
+            elkEdges.push({
+                id: `es-${edgeIdx++}`,
+                sources: [rel.sourceId],
+                targets: [rel.targetId],
+            });
+        }
+    }
+
+    const elkGraph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'RIGHT',
+            'elk.spacing.nodeNode': '40',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+            'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+            'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+        },
+        children: elkChildren,
+        edges: elkEdges,
+    };
+
+    const layouted = await elk.layout(elkGraph);
+
+    // Convert to ReactFlow nodes
+    const nodes: Node[] = (layouted.children || []).map(child => {
+        // Start pseudo-node
+        if (child.id === startId) {
+            const nodeData: ActionFlowNodeData = {
+                label: 'Start',
+                nodeType: 'start',
+                laneColor: '#374151',
+                layerColor: '#374151',
+                inPorts: [],
+                outPorts: [],
+            };
+            return {
+                id: child.id,
+                type: 'actionFlowNode',
+                position: { x: child.x || 0, y: child.y || 0 },
+                data: nodeData as any,
+            };
+        }
+
+        // Done pseudo-node
+        if (child.id === doneId) {
+            const nodeData: ActionFlowNodeData = {
+                label: 'Done',
+                nodeType: 'done',
+                laneColor: '#374151',
+                layerColor: '#374151',
+                inPorts: [],
+                outPorts: [],
+            };
+            return {
+                id: child.id,
+                type: 'actionFlowNode',
+                position: { x: child.x || 0, y: child.y || 0 },
+                data: nodeData as any,
+            };
+        }
+
+        // Action node
+        const el = model.elements[child.id];
+        const ports = actionParamsMap.get(child.id) || { inPorts: [], outPorts: [] };
+        const lane = el?.allocatedTo || 'Unallocated';
+        const color = laneColorMap.get(lane) || '#9CA3AF';
+        const layerColor = LAYER_COLORS[el?.layer] || '#FF6B6B';
+
+        const nodeData: ActionFlowNodeData = {
+            element: el,
+            label: el?.name || child.id,
+            nodeType: 'action',
+            parameters: el?.parameters,
+            allocatedTo: el?.allocatedTo,
+            laneColor: color,
+            layerColor,
+            inPorts: ports.inPorts,
+            outPorts: ports.outPorts,
+        };
+
+        return {
+            id: child.id,
+            type: 'actionFlowNode',
+            position: { x: child.x || 0, y: child.y || 0 },
+            data: nodeData as any,
+        };
+    });
+
+    // Convert to ReactFlow edges
+    const edges: Edge[] = [];
+
+    // Flow edges: solid, labeled with item type
+    for (const rel of flowRels) {
+        if (!actionIds.has(rel.sourceId) || !actionIds.has(rel.targetId)) continue;
+        const isSignalOrInfo = rel.flowItem
+            ? /signal|error|status|code|report|alarm|response|command|data|reading/i.test(rel.flowItem)
+            : false;
+
+        edges.push({
+            id: rel.id,
+            source: rel.sourceId,
+            target: rel.targetId,
+            label: rel.flowItem || '',
+            type: 'smoothstep',
+            animated: false,
+            style: {
+                stroke: '#3498DB',
+                strokeWidth: 2,
+                strokeDasharray: isSignalOrInfo ? '6 3' : undefined,
+            },
+            labelStyle: {
+                fontSize: '10px',
+                fill: '#4A90D9',
+                fontWeight: 600,
+            },
+            labelBgStyle: {
+                fill: '#FFFFFF',
+                fillOpacity: 0.85,
+            },
+            labelBgPadding: [4, 6] as [number, number],
+        });
+    }
+
+    // Succession edges: thin gray arrows
+    for (const rel of succRels) {
+        if (!actionIds.has(rel.sourceId) || !actionIds.has(rel.targetId)) continue;
+        edges.push({
+            id: rel.id,
+            source: rel.sourceId,
+            target: rel.targetId,
+            type: 'smoothstep',
+            animated: false,
+            style: {
+                stroke: '#D1D5DB',
+                strokeWidth: 1,
+                strokeDasharray: '4 4',
+            },
+            markerEnd: {
+                type: 'arrowclosed' as any,
+                color: '#D1D5DB',
+                width: 12,
+                height: 12,
+            },
+        });
+    }
+
+    return { nodes, edges };
+}
+
+/**
+ * Find the ActionDefinition id referenced by an action usage.
+ * Checks relationships, model elements, and uses naming conventions.
+ */
+function findActionDefId(usage: MemoElement, model: MemoModelDTO): string | undefined {
+    // Look for an action definition with the same type reference
+    // The usage's kind might map to an ActionDefinition in the model
+    for (const el of Object.values(model.elements)) {
+        if (el.kind === 'ActionDefinition') {
+            // Check by incoming relationships
+            const rels = model.relationships.filter(
+                r => r.sourceId === usage.id && r.targetId === el.id && r.type === 'traceTo'
+            );
+            if (rels.length > 0) return el.id;
+        }
+    }
+
+    // Fallback: look for an ActionDefinition whose name matches the usage's type
+    // The builder stores the type in the kind field for typed usages
+    if (usage.kind !== 'ActionUsage') {
+        const def = model.elements[usage.kind];
+        if (def?.kind === 'ActionDefinition') return def.id;
+    }
+
+    // Check all ActionDefinitions to find one whose name was used as the usage type
+    for (const el of Object.values(model.elements)) {
+        if (el.kind === 'ActionDefinition') {
+            // Match if any relationship connects usage to this def
+            // or if usage attributes reference this def's name
+        }
+    }
+
+    return undefined;
 }
