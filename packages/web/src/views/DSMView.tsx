@@ -8,6 +8,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
 import { computeDSM, reorderDSM, type DSMResult, type DSMCell } from '../analysis/dsm';
+import { analyzeConsistency, type ConsistencyIssue } from '../analysis/consistency';
 import { LAYER_COLORS, REL_COLORS } from '../constants';
 
 /** Color for a DSM cell based on relationship types */
@@ -52,6 +53,11 @@ export function DSMView() {
         const raw = computeDSM(model, { kinds: kindsFilter });
         return showClusters ? reorderDSM(raw) : raw;
     }, [model, showClusters, kindsFilter]);
+
+    const consistency = useMemo(() => {
+        if (!model) return null;
+        return analyzeConsistency(model);
+    }, [model]);
 
     const onCellHover = useCallback((row: number, col: number) => {
         setHoveredCell({ row, col });
@@ -411,6 +417,89 @@ export function DSMView() {
                         </div>
                     )}
                 </div>
+
+                {/* Consistency Analysis Panel */}
+                {consistency && consistency.issues.length > 0 && (
+                    <div
+                        style={{
+                            marginTop: '24px',
+                            background: '#FFFFFF',
+                            border: '1px solid #E5E5E0',
+                            borderRadius: '8px',
+                            padding: '16px',
+                        }}
+                    >
+                        <div style={{
+                            fontSize: '13px', fontWeight: 600, color: '#374151',
+                            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px',
+                        }}>
+                            Functional {'\u2194'} Logical Consistency
+                            <span style={{
+                                fontSize: '10px', padding: '2px 8px', borderRadius: '10px',
+                                background: consistency.issues.some(i => i.severity === 'warning')
+                                    ? '#FEF3C7' : '#EBF5FF',
+                                color: consistency.issues.some(i => i.severity === 'warning')
+                                    ? '#92400E' : '#1E40AF',
+                                fontWeight: 500,
+                            }}>
+                                {consistency.issues.length} issue{consistency.issues.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {consistency.issues.map(issue => (
+                                <div
+                                    key={issue.id}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '8px',
+                                        padding: '6px 8px',
+                                        borderRadius: '6px',
+                                        background: issue.severity === 'warning' ? '#FFFBEB' : '#F0F9FF',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                    }}
+                                    onClick={() => selectElement(issue.elementId)}
+                                >
+                                    <span style={{
+                                        flexShrink: 0, fontSize: '11px',
+                                        color: issue.severity === 'warning' ? '#D97706' : '#2563EB',
+                                    }}>
+                                        {issue.severity === 'warning' ? '\u26A0' : '\u2139'}
+                                    </span>
+                                    <span style={{
+                                        color: issue.severity === 'warning' ? '#92400E' : '#1E40AF',
+                                        lineHeight: 1.4,
+                                    }}>
+                                        {issue.message}
+                                    </span>
+                                    <span style={{
+                                        marginLeft: 'auto', flexShrink: 0,
+                                        fontSize: '9px', padding: '1px 6px', borderRadius: '4px',
+                                        background: issue.type === 'unallocated-function' ? '#FDE68A'
+                                            : issue.type === 'cross-component-flow' ? '#BFDBFE'
+                                            : '#E5E7EB',
+                                        color: '#374151',
+                                    }}>
+                                        {issue.type === 'unallocated-function' ? 'unallocated'
+                                            : issue.type === 'cross-component-flow' ? 'cross-boundary'
+                                            : 'no functions'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Allocation summary */}
+                        {consistency.allocations.length > 0 && (
+                            <div style={{ marginTop: '12px', fontSize: '11px', color: '#6B7280' }}>
+                                <span style={{ fontWeight: 500 }}>Allocation coverage:</span>{' '}
+                                {consistency.allocations.length} of {consistency.functions.length} functions allocated
+                                {' '}({Math.round(consistency.allocations.length / Math.max(consistency.functions.length, 1) * 100)}%)
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

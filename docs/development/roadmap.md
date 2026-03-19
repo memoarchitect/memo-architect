@@ -126,14 +126,14 @@
 - [x] **DSM toolbar** — Kind filter (Functions/Behavior/All), cluster toggle, allocation overlay toggle, dependency count
 - [x] **9 DSM tests** — Matrix construction, flow/decomposedBy cell recording, diagonal empty, clustering, custom filters, reordering, empty/no-match models
 
+### Phase 6c — Functional ↔ Logical Consistency
+
+- [x] **Consistency analysis** — `analyzeConsistency()` identifies unallocated functions, components with no functions, and cross-component flows that imply interface needs
+- [x] **Consistency panel in DSM view** — Clickable issue list with severity badges, allocation coverage percentage, issue type tags (unallocated / cross-boundary / no functions)
+
 ---
 
 ## In Progress / Next Up
-
-### Phase 6 — DSM & Functional Analysis
-
-#### 6c. Functional ↔ Logical Consistency
-- [ ] **Consistency visualization** — Overlay functional flows on logical architecture
 
 ### Phase 7 — Build, Export & Advanced Features
 
