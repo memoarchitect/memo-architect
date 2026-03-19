@@ -12,7 +12,7 @@ import { resolve, dirname } from 'node:path';
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
-import { evaluateClosureRules } from '@memo/core';
+import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import type { ViewpointDTO, CosmaLayerDTO } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
@@ -58,7 +58,7 @@ export async function buildCommand(options: {
     const sysmlFiles = findSysmlFiles(cwd);
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, errors);
-    const validation = evaluateClosureRules(model, config);
+    const validation = validateModel(model, config);
     const completeness = computeCompleteness(model, validation, config);
 
     const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({

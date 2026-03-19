@@ -39,6 +39,8 @@ export type SysMLConstruct =
     | 'part def'
     | 'requirement def'
     | 'action def'
+    | 'action usage'
+    | 'item def'
     | 'port def'
     | 'interface def'
     | 'connection def'
@@ -96,7 +98,7 @@ export interface RuleCondition {
 }
 
 /** SysML v2 diagram type classification */
-export type DiagramType = 'bdd' | 'ibd' | 'req' | 'ucd' | 'act' | 'pkg' | 'par' | 'risk';
+export type DiagramType = 'bdd' | 'ibd' | 'req' | 'ucd' | 'act' | 'afd' | 'pkg' | 'par' | 'risk';
 
 /** Diagram definition — a named, typed view within a viewpoint */
 export interface DiagramDefinition {

@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { readdirSync, statSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel } from '@memo/core';
-import { evaluateClosureRules } from '@memo/core';
+import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 
@@ -73,7 +73,7 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     console.log(chalk.cyan(`Model: ${model.elements.size} elements, ${model.relationships.length} relationships\n`));
 
     // 6. Validate
-    const result = evaluateClosureRules(model, config);
+    const result = validateModel(model, config);
 
     // Print violations grouped by severity
     const errors = result.violations.filter(v => v.severity === 'error');

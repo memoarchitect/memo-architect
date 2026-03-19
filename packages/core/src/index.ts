@@ -34,6 +34,7 @@ export * from './model/builder.js';
 // ─── Validation + Completeness ──────────────────────────────────────────────
 export * from './validator/types.js';
 export * from './validator/rule-engine.js';
+export * from './validator/behavior-validator.js';
 export * from './completeness/tracker.js';
 
 // ─── Analysis ────────────────────────────────────────────────────────────────

@@ -413,6 +413,11 @@ function extractActionUsage(
     const doc = extractDocComment(bodyMembers);
     const displayName = attributes['name'] || attributes['title'] || id;
 
+    // Store the action definition type for flow type checking
+    if (typeName) {
+        attributes['actionType'] = typeName;
+    }
+
     const element: MemoElement = {
         id,
         name: displayName,

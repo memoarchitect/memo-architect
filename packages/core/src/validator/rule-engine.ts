@@ -7,6 +7,26 @@
 import type { MEMOConfig, ClosureRule, ClosureRuleDefinition, RuleCondition } from '../model/config.js';
 import type { MemoModel, MemoElement, MemoRelationship } from '../model/semantic.js';
 import type { Violation, ValidationResult } from './types.js';
+import { validateBehavior } from './behavior-validator.js';
+
+/**
+ * Full model validation: closure rules + built-in structural checks.
+ * Preferred entry point — combines all validation passes.
+ */
+export function validateModel(
+    model: MemoModel,
+    config: MEMOConfig
+): ValidationResult {
+    const closureResult = evaluateClosureRules(model, config);
+    const behaviorViolations = validateBehavior(model);
+
+    return {
+        violations: [...closureResult.violations, ...behaviorViolations],
+        rulesEvaluated: closureResult.rulesEvaluated + (behaviorViolations.length > 0 ? 3 : 3),
+        rulesPassed: closureResult.rulesPassed,
+        timestamp: Date.now(),
+    };
+}
 
 /**
  * Evaluate all closure rules against the model.

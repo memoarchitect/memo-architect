@@ -5,6 +5,7 @@ import { createMemoSysMLServices } from '../language/memo-sysml-module.js';
 import type { Model } from '../language/generated/ast.js';
 import type { MEMOConfig } from '../model/config.js';
 import { buildMemoModel } from '../model/builder.js';
+import { validateBehavior } from '../validator/behavior-validator.js';
 import type { ParsedDocument } from '../model/parser-utils.js';
 
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
@@ -600,5 +601,124 @@ describe('Behavior builder: model indexes', () => {
         const model = buildMemoModel([doc], behaviorConfig);
         expect(model.relationshipsByType.get('flow')).toHaveLength(1);
         expect(model.relationshipsByType.get('succession')).toHaveLength(3);
+    });
+});
+
+// ─── Behavior Validation Tests ──────────────────────────────────────────────
+
+describe('Behavior validation', () => {
+    it('BV-001: warns on unallocated action usage', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action def DoWork { out result : Data; }
+                action process {
+                    action work : DoWork;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        const bv001 = violations.filter(v => v.ruleId === 'BV-001');
+        expect(bv001.length).toBeGreaterThan(0);
+        expect(bv001[0].description).toContain('not allocated');
+    });
+
+    it('BV-001: no warning when action is allocated', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                part sw : Subsystem;
+                action work : SystemFunction;
+                allocate work to sw;
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const workEl = model.elements.get('work');
+        expect(workEl?.allocatedTo).toBe('sw');
+        const violations = validateBehavior(model);
+        const bv001 = violations.filter(v => v.ruleId === 'BV-001' && v.elementName === 'work');
+        expect(bv001).toHaveLength(0);
+    });
+
+    it('BV-002: warns on orphan action (no flow/succession)', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action def A { out x : X; }
+                action def B { in x : X; }
+                action def Orphan;
+                action process {
+                    action a : A;
+                    action b : B;
+                    action orphan : Orphan;
+                    flow of X from a.x to b.x;
+                    first start then a then b then done;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        const bv002 = violations.filter(v => v.ruleId === 'BV-002');
+        // 'orphan' has no flow or succession connections
+        const orphanViolation = bv002.find(v => v.elementName === 'orphan');
+        expect(orphanViolation).toBeDefined();
+    });
+
+    it('BV-002: no warning when action has flow connections', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action def A { out x : X; }
+                action def B { in x : X; }
+                action process {
+                    action a : A;
+                    action b : B;
+                    flow of X from a.x to b.x;
+                    first start then a then b then done;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        const bv002 = violations.filter(v => v.ruleId === 'BV-002');
+        // a and b both have flow connections, should not be flagged
+        const aOrB = bv002.filter(v => v.elementName === 'a' || v.elementName === 'b');
+        expect(aOrB).toHaveLength(0);
+    });
+
+    it('BV-003: errors on incompatible flow type', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action def Sender { out msg : MessageType; }
+                action def Receiver { in data : DifferentType; }
+                action process {
+                    action send : Sender;
+                    action recv : Receiver;
+                    flow of MessageType from send.msg to recv.data;
+                    first start then send then recv then done;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        const bv003 = violations.filter(v => v.ruleId === 'BV-003');
+        // Receiver has no 'in' param of type MessageType → error
+        expect(bv003.length).toBeGreaterThan(0);
+        expect(bv003[0].severity).toBe('error');
+    });
+
+    it('BV-003: no error when flow types match', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action def Sender { out msg : DataType; }
+                action def Receiver { in msg : DataType; }
+                action process {
+                    action send : Sender;
+                    action recv : Receiver;
+                    flow of DataType from send.msg to recv.msg;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        const bv003 = violations.filter(v => v.ruleId === 'BV-003');
+        expect(bv003).toHaveLength(0);
     });
 });
