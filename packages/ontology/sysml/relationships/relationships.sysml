@@ -33,6 +33,24 @@ package MEMO_Ontology_Relationships {
         end target[1];
     }
 
+    connection def Refines {
+        doc /* A more detailed element refines a higher-level one. */
+        end refiner[1];
+        end refined[1];
+    }
+
+    connection def Derives {
+        doc /* A downstream requirement or element is derived from another. */
+        end source[1];
+        end derived[1];
+    }
+
+    connection def Constrains {
+        doc /* A constraint applies to an element or model fragment. */
+        end constraint[1];
+        end constrained[1];
+    }
+
     connection def AllocateTo {
         doc /* Allocation of function to structure. */
         end function[1];
@@ -104,5 +122,23 @@ package MEMO_Ontology_Relationships {
         doc /* UseCase inclusion. */
         end including[1];
         end included[1];
+    }
+
+    connection def Flow {
+        doc /* Flow of items or information between actions/elements. */
+        end source[1];
+        end target[1];
+    }
+
+    connection def Succession {
+        doc /* Temporal succession between actions or activities. */
+        end predecessor[1];
+        end successor[1];
+    }
+
+    connection def DecomposedBy {
+        doc /* Functional decomposition from parent to child. */
+        end parent[1];
+        end child[0..*];
     }
 }
