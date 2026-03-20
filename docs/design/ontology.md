@@ -2,6 +2,17 @@
 
 The MEMO ontology defines the vocabulary of entity types and relationship types that models are built from.
 
+## Package Direction
+
+MEMO is moving to a layered ontology structure:
+
+- **`@memo/ontology-core`** — domain-agnostic MBSE backbone
+- **`@memo/ontology-medical-base`** — regulated medical device development backbone built on top of core
+- **Product-family extensions** — device or platform specific packages
+- **Rules / views / templates** — separate from ontology packages
+
+The current `@memo/ontology` package is the transitional source package that will be split along those boundaries. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
+
 ## Design Philosophy
 
 MEMO uses **SysML v2 specialization** as the type mechanism. Rather than inventing a proprietary metamodel, entity kinds are defined as SysML v2 definitions that specialize base constructs:
@@ -28,11 +39,19 @@ Entity kinds are mapped to SysML v2 constructs:
 
 | Construct | Used For | Examples |
 |---|---|---|
-| `part def` | Physical/logical elements | System, Component, Hazard, RiskControl |
-| `requirement def` | Requirements | SystemRequirement, UserNeed |
-| `action def` | Functions/behaviors | SystemFunction, UseCase |
+| `part def` | Physical/logical elements | System, Component, InterfaceContract |
+| `requirement def` | Needs and requirements | StakeholderNeed, SystemRequirement |
+| `action def` | Functions/behaviors | SystemFunction, OperationalActivity |
 | `port def` | Interfaces/ports | Port, DataPort, FlowPort |
 | `connection def` | Relationships | mitigates, traceTo, verify |
+
+### Intended Boundary
+
+As the ontology is split:
+
+- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
+- **Medical base** adds medical-device-specific concepts such as risk management, design-control artifacts, software lifecycle semantics, and safety/essential-performance concepts.
+- **Extensions** carry product-family or technology-specific concepts such as ROS integration, UI wireframes, or device-family parts.
 
 ## Relationship Types
 
@@ -75,7 +94,7 @@ Each relationship type has:
 
 ## Ontology Package
 
-The `@memo/ontology` package ships:
+The current `@memo/ontology` package ships:
 
 ```
 packages/ontology/
@@ -83,7 +102,35 @@ packages/ontology/
     entities/          # Part/requirement/action/port definitions
     relationships/     # Connection definitions
     index.sysml       # Package entry point
-  memo.config.yaml    # Base config (empty kinds, no rules)
+  memo.config.yaml    # Base config for layers, kinds, relationships, and viewpoints
 ```
 
 Domain packages like `@memo/medical` extend the ontology by adding kinds, rules, and viewpoints via `memo.config.yaml`.
+
+## Target Package Stack
+
+The target package stack is:
+
+```text
+@memo/ontology-core
+  ├── purpose / stakeholder concerns
+  ├── operational
+  ├── requirements
+  ├── functional
+  ├── logical
+  ├── physical
+  ├── software
+  ├── interfaces
+  ├── analysis
+  ├── verification
+  └── relationships
+
+@memo/ontology-medical-base
+  ├── design-control
+  ├── risk-management
+  ├── software-lifecycle
+  ├── safety-essential-performance
+  └── regulatory-trace references
+```
+
+Rules, viewpoints, completeness logic, and example models remain outside ontology packages.

@@ -2,7 +2,12 @@
 
 ## Architecture Vision
 
-MEMO follows the **ISO/IEC/IEEE 42010** architecture description standard and draws from the **Arcadia/Capella** MBSE methodology. The tool is designed for **medical device development** per ISO 14971, IEC 62304, and ISO 15288.
+MEMO follows the **ISO/IEC/IEEE 42010** architecture description standard and draws from the **Arcadia/Capella** MBSE methodology. The tool is designed for **medical device development** with a layered ontology strategy:
+
+- **`@memo/ontology-core`** — domain-agnostic MBSE backbone aligned to ISO/IEC/IEEE 42010
+- **`@memo/ontology-medical-base`** — reusable medical device development backbone built on top of core
+
+The medical backbone is intended to support traceable development against **ISO 13485**, **ISO 14971**, **IEC 62304**, and **IEC 60601-1**, with product-family ontologies extending it further.
 
 **Core principle:** Viewpoint → View → Model. Views (diagrams) are organized under viewpoints, not as separate application modes. The app uses a unified canvas that renders any view type (BDD, IBD, ACT, AFD, REQ, etc.) based on selection.
 
@@ -142,6 +147,34 @@ MEMO follows the **ISO/IEC/IEEE 42010** architecture description standard and dr
 ---
 
 ## In Progress / Next Up
+
+### Current Phase — Ontology Backbone Restructuring **[CRITICAL]**
+
+Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards-driven medical device backbone:
+
+- [x] **Define `@memo/ontology-core` boundary** — documented in ADR-1-6 and ontology design doc
+- [x] **Define `@memo/ontology-medical-base` boundary** — documented in ADR-1-6 and ontology design doc
+- [x] **Classify current ontology content** — documented in ADR-1-6 with core / medical / extension buckets
+- [ ] **Remove core contamination** — move device-family-specific, ROS-specific, UI-specific, and app/workbench-specific concepts out of the base ontology packages
+- [ ] **Add missing P0 method concepts** — especially operational layer, system-need separation, explicit traceability relationships, and specification/container concepts
+- [ ] **Keep rules/views separate** — closure rules, completeness logic, DHF generation, and compliance checks remain outside ontology packages
+
+### Next Milestone — `@memo/ontology-core` **[CRITICAL]**
+
+- [ ] **Core ontology package split** — extract domain-agnostic SysML v2 ontology from current `@memo/ontology`
+- [ ] **Operational layer** — add first-class operational entities, activities, scenarios, phases/states, and context
+- [ ] **Requirements stratification** — stakeholder need, system need, functional requirement, technical requirement, interface requirement
+- [ ] **Relationship normalization** — align YAML-configured relationships with actual SysML definitions (`refines`, `derives`, `constrains`, `decomposedBy`, etc.)
+- [ ] **Analysis + verification abstractions** — add reusable constraint, analysis, calculation, test/evidence concepts
+
+### Next Milestone — `@memo/ontology-medical-base` **[CRITICAL]**
+
+- [ ] **Medical backbone package** — reusable regulated medical-device ontology built on top of core
+- [ ] **Design control artifacts** — intended use, indications, users, use environments, design inputs/outputs, verification/validation evidence, release/change artifacts
+- [ ] **Risk management backbone** — ISO 14971 hazards, hazardous situations, harms, risk controls, residual risk, benefit-risk
+- [ ] **Software lifecycle backbone** — IEC 62304 software items, software system decomposition, SOUP, safety classification, maintenance/change concepts
+- [ ] **Safety + essential performance backbone** — IEC 60601-1 safety, essential performance, hazards tied to architecture and verification
+- [ ] **QMS trace backbone** — ISO 13485-oriented traceability and records support without embedding QMS workflow logic into the ontology itself
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
