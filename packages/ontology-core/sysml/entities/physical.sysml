@@ -25,4 +25,10 @@ package MEMO_Ontology_Core_Physical {
         attribute ram : Integer;
         attribute storage : Integer;
     }
+
+    part def FPGA :> ComputingDevice { }
+
+    part def Microcontroller :> ComputingDevice { }
+
+    part def SingleBoardComputer :> ComputingDevice { }
 }

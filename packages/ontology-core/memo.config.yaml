@@ -235,6 +235,21 @@ kinds:
     layer: physical
     sysmlConstruct: part def
 
+  FPGA:
+    label: FPGA
+    layer: physical
+    sysmlConstruct: part def
+
+  Microcontroller:
+    label: Microcontroller
+    layer: physical
+    sysmlConstruct: part def
+
+  SingleBoardComputer:
+    label: Single Board Computer
+    layer: physical
+    sysmlConstruct: part def
+
   Software:
     label: Software
     layer: software
