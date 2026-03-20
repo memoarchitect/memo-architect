@@ -149,7 +149,7 @@ closureRules:
     severity: error
 
   - id: CR-MED-008
-    description: "Every SystemRequirement must trace to a UserNeed"
+    description: "Every SystemRequirement must trace to a StakeholderNeed"
     entity: SystemRequirement
     rule:
       type: requireRelationship
@@ -158,7 +158,7 @@ closureRules:
     severity: warning
 
   - id: CR-MED-009
-    description: "Every SystemRequirement should be satisfied by a Component"
+    description: "Every SystemRequirement should be satisfied by a LogicalComponent"
     entity: SystemRequirement
     rule:
       type: requireRelationship
@@ -167,7 +167,7 @@ closureRules:
     severity: warning
 
   - id: CR-MED-010
-    description: "Every SystemFunction must be allocated to a Component or Software"
+    description: "Every SystemFunction must be allocated to a LogicalComponent or Software"
     entity: SystemFunction
     rule:
       type: requireRelationship
@@ -211,8 +211,8 @@ closureRules:
     severity: warning
 
   - id: CR-MED-015
-    description: "Every UserNeed must trace to at least one UseCase"
-    entity: UserNeed
+    description: "Every StakeholderNeed must trace to at least one UseCase"
+    entity: StakeholderNeed
     rule:
       type: requireRelationship
       relationship: traceTo

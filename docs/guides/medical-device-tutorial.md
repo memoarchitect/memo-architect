@@ -101,8 +101,8 @@ Create `data/requirements.csv`:
 
 ```csv
 id,name,kind,doc,priority
-unFlowControl,Adjustable Flow Rate,UserNeed,Clinician needs to set and adjust infusion flow rate,High
-unAlarmVisibility,Visible Alarm Indicators,UserNeed,Alarms must be visible from 3 meters,High
+unFlowControl,Adjustable Flow Rate,StakeholderNeed,Clinician needs to set and adjust infusion flow rate,High
+unAlarmVisibility,Visible Alarm Indicators,StakeholderNeed,Alarms must be visible from 3 meters,High
 sysReqFlowAccuracy,Flow Rate Accuracy,SystemRequirement,System shall maintain flow rate within +-5% of set value,High
 sysReqAlarmResponse,Alarm Response Time,SystemRequirement,System shall activate alarm within 2 seconds of fault detection,Critical
 sysReqBattery,Battery Life,SystemRequirement,Device shall operate for 8 hours on battery,Medium
@@ -500,23 +500,23 @@ MEMO models are **plain text SysML files** stored in Git:
 | Relationship | Pattern | ISO Standard |
 |-------------|---------|-------------|
 | `traceTo` | Requirement → Requirement | IEC 62304 |
-| `satisfy` | Component → Requirement | IEC 62304 |
+| `satisfy` | LogicalComponent → Requirement | IEC 62304 |
 | `verify` | Test → Requirement | IEC 62304 |
 | `mitigates` | RiskControl → Hazard | ISO 14971 |
 | `causes` | Hazard → HazardousSituation | ISO 14971 |
 | `leadsTo` | HazardousSituation → Harm | ISO 14971 |
 | `identifies` | Risk → Hazard | ISO 14971 |
-| `allocateTo` | Function → Component | Systems Engineering |
+| `allocateTo` | Function → LogicalComponent | Systems Engineering |
 
 ### CoSMA Layers
 
 | Layer | Element Examples | Color |
 |-------|-----------------|-------|
 | Business | Actor, Stakeholder, UseCase | Pink |
-| Requirements | UserNeed, SystemRequirement | Blue |
+| Requirements | StakeholderNeed, SystemRequirement | Blue |
 | Risk | Hazard, RiskControl, Harm | Red |
 | Functional | SystemFunction, ComponentFunction | Orange |
-| Logical | System, Subsystem, Component | Indigo |
+| Logical | System, Subsystem, LogicalComponent | Indigo |
 | Physical | Microcontroller, ElectricalComponent | Teal |
 | Software | Software, Firmware | Purple |
 | Interfaces | Port, Interface, DataType | Green |

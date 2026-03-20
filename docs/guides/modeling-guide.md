@@ -11,9 +11,9 @@ enforce this chain:
 
 ```mermaid
 graph TD
-    UN[User Need] -->|traceTo| SR[System Requirement]
+    UN[Stakeholder Need] -->|traceTo| SR[System Requirement]
     SR -->|traceTo| SwR[Software Requirement]
-    SR -->|satisfy| COMP[Component / Software]
+    SR -->|satisfy| COMP[Logical Component / Software]
     SR -->|verify| TEST[Test]
     SwR -->|verify| TEST
     HAZ[Hazard] -->|causes| HS[Hazardous Situation]
@@ -32,8 +32,8 @@ Your goal is to fill in this chain for every element in your model.
 ### Requirements (IEC 62304 / ISO 13485)
 
 ```sysml
-// User needs — what the user actually wants
-requirement unFlowControl : UserNeed {
+// Stakeholder needs — what the user actually wants
+requirement unFlowControl : StakeholderNeed {
     attribute redefines name = "Adjustable Flow Rate";
     doc /* Clinician needs to set and adjust infusion flow rate */
 }
@@ -52,7 +52,7 @@ requirement swReqPIDControl : SoftwareRequirement {
     doc /* Software shall implement PID control loop at 100ms interval */
 }
 
-// Trace the chain: SwReq → SysReq → UserNeed
+// Trace the chain: SwReq → SysReq → StakeholderNeed
 connection : traceTo connect sysReqFlowAccuracy to unFlowControl;
 connection : traceTo connect swReqPIDControl to sysReqFlowAccuracy;
 ```
@@ -142,9 +142,9 @@ Use these relationship types to build traceability:
 | Relationship | From → To | Purpose |
 |-------------|-----------|---------|
 | `traceTo` | Requirement → Requirement | Requirements decomposition |
-| `satisfy` | Component → Requirement | Design satisfies requirement |
+| `satisfy` | LogicalComponent → Requirement | Design satisfies requirement |
 | `verify` | Test → Requirement / RiskControl | Verification coverage |
-| `allocateTo` | Function → Component | Functional allocation |
+| `allocateTo` | Function → LogicalComponent | Functional allocation |
 | `mitigates` | RiskControl → Hazard | Risk mitigation |
 | `causes` | Hazard → HazardousSituation | Causal chain |
 | `leadsTo` | HazardousSituation → Harm | Consequence chain |
@@ -247,7 +247,7 @@ part myComponent : ElectricalComponent {
 
 !!! tip "Name IDs consistently"
     Use prefixes that indicate the kind:
-    `un_` for UserNeed, `sysReq_` for SystemRequirement,
+    `un_` for stakeholder/user needs, `sysReq_` for SystemRequirement,
     `haz_` for Hazard, `rc_` for RiskControl, `test_` for Test
 
 !!! tip "One relationship file"

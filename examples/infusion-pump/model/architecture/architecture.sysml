@@ -8,22 +8,22 @@ package InfusionPump_Architecture {
     import InfusionPump_Requirements::*;
 
     // Logical Architecture (subsystems)
-    part pumpMechanism : Component {
+    part pumpMechanism : LogicalComponent {
         attribute redefines name = "Pump Mechanism";
         attribute redefines description = "Peristaltic pump for controlled fluid delivery";
     }
 
-    part controlBoard : Component {
+    part controlBoard : LogicalComponent {
         attribute redefines name = "Control Board";
         attribute redefines description = "Main processor and control electronics";
     }
 
-    part alarmSubsystem : Component {
+    part alarmSubsystem : LogicalComponent {
         attribute redefines name = "Alarm Subsystem";
         attribute redefines description = "Audio and visual alert system";
     }
 
-    // Allocation: component satisfies requirement
-    connection : Satisfy connect component ::> pumpMechanism to requirement ::> srFlowAccuracy;
-    connection : Satisfy connect component ::> alarmSubsystem to requirement ::> srAlarmAudibility;
+    // Allocation: logical component satisfies requirement
+    connection : Satisfy connect satisfiedBy ::> pumpMechanism to satisfies ::> srFlowAccuracy;
+    connection : Satisfy connect satisfiedBy ::> alarmSubsystem to satisfies ::> srAlarmAudibility;
 }
