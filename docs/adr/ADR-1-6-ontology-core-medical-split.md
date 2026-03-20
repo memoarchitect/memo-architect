@@ -9,7 +9,7 @@
 MEMO will evolve from a single broad `@memo/ontology` package into a layered ontology stack:
 
 1. **`@memo/ontology-core`** — domain-agnostic MBSE backbone
-2. **`@memo/ontology-medical-base`** — reusable medical device development backbone built on top of core
+2. **`@memo/ontology-medical`** — reusable medical device development backbone built on top of core
 3. **Product-family extensions** — infusion, ablation, monitoring, SaMD-specific concepts
 4. **Rules / views / templates packages** — closure rules, completeness logic, DHF generation, examples
 
@@ -60,7 +60,7 @@ Core must not contain:
 - UI wireframe concepts
 - app- or dashboard-specific viewpoints/rules
 
-### `@memo/ontology-medical-base`
+### `@memo/ontology-medical`
 
 Build on top of core to provide a reusable medical device development backbone:
 
@@ -116,7 +116,7 @@ Files and concepts that should move into the medical backbone:
 
 ### Moves to Product or Technology Extensions
 
-These are too specific for both core and medical-base:
+These are too specific for both core and `@memo/ontology-medical`:
 
 - `Catheter` in `packages/ontology/sysml/entities/physical.sysml`
 - `RosNode` in `packages/ontology/sysml/entities/software.sysml`
@@ -146,4 +146,4 @@ The current ontology must add the following before the split is complete:
 
 - The current `@memo/ontology` package should be considered transitional and broad, not the final standalone core release.
 - Future work will split the package without changing the architectural intent recorded here.
-- `@memo/medical` should eventually depend on `@memo/ontology-medical-base`, not directly on a monolithic base ontology.
+- `@memo/medical` should eventually depend on `@memo/ontology-medical`, not directly on a monolithic base ontology.

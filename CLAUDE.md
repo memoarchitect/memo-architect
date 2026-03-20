@@ -162,8 +162,8 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 
 **Last completed:** Phase 6c (Consistency + Visual Polish) — all code complete, build passes, 130+ tests pass.
 
-**Current phase:** Ontology Backbone Restructuring — split the current ontology direction into `@memo/ontology-core` (domain-agnostic MBSE backbone) and `@memo/ontology-medical-base` (medical device development backbone for ISO 13485 / ISO 14971 / IEC 62304 / IEC 60601-1).
+**Current phase:** Ontology Backbone Restructuring — split the current ontology direction into `@memo/ontology-core` (domain-agnostic MBSE backbone) and `@memo/ontology-medical` (medical device development backbone for ISO 13485 / ISO 14971 / IEC 62304 / IEC 60601-1).
 
-**Next up:** Phase 7 (M33 — Unified View Architecture) continues, but the ontology work now starts with defining the `core` and `medical-base` package boundaries before expanding compliance features.
+**Next up:** Phase 7 (M33 — Unified View Architecture) continues, but the ontology work now starts with defining the `core` and `ontology-medical` package boundaries before expanding compliance features.
 
 **GitLab milestones updated:** M16/M17/M18 closed, M33/M34/M35 created, all milestones have Tier descriptions.

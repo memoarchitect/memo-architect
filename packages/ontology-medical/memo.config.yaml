@@ -1,9 +1,9 @@
-projectName: "@memo/ontology-medical-base"
+projectName: "@memo/ontology-medical"
 projectType: ontology
 extends: "@memo/ontology-core"
 
 ontologyMetadata:
-  id: "@memo/ontology-medical-base"
+  id: "@memo/ontology-medical"
   version: "0.1.0"
   description: "Reusable regulated medical device development backbone built on ontology core"
   author: "SysAnd"

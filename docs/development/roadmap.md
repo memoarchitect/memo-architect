@@ -5,7 +5,7 @@
 MEMO follows the **ISO/IEC/IEEE 42010** architecture description standard and draws from the **Arcadia/Capella** MBSE methodology. The tool is designed for **medical device development** with a layered ontology strategy:
 
 - **`@memo/ontology-core`** — domain-agnostic MBSE backbone aligned to ISO/IEC/IEEE 42010
-- **`@memo/ontology-medical-base`** — reusable medical device development backbone built on top of core
+- **`@memo/ontology-medical`** — reusable medical device development backbone built on top of core
 
 The medical backbone is intended to support traceable development against **ISO 13485**, **ISO 14971**, **IEC 62304**, and **IEC 60601-1**, with product-family ontologies extending it further.
 
@@ -153,7 +153,7 @@ The medical backbone is intended to support traceable development against **ISO 
 Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards-driven medical device backbone:
 
 - [x] **Define `@memo/ontology-core` boundary** — documented in ADR-1-6 and ontology design doc
-- [x] **Define `@memo/ontology-medical-base` boundary** — documented in ADR-1-6 and ontology design doc
+- [x] **Define `@memo/ontology-medical` boundary** — documented in ADR-1-6 and ontology design doc
 - [x] **Classify current ontology content** — documented in ADR-1-6 with core / medical / extension buckets
 - [ ] **Remove core contamination** — move device-family-specific, ROS-specific, UI-specific, and app/workbench-specific concepts out of the base ontology packages
 - [ ] **Add missing P0 method concepts** — especially operational layer, system-need separation, explicit traceability relationships, and specification/container concepts
@@ -167,9 +167,9 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Relationship normalization** — first cut added with `refines`, `derives`, `constrains`, `decomposedBy`, `flow`, and `succession` in SysML and YAML
 - [x] **Analysis + verification abstractions** — first cut added with analysis case, constraint, calculation, assumption, measure, parameter, verification case, validation case, and evidence
 
-### Next Milestone — `@memo/ontology-medical-base` **[CRITICAL]**
+### Next Milestone — `@memo/ontology-medical` **[CRITICAL]**
 
-- [x] **Medical backbone package** — first `@memo/ontology-medical-base` workspace package added on top of the core split
+- [x] **Medical backbone package** — first `@memo/ontology-medical` workspace package added on top of the core split
 - [x] **Design control artifacts** — first cut added with intended use, indications for use, user profile, use environment, design inputs/outputs, and design review concepts
 - [x] **Risk management backbone** — first cut added with hazard, hazardous situation, harm, risk, risk control, and benefit-risk assessment concepts
 - [x] **Software lifecycle backbone** — first cut added with software system, software item, software unit, SOUP item, anomaly, maintenance release, and software safety class
