@@ -1,64 +1,28 @@
 # Medical Domain Configuration
 
-The `@memo/medical` package provides a comprehensive domain configuration for medical device development, aligned with ISO 14971 (risk management) and IEC 62304 (software lifecycle).
+The `@memo/medical` package is the medical workbench configuration layered on top of `@memo/ontology-medical`.
+
+It now provides:
+
+- closure rules for ISO 14971 and IEC 62304 traceability/completeness
+- medical-specific viewpoints and starter scaffolding
+- a small set of transitional compatibility kinds that have not yet been migrated into `@memo/ontology-core` or `@memo/ontology-medical`
 
 ## Overview
 
 | Metric | Count |
 |---|---|
-| CoSMA Layers | 10 |
-| Entity Kinds | 60+ |
-| Relationship Types | 16 |
+| Primary role | Rules + viewpoints + templates |
+| Extends | `@memo/ontology-medical` |
 | Closure Rules | 15 |
-| Viewpoints | 7 |
-
-## Entity Kinds by Layer
-
-### Business Analysis (`#8E44AD`)
-
-Actor, Stakeholder, Goal, Concern, Responsibility, Capability
-
-### Requirements (`#4A90D9`)
-
-UserNeed, SystemRequirement, SoftwareRequirement, HardwareRequirement, DesignSpecification, OtherRequirement, Standard, RegulatoryRequirement
-
-### Risk Management (`#E74C3C`)
-
-Hazard, HazardousSituation, Harm, Risk, RiskControl, SafetyGoal
-
-### Functional Analysis (`#E67E22`)
-
-SystemFunction, ComponentFunction, UserActivity, UIFunction, UseCase, Scenario
-
-### Logical Architecture (`#7B68EE`)
-
-System, SystemExternal, Subsystem, Component, LogicalComponent, LogicalComponentExternal, ArchitectureDecision, QualityAttribute, Question
-
-### Physical Architecture (`#95A5A6`)
-
-PhysicalComponent, ElectricalComponent, MechanicalComponent, HardwareNode, ComputingDevice, PhysicalModule, FPGA, Microcontroller, SingleBoardComputer
-
-### Software Architecture (`#F39C12`)
-
-Software, SoftwareComponent, SoftwareModule, Firmware, Docker, OperatingSystem, RosNode
-
-### Interfaces & Ports (`#1ABC9C`)
-
-Port, DataPort, FlowPort, ServicePort, Interface, SoftwareInterface, ElectricalInterface, MechanicalInterface, RosTopic, RosService, DataType
-
-### UI Wireframe (`#3498DB`)
-
-UIScreen, UIPanel, UIElement
-
-### Verification (`#2ECC71`)
-
-Test
+| Workbench Viewpoints | 4 |
 
 ## Standards Alignment
 
 ### ISO 14971 — Risk Management
 
-The risk layer and closure rules enforce the ISO 14971 risk management process:
+The ontology-level risk concepts live in `@memo/ontology-medical`. The `@memo/medical`
+package adds the validation and viewpoint layer that operationalizes them:
 
 - Hazard identification → `Hazard` elements
 - Risk analysis → `HazardousSituation`, `Harm`, `Risk` elements
@@ -69,7 +33,8 @@ The risk layer and closure rules enforce the ISO 14971 risk management process:
 
 ### IEC 62304 — Software Lifecycle
 
-The requirements and software layers support IEC 62304 traceability:
+The ontology-level software lifecycle concepts live in `@memo/ontology-medical`. The
+medical workbench package adds traceability and completeness rules over them:
 
 - User needs → System requirements → Software requirements
 - Software architecture decomposition
@@ -87,4 +52,8 @@ projectType: device
 extends: "@memo/medical"
 ```
 
-All 60+ kinds, 15 rules, and 7 viewpoints are inherited automatically.
+Projects inherit:
+
+- `@memo/ontology-core` via `@memo/ontology-medical`
+- `@memo/ontology-medical`
+- `@memo/medical` rules, viewpoints, and starter templates

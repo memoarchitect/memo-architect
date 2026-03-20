@@ -162,7 +162,7 @@ firstRun:
 ```yaml
 projectName: "@memo/medical"
 projectType: device
-extends: "@memo/ontology"
+extends: "@memo/ontology-medical"
 
 ontologies:
   - name: memo-ontology

@@ -1,7 +1,7 @@
 {
   "name": "@memo/medical",
   "version": "2.0.0",
-  "description": "MEMO Medical Device Domain Package — ISO 14971 + IEC 62304 closure rules, viewpoints, workflows, and templates",
+  "description": "MEMO medical workbench package — closure rules, viewpoints, templates, and transitional compatibility kinds on top of @memo/ontology-medical",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -11,7 +11,7 @@
     "clean": "rm -rf lib/"
   },
   "dependencies": {
-    "@memo/ontology": "workspace:*"
+    "@memo/ontology-medical": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.5.0",
