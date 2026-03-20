@@ -10,6 +10,7 @@
 
 package MEMO_Ontology {
     import MEMO_Ontology_Business::*;
+    import MEMO_Ontology_Operational::*;
     import MEMO_Ontology_Requirements::*;
     import MEMO_Ontology_Risk::*;
     import MEMO_Ontology_Functional::*;
@@ -17,6 +18,7 @@ package MEMO_Ontology {
     import MEMO_Ontology_Physical::*;
     import MEMO_Ontology_Software::*;
     import MEMO_Ontology_Interfaces::*;
+    import MEMO_Ontology_Analysis::*;
     import MEMO_Ontology_UI::*;
     import MEMO_Ontology_CrossCutting::*;
     import MEMO_Ontology_Relationships::*;

@@ -26,6 +26,10 @@ cosmaLayers:
     label: Business Analysis
     color: "#8E44AD"
 
+  - id: operational
+    label: Operational Analysis
+    color: "#C0392B"
+
   - id: requirements
     label: Requirements
     color: "#4A90D9"
@@ -49,6 +53,10 @@ cosmaLayers:
   - id: interfaces
     label: Interfaces & Ports
     color: "#1ABC9C"
+
+  - id: analysis
+    label: Analysis & Constraints
+    color: "#16A085"
 
   - id: behavior
     label: Behavior
@@ -93,6 +101,37 @@ kinds:
     layer: business
     sysmlConstruct: part def
 
+  # ── Operational Analysis ─────────────────────────────────────────────────
+  Mission:
+    label: Mission
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalActor:
+    label: Operational Actor
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalEntity:
+    label: Operational Entity
+    layer: operational
+    sysmlConstruct: part def
+
+  MissionPhase:
+    label: Mission Phase
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalActivity:
+    label: Operational Activity
+    layer: operational
+    sysmlConstruct: action def
+
+  OperationalScenario:
+    label: Operational Scenario
+    layer: operational
+    sysmlConstruct: action def
+
   # ── Requirements ─────────────────────────────────────────────────────────
   UserNeed:
     label: User Need
@@ -118,6 +157,11 @@ kinds:
     label: Design Specification
     layer: requirements
     sysmlConstruct: requirement def
+
+  RequirementSet:
+    label: Requirement Set
+    layer: requirements
+    sysmlConstruct: part def
 
   OtherRequirement:
     label: Other Requirement
@@ -330,6 +374,37 @@ kinds:
     layer: interfaces
     sysmlConstruct: attribute def
 
+  # ── Analysis ─────────────────────────────────────────────────────────────
+  AnalysisCase:
+    label: Analysis Case
+    layer: analysis
+    sysmlConstruct: part def
+
+  Constraint:
+    label: Constraint
+    layer: analysis
+    sysmlConstruct: part def
+
+  Calculation:
+    label: Calculation
+    layer: analysis
+    sysmlConstruct: part def
+
+  Assumption:
+    label: Assumption
+    layer: analysis
+    sysmlConstruct: part def
+
+  Measure:
+    label: Measure
+    layer: analysis
+    sysmlConstruct: part def
+
+  Parameter:
+    label: Parameter
+    layer: analysis
+    sysmlConstruct: attribute def
+
   # ── Verification ─────────────────────────────────────────────────────────
   Test:
     label: Test
@@ -359,6 +434,21 @@ relationshipTypes:
     label: Trace
     layer: requirements
     color: "#3498DB"
+
+  - name: refines
+    label: Refines
+    layer: requirements
+    color: "#2E86C1"
+
+  - name: derives
+    label: Derives
+    layer: requirements
+    color: "#5DADE2"
+
+  - name: constrains
+    label: Constrains
+    layer: analysis
+    color: "#16A085"
 
   - name: allocateTo
     label: Allocate To
@@ -422,6 +512,9 @@ relationships:
   - association
   - traceTo
   - trace
+  - refines
+  - derives
+  - constrains
   - allocateTo
   - composedOf
   - dependency
@@ -461,6 +554,31 @@ viewpoints:
         viewpointId: context-view
         auto: true
         description: System boundary with external actors and interfacing systems
+
+  - id: operational-view
+    label: Operational Analysis
+    supportedDiagramTypes: [bdd, act, pkg]
+    visibleKinds:
+      - Mission
+      - OperationalActor
+      - OperationalEntity
+      - MissionPhase
+      - OperationalActivity
+      - OperationalScenario
+    visibleRelationships:
+      - association
+      - succession
+      - traceTo
+    visibleLayers:
+      - operational
+      - business
+    diagrams:
+      - id: diag-operational-overview
+        name: Operational Overview
+        diagramType: act
+        viewpointId: operational-view
+        auto: true
+        description: Mission phases, actors, and operational scenarios
 
   # Functional Viewpoint — what the system needs to do (functions, allocation)
   - id: functional-view

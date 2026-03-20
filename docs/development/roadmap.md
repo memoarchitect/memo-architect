@@ -156,7 +156,7 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Define `@memo/ontology-medical` boundary** — documented in ADR-1-6 and ontology design doc
 - [x] **Classify current ontology content** — documented in ADR-1-6 with core / medical / extension buckets
 - [ ] **Remove core contamination** — move device-family-specific, ROS-specific, UI-specific, and app/workbench-specific concepts out of the base ontology packages
-- [ ] **Add missing P0 method concepts** — especially operational layer, system-need separation, explicit traceability relationships, and specification/container concepts
+- [x] **Add missing P0 method concepts** — legacy `@memo/ontology` now includes first-cut operational concepts, requirement/specification containers, analysis abstractions, and normalized SysML relationship definitions
 - [x] **Keep rules/views separate** — `@memo/medical` now extends `@memo/ontology-medical` and carries workbench rules/viewpoints/templates, with only transitional compatibility kinds left outside the ontology packages
 
 ### Next Milestone — `@memo/ontology-core` **[CRITICAL]**
