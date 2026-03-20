@@ -14,7 +14,7 @@
 // ============================================================================
 
 package InfusionPump {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // BUSINESS ANALYSIS LAYER — Who uses this and why?

@@ -37,6 +37,26 @@ cosmaLayers:
     color: "#2C3E50"
 
 kinds:
+  UserNeed:
+    label: User Need
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SoftwareRequirement:
+    label: Software Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  HardwareRequirement:
+    label: Hardware Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  OtherRequirement:
+    label: Other Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
   IntendedUse:
     label: Intended Use
     layer: design-control
@@ -70,6 +90,21 @@ kinds:
   DesignReview:
     label: Design Review
     layer: design-control
+    sysmlConstruct: part def
+
+  UserActivity:
+    label: User Activity
+    layer: functional
+    sysmlConstruct: action def
+
+  Component:
+    label: Component
+    layer: logical
+    sysmlConstruct: part def
+
+  EnvironmentElement:
+    label: Environment Element
+    layer: logical
     sysmlConstruct: part def
 
   Hazard:

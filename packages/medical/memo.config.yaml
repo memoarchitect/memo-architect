@@ -32,26 +32,6 @@ cosmaLayers:
     color: "#3498DB"
 
 kinds:
-  UserNeed:
-    label: User Need
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  SoftwareRequirement:
-    label: Software Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  HardwareRequirement:
-    label: Hardware Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-  OtherRequirement:
-    label: Other Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
   Standard:
     label: Standard
     layer: requirements
@@ -62,25 +42,10 @@ kinds:
     layer: requirements
     sysmlConstruct: part def
 
-  UserActivity:
-    label: User Activity
-    layer: functional
-    sysmlConstruct: action def
-
   UIFunction:
     label: UI Function
     layer: functional
     sysmlConstruct: action def
-
-  Component:
-    label: Component
-    layer: logical
-    sysmlConstruct: part def
-
-  EnvironmentElement:
-    label: Environment Element
-    layer: logical
-    sysmlConstruct: part def
 
   Question:
     label: Question
@@ -114,18 +79,8 @@ kinds:
     defaultAttributes:
       safetyClassification: "A"
 
-  Firmware:
-    label: Firmware
-    layer: software
-    sysmlConstruct: part def
-
   Docker:
     label: Docker
-    layer: software
-    sysmlConstruct: part def
-
-  OperatingSystem:
-    label: Operating System
     layer: software
     sysmlConstruct: part def
 

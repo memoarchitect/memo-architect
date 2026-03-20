@@ -176,6 +176,13 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Safety + essential performance backbone** — first cut added with safety goal, essential performance, basic safety, safety function, and protective measure concepts
 - [x] **QMS trace backbone** — first cut added with QMS record, design history record, change record, release baseline, compliance evidence, and supporting relationships
 
+### Next Milestone — Ontology Migration **[HIGH]**
+
+- [x] **Default medical entrypoints** — `memo init`, starter template imports, medical guides, and example configs now point at `@memo/ontology-medical` / `MEMO_Ontology_Medical`
+- [x] **Move common medical-development kinds into ontology** — `UserNeed`, `SoftwareRequirement`, `HardwareRequirement`, `OtherRequirement`, `UserActivity`, `Component`, and `EnvironmentElement` now live in `@memo/ontology-medical` instead of only `@memo/medical`
+- [ ] **Remove remaining transitional duplicates from `@memo/medical`** — keep only workbench-only kinds such as UI, ROS, and temporary platform-specific helpers
+- [ ] **Migrate examples off compatibility-only kinds** — converge starter/example models on core + ontology-medical vocabulary where the legacy aliases are no longer needed
+
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
 Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:

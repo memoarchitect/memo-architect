@@ -165,8 +165,8 @@ projectType: device
 extends: "@memo/ontology-medical"
 
 ontologies:
-  - name: memo-ontology
-    version: "^2.0.0"
+  - name: memo-ontology-medical
+    version: "^0.1.0"
 
 cosmaLayers:
   - id: risk
