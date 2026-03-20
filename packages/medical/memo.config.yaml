@@ -3,7 +3,7 @@
 #   - closure rules
 #   - medical viewpoints
 #   - starter scaffolding
-#   - transitional compatibility kinds not yet moved into ontology-core/ontology-medical
+#   - workbench-only UI/ROS kinds plus temporary product/platform helpers
 
 projectName: "@memo/medical"
 projectType: device
@@ -17,7 +17,7 @@ extends: "@memo/ontology-medical"
 ontologyMetadata:
   id: "@memo/medical"
   version: "2.0.0"
-  description: "Medical workbench package — closure rules, viewpoints, templates, and transitional compatibility kinds"
+  description: "Medical workbench package — closure rules, viewpoints, templates, and workbench-only helper kinds"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
@@ -32,25 +32,10 @@ cosmaLayers:
     color: "#3498DB"
 
 kinds:
-  Standard:
-    label: Standard
-    layer: requirements
-    sysmlConstruct: part def
-
-  RegulatoryRequirement:
-    label: Regulatory Requirement
-    layer: requirements
-    sysmlConstruct: part def
-
   UIFunction:
     label: UI Function
     layer: functional
     sysmlConstruct: action def
-
-  Question:
-    label: Question
-    layer: logical
-    sysmlConstruct: part def
 
   Catheter:
     label: Catheter

@@ -96,7 +96,7 @@ graph TD
 | `@memo/ontology-core` | Core ontology backbone | Domain-agnostic SysML v2 MBSE types |
 | `@memo/ontology-medical` | Medical ontology backbone | Medical device development types built on core |
 | `@memo/ontology` | Compatibility ontology | Legacy `MEMO_Ontology` package surface |
-| `@memo/medical` | Medical workbench config | `memo.config.yaml` with rules, viewpoints, templates, and transitional compatibility kinds |
+| `@memo/medical` | Medical workbench config | `memo.config.yaml` with rules, viewpoints, templates, and workbench-only helper kinds |
 | `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
 | `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
 

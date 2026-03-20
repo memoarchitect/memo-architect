@@ -205,6 +205,11 @@ kinds:
     layer: logical
     sysmlConstruct: part def
 
+  Question:
+    label: Question
+    layer: logical
+    sysmlConstruct: part def
+
   PhysicalComponent:
     label: Physical Component
     layer: physical
