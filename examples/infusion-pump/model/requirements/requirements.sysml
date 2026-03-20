@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Requirements {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
     import InfusionPump_Risk::*;
 
     // System Requirements

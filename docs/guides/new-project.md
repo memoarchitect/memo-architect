@@ -43,8 +43,8 @@ projectType: device
 extends: "@memo/medical"
 
 ontologies:
-  - name: memo-ontology
-    version: "^2.0.0"
+  - name: memo-ontology-medical
+    version: "^0.1.0"
 ```
 
 The key line is `extends: "@memo/medical"`. This gives you:
@@ -80,7 +80,7 @@ Open `model/my-device.sysml` and start adding elements:
 
 ```sysml
 package MyDevice {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
 
     // A stakeholder
     part surgeon : Actor {

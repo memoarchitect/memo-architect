@@ -188,7 +188,7 @@ with `import`:
 ```sysml
 // In requirements/system-requirements.sysml
 package SystemRequirements {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
 
     requirement sysReq001 : SystemRequirement {
         attribute redefines name = "Flow Accuracy";
@@ -199,7 +199,7 @@ package SystemRequirements {
 ```sysml
 // In verification/tests.sysml
 package Verification {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
     import SystemRequirements::*;
 
     part testFlow : Test {

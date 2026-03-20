@@ -299,7 +299,7 @@ elements or connections:
 
 ```sysml
 package Functions {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
 
     part sfFlowControl : SystemFunction {
         attribute redefines name = "Flow Rate Control";
