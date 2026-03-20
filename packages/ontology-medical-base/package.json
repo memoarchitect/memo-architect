@@ -1,0 +1,29 @@
+{
+  "name": "@memo/ontology-medical-base",
+  "version": "0.1.0",
+  "description": "MEMO medical ontology backbone — reusable regulated medical device development concepts built on ontology core.",
+  "type": "module",
+  "private": true,
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf lib/ dist/"
+  },
+  "files": [
+    "lib/",
+    "sysml/",
+    "memo.config.yaml"
+  ],
+  "keywords": [
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "medical-device",
+    "62304",
+    "14971",
+    "60601",
+    "13485"
+  ],
+  "license": "Apache-2.0"
+}

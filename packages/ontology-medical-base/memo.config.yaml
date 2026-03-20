@@ -1,0 +1,224 @@
+projectName: "@memo/ontology-medical-base"
+projectType: ontology
+extends: "@memo/ontology-core"
+
+ontologyMetadata:
+  id: "@memo/ontology-medical-base"
+  version: "0.1.0"
+  description: "Reusable regulated medical device development backbone built on ontology core"
+  author: "SysAnd"
+  license: "Apache-2.0"
+  tags:
+    - medical-device
+    - ISO-13485
+    - ISO-14971
+    - IEC-62304
+    - IEC-60601-1
+
+cosmaLayers:
+  - id: design-control
+    label: Design Control
+    color: "#5B8DEF"
+
+  - id: risk
+    label: Risk Management
+    color: "#E74C3C"
+
+  - id: software-lifecycle
+    label: Software Lifecycle
+    color: "#F39C12"
+
+  - id: safety
+    label: Safety & Essential Performance
+    color: "#C0392B"
+
+  - id: qms
+    label: QMS & Records
+    color: "#2C3E50"
+
+kinds:
+  IntendedUse:
+    label: Intended Use
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  IndicationForUse:
+    label: Indication For Use
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  UserProfile:
+    label: User Profile
+    layer: design-control
+    sysmlConstruct: part def
+
+  UseEnvironment:
+    label: Use Environment
+    layer: design-control
+    sysmlConstruct: part def
+
+  DesignInput:
+    label: Design Input
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  DesignOutput:
+    label: Design Output
+    layer: design-control
+    sysmlConstruct: part def
+
+  DesignReview:
+    label: Design Review
+    layer: design-control
+    sysmlConstruct: part def
+
+  Hazard:
+    label: Hazard
+    layer: risk
+    sysmlConstruct: requirement def
+
+  HazardousSituation:
+    label: Hazardous Situation
+    layer: risk
+    sysmlConstruct: requirement def
+
+  Harm:
+    label: Harm
+    layer: risk
+    sysmlConstruct: requirement def
+
+  Risk:
+    label: Risk
+    layer: risk
+    sysmlConstruct: requirement def
+
+  RiskControl:
+    label: Risk Control
+    layer: risk
+    sysmlConstruct: requirement def
+
+  BenefitRiskAssessment:
+    label: Benefit-Risk Assessment
+    layer: risk
+    sysmlConstruct: part def
+
+  SafetyGoal:
+    label: Safety Goal
+    layer: safety
+    sysmlConstruct: requirement def
+
+  EssentialPerformance:
+    label: Essential Performance
+    layer: safety
+    sysmlConstruct: requirement def
+
+  BasicSafety:
+    label: Basic Safety
+    layer: safety
+    sysmlConstruct: requirement def
+
+  SafetyFunction:
+    label: Safety Function
+    layer: safety
+    sysmlConstruct: action def
+
+  ProtectiveMeasure:
+    label: Protective Measure
+    layer: safety
+    sysmlConstruct: part def
+
+  SoftwareSystem:
+    label: Software System
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareItem:
+    label: Software Item
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareUnit:
+    label: Software Unit
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SOUPItem:
+    label: SOUP Item
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareAnomaly:
+    label: Software Anomaly
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  MaintenanceRelease:
+    label: Maintenance Release
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  QMSRecord:
+    label: QMS Record
+    layer: qms
+    sysmlConstruct: part def
+
+  DesignHistoryRecord:
+    label: Design History Record
+    layer: qms
+    sysmlConstruct: part def
+
+  ChangeRecord:
+    label: Change Record
+    layer: qms
+    sysmlConstruct: part def
+
+  ReleaseBaseline:
+    label: Release Baseline
+    layer: qms
+    sysmlConstruct: part def
+
+  ComplianceEvidence:
+    label: Compliance Evidence
+    layer: qms
+    sysmlConstruct: part def
+
+relationshipTypes:
+  - name: mitigates
+    label: Mitigates
+    layer: risk
+    color: "#E74C3C"
+
+  - name: causes
+    label: Causes
+    layer: risk
+    color: "#C0392B"
+
+  - name: leadsTo
+    label: Leads To
+    layer: risk
+    color: "#E74C3C"
+
+  - name: identifies
+    label: Identifies
+    layer: risk
+    color: "#D35400"
+
+  - name: evidences
+    label: Evidences
+    layer: qms
+    color: "#2C3E50"
+
+  - name: documents
+    label: Documents
+    layer: qms
+    color: "#34495E"
+
+relationships:
+  - mitigates
+  - causes
+  - leadsTo
+  - identifies
+  - evidences
+  - documents
+
+closureRules: []

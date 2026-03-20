@@ -67,6 +67,7 @@ node packages/cli/lib/bin/memo.js dev --port 3000
 memo/
 ├── packages/
 │   ├── ontology-core/ @memo/ontology-core — Domain-agnostic MBSE backbone ontology
+│   ├── ontology-medical-base/ @memo/ontology-medical-base — Reusable medical device development backbone
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app

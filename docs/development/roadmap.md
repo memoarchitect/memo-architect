@@ -169,12 +169,12 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 
 ### Next Milestone — `@memo/ontology-medical-base` **[CRITICAL]**
 
-- [ ] **Medical backbone package** — reusable regulated medical-device ontology built on top of core
-- [ ] **Design control artifacts** — intended use, indications, users, use environments, design inputs/outputs, verification/validation evidence, release/change artifacts
-- [ ] **Risk management backbone** — ISO 14971 hazards, hazardous situations, harms, risk controls, residual risk, benefit-risk
-- [ ] **Software lifecycle backbone** — IEC 62304 software items, software system decomposition, SOUP, safety classification, maintenance/change concepts
-- [ ] **Safety + essential performance backbone** — IEC 60601-1 safety, essential performance, hazards tied to architecture and verification
-- [ ] **QMS trace backbone** — ISO 13485-oriented traceability and records support without embedding QMS workflow logic into the ontology itself
+- [x] **Medical backbone package** — first `@memo/ontology-medical-base` workspace package added on top of the core split
+- [x] **Design control artifacts** — first cut added with intended use, indications for use, user profile, use environment, design inputs/outputs, and design review concepts
+- [x] **Risk management backbone** — first cut added with hazard, hazardous situation, harm, risk, risk control, and benefit-risk assessment concepts
+- [x] **Software lifecycle backbone** — first cut added with software system, software item, software unit, SOUP item, anomaly, maintenance release, and software safety class
+- [x] **Safety + essential performance backbone** — first cut added with safety goal, essential performance, basic safety, safety function, and protective measure concepts
+- [x] **QMS trace backbone** — first cut added with QMS record, design history record, change record, release baseline, compliance evidence, and supporting relationships
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
