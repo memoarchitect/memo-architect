@@ -26,4 +26,8 @@ package MEMO_Ontology_Core_Logical {
     part def QualityAttribute {
         attribute name : String;
     }
+
+    part def Question {
+        attribute name : String;
+    }
 }

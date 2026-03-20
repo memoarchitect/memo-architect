@@ -181,7 +181,8 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Default medical entrypoints** — `memo init`, starter template imports, medical guides, and example configs now point at `@memo/ontology-medical` / `MEMO_Ontology_Medical`
 - [x] **Move common medical-development kinds into ontology** — `UserNeed`, `SoftwareRequirement`, `HardwareRequirement`, `OtherRequirement`, `UserActivity`, `Component`, and `EnvironmentElement` now live in `@memo/ontology-medical` instead of only `@memo/medical`
 - [x] **Move generic platform kinds into core** — `Microcontroller`, `FPGA`, and `SingleBoardComputer` now live in `@memo/ontology-core` instead of only `@memo/medical`
-- [ ] **Remove remaining transitional duplicates from `@memo/medical`** — keep only workbench-only kinds such as UI, ROS, and temporary platform-specific helpers
+- [x] **Move reusable compliance and rationale kinds into ontology** — `Standard` and `RegulatoryRequirement` now live in `@memo/ontology-medical`, and `Question` now lives in `@memo/ontology-core`
+- [x] **Remove remaining transitional duplicates from `@memo/medical`** — the package now keeps only workbench-only helper kinds such as UI/ROS, a software default overlay, and temporary product/platform helpers
 - [ ] **Migrate examples off compatibility-only kinds** — converge starter/example models on core + ontology-medical vocabulary where the legacy aliases are no longer needed
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**

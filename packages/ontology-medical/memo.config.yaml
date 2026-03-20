@@ -57,6 +57,16 @@ kinds:
     layer: requirements
     sysmlConstruct: requirement def
 
+  Standard:
+    label: Standard
+    layer: requirements
+    sysmlConstruct: part def
+
+  RegulatoryRequirement:
+    label: Regulatory Requirement
+    layer: requirements
+    sysmlConstruct: part def
+
   IntendedUse:
     label: Intended Use
     layer: design-control

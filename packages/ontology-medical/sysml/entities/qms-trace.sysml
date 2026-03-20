@@ -5,6 +5,17 @@ package MEMO_Ontology_Medical_QMS {
         attribute title : String;
     }
 
+    part def Standard {
+        attribute name : String;
+        attribute version : String;
+    }
+
+    part def RegulatoryRequirement {
+        attribute name : String;
+        attribute standardRef : String;
+        attribute clause : String;
+    }
+
     part def DesignHistoryRecord :> QMSRecord { }
 
     part def ChangeRecord :> QMSRecord { }

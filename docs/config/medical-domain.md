@@ -6,7 +6,7 @@ It now provides:
 
 - closure rules for ISO 14971 and IEC 62304 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
-- a small set of transitional compatibility kinds that have not yet been migrated into `@memo/ontology-core` or `@memo/ontology-medical`
+- workbench-only helper kinds for UI/ROS plus temporary product/platform overlays
 
 ## Overview
 
