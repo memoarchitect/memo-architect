@@ -64,10 +64,10 @@ it automatically belongs to its layer.
 | Layer | Example Kinds | Purpose |
 |-------|---------------|---------|
 | **Business** | Actor, Stakeholder, UseCase, Scenario | Who uses the device and why |
-| **Requirements** | UserNeed, SystemRequirement, SoftwareRequirement | What the device must do |
+| **Requirements** | StakeholderNeed, SystemRequirement, SoftwareRequirement | What the device must do |
 | **Risk** | Hazard, HazardousSituation, Harm, Risk, RiskControl | ISO 14971 risk management |
 | **Functional** | SystemFunction, ComponentFunction, UserActivity | What functions the device performs |
-| **Logical** | System, Subsystem, Component | Logical decomposition |
+| **Logical** | System, Subsystem, LogicalComponent | Logical decomposition |
 | **Physical** | Microcontroller, ElectricalComponent, MechanicalComponent | Physical hardware |
 | **Software** | Software, SoftwareComponent, Firmware | Software architecture |
 | **Interfaces** | Port, PortEthernet, Interface, DataType | Connection points |
