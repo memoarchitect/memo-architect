@@ -19,13 +19,14 @@ pnpm install
 pnpm run build
 ```
 
-This uses Turborepo to build all 5 packages in dependency order:
+This uses Turborepo to build all workspace packages in dependency order, including:
 
-1. `@memo/ontology` — Base type definitions
-2. `@memo/core` — Parser, model builder, validator, completeness tracker
-3. `@memo/medical` — Medical domain configuration
-4. `@memo/cli` — Command-line interface
-5. `@memo/web` — React web application
+1. `@memo/ontology-core` — Domain-agnostic MBSE backbone ontology
+2. `@memo/ontology` — Transitional broad ontology package
+3. `@memo/core` — Parser, model builder, validator, completeness tracker
+4. `@memo/medical` — Medical domain configuration
+5. `@memo/cli` — Command-line interface
+6. `@memo/web` — React web application
 
 ## Verify Installation
 

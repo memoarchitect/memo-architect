@@ -66,10 +66,11 @@ node packages/cli/lib/bin/memo.js dev --port 3000
 ```
 memo/
 ├── packages/
+│   ├── ontology-core/ @memo/ontology-core — Domain-agnostic MBSE backbone ontology
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-│   ├── ontology/    @memo/ontology — Base SysML v2 type definitions (60+ types, 16 relationships)
+│   ├── ontology/    @memo/ontology — Transitional broad ontology package being split
 │   └── medical/     @memo/medical  — Medical domain config (15 closure rules, 7 viewpoints)
 ├── examples/
 │   └── infusion-pump/              — Complete working example (74 elements)

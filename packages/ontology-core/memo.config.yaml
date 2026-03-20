@@ -1,0 +1,437 @@
+projectName: "@memo/ontology-core"
+projectType: ontology
+
+ontologyMetadata:
+  id: "@memo/ontology-core"
+  version: "0.1.0"
+  description: "Domain-agnostic MBSE backbone ontology aligned to ISO/IEC/IEEE 42010"
+  author: "SysAnd"
+  license: "Apache-2.0"
+  tags:
+    - mbse
+    - sysml-v2
+    - architecture
+    - 42010
+
+cosmaLayers:
+  - id: purpose
+    label: Purpose & Stakeholders
+    color: "#8E44AD"
+
+  - id: operational
+    label: Operational Analysis
+    color: "#C0392B"
+
+  - id: requirements
+    label: Requirements
+    color: "#4A90D9"
+
+  - id: functional
+    label: Functional Analysis
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical Architecture
+    color: "#7B68EE"
+
+  - id: physical
+    label: Physical Architecture
+    color: "#95A5A6"
+
+  - id: software
+    label: Software Architecture
+    color: "#F39C12"
+
+  - id: interfaces
+    label: Interfaces & Contracts
+    color: "#1ABC9C"
+
+  - id: analysis
+    label: Analysis & Constraints
+    color: "#16A085"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"
+
+kinds:
+  Actor:
+    label: Actor
+    layer: purpose
+    sysmlConstruct: part def
+
+  Stakeholder:
+    label: Stakeholder
+    layer: purpose
+    sysmlConstruct: part def
+
+  Goal:
+    label: Goal
+    layer: purpose
+    sysmlConstruct: requirement def
+
+  Concern:
+    label: Concern
+    layer: purpose
+    sysmlConstruct: requirement def
+
+  Capability:
+    label: Capability
+    layer: purpose
+    sysmlConstruct: part def
+
+  Mission:
+    label: Mission
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalActor:
+    label: Operational Actor
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalEntity:
+    label: Operational Entity
+    layer: operational
+    sysmlConstruct: part def
+
+  OperationalActivity:
+    label: Operational Activity
+    layer: operational
+    sysmlConstruct: action def
+
+  OperationalScenario:
+    label: Operational Scenario
+    layer: operational
+    sysmlConstruct: action def
+
+  MissionPhase:
+    label: Mission Phase
+    layer: operational
+    sysmlConstruct: part def
+
+  Requirement:
+    label: Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  StakeholderNeed:
+    label: Stakeholder Need
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SystemRequirement:
+    label: System Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  FunctionalRequirement:
+    label: Functional Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  TechnicalRequirement:
+    label: Technical Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  InterfaceRequirement:
+    label: Interface Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  DesignSpecification:
+    label: Design Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  RequirementSet:
+    label: Requirement Set
+    layer: requirements
+    sysmlConstruct: part def
+
+  SystemFunction:
+    label: System Function
+    layer: functional
+    sysmlConstruct: action def
+
+  ComponentFunction:
+    label: Component Function
+    layer: functional
+    sysmlConstruct: action def
+
+  UseCase:
+    label: Use Case
+    layer: functional
+    sysmlConstruct: part def
+
+  Scenario:
+    label: Scenario
+    layer: functional
+    sysmlConstruct: action def
+
+  System:
+    label: System
+    layer: logical
+    sysmlConstruct: part def
+
+  SystemExternal:
+    label: External System
+    layer: logical
+    sysmlConstruct: part def
+
+  Subsystem:
+    label: Subsystem
+    layer: logical
+    sysmlConstruct: part def
+
+  LogicalComponent:
+    label: Logical Component
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureDecision:
+    label: Architecture Decision
+    layer: logical
+    sysmlConstruct: part def
+
+  ArchitectureRationale:
+    label: Architecture Rationale
+    layer: logical
+    sysmlConstruct: part def
+
+  QualityAttribute:
+    label: Quality Attribute
+    layer: logical
+    sysmlConstruct: part def
+
+  PhysicalComponent:
+    label: Physical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  ElectricalComponent:
+    label: Electrical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  MechanicalComponent:
+    label: Mechanical Component
+    layer: physical
+    sysmlConstruct: part def
+
+  PhysicalModule:
+    label: Physical Module
+    layer: physical
+    sysmlConstruct: part def
+
+  HardwareNode:
+    label: Hardware Node
+    layer: physical
+    sysmlConstruct: part def
+
+  ComputingDevice:
+    label: Computing Device
+    layer: physical
+    sysmlConstruct: part def
+
+  Software:
+    label: Software
+    layer: software
+    sysmlConstruct: part def
+
+  SoftwareComponent:
+    label: Software Component
+    layer: software
+    sysmlConstruct: part def
+
+  SoftwareModule:
+    label: Software Module
+    layer: software
+    sysmlConstruct: part def
+
+  Firmware:
+    label: Firmware
+    layer: software
+    sysmlConstruct: part def
+
+  OperatingSystem:
+    label: Operating System
+    layer: software
+    sysmlConstruct: part def
+
+  Port:
+    label: Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  Interface:
+    label: Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  InterfaceContract:
+    label: Interface Contract
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  ExchangeItem:
+    label: Exchange Item
+    layer: interfaces
+    sysmlConstruct: item def
+
+  DataType:
+    label: Data Type
+    layer: interfaces
+    sysmlConstruct: attribute def
+
+  AnalysisCase:
+    label: Analysis Case
+    layer: analysis
+    sysmlConstruct: part def
+
+  Constraint:
+    label: Constraint
+    layer: analysis
+    sysmlConstruct: part def
+
+  Calculation:
+    label: Calculation
+    layer: analysis
+    sysmlConstruct: part def
+
+  Assumption:
+    label: Assumption
+    layer: analysis
+    sysmlConstruct: part def
+
+  Measure:
+    label: Measure
+    layer: analysis
+    sysmlConstruct: part def
+
+  Parameter:
+    label: Parameter
+    layer: analysis
+    sysmlConstruct: attribute def
+
+  Test:
+    label: Test
+    layer: verification
+    sysmlConstruct: part def
+
+  VerificationCase:
+    label: Verification Case
+    layer: verification
+    sysmlConstruct: part def
+
+  ValidationCase:
+    label: Validation Case
+    layer: verification
+    sysmlConstruct: part def
+
+  Evidence:
+    label: Evidence
+    layer: verification
+    sysmlConstruct: part def
+
+relationshipTypes:
+  - name: aggregation
+    label: Aggregation
+    layer: logical
+    color: "#7B68EE"
+
+  - name: association
+    label: Association
+    layer: logical
+    color: "#9B59B6"
+
+  - name: traceTo
+    label: Trace To
+    layer: requirements
+    color: "#4A90D9"
+
+  - name: trace
+    label: Trace
+    layer: requirements
+    color: "#3498DB"
+
+  - name: refines
+    label: Refines
+    layer: requirements
+    color: "#2E86C1"
+
+  - name: derives
+    label: Derives
+    layer: requirements
+    color: "#5DADE2"
+
+  - name: constrains
+    label: Constrains
+    layer: analysis
+    color: "#16A085"
+
+  - name: allocateTo
+    label: Allocate To
+    layer: functional
+    color: "#E67E22"
+
+  - name: composedOf
+    label: Composed Of
+    layer: logical
+    color: "#8E44AD"
+
+  - name: decomposedBy
+    label: Decomposed By
+    layer: functional
+    color: "#D35400"
+
+  - name: dependency
+    label: Dependency
+    layer: logical
+    color: "#95A5A6"
+
+  - name: realization
+    label: Realization
+    layer: logical
+    color: "#2C3E50"
+
+  - name: satisfy
+    label: Satisfy
+    layer: requirements
+    color: "#2ECC71"
+
+  - name: verify
+    label: Verify
+    layer: verification
+    color: "#27AE60"
+
+  - name: flow
+    label: Flow
+    layer: interfaces
+    color: "#1ABC9C"
+
+  - name: succession
+    label: Succession
+    layer: operational
+    color: "#C0392B"
+
+relationships:
+  - aggregation
+  - association
+  - traceTo
+  - trace
+  - refines
+  - derives
+  - constrains
+  - allocateTo
+  - composedOf
+  - decomposedBy
+  - dependency
+  - realization
+  - satisfy
+  - verify
+  - flow
+  - succession
+
+closureRules: []
