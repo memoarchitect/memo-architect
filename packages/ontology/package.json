@@ -1,7 +1,7 @@
 {
   "name": "@memo/ontology",
   "version": "2.0.0",
-  "description": "MEMO MBSE Ontology — 60+ SysML v2 entity types and 16 relationship types. Publishable as SysAnd .kpar package.",
+  "description": "MEMO transitional compatibility ontology package preserving legacy MEMO_Ontology imports while the clean backbone moves to @memo/ontology-core and @memo/ontology-medical.",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -28,7 +28,7 @@
     "sysml-v2",
     "mbse",
     "ontology",
-    "medical-device",
+    "compatibility",
     "sysand"
   ],
   "license": "Apache-2.0"

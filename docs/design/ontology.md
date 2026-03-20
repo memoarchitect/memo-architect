@@ -11,7 +11,7 @@ MEMO is moving to a layered ontology structure:
 - **Product-family extensions** — device or platform specific packages
 - **Rules / views / templates** — separate from ontology packages
 
-The current `@memo/ontology` package is the transitional source package that will be split along those boundaries. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
+The current `@memo/ontology` package is a transitional compatibility package that preserves the legacy `MEMO_Ontology` surface while the clean backbone moves into `@memo/ontology-core` and `@memo/ontology-medical`. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
 
 ## Design Philosophy
 
@@ -94,7 +94,7 @@ Each relationship type has:
 
 ## Ontology Package
 
-The current `@memo/ontology` package ships:
+The current `@memo/ontology` package ships a compatibility surface:
 
 ```
 packages/ontology/
@@ -105,7 +105,7 @@ packages/ontology/
   memo.config.yaml    # Base config for layers, kinds, relationships, and viewpoints
 ```
 
-Domain packages like `@memo/medical` extend the ontology by adding kinds, rules, and viewpoints via `memo.config.yaml`.
+`@memo/medical` now extends `@memo/ontology-medical` for rules, viewpoints, and templates. The legacy `@memo/ontology` package remains only for compatibility with existing imports and older examples.
 
 ## Target Package Stack
 

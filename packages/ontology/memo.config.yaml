@@ -1,9 +1,10 @@
-# @memo/ontology — Base MBSE ontology configuration
-# Domain-agnostic systems engineering concepts. Domain configs (e.g. @memo/medical)
-# extend this to add domain-specific kinds, rules, and viewpoints.
+# @memo/ontology — Transitional compatibility ontology configuration
+# Preserves the legacy broad MEMO_Ontology surface while the clean backbone
+# moves to @memo/ontology-core and @memo/ontology-medical.
 #
-# Contains universal MBSE concepts: business analysis, requirements, functional
-# analysis, logical/physical/software architecture, interfaces, and verification.
+# New work should prefer @memo/ontology-core and @memo/ontology-medical.
+# This package remains to support existing MEMO_Ontology imports and older
+# examples while the split is completed.
 
 projectName: "@memo/ontology"
 projectType: ontology
@@ -11,13 +12,14 @@ projectType: ontology
 ontologyMetadata:
   id: "@memo/ontology"
   version: "2.0.0"
-  description: "Base MBSE ontology with universal systems engineering concepts"
+  description: "Transitional compatibility ontology preserving the legacy MEMO_Ontology package surface"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
     - mbse
     - sysml-v2
     - systems-engineering
+    - compatibility
 
 # ─── CoSMA Visualization Layers ───────────────────────────────────────────────
 
@@ -661,8 +663,6 @@ viewpoints:
       - SoftwareProvidedInterface
       - SoftwareRequiredInterface
       - DataType
-      - RosTopic
-      - RosService
     visibleRelationships:
       - association
       - dependency
