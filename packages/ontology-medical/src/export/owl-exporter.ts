@@ -26,7 +26,7 @@ export interface OntologyConfig {
 
 export function exportToOwlTurtle(
     config: OntologyConfig,
-    namespace: string = 'https://sysand.dev/ontology/memo/medical-base#'
+    namespace: string = 'https://sysand.dev/ontology/memo/medical#'
 ): string {
     const lines: string[] = [];
     const prefix = 'memo';
@@ -72,7 +72,7 @@ export function exportToOwlTurtle(
 
 export function exportToOwlXml(
     config: OntologyConfig,
-    namespace: string = 'https://sysand.dev/ontology/memo/medical-base#'
+    namespace: string = 'https://sysand.dev/ontology/memo/medical#'
 ): string {
     const lines: string[] = [];
     const ns = namespace.replace(/#$/, '');

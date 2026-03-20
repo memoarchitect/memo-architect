@@ -22,7 +22,7 @@ pnpm run build
 This uses Turborepo to build all workspace packages in dependency order, including:
 
 1. `@memo/ontology-core` — Domain-agnostic MBSE backbone ontology
-2. `@memo/ontology-medical-base` — Reusable medical device development backbone
+2. `@memo/ontology-medical` — Reusable medical device development backbone
 3. `@memo/ontology` — Transitional broad ontology package
 4. `@memo/core` — Parser, model builder, validator, completeness tracker
 5. `@memo/medical` — Medical domain configuration

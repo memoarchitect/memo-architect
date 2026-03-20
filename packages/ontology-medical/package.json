@@ -1,5 +1,5 @@
 {
-  "name": "@memo/ontology-medical-base",
+  "name": "@memo/ontology-medical",
   "version": "0.1.0",
   "description": "MEMO medical ontology backbone — reusable regulated medical device development concepts built on ontology core.",
   "type": "module",

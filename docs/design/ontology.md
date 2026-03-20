@@ -7,7 +7,7 @@ The MEMO ontology defines the vocabulary of entity types and relationship types 
 MEMO is moving to a layered ontology structure:
 
 - **`@memo/ontology-core`** — domain-agnostic MBSE backbone
-- **`@memo/ontology-medical-base`** — regulated medical device development backbone built on top of core
+- **`@memo/ontology-medical`** — regulated medical device development backbone built on top of core
 - **Product-family extensions** — device or platform specific packages
 - **Rules / views / templates** — separate from ontology packages
 
@@ -125,7 +125,7 @@ The target package stack is:
   ├── verification
   └── relationships
 
-@memo/ontology-medical-base
+@memo/ontology-medical
   ├── design-control
   ├── risk-management
   ├── software-lifecycle
