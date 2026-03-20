@@ -22,6 +22,7 @@ export interface DevServer {
 
 export async function createDevServer(options: DevServerOptions): Promise<DevServer> {
     const { port, webPackagePath, initialMessages } = options;
+    const host = '127.0.0.1';
 
     // Dynamic import Vite (it's a dev dependency of @memo/web)
     let vite: any;
@@ -39,7 +40,7 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
         // Create Vite dev server in middleware mode
         viteServer = await vite.createServer({
             root: webPackagePath,
-            server: { middlewareMode: true },
+            server: { middlewareMode: true, host },
             appType: 'spa',
         });
 
@@ -103,7 +104,7 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
 
     // Start listening
     await new Promise<void>((resolve) => {
-        server.listen(port, () => resolve());
+        server.listen(port, host, () => resolve());
     });
 
     return {
