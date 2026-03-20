@@ -161,11 +161,11 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 
 ### Next Milestone — `@memo/ontology-core` **[CRITICAL]**
 
-- [ ] **Core ontology package split** — extract domain-agnostic SysML v2 ontology from current `@memo/ontology`
-- [ ] **Operational layer** — add first-class operational entities, activities, scenarios, phases/states, and context
-- [ ] **Requirements stratification** — stakeholder need, system need, functional requirement, technical requirement, interface requirement
-- [ ] **Relationship normalization** — align YAML-configured relationships with actual SysML definitions (`refines`, `derives`, `constrains`, `decomposedBy`, etc.)
-- [ ] **Analysis + verification abstractions** — add reusable constraint, analysis, calculation, test/evidence concepts
+- [x] **Core ontology package split** — first `@memo/ontology-core` workspace package added with standalone config, SysML package, and OWL export entrypoints
+- [x] **Operational layer** — first cut added with mission, operational actor/entity, operational activity/scenario, and mission phase concepts
+- [x] **Requirements stratification** — first cut added with stakeholder need, system requirement, functional/technical/interface requirement concepts
+- [x] **Relationship normalization** — first cut added with `refines`, `derives`, `constrains`, `decomposedBy`, `flow`, and `succession` in SysML and YAML
+- [x] **Analysis + verification abstractions** — first cut added with analysis case, constraint, calculation, assumption, measure, parameter, verification case, validation case, and evidence
 
 ### Next Milestone — `@memo/ontology-medical-base` **[CRITICAL]**
 
