@@ -1,6 +1,6 @@
 # Architecture Overview
 
-MEMO is a monorepo containing 5 packages that form a layered architecture from parsing to visualization.
+MEMO is a monorepo containing multiple packages that form a layered architecture from ontology definition through parsing, validation, and visualization.
 
 ## System Context
 
@@ -29,16 +29,25 @@ graph TD
         Protocol[WebSocket Protocol]
     end
 
+    subgraph "@memo/ontology-core"
+        CoreTypes[Core MBSE Types]
+        CoreRels[Core Relationships]
+    end
+
+    subgraph "@memo/ontology-medical"
+        MedTypes[Medical Backbone Types]
+        MedRels[Medical Relationships]
+    end
+
     subgraph "@memo/ontology"
-        Types[60+ SysML v2 Types]
-        Rels[16 Relationship Types]
+        Compat[Legacy MEMO_Ontology Compatibility]
     end
 
     subgraph "@memo/medical"
-        MedConfig[70 Entity Kinds]
+        MedConfig[Medical Workbench Config]
         Rules[15 Closure Rules]
-        Viewpoints[7 Viewpoints]
-        Layers[10 CoSMA Layers]
+        Viewpoints[Medical Viewpoints]
+        Templates[Starter Templates]
     end
 
     subgraph "@memo/cli"
@@ -69,7 +78,8 @@ graph TD
     DevCmd --> DevServer
     DevCmd --> FileWatcher
     ConfigResolver --> MedConfig
-    MedConfig --> Types
+    MedConfig --> MedTypes
+    MedTypes --> CoreTypes
 
     Protocol --> WS
     WS --> Zustand
@@ -83,8 +93,10 @@ graph TD
 | Package | Role | Key Exports |
 |---|---|---|
 | `@memo/core` | Parser, model, validation | `parseFiles`, `buildMemoModel`, `modelToDTO`, `evaluateClosureRules`, `computeCompleteness` |
-| `@memo/ontology` | Base type system | SysML v2 type definitions (`.sysml` files) |
-| `@memo/medical` | Domain config | `memo.config.yaml` with 70 kinds, 15 rules, 7 viewpoints |
+| `@memo/ontology-core` | Core ontology backbone | Domain-agnostic SysML v2 MBSE types |
+| `@memo/ontology-medical` | Medical ontology backbone | Medical device development types built on core |
+| `@memo/ontology` | Compatibility ontology | Legacy `MEMO_Ontology` package surface |
+| `@memo/medical` | Medical workbench config | `memo.config.yaml` with rules, viewpoints, templates, and transitional compatibility kinds |
 | `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
 | `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
 
@@ -93,9 +105,12 @@ graph TD
 ```
 @memo/web ──> @memo/core
 @memo/cli ──> @memo/core
-@memo/medical ──> @memo/ontology
+@memo/medical ──> @memo/ontology-medical
+@memo/ontology-medical ──> @memo/ontology-core
 @memo/core (standalone)
-@memo/ontology (standalone)
+@memo/ontology-core (standalone)
+@memo/ontology-medical (standalone)
+@memo/ontology (compatibility)
 ```
 
 The `@memo/core` package has zero runtime dependencies on domain packages. Domain knowledge flows through `memo.config.yaml` at runtime.
