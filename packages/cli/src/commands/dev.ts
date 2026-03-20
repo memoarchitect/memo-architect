@@ -51,6 +51,7 @@ function findSysmlFiles(dir: string): string[] {
 export async function devCommand(options: { port?: number; open?: boolean }): Promise<void> {
     const cwd = process.cwd();
     const port = options.port || 3000;
+    const host = '127.0.0.1';
 
     console.log(chalk.bold('\n🚀 MEMO Dev Server\n'));
 
@@ -168,7 +169,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         initialMessages: initial.messages,
     });
 
-    console.log(chalk.green(`\n  ➜ http://localhost:${port}\n`));
+    console.log(chalk.green(`\n  ➜ http://${host}:${port}\n`));
 
     // 4. Watch for changes
     const watcher = createFileWatcher(cwd, async () => {
@@ -180,7 +181,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     // 5. Open browser
     if (options.open !== false) {
         const openModule = await import('open');
-        openModule.default(`http://localhost:${port}`);
+        openModule.default(`http://${host}:${port}`);
     }
 
     // Keep alive
