@@ -1,92 +1,92 @@
-# @memo/medical — Medical Device Domain Configuration (Comprehensive)
-# ISO 14971 risk management, IEC 62304 software lifecycle, IEC 62366 usability
-#
-# Extends @memo/ontology (base MBSE) with medical-device-specific:
-#   - Risk management layer + kinds (Hazard, Harm, RiskControl, etc.)
-#   - UI wireframe layer + kinds
-#   - Specialized hardware (FPGA, Catheter, Microcontroller)
-#   - Specialized software (Firmware, Docker, ROS)
-#   - 15 closure rules (ISO 14971 + IEC 62304)
-#   - Medical-specific viewpoints
+# @memo/medical — Medical workbench package
+# Extends @memo/ontology-medical with:
+#   - closure rules
+#   - medical viewpoints
+#   - starter scaffolding
+#   - transitional compatibility kinds not yet moved into ontology-core/ontology-medical
 
 projectName: "@memo/medical"
 projectType: device
 
 ontologies:
-  - name: memo-ontology
-    version: "^2.0.0"
+  - name: memo-ontology-medical
+    version: "^0.1.0"
 
-extends: "@memo/ontology"
+extends: "@memo/ontology-medical"
 
 ontologyMetadata:
   id: "@memo/medical"
   version: "2.0.0"
-  description: "Comprehensive medical device ontology — ISO 14971, IEC 62304, IEC 62366"
+  description: "Medical workbench package — closure rules, viewpoints, templates, and transitional compatibility kinds"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
     - medical-device
     - ISO-14971
     - IEC-62304
-    - IEC-62366
-
-# ─── Additional CoSMA Layers (medical-specific) ──────────────────────────────
+    - workbench
 
 cosmaLayers:
-  - id: risk
-    label: Risk Management
-    color: "#E74C3C"
-
   - id: ui
     label: UI Wireframe
     color: "#3498DB"
 
-# ─── Medical-Specific Entity Kinds ───────────────────────────────────────────
-# Only kinds NOT already in @memo/ontology base.
-
 kinds:
-  # ── Risk Management (ISO 14971) ────────────────────────────────────────
-  Hazard:
-    label: Hazard
-    layer: risk
+  UserNeed:
+    label: User Need
+    layer: requirements
     sysmlConstruct: requirement def
 
-  HazardousSituation:
-    label: Hazardous Situation
-    layer: risk
+  SoftwareRequirement:
+    label: Software Requirement
+    layer: requirements
     sysmlConstruct: requirement def
 
-  Harm:
-    label: Harm
-    layer: risk
-    sysmlConstruct: requirement def
-    defaultAttributes:
-      severity: "Serious"
-
-  Risk:
-    label: Risk
-    layer: risk
-    sysmlConstruct: requirement def
-    defaultAttributes:
-      riskAcceptance: "NeedsReview"
-
-  RiskControl:
-    label: Risk Control
-    layer: risk
+  HardwareRequirement:
+    label: Hardware Requirement
+    layer: requirements
     sysmlConstruct: requirement def
 
-  SafetyGoal:
-    label: Safety Goal
-    layer: risk
+  OtherRequirement:
+    label: Other Requirement
+    layer: requirements
     sysmlConstruct: requirement def
 
-  # ── Functional (medical-specific) ──────────────────────────────────────
+  Standard:
+    label: Standard
+    layer: requirements
+    sysmlConstruct: part def
+
+  RegulatoryRequirement:
+    label: Regulatory Requirement
+    layer: requirements
+    sysmlConstruct: part def
+
+  UserActivity:
+    label: User Activity
+    layer: functional
+    sysmlConstruct: action def
+
   UIFunction:
     label: UI Function
     layer: functional
     sysmlConstruct: action def
 
-  # ── Physical (specialized hardware) ────────────────────────────────────
+  Component:
+    label: Component
+    layer: logical
+    sysmlConstruct: part def
+
+  EnvironmentElement:
+    label: Environment Element
+    layer: logical
+    sysmlConstruct: part def
+
+  Question:
+    label: Question
+    layer: logical
+    sysmlConstruct: part def
+
   Catheter:
     label: Catheter
     layer: physical
@@ -107,7 +107,6 @@ kinds:
     layer: physical
     sysmlConstruct: part def
 
-  # ── Software (specialized) ─────────────────────────────────────────────
   Software:
     label: Software
     layer: software
@@ -135,7 +134,6 @@ kinds:
     layer: software
     sysmlConstruct: part def
 
-  # ── Interfaces (specialized) ───────────────────────────────────────────
   RosTopic:
     label: ROS Topic
     layer: interfaces
@@ -146,7 +144,6 @@ kinds:
     layer: interfaces
     sysmlConstruct: interface def
 
-  # ── UI Wireframe ───────────────────────────────────────────────────────
   UIScreen:
     label: UI Screen
     layer: ui
@@ -162,41 +159,7 @@ kinds:
     layer: ui
     sysmlConstruct: part def
 
-# ─── Medical-Specific Relationship Types ─────────────────────────────────────
-
-relationshipTypes:
-  - name: mitigates
-    label: Mitigates
-    layer: risk
-    color: "#E74C3C"
-
-  - name: causes
-    label: Causes
-    layer: risk
-    color: "#C0392B"
-
-  - name: leadsTo
-    label: Leads To
-    layer: risk
-    color: "#E74C3C"
-
-  - name: identifies
-    label: Identifies
-    layer: risk
-    color: "#D35400"
-
-# ─── Backward-Compatible Flat Relationship List ──────────────────────────────
-
-relationships:
-  - mitigates
-  - causes
-  - leadsTo
-  - identifies
-
-# ─── Closure Rules ────────────────────────────────────────────────────────────
-
 closureRules:
-  # Risk management (ISO 14971)
   - id: CR-MED-001
     description: "Every Hazard must have at least one mitigates relationship (ISO 14971 §6)"
     entity: Hazard
@@ -251,7 +214,6 @@ closureRules:
       min: 1
     severity: warning
 
-  # Requirements traceability (IEC 62304)
   - id: CR-MED-007
     description: "Every SoftwareRequirement must trace to a SystemRequirement"
     entity: SoftwareRequirement
@@ -279,7 +241,6 @@ closureRules:
       min: 1
     severity: warning
 
-  # Architecture completeness
   - id: CR-MED-010
     description: "Every SystemFunction must be allocated to a Component or Software"
     entity: SystemFunction
@@ -306,7 +267,6 @@ closureRules:
       min: 1
     severity: warning
 
-  # Verification
   - id: CR-MED-013
     description: "Every SystemRequirement must be verified by at least one Test"
     entity: SystemRequirement
@@ -334,11 +294,6 @@ closureRules:
       min: 1
     severity: warning
 
-# ─── Viewpoints ───────────────────────────────────────────────────────────────
-# Medical-specific viewpoints. Base viewpoints (context-view, functional-view,
-# logical-view, interface-view, requirements-trace, use-case-view, v-and-v,
-# behavior-view) are inherited from @memo/ontology.
-
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -357,6 +312,7 @@ viewpoints:
       - identifies
     visibleLayers:
       - risk
+      - safety
     diagrams:
       - id: diag-risk-chain
         name: Risk Mitigation Chain
@@ -365,8 +321,6 @@ viewpoints:
         auto: true
         description: Hazard to RiskControl to Test mitigation chain
 
-  # Safety Viewpoint — distinct from risk per Asensus/GPCA: how the system
-  # provides safety, illustrated via safety goals, controls, and mitigations
   - id: safety-view
     label: Safety Analysis
     supportedDiagramTypes: [bdd, req, pkg]
@@ -384,6 +338,7 @@ viewpoints:
       - verify
     visibleLayers:
       - risk
+      - safety
       - functional
       - verification
     diagrams:
@@ -399,15 +354,19 @@ viewpoints:
     supportedDiagramTypes: [bdd, ibd, pkg]
     visibleKinds:
       - Software
+      - SoftwareSystem
+      - SoftwareItem
+      - SoftwareUnit
       - SoftwareComponent
       - SoftwareModule
       - Firmware
       - Docker
       - OperatingSystem
       - RosNode
-      - SoftwareInterface
       - RosTopic
       - RosService
+      - Interface
+      - InterfaceContract
     visibleRelationships:
       - aggregation
       - composedOf
@@ -415,6 +374,7 @@ viewpoints:
       - realization
     visibleLayers:
       - software
+      - software-lifecycle
       - interfaces
     diagrams:
       - id: diag-sw-decomposition
@@ -422,7 +382,7 @@ viewpoints:
         diagramType: bdd
         viewpointId: software-view
         auto: true
-        description: Software components and modules hierarchy
+        description: Software components and lifecycle decomposition
 
   - id: physical-view
     label: Physical Architecture
@@ -434,6 +394,10 @@ viewpoints:
       - HardwareNode
       - ComputingDevice
       - PhysicalModule
+      - FPGA
+      - Microcontroller
+      - SingleBoardComputer
+      - Catheter
     visibleRelationships:
       - aggregation
       - composedOf
@@ -455,8 +419,6 @@ viewpoints:
         description: Physical system breakdown — nested containment view
         properties:
           layoutStyle: ibd
-
-# ─── First Run Configuration ─────────────────────────────────────────────────
 
 firstRun:
   template: infusion-pump

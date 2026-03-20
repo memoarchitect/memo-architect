@@ -6,10 +6,12 @@ MEMO uses a YAML-based configuration system with inheritance chains for domain r
 
 ```mermaid
 graph TD
-    Ontology["@memo/ontology<br/>memo.config.yaml<br/>(base: empty kinds)"] --> Medical["@memo/medical<br/>memo.config.yaml<br/>(70 kinds, 15 rules, 7 viewpoints)"]
+    Core["@memo/ontology-core<br/>memo.config.yaml<br/>(domain-agnostic backbone)"] --> MedicalOntology["@memo/ontology-medical<br/>memo.config.yaml<br/>(medical ontology backbone)"]
+    MedicalOntology --> Medical["@memo/medical<br/>memo.config.yaml<br/>(rules, viewpoints, templates)"]
     Medical --> Project["your-project/<br/>memo.config.yaml<br/>(extends: @memo/medical)"]
 
-    style Ontology fill:#7B68EE,color:#fff
+    style Core fill:#7B68EE,color:#fff
+    style MedicalOntology fill:#C0392B,color:#fff
     style Medical fill:#E74C3C,color:#fff
     style Project fill:#2ECC71,color:#fff
 ```
