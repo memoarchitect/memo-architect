@@ -16,12 +16,24 @@ package InfusionPump_Compliance {
         attribute redefines name = "Alarm acknowledgement during occlusion";
     }
 
+    part useSpecAlarmWorkflow : UseSpecification {
+        attribute redefines title = "Alarm acknowledgement use specification";
+    }
+
+    part useErrorAnalysisAlarmWorkflow : UseErrorAnalysis {
+        attribute redefines title = "Alarm acknowledgement use-error analysis";
+    }
+
     requirement pofControlledInfusion : PrimaryOperatingFunction {
         attribute redefines title = "Deliver prescribed infusion within clinically acceptable limits";
     }
 
     requirement epControlledDelivery : EssentialPerformance {
         attribute redefines title = "Maintain controlled infusion delivery and annunciation";
+    }
+
+    requirement lossOfControlledDelivery : EssentialPerformanceLossCondition {
+        attribute redefines title = "Loss of controlled infusion delivery or alarm annunciation during therapy";
     }
 
     action sfMaintainControlledDelivery : SafetyFunction {
@@ -32,7 +44,11 @@ package InfusionPump_Compliance {
         attribute redefines title = "Alarm acknowledgement usability specification";
     }
 
-    part usabilityValAlarmWorkflow : UsabilityValidation {
+    part formativeEvalAlarmWorkflow : FormativeEvaluation {
+        attribute redefines title = "Alarm acknowledgement formative evaluation";
+    }
+
+    part summativeEvalAlarmWorkflow : SummativeEvaluation {
         attribute redefines title = "Alarm acknowledgement summative validation";
     }
 
@@ -57,6 +73,10 @@ package InfusionPump_Compliance {
 
     part swPlanPumpController : SoftwareDevelopmentPlan {
         attribute redefines title = "Pump controller software development plan";
+    }
+
+    part swReqSpecPumpController : SoftwareRequirementsArtifact {
+        attribute redefines title = "Pump controller software requirements specification";
     }
 
     part swArchPumpController : SoftwareArchitectureArtifact {
@@ -86,9 +106,27 @@ package InfusionPump_Compliance {
         attribute redefines title = "Alarm acknowledgement fix impact assessment";
     }
 
+    part collateralAlarmStandard : CollateralStandardRequirement {
+        attribute redefines name = "IEC 60601-1-8 alarm presentation applicability";
+        attribute redefines standardRef = "IEC 60601-1-8";
+        attribute redefines clause = "6.3";
+    }
+
+    part particularInfusionPumpStandard : ParticularStandardRequirement {
+        attribute redefines name = "IEC 60601-2-24 infusion pump safety applicability";
+        attribute redefines standardRef = "IEC 60601-2-24";
+        attribute redefines clause = "201.12.4.101";
+    }
+
     part dhfSoftwareTrace : DesignHistoryRecord {
         attribute redefines recordId = "DHF-001";
         attribute redefines title = "Software and usability trace package";
+    }
+
+    part evidenceFormativeUiFindings : ComplianceEvidence {
+        attribute redefines recordId = "EV-002";
+        attribute redefines title = "Formative usability findings";
+        attribute redefines artifactType = "Formative Evaluation Report";
     }
 
     part evidenceUsabilitySummary : ComplianceEvidence {
@@ -101,6 +139,30 @@ package InfusionPump_Compliance {
         attribute redefines recordId = "REL-001";
         attribute redefines title = "Release baseline 1.0";
         attribute redefines version = "1.0.0";
+    }
+
+    action swDevProcessPumpController : SoftwareDevelopmentProcess {
+        attribute redefines name = "Pump controller software development process";
+    }
+
+    action swMaintProcessPumpController : SoftwareMaintenanceProcess {
+        attribute redefines name = "Pump controller software maintenance process";
+    }
+
+    action swRequirementsAlarmHandling : SoftwareRequirementsAnalysisActivity {
+        attribute redefines name = "Analyze alarm handling software requirements";
+    }
+
+    action swArchitectureAlarmHandling : SoftwareArchitecturalDesignActivity {
+        attribute redefines name = "Design alarm handling software architecture";
+    }
+
+    action swVerificationAlarmHandling : SoftwareVerificationActivity {
+        attribute redefines name = "Verify alarm handling implementation";
+    }
+
+    action swProblemResolutionAlarmDelay : ProblemResolutionActivity {
+        attribute redefines name = "Resolve alarm acknowledgement latency anomaly";
     }
 
     part testAlarmUiWorkflow : Test {
@@ -119,25 +181,42 @@ package InfusionPump_Compliance {
     }
 
     connection : AddressesUseError connect uiRequirement ::> uiReqAlarmAcknowledgement to useError ::> useErrAlarmSilenced;
-    connection : TraceTo connect source ::> useErrAlarmSilenced to target ::> hazUnderInfusion;
-    connection : TraceTo connect source ::> alarmAckScenario to target ::> useErrAlarmSilenced;
-    connection : TraceTo connect source ::> pofControlledInfusion to target ::> srFlowAccuracy;
-    connection : TraceTo connect source ::> epControlledDelivery to target ::> pofControlledInfusion;
+    connection : AnalyzesUseError connect analysis ::> useErrorAnalysisAlarmWorkflow to useError ::> useErrAlarmSilenced;
+    connection : SpecifiesScenario connect specification ::> useSpecAlarmWorkflow to scenario ::> alarmAckScenario;
+    connection : ExposesUseError connect scenario ::> alarmAckScenario to useError ::> useErrAlarmSilenced;
+    connection : ContributesToHazard connect useError ::> useErrAlarmSilenced to hazard ::> hazUnderInfusion;
+    connection : Refines connect refined ::> srAlarmAudibility to refiner ::> uiReqAlarmAcknowledgement;
+    connection : SupportsOperatingFunction connect performance ::> epControlledDelivery to function ::> pofControlledInfusion;
+    connection : DefinesLossCondition connect performance ::> epControlledDelivery to condition ::> lossOfControlledDelivery;
     connection : Preserves connect function ::> sfMaintainControlledDelivery to performance ::> epControlledDelivery;
-    connection : TraceTo connect source ::> sfMaintainControlledDelivery to target ::> rcFlowRateLimiter;
-    connection : TraceTo connect source ::> uiReqAlarmAcknowledgement to target ::> srAlarmAudibility;
-    connection : TraceTo connect source ::> swItemTherapyController to target ::> srFlowAccuracy;
-    connection : TraceTo connect source ::> swItemAlarmSupervisor to target ::> srAlarmAudibility;
+    connection : ProtectsEssentialPerformance connect control ::> rcFlowRateLimiter to performance ::> epControlledDelivery;
+    connection : ImplementsRiskControl connect implementer ::> sfMaintainControlledDelivery to control ::> rcFlowRateLimiter;
+    connection : Satisfy connect satisfiedBy ::> swItemTherapyController to satisfies ::> srFlowAccuracy;
+    connection : Satisfy connect satisfiedBy ::> swItemAlarmSupervisor to satisfies ::> srAlarmAudibility;
+    connection : EvaluatesRequirement connect evaluation ::> formativeEvalAlarmWorkflow to uiRequirement ::> uiReqAlarmAcknowledgement;
+    connection : EvaluatesRequirement connect evaluation ::> summativeEvalAlarmWorkflow to uiRequirement ::> uiReqAlarmAcknowledgement;
+    connection : AppliesStandardRequirement connect standardRequirement ::> collateralAlarmStandard to subject ::> epControlledDelivery;
+    connection : AppliesStandardRequirement connect standardRequirement ::> particularInfusionPumpStandard to subject ::> pofControlledInfusion;
     connection : Causes connect hazard ::> hazFreeFlow to situation ::> hsFreeFlowSituation;
     connection : LeadsTo connect situation ::> hsFreeFlowSituation to harm ::> harmOverdose;
     connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> uiReqAlarmAcknowledgement;
-    connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> usabilityValAlarmWorkflow;
+    connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> summativeEvalAlarmWorkflow;
     connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> srAlarmAudibility;
     connection : Verify connect verifiedBy ::> testSoftwareFlowControl to verifies ::> srFlowAccuracy;
     connection : Verify connect verifiedBy ::> testSoftwareFlowControl to verifies ::> swrAlarmManagement;
     connection : Verify connect verifiedBy ::> testSoftwareFlowControl to verifies ::> rcFlowRateLimiter;
     connection : Verify connect verifiedBy ::> testAntiFreeFlowContainment to verifies ::> rcAntiFreeFlow;
+    connection : GovernsActivity connect process ::> swDevProcessPumpController to activity ::> swRequirementsAlarmHandling;
+    connection : GovernsActivity connect process ::> swDevProcessPumpController to activity ::> swArchitectureAlarmHandling;
+    connection : GovernsActivity connect process ::> swDevProcessPumpController to activity ::> swVerificationAlarmHandling;
+    connection : GovernsActivity connect process ::> swMaintProcessPumpController to activity ::> swProblemResolutionAlarmDelay;
+    connection : ProducesWorkProduct connect activity ::> swRequirementsAlarmHandling to workProduct ::> swReqSpecPumpController;
+    connection : ProducesWorkProduct connect activity ::> swArchitectureAlarmHandling to workProduct ::> swArchPumpController;
+    connection : ProducesWorkProduct connect activity ::> swArchitectureAlarmHandling to workProduct ::> swDesignAlarmHandling;
+    connection : ProducesWorkProduct connect activity ::> swProblemResolutionAlarmDelay to workProduct ::> problemAlarmDelay;
+    connection : ProducesWorkProduct connect activity ::> swProblemResolutionAlarmDelay to workProduct ::> changeAlarmDelay;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swPlanPumpController;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swReqSpecPumpController;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swArchPumpController;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swDesignAlarmHandling;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> soupRtos;
@@ -145,7 +224,15 @@ package InfusionPump_Compliance {
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> problemAlarmDelay;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> changeAlarmDelay;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> releaseBaseline10;
-    connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> usabilityValAlarmWorkflow;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> useSpecAlarmWorkflow;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> useErrorAnalysisAlarmWorkflow;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> formativeEvalAlarmWorkflow;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> summativeEvalAlarmWorkflow;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> collateralAlarmStandard;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> particularInfusionPumpStandard;
+    connection : Evidences connect evidence ::> evidenceFormativeUiFindings to subject ::> formativeEvalAlarmWorkflow;
+    connection : Evidences connect evidence ::> evidenceFormativeUiFindings to subject ::> useErrorAnalysisAlarmWorkflow;
+    connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> summativeEvalAlarmWorkflow;
     connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> uiReqAlarmAcknowledgement;
     connection : Documents connect record ::> releaseBaseline10 to subject ::> swSystemPumpController;
     connection : Documents connect record ::> releaseBaseline10 to subject ::> swItemTherapyController;

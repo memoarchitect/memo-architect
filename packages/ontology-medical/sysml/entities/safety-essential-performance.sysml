@@ -14,6 +14,10 @@ package MEMO_Ontology_Medical_Safety {
 
     requirement def PrimaryOperatingFunction :> EssentialPerformance { }
 
+    requirement def EssentialPerformanceLossCondition {
+        attribute title : String;
+    }
+
     action def SafetyFunction {
         attribute name : String;
     }
@@ -21,4 +25,8 @@ package MEMO_Ontology_Medical_Safety {
     part def ProtectiveMeasure {
         attribute name : String;
     }
+
+    part def CollateralStandardRequirement :> RegulatoryRequirement { }
+
+    part def ParticularStandardRequirement :> RegulatoryRequirement { }
 }

@@ -38,11 +38,11 @@ closureRules:
     severity: error
 
   - id: CR-MED-002
-    description: "Every Hazard must trace to at least one SystemFunction or UseCase"
+    description: "Every Hazard must cause at least one HazardousSituation"
     entity: Hazard
     rule:
       type: requireRelationship
-      relationship: traceTo
+      relationship: causes
       min: 1
     severity: error
 
@@ -83,20 +83,20 @@ closureRules:
     severity: warning
 
   - id: CR-MED-007
-    description: "Every SoftwareRequirement must trace to a SystemRequirement"
+    description: "Every SoftwareRequirement must derive from a SystemRequirement"
     entity: SoftwareRequirement
     rule:
       type: requireRelationship
-      relationship: traceTo
+      relationship: derives
       min: 1
     severity: error
 
   - id: CR-MED-008
-    description: "Every SystemRequirement must trace to a UserNeed"
+    description: "Every SystemRequirement should derive from a UserNeed"
     entity: SystemRequirement
     rule:
       type: requireRelationship
-      relationship: traceTo
+      relationship: derives
       min: 1
     severity: warning
 
@@ -127,11 +127,11 @@ closureRules:
     severity: error
 
   - id: CR-MED-012
-    description: "Every UseCase must trace to at least one Scenario"
+    description: "Every UseCase should be refined by at least one Scenario"
     entity: UseCase
     rule:
       type: requireRelationship
-      relationship: traceTo
+      relationship: refines
       min: 1
     severity: warning
 
@@ -154,11 +154,11 @@ closureRules:
     severity: warning
 
   - id: CR-MED-015
-    description: "Every UserNeed must trace to at least one UseCase"
+    description: "Every UserNeed should derive at least one SystemRequirement"
     entity: UserNeed
     rule:
       type: requireRelationship
-      relationship: traceTo
+      relationship: derives
       min: 1
     severity: warning
 
@@ -231,6 +231,7 @@ viewpoints:
       - causes
       - leadsTo
       - identifies
+      - contributesToHazard
     visibleLayers:
       - risk
       - safety
@@ -250,10 +251,15 @@ viewpoints:
       - EssentialPerformance
       - BasicSafety
       - PrimaryOperatingFunction
+      - EssentialPerformanceLossCondition
       - RiskControl
       - Hazard
       - UserInterfaceRequirement
       - UseError
+      - CollateralStandardRequirement
+      - ParticularStandardRequirement
+      - FormativeEvaluation
+      - SummativeEvaluation
       - SystemFunction
       - ComponentFunction
       - Test
@@ -262,7 +268,11 @@ viewpoints:
       - preserves
       - addressesUseError
       - allocateTo
-      - traceTo
+      - supportsOperatingFunction
+      - definesLossCondition
+      - protectsEssentialPerformance
+      - implementsRiskControl
+      - appliesStandardRequirement
       - verify
     visibleLayers:
       - risk
@@ -288,6 +298,19 @@ viewpoints:
       - SOUPItem
       - SoftwareAnomaly
       - MaintenanceRelease
+      - SoftwareLifecycleProcess
+      - SoftwareLifecycleActivity
+      - SoftwareDevelopmentProcess
+      - SoftwareMaintenanceProcess
+      - SoftwareRiskManagementProcess
+      - SoftwareRequirementsAnalysisActivity
+      - SoftwareArchitecturalDesignActivity
+      - SoftwareDetailedDesignActivity
+      - SoftwareUnitImplementationActivity
+      - SoftwareVerificationActivity
+      - ProblemResolutionActivity
+      - SoftwareWorkProduct
+      - SoftwareRequirementsArtifact
       - SoftwareDevelopmentPlan
       - SoftwareArchitectureArtifact
       - SoftwareDetailedDesign
@@ -310,6 +333,8 @@ viewpoints:
       - dependency
       - realization
       - documents
+      - governsActivity
+      - producesWorkProduct
     visibleLayers:
       - software
       - software-lifecycle
@@ -323,7 +348,7 @@ viewpoints:
         description: Software components and lifecycle decomposition
 
   - id: usability-view
-    label: Usability Engineering (IEC 60601-1-6)
+    label: Usability Engineering (IEC 62366 / IEC 60601-1-6)
     supportedDiagramTypes: [req, act, bdd, pkg]
     visibleKinds:
       - UserNeed
@@ -332,15 +357,25 @@ viewpoints:
       - UserActivity
       - UserInterfaceRequirement
       - UseError
+      - UseSpecification
+      - UseErrorAnalysis
       - HazardRelatedUseScenario
       - UsabilitySpecification
       - UsabilityValidation
+      - FormativeEvaluation
+      - SummativeEvaluation
       - EssentialPerformance
       - BasicSafety
       - Test
     visibleRelationships:
-      - traceTo
+      - derives
+      - refines
       - addressesUseError
+      - analyzesUseError
+      - specifiesScenario
+      - exposesUseError
+      - evaluatesRequirement
+      - contributesToHazard
       - preserves
       - verify
     visibleLayers:

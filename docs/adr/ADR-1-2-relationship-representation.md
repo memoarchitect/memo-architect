@@ -6,7 +6,7 @@
 
 ## Decision
 
-MEMO relationships map to SysML v2 `connection def` types. The EA MDG defines 11 relationship stereotypes; we add 5 more for ISO 14971 risk chains and verification, totaling **16 relationship types**.
+MEMO relationships map to SysML v2 `connection def` types. The initial core mapping carried the EA MDG relationship surface plus ISO 14971 risk-chain additions for a 16-relationship baseline. The layered ontology now extends that baseline in `@memo/ontology-medical` with medical-specific relations for IEC 62366, IEC 60601, and IEC 62304 semantics.
 
 ### Complete Relationship Mapping
 
@@ -63,7 +63,7 @@ These four risk-specific relationships are NOT in the EA MDG (which uses generic
 
 ## Consequences
 
-- 16 typed relationships cover all EA MDG stereotypes plus ISO 14971 risk chain.
+- The original 16-relationship baseline covers the EA MDG stereotypes plus the ISO 14971 risk chain, and the layered ontology can extend it with domain-specific relations above core.
 - All relationships are `connection def` — first-class, navigable, diagrammable.
 - Relationship constraints from EA are enforced via YAML closure rules, not SysML v2 syntax.
 - Risk chain relationships (Mitigates, Causes, LeadsTo, Identifies) enable automated compliance checking.

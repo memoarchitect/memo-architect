@@ -7,6 +7,7 @@ It now provides:
 - closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
 - workbench validation, viewpoints, and starter templates on top of the medical ontology
+- second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
 
 ## Overview
 
@@ -37,6 +38,7 @@ The ontology-level software lifecycle concepts live in `@memo/ontology-medical`.
 medical workbench package adds traceability and completeness rules over them:
 
 - User needs → System requirements → Software requirements
+- Explicit lifecycle processes → activities → work products
 - Software architecture decomposition
 - Verification of requirements
 - Software item safety classification
@@ -52,7 +54,9 @@ specializes the core `StakeholderNeed` concept.
 The ontology-level safety, design-control, and product-UI concepts live in `@memo/ontology-medical`.
 The medical workbench package adds usability and essential-performance checks over them:
 
-- Essential performance linked to safety functions
+- Use specifications, use-error analysis, and formative/summative evaluations
+- Essential performance linked to safety functions, risk controls, and explicit loss conditions
+- Collateral / particular-standard applicability traces
 - User interface requirements linked to use errors and implemented UI elements
 - Usability requirements verified by tests/validation artifacts
 

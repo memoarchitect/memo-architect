@@ -31,6 +31,14 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute title : String;
     }
 
+    part def UseSpecification {
+        attribute title : String;
+    }
+
+    part def UseErrorAnalysis {
+        attribute title : String;
+    }
+
     part def DesignOutput {
         attribute outputId : String;
         attribute title : String;
@@ -46,6 +54,14 @@ package MEMO_Ontology_Medical_DesignControl {
     }
 
     part def UsabilityValidation :> ValidationCase {
+        attribute title : String;
+    }
+
+    part def FormativeEvaluation :> ValidationCase {
+        attribute title : String;
+    }
+
+    part def SummativeEvaluation :> UsabilityValidation {
         attribute title : String;
     }
 

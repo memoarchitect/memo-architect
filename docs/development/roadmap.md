@@ -29,7 +29,7 @@ The medical backbone is intended to support traceable development against **ISO 
 ### Phase 1 — Foundation
 
 - [x] Langium SysML v2 parser with full grammar
-- [x] Ontology with 60+ entity types, 16 relationship types
+- [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
 - [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 21 rules, 5 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
@@ -218,14 +218,14 @@ Exit criteria:
 
 Deepen the medical ontology beyond the first-cut backbone so it is methodologically stronger for regulated development:
 
-- [ ] **IEC 62366 usability engineering enrichment** — add more explicit concepts for usability engineering artifacts, use-error analysis, and summative/formative evidence structure
-- [ ] **IEC 60601 safety structure enrichment** — model collateral/particular-standard applicability, essential-performance loss conditions, and stronger safety trace semantics
-- [ ] **IEC 62304 lifecycle enrichment** — add explicit process/activity/work-product concepts where the current model only has top-level artifacts
-- [ ] **Tighten relationship semantics** — replace generic `traceTo` with more precise relations where the domain meaning is stable and worth encoding
+- [x] **IEC 62366 usability engineering enrichment** — added `UseSpecification`, `UseErrorAnalysis`, `FormativeEvaluation`, and `SummativeEvaluation`, with explicit analysis/evaluation/evidence relationships in `@memo/ontology-medical`
+- [x] **IEC 60601 safety structure enrichment** — added collateral/particular-standard applicability, essential-performance loss conditions, and stronger essential-performance / risk-control trace semantics
+- [x] **IEC 62304 lifecycle enrichment** — added lifecycle process/activity/work-product concepts and exercised them in the infusion-pump example and starter template
+- [x] **Tighten relationship semantics** — replaced generic `traceTo` links with `derives`, `refines`, `satisfy`, and new medical relations where the domain meaning is stable
 
 Exit criteria:
-- `@memo/ontology-medical` covers a stronger second-pass 62366/60601/62304 backbone
-- at least one live example uses the new concepts
+- [x] `@memo/ontology-medical` covers a stronger second-pass 62366/60601/62304 backbone
+- [x] at least one live example uses the new concepts
 
 ### Next Ontology Milestone — Rule-Pack Expansion **[HIGH]**
 

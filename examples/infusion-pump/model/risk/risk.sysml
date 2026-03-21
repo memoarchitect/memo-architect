@@ -35,6 +35,16 @@ package InfusionPump_Risk {
     }
 
     // Hazardous Situations
+    requirement hsOverInfusionSituation : HazardousSituation {
+        attribute redefines title = "Over-Infusion During Therapy";
+        attribute redefines description = "Flow-control failure causes medication delivery above the programmed rate";
+    }
+
+    requirement hsUnderInfusionSituation : HazardousSituation {
+        attribute redefines title = "Under-Infusion During Therapy";
+        attribute redefines description = "Occlusion or control failure prevents the programmed therapy from reaching the patient";
+    }
+
     requirement hsFreeFlowSituation : HazardousSituation {
         attribute redefines title = "Free-Flow During Infusion";
         attribute redefines description = "IV tubing disconnected while medication is flowing";
@@ -44,6 +54,11 @@ package InfusionPump_Risk {
     requirement harmOverdose : Harm {
         attribute redefines title = "Medication Overdose";
         attribute redefines description = "Patient overdose requiring medical intervention";
+    }
+
+    requirement harmTherapyFailure : Harm {
+        attribute redefines title = "Therapy Failure";
+        attribute redefines description = "Loss of intended therapy effect due to insufficient medication delivery";
     }
 
     // Risk Controls
@@ -75,7 +90,11 @@ package InfusionPump_Risk {
     connection : Mitigates connect control ::> rcOcclusionAlarm to hazard ::> hazUnderInfusion;
 
     // Risk chain relationships
-    connection : TraceTo connect source ::> hsFreeFlowSituation to target ::> hazFreeFlow;
-    connection : TraceTo connect source ::> harmOverdose to target ::> hazOverInfusion;
-    connection : Identifies connect source ::> riskOverInfusion to target ::> hazOverInfusion;
+    connection : Causes connect hazard ::> hazOverInfusion to situation ::> hsOverInfusionSituation;
+    connection : Causes connect hazard ::> hazUnderInfusion to situation ::> hsUnderInfusionSituation;
+    connection : Causes connect hazard ::> hazFreeFlow to situation ::> hsFreeFlowSituation;
+    connection : LeadsTo connect situation ::> hsOverInfusionSituation to harm ::> harmOverdose;
+    connection : LeadsTo connect situation ::> hsUnderInfusionSituation to harm ::> harmTherapyFailure;
+    connection : LeadsTo connect situation ::> hsFreeFlowSituation to harm ::> harmOverdose;
+    connection : Identifies connect risk ::> riskOverInfusion to hazard ::> hazOverInfusion;
 }

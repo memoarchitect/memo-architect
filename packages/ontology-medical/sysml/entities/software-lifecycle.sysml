@@ -29,32 +29,56 @@ package MEMO_Ontology_Medical_SoftwareLifecycle {
         attribute title : String;
     }
 
-    part def MaintenanceRelease {
+    action def SoftwareLifecycleProcess {
+        attribute name : String;
+    }
+
+    action def SoftwareLifecycleActivity {
+        attribute name : String;
+    }
+
+    action def SoftwareDevelopmentProcess :> SoftwareLifecycleProcess { }
+
+    action def SoftwareMaintenanceProcess :> SoftwareLifecycleProcess { }
+
+    action def SoftwareRiskManagementProcess :> SoftwareLifecycleProcess { }
+
+    action def SoftwareRequirementsAnalysisActivity :> SoftwareLifecycleActivity { }
+
+    action def SoftwareArchitecturalDesignActivity :> SoftwareLifecycleActivity { }
+
+    action def SoftwareDetailedDesignActivity :> SoftwareLifecycleActivity { }
+
+    action def SoftwareUnitImplementationActivity :> SoftwareLifecycleActivity { }
+
+    action def SoftwareVerificationActivity :> SoftwareLifecycleActivity { }
+
+    action def ProblemResolutionActivity :> SoftwareLifecycleActivity { }
+
+    part def SoftwareWorkProduct {
+        attribute title : String;
+    }
+
+    part def MaintenanceRelease :> SoftwareWorkProduct {
         attribute version : String;
     }
 
-    part def SoftwareDevelopmentPlan {
-        attribute title : String;
-    }
+    part def SoftwareRequirementsArtifact :> SoftwareWorkProduct { }
 
-    part def SoftwareArchitectureArtifact {
-        attribute title : String;
-    }
+    part def SoftwareDevelopmentPlan :> SoftwareWorkProduct { }
 
-    part def SoftwareDetailedDesign {
-        attribute title : String;
-    }
+    part def SoftwareArchitectureArtifact :> SoftwareWorkProduct { }
 
-    part def SOUPEvaluation {
-        attribute title : String;
-    }
+    part def SoftwareDetailedDesign :> SoftwareWorkProduct { }
 
-    part def SoftwareProblemReport {
+    part def SOUPEvaluation :> SoftwareWorkProduct { }
+
+    part def SoftwareProblemReport :> SoftwareWorkProduct {
         attribute reportId : String;
         attribute title : String;
     }
 
-    part def ChangeImpactAssessment {
+    part def ChangeImpactAssessment :> SoftwareWorkProduct {
         attribute assessmentId : String;
         attribute title : String;
     }
