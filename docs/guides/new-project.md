@@ -64,7 +64,7 @@ it automatically belongs to its layer.
 | Layer | Example Kinds | Purpose |
 |-------|---------------|---------|
 | **Business** | Actor, Stakeholder, UseCase, Scenario | Who uses the device and why |
-| **Requirements** | StakeholderNeed, SystemRequirement, SoftwareRequirement | What the device must do |
+| **Requirements** | UserNeed, SystemRequirement, SoftwareRequirement | What the device must do |
 | **Risk** | Hazard, HazardousSituation, Harm, Risk, RiskControl | ISO 14971 risk management |
 | **Functional** | SystemFunction, ComponentFunction, UserActivity | What functions the device performs |
 | **Logical** | System, Subsystem, LogicalComponent | Logical decomposition |

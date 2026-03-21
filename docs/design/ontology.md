@@ -40,7 +40,7 @@ Entity kinds are mapped to SysML v2 constructs:
 | Construct | Used For | Examples |
 |---|---|---|
 | `part def` | Physical/logical elements | System, Component, InterfaceContract |
-| `requirement def` | Needs and requirements | StakeholderNeed, SystemRequirement |
+| `requirement def` | Needs and requirements | StakeholderNeed, UserNeed, SystemRequirement |
 | `action def` | Functions/behaviors | SystemFunction, OperationalActivity |
 | `port def` | Interfaces/ports | Port, DataPort, FlowPort |
 | `connection def` | Relationships | mitigates, traceTo, verify |
@@ -50,7 +50,7 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
-- **Medical base** adds medical-device-specific concepts such as risk management, design-control artifacts, software lifecycle semantics, and safety/essential-performance concepts.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control artifacts, software lifecycle semantics, and safety/essential-performance concepts.
 - **Extensions** carry product-family or technology-specific concepts such as ROS integration, UI wireframes, or device-family parts.
 
 ## Relationship Types
@@ -127,6 +127,7 @@ The target package stack is:
 
 @memo/ontology-medical
   ├── design-control
+  ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── risk-management
   ├── software-lifecycle
   ├── safety-essential-performance

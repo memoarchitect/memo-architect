@@ -165,7 +165,7 @@ extends: "@memo/medical"
         // Write a SysML model with elements and a traced relationship
         writeFileSync(join(projectDir, 'model', 'device.sysml'), `
 package CustomDevice {
-    import MEMO_Ontology::*;
+    import MEMO_Ontology_Medical::*;
 
     part mySystem : System {
         attribute redefines name = "Custom Device";
@@ -200,7 +200,7 @@ package CustomDevice {
     it('detects missing relationships per closure rules', () => {
         const { stdout } = runMayFail('validate', projectDir);
 
-        // sysReq1 should have a warning about not being satisfied by a Component
+        // sysReq1 should have a warning about not being satisfied by a LogicalComponent
         expect(stdout).toContain('SystemRequirement');
     });
 });

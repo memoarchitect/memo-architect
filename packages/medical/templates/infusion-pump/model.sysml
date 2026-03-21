@@ -68,22 +68,22 @@ package InfusionPump {
     // REQUIREMENTS LAYER — Needs → System Reqs → Software Reqs
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Stakeholder Needs
-    requirement unAccurateDelivery : StakeholderNeed {
+    // User Needs
+    requirement unAccurateDelivery : UserNeed {
         attribute redefines reqId = "UN-001";
         attribute redefines title = "Accurate Medication Delivery";
         doc /* The clinician needs the pump to deliver medication at the
              * prescribed rate with clinically acceptable accuracy. */
     }
 
-    requirement unOcclusionAlert : StakeholderNeed {
+    requirement unOcclusionAlert : UserNeed {
         attribute redefines reqId = "UN-002";
         attribute redefines title = "Occlusion Alerting";
         doc /* The clinician needs to be alerted promptly when the
              * infusion line is occluded. */
     }
 
-    requirement unFreeFlowPrevention : StakeholderNeed {
+    requirement unFreeFlowPrevention : UserNeed {
         attribute redefines reqId = "UN-003";
         attribute redefines title = "Free-Flow Prevention";
         doc /* The patient needs protection from uncontrolled
@@ -450,7 +450,7 @@ package InfusionPump {
     // TRACEABILITY — Cross-layer relationships
     // ═══════════════════════════════════════════════════════════════════════
 
-    // StakeholderNeed → SystemRequirement
+    // UserNeed → SystemRequirement
     connection : TraceTo connect source ::> unAccurateDelivery to target ::> sysReqFlowAccuracy;
     connection : TraceTo connect source ::> unOcclusionAlert to target ::> sysReqOcclusionDetect;
     connection : TraceTo connect source ::> unFreeFlowPrevention to target ::> sysReqAntiFreeFlow;

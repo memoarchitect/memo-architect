@@ -22,7 +22,7 @@ Checking 15 closure rules against 74 elements...
 ✗ CR-MED-007  Every SoftwareRequirement must trace to SystemRequirement
               Missing: swReqLogging (Audit Logging)
 
-⚠ CR-MED-008  Every SystemRequirement should trace to StakeholderNeed
+⚠ CR-MED-008  Every SystemRequirement should trace to UserNeed
               Missing: sysReqBattery (Battery Life)
 
 Results: 2 errors, 1 warning — 94% complete
@@ -49,7 +49,7 @@ Results: 2 errors, 1 warning — 94% complete
 | Rule | Check | Severity |
 |------|-------|----------|
 | CR-MED-007 | Every **SoftwareRequirement** must trace to SystemRequirement | Error |
-| CR-MED-008 | Every **SystemRequirement** should trace to StakeholderNeed | Warning |
+| CR-MED-008 | Every **SystemRequirement** should trace to UserNeed | Warning |
 | CR-MED-009 | Every **SystemRequirement** should be satisfied by LogicalComponent | Warning |
 
 ### Architecture Completeness
@@ -66,7 +66,7 @@ Results: 2 errors, 1 warning — 94% complete
 |------|-------|----------|
 | CR-MED-013 | Every **SystemRequirement** should be verified by ≥1 Test | Warning |
 | CR-MED-014 | Every **SoftwareRequirement** should be verified by ≥1 Test | Warning |
-| CR-MED-015 | Every **StakeholderNeed** should trace to ≥1 UseCase | Warning |
+| CR-MED-015 | Every **UserNeed** should trace to ≥1 UseCase | Warning |
 
 ## The Completeness Bar (Web UI)
 
