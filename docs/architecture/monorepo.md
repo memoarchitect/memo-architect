@@ -29,12 +29,12 @@ memo/
 │   │   │   └── index.ts                  # Public API barrel
 │   │   └── src/__tests__/               # 120 tests (parser, builder, ontology)
 │   │
-│   ├── ontology/                # @memo/ontology — base type system
+│   ├── ontology/                # @memo/ontology — legacy compatibility shim
 │   │   ├── sysml/
 │   │   │   ├── entities/                 # SysML v2 entity type definitions
 │   │   │   ├── relationships/            # Connection definitions
 │   │   │   └── index.sysml              # Package entry
-│   │   ├── memo.config.yaml             # Base ontology config
+│   │   ├── memo.config.yaml             # Compatibility config layered on @memo/ontology-medical
 │   │   └── scripts/
 │   │       └── pack-kpar.ts             # Package as .kpar archive
 │   │

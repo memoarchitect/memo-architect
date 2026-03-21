@@ -8,11 +8,12 @@
 
 projectName: "@memo/ontology"
 projectType: ontology
+extends: "@memo/ontology-medical"
 
 ontologyMetadata:
   id: "@memo/ontology"
   version: "2.0.0"
-  description: "Transitional compatibility ontology preserving the legacy MEMO_Ontology package surface"
+  description: "Transitional compatibility ontology layered on @memo/ontology-medical to preserve the legacy MEMO_Ontology package surface"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:

@@ -414,6 +414,109 @@ package InfusionPump {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // MEDICAL DEVELOPMENT BACKBONE — 60601 / 62304 / QMS trace artifacts
+    // ═══════════════════════════════════════════════════════════════════════
+
+    requirement uiReqAlarmAcknowledgement : UserInterfaceRequirement {
+        attribute redefines title = "Alarm acknowledgement shall require explicit user confirmation";
+    }
+
+    requirement useErrAlarmSilenced : UseError {
+        attribute redefines title = "Clinician silences an alarm without resolving the infusion issue";
+    }
+
+    action alarmAckScenario : HazardRelatedUseScenario {
+        attribute redefines name = "Alarm acknowledgement during occlusion";
+    }
+
+    requirement pofControlledInfusion : PrimaryOperatingFunction {
+        attribute redefines title = "Deliver prescribed infusion within clinically acceptable limits";
+    }
+
+    requirement epControlledDelivery : EssentialPerformance {
+        attribute redefines title = "Maintain controlled infusion delivery and annunciation";
+    }
+
+    action sfMaintainControlledDelivery : SafetyFunction {
+        attribute redefines name = "Maintain controlled delivery under fault conditions";
+    }
+
+    part usabilitySpecAlarmWorkflow : UsabilitySpecification {
+        attribute redefines title = "Alarm acknowledgement usability specification";
+    }
+
+    part usabilityValAlarmWorkflow : UsabilityValidation {
+        attribute redefines title = "Alarm acknowledgement summative validation";
+    }
+
+    part swSystemPumpController : SoftwareSystem {
+        attribute redefines name = "Infusion Pump Control System";
+    }
+
+    part swItemTherapyController : SoftwareItem {
+        attribute redefines name = "Therapy Control Item";
+        attribute redefines safetyClass = SoftwareSafetyClass::C;
+    }
+
+    part swItemAlarmSupervisor : SoftwareItem {
+        attribute redefines name = "Alarm Supervisor Item";
+        attribute redefines safetyClass = SoftwareSafetyClass::B;
+    }
+
+    part soupRtos : SOUPItem {
+        attribute redefines name = "Embedded RTOS";
+        attribute redefines supplier = "Third-party supplier";
+    }
+
+    part swPlanPumpController : SoftwareDevelopmentPlan {
+        attribute redefines title = "Pump controller software development plan";
+    }
+
+    part swArchPumpController : SoftwareArchitectureArtifact {
+        attribute redefines title = "Pump controller software architecture";
+    }
+
+    part swDesignAlarmHandling : SoftwareDetailedDesign {
+        attribute redefines title = "Alarm handling detailed design";
+    }
+
+    part soupEvalRtos : SOUPEvaluation {
+        attribute redefines title = "Embedded RTOS SOUP evaluation";
+    }
+
+    part anomalyAlarmDelay : SoftwareAnomaly {
+        attribute redefines anomalyId = "ANOM-001";
+        attribute redefines title = "Alarm acknowledgement latency regression";
+    }
+
+    part problemAlarmDelay : SoftwareProblemReport {
+        attribute redefines reportId = "PR-001";
+        attribute redefines title = "Alarm latency problem report";
+    }
+
+    part changeAlarmDelay : ChangeImpactAssessment {
+        attribute redefines assessmentId = "CIA-001";
+        attribute redefines title = "Alarm acknowledgement fix impact assessment";
+    }
+
+    part dhfSoftwareTrace : DesignHistoryRecord {
+        attribute redefines recordId = "DHF-001";
+        attribute redefines title = "Software and usability trace package";
+    }
+
+    part evidenceUsabilitySummary : ComplianceEvidence {
+        attribute redefines recordId = "EV-001";
+        attribute redefines title = "Summative usability evidence";
+        attribute redefines artifactType = "Usability Test Report";
+    }
+
+    part releaseBaseline10 : ReleaseBaseline {
+        attribute redefines recordId = "REL-001";
+        attribute redefines title = "Release baseline 1.0";
+        attribute redefines version = "1.0.0";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INTERFACES & PORTS LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -476,6 +579,16 @@ package InfusionPump {
         attribute redefines name = "Alarm Audibility at 1m Test";
     }
 
+    part testAlarmUiWorkflow : Test {
+        attribute redefines testId = "TC-UI-001";
+        attribute redefines name = "Alarm acknowledgement workflow test";
+    }
+
+    part testSoftwareFlowControl : Test {
+        attribute redefines testId = "TC-SW-001";
+        attribute redefines name = "Software flow control verification";
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PHYSICAL DECOMPOSITION — System composition hierarchy
     // ═══════════════════════════════════════════════════════════════════════
@@ -506,28 +619,73 @@ package InfusionPump {
     connection : TraceTo connect source ::> unAccurateDelivery to target ::> sysReqFlowAccuracy;
     connection : TraceTo connect source ::> unOcclusionAlert to target ::> sysReqOcclusionDetect;
     connection : TraceTo connect source ::> unFreeFlowPrevention to target ::> sysReqAntiFreeFlow;
+    connection : TraceTo connect source ::> unAccurateDelivery to target ::> ucProgramInfusion;
+    connection : TraceTo connect source ::> unOcclusionAlert to target ::> ucRespondToAlarm;
+    connection : TraceTo connect source ::> ucProgramInfusion to target ::> normalInfusionScenario;
+    connection : TraceTo connect source ::> ucRespondToAlarm to target ::> occlusionAlarmScenario;
 
     // SystemRequirement → SoftwareRequirement
     connection : TraceTo connect source ::> sysReqFlowAccuracy to target ::> swReqFlowRegulation;
     connection : TraceTo connect source ::> sysReqOcclusionDetect to target ::> swReqOcclusionMonitor;
+    connection : TraceTo connect source ::> sysReqAlarmVolume to target ::> swReqAlarmManager;
 
     // Function allocation
     connection : AllocateTo connect function ::> sfRegulateFlow to structure ::> flowController;
     connection : AllocateTo connect function ::> sfDetectOcclusion to structure ::> occlusionDetector;
     connection : AllocateTo connect function ::> sfManageAlarms to structure ::> alarmManager;
+    connection : AllocateTo connect function ::> sfDisplayStatus to structure ::> displayDriver;
 
     // Satisfy (design satisfies requirement)
+    connection : Satisfy connect satisfiedBy ::> pumpSubsystem to satisfies ::> sysReqFlowAccuracy;
+    connection : Satisfy connect satisfiedBy ::> controlSubsystem to satisfies ::> sysReqOcclusionDetect;
+    connection : Satisfy connect satisfiedBy ::> pumpSubsystem to satisfies ::> sysReqAntiFreeFlow;
+    connection : Satisfy connect satisfiedBy ::> uiSubsystem to satisfies ::> sysReqAlarmVolume;
     connection : Satisfy connect satisfiedBy ::> flowController to satisfies ::> swReqFlowRegulation;
     connection : Satisfy connect satisfiedBy ::> occlusionDetector to satisfies ::> swReqOcclusionMonitor;
+    connection : Satisfy connect satisfiedBy ::> alarmManager to satisfies ::> swReqAlarmManager;
 
     // Verify (test verifies requirement)
     connection : Verify connect verifiedBy ::> testFlowAccuracy to verifies ::> sysReqFlowAccuracy;
     connection : Verify connect verifiedBy ::> testOcclusionDetection to verifies ::> sysReqOcclusionDetect;
     connection : Verify connect verifiedBy ::> testFreeFlowPrevention to verifies ::> sysReqAntiFreeFlow;
     connection : Verify connect verifiedBy ::> testAlarmAudibility to verifies ::> sysReqAlarmVolume;
+    connection : Verify connect verifiedBy ::> testSoftwareFlowControl to verifies ::> swReqFlowRegulation;
+    connection : Verify connect verifiedBy ::> testSoftwareFlowControl to verifies ::> swReqOcclusionMonitor;
+    connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> swReqAlarmManager;
+    connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> uiReqAlarmAcknowledgement;
+    connection : Verify connect verifiedBy ::> testAlarmUiWorkflow to verifies ::> usabilityValAlarmWorkflow;
 
     // Verify risk controls
     connection : Verify connect verifiedBy ::> testFlowAccuracy to verifies ::> rcFlowRateLimiter;
     connection : Verify connect verifiedBy ::> testOcclusionDetection to verifies ::> rcOcclusionAlarm;
     connection : Verify connect verifiedBy ::> testFreeFlowPrevention to verifies ::> rcAntiFreeFlowClamp;
+
+    // 60601 usability and essential performance traces
+    connection : AddressesUseError connect uiRequirement ::> uiReqAlarmAcknowledgement to useError ::> useErrAlarmSilenced;
+    connection : TraceTo connect source ::> useErrAlarmSilenced to target ::> hazUnderInfusion;
+    connection : TraceTo connect source ::> alarmAckScenario to target ::> useErrAlarmSilenced;
+    connection : TraceTo connect source ::> uiReqAlarmAcknowledgement to target ::> sysReqAlarmVolume;
+    connection : TraceTo connect source ::> pofControlledInfusion to target ::> sysReqFlowAccuracy;
+    connection : TraceTo connect source ::> epControlledDelivery to target ::> pofControlledInfusion;
+    connection : Preserves connect function ::> sfMaintainControlledDelivery to performance ::> epControlledDelivery;
+    connection : TraceTo connect source ::> sfMaintainControlledDelivery to target ::> rcFlowRateLimiter;
+
+    // 62304 lifecycle and QMS traces
+    connection : TraceTo connect source ::> swItemTherapyController to target ::> swReqFlowRegulation;
+    connection : TraceTo connect source ::> swItemAlarmSupervisor to target ::> swReqAlarmManager;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swPlanPumpController;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swArchPumpController;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> swDesignAlarmHandling;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> soupRtos;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> anomalyAlarmDelay;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> problemAlarmDelay;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> changeAlarmDelay;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> releaseBaseline10;
+    connection : Documents connect record ::> releaseBaseline10 to subject ::> swSystemPumpController;
+    connection : Documents connect record ::> releaseBaseline10 to subject ::> swItemTherapyController;
+    connection : Documents connect record ::> releaseBaseline10 to subject ::> swItemAlarmSupervisor;
+    connection : Documents connect record ::> releaseBaseline10 to subject ::> soupEvalRtos;
+    connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> usabilityValAlarmWorkflow;
+    connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> uiReqAlarmAcknowledgement;
+    connection : TraceTo connect source ::> ucMonitorInfusion to target ::> normalInfusionScenario;
 }

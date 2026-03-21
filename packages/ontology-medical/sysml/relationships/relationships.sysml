@@ -26,7 +26,7 @@ package MEMO_Ontology_Medical_Relationships {
     }
 
     connection def AddressesUseError {
-        end requirement : UserInterfaceRequirement [1];
+        end uiRequirement : UserInterfaceRequirement [1];
         end useError : UseError [1];
     }
 

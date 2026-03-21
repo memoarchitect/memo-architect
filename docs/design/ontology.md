@@ -11,7 +11,7 @@ MEMO is moving to a layered ontology structure:
 - **Product-family extensions** — device or platform specific packages
 - **Rules / views / templates** — separate from ontology packages
 
-The current `@memo/ontology` package is a transitional compatibility package that preserves the legacy `MEMO_Ontology` surface while the clean backbone moves into `@memo/ontology-core` and `@memo/ontology-medical`. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
+The current `@memo/ontology` package is a transitional compatibility package layered on top of `@memo/ontology-medical`. It preserves the legacy `MEMO_Ontology` surface while the clean backbone lives in `@memo/ontology-core` and `@memo/ontology-medical`. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
 
 ## Design Philosophy
 
