@@ -149,7 +149,7 @@ closureRules:
     severity: error
 
   - id: CR-MED-008
-    description: "Every SystemRequirement must trace to a StakeholderNeed"
+    description: "Every SystemRequirement must trace to a UserNeed"
     entity: SystemRequirement
     rule:
       type: requireRelationship
@@ -211,8 +211,8 @@ closureRules:
     severity: warning
 
   - id: CR-MED-015
-    description: "Every StakeholderNeed must trace to at least one UseCase"
-    entity: StakeholderNeed
+    description: "Every UserNeed must trace to at least one UseCase"
+    entity: UserNeed
     rule:
       type: requireRelationship
       relationship: traceTo

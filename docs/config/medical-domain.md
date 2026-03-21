@@ -40,6 +40,9 @@ medical workbench package adds traceability and completeness rules over them:
 - Software architecture decomposition
 - Verification of requirements
 
+In the layered ontology, `UserNeed` remains the preferred medical-device term and
+specializes the core `StakeholderNeed` concept.
+
 **Enforced by rules:** CR-MED-007 through CR-MED-012
 
 ## Usage

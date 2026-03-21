@@ -11,7 +11,7 @@ enforce this chain:
 
 ```mermaid
 graph TD
-    UN[Stakeholder Need] -->|traceTo| SR[System Requirement]
+    UN[User Need] -->|traceTo| SR[System Requirement]
     SR -->|traceTo| SwR[Software Requirement]
     SR -->|satisfy| COMP[Logical Component / Software]
     SR -->|verify| TEST[Test]
@@ -32,8 +32,8 @@ Your goal is to fill in this chain for every element in your model.
 ### Requirements (IEC 62304 / ISO 13485)
 
 ```sysml
-// Stakeholder needs — what the user actually wants
-requirement unFlowControl : StakeholderNeed {
+// User needs — medical-facing specialization of core StakeholderNeed
+requirement unFlowControl : UserNeed {
     attribute redefines name = "Adjustable Flow Rate";
     doc /* Clinician needs to set and adjust infusion flow rate */
 }
@@ -52,7 +52,7 @@ requirement swReqPIDControl : SoftwareRequirement {
     doc /* Software shall implement PID control loop at 100ms interval */
 }
 
-// Trace the chain: SwReq → SysReq → StakeholderNeed
+// Trace the chain: SwReq → SysReq → UserNeed
 connection : traceTo connect sysReqFlowAccuracy to unFlowControl;
 connection : traceTo connect swReqPIDControl to sysReqFlowAccuracy;
 ```

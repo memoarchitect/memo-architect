@@ -1,5 +1,6 @@
 package MEMO_Ontology_Medical_Development {
 
+    // Medical-facing specialization of the core stakeholder-need concept.
     requirement def UserNeed :> StakeholderNeed { }
 
     requirement def SoftwareRequirement :> TechnicalRequirement {
