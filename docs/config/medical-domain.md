@@ -6,7 +6,7 @@ It now provides:
 
 - closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
-- workbench-only helper kinds for ROS/deployment plus temporary product/platform overlays
+- temporary product overlays and default-value conveniences used by the workbench
 
 ## Overview
 

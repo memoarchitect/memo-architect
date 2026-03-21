@@ -3,7 +3,7 @@
 #   - closure rules
 #   - medical viewpoints
 #   - starter scaffolding
-#   - workbench-only ROS/deployment kinds plus temporary product/platform helpers
+#   - workbench-only product overlays and defaults
 
 projectName: "@memo/medical"
 projectType: device
@@ -17,7 +17,7 @@ extends: "@memo/ontology-medical"
 ontologyMetadata:
   id: "@memo/medical"
   version: "2.0.0"
-  description: "Medical workbench package — closure rules, viewpoints, templates, and ROS/deployment compatibility overlays"
+  description: "Medical workbench package — closure rules, viewpoints, templates, and temporary product overlays"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
@@ -39,26 +39,6 @@ kinds:
     sysmlConstruct: part def
     defaultAttributes:
       safetyClassification: "A"
-
-  Docker:
-    label: Docker
-    layer: software
-    sysmlConstruct: part def
-
-  RosNode:
-    label: ROS Node
-    layer: software
-    sysmlConstruct: part def
-
-  RosTopic:
-    label: ROS Topic
-    layer: interfaces
-    sysmlConstruct: interface def
-
-  RosService:
-    label: ROS Service
-    layer: interfaces
-    sysmlConstruct: interface def
 
 closureRules:
   - id: CR-MED-001

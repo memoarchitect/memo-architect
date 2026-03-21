@@ -2,6 +2,7 @@ package MEMO_Ontology_Medical {
     import MEMO_Ontology_Core::*;
     import MEMO_Ontology_Medical_DesignControl::*;
     import MEMO_Ontology_Medical_Development::*;
+    import MEMO_Ontology_Medical_Platform::*;
     import MEMO_Ontology_Medical_Risk::*;
     import MEMO_Ontology_Medical_SoftwareLifecycle::*;
     import MEMO_Ontology_Medical_Safety::*;
