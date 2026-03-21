@@ -182,7 +182,7 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Move common medical-development kinds into ontology** — `UserNeed`, `SoftwareRequirement`, `HardwareRequirement`, `OtherRequirement`, `UserActivity`, `Component`, and `EnvironmentElement` now live in `@memo/ontology-medical` instead of only `@memo/medical`
 - [x] **Move generic platform kinds into core** — `Microcontroller`, `FPGA`, and `SingleBoardComputer` now live in `@memo/ontology-core` instead of only `@memo/medical`
 - [x] **Move reusable compliance and rationale kinds into ontology** — `Standard` and `RegulatoryRequirement` now live in `@memo/ontology-medical`, and `Question` now lives in `@memo/ontology-core`
-- [x] **Remove remaining transitional duplicates from `@memo/medical`** — the package now keeps only temporary product overlays and default-value conveniences, while reusable UI/platform realization kinds moved into the ontology layer
+- [x] **Remove remaining transitional duplicates from `@memo/medical`** — reusable UI/platform realization kinds and medical software defaults now live in the ontology layer, leaving the workbench package focused on rules, viewpoints, and templates
 - [x] **Migrate examples off compatibility-only kinds** — starter/example models now use the layered backbone vocabulary, with `UserNeed` retained as the preferred medical-facing specialization on top of core `StakeholderNeed`
 
 ### Next Milestone — Standards Hardening **[CRITICAL]**

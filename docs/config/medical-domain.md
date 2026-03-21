@@ -6,7 +6,7 @@ It now provides:
 
 - closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
-- temporary product overlays and default-value conveniences used by the workbench
+- workbench validation, viewpoints, and starter templates on top of the medical ontology
 
 ## Overview
 

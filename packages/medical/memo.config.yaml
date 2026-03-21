@@ -3,7 +3,7 @@
 #   - closure rules
 #   - medical viewpoints
 #   - starter scaffolding
-#   - workbench-only product overlays and defaults
+#   - closure rules, viewpoints, and starter scaffolding only
 
 projectName: "@memo/medical"
 projectType: device
@@ -17,7 +17,7 @@ extends: "@memo/ontology-medical"
 ontologyMetadata:
   id: "@memo/medical"
   version: "2.0.0"
-  description: "Medical workbench package — closure rules, viewpoints, templates, and temporary product overlays"
+  description: "Medical workbench package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
@@ -26,19 +26,6 @@ ontologyMetadata:
     - IEC-62304
     - IEC-60601
     - workbench
-
-kinds:
-  Catheter:
-    label: Catheter
-    layer: physical
-    sysmlConstruct: part def
-
-  Software:
-    label: Software
-    layer: software
-    sysmlConstruct: part def
-    defaultAttributes:
-      safetyClassification: "A"
 
 closureRules:
   - id: CR-MED-001
