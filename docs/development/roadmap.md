@@ -201,6 +201,58 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Complete example trace chains** — the split infusion-pump example now includes a compliance package linking user interface requirements, use errors, risk controls, software items, records, evidence, and release artifacts
 - [x] **Promote product UI into the medical ontology** — `UIElement`, `UIScreen`, `UIPanel`, and `UIFunction` now live in `@memo/ontology-medical` and inherit from shared software/function concepts so requirements and risk can trace to them directly
 
+### Next Ontology Milestone — Legacy Compatibility Decision **[HIGH]**
+
+Choose the final fate of the legacy `@memo/ontology` package instead of letting it drift indefinitely:
+
+- [ ] **Audit remaining compatibility-only content** — identify what still exists only in `@memo/ontology` and whether it is truly needed for active models
+- [ ] **Decide shim policy** — either freeze `@memo/ontology` as compatibility-only or replace it with generated alias/re-export material
+- [ ] **Isolate legacy-only domain content** — keep product-specific leftovers like `Catheter` out of the active backbone unless promoted deliberately
+- [ ] **Document deprecation path** — record which imports/projects should continue using `MEMO_Ontology` and which should move fully to `MEMO_Ontology_Medical`
+
+Exit criteria:
+- `@memo/ontology` has an explicit long-term policy
+- no new ontology concepts are added there by default
+
+### Next Ontology Milestone — Second-Pass Medical Semantics **[CRITICAL]**
+
+Deepen the medical ontology beyond the first-cut backbone so it is methodologically stronger for regulated development:
+
+- [ ] **IEC 62366 usability engineering enrichment** — add more explicit concepts for usability engineering artifacts, use-error analysis, and summative/formative evidence structure
+- [ ] **IEC 60601 safety structure enrichment** — model collateral/particular-standard applicability, essential-performance loss conditions, and stronger safety trace semantics
+- [ ] **IEC 62304 lifecycle enrichment** — add explicit process/activity/work-product concepts where the current model only has top-level artifacts
+- [ ] **Tighten relationship semantics** — replace generic `traceTo` with more precise relations where the domain meaning is stable and worth encoding
+
+Exit criteria:
+- `@memo/ontology-medical` covers a stronger second-pass 62366/60601/62304 backbone
+- at least one live example uses the new concepts
+
+### Next Ontology Milestone — Rule-Pack Expansion **[HIGH]**
+
+Bring the workbench validation layer up to the level of the newer ontology concepts:
+
+- [ ] **Add rules for newer medical ontology concepts** — usability specs/validation, software lifecycle artifacts, essential performance, and QMS trace artifacts
+- [ ] **Add stricter traceability checks** — enforce more complete chains across user need → requirement → architecture → risk → verification → evidence where justified
+- [ ] **Align viewpoints with the richer ontology** — update viewpoints so the new concepts are visible in the right review contexts
+- [ ] **Update validation docs/examples** — make the rule outputs and tutorials reflect the expanded medical ontology surface
+
+Exit criteria:
+- `@memo/medical` validates the newer ontology concepts, not just the original subset
+- docs and examples show the intended rule coverage
+
+### Next Ontology Milestone — Additional Reference Models **[HIGH]**
+
+Prove the ontology against more than a single infusion-pump reference:
+
+- [ ] **Add a second medical reference model** — choose a different device archetype and model it on the new backbone
+- [ ] **Exercise different ontology slices** — ensure the new example stresses different risk, software, UI, or physical patterns than infusion pump
+- [ ] **Compare rule behavior across examples** — check whether the ontology and rule-pack behave consistently across multiple device types
+- [ ] **Use findings to refine ontology boundaries** — fix any concepts that still feel too device-specific or too weakly typed
+
+Exit criteria:
+- at least two strong reference models validate on the shared backbone
+- ontology changes are driven by cross-example evidence rather than a single product
+
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
 Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
