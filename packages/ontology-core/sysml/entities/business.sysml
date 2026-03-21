@@ -1,5 +1,9 @@
 package MEMO_Ontology_Core_Purpose {
 
+    part def Program {
+        attribute name : String;
+    }
+
     part def Actor {
         attribute name : String;
     }

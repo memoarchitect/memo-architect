@@ -92,6 +92,16 @@ kinds:
     layer: design-control
     sysmlConstruct: requirement def
 
+  UserInterfaceRequirement:
+    label: User Interface Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  UseError:
+    label: Use Error
+    layer: risk
+    sysmlConstruct: requirement def
+
   DesignOutput:
     label: Design Output
     layer: design-control
@@ -101,6 +111,21 @@ kinds:
     label: Design Review
     layer: design-control
     sysmlConstruct: part def
+
+  UsabilitySpecification:
+    label: Usability Specification
+    layer: design-control
+    sysmlConstruct: part def
+
+  UsabilityValidation:
+    label: Usability Validation
+    layer: verification
+    sysmlConstruct: part def
+
+  HazardRelatedUseScenario:
+    label: Hazard-Related Use Scenario
+    layer: operational
+    sysmlConstruct: action def
 
   UserActivity:
     label: User Activity
@@ -162,6 +187,11 @@ kinds:
     layer: safety
     sysmlConstruct: requirement def
 
+  PrimaryOperatingFunction:
+    label: Primary Operating Function
+    layer: safety
+    sysmlConstruct: requirement def
+
   SafetyFunction:
     label: Safety Function
     layer: safety
@@ -199,6 +229,36 @@ kinds:
 
   MaintenanceRelease:
     label: Maintenance Release
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareDevelopmentPlan:
+    label: Software Development Plan
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareArchitectureArtifact:
+    label: Software Architecture Artifact
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareDetailedDesign:
+    label: Software Detailed Design
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SOUPEvaluation:
+    label: SOUP Evaluation
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareProblemReport:
+    label: Software Problem Report
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  ChangeImpactAssessment:
+    label: Change Impact Assessment
     layer: software-lifecycle
     sysmlConstruct: part def
 
@@ -248,6 +308,16 @@ relationshipTypes:
     layer: risk
     color: "#D35400"
 
+  - name: preserves
+    label: Preserves
+    layer: safety
+    color: "#C0392B"
+
+  - name: addressesUseError
+    label: Addresses Use Error
+    layer: design-control
+    color: "#5B8DEF"
+
   - name: evidences
     label: Evidences
     layer: qms
@@ -263,6 +333,8 @@ relationships:
   - causes
   - leadsTo
   - identifies
+  - preserves
+  - addressesUseError
   - evidences
   - documents
 

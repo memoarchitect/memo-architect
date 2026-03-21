@@ -20,6 +20,16 @@ package MEMO_Ontology_Medical_Relationships {
         end hazard : Hazard [1];
     }
 
+    connection def Preserves {
+        end function : SafetyFunction [1];
+        end performance : EssentialPerformance [1];
+    }
+
+    connection def AddressesUseError {
+        end requirement : UserInterfaceRequirement [1];
+        end useError : UseError [1];
+    }
+
     connection def Evidences {
         end evidence : ComplianceEvidence [1];
         end subject[1];

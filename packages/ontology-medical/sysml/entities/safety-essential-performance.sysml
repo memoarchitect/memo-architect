@@ -12,6 +12,8 @@ package MEMO_Ontology_Medical_Safety {
         attribute title : String;
     }
 
+    requirement def PrimaryOperatingFunction :> EssentialPerformance { }
+
     action def SafetyFunction {
         attribute name : String;
     }

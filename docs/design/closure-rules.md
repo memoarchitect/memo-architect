@@ -71,7 +71,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 15 closure rules aligned with ISO 14971 and IEC 62304:
+The medical config includes 21 closure rules aligned with ISO 14971, IEC 62304, and IEC 60601 usability/safety concerns:
 
 ### Risk Management (ISO 14971)
 

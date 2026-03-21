@@ -23,6 +23,14 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute title : String;
     }
 
+    requirement def UserInterfaceRequirement :> InterfaceRequirement {
+        attribute title : String;
+    }
+
+    requirement def UseError :> Requirement {
+        attribute title : String;
+    }
+
     part def DesignOutput {
         attribute outputId : String;
         attribute title : String;
@@ -32,4 +40,14 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute reviewId : String;
         attribute title : String;
     }
+
+    part def UsabilitySpecification {
+        attribute title : String;
+    }
+
+    part def UsabilityValidation :> ValidationCase {
+        attribute title : String;
+    }
+
+    action def HazardRelatedUseScenario :> OperationalScenario { }
 }

@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types, 16 relationship types
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config (70 kinds, 15 rules, 7 viewpoints, 10 CoSMA layers)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 21 rules, 5 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -184,6 +184,14 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Move reusable compliance and rationale kinds into ontology** — `Standard` and `RegulatoryRequirement` now live in `@memo/ontology-medical`, and `Question` now lives in `@memo/ontology-core`
 - [x] **Remove remaining transitional duplicates from `@memo/medical`** — the package now keeps only workbench-only helper kinds such as UI/ROS, a software default overlay, and temporary product/platform helpers
 - [x] **Migrate examples off compatibility-only kinds** — starter/example models now use the layered backbone vocabulary, with `UserNeed` retained as the preferred medical-facing specialization on top of core `StakeholderNeed`
+
+### Next Milestone — Standards Hardening **[CRITICAL]**
+
+- [x] **Apollo-aligned core scaffolding** — added `Program`, `Context`, `Operation`, `MissionRequirement`, `Specification` containers, `MissionFunction`, and richer analysis result/trade study primitives to `@memo/ontology-core`
+- [x] **Verification semantics widened** — `Verify` now supports broader medical verification subjects instead of only generic requirements
+- [x] **IEC 62304 lifecycle hardening** — added development plan, architecture, detailed design, SOUP evaluation, problem report, and change impact concepts to `@memo/ontology-medical`
+- [x] **IEC 60601 usability/safety hardening** — added user interface requirement, use error, hazard-related use scenario, usability specification/validation, and primary operating function concepts
+- [x] **Medical workbench rules/viewpoints extended** — added 60601/62304 closure rules and a dedicated usability engineering viewpoint
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

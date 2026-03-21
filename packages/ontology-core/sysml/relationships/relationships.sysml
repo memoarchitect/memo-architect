@@ -67,7 +67,7 @@ package MEMO_Ontology_Core_Relationships {
 
     connection def Verify {
         end verifiedBy[1];
-        end verifies : Requirement [1];
+        end verifies[1];
     }
 
     connection def Flow {

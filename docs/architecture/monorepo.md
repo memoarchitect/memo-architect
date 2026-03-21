@@ -38,8 +38,8 @@ memo/
 │   │   └── scripts/
 │   │       └── pack-kpar.ts             # Package as .kpar archive
 │   │
-│   ├── medical/                 # @memo/medical — domain config
-│   │   └── memo.config.yaml             # 70 kinds, 15 rules, 7 viewpoints
+│   ├── medical/                 # @memo/medical — workbench config
+│   │   └── memo.config.yaml             # 131 kinds, 21 rules, 5 viewpoints
 │   │
 │   ├── cli/                     # @memo/cli — command-line interface
 │   │   └── src/

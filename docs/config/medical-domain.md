@@ -4,7 +4,7 @@ The `@memo/medical` package is the medical workbench configuration layered on to
 
 It now provides:
 
-- closure rules for ISO 14971 and IEC 62304 traceability/completeness
+- closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
 - workbench-only helper kinds for UI/ROS plus temporary product/platform overlays
 
@@ -14,8 +14,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 15 |
-| Workbench Viewpoints | 4 |
+| Closure Rules | 21 |
+| Workbench Viewpoints | 5 |
 
 ## Standards Alignment
 
@@ -39,11 +39,24 @@ medical workbench package adds traceability and completeness rules over them:
 - User needs → System requirements → Software requirements
 - Software architecture decomposition
 - Verification of requirements
+- Software item safety classification
+- SOUP and anomaly documentation
 
 In the layered ontology, `UserNeed` remains the preferred medical-device term and
 specializes the core `StakeholderNeed` concept.
 
-**Enforced by rules:** CR-MED-007 through CR-MED-012
+**Enforced by rules:** CR-MED-007 through CR-MED-021
+
+### IEC 60601 / IEC 60601-1-6 — Safety, Essential Performance, and Usability
+
+The ontology-level safety and design-control concepts live in `@memo/ontology-medical`.
+The medical workbench package adds usability and essential-performance checks over them:
+
+- Essential performance linked to safety functions
+- User interface requirements linked to use errors
+- Usability requirements verified by tests/validation artifacts
+
+**Enforced by rules:** CR-MED-016 through CR-MED-018
 
 ## Usage
 

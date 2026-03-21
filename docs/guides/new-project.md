@@ -52,8 +52,8 @@ The key line is `extends: "@memo/medical"`. This gives you:
 - **86+ element kinds** across 10 CoSMA layers (business, requirements, risk,
   functional, logical, physical, software, interfaces, verification, UI)
 - **16 relationship types** (traceTo, allocateTo, satisfy, verify, mitigates, causes, etc.)
-- **15 closure rules** aligned with ISO 14971 and IEC 62304
-- **7 viewpoints** for focused views of your model
+- **21 closure rules** aligned with ISO 14971, IEC 62304, and IEC 60601
+- **5 viewpoints** for focused views of your model
 
 ## 2. Understand the CoSMA Layers
 

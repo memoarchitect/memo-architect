@@ -620,7 +620,7 @@ describe('Infusion pump integration', () => {
         );
 
         const result = evaluateClosureRules(model, config);
-        expect(result.rulesEvaluated).toBe(15);
+        expect(result.rulesEvaluated).toBe(21);
         // Some rules should pass, some may have violations
         expect(result.violations.length).toBeGreaterThanOrEqual(0);
 

@@ -55,6 +55,11 @@ cosmaLayers:
     color: "#2ECC71"
 
 kinds:
+  Program:
+    label: Program
+    layer: purpose
+    sysmlConstruct: part def
+
   Actor:
     label: Actor
     layer: purpose
@@ -85,6 +90,11 @@ kinds:
     layer: operational
     sysmlConstruct: part def
 
+  Context:
+    label: Context
+    layer: operational
+    sysmlConstruct: part def
+
   OperationalActor:
     label: Operational Actor
     layer: operational
@@ -97,6 +107,11 @@ kinds:
 
   OperationalActivity:
     label: Operational Activity
+    layer: operational
+    sysmlConstruct: action def
+
+  Operation:
+    label: Operation
     layer: operational
     sysmlConstruct: action def
 
@@ -117,6 +132,11 @@ kinds:
 
   StakeholderNeed:
     label: Stakeholder Need
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  MissionRequirement:
+    label: Mission Requirement
     layer: requirements
     sysmlConstruct: requirement def
 
@@ -145,10 +165,40 @@ kinds:
     layer: requirements
     sysmlConstruct: requirement def
 
+  Specification:
+    label: Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  MissionSpecification:
+    label: Mission Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  FunctionSpecification:
+    label: Function Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  SystemSpecification:
+    label: System Specification
+    layer: requirements
+    sysmlConstruct: requirement def
+
   RequirementSet:
     label: Requirement Set
     layer: requirements
     sysmlConstruct: part def
+
+  Function:
+    label: Function
+    layer: functional
+    sysmlConstruct: action def
+
+  MissionFunction:
+    label: Mission Function
+    layer: functional
+    sysmlConstruct: action def
 
   SystemFunction:
     label: System Function
@@ -317,6 +367,16 @@ kinds:
 
   Calculation:
     label: Calculation
+    layer: analysis
+    sysmlConstruct: part def
+
+  TradeStudy:
+    label: Trade Study
+    layer: analysis
+    sysmlConstruct: part def
+
+  AnalysisResult:
+    label: Analysis Result
     layer: analysis
     sysmlConstruct: part def
 

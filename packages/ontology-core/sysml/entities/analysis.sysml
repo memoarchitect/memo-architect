@@ -14,6 +14,15 @@ package MEMO_Ontology_Core_Analysis {
         attribute formula : String;
     }
 
+    part def TradeStudy {
+        attribute name : String;
+    }
+
+    part def AnalysisResult {
+        attribute name : String;
+        attribute conclusion : String;
+    }
+
     part def Assumption {
         attribute name : String;
         attribute statement : String;
