@@ -271,6 +271,26 @@ kinds:
     layer: software-lifecycle
     sysmlConstruct: part def
 
+  Docker:
+    label: Docker
+    layer: software
+    sysmlConstruct: part def
+
+  RosNode:
+    label: ROS Node
+    layer: software
+    sysmlConstruct: part def
+
+  RosTopic:
+    label: ROS Topic
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosService:
+    label: ROS Service
+    layer: interfaces
+    sysmlConstruct: interface def
+
   UIElement:
     label: UI Element
     layer: ui

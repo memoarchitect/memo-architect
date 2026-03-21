@@ -335,8 +335,43 @@ kinds:
     layer: interfaces
     sysmlConstruct: port def
 
+  PortEthernet:
+    label: Ethernet Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortUSB:
+    label: USB Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortSerial:
+    label: Serial Port
+    layer: interfaces
+    sysmlConstruct: port def
+
+  PortPower:
+    label: Power Port
+    layer: interfaces
+    sysmlConstruct: port def
+
   Interface:
     label: Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareInterface:
+    label: Software Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareProvidedInterface:
+    label: Software Provided Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SoftwareRequiredInterface:
+    label: Software Required Interface
     layer: interfaces
     sysmlConstruct: interface def
 

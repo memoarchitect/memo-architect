@@ -1,7 +1,7 @@
 {
   "name": "@memo/medical",
   "version": "2.0.0",
-  "description": "MEMO medical workbench package — closure rules, viewpoints, templates, and ROS/deployment compatibility overlays on top of @memo/ontology-medical",
+  "description": "MEMO medical workbench package — closure rules, viewpoints, templates, and temporary product overlays on top of @memo/ontology-medical",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
