@@ -11,7 +11,7 @@ MEMO is moving to a layered ontology structure:
 - **Product-family extensions** — device or platform specific packages
 - **Rules / views / templates** — separate from ontology packages
 
-The current `@memo/ontology` package is a transitional compatibility package layered on top of `@memo/ontology-medical`. It preserves the legacy `MEMO_Ontology` surface while the clean backbone lives in `@memo/ontology-core` and `@memo/ontology-medical`. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md).
+The current `@memo/ontology` package is a frozen compatibility shim layered on top of `@memo/ontology-medical`. It preserves the legacy `MEMO_Ontology` surface while the clean backbone lives in `@memo/ontology-core` and `@memo/ontology-medical`. See [ADR-1-6](../adr/ADR-1-6-ontology-core-medical-split.md) and [ADR-1-7](../adr/ADR-1-7-legacy-ontology-compatibility-policy.md).
 
 ## Design Philosophy
 
@@ -51,7 +51,15 @@ As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
 - **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, and safety/essential-performance concepts.
-- **Extensions** carry product-family or technology-specific concepts such as ROS integration, UI wireframes, or device-family parts.
+- **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
+
+### Compatibility Policy
+
+`@memo/ontology` is now treated as a frozen compatibility shim:
+
+- new ontology concepts go to `@memo/ontology-core` or `@memo/ontology-medical`
+- legacy `MEMO_Ontology::*` imports remain supported
+- remaining legacy-only content such as `Responsibility`, `LogicalComponentExternal`, behavior helper kinds, and `Catheter` should not drive new backbone design
 
 ## Relationship Types
 
@@ -105,7 +113,7 @@ packages/ontology/
   memo.config.yaml    # Base config for layers, kinds, relationships, and viewpoints
 ```
 
-`@memo/medical` now extends `@memo/ontology-medical` for rules, viewpoints, and templates. The legacy `@memo/ontology` package remains only for compatibility with existing imports and older examples.
+`@memo/medical` now extends `@memo/ontology-medical` for rules, viewpoints, and templates. The legacy `@memo/ontology` package remains only as a frozen compatibility shim for existing imports.
 
 ## Target Package Stack
 

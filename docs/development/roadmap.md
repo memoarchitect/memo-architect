@@ -205,10 +205,10 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 
 Choose the final fate of the legacy `@memo/ontology` package instead of letting it drift indefinitely:
 
-- [ ] **Audit remaining compatibility-only content** — identify what still exists only in `@memo/ontology` and whether it is truly needed for active models
-- [ ] **Decide shim policy** — either freeze `@memo/ontology` as compatibility-only or replace it with generated alias/re-export material
-- [ ] **Isolate legacy-only domain content** — keep product-specific leftovers like `Catheter` out of the active backbone unless promoted deliberately
-- [ ] **Document deprecation path** — record which imports/projects should continue using `MEMO_Ontology` and which should move fully to `MEMO_Ontology_Medical`
+- [x] **Audit remaining compatibility-only content** — confirmed the remaining legacy-only surface is the `MEMO_Ontology` namespace, compatibility viewpoints, a few legacy helper kinds (`Responsibility`, `LogicalComponentExternal`, `ActionDefinition`, `ActionUsage`, `ItemDefinition`), and the product-specific leftover `Catheter`
+- [x] **Decide shim policy** — `@memo/ontology` is now frozen as a supported compatibility shim, not an active ontology development target
+- [x] **Isolate legacy-only domain content** — `Catheter` is explicitly treated as legacy-only until a future product-family ontology promotes it deliberately
+- [x] **Document deprecation path** — ADR-1-7 and the ontology docs now state that new work targets `MEMO_Ontology_Medical` / `@memo/ontology-medical`, while `MEMO_Ontology` remains supported only for existing projects
 
 Exit criteria:
 - `@memo/ontology` has an explicit long-term policy
