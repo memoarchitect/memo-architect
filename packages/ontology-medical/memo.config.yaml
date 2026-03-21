@@ -271,6 +271,13 @@ kinds:
     layer: software-lifecycle
     sysmlConstruct: part def
 
+  Software:
+    label: Software
+    layer: software
+    sysmlConstruct: part def
+    defaultAttributes:
+      safetyClassification: "A"
+
   Docker:
     label: Docker
     layer: software
