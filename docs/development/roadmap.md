@@ -193,6 +193,13 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **IEC 60601 usability/safety hardening** — added user interface requirement, use error, hazard-related use scenario, usability specification/validation, and primary operating function concepts
 - [x] **Medical workbench rules/viewpoints extended** — added 60601/62304 closure rules and a dedicated usability engineering viewpoint
 
+### Next Milestone — Compatibility Retirement + Standards Traceability **[HIGH]**
+
+- [x] **Layer legacy `@memo/ontology` on the medical backbone** — the compatibility package now explicitly extends `@memo/ontology-medical` instead of presenting itself as the primary ontology source
+- [x] **Keep legacy `MEMO_Ontology` imports working** — compatibility package metadata and docs now describe the package as a shim rather than a clean backbone
+- [x] **Exercise new standards concepts in live models** — infusion-pump example and starter template now instantiate IEC 60601 usability, essential performance, IEC 62304 lifecycle, and QMS trace artifacts
+- [x] **Complete example trace chains** — the split infusion-pump example now includes a compliance package linking user interface requirements, use errors, risk controls, software items, records, evidence, and release artifacts
+
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
 Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
