@@ -106,6 +106,16 @@ kinds:
     layer: risk
     sysmlConstruct: requirement def
 
+  UseSpecification:
+    label: Use Specification
+    layer: design-control
+    sysmlConstruct: part def
+
+  UseErrorAnalysis:
+    label: Use Error Analysis
+    layer: design-control
+    sysmlConstruct: part def
+
   DesignOutput:
     label: Design Output
     layer: design-control
@@ -123,6 +133,16 @@ kinds:
 
   UsabilityValidation:
     label: Usability Validation
+    layer: verification
+    sysmlConstruct: part def
+
+  FormativeEvaluation:
+    label: Formative Evaluation
+    layer: verification
+    sysmlConstruct: part def
+
+  SummativeEvaluation:
+    label: Summative Evaluation
     layer: verification
     sysmlConstruct: part def
 
@@ -201,6 +221,11 @@ kinds:
     layer: safety
     sysmlConstruct: requirement def
 
+  EssentialPerformanceLossCondition:
+    label: Essential Performance Loss Condition
+    layer: safety
+    sysmlConstruct: requirement def
+
   SafetyFunction:
     label: Safety Function
     layer: safety
@@ -209,6 +234,16 @@ kinds:
   ProtectiveMeasure:
     label: Protective Measure
     layer: safety
+    sysmlConstruct: part def
+
+  CollateralStandardRequirement:
+    label: Collateral Standard Requirement
+    layer: qms
+    sysmlConstruct: part def
+
+  ParticularStandardRequirement:
+    label: Particular Standard Requirement
+    layer: qms
     sysmlConstruct: part def
 
   SoftwareSystem:
@@ -238,6 +273,71 @@ kinds:
 
   MaintenanceRelease:
     label: Maintenance Release
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareLifecycleProcess:
+    label: Software Lifecycle Process
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareLifecycleActivity:
+    label: Software Lifecycle Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareDevelopmentProcess:
+    label: Software Development Process
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareMaintenanceProcess:
+    label: Software Maintenance Process
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareRiskManagementProcess:
+    label: Software Risk Management Process
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareRequirementsAnalysisActivity:
+    label: Software Requirements Analysis Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareArchitecturalDesignActivity:
+    label: Software Architectural Design Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareDetailedDesignActivity:
+    label: Software Detailed Design Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareUnitImplementationActivity:
+    label: Software Unit Implementation Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareVerificationActivity:
+    label: Software Verification Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  ProblemResolutionActivity:
+    label: Problem Resolution Activity
+    layer: software-lifecycle
+    sysmlConstruct: action def
+
+  SoftwareWorkProduct:
+    label: Software Work Product
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SoftwareRequirementsArtifact:
+    label: Software Requirements Artifact
     layer: software-lifecycle
     sysmlConstruct: part def
 
@@ -369,6 +469,31 @@ relationshipTypes:
     layer: design-control
     color: "#5B8DEF"
 
+  - name: analyzesUseError
+    label: Analyzes Use Error
+    layer: design-control
+    color: "#4A90D9"
+
+  - name: exposesUseError
+    label: Exposes Use Error
+    layer: design-control
+    color: "#5DADE2"
+
+  - name: specifiesScenario
+    label: Specifies Scenario
+    layer: design-control
+    color: "#5B8DEF"
+
+  - name: evaluatesRequirement
+    label: Evaluates Requirement
+    layer: verification
+    color: "#2ECC71"
+
+  - name: contributesToHazard
+    label: Contributes To Hazard
+    layer: risk
+    color: "#E74C3C"
+
   - name: evidences
     label: Evidences
     layer: qms
@@ -379,6 +504,41 @@ relationshipTypes:
     layer: qms
     color: "#34495E"
 
+  - name: supportsOperatingFunction
+    label: Supports Operating Function
+    layer: safety
+    color: "#C0392B"
+
+  - name: definesLossCondition
+    label: Defines Loss Condition
+    layer: safety
+    color: "#A93226"
+
+  - name: protectsEssentialPerformance
+    label: Protects Essential Performance
+    layer: safety
+    color: "#922B21"
+
+  - name: appliesStandardRequirement
+    label: Applies Standard Requirement
+    layer: qms
+    color: "#2C3E50"
+
+  - name: implementsRiskControl
+    label: Implements Risk Control
+    layer: safety
+    color: "#D35400"
+
+  - name: governsActivity
+    label: Governs Activity
+    layer: software-lifecycle
+    color: "#F39C12"
+
+  - name: producesWorkProduct
+    label: Produces Work Product
+    layer: software-lifecycle
+    color: "#E67E22"
+
 relationships:
   - mitigates
   - causes
@@ -386,7 +546,19 @@ relationships:
   - identifies
   - preserves
   - addressesUseError
+  - analyzesUseError
+  - exposesUseError
+  - specifiesScenario
+  - evaluatesRequirement
+  - contributesToHazard
   - evidences
   - documents
+  - supportsOperatingFunction
+  - definesLossCondition
+  - protectsEssentialPerformance
+  - appliesStandardRequirement
+  - implementsRiskControl
+  - governsActivity
+  - producesWorkProduct
 
 closureRules: []

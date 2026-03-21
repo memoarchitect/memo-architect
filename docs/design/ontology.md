@@ -43,14 +43,14 @@ Entity kinds are mapped to SysML v2 constructs:
 | `requirement def` | Needs and requirements | StakeholderNeed, UserNeed, SystemRequirement |
 | `action def` | Functions/behaviors | SystemFunction, OperationalActivity |
 | `port def` | Interfaces/ports | Port, DataPort, FlowPort |
-| `connection def` | Relationships | mitigates, traceTo, verify |
+| `connection def` | Relationships | mitigates, derives, verify |
 
 ### Intended Boundary
 
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, and safety/essential-performance concepts.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, and the second-pass 62366 / 60601 / 62304 backbone.
 - **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
 
 ### Compatibility Policy
@@ -80,25 +80,29 @@ Each relationship type has:
 - **Layer** — CoSMA layer it belongs to
 - **Color** — Visualization color
 
-### Built-in Relationship Types
+### Selected Relationship Types
 
 | Type | Source → Target | Layer | Purpose |
 |---|---|---|---|
+| `derives` | Need/Requirement → derived Requirement | requirements | Downstream requirement derivation |
+| `refines` | Base concern/use case → refiner | requirements | More precise refinement when generic tracing is too weak |
+| `traceTo` | Element → Element | requirements | Fallback trace only when no stronger stable semantics are worth encoding |
 | `mitigates` | RiskControl → Hazard | risk | ISO 14971 risk mitigation |
 | `causes` | Hazard → HazardousSituation | risk | Causal chain |
 | `leadsTo` | HazardousSituation → Harm | risk | Harm pathway |
-| `identifies` | SystemFunction → Hazard | risk | Hazard identification |
-| `traceTo` | Requirement → Requirement | requirements | Requirement traceability |
+| `identifies` | Risk → Hazard | risk | Risk record identifies the associated hazard |
+| `addressesUseError` | UI Requirement → Use Error | design-control | Explicit IEC 62366 usability trace |
+| `analyzesUseError` | Use Error Analysis → Use Error | design-control | Use-error analysis structure |
+| `evaluatesRequirement` | Validation Case → UI Requirement | verification | Formative/summative evaluation linkage |
+| `supportsOperatingFunction` | Essential Performance → Primary Operating Function | safety | Essential-performance claim tied to the protected function |
+| `definesLossCondition` | Essential Performance → EP Loss Condition | safety | Explicit loss-of-essential-performance semantics |
+| `protectsEssentialPerformance` | RiskControl → Essential Performance | safety | Stronger safety trace from control to protected performance |
+| `implementsRiskControl` | Implementer → RiskControl | safety | Requirement/function/architecture implementation of a control |
+| `governsActivity` | Lifecycle Process → Lifecycle Activity | software-lifecycle | IEC 62304 process-to-activity structure |
+| `producesWorkProduct` | Lifecycle Activity → Work Product | software-lifecycle | IEC 62304 activity-to-artifact structure |
 | `satisfy` | Element → Requirement | requirements | Satisfaction link |
 | `verify` | Test → Requirement/RiskControl | verification | Verification evidence |
-| `allocateTo` | Function → Component | functional | Function allocation |
-| `aggregation` | Parent → Child | logical | Composition |
-| `composedOf` | Parent → Child | logical | Decomposition |
-| `dependency` | Source → Target | software | Dependency |
-| `realization` | Impl → Spec | software | Realization link |
-| `association` | Element → Element | general | General association |
-| `extend` | UseCase → UseCase | functional | Use case extension |
-| `include` | UseCase → UseCase | functional | Use case inclusion |
+| `documents` / `evidences` | QMS record/evidence → subject | qms | DHF / evidence trace across regulated artifacts |
 
 ## Ontology Package
 
@@ -139,7 +143,8 @@ The target package stack is:
   ├── risk-management
   ├── software-lifecycle
   ├── safety-essential-performance
-  └── regulatory-trace references
+  ├── regulatory-trace references
+  └── medical relationship specializations
 ```
 
 Rules, viewpoints, completeness logic, and example models remain outside ontology packages.

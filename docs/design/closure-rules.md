@@ -73,37 +73,23 @@ This means a model can be 100% complete even with warnings, but never with error
 
 The medical config includes 21 closure rules aligned with ISO 14971, IEC 62304, and IEC 60601 usability/safety concerns:
 
-### Risk Management (ISO 14971)
+Representative rules:
 
 | Rule | Entity | Requirement | Severity |
 |---|---|---|---|
-| CR-MED-001 | Hazard | Must have `mitigates` (incoming) | error |
-| CR-MED-002 | Hazard | Must `traceTo` a SystemFunction or UseCase | warning |
-| CR-MED-003 | RiskControl | Must be verified by a Test | error |
-| CR-MED-004 | HazardousSituation | Must have `causes` (incoming from Hazard) | warning |
-| CR-MED-005 | Harm | Must have `leadsTo` (incoming) | warning |
-| CR-MED-006 | SafetyGoal | Must `traceTo` a Hazard | warning |
-
-### Requirements (IEC 62304)
-
-| Rule | Entity | Requirement | Severity |
-|---|---|---|---|
-| CR-MED-007 | SoftwareRequirement | Must `traceTo` a SystemRequirement | warning |
-| CR-MED-008 | SystemRequirement | Must `traceTo` a UserNeed | warning |
-| CR-MED-009 | UserNeed | Must have `traceTo` (outgoing) | info |
-
-### Architecture
-
-| Rule | Entity | Requirement | Severity |
-|---|---|---|---|
-| CR-MED-010 | SystemFunction | Must `allocateTo` a Component or Software | warning |
-| CR-MED-011 | Component | Must have `aggregation` or `composedOf` | info |
-
-### Verification
-
-| Rule | Entity | Requirement | Severity |
-|---|---|---|---|
-| CR-MED-012 | Test | Must `verify` a Requirement or RiskControl | warning |
+| CR-MED-001 | Hazard | Must have at least one `mitigates` relationship | error |
+| CR-MED-002 | Hazard | Must have at least one `causes` relationship | error |
+| CR-MED-003 | RiskControl | Must be verified by at least one `verify` relationship | error |
+| CR-MED-004 | Risk | Must identify at least one Hazard via `identifies` | error |
+| CR-MED-005 | HazardousSituation | Must participate in a `causes` relationship | error |
+| CR-MED-006 | Harm | Must participate in a `leadsTo` relationship | warning |
+| CR-MED-007 | SoftwareRequirement | Must derive from a SystemRequirement via `derives` | error |
+| CR-MED-008 | SystemRequirement | Should derive from a UserNeed via `derives` | warning |
+| CR-MED-009 | SystemRequirement | Should be satisfied by architecture via `satisfy` | warning |
+| CR-MED-010 | SystemFunction | Must be allocated via `allocateTo` | error |
+| CR-MED-012 | UseCase | Should be refined by at least one Scenario via `refines` | warning |
+| CR-MED-016 | EssentialPerformance | Should be preserved by a SafetyFunction via `preserves` | warning |
+| CR-MED-017 | UserInterfaceRequirement | Should address at least one UseError via `addressesUseError` | warning |
 
 ## CLI Output
 
@@ -113,8 +99,8 @@ The medical config includes 21 closure rules aligned with ISO 14971, IEC 62304, 
   Violations:
     ERROR  CR-MED-001  Hazard "Over-infusion" has no mitigates relationship
     ERROR  CR-MED-003  RiskControl "Flow sensor" has no verify relationship
-    WARN   CR-MED-007  SoftwareRequirement "Flow control" has no traceTo
-    INFO   CR-MED-009  UserNeed "Safe delivery" has no traceTo
+    WARN   CR-MED-008  SystemRequirement "Flow accuracy" has no derives relationship
+    WARN   CR-MED-017  UserInterfaceRequirement "Alarm acknowledgement" has no addressesUseError relationship
 
   Completeness:
     risk          ██████░░░░  60%
