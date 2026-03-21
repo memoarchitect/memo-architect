@@ -3,7 +3,7 @@
 #   - closure rules
 #   - medical viewpoints
 #   - starter scaffolding
-#   - workbench-only UI/ROS kinds plus temporary product/platform helpers
+#   - workbench-only ROS/deployment kinds plus temporary product/platform helpers
 
 projectName: "@memo/medical"
 projectType: device
@@ -17,7 +17,7 @@ extends: "@memo/ontology-medical"
 ontologyMetadata:
   id: "@memo/medical"
   version: "2.0.0"
-  description: "Medical workbench package — closure rules, viewpoints, templates, and workbench-only helper kinds"
+  description: "Medical workbench package — closure rules, viewpoints, templates, and ROS/deployment compatibility overlays"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
@@ -27,17 +27,7 @@ ontologyMetadata:
     - IEC-60601
     - workbench
 
-cosmaLayers:
-  - id: ui
-    label: UI Wireframe
-    color: "#3498DB"
-
 kinds:
-  UIFunction:
-    label: UI Function
-    layer: functional
-    sysmlConstruct: action def
-
   Catheter:
     label: Catheter
     layer: physical
@@ -69,21 +59,6 @@ kinds:
     label: ROS Service
     layer: interfaces
     sysmlConstruct: interface def
-
-  UIScreen:
-    label: UI Screen
-    layer: ui
-    sysmlConstruct: part def
-
-  UIPanel:
-    label: UI Panel
-    layer: ui
-    sysmlConstruct: part def
-
-  UIElement:
-    label: UI Element
-    layer: ui
-    sysmlConstruct: part def
 
 closureRules:
   - id: CR-MED-001

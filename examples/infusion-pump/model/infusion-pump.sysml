@@ -665,6 +665,8 @@ package InfusionPump {
     connection : TraceTo connect source ::> useErrAlarmSilenced to target ::> hazUnderInfusion;
     connection : TraceTo connect source ::> alarmAckScenario to target ::> useErrAlarmSilenced;
     connection : TraceTo connect source ::> uiReqAlarmAcknowledgement to target ::> sysReqAlarmVolume;
+    connection : Satisfy connect satisfiedBy ::> alarmScreen to satisfies ::> uiReqAlarmAcknowledgement;
+    connection : TraceTo connect source ::> useErrAlarmSilenced to target ::> alarmScreen;
     connection : TraceTo connect source ::> pofControlledInfusion to target ::> sysReqFlowAccuracy;
     connection : TraceTo connect source ::> epControlledDelivery to target ::> pofControlledInfusion;
     connection : Preserves connect function ::> sfMaintainControlledDelivery to performance ::> epControlledDelivery;

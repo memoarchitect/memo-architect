@@ -72,7 +72,7 @@ it automatically belongs to its layer.
 | **Software** | Software, SoftwareComponent, Firmware | Software architecture |
 | **Interfaces** | Port, PortEthernet, Interface, DataType | Connection points |
 | **Verification** | Test | Test definitions |
-| **UI** | UIScreen, UIPanel, UIElement | UI wireframes |
+| **UI** | UIScreen, UIPanel, UIElement | Product UI elements traceable to requirements and risk |
 
 ## 3. Write Your First Elements
 

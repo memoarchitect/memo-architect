@@ -199,6 +199,7 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Keep legacy `MEMO_Ontology` imports working** — compatibility package metadata and docs now describe the package as a shim rather than a clean backbone
 - [x] **Exercise new standards concepts in live models** — infusion-pump example and starter template now instantiate IEC 60601 usability, essential performance, IEC 62304 lifecycle, and QMS trace artifacts
 - [x] **Complete example trace chains** — the split infusion-pump example now includes a compliance package linking user interface requirements, use errors, risk controls, software items, records, evidence, and release artifacts
+- [x] **Promote product UI into the medical ontology** — `UIElement`, `UIScreen`, `UIPanel`, and `UIFunction` now live in `@memo/ontology-medical` and inherit from shared software/function concepts so requirements and risk can trace to them directly
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

@@ -56,7 +56,7 @@ graph TD
 | `software` | Software Architecture | `#F39C12` | Software, SoftwareComponent, SoftwareModule, Firmware, Docker, OperatingSystem, RosNode |
 | `interfaces` | Interfaces & Ports | `#1ABC9C` | Port, DataPort, FlowPort, Interface, SoftwareInterface, RosTopic, RosService, DataType |
 | `verification` | Verification | `#2ECC71` | Test |
-| `ui` | UI Wireframe | `#3498DB` | UIScreen, UIPanel, UIElement |
+| `ui` | UI Realization | `#3498DB` | UIScreen, UIPanel, UIElement |
 
 ## How Layers Work
 
