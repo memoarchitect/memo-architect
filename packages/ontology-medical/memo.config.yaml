@@ -36,6 +36,10 @@ cosmaLayers:
     label: QMS & Records
     color: "#2C3E50"
 
+  - id: ui
+    label: UI Realization
+    color: "#3498DB"
+
 kinds:
   UserNeed:
     label: User Need
@@ -129,6 +133,11 @@ kinds:
 
   UserActivity:
     label: User Activity
+    layer: functional
+    sysmlConstruct: action def
+
+  UIFunction:
+    label: UI Function
     layer: functional
     sysmlConstruct: action def
 
@@ -260,6 +269,21 @@ kinds:
   ChangeImpactAssessment:
     label: Change Impact Assessment
     layer: software-lifecycle
+    sysmlConstruct: part def
+
+  UIElement:
+    label: UI Element
+    layer: ui
+    sysmlConstruct: part def
+
+  UIScreen:
+    label: UI Screen
+    layer: ui
+    sysmlConstruct: part def
+
+  UIPanel:
+    label: UI Panel
+    layer: ui
     sysmlConstruct: part def
 
   QMSRecord:

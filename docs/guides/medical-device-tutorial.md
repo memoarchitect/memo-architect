@@ -523,6 +523,8 @@ MEMO models are **plain text SysML files** stored in Git:
 | Verification | Test | Yellow |
 | UI | UIScreen, UIElement | Slate |
 
+UI elements in the medical ontology are modeled as product software realization elements, so they can satisfy `UserInterfaceRequirement` instances and participate in risk traceability.
+
 ---
 
 ## Next Steps

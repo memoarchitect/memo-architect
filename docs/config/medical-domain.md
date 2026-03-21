@@ -6,7 +6,7 @@ It now provides:
 
 - closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
-- workbench-only helper kinds for UI/ROS plus temporary product/platform overlays
+- workbench-only helper kinds for ROS/deployment plus temporary product/platform overlays
 
 ## Overview
 
@@ -49,11 +49,11 @@ specializes the core `StakeholderNeed` concept.
 
 ### IEC 60601 / IEC 60601-1-6 — Safety, Essential Performance, and Usability
 
-The ontology-level safety and design-control concepts live in `@memo/ontology-medical`.
+The ontology-level safety, design-control, and product-UI concepts live in `@memo/ontology-medical`.
 The medical workbench package adds usability and essential-performance checks over them:
 
 - Essential performance linked to safety functions
-- User interface requirements linked to use errors
+- User interface requirements linked to use errors and implemented UI elements
 - Usability requirements verified by tests/validation artifacts
 
 **Enforced by rules:** CR-MED-016 through CR-MED-018
