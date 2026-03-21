@@ -1,10 +1,11 @@
-# @memo/ontology — Transitional compatibility ontology configuration
-# Preserves the legacy broad MEMO_Ontology surface while the clean backbone
-# moves to @memo/ontology-core and @memo/ontology-medical.
+# @memo/ontology — Frozen compatibility shim configuration
+# Preserves the legacy MEMO_Ontology surface while active ontology development
+# now happens in @memo/ontology-core and @memo/ontology-medical.
 #
 # New work should prefer @memo/ontology-core and @memo/ontology-medical.
-# This package remains to support existing MEMO_Ontology imports and older
-# examples while the split is completed.
+# This package remains to support existing MEMO_Ontology imports.
+# Do not add new reusable ontology concepts here unless required for backward
+# compatibility.
 
 projectName: "@memo/ontology"
 projectType: ontology
@@ -13,7 +14,7 @@ extends: "@memo/ontology-medical"
 ontologyMetadata:
   id: "@memo/ontology"
   version: "2.0.0"
-  description: "Transitional compatibility ontology layered on @memo/ontology-medical to preserve the legacy MEMO_Ontology package surface"
+  description: "Frozen compatibility shim layered on @memo/ontology-medical to preserve the legacy MEMO_Ontology package surface"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
