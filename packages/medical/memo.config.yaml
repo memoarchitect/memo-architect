@@ -24,6 +24,7 @@ ontologyMetadata:
     - medical-device
     - ISO-14971
     - IEC-62304
+    - IEC-60601
     - workbench
 
 cosmaLayers:
@@ -219,6 +220,59 @@ closureRules:
       min: 1
     severity: warning
 
+  - id: CR-MED-016
+    description: "Every EssentialPerformance claim should be preserved by at least one SafetyFunction"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: preserves
+      min: 1
+    severity: warning
+
+  - id: CR-MED-017
+    description: "Every UserInterfaceRequirement should address at least one UseError"
+    entity: UserInterfaceRequirement
+    rule:
+      type: requireRelationship
+      relationship: addressesUseError
+      min: 1
+    severity: warning
+
+  - id: CR-MED-018
+    description: "Every UserInterfaceRequirement should be verified by at least one Test"
+    entity: UserInterfaceRequirement
+    rule:
+      type: requireRelationship
+      relationship: verify
+      min: 1
+    severity: warning
+
+  - id: CR-MED-019
+    description: "Every SoftwareItem must declare a safetyClass"
+    entity: SoftwareItem
+    rule:
+      type: requireAttribute
+      attribute: safetyClass
+    severity: error
+
+  - id: CR-MED-020
+    description: "Every SOUPItem should be documented by at least one record or evidence link"
+    entity: SOUPItem
+    rule:
+      type: requireRelationship
+      relationship: documents
+      min: 1
+    severity: warning
+
+  - id: CR-MED-021
+    description: "Every SoftwareAnomaly should be documented by at least one record or evidence link"
+    entity: SoftwareAnomaly
+    rule:
+      type: requireRelationship
+      relationship: documents
+      min: 1
+    severity: warning
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -251,13 +305,20 @@ viewpoints:
     supportedDiagramTypes: [bdd, req, pkg]
     visibleKinds:
       - SafetyGoal
+      - EssentialPerformance
+      - BasicSafety
+      - PrimaryOperatingFunction
       - RiskControl
       - Hazard
+      - UserInterfaceRequirement
+      - UseError
       - SystemFunction
       - ComponentFunction
       - Test
     visibleRelationships:
       - mitigates
+      - preserves
+      - addressesUseError
       - allocateTo
       - traceTo
       - verify
@@ -282,6 +343,15 @@ viewpoints:
       - SoftwareSystem
       - SoftwareItem
       - SoftwareUnit
+      - SOUPItem
+      - SoftwareAnomaly
+      - MaintenanceRelease
+      - SoftwareDevelopmentPlan
+      - SoftwareArchitectureArtifact
+      - SoftwareDetailedDesign
+      - SOUPEvaluation
+      - SoftwareProblemReport
+      - ChangeImpactAssessment
       - SoftwareComponent
       - SoftwareModule
       - Firmware
@@ -297,6 +367,7 @@ viewpoints:
       - composedOf
       - dependency
       - realization
+      - documents
     visibleLayers:
       - software
       - software-lifecycle
@@ -308,6 +379,42 @@ viewpoints:
         viewpointId: software-view
         auto: true
         description: Software components and lifecycle decomposition
+
+  - id: usability-view
+    label: Usability Engineering (IEC 60601-1-6)
+    supportedDiagramTypes: [req, act, bdd, pkg]
+    visibleKinds:
+      - UserNeed
+      - UserProfile
+      - UseEnvironment
+      - UserActivity
+      - UserInterfaceRequirement
+      - UseError
+      - HazardRelatedUseScenario
+      - UsabilitySpecification
+      - UsabilityValidation
+      - EssentialPerformance
+      - BasicSafety
+      - Test
+    visibleRelationships:
+      - traceTo
+      - addressesUseError
+      - preserves
+      - verify
+    visibleLayers:
+      - requirements
+      - design-control
+      - operational
+      - risk
+      - safety
+      - verification
+    diagrams:
+      - id: diag-usability-trace
+        name: Usability Trace
+        diagramType: req
+        viewpointId: usability-view
+        auto: true
+        description: User needs, use errors, usability requirements, and validation trace
 
   - id: physical-view
     label: Physical Architecture

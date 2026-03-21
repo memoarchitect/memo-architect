@@ -5,6 +5,8 @@ package MEMO_Ontology_Core_Operational {
         attribute objective : String;
     }
 
+    part def Context :> OperationalEntity { }
+
     part def OperationalActor {
         attribute name : String;
         attribute role : String;
@@ -19,6 +21,8 @@ package MEMO_Ontology_Core_Operational {
         attribute name : String;
         attribute level : String;
     }
+
+    action def Operation :> OperationalActivity { }
 
     action def OperationalScenario {
         attribute name : String;

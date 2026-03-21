@@ -235,7 +235,7 @@ Then validate for completeness:
 pnpm memo validate
 ```
 
-This checks all 15 closure rules and tells you what's missing.
+This checks all 21 closure rules and tells you what's missing.
 
 ## Practical Example: Migrating from Excel
 

@@ -50,7 +50,7 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control artifacts, software lifecycle semantics, and safety/essential-performance concepts.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, and safety/essential-performance concepts.
 - **Extensions** carry product-family or technology-specific concepts such as ROS integration, UI wireframes, or device-family parts.
 
 ## Relationship Types
@@ -113,7 +113,7 @@ The target package stack is:
 
 ```text
 @memo/ontology-core
-  ├── purpose / stakeholder concerns
+  ├── purpose / program / stakeholder concerns
   ├── operational
   ├── requirements
   ├── functional

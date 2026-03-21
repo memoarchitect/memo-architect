@@ -14,7 +14,7 @@ This parses your model, checks all closure rules, and reports gaps:
 ```
 MEMO Validate — my-device
 
-Checking 15 closure rules against 74 elements...
+Checking 21 closure rules against 74 elements...
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -31,7 +31,7 @@ Results: 2 errors, 1 warning — 94% complete
 - **Errors** (`✗`) — must be fixed; `memo validate` exits with code 1 (blocks CI)
 - **Warnings** (`⚠`) — should be fixed; does not block CI
 
-## The 15 Medical Closure Rules
+## The 21 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -67,6 +67,17 @@ Results: 2 errors, 1 warning — 94% complete
 | CR-MED-013 | Every **SystemRequirement** should be verified by ≥1 Test | Warning |
 | CR-MED-014 | Every **SoftwareRequirement** should be verified by ≥1 Test | Warning |
 | CR-MED-015 | Every **UserNeed** should trace to ≥1 UseCase | Warning |
+
+### Safety, Usability, and Lifecycle Hardening
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-016 | Every **EssentialPerformance** should be preserved by ≥1 SafetyFunction | Warning |
+| CR-MED-017 | Every **UserInterfaceRequirement** should address ≥1 UseError | Warning |
+| CR-MED-018 | Every **UserInterfaceRequirement** should be verified by ≥1 Test | Warning |
+| CR-MED-019 | Every **SoftwareItem** must have `safetyClass` | Error |
+| CR-MED-020 | Every **SOUPItem** should be documented by ≥1 record/evidence link | Warning |
+| CR-MED-021 | Every **SoftwareAnomaly** should be documented by ≥1 record/evidence link | Warning |
 
 ## The Completeness Bar (Web UI)
 
