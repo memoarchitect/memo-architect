@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 188 | Rules: 61 | Relationships: 66
+Kinds: 208 | Rules: 74 | Relationships: 85
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 61 Medical Closure Rules
+## The 74 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -149,6 +149,24 @@ pnpm memo validate
 | CR-MED-059 | Every **BenefitRiskAssessment** should conclude ≥1 **ResidualRiskEvaluation** or **OverallResidualRiskEvaluation** | Warning |
 | CR-MED-060 | Every **RiskManagementReport** should conclude ≥1 **OverallResidualRiskEvaluation** | Warning |
 | CR-MED-061 | Every **ProductionPostProductionSignal** should monitor at least one regulated risk subject | Warning |
+
+### Cybersecurity and Interoperability — FDA / IEC 81001-5-1 / IEC 80001 / HL7 FHIR
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-062 | Every **CybersecurityRequirement** should be satisfied by at least one software, structure, or interface element | Warning |
+| CR-MED-063 | Every **ThreatModel** should model at least one **ThreatScenario** | Warning |
+| CR-MED-064 | Every **ThreatScenario** should threaten at least one **CyberAsset** | Warning |
+| CR-MED-065 | Every **ThreatScenario** should exploit at least one **Vulnerability** | Warning |
+| CR-MED-066 | Every **SecurityControl** should mitigate at least one **ThreatScenario** | Warning |
+| CR-MED-067 | Every **SecurityControl** should secure at least one interface | Warning |
+| CR-MED-068 | Every **TerminologyBinding** should bind at least one interface or observation | Warning |
+| CR-MED-069 | Every **TerminologyBinding** should reference at least one **ClinicalCodeSystemReference** | Warning |
+| CR-MED-070 | Every **TerminologyBinding** should reference at least one **ClinicalValueSetReference** | Warning |
+| CR-MED-071 | Every **ClinicalConceptMapReference** should identify at least one source code system | Warning |
+| CR-MED-072 | Every **ClinicalConceptMapReference** should identify at least one target code system | Warning |
+| CR-MED-073 | Every **SBOMArtifact** should describe at least one software subject | Warning |
+| CR-MED-074 | Every **SecureUpdateCapability** should support at least one software or cyber asset subject | Warning |
 
 ## The Completeness Bar (Web UI)
 

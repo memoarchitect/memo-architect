@@ -86,6 +86,81 @@ kinds:
     layer: operational
     sysmlConstruct: part def
 
+  CybersecurityRequirement:
+    label: Cybersecurity Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  AuthenticationRequirement:
+    label: Authentication Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  AuthorizationRequirement:
+    label: Authorization Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  AuditLogRequirement:
+    label: Audit Log Requirement
+    layer: requirements
+    sysmlConstruct: requirement def
+
+  CyberAsset:
+    label: Cyber Asset
+    layer: software
+    sysmlConstruct: part def
+
+  ThreatModel:
+    label: Threat Model
+    layer: risk
+    sysmlConstruct: part def
+
+  ThreatScenario:
+    label: Threat Scenario
+    layer: risk
+    sysmlConstruct: requirement def
+
+  Vulnerability:
+    label: Vulnerability
+    layer: risk
+    sysmlConstruct: requirement def
+
+  SecurityControl:
+    label: Security Control
+    layer: risk
+    sysmlConstruct: requirement def
+
+  SBOMArtifact:
+    label: SBOM Artifact
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  SecureUpdateCapability:
+    label: Secure Update Capability
+    layer: software-lifecycle
+    sysmlConstruct: part def
+
+  ClinicalCodeSystemReference:
+    label: Clinical Code System Reference
+    layer: interfaces
+    sysmlConstruct: part def
+
+  ClinicalValueSetReference:
+    label: Clinical Value Set Reference
+    layer: interfaces
+    sysmlConstruct: part def
+
+  ClinicalConceptMapReference:
+    label: Clinical Concept Map Reference
+    layer: interfaces
+    sysmlConstruct: part def
+
+  TerminologyBinding:
+    label: Terminology Binding
+    layer: interfaces
+    sysmlConstruct: part def
+
   UserNeed:
     label: User Need
     layer: requirements
@@ -604,6 +679,71 @@ relationshipTypes:
     layer: operational
     color: "#7D3C98"
 
+  - name: modelsThreat
+    label: Models Threat
+    layer: risk
+    color: "#A93226"
+
+  - name: threatensAsset
+    label: Threatens Asset
+    layer: risk
+    color: "#922B21"
+
+  - name: exploitsVulnerability
+    label: Exploits Vulnerability
+    layer: risk
+    color: "#7B241C"
+
+  - name: mitigatesThreat
+    label: Mitigates Threat
+    layer: risk
+    color: "#C0392B"
+
+  - name: securesInterface
+    label: Secures Interface
+    layer: risk
+    color: "#D35400"
+
+  - name: maintainsSbom
+    label: Maintains SBOM
+    layer: software-lifecycle
+    color: "#E67E22"
+
+  - name: supportsSecureUpdate
+    label: Supports Secure Update
+    layer: software-lifecycle
+    color: "#F39C12"
+
+  - name: bindsTerminology
+    label: Binds Terminology
+    layer: interfaces
+    color: "#16A085"
+
+  - name: referencesCodeSystem
+    label: References Code System
+    layer: interfaces
+    color: "#17A589"
+
+  - name: referencesValueSet
+    label: References Value Set
+    layer: interfaces
+    color: "#148F77"
+
+  - name: usesConceptMap
+    label: Uses Concept Map
+    layer: interfaces
+    color: "#117864"
+
+  - name: mapsSourceCodeSystem
+    label: Maps Source Code System
+    layer: interfaces
+    color: "#0E6251"
+
+  - name: mapsTargetCodeSystem
+    label: Maps Target Code System
+    layer: interfaces
+    color: "#0B5345"
+
   - name: mitigates
     label: Mitigates
     layer: risk
@@ -787,6 +927,19 @@ relationships:
   - observesSubject
   - affectsMorphology
   - appliesEnvironmentQualifier
+  - modelsThreat
+  - threatensAsset
+  - exploitsVulnerability
+  - mitigatesThreat
+  - securesInterface
+  - maintainsSbom
+  - supportsSecureUpdate
+  - bindsTerminology
+  - referencesCodeSystem
+  - referencesValueSet
+  - usesConceptMap
+  - mapsSourceCodeSystem
+  - mapsTargetCodeSystem
   - mitigates
   - causes
   - leadsTo

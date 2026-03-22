@@ -73,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 61 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, and residual-risk / post-market governance semantics:
+The medical config includes 74 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, and cybersecurity/interoperability semantics:
 
 Representative rules:
 
@@ -107,6 +107,10 @@ Representative rules:
 | CR-MED-056 | RiskManagementPlan | Should plan at least one risk-management subject via `plansRiskManagement` | warning |
 | CR-MED-058 | BenefitRiskAssessment | Should weigh at least one ClinicalBenefit via `weighsAgainstBenefit` | warning |
 | CR-MED-061 | ProductionPostProductionSignal | Should monitor at least one regulated risk subject via `monitorsRiskSubject` | warning |
+| CR-MED-063 | ThreatModel | Should model at least one ThreatScenario via `modelsThreat` | warning |
+| CR-MED-066 | SecurityControl | Should mitigate at least one ThreatScenario via `mitigatesThreat` | warning |
+| CR-MED-068 | TerminologyBinding | Should bind at least one interface/observation via `bindsTerminology` | warning |
+| CR-MED-073 | SBOMArtifact | Should describe at least one software subject via `maintainsSbom` | warning |
 
 ## CLI Output
 

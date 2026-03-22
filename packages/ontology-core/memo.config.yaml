@@ -250,6 +250,11 @@ kinds:
     layer: logical
     sysmlConstruct: part def
 
+  SystemOfSystems:
+    label: System Of Systems
+    layer: logical
+    sysmlConstruct: part def
+
   SystemExternal:
     label: External System
     layer: logical
@@ -380,8 +385,18 @@ kinds:
     layer: interfaces
     sysmlConstruct: port def
 
+  DataEndpoint:
+    label: Data Endpoint
+    layer: interfaces
+    sysmlConstruct: port def
+
   Interface:
     label: Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  DataInterface:
+    label: Data Interface
     layer: interfaces
     sysmlConstruct: interface def
 
@@ -402,6 +417,16 @@ kinds:
 
   InterfaceContract:
     label: Interface Contract
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  CommunicationProtocol:
+    label: Communication Protocol
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  InteroperabilityProfile:
+    label: Interoperability Profile
     layer: interfaces
     sysmlConstruct: interface def
 
@@ -531,6 +556,36 @@ relationshipTypes:
     layer: logical
     color: "#95A5A6"
 
+  - name: participatesInSystemOfSystems
+    label: Participates In System Of Systems
+    layer: logical
+    color: "#7D3C98"
+
+  - name: exposesInterface
+    label: Exposes Interface
+    layer: interfaces
+    color: "#17A589"
+
+  - name: hasEndpoint
+    label: Has Endpoint
+    layer: interfaces
+    color: "#148F77"
+
+  - name: implementsProtocol
+    label: Implements Protocol
+    layer: interfaces
+    color: "#117864"
+
+  - name: conformsToProfile
+    label: Conforms To Profile
+    layer: interfaces
+    color: "#0E6251"
+
+  - name: carriesExchangeItem
+    label: Carries Exchange Item
+    layer: interfaces
+    color: "#1ABC9C"
+
   - name: realization
     label: Realization
     layer: logical
@@ -608,6 +663,12 @@ relationships:
   - composedOf
   - decomposedBy
   - dependency
+  - participatesInSystemOfSystems
+  - exposesInterface
+  - hasEndpoint
+  - implementsProtocol
+  - conformsToProfile
+  - carriesExchangeItem
   - realization
   - satisfy
   - verify
