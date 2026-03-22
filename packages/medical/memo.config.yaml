@@ -820,6 +820,10 @@ viewpoints:
       - UserProfile
       - UseEnvironment
       - UserActivity
+      - Procedure
+      - OperationalEnvironment
+      - Substance
+      - Observable
       - UserInterfaceRequirement
       - UseError
       - UseSpecification
@@ -840,6 +844,14 @@ viewpoints:
     visibleRelationships:
       - derives
       - refines
+      - hasSubProcedure
+      - performedBy
+      - performedOn
+      - occursIn
+      - usesResource
+      - hasEquipment
+      - hasPersonnel
+      - containsSubstance
       - addressesUseError
       - analyzesUseError
       - specifiesScenario

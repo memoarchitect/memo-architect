@@ -9,6 +9,7 @@ It now provides:
 - workbench validation, viewpoints, and starter templates on top of the medical ontology
 - second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
 - structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
+- medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
 
@@ -68,6 +69,17 @@ The medical workbench package adds usability and essential-performance checks ov
 - Usability requirements verified by tests/validation artifacts
 
 **Enforced by rules:** CR-MED-016 through CR-MED-033
+
+### Procedure Context — Paper-Informed Operational Backbone
+
+Following the CIFMeDD paper's reusable ideas, the domain-agnostic procedure-context
+concepts live in `@memo/ontology-core`, while medical specializations live in
+`@memo/ontology-medical`:
+
+- `Procedure`, `OperationalEnvironment`, `Substance`, `Observable`, and performer/subject/resource relations live in the core backbone
+- `UserProfile` now specializes `OperationalActor`
+- `UseEnvironment` now specializes `OperationalEnvironment`
+- medical examples can now model who performs a procedure, where it occurs, what it acts on, and which resources/substances are in play without inventing device-specific terms
 
 ### ISO 13485 — QMS, Traceability, and Records
 

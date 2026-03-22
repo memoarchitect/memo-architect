@@ -15,5 +15,5 @@ package MEMO_Ontology_Medical_Development {
 
     part def Component :> LogicalComponent { }
 
-    part def EnvironmentElement :> OperationalEntity { }
+    part def EnvironmentElement :> Resource { }
 }

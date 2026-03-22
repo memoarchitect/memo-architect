@@ -105,6 +105,26 @@ kinds:
     layer: operational
     sysmlConstruct: part def
 
+  OperationalEnvironment:
+    label: Operational Environment
+    layer: operational
+    sysmlConstruct: part def
+
+  Resource:
+    label: Resource
+    layer: operational
+    sysmlConstruct: part def
+
+  Substance:
+    label: Substance
+    layer: operational
+    sysmlConstruct: part def
+
+  Observable:
+    label: Observable
+    layer: operational
+    sysmlConstruct: part def
+
   OperationalActivity:
     label: Operational Activity
     layer: operational
@@ -112,6 +132,11 @@ kinds:
 
   Operation:
     label: Operation
+    layer: operational
+    sysmlConstruct: action def
+
+  Procedure:
+    label: Procedure
     layer: operational
     sysmlConstruct: action def
 
@@ -526,6 +551,46 @@ relationshipTypes:
     layer: interfaces
     color: "#1ABC9C"
 
+  - name: hasSubProcedure
+    label: Has Subprocedure
+    layer: operational
+    color: "#CD6155"
+
+  - name: performedBy
+    label: Performed By
+    layer: operational
+    color: "#C0392B"
+
+  - name: performedOn
+    label: Performed On
+    layer: operational
+    color: "#A93226"
+
+  - name: occursIn
+    label: Occurs In
+    layer: operational
+    color: "#922B21"
+
+  - name: usesResource
+    label: Uses Resource
+    layer: operational
+    color: "#E74C3C"
+
+  - name: hasEquipment
+    label: Has Equipment
+    layer: operational
+    color: "#CB4335"
+
+  - name: hasPersonnel
+    label: Has Personnel
+    layer: operational
+    color: "#B03A2E"
+
+  - name: containsSubstance
+    label: Contains Substance
+    layer: operational
+    color: "#884EA0"
+
   - name: succession
     label: Succession
     layer: operational
@@ -547,6 +612,14 @@ relationships:
   - satisfy
   - verify
   - flow
+  - hasSubProcedure
+  - performedBy
+  - performedOn
+  - occursIn
+  - usesResource
+  - hasEquipment
+  - hasPersonnel
+  - containsSubstance
   - succession
 
 closureRules: []
