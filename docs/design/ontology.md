@@ -50,7 +50,7 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
 - **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
 
 ### Compatibility Policy
@@ -99,6 +99,12 @@ Each relationship type has:
 | `causes` | Hazard → HazardousSituation | risk | Causal chain |
 | `leadsTo` | HazardousSituation → Harm | risk | Harm pathway |
 | `identifies` | Risk → Hazard | risk | Risk record identifies the associated hazard |
+| `plansRiskManagement` | Risk Management Plan → risk-governance subject | qms | Explicit ISO 14971 planning scope across risks and analyses |
+| `assessesResidualRisk` | Residual Risk Evaluation → Risk/HazardousSituation/Harm | risk | Explicit residual-risk acceptability linkage |
+| `weighsAgainstBenefit` | Benefit-Risk Assessment → Clinical Benefit | risk | Connects benefit-risk rationale to the claimed clinical benefit |
+| `concludesBenefitRisk` | Benefit-Risk Assessment → residual-risk subject | risk | Captures the assessment outcome over residual-risk evaluations |
+| `concludesOverallResidualRisk` | Risk Management Report → Overall Residual Risk Evaluation | qms | Records overall residual-risk acceptability in a governed report |
+| `monitorsRiskSubject` | Production/Post-Production Signal → Hazard/Harm/Risk/Control | qms | Feeds production/post-production learning back into the risk backbone |
 | `analyzesFailureMode` | FMEA → Failure Mode | risk | Structured failure analysis coverage |
 | `hasFailureCause` | Failure Mode → Failure Cause | risk | Captures why a failure mode occurs |
 | `resultsInFailureEffect` | Failure Mode → Failure Effect | risk | Captures what the failure mode produces |
@@ -164,7 +170,7 @@ The target package stack is:
   ├── clinical-context
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
-  ├── risk-management
+  ├── risk-management (including residual risk, benefit-risk, and post-market anchors)
   ├── risk-analysis (FTA / FMEA semantics on top of medical risk management)
   ├── software-lifecycle
   ├── safety-essential-performance

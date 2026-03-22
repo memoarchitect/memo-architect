@@ -73,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 55 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, and richer clinical-context semantics:
+The medical config includes 61 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, and residual-risk / post-market governance semantics:
 
 Representative rules:
 
@@ -104,6 +104,9 @@ Representative rules:
 | CR-MED-049 | TreatmentPathway | Should contain at least one Procedure/ClinicalStep via `hasSubProcedure` | warning |
 | CR-MED-052 | ClinicalObservation | Should be produced by a Procedure via `producesObservation` | warning |
 | CR-MED-055 | UseEnvironment | Should declare a ClinicalEnvironmentQualifier via `appliesEnvironmentQualifier` | warning |
+| CR-MED-056 | RiskManagementPlan | Should plan at least one risk-management subject via `plansRiskManagement` | warning |
+| CR-MED-058 | BenefitRiskAssessment | Should weigh at least one ClinicalBenefit via `weighsAgainstBenefit` | warning |
+| CR-MED-061 | ProductionPostProductionSignal | Should monitor at least one regulated risk subject via `monitorsRiskSubject` | warning |
 
 ## CLI Output
 

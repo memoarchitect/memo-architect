@@ -56,6 +56,30 @@ package IrrigationPump_Risk {
         attribute redefines probabilityPost = ProbabilityLevel::Remote;
     }
 
+    part benefitSustainedVisualization : ClinicalBenefit {
+        attribute redefines benefitId = "BEN-IRR-001";
+        attribute redefines title = "Sustained arthroscopic visualization with controlled distension";
+    }
+
+    part residualRiskEvalPressureControl : ResidualRiskEvaluation {
+        attribute redefines evaluationId = "RRE-IRR-001";
+        attribute redefines title = "Residual pressure-control risk evaluation";
+        attribute redefines acceptability = "Acceptable with implemented controls and verification";
+    }
+
+    part overallResidualRiskEvalIrrigation : OverallResidualRiskEvaluation {
+        attribute redefines evaluationId = "ORRE-IRR-001";
+        attribute redefines title = "Overall residual risk evaluation for irrigation support";
+        attribute redefines acceptability = "Acceptable when weighed against clinical benefit";
+        attribute redefines conclusion = "Residual pressure and depletion risks are acceptable for intended arthroscopy use when controls remain in place.";
+    }
+
+    part benefitRiskAssessmentIrrigation : BenefitRiskAssessment {
+        attribute redefines assessmentId = "BRA-IRR-001";
+        attribute redefines title = "Irrigation support benefit-risk assessment";
+        attribute redefines conclusion = "The residual risks are acceptable relative to the benefit of maintaining visualization and procedure continuity.";
+    }
+
     requirement rcPressureLimiter : RiskControl {
         attribute redefines rcId = "RC-IRR-001";
         attribute redefines title = "Pressure Limiter";
@@ -163,6 +187,11 @@ package IrrigationPump_Risk {
     connection : LeadsTo connect situation ::> hsCollapsedField to harm ::> harmLossOfVisualization;
 
     connection : Identifies connect risk ::> riskPressureInjury to hazard ::> hazOverpressure;
+    connection : AssessesResidualRisk connect evaluation ::> residualRiskEvalPressureControl to subject ::> riskPressureInjury;
+    connection : AssessesResidualRisk connect evaluation ::> residualRiskEvalPressureControl to subject ::> hsCollapsedField;
+    connection : WeighsAgainstBenefit connect assessment ::> benefitRiskAssessmentIrrigation to benefit ::> benefitSustainedVisualization;
+    connection : ConcludesBenefitRisk connect assessment ::> benefitRiskAssessmentIrrigation to subject ::> residualRiskEvalPressureControl;
+    connection : ConcludesBenefitRisk connect assessment ::> benefitRiskAssessmentIrrigation to subject ::> overallResidualRiskEvalIrrigation;
 
     connection : AnalyzesFailureMode connect analysis ::> fmeaPressureAndAlarmIntegrity to failureMode ::> fmPressureSensorDrift;
     connection : AnalyzesFailureMode connect analysis ::> fmeaPressureAndAlarmIntegrity to failureMode ::> fmReservoirScaleDisconnect;

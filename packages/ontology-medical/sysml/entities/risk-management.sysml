@@ -45,8 +45,40 @@ package MEMO_Ontology_Medical_Risk {
         attribute title : String;
     }
 
+    part def ClinicalBenefit {
+        attribute benefitId : String;
+        attribute title : String;
+    }
+
     part def BenefitRiskAssessment {
         attribute assessmentId : String;
+        attribute title : String;
         attribute conclusion : String;
+    }
+
+    part def ResidualRiskEvaluation {
+        attribute evaluationId : String;
+        attribute title : String;
+        attribute acceptability : String;
+    }
+
+    part def OverallResidualRiskEvaluation {
+        attribute evaluationId : String;
+        attribute title : String;
+        attribute acceptability : String;
+        attribute conclusion : String;
+    }
+
+    part def RiskManagementPlan :> QMSRecord {
+        attribute scope : String;
+    }
+
+    part def RiskManagementReport :> QMSRecord {
+        attribute conclusion : String;
+    }
+
+    part def ProductionPostProductionSignal :> ComplianceEvidence {
+        attribute signalId : String;
+        attribute sourceType : String;
     }
 }

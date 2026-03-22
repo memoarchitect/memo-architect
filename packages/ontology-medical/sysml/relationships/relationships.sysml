@@ -55,6 +55,36 @@ package MEMO_Ontology_Medical_Relationships {
         end hazard : Hazard [1];
     }
 
+    connection def PlansRiskManagement {
+        end plan : RiskManagementPlan [1];
+        end subject[1];
+    }
+
+    connection def AssessesResidualRisk {
+        end evaluation : ResidualRiskEvaluation [1];
+        end subject[1];
+    }
+
+    connection def WeighsAgainstBenefit {
+        end assessment : BenefitRiskAssessment [1];
+        end benefit : ClinicalBenefit [1];
+    }
+
+    connection def ConcludesBenefitRisk {
+        end assessment : BenefitRiskAssessment [1];
+        end subject[1];
+    }
+
+    connection def ConcludesOverallResidualRisk {
+        end report : RiskManagementReport [1];
+        end evaluation : OverallResidualRiskEvaluation [1];
+    }
+
+    connection def MonitorsRiskSubject {
+        end signal : ProductionPostProductionSignal [1];
+        end subject[1];
+    }
+
     connection def AnalyzesFailureMode {
         end analysis : FailureModesAndEffectsAnalysis [1];
         end failureMode : FailureMode [1];

@@ -207,6 +207,18 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Irrigation software and usability trace package";
     }
 
+    part riskPlanIrrigationConsole : RiskManagementPlan {
+        attribute redefines recordId = "RMP-IRR-001";
+        attribute redefines title = "Irrigation console risk management plan";
+        attribute redefines scope = "Pressure regulation, priming integrity, reservoir depletion, and post-market risk feedback";
+    }
+
+    part riskReportIrrigationConsole : RiskManagementReport {
+        attribute redefines recordId = "RMR-IRR-001";
+        attribute redefines title = "Irrigation console risk management report";
+        attribute redefines conclusion = "Overall residual risk remains acceptable for the intended arthroscopy workflow with current controls and monitoring.";
+    }
+
     part evidenceFormativePrimeWorkflow : ComplianceEvidence {
         attribute redefines recordId = "EV-IRR-001";
         attribute redefines title = "Prime workflow formative findings";
@@ -217,6 +229,14 @@ package IrrigationPump_Compliance {
         attribute redefines recordId = "EV-IRR-002";
         attribute redefines title = "Prime workflow summative evidence";
         attribute redefines artifactType = "Usability Test Report";
+    }
+
+    part signalReservoirCollapseTrend : ProductionPostProductionSignal {
+        attribute redefines recordId = "PMS-IRR-001";
+        attribute redefines title = "Reservoir depletion complaint trend review";
+        attribute redefines artifactType = "Post-market complaint trend";
+        attribute redefines signalId = "SIG-IRR-001";
+        attribute redefines sourceType = "Complaint trend and service review";
     }
 
     part releaseBaseline20 : ReleaseBaseline {
@@ -317,6 +337,13 @@ package IrrigationPump_Compliance {
     connection : ImplementsRiskControl connect implementer ::> sfMaintainSafePressure to control ::> rcPressureLimiter;
     connection : AppliesStandardRequirement connect standardRequirement ::> collateralAlarmStandard to subject ::> epControlledIrrigationPressure;
     connection : AppliesStandardRequirement connect standardRequirement ::> particularIrrigationStandard to subject ::> pofMaintainFieldDistension;
+    connection : PlansRiskManagement connect plan ::> riskPlanIrrigationConsole to subject ::> riskPressureInjury;
+    connection : PlansRiskManagement connect plan ::> riskPlanIrrigationConsole to subject ::> fmeaPressureAndAlarmIntegrity;
+    connection : PlansRiskManagement connect plan ::> riskPlanIrrigationConsole to subject ::> residualRiskEvalPressureControl;
+    connection : PlansRiskManagement connect plan ::> riskPlanIrrigationConsole to subject ::> benefitRiskAssessmentIrrigation;
+    connection : ConcludesOverallResidualRisk connect report ::> riskReportIrrigationConsole to evaluation ::> overallResidualRiskEvalIrrigation;
+    connection : MonitorsRiskSubject connect signal ::> signalReservoirCollapseTrend to subject ::> harmLossOfVisualization;
+    connection : MonitorsRiskSubject connect signal ::> signalReservoirCollapseTrend to subject ::> rcReservoirLowAlarm;
 
     connection : Satisfy connect satisfiedBy ::> swItemPressureController to satisfies ::> swrPressureControlLoop;
     connection : Satisfy connect satisfiedBy ::> swItemAlarmSupervisor to satisfies ::> swrAlarmCoordinator;
@@ -364,6 +391,8 @@ package IrrigationPump_Compliance {
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> summativeEvalPrimeWorkflow;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> fmeaPressureAndAlarmIntegrity;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> ftaReservoirAlarmLoss;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> riskPlanIrrigationConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> riskReportIrrigationConsole;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> collateralAlarmStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> particularIrrigationStandard;
 
@@ -371,6 +400,7 @@ package IrrigationPump_Compliance {
     connection : Evidences connect evidence ::> evidenceFormativePrimeWorkflow to subject ::> useErrorAnalysisPrimeWorkflow;
     connection : Evidences connect evidence ::> evidenceSummativePrimeWorkflow to subject ::> summativeEvalPrimeWorkflow;
     connection : Evidences connect evidence ::> evidenceSummativePrimeWorkflow to subject ::> uiReqPrimeConfirmation;
+    connection : Evidences connect evidence ::> signalReservoirCollapseTrend to subject ::> overallResidualRiskEvalIrrigation;
 
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swSystemIrrigationController;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swItemPressureController;

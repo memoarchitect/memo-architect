@@ -241,9 +241,39 @@ kinds:
     layer: risk
     sysmlConstruct: requirement def
 
+  ClinicalBenefit:
+    label: Clinical Benefit
+    layer: risk
+    sysmlConstruct: part def
+
   BenefitRiskAssessment:
     label: Benefit-Risk Assessment
     layer: risk
+    sysmlConstruct: part def
+
+  ResidualRiskEvaluation:
+    label: Residual Risk Evaluation
+    layer: risk
+    sysmlConstruct: part def
+
+  OverallResidualRiskEvaluation:
+    label: Overall Residual Risk Evaluation
+    layer: risk
+    sysmlConstruct: part def
+
+  RiskManagementPlan:
+    label: Risk Management Plan
+    layer: qms
+    sysmlConstruct: part def
+
+  RiskManagementReport:
+    label: Risk Management Report
+    layer: qms
+    sysmlConstruct: part def
+
+  ProductionPostProductionSignal:
+    label: Production/Post-Production Signal
+    layer: qms
     sysmlConstruct: part def
 
   FailureAnalysis:
@@ -594,6 +624,36 @@ relationshipTypes:
     layer: risk
     color: "#D35400"
 
+  - name: plansRiskManagement
+    label: Plans Risk Management
+    layer: qms
+    color: "#34495E"
+
+  - name: assessesResidualRisk
+    label: Assesses Residual Risk
+    layer: risk
+    color: "#BA4A00"
+
+  - name: weighsAgainstBenefit
+    label: Weighs Against Benefit
+    layer: risk
+    color: "#AF601A"
+
+  - name: concludesBenefitRisk
+    label: Concludes Benefit-Risk
+    layer: risk
+    color: "#7E5109"
+
+  - name: concludesOverallResidualRisk
+    label: Concludes Overall Residual Risk
+    layer: qms
+    color: "#2C3E50"
+
+  - name: monitorsRiskSubject
+    label: Monitors Risk Subject
+    layer: qms
+    color: "#5D6D7E"
+
   - name: analyzesFailureMode
     label: Analyzes Failure Mode
     layer: risk
@@ -731,6 +791,12 @@ relationships:
   - causes
   - leadsTo
   - identifies
+  - plansRiskManagement
+  - assessesResidualRisk
+  - weighsAgainstBenefit
+  - concludesBenefitRisk
+  - concludesOverallResidualRisk
+  - monitorsRiskSubject
   - analyzesFailureMode
   - hasFailureCause
   - resultsInFailureEffect

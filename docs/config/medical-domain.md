@@ -9,6 +9,7 @@ It now provides:
 - workbench validation, viewpoints, and starter templates on top of the medical ontology
 - second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
 - structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
+- residual-risk, benefit-risk, and production/post-production signal semantics connected into the medical risk and QMS backbone
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -17,7 +18,7 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 55 |
+| Closure Rules | 61 |
 | Workbench Viewpoints | 6 |
 
 ## Standards Alignment
@@ -32,13 +33,16 @@ package adds the validation and viewpoint layer that operationalizes them:
 - Structured failure analysis → `FailureModesAndEffectsAnalysis`, `FailureMode`, `FailureCause`, `FailureEffect`, `DetectionControl`
 - Fault propagation analysis → `FaultTreeAnalysis`, `TopEvent`, `IntermediateEvent`, `BasicEvent`, `FaultTreeGate`
 - Risk control → `RiskControl` elements with `mitigates` relationships
+- Residual-risk and benefit-risk reasoning → `ResidualRiskEvaluation`, `OverallResidualRiskEvaluation`, `ClinicalBenefit`, and `BenefitRiskAssessment`
+- Governance and feedback anchors → `RiskManagementPlan`, `RiskManagementReport`, and `ProductionPostProductionSignal`
 - Verification → `Test` elements with `verify` relationships to controls
 - Failure-analysis trace → `escalatesToRisk`, `triggersHazardousSituation`, and `detectsFailureMode` connect analysis results directly into the ISO 14971 chain
+- Governance trace → `plansRiskManagement`, `assessesResidualRisk`, `weighsAgainstBenefit`, `concludesBenefitRisk`, `concludesOverallResidualRisk`, and `monitorsRiskSubject` connect planning, acceptability, benefit-risk rationale, and post-market feedback into that same chain
 
 This follows the direction of ISO 14971:2019 plus ISO/TR 24971:2020 guidance:
 failure-analysis artifacts are modeled as part of risk analysis, not as detached UI-only tooling.
 
-**Enforced by rules:** CR-MED-001 through CR-MED-006 and CR-MED-040 through CR-MED-048
+**Enforced by rules:** CR-MED-001 through CR-MED-006, CR-MED-040 through CR-MED-048, and CR-MED-056 through CR-MED-061
 
 ### IEC 62304 — Software Lifecycle
 
@@ -101,6 +105,8 @@ usability, and risk-analysis artifacts:
 
 - Design history and release records → `DesignHistoryRecord`, `ReleaseBaseline`, `ChangeRecord`
 - Objective evidence → `ComplianceEvidence`
+- Risk-governance records → `RiskManagementPlan` and `RiskManagementReport`
+- Production/post-production feedback → `ProductionPostProductionSignal`
 - Risk-analysis artifacts documented under QMS trace → FMEA / fault-tree analyses can be documented alongside lifecycle and usability artifacts
 
 **Enforced by rules:** CR-MED-020 through CR-MED-039
