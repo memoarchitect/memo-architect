@@ -17,7 +17,7 @@ pnpm run test
 ```bash
 cd packages/core
 pnpm run build    # Rebuild after changes
-pnpm run test     # Run 120 tests
+pnpm run test
 ```
 
 After changing the Langium grammar (`src/grammar/memo-sysml.langium`), the build step runs `langium generate` to regenerate the parser.
@@ -39,6 +39,8 @@ pnpm run build    # Rebuild TypeScript
 cd ../../examples/infusion-pump
 pnpm memo validate    # Test the validate command
 pnpm memo dev         # Test the dev server
+cd ../irrigation-pump
+pnpm memo validate    # Compare against the second medical reference model
 ```
 
 ## Project Structure
@@ -75,8 +77,8 @@ pnpm --filter @memo/core test
 
 | Package | Tests | Status |
 |---|---|---|
-| `@memo/core` | 120 | Parser (31), ontology parsing (13), real files (4), builder (12) |
-| `@memo/cli` | 0 | Pending |
+| `@memo/core` | Vitest suite | Parser, ontology parsing, real files, builder, validation |
+| `@memo/cli` | Vitest suite | E2E CLI workflows against live example projects |
 | `@memo/web` | 0 | Pending |
 
 ## Code Style

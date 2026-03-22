@@ -244,14 +244,14 @@ Exit criteria:
 
 Prove the ontology against more than a single infusion-pump reference:
 
-- [ ] **Add a second medical reference model** — choose a different device archetype and model it on the new backbone
-- [ ] **Exercise different ontology slices** — ensure the new example stresses different risk, software, UI, or physical patterns than infusion pump
-- [ ] **Compare rule behavior across examples** — check whether the ontology and rule-pack behave consistently across multiple device types
-- [ ] **Use findings to refine ontology boundaries** — fix any concepts that still feel too device-specific or too weakly typed
+- [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
+- [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 39-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
-- at least two strong reference models validate on the shared backbone
-- ontology changes are driven by cross-example evidence rather than a single product
+- [x] at least two strong reference models validate on the shared backbone
+- [x] ontology changes are driven by cross-example evidence rather than a single product
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

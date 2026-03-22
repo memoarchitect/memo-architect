@@ -1,82 +1,53 @@
 package IrrigationPump_Behavior {
+    import MEMO_Ontology_Medical::*;
 
-    // --- Action Definitions ---
-
-    action def SenseSoilMoisture {
-        out moistureLevel : MoistureReading;
+    part ucPrimeCassette : UseCase {
+        attribute redefines name = "Prime Disposable Cassette";
+        attribute redefines status = "Operational";
     }
 
-    action def EvaluateIrrigationNeed {
-        in moistureLevel : MoistureReading;
-        in weatherForecast : WeatherData;
-        out irrigationDecision : IrrigationCommand;
+    part ucDeliverIrrigation : UseCase {
+        attribute redefines name = "Deliver Surgical Irrigation";
+        attribute redefines status = "Operational";
     }
 
-    action def ActivatePump {
-        in command : IrrigationCommand;
-        out waterFlow : WaterFlowRate;
-        out pumpStatus : PumpStatus;
+    part ucRespondToReservoirAlarm : UseCase {
+        attribute redefines name = "Respond To Reservoir Alarm";
+        attribute redefines status = "Operational";
     }
 
-    action def DistributeWater {
-        in waterFlow : WaterFlowRate;
-        out zoneDelivery : ZoneWaterVolume;
+    action primeCassetteScenario : Scenario {
+        attribute redefines name = "Cassette priming workflow";
+        attribute redefines scenarioType = "Setup";
     }
 
-    action def MonitorWaterUsage {
-        in zoneDelivery : ZoneWaterVolume;
-        in pumpStatus : PumpStatus;
-        out usageReport : UsageReport;
-        out leakAlert : LeakAlarm;
+    action arthroscopyIrrigationScenario : Scenario {
+        attribute redefines name = "Arthroscopy irrigation pressure control";
+        attribute redefines scenarioType = "Operation";
     }
 
-    action def HandleFault {
-        in leakAlert : LeakAlarm;
-        out shutdownCommand : ShutdownSignal;
+    action reservoirAlarmScenario : Scenario {
+        attribute redefines name = "Reservoir depletion alarm response";
+        attribute redefines scenarioType = "Alarm";
     }
 
-    action def FetchWeather {
-        out weatherForecast : WeatherData;
+    action sfPrimeFluidPath : SystemFunction {
+        attribute redefines name = "Prime Fluid Path";
     }
 
-    // --- Top-level irrigation cycle ---
-
-    action irrigationCycle {
-
-        action sense : SenseSoilMoisture;
-        action fetchWeather : FetchWeather;
-        action evaluate : EvaluateIrrigationNeed;
-        action activate : ActivatePump;
-        action distribute : DistributeWater;
-        action monitorUsage : MonitorWaterUsage;
-        action handleFault : HandleFault;
-
-        // Flows — material (water), information (signals/data)
-        flow of MoistureReading from sense.moistureLevel to evaluate.moistureLevel;
-        flow of WeatherData from fetchWeather.weatherForecast to evaluate.weatherForecast;
-        flow of IrrigationCommand from evaluate.irrigationDecision to activate.command;
-        flow of WaterFlowRate from activate.waterFlow to distribute.waterFlow;
-        flow of ZoneWaterVolume from distribute.zoneDelivery to monitorUsage.zoneDelivery;
-        flow of PumpStatus from activate.pumpStatus to monitorUsage.pumpStatus;
-        flow of LeakAlarm from monitorUsage.leakAlert to handleFault.leakAlert;
-
-        // Succession — sense and fetch run in parallel, then evaluate
-        first start then sense;
-        first start then fetchWeather;
-        first sense then evaluate;
-        first fetchWeather then evaluate;
-        first evaluate then activate then distribute then done;
-        first distribute then monitorUsage;
-        first monitorUsage then handleFault;
+    action sfRegulatePressure : SystemFunction {
+        attribute redefines name = "Regulate Irrigation Pressure";
     }
 
-    // --- Allocations (function → structure) ---
+    action sfEstimateReservoirVolume : SystemFunction {
+        attribute redefines name = "Estimate Reservoir Volume";
+    }
 
-    allocate sense to SoilSensorArray;
-    allocate fetchWeather to CommunicationsModule;
-    allocate evaluate to ControlUnit;
-    allocate activate to PumpMotorAssembly;
-    allocate distribute to ValveManifold;
-    allocate monitorUsage to ControlUnit;
-    allocate handleFault to ControlUnit;
+    action sfManageAlarms : SystemFunction {
+        attribute redefines name = "Manage Irrigation Alarms";
+    }
+
+    connection : Refines connect refined ::> ucPrimeCassette to refiner ::> primeCassetteScenario;
+    connection : Refines connect refined ::> ucDeliverIrrigation to refiner ::> arthroscopyIrrigationScenario;
+    connection : Refines connect refined ::> ucRespondToReservoirAlarm to refiner ::> reservoirAlarmScenario;
 }

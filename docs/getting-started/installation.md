@@ -32,7 +32,7 @@ This uses Turborepo to build all workspace packages in dependency order, includi
 ## Verify Installation
 
 ```bash
-# Run the test suite (120 tests)
+# Run the test suite
 pnpm run test
 
 # Check the CLI is available
@@ -72,4 +72,14 @@ Then from any MEMO project directory:
 ```bash
 memo dev
 memo validate
+```
+
+To verify the shared medical backbone against both reference models:
+
+```bash
+cd examples/infusion-pump
+pnpm memo validate
+
+cd ../irrigation-pump
+pnpm memo validate
 ```
