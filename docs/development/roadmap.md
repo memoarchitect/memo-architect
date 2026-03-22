@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 subset parser grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 89 rules, 9 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 97 rules, 10 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -246,7 +246,7 @@ Prove the ontology against more than a single infusion-pump reference:
 
 - [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
 - [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
-- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 89-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 97-rule medical pack, exposing only the pre-existing infusion behavior warnings
 - [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
@@ -328,6 +328,20 @@ Exit criteria:
 - [x] `@memo/ontology-medical` supports manufacturing / installation / service / calibration semantics on the regulated backbone
 - [x] `@memo/ontology-medical` supports reusable regulated product-family / configuration semantics without falling back to generic trace links
 - [x] ontology files validate cleanly inside MEMO's supported SysML v2 subset
+
+### Next Ontology Milestone — Data Modeling and ROS Interface Semantics **[HIGH]**
+
+Refine the ontology so message-oriented software integration can be modeled with typed semantics instead of generic interfaces and trace links:
+
+- [x] **Add reusable data-modeling semantics to the core backbone** — added publish/subscribe channels, request/response interfaces, message types, schemas, fields, and typed messaging relationships in `@memo/ontology-core`
+- [x] **Add ROS-specialized platform semantics in the medical layer** — added `RosPublication`, `RosSubscription`, `RosServiceCall`, `RosServiceServer`, `RosMessage`, `RosRequest`, `RosResponse`, and ROS message-schema/field concepts in `@memo/ontology-medical`
+- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates ROS-style topic/service/message structures and includes a dedicated data-messaging viewpoint
+- [x] **Exercise the new semantics in a live reference model** — the infusion-pump reference model now includes ROS-style nodes, topics, publishers, subscribers, services, messages, and schemas
+
+Exit criteria:
+- [x] `@memo/ontology-core` supports reusable message/data-model semantics
+- [x] `@memo/ontology-medical` supports ROS-specialized interface semantics without pushing them into the frozen legacy package
+- [x] at least one reference model exercises publishers, subscribers, services, messages, and schemas end to end
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

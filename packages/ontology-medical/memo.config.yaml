@@ -723,6 +723,66 @@ kinds:
     layer: interfaces
     sysmlConstruct: interface def
 
+  RosPublication:
+    label: ROS Publication
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosSubscription:
+    label: ROS Subscription
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosServiceCall:
+    label: ROS Service Call
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosServiceServer:
+    label: ROS Service Server
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosMessage:
+    label: ROS Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosEventMessage:
+    label: ROS Event Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosStateMessage:
+    label: ROS State Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosCommandMessage:
+    label: ROS Command Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosRequest:
+    label: ROS Request
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosResponse:
+    label: ROS Response
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosMessageSchema:
+    label: ROS Message Schema
+    layer: interfaces
+    sysmlConstruct: part def
+
+  RosMessageField:
+    label: ROS Message Field
+    layer: interfaces
+    sysmlConstruct: part def
+
   UIElement:
     label: UI Element
     layer: ui

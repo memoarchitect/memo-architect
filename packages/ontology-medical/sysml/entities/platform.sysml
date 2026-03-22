@@ -6,7 +6,31 @@ package MEMO_Ontology_Medical_Platform {
 
     part def RosNode :> SoftwareComponent { }
 
-    interface def RosTopic :> SoftwareInterface { }
+    interface def RosTopic :> PublishSubscribeChannel { }
 
-    interface def RosService :> SoftwareInterface { }
+    interface def RosService :> RequestResponseInterface { }
+
+    interface def RosPublication :> PublisherInterface { }
+
+    interface def RosSubscription :> SubscriberInterface { }
+
+    interface def RosServiceCall :> ServiceConsumerInterface { }
+
+    interface def RosServiceServer :> ServiceProviderInterface { }
+
+    item def RosMessage :> Message { }
+
+    item def RosEventMessage :> EventMessage { }
+
+    item def RosStateMessage :> StateMessage { }
+
+    item def RosCommandMessage :> CommandMessage { }
+
+    item def RosRequest :> RequestMessage { }
+
+    item def RosResponse :> ResponseMessage { }
+
+    part def RosMessageSchema :> MessageSchema { }
+
+    part def RosMessageField :> MessageField { }
 }

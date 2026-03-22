@@ -400,6 +400,16 @@ kinds:
     layer: interfaces
     sysmlConstruct: interface def
 
+  PublishSubscribeChannel:
+    label: Publish Subscribe Channel
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RequestResponseInterface:
+    label: Request Response Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
   SoftwareInterface:
     label: Software Interface
     layer: interfaces
@@ -412,6 +422,26 @@ kinds:
 
   SoftwareRequiredInterface:
     label: Software Required Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  PublisherInterface:
+    label: Publisher Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  SubscriberInterface:
+    label: Subscriber Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  ServiceProviderInterface:
+    label: Service Provider Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  ServiceConsumerInterface:
+    label: Service Consumer Interface
     layer: interfaces
     sysmlConstruct: interface def
 
@@ -434,6 +464,46 @@ kinds:
     label: Exchange Item
     layer: interfaces
     sysmlConstruct: item def
+
+  Message:
+    label: Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  EventMessage:
+    label: Event Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  StateMessage:
+    label: State Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  CommandMessage:
+    label: Command Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RequestMessage:
+    label: Request Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  ResponseMessage:
+    label: Response Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  MessageSchema:
+    label: Message Schema
+    layer: interfaces
+    sysmlConstruct: part def
+
+  MessageField:
+    label: Message Field
+    layer: interfaces
+    sysmlConstruct: part def
 
   DataType:
     label: Data Type
@@ -586,6 +656,56 @@ relationshipTypes:
     layer: interfaces
     color: "#1ABC9C"
 
+  - name: publishesTo
+    label: Publishes To
+    layer: interfaces
+    color: "#16A085"
+
+  - name: subscribesTo
+    label: Subscribes To
+    layer: interfaces
+    color: "#148F77"
+
+  - name: publishesMessage
+    label: Publishes Message
+    layer: interfaces
+    color: "#117864"
+
+  - name: consumesMessage
+    label: Consumes Message
+    layer: interfaces
+    color: "#0E6251"
+
+  - name: servesInterface
+    label: Serves Interface
+    layer: interfaces
+    color: "#1F618D"
+
+  - name: invokesInterface
+    label: Invokes Interface
+    layer: interfaces
+    color: "#2874A6"
+
+  - name: carriesRequestMessage
+    label: Carries Request Message
+    layer: interfaces
+    color: "#2E86C1"
+
+  - name: carriesResponseMessage
+    label: Carries Response Message
+    layer: interfaces
+    color: "#3498DB"
+
+  - name: definesMessageSchema
+    label: Defines Message Schema
+    layer: interfaces
+    color: "#48C9B0"
+
+  - name: hasMessageField
+    label: Has Message Field
+    layer: interfaces
+    color: "#45B39D"
+
   - name: realization
     label: Realization
     layer: logical
@@ -669,6 +789,16 @@ relationships:
   - implementsProtocol
   - conformsToProfile
   - carriesExchangeItem
+  - publishesTo
+  - subscribesTo
+  - publishesMessage
+  - consumesMessage
+  - servesInterface
+  - invokesInterface
+  - carriesRequestMessage
+  - carriesResponseMessage
+  - definesMessageSchema
+  - hasMessageField
   - realization
   - satisfy
   - verify
