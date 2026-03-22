@@ -36,6 +36,10 @@ cosmaLayers:
     label: QMS & Records
     color: "#2C3E50"
 
+  - id: privacy
+    label: Privacy & Governance
+    color: "#16A085"
+
   - id: ui
     label: UI Realization
     color: "#3498DB"
@@ -159,6 +163,126 @@ kinds:
   TerminologyBinding:
     label: Terminology Binding
     layer: interfaces
+    sysmlConstruct: part def
+
+  PersonalDataCategory:
+    label: Personal Data Category
+    layer: privacy
+    sysmlConstruct: part def
+
+  SpecialCategoryPersonalData:
+    label: Special Category Personal Data
+    layer: privacy
+    sysmlConstruct: part def
+
+  ProtectedHealthInformation:
+    label: Protected Health Information
+    layer: privacy
+    sysmlConstruct: part def
+
+  DataProcessingActivity:
+    label: Data Processing Activity
+    layer: privacy
+    sysmlConstruct: action def
+
+  ProcessingBasis:
+    label: Processing Basis
+    layer: privacy
+    sysmlConstruct: part def
+
+  LawfulBasis:
+    label: Lawful Basis
+    layer: privacy
+    sysmlConstruct: part def
+
+  HIPAAPermissionBasis:
+    label: HIPAA Permission Basis
+    layer: privacy
+    sysmlConstruct: part def
+
+  ConsentRecord:
+    label: Consent Record
+    layer: privacy
+    sysmlConstruct: part def
+
+  PrivacyNotice:
+    label: Privacy Notice
+    layer: privacy
+    sysmlConstruct: part def
+
+  DataRetentionPolicy:
+    label: Data Retention Policy
+    layer: privacy
+    sysmlConstruct: part def
+
+  MinimumNecessaryPolicy:
+    label: Minimum Necessary Policy
+    layer: privacy
+    sysmlConstruct: part def
+
+  DataControllerRole:
+    label: Data Controller Role
+    layer: privacy
+    sysmlConstruct: part def
+
+  DataProcessorRole:
+    label: Data Processor Role
+    layer: privacy
+    sysmlConstruct: part def
+
+  DeIdentificationMethod:
+    label: De-Identification Method
+    layer: privacy
+    sysmlConstruct: part def
+
+  PseudonymizationMethod:
+    label: Pseudonymization Method
+    layer: privacy
+    sysmlConstruct: part def
+
+  PrivacyImpactAssessment:
+    label: Privacy Impact Assessment
+    layer: privacy
+    sysmlConstruct: part def
+
+  DataSubjectRequest:
+    label: Data Subject Request
+    layer: privacy
+    sysmlConstruct: part def
+
+  AccessRequest:
+    label: Access Request
+    layer: privacy
+    sysmlConstruct: part def
+
+  ErasureRequest:
+    label: Erasure Request
+    layer: privacy
+    sysmlConstruct: part def
+
+  RectificationRequest:
+    label: Rectification Request
+    layer: privacy
+    sysmlConstruct: part def
+
+  TerminologyImportBoundary:
+    label: Terminology Import Boundary
+    layer: interfaces
+    sysmlConstruct: part def
+
+  ImportedTerminologySubset:
+    label: Imported Terminology Subset
+    layer: interfaces
+    sysmlConstruct: part def
+
+  ImportedConceptBinding:
+    label: Imported Concept Binding
+    layer: interfaces
+    sysmlConstruct: part def
+
+  ImportProvenanceRecord:
+    label: Import Provenance Record
+    layer: qms
     sysmlConstruct: part def
 
   ClinicalClaim:
@@ -924,6 +1048,91 @@ relationshipTypes:
     layer: interfaces
     color: "#0B5345"
 
+  - name: classifiesData
+    label: Classifies Data
+    layer: privacy
+    color: "#16A085"
+
+  - name: processesData
+    label: Processes Data
+    layer: privacy
+    color: "#138D75"
+
+  - name: governedByProcessingBasis
+    label: Governed By Processing Basis
+    layer: privacy
+    color: "#117A65"
+
+  - name: requiresConsent
+    label: Requires Consent
+    layer: privacy
+    color: "#0E6655"
+
+  - name: providesPrivacyNotice
+    label: Provides Privacy Notice
+    layer: privacy
+    color: "#0B5345"
+
+  - name: governedByRetentionPolicy
+    label: Governed By Retention Policy
+    layer: privacy
+    color: "#117864"
+
+  - name: appliesMinimumNecessary
+    label: Applies Minimum Necessary
+    layer: privacy
+    color: "#148F77"
+
+  - name: deIdentifiesData
+    label: De-Identifies Data
+    layer: privacy
+    color: "#17A589"
+
+  - name: pseudonymizesData
+    label: Pseudonymizes Data
+    layer: privacy
+    color: "#1ABC9C"
+
+  - name: controlsProcessing
+    label: Controls Processing
+    layer: privacy
+    color: "#0E6251"
+
+  - name: processesOnBehalfOf
+    label: Processes On Behalf Of
+    layer: privacy
+    color: "#117864"
+
+  - name: assessesPrivacyImpact
+    label: Assesses Privacy Impact
+    layer: privacy
+    color: "#148F77"
+
+  - name: respondsToDataSubjectRequest
+    label: Responds To Data Subject Request
+    layer: privacy
+    color: "#17A589"
+
+  - name: scopesTerminologyReference
+    label: Scopes Terminology Reference
+    layer: interfaces
+    color: "#16A085"
+
+  - name: bindsImportedConcept
+    label: Binds Imported Concept
+    layer: interfaces
+    color: "#1ABC9C"
+
+  - name: governedByImportBoundary
+    label: Governed By Import Boundary
+    layer: interfaces
+    color: "#148F77"
+
+  - name: providesImportProvenance
+    label: Provides Import Provenance
+    layer: qms
+    color: "#2C3E50"
+
   - name: mitigates
     label: Mitigates
     layer: risk
@@ -1136,6 +1345,23 @@ relationships:
   - usesConceptMap
   - mapsSourceCodeSystem
   - mapsTargetCodeSystem
+  - classifiesData
+  - processesData
+  - governedByProcessingBasis
+  - requiresConsent
+  - providesPrivacyNotice
+  - governedByRetentionPolicy
+  - appliesMinimumNecessary
+  - deIdentifiesData
+  - pseudonymizesData
+  - controlsProcessing
+  - processesOnBehalfOf
+  - assessesPrivacyImpact
+  - respondsToDataSubjectRequest
+  - scopesTerminologyReference
+  - bindsImportedConcept
+  - governedByImportBoundary
+  - providesImportProvenance
   - mitigates
   - causes
   - leadsTo
