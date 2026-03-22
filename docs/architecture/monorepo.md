@@ -29,14 +29,19 @@ memo/
 │   │   │   └── index.ts                  # Public API barrel
 │   │   └── src/__tests__/               # 120 tests (parser, builder, ontology)
 │   │
-│   ├── ontology/                # @memo/ontology — legacy compatibility shim
+│   ├── ontology-core/           # @memo/ontology-core — domain-agnostic MBSE backbone
 │   │   ├── sysml/
-│   │   │   ├── entities/                 # SysML v2 entity type definitions
-│   │   │   ├── relationships/            # Connection definitions
+│   │   │   ├── entities/                 # Core SysML v2 entity definitions
+│   │   │   ├── relationships/            # Core connection definitions
 │   │   │   └── index.sysml              # Package entry
-│   │   ├── memo.config.yaml             # Compatibility config layered on @memo/ontology-medical
-│   │   └── scripts/
-│   │       └── pack-kpar.ts             # Package as .kpar archive
+│   │   └── memo.config.yaml             # Core ontology config
+│   │
+│   ├── ontology-medical/        # @memo/ontology-medical — medical backbone
+│   │   ├── sysml/
+│   │   │   ├── entities/                 # Medical SysML v2 entity definitions
+│   │   │   ├── relationships/            # Medical connection definitions
+│   │   │   └── index.sysml              # Package entry
+│   │   └── memo.config.yaml             # Medical ontology config
 │   │
 │   ├── medical/                 # @memo/medical — workbench config
 │   │   └── memo.config.yaml             # medical workbench rules, viewpoints, and templates
@@ -95,10 +100,10 @@ Turborepo manages the build pipeline with these task definitions:
 | `dev` | — | — (persistent) |
 | `clean` | — | — |
 
-The `^build` dependency ensures the build order is:
+The `^build` dependency ensures the ontology/build chain is respected:
 
 ```
-@memo/ontology → @memo/core → @memo/medical → @memo/cli + @memo/web
+@memo/ontology-core → @memo/ontology-medical → @memo/medical → @memo/cli
 ```
 
 ## Key Commands

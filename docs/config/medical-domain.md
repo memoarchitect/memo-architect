@@ -22,8 +22,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 97 |
-| Workbench Viewpoints | 10 |
+| Closure Rules | 109 |
+| Workbench Viewpoints | 11 |
 
 ## Standards Alignment
 

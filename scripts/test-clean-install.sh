@@ -34,9 +34,13 @@ echo ""
 # ── 1. Pack each package ──────────────────────────────────────────────────────
 echo "① Packing packages..."
 
-cd "$REPO_DIR/packages/ontology"
-ONTOLOGY_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
-echo "  ✓ @memo/ontology → $(basename "$ONTOLOGY_TGZ")"
+cd "$REPO_DIR/packages/ontology-core"
+ONTOLOGY_CORE_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
+echo "  ✓ @memo/ontology-core    → $(basename "$ONTOLOGY_CORE_TGZ")"
+
+cd "$REPO_DIR/packages/ontology-medical"
+ONTOLOGY_MEDICAL_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
+echo "  ✓ @memo/ontology-medical → $(basename "$ONTOLOGY_MEDICAL_TGZ")"
 
 cd "$REPO_DIR/packages/core"
 CORE_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
@@ -68,7 +72,8 @@ echo ""
 echo "③ Installing from tarballs (npm install)..."
 
 npm install \
-  "$TARBALLS_DIR"/memo-ontology-*.tgz \
+  "$TARBALLS_DIR"/memo-ontology-core-*.tgz \
+  "$TARBALLS_DIR"/memo-ontology-medical-*.tgz \
   "$TARBALLS_DIR"/memo-core-*.tgz \
   "$TARBALLS_DIR"/memo-medical-*.tgz \
   "$TARBALLS_DIR"/memo-cli-*.tgz \
@@ -96,8 +101,10 @@ check_file() {
 check_file "node_modules/@memo/core/lib/index.js"
 check_file "node_modules/@memo/core/lib/index.d.ts"
 check_file "node_modules/@memo/cli/lib/bin/memo.js"
-check_file "node_modules/@memo/ontology/memo.config.yaml"
-check_file "node_modules/@memo/ontology/sysml/index.sysml"
+check_file "node_modules/@memo/ontology-core/memo.config.yaml"
+check_file "node_modules/@memo/ontology-core/sysml/index.sysml"
+check_file "node_modules/@memo/ontology-medical/memo.config.yaml"
+check_file "node_modules/@memo/ontology-medical/sysml/index.sysml"
 check_file "node_modules/@memo/medical/memo.config.yaml"
 
 echo ""

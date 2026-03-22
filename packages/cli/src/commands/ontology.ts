@@ -10,8 +10,8 @@ import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile } from '@memo/core';
+import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology-medical';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
-import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology';
 
 export async function ontologyShowCommand(): Promise<void> {
     const cwd = process.cwd();

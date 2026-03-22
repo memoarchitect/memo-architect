@@ -58,7 +58,7 @@ function resolveFromNodeModules(packageName: string, fromDir: string): string | 
 
 function resolveFromWorkspace(packageName: string, fromDir: string): string | undefined {
     // Map package names to workspace directories
-    // @memo/medical → packages/medical, @memo/ontology → packages/ontology
+    // @memo/medical → packages/medical, @memo/ontology-medical → packages/ontology-medical
     const shortName = packageName.replace(/^@memo\//, '');
 
     // Walk up to find the monorepo root (has pnpm-workspace.yaml or packages/ dir)

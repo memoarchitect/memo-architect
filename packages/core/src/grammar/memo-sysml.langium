@@ -51,7 +51,7 @@ PackageMember:
 ImportDeclaration:
     'import' path=ImportPath ';';
 
-// Separate rule to handle wildcard imports (e.g. `import MEMO_Ontology::*`)
+// Separate rule to handle wildcard imports (e.g. `import MEMO_Ontology_Medical::*`)
 // without LL parser ambiguity on `::` lookahead in QualifiedName
 ImportPath returns string:
     ID ('::' (ID | '*'))*;

@@ -20,9 +20,9 @@ importers:
       '@memo/core':
         specifier: workspace:*
         version: link:../core
-      '@memo/ontology':
+      '@memo/ontology-medical':
         specifier: workspace:*
-        version: link:../ontology
+        version: link:../ontology-medical
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -94,9 +94,9 @@ importers:
 
   packages/medical:
     dependencies:
-      '@memo/ontology':
+      '@memo/ontology-medical':
         specifier: workspace:*
-        version: link:../ontology
+        version: link:../ontology-medical
     devDependencies:
       typescript:
         specifier: ~5.5.0
@@ -105,21 +105,9 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
 
-  packages/ontology:
-    dependencies:
-      archiver:
-        specifier: ^7.0.1
-        version: 7.0.1
-    devDependencies:
-      '@types/archiver':
-        specifier: ^6.0.3
-        version: 6.0.4
-      tsx:
-        specifier: ^4.19.0
-        version: 4.21.0
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
+  packages/ontology-core: {}
+
+  packages/ontology-medical: {}
 
   packages/web:
     dependencies:

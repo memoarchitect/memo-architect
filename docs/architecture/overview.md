@@ -39,13 +39,9 @@ graph TD
         MedRels[Medical Relationships]
     end
 
-    subgraph "@memo/ontology"
-        Compat[Legacy MEMO_Ontology Compatibility]
-    end
-
     subgraph "@memo/medical"
         MedConfig[Medical Workbench Config]
-        Rules[15 Closure Rules]
+        Rules[109 Closure Rules]
         Viewpoints[Medical Viewpoints]
         Templates[Starter Templates]
     end
@@ -95,7 +91,6 @@ graph TD
 | `@memo/core` | Parser, model, validation | `parseFiles`, `buildMemoModel`, `modelToDTO`, `evaluateClosureRules`, `computeCompleteness` |
 | `@memo/ontology-core` | Core ontology backbone | Domain-agnostic SysML v2 MBSE types |
 | `@memo/ontology-medical` | Medical ontology backbone | Medical device development types built on core |
-| `@memo/ontology` | Compatibility ontology | Legacy `MEMO_Ontology` package surface |
 | `@memo/medical` | Medical workbench config | `memo.config.yaml` with rules, viewpoints, and starter templates |
 | `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
 | `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
@@ -106,11 +101,11 @@ graph TD
 @memo/web ──> @memo/core
 @memo/cli ──> @memo/core
 @memo/medical ──> @memo/ontology-medical
+@memo/cli ──> @memo/ontology-medical
 @memo/ontology-medical ──> @memo/ontology-core
 @memo/core (standalone)
 @memo/ontology-core (standalone)
 @memo/ontology-medical (standalone)
-@memo/ontology (compatibility)
 ```
 
 The `@memo/core` package has zero runtime dependencies on domain packages. Domain knowledge flows through `memo.config.yaml` at runtime.

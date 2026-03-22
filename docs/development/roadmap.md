@@ -53,12 +53,12 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Completeness bar visualization
 - [x] Gap bar (violation display)
 - [x] Viewpoint filtering (end-to-end: config → CLI → WebSocket → diagram)
-- [x] Config resolver for `@memo/ontology` extends chain
+- [x] Config resolver for package-based `extends` chains
 - [x] 69 tests passing (60 core + 9 CLI E2E)
 
 ### Phase 3 — Modular Ontology & Multi-Mode Web App
 
-- [x] **Modular ontology architecture** — Base `@memo/ontology` + `@memo/medical` extends
+- [x] **Modular ontology architecture** — layered `@memo/ontology-core` + `@memo/ontology-medical` with `@memo/medical` on top
 - [x] **Ontology metadata** — `OntologyMetadata` type with id, version, description, author, license, tags
 - [x] **Config merge deduplication** — `dedup()` for cosmaLayers, relationshipTypes, closureRules
 - [x] **External ontology types** — `ExternalOntologyRef` and `LibraryRef` type definitions
@@ -195,8 +195,8 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 
 ### Next Milestone — Compatibility Retirement + Standards Traceability **[HIGH]**
 
-- [x] **Layer legacy `@memo/ontology` on the medical backbone** — the compatibility package now explicitly extends `@memo/ontology-medical` instead of presenting itself as the primary ontology source
-- [x] **Keep legacy `MEMO_Ontology` imports working** — compatibility package metadata and docs now describe the package as a shim rather than a clean backbone
+- [x] **Migrate active entrypoints to the layered stack** — examples, starter templates, CLI defaults, and docs now point at `@memo/ontology-medical` / `MEMO_Ontology_Medical`
+- [x] **Retire the legacy compatibility package** — `packages/ontology` was removed after repo-wide migration off `@memo/ontology`
 - [x] **Exercise new standards concepts in live models** — infusion-pump example and starter template now instantiate IEC 60601 usability, essential performance, IEC 62304 lifecycle, and QMS trace artifacts
 - [x] **Complete example trace chains** — the split infusion-pump example now includes a compliance package linking user interface requirements, use errors, risk controls, software items, records, evidence, and release artifacts
 - [x] **Promote product UI into the medical ontology** — `UIElement`, `UIScreen`, `UIPanel`, and `UIFunction` now live in `@memo/ontology-medical` and inherit from shared software/function concepts so requirements and risk can trace to them directly
@@ -206,13 +206,13 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 Choose the final fate of the legacy `@memo/ontology` package instead of letting it drift indefinitely:
 
 - [x] **Audit remaining compatibility-only content** — confirmed the remaining legacy-only surface is the `MEMO_Ontology` namespace, compatibility viewpoints, a few legacy helper kinds (`Responsibility`, `LogicalComponentExternal`, `ActionDefinition`, `ActionUsage`, `ItemDefinition`), and the product-specific leftover `Catheter`
-- [x] **Decide shim policy** — `@memo/ontology` is now frozen as a supported compatibility shim, not an active ontology development target
+- [x] **Decide and execute retirement path** — the temporary shim policy was superseded by full repo migration, and `@memo/ontology` has now been removed
 - [x] **Isolate legacy-only domain content** — `Catheter` is explicitly treated as legacy-only until a future product-family ontology promotes it deliberately
-- [x] **Document deprecation path** — ADR-1-7 and the ontology docs now state that new work targets `MEMO_Ontology_Medical` / `@memo/ontology-medical`, while `MEMO_Ontology` remains supported only for existing projects
+- [x] **Document deprecation path** — active docs now state that new work targets `MEMO_Ontology_Medical` / `@memo/ontology-medical`, and legacy `MEMO_Ontology` imports are no longer part of the supported repo surface
 
 Exit criteria:
-- `@memo/ontology` has an explicit long-term policy
-- no new ontology concepts are added there by default
+- active repo surfaces use `@memo/ontology-core` and `@memo/ontology-medical`
+- the legacy compatibility package no longer exists in the workspace
 
 ### Next Ontology Milestone — Second-Pass Medical Semantics **[CRITICAL]**
 
