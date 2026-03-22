@@ -73,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 74 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, and cybersecurity/interoperability semantics:
+The medical config includes 89 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, cybersecurity/interoperability semantics, clinical-evidence / claims semantics, and lifecycle-configuration semantics:
 
 Representative rules:
 
@@ -111,6 +111,12 @@ Representative rules:
 | CR-MED-066 | SecurityControl | Should mitigate at least one ThreatScenario via `mitigatesThreat` | warning |
 | CR-MED-068 | TerminologyBinding | Should bind at least one interface/observation via `bindsTerminology` | warning |
 | CR-MED-073 | SBOMArtifact | Should describe at least one software subject via `maintainsSbom` | warning |
+| CR-MED-075 | ClinicalPerformanceClaim | Should reference intended use or indication via `claimsForUse` | warning |
+| CR-MED-078 | ClinicalSafetyClaim | Should be evaluated by a clinical evaluation report via `evaluatesClinicalClaim` | warning |
+| CR-MED-080 | ManufacturingProcedure | Should manufacture at least one subject via `manufacturesSubject` | warning |
+| CR-MED-084 | InstallationQualification | Should qualify at least one installed subject via `qualifiesInstallation` | warning |
+| CR-MED-085 | ProductFamily | Should declare at least one ProductVariant via `hasProductVariant` | warning |
+| CR-MED-088 | ConfigurationBaseline | Should configure at least one subject via `configuresItem` | warning |
 
 ## CLI Output
 

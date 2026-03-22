@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 208 | Rules: 74 | Relationships: 85
+Kinds: 232 | Rules: 89 | Relationships: 101
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 74 Medical Closure Rules
+## The 89 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -167,6 +167,31 @@ pnpm memo validate
 | CR-MED-072 | Every **ClinicalConceptMapReference** should identify at least one target code system | Warning |
 | CR-MED-073 | Every **SBOMArtifact** should describe at least one software subject | Warning |
 | CR-MED-074 | Every **SecureUpdateCapability** should support at least one software or cyber asset subject | Warning |
+
+### Clinical Evidence and Claims
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-075 | Every **ClinicalPerformanceClaim** should reference at least one **IntendedUse** or **IndicationForUse** | Warning |
+| CR-MED-076 | Every **ClinicalPerformanceClaim** should be supported by at least one clinical evidence artifact | Warning |
+| CR-MED-077 | Every **ClinicalSafetyClaim** should reference at least one **IntendedUse** or **IndicationForUse** | Warning |
+| CR-MED-078 | Every **ClinicalSafetyClaim** should be evaluated by at least one **ClinicalEvaluationReport** | Warning |
+| CR-MED-079 | Every **ClinicalEvaluationPlan** should plan at least one clinical claim | Warning |
+
+### Manufacturing, Service, and Configuration
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-080 | Every **ManufacturingProcedure** should manufacture at least one subject | Warning |
+| CR-MED-081 | Every **InstallationProcedure** should install at least one subject | Warning |
+| CR-MED-082 | Every **PreventiveMaintenanceProcedure** should maintain at least one subject | Warning |
+| CR-MED-083 | Every **CalibrationProcedure** should calibrate at least one subject | Warning |
+| CR-MED-084 | Every **InstallationQualification** should qualify at least one installed subject | Warning |
+| CR-MED-085 | Every **ProductFamily** should declare at least one **ProductVariant** | Warning |
+| CR-MED-086 | Every **ProductVariant** should select at least one **FeatureOption** | Warning |
+| CR-MED-087 | Every **ProductVariant** should support at least one **Accessory** | Warning |
+| CR-MED-088 | Every **ConfigurationBaseline** should configure at least one subject | Warning |
+| CR-MED-089 | Every **VariantConstraint** should constrain at least one **ProductVariant** | Warning |
 
 ## The Completeness Bar (Web UI)
 

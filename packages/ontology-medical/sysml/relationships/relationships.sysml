@@ -1,5 +1,85 @@
 package MEMO_Ontology_Medical_Relationships {
 
+    connection def PlansClinicalEvaluation {
+        end plan : ClinicalEvaluationPlan [1];
+        end subject[1];
+    }
+
+    connection def EvaluatesClinicalClaim {
+        end report : ClinicalEvaluationReport [1];
+        end claim : ClinicalClaim [1];
+    }
+
+    connection def SupportsClinicalClaim {
+        end evidence : ClinicalEvidenceArtifact [1];
+        end claim : ClinicalClaim [1];
+    }
+
+    connection def ClaimsClinicalBenefit {
+        end claim : ClinicalClaim [1];
+        end benefit : ClinicalBenefit [1];
+    }
+
+    connection def ClaimsForUse {
+        end claim : ClinicalClaim [1];
+        end subject[1];
+    }
+
+    connection def ManufacturesSubject {
+        end procedure : ManufacturingProcedure [1];
+        end subject[1];
+    }
+
+    connection def InstallsSubject {
+        end procedure : InstallationProcedure [1];
+        end subject[1];
+    }
+
+    connection def ServicesSubject {
+        end procedure : ServiceProcedure [1];
+        end subject[1];
+    }
+
+    connection def MaintainsSubject {
+        end procedure : PreventiveMaintenanceProcedure [1];
+        end subject[1];
+    }
+
+    connection def CalibratesSubject {
+        end procedure : CalibrationProcedure [1];
+        end subject[1];
+    }
+
+    connection def QualifiesInstallation {
+        end qualification : InstallationQualification [1];
+        end subject[1];
+    }
+
+    connection def HasProductVariant {
+        end family : ProductFamily [1];
+        end variant : ProductVariant [1];
+    }
+
+    connection def SelectsFeature {
+        end variant : ProductVariant [1];
+        end feature : FeatureOption [1];
+    }
+
+    connection def SupportsAccessory {
+        end subject[1];
+        end accessory : Accessory [1];
+    }
+
+    connection def ConfiguresItem {
+        end baseline : ConfigurationBaseline [1];
+        end subject[1];
+    }
+
+    connection def ConstrainsVariant {
+        end constraint : VariantConstraint [1];
+        end variant : ProductVariant [1];
+    }
+
     connection def HasAnatomicalSite {
         end subject[1];
         end site : AnatomicalSite [1];

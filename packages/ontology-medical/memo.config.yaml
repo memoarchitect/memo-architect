@@ -161,6 +161,126 @@ kinds:
     layer: interfaces
     sysmlConstruct: part def
 
+  ClinicalClaim:
+    label: Clinical Claim
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  ClinicalPerformanceClaim:
+    label: Clinical Performance Claim
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  ClinicalSafetyClaim:
+    label: Clinical Safety Claim
+    layer: design-control
+    sysmlConstruct: requirement def
+
+  ClinicalEvidenceArtifact:
+    label: Clinical Evidence Artifact
+    layer: qms
+    sysmlConstruct: part def
+
+  ClinicalInvestigationReference:
+    label: Clinical Investigation Reference
+    layer: qms
+    sysmlConstruct: part def
+
+  ClinicalLiteratureReference:
+    label: Clinical Literature Reference
+    layer: qms
+    sysmlConstruct: part def
+
+  ClinicalExperienceEvidence:
+    label: Clinical Experience Evidence
+    layer: qms
+    sysmlConstruct: part def
+
+  ClinicalEvaluationPlan:
+    label: Clinical Evaluation Plan
+    layer: qms
+    sysmlConstruct: part def
+
+  ClinicalEvaluationReport:
+    label: Clinical Evaluation Report
+    layer: qms
+    sysmlConstruct: part def
+
+  ManufacturingProcedure:
+    label: Manufacturing Procedure
+    layer: operational
+    sysmlConstruct: action def
+
+  InstallationProcedure:
+    label: Installation Procedure
+    layer: operational
+    sysmlConstruct: action def
+
+  ServiceProcedure:
+    label: Service Procedure
+    layer: operational
+    sysmlConstruct: action def
+
+  PreventiveMaintenanceProcedure:
+    label: Preventive Maintenance Procedure
+    layer: operational
+    sysmlConstruct: action def
+
+  CalibrationProcedure:
+    label: Calibration Procedure
+    layer: operational
+    sysmlConstruct: action def
+
+  ManufacturingRecord:
+    label: Manufacturing Record
+    layer: qms
+    sysmlConstruct: part def
+
+  InstallationQualification:
+    label: Installation Qualification
+    layer: verification
+    sysmlConstruct: part def
+
+  ServiceReport:
+    label: Service Report
+    layer: qms
+    sysmlConstruct: part def
+
+  CalibrationRecord:
+    label: Calibration Record
+    layer: verification
+    sysmlConstruct: part def
+
+  ProductFamily:
+    label: Product Family
+    layer: logical
+    sysmlConstruct: part def
+
+  ProductVariant:
+    label: Product Variant
+    layer: logical
+    sysmlConstruct: part def
+
+  FeatureOption:
+    label: Feature Option
+    layer: logical
+    sysmlConstruct: part def
+
+  Accessory:
+    label: Accessory
+    layer: physical
+    sysmlConstruct: part def
+
+  ConfigurationBaseline:
+    label: Configuration Baseline
+    layer: qms
+    sysmlConstruct: part def
+
+  VariantConstraint:
+    label: Variant Constraint
+    layer: design-control
+    sysmlConstruct: requirement def
+
   UserNeed:
     label: User Need
     layer: requirements
@@ -644,6 +764,86 @@ kinds:
     sysmlConstruct: part def
 
 relationshipTypes:
+  - name: plansClinicalEvaluation
+    label: Plans Clinical Evaluation
+    layer: qms
+    color: "#2C3E50"
+
+  - name: evaluatesClinicalClaim
+    label: Evaluates Clinical Claim
+    layer: qms
+    color: "#34495E"
+
+  - name: supportsClinicalClaim
+    label: Supports Clinical Claim
+    layer: qms
+    color: "#5D6D7E"
+
+  - name: claimsClinicalBenefit
+    label: Claims Clinical Benefit
+    layer: design-control
+    color: "#5B8DEF"
+
+  - name: claimsForUse
+    label: Claims For Use
+    layer: design-control
+    color: "#4A90D9"
+
+  - name: manufacturesSubject
+    label: Manufactures Subject
+    layer: operational
+    color: "#AF601A"
+
+  - name: installsSubject
+    label: Installs Subject
+    layer: operational
+    color: "#A04000"
+
+  - name: servicesSubject
+    label: Services Subject
+    layer: operational
+    color: "#935116"
+
+  - name: maintainsSubject
+    label: Maintains Subject
+    layer: operational
+    color: "#7E5109"
+
+  - name: calibratesSubject
+    label: Calibrates Subject
+    layer: operational
+    color: "#6E2C00"
+
+  - name: qualifiesInstallation
+    label: Qualifies Installation
+    layer: verification
+    color: "#229954"
+
+  - name: hasProductVariant
+    label: Has Product Variant
+    layer: logical
+    color: "#5B8DEF"
+
+  - name: selectsFeature
+    label: Selects Feature
+    layer: logical
+    color: "#3498DB"
+
+  - name: supportsAccessory
+    label: Supports Accessory
+    layer: physical
+    color: "#7F8C8D"
+
+  - name: configuresItem
+    label: Configures Item
+    layer: qms
+    color: "#566573"
+
+  - name: constrainsVariant
+    label: Constrains Variant
+    layer: design-control
+    color: "#2E86C1"
+
   - name: hasAnatomicalSite
     label: Has Anatomical Site
     layer: operational
@@ -920,6 +1120,22 @@ relationshipTypes:
     color: "#E67E22"
 
 relationships:
+  - plansClinicalEvaluation
+  - evaluatesClinicalClaim
+  - supportsClinicalClaim
+  - claimsClinicalBenefit
+  - claimsForUse
+  - manufacturesSubject
+  - installsSubject
+  - servicesSubject
+  - maintainsSubject
+  - calibratesSubject
+  - qualifiesInstallation
+  - hasProductVariant
+  - selectsFeature
+  - supportsAccessory
+  - configuresItem
+  - constrainsVariant
   - hasAnatomicalSite
   - usesMethod
   - usesRoute

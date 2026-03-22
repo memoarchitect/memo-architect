@@ -23,21 +23,21 @@ Open `model/my-device.sysml`:
 
 ```sysml
 package my_device {
-    part def MyDeviceSystem :>> System {
+    part def MyDeviceSystem :> System {
         attribute redefines name = "my-device";
     }
 
-    requirement def MainRequirement :>> SystemRequirement {
+    requirement def MainRequirement :> SystemRequirement {
         attribute redefines name = "Main system requirement";
     }
 
-    part def ExampleHazard :>> Hazard {
+    part def ExampleHazard :> Hazard {
         attribute redefines name = "Example hazard";
     }
 }
 ```
 
-The `:>>` operator specializes from entity kinds defined in the ontology (e.g., `System`, `SystemRequirement`, `Hazard`). These kinds are defined in the medical domain config.
+The `:>` operator specializes from entity kinds defined in the ontology (e.g., `System`, `SystemRequirement`, `Hazard`). These kinds are defined in the medical domain config.
 
 ## 3. Start the Dev Server
 
@@ -61,7 +61,7 @@ Edit your `.sysml` file and save. The dev server detects the change and instantl
 ### Adding a risk control relationship:
 
 ```sysml
-part def FlowSensor :>> RiskControl {
+part def FlowSensor :> RiskControl {
     attribute redefines name = "Flow rate monitoring sensor";
 }
 

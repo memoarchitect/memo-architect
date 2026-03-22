@@ -11,6 +11,8 @@ It now provides:
 - structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
 - residual-risk, benefit-risk, and production/post-production signal semantics connected into the medical risk and QMS backbone
 - cybersecurity, connected-system, and terminology-binding semantics for FDA-aligned cyber devices and interoperable clinical integrations
+- clinical evaluation, clinical evidence, and clinical claims semantics connected back to intended use, benefit-risk, and QMS records
+- manufacturing, installation, service, preventive-maintenance, calibration, and regulated product-configuration semantics
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -19,8 +21,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 74 |
-| Workbench Viewpoints | 7 |
+| Closure Rules | 89 |
+| Workbench Viewpoints | 9 |
 
 ## Standards Alignment
 
@@ -125,7 +127,43 @@ and `@memo/ontology-medical`:
 
 **Enforced by rules:** CR-MED-062 through CR-MED-074
 
-**Enforced by rules:** CR-MED-020 through CR-MED-039
+### Clinical Evaluation, Evidence, and Claims
+
+The ontology-level claim and evidence semantics now live in `@memo/ontology-medical`:
+
+- clinical-use and submission-facing claims → `ClinicalPerformanceClaim`, `ClinicalSafetyClaim`
+- claim evidence anchors → `ClinicalEvidenceArtifact`
+- governed evaluation planning and reporting → `ClinicalEvaluationPlan`, `ClinicalEvaluationReport`
+- explicit trace back to intended use / indication, claimed benefit, and supporting evidence using `claimsForUse`, `claimsClinicalBenefit`, `supportsClinicalClaim`, and `evaluatesClinicalClaim`
+
+These semantics keep clinical claims from collapsing into generic `documents` or `traceTo` links and make the evidence basis auditable.
+
+**Enforced by rules:** CR-MED-075 through CR-MED-079
+
+### Manufacturing, Service, and Configuration Semantics
+
+The regulated lifecycle and product-configuration anchors now also live in `@memo/ontology-medical`:
+
+- manufacturing / installation / service procedures → `ManufacturingProcedure`, `InstallationProcedure`, `ServiceProcedure`
+- preventive maintenance / calibration procedures → `PreventiveMaintenanceProcedure`, `CalibrationProcedure`
+- lifecycle records and qualifications → `ManufacturingRecord`, `InstallationQualification`, `ServiceReport`, `CalibrationRecord`
+- reusable product-line anchors → `ProductFamily`, `ProductVariant`, `FeatureOption`, `Accessory`, `ConfigurationBaseline`, `VariantConstraint`
+- typed lifecycle and configuration traces → `manufacturesSubject`, `installsSubject`, `servicesSubject`, `maintainsSubject`, `calibratesSubject`, `qualifiesInstallation`, `hasProductVariant`, `selectsFeature`, `supportsAccessory`, `configuresItem`, and `constrainsVariant`
+
+These semantics are intended for reusable regulated medical-device backbone reasoning, not device-specific SKU taxonomy.
+
+**Enforced by rules:** CR-MED-080 through CR-MED-089
+
+### SysML v2 Compliance Boundary
+
+The medical ontology is authored against MEMO's supported SysML v2 textual subset:
+
+- packages and imports
+- `part def`, `requirement def`, `action def`, `port def`, `interface def`, `item def`, `connection def`, `attribute def`, and `enum def`
+- specialization via `:>`
+- typed connection usages, viewpoints, and views
+
+The ontology packages validate cleanly within that supported subset. MEMO should not currently be described as a full SysML 2.0 implementation; the parser intentionally covers the subset needed by the ontology and reference models.
 
 ### ISO/IEC/IEEE 42010 — Viewpoint Separation
 

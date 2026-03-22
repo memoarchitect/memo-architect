@@ -32,7 +32,7 @@ Defines entity types available in the model. Each kind maps a domain concept to 
 
 ```yaml
 kinds:
-  Hazard:                          # Kind key (used in :>> specialization)
+  Hazard:                          # Kind key (used in :> specialization)
     label: Hazard                  # Human-readable label
     layer: risk                    # CoSMA layer ID
     sysmlConstruct: part def       # SysML v2 construct

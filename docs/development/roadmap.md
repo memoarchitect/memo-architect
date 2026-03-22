@@ -28,10 +28,10 @@ The medical backbone is intended to support traceable development against **ISO 
 
 ### Phase 1 — Foundation
 
-- [x] Langium SysML v2 parser with full grammar
+- [x] Langium SysML v2 subset parser grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 74 rules, 7 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 89 rules, 9 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -246,7 +246,7 @@ Prove the ontology against more than a single infusion-pump reference:
 
 - [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
 - [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
-- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 74-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 89-rule medical pack, exposing only the pre-existing infusion behavior warnings
 - [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
@@ -312,6 +312,22 @@ Exit criteria:
 - [x] `@memo/ontology-core` supports reusable system-of-systems and data-interface modeling
 - [x] `@memo/ontology-medical` supports medical cybersecurity and external-clinical-terminology anchor semantics
 - [x] at least one reference model exercises the new semantics end to end
+
+### Next Ontology Milestone — Clinical Evidence, Lifecycle Operations, and Product Configuration **[HIGH]**
+
+Refine the medical backbone so clinical claims, product realization lifecycle operations, and regulated product-family configuration no longer depend on generic documentation traces:
+
+- [x] **Add clinical evidence and claims semantics** — added `ClinicalPerformanceClaim`, `ClinicalSafetyClaim`, `ClinicalEvidenceArtifact`, `ClinicalEvaluationPlan`, and `ClinicalEvaluationReport` plus typed claim/evidence/use relations in `@memo/ontology-medical`
+- [x] **Add manufacturing, installation, servicing, and calibration semantics** — added first-class lifecycle procedures and governed records for manufacturing, installation qualification, preventive maintenance, and calibration
+- [x] **Add reusable regulated product-configuration semantics** — added `ProductFamily`, `ProductVariant`, `FeatureOption`, `Accessory`, `ConfigurationBaseline`, and `VariantConstraint` so product-line reasoning stays typed and auditable
+- [x] **Exercise the new semantics in live examples** — the irrigation reference model now traces clinical claims to evidence, lifecycle operations to serviced subjects, and product variants to features/accessories/baselines
+- [x] **Audit the ontology against MEMO's SysML v2 subset** — ontology packages now stay within the supported textual subset, docs use `:>` specialization consistently, and roadmap wording no longer claims full-language coverage
+
+Exit criteria:
+- [x] `@memo/ontology-medical` supports clinical-evaluation / evidence / claims semantics on the regulated backbone
+- [x] `@memo/ontology-medical` supports manufacturing / installation / service / calibration semantics on the regulated backbone
+- [x] `@memo/ontology-medical` supports reusable regulated product-family / configuration semantics without falling back to generic trace links
+- [x] ontology files validate cleanly inside MEMO's supported SysML v2 subset
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

@@ -25,13 +25,13 @@ part def Hazard {
 }
 
 // User model (specializes the ontology type)
-part def OverInfusion :>> Hazard {
+part def OverInfusion :> Hazard {
     attribute redefines name = "Over-infusion of drug";
     attribute redefines severity = "critical";
 }
 ```
 
-The `:>>` operator means "specializes" — the user's `OverInfusion` inherits all attributes from `Hazard`.
+The `:>` operator means "specializes" — the user's `OverInfusion` inherits all attributes from `Hazard`.
 
 ## Entity Kinds
 
@@ -50,8 +50,21 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, system-of-systems integration, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
-- **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, clinical evaluation / claims semantics, lifecycle-operations semantics, and regulated product-configuration anchors.
+- **Extensions** still carry device-family or technology-specific concepts when the repo eventually supports them as independent packages. The current medical backbone only includes reusable product-family/configuration semantics that are broadly applicable across regulated medical devices.
+
+### SysML v2 Compliance Boundary
+
+MEMO's ontology files are authored against the SysML v2 textual constructs that the current parser actually supports:
+
+- `package` / `import`
+- `part def`, `requirement def`, `action def`, `port def`, `interface def`, `item def`, `connection def`, `attribute def`, `enum def`
+- specialization via `:>`
+- typed connection ends, usages, viewpoints, and views
+
+The ontology packages were audited to stay inside that supported subset. They do not rely on custom ontology-only syntax, and they no longer document unsupported `:>>` specialization examples.
+
+This is **SysML v2 subset compliance**, not a claim that MEMO implements the full OMG SysML 2.0 language. The current parser/serializer boundary is intentionally narrower than the full formal specification.
 
 ### Compatibility Policy
 
@@ -121,6 +134,10 @@ Each relationship type has:
 | `bindsTerminology` | Terminology Binding → interface/observation | interfaces | Associates an interface with external clinical terminology semantics |
 | `referencesCodeSystem` / `referencesValueSet` | Terminology Binding → terminology reference | interfaces | Records versioned external terminology anchors without importing their full content |
 | `usesConceptMap` / `mapsSourceCodeSystem` / `mapsTargetCodeSystem` | Binding/concept map → terminology systems | interfaces | Captures translation boundaries between device-local and external clinical terminology |
+| `claimsForUse` | Clinical Claim → Intended Use / Indication | design-control | Binds claims to the clinical use context they are meant to support |
+| `supportsClinicalClaim` / `evaluatesClinicalClaim` | Clinical evidence / evaluation report → Clinical Claim | qms | Connects claims to evidence sources and governed clinical-evaluation conclusions |
+| `manufacturesSubject` / `installsSubject` / `maintainsSubject` / `calibratesSubject` | Lifecycle procedure → device subject | operational | Makes manufacturing, installation, maintenance, and calibration first-class lifecycle traces |
+| `hasProductVariant` / `selectsFeature` / `configuresItem` / `constrainsVariant` | Family/baseline/constraint → variant subject | logical / qms / design-control | Captures regulated product-family and baseline semantics without collapsing into ad hoc trace links |
 | `analyzesFailureMode` | FMEA → Failure Mode | risk | Structured failure analysis coverage |
 | `hasFailureCause` | Failure Mode → Failure Cause | risk | Captures why a failure mode occurs |
 | `resultsInFailureEffect` | Failure Mode → Failure Effect | risk | Captures what the failure mode produces |
@@ -183,10 +200,13 @@ The target package stack is:
   └── relationships
 
 @memo/ontology-medical
+  ├── clinical-evaluation
   ├── clinical-context
   ├── cybersecurity-interoperability
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
+  ├── operations-service
+  ├── product-line
   ├── risk-management (including residual risk, benefit-risk, and post-market anchors)
   ├── risk-analysis (FTA / FMEA semantics on top of medical risk management)
   ├── software-lifecycle

@@ -877,6 +877,164 @@ closureRules:
       min: 1
     severity: warning
 
+  - id: CR-MED-075
+    description: "Every ClinicalPerformanceClaim should reference at least one intended use or indication"
+    entity: ClinicalPerformanceClaim
+    rule:
+      type: requireRelationship
+      relationship: claimsForUse
+      direction: outgoing
+      relatedKinds: [IntendedUse, IndicationForUse]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-076
+    description: "Every ClinicalPerformanceClaim should be supported by at least one clinical evidence artifact"
+    entity: ClinicalPerformanceClaim
+    rule:
+      type: requireRelationship
+      relationship: supportsClinicalClaim
+      direction: incoming
+      min: 1
+    severity: warning
+
+  - id: CR-MED-077
+    description: "Every ClinicalSafetyClaim should reference at least one intended use or indication"
+    entity: ClinicalSafetyClaim
+    rule:
+      type: requireRelationship
+      relationship: claimsForUse
+      direction: outgoing
+      relatedKinds: [IntendedUse, IndicationForUse]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-078
+    description: "Every ClinicalSafetyClaim should be evaluated by at least one clinical evaluation report"
+    entity: ClinicalSafetyClaim
+    rule:
+      type: requireRelationship
+      relationship: evaluatesClinicalClaim
+      direction: incoming
+      relatedKinds: [ClinicalEvaluationReport]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-079
+    description: "Every ClinicalEvaluationPlan should plan at least one clinical claim"
+    entity: ClinicalEvaluationPlan
+    rule:
+      type: requireRelationship
+      relationship: plansClinicalEvaluation
+      direction: outgoing
+      relatedKinds: [ClinicalPerformanceClaim, ClinicalSafetyClaim]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-080
+    description: "Every ManufacturingProcedure should manufacture at least one subject"
+    entity: ManufacturingProcedure
+    rule:
+      type: requireRelationship
+      relationship: manufacturesSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-081
+    description: "Every InstallationProcedure should install at least one subject"
+    entity: InstallationProcedure
+    rule:
+      type: requireRelationship
+      relationship: installsSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-082
+    description: "Every PreventiveMaintenanceProcedure should maintain at least one subject"
+    entity: PreventiveMaintenanceProcedure
+    rule:
+      type: requireRelationship
+      relationship: maintainsSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-083
+    description: "Every CalibrationProcedure should calibrate at least one subject"
+    entity: CalibrationProcedure
+    rule:
+      type: requireRelationship
+      relationship: calibratesSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-084
+    description: "Every InstallationQualification should qualify at least one installed subject"
+    entity: InstallationQualification
+    rule:
+      type: requireRelationship
+      relationship: qualifiesInstallation
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-085
+    description: "Every ProductFamily should declare at least one product variant"
+    entity: ProductFamily
+    rule:
+      type: requireRelationship
+      relationship: hasProductVariant
+      direction: outgoing
+      relatedKinds: [ProductVariant]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-086
+    description: "Every ProductVariant should select at least one feature option"
+    entity: ProductVariant
+    rule:
+      type: requireRelationship
+      relationship: selectsFeature
+      direction: outgoing
+      relatedKinds: [FeatureOption]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-087
+    description: "Every ProductVariant should support at least one accessory or configured device element"
+    entity: ProductVariant
+    rule:
+      type: requireRelationship
+      relationship: supportsAccessory
+      direction: outgoing
+      relatedKinds: [Accessory]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-088
+    description: "Every ConfigurationBaseline should configure at least one subject"
+    entity: ConfigurationBaseline
+    rule:
+      type: requireRelationship
+      relationship: configuresItem
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-089
+    description: "Every VariantConstraint should constrain at least one product variant"
+    entity: VariantConstraint
+    rule:
+      type: requireRelationship
+      relationship: constrainsVariant
+      direction: outgoing
+      relatedKinds: [ProductVariant]
+      min: 1
+    severity: warning
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -1206,6 +1364,109 @@ viewpoints:
         viewpointId: cybersecurity-view
         auto: true
         description: Connected-system interfaces, cyber threats and controls, and terminology bindings
+
+  - id: clinical-evidence-view
+    label: Clinical Evidence & Claims
+    supportedDiagramTypes: [req, pkg, bdd]
+    visibleKinds:
+      - IntendedUse
+      - IndicationForUse
+      - ClinicalPerformanceClaim
+      - ClinicalSafetyClaim
+      - ClinicalEvidenceArtifact
+      - ClinicalEvaluationPlan
+      - ClinicalEvaluationReport
+      - ClinicalBenefit
+      - OverallResidualRiskEvaluation
+      - BenefitRiskAssessment
+      - RiskManagementReport
+      - ComplianceEvidence
+      - DesignHistoryRecord
+      - ProductionPostProductionSignal
+    visibleRelationships:
+      - claimsForUse
+      - claimsClinicalBenefit
+      - supportsClinicalClaim
+      - plansClinicalEvaluation
+      - evaluatesClinicalClaim
+      - weighsAgainstBenefit
+      - concludesBenefitRisk
+      - concludesOverallResidualRisk
+      - monitorsRiskSubject
+      - documents
+      - evidences
+    visibleLayers:
+      - design-control
+      - risk
+      - qms
+      - verification
+    diagrams:
+      - id: diag-clinical-evidence
+        name: Clinical Evidence And Claims
+        diagramType: req
+        viewpointId: clinical-evidence-view
+        auto: true
+        description: Clinical claims linked to intended use, evidence, benefit, and governed evaluation
+
+  - id: lifecycle-ops-view
+    label: Lifecycle Operations & Configuration
+    supportedDiagramTypes: [bdd, act, pkg]
+    visibleKinds:
+      - ManufacturingProcedure
+      - InstallationProcedure
+      - ServiceProcedure
+      - PreventiveMaintenanceProcedure
+      - CalibrationProcedure
+      - ManufacturingRecord
+      - InstallationQualification
+      - ServiceReport
+      - CalibrationRecord
+      - ProductFamily
+      - ProductVariant
+      - FeatureOption
+      - Accessory
+      - ConfigurationBaseline
+      - VariantConstraint
+      - OperationalActor
+      - OperationalEnvironment
+      - Resource
+      - Subsystem
+      - LogicalComponent
+      - SoftwareSystem
+      - SoftwareItem
+      - DesignHistoryRecord
+    visibleRelationships:
+      - manufacturesSubject
+      - installsSubject
+      - servicesSubject
+      - maintainsSubject
+      - calibratesSubject
+      - qualifiesInstallation
+      - hasProductVariant
+      - selectsFeature
+      - supportsAccessory
+      - configuresItem
+      - constrainsVariant
+      - performedBy
+      - occursIn
+      - usesResource
+      - documents
+      - evidences
+    visibleLayers:
+      - operational
+      - logical
+      - physical
+      - software
+      - qms
+      - verification
+      - design-control
+    diagrams:
+      - id: diag-lifecycle-configuration
+        name: Lifecycle Operations And Product Configuration
+        diagramType: bdd
+        viewpointId: lifecycle-ops-view
+        auto: true
+        description: Manufacturing, installation, service, and product-variant semantics on the regulated backbone
 
   - id: usability-view
     label: Usability Engineering (IEC 62366 / IEC 60601-1-6)
