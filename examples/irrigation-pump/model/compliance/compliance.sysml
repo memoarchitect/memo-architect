@@ -68,6 +68,26 @@ package IrrigationPump_Compliance {
         attribute redefines routeType = "Minimally invasive fluid delivery";
     }
 
+    requirement intendedUseIrrigationConsole : IntendedUse {
+        attribute redefines title = "Provide controlled irrigation support during arthroscopic procedures";
+    }
+
+    requirement indicationArthroscopyIrrigation : IndicationForUse {
+        attribute redefines title = "Arthroscopic knee and shoulder procedures requiring controlled irrigation pressure and depletion alarming";
+    }
+
+    requirement claimControlledVisualization : ClinicalPerformanceClaim {
+        attribute redefines claimId = "CC-IRR-001";
+        attribute redefines title = "The system supports clinically effective visualization by maintaining commanded irrigation pressure throughout arthroscopy";
+        attribute redefines claimBasis = "Bench verification, usability validation, and published arthroscopy irrigation evidence";
+    }
+
+    requirement claimSafeAlarmedContinuity : ClinicalSafetyClaim {
+        attribute redefines claimId = "CC-IRR-002";
+        attribute redefines title = "The system supports clinically acceptable irrigation continuity through timely depletion alarming and controlled recovery workflow";
+        attribute redefines claimBasis = "Risk management, usability validation, and field-service trend review";
+    }
+
     action pathwayArthroscopyIrrigation : TreatmentPathway {
         attribute redefines name = "Arthroscopy irrigation support pathway";
         attribute redefines objective = "Establish and maintain irrigation support across setup, delivery, and alarm recovery";
@@ -150,6 +170,34 @@ package IrrigationPump_Compliance {
 
     part swSystemIrrigationController : SoftwareSystem {
         attribute redefines name = "Surgical Irrigation Control System";
+    }
+
+    part clinicalEvidenceArthroscopyLiterature : ClinicalEvidenceArtifact {
+        attribute redefines recordId = "CE-IRR-001";
+        attribute redefines title = "Published arthroscopy irrigation performance evidence summary";
+        attribute redefines artifactType = "Clinical literature synthesis";
+        attribute redefines sourceKind = "Literature review";
+        attribute redefines citation = "Arthroscopy irrigation pressure-control literature summary";
+    }
+
+    part clinicalEvidenceFieldExperience : ClinicalEvidenceArtifact {
+        attribute redefines recordId = "CE-IRR-002";
+        attribute redefines title = "Field experience and complaint-trend evidence for depletion alarming";
+        attribute redefines artifactType = "Clinical experience summary";
+        attribute redefines sourceKind = "Post-market experience";
+        attribute redefines citation = "Complaint trend and service review synthesis";
+    }
+
+    part clinicalEvalPlanIrrigationConsole : ClinicalEvaluationPlan {
+        attribute redefines recordId = "CEP-IRR-001";
+        attribute redefines title = "Irrigation console clinical evaluation plan";
+        attribute redefines objective = "Plan the evidence package for visualization support and alarmed continuity claims";
+    }
+
+    part clinicalEvalReportIrrigationConsole : ClinicalEvaluationReport {
+        attribute redefines recordId = "CER-IRR-001";
+        attribute redefines title = "Irrigation console clinical evaluation report";
+        attribute redefines conclusion = "Clinical performance and safety claims remain supported for the intended arthroscopy use when verified controls and post-market monitoring remain active.";
     }
 
     part assetAlarmIntegrationChannel : CyberAsset {
@@ -284,6 +332,42 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Transient pressure spike during cassette replacement";
     }
 
+    part productFamilyArthroscopyPlatform : ProductFamily {
+        attribute redefines familyId = "PF-IRR-001";
+        attribute redefines name = "Arthroscopy Irrigation Platform";
+    }
+
+    part variantIntegratedORConsole : ProductVariant {
+        attribute redefines variantId = "PV-IRR-001";
+        attribute redefines name = "Integrated OR Console Variant";
+    }
+
+    part featureRemoteAlarmIntegration : FeatureOption {
+        attribute redefines name = "Remote alarm integration";
+        attribute redefines category = "Connectivity";
+    }
+
+    part featureProcedureStatusExchange : FeatureOption {
+        attribute redefines name = "Procedure-status exchange";
+        attribute redefines category = "Interoperability";
+    }
+
+    part accessoryDisposableCassetteKit : Accessory {
+        attribute redefines accessoryId = "ACC-IRR-001";
+        attribute redefines name = "Disposable Arthroscopy Cassette Kit";
+    }
+
+    part configIntegratedORRelease20 : ConfigurationBaseline {
+        attribute redefines recordId = "CB-IRR-001";
+        attribute redefines title = "Integrated OR configuration baseline 2.0";
+        attribute redefines version = "2.0.0";
+    }
+
+    requirement constraintIntegratedVariantConnectivity : VariantConstraint {
+        attribute redefines reqId = "VC-IRR-001";
+        attribute redefines title = "Integrated OR variants shall include authenticated alarm routing and documented terminology bindings";
+    }
+
     part problemPressureSpike : SoftwareProblemReport {
         attribute redefines reportId = "PR-IRR-001";
         attribute redefines title = "Pressure spike problem report";
@@ -349,6 +433,78 @@ package IrrigationPump_Compliance {
         attribute redefines artifactType = "Post-market complaint trend";
         attribute redefines signalId = "SIG-IRR-001";
         attribute redefines sourceType = "Complaint trend and service review";
+    }
+
+    part manufacturingTechnician : OperationalActor {
+        attribute redefines name = "Manufacturing Technician";
+        attribute redefines role = "Final assembly and release";
+    }
+
+    part biomedicalTechnician : OperationalActor {
+        attribute redefines name = "Biomedical Technician";
+        attribute redefines role = "Installation, calibration, and preventive maintenance";
+    }
+
+    part manufacturingCell : OperationalEnvironment {
+        attribute redefines name = "Manufacturing Final Assembly Cell";
+        attribute redefines setting = "Controlled production line";
+    }
+
+    part serviceWorkshop : OperationalEnvironment {
+        attribute redefines name = "Biomedical Service Workshop";
+        attribute redefines setting = "Hospital clinical engineering bench";
+    }
+
+    part calibrationFixture : Resource {
+        attribute redefines name = "Pressure calibration fixture";
+        attribute redefines category = "Test equipment";
+    }
+
+    part serviceLaptop : Resource {
+        attribute redefines name = "Service diagnostic laptop";
+        attribute redefines category = "Service tool";
+    }
+
+    action procManufactureIntegratedConsole : ManufacturingProcedure {
+        attribute redefines name = "Manufacture integrated irrigation console";
+        attribute redefines objective = "Assemble and release the integrated irrigation console configuration";
+    }
+
+    action procInstallIntegratedConsole : InstallationProcedure {
+        attribute redefines name = "Install integrated irrigation console";
+        attribute redefines objective = "Install and configure the integrated irrigation console in the perioperative environment";
+    }
+
+    action procPreventiveMaintenancePressurePath : PreventiveMaintenanceProcedure {
+        attribute redefines name = "Perform preventive maintenance on pressure path";
+        attribute redefines objective = "Inspect and maintain the pressure-control path and depletion alarm path";
+    }
+
+    action procCalibratePressureSensing : CalibrationProcedure {
+        attribute redefines name = "Calibrate pressure sensing chain";
+        attribute redefines objective = "Calibrate the pressure-sensing chain before release to service";
+    }
+
+    part manufacturingRecordIntegratedConsole : ManufacturingRecord {
+        attribute redefines recordId = "MR-IRR-001";
+        attribute redefines title = "Integrated console manufacturing traveler";
+    }
+
+    part installQualificationIntegratedConsole : InstallationQualification {
+        attribute redefines recordId = "IQ-IRR-001";
+        attribute redefines title = "Integrated console installation qualification";
+        attribute redefines artifactType = "Installation qualification report";
+    }
+
+    part serviceReportPreventiveMaintenance : ServiceReport {
+        attribute redefines recordId = "SR-IRR-001";
+        attribute redefines title = "Preventive maintenance and alarm-path inspection report";
+    }
+
+    part calibrationRecordPressureChain : CalibrationRecord {
+        attribute redefines recordId = "CAL-IRR-001";
+        attribute redefines title = "Pressure sensing calibration record";
+        attribute redefines artifactType = "Calibration certificate";
     }
 
     part releaseBaseline20 : ReleaseBaseline {
@@ -429,6 +585,18 @@ package IrrigationPump_Compliance {
     connection : UsesMethod connect procedure ::> procDeliverIrrigation to method ::> methodPeristalticPressureControl;
     connection : UsesMethod connect procedure ::> procRespondToReservoirAlarm to method ::> methodPeristalticPressureControl;
     connection : UsesRoute connect procedure ::> procDeliverIrrigation to route ::> routeArthroscopicCannulaDelivery;
+    connection : ClaimsForUse connect claim ::> claimControlledVisualization to subject ::> intendedUseIrrigationConsole;
+    connection : ClaimsForUse connect claim ::> claimControlledVisualization to subject ::> indicationArthroscopyIrrigation;
+    connection : ClaimsForUse connect claim ::> claimSafeAlarmedContinuity to subject ::> intendedUseIrrigationConsole;
+    connection : ClaimsForUse connect claim ::> claimSafeAlarmedContinuity to subject ::> indicationArthroscopyIrrigation;
+    connection : ClaimsClinicalBenefit connect claim ::> claimControlledVisualization to benefit ::> benefitSustainedVisualization;
+    connection : ClaimsClinicalBenefit connect claim ::> claimSafeAlarmedContinuity to benefit ::> benefitSustainedVisualization;
+    connection : PlansClinicalEvaluation connect plan ::> clinicalEvalPlanIrrigationConsole to subject ::> claimControlledVisualization;
+    connection : PlansClinicalEvaluation connect plan ::> clinicalEvalPlanIrrigationConsole to subject ::> claimSafeAlarmedContinuity;
+    connection : SupportsClinicalClaim connect evidence ::> clinicalEvidenceArthroscopyLiterature to claim ::> claimControlledVisualization;
+    connection : SupportsClinicalClaim connect evidence ::> clinicalEvidenceFieldExperience to claim ::> claimSafeAlarmedContinuity;
+    connection : EvaluatesClinicalClaim connect report ::> clinicalEvalReportIrrigationConsole to claim ::> claimControlledVisualization;
+    connection : EvaluatesClinicalClaim connect report ::> clinicalEvalReportIrrigationConsole to claim ::> claimSafeAlarmedContinuity;
     connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> disposableCassette;
     connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> salineIrrigationFluid;
     connection : UsesResource connect procedure ::> procDeliverIrrigation to resource ::> disposableCassette;
@@ -490,6 +658,34 @@ package IrrigationPump_Compliance {
     connection : UsesConceptMap connect binding ::> terminologyBindingProcedureStatus to conceptMap ::> conceptMapDeviceToLoinc;
     connection : MapsSourceCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to sourceSystem ::> codeSystemDeviceStatus;
     connection : MapsTargetCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to targetSystem ::> codeSystemLoinc;
+    connection : HasProductVariant connect family ::> productFamilyArthroscopyPlatform to variant ::> variantIntegratedORConsole;
+    connection : SelectsFeature connect variant ::> variantIntegratedORConsole to feature ::> featureRemoteAlarmIntegration;
+    connection : SelectsFeature connect variant ::> variantIntegratedORConsole to feature ::> featureProcedureStatusExchange;
+    connection : SupportsAccessory connect subject ::> variantIntegratedORConsole to accessory ::> accessoryDisposableCassetteKit;
+    connection : ConfiguresItem connect baseline ::> configIntegratedORRelease20 to subject ::> irrigationConsole;
+    connection : ConfiguresItem connect baseline ::> configIntegratedORRelease20 to subject ::> swSystemIrrigationController;
+    connection : ConfiguresItem connect baseline ::> configIntegratedORRelease20 to subject ::> AlarmStatusFHIRInterface;
+    connection : ConfiguresItem connect baseline ::> configIntegratedORRelease20 to subject ::> ProcedureStatusFHIRInterface;
+    connection : ConstrainsVariant connect constraint ::> constraintIntegratedVariantConnectivity to variant ::> variantIntegratedORConsole;
+    connection : ManufacturesSubject connect procedure ::> procManufactureIntegratedConsole to subject ::> irrigationConsole;
+    connection : InstallsSubject connect procedure ::> procInstallIntegratedConsole to subject ::> irrigationConsole;
+    connection : ServicesSubject connect procedure ::> procPreventiveMaintenancePressurePath to subject ::> irrigationConsole;
+    connection : MaintainsSubject connect procedure ::> procPreventiveMaintenancePressurePath to subject ::> reservoirScale;
+    connection : MaintainsSubject connect procedure ::> procPreventiveMaintenancePressurePath to subject ::> pressureSensorBoard;
+    connection : CalibratesSubject connect procedure ::> procCalibratePressureSensing to subject ::> pressureSensorBoard;
+    connection : QualifiesInstallation connect qualification ::> installQualificationIntegratedConsole to subject ::> irrigationConsole;
+    connection : PerformedBy connect procedure ::> procManufactureIntegratedConsole to performer ::> manufacturingTechnician;
+    connection : PerformedBy connect procedure ::> procInstallIntegratedConsole to performer ::> biomedicalTechnician;
+    connection : PerformedBy connect procedure ::> procPreventiveMaintenancePressurePath to performer ::> biomedicalTechnician;
+    connection : PerformedBy connect procedure ::> procCalibratePressureSensing to performer ::> biomedicalTechnician;
+    connection : OccursIn connect procedure ::> procManufactureIntegratedConsole to environment ::> manufacturingCell;
+    connection : OccursIn connect procedure ::> procInstallIntegratedConsole to environment ::> operatingRoom;
+    connection : OccursIn connect procedure ::> procPreventiveMaintenancePressurePath to environment ::> serviceWorkshop;
+    connection : OccursIn connect procedure ::> procCalibratePressureSensing to environment ::> serviceWorkshop;
+    connection : UsesResource connect procedure ::> procManufactureIntegratedConsole to resource ::> disposableCassette;
+    connection : UsesResource connect procedure ::> procInstallIntegratedConsole to resource ::> serviceLaptop;
+    connection : UsesResource connect procedure ::> procPreventiveMaintenancePressurePath to resource ::> serviceLaptop;
+    connection : UsesResource connect procedure ::> procCalibratePressureSensing to resource ::> calibrationFixture;
 
     connection : Satisfy connect satisfiedBy ::> swItemPressureController to satisfies ::> swrPressureControlLoop;
     connection : Satisfy connect satisfiedBy ::> swItemAlarmSupervisor to satisfies ::> swrAlarmCoordinator;
@@ -551,6 +747,20 @@ package IrrigationPump_Compliance {
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> terminologyBindingProcedureStatus;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> collateralAlarmStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> particularIrrigationStandard;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> clinicalEvalPlanIrrigationConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> clinicalEvalReportIrrigationConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> clinicalEvidenceArthroscopyLiterature;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> clinicalEvidenceFieldExperience;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> productFamilyArthroscopyPlatform;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> variantIntegratedORConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> configIntegratedORRelease20;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procManufactureIntegratedConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procInstallIntegratedConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procPreventiveMaintenancePressurePath;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procCalibratePressureSensing;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> manufacturingRecordIntegratedConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> serviceReportPreventiveMaintenance;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> calibrationRecordPressureChain;
 
     connection : Evidences connect evidence ::> evidenceFormativePrimeWorkflow to subject ::> formativeEvalPrimeWorkflow;
     connection : Evidences connect evidence ::> evidenceFormativePrimeWorkflow to subject ::> useErrorAnalysisPrimeWorkflow;
@@ -558,10 +768,18 @@ package IrrigationPump_Compliance {
     connection : Evidences connect evidence ::> evidenceSummativePrimeWorkflow to subject ::> uiReqPrimeConfirmation;
     connection : Evidences connect evidence ::> signalReservoirCollapseTrend to subject ::> overallResidualRiskEvalIrrigation;
     connection : Evidences connect evidence ::> signalCyberIntegrationReview to subject ::> threatModelIntegratedORConnectivity;
+    connection : Evidences connect evidence ::> clinicalEvidenceArthroscopyLiterature to subject ::> claimControlledVisualization;
+    connection : Evidences connect evidence ::> clinicalEvidenceFieldExperience to subject ::> claimSafeAlarmedContinuity;
+    connection : Evidences connect evidence ::> installQualificationIntegratedConsole to subject ::> procInstallIntegratedConsole;
+    connection : Evidences connect evidence ::> calibrationRecordPressureChain to subject ::> procCalibratePressureSensing;
 
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swSystemIrrigationController;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swItemPressureController;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swItemAlarmSupervisor;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> soupEvalUiFramework;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> sbomIrrigationRelease;
+    connection : Documents connect record ::> manufacturingRecordIntegratedConsole to subject ::> procManufactureIntegratedConsole;
+    connection : Documents connect record ::> manufacturingRecordIntegratedConsole to subject ::> irrigationConsole;
+    connection : Documents connect record ::> serviceReportPreventiveMaintenance to subject ::> procPreventiveMaintenancePressurePath;
+    connection : Documents connect record ::> serviceReportPreventiveMaintenance to subject ::> pressureSensorBoard;
 }

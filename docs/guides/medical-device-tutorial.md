@@ -58,16 +58,16 @@ This creates:
 
 ```
 my-infusion-pump/
-├── memo.config.yaml      # Extends @memo/medical (86+ element kinds)
+├── memo.config.yaml      # Extends @memo/medical (230+ element kinds)
 └── model/
     └── my-infusion-pump.sysml   # Starter file
 ```
 
 !!! info "What does `extends: @memo/medical` give you?"
-    - **86+ element kinds** across 10 CoSMA layers
-    - **20+ relationship types** including cyber/integration and FMEA / fault-tree risk-analysis traces
-    - **74 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, and FDA-aligned cybersecurity expectations
-    - **7 viewpoints** with pre-configured SysML v2 diagrams
+    - **230+ element kinds** across 10+ CoSMA layers
+    - **100+ relationship types** including cyber/integration, clinical-evidence, lifecycle-operations, and FMEA / fault-tree risk-analysis traces
+    - **89 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, and regulated lifecycle/configuration traceability
+    - **9 viewpoints** with pre-configured SysML v2 diagrams
 
 ---
 
@@ -280,7 +280,7 @@ You'll see output like:
 ```
 MEMO Validate — my-infusion-pump
 
-Checking 74 closure rules against 24 elements...
+Checking 89 closure rules against 24 elements...
 
 ✗ CR-MED-002  hazAirEmbolism — Every Hazard must cause at least one HazardousSituation
 ✗ CR-MED-007  swReqAlarmManager — Every SoftwareRequirement must derive from a SystemRequirement

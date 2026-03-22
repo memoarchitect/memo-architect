@@ -57,19 +57,19 @@ MEMO is a developer-first Model-Based Systems Engineering tool that brings the r
 
 ```sysml
 package InfusionPump {
-    part def PumpSystem :>> System {
+    part def PumpSystem :> System {
         attribute redefines name = "Infusion Pump";
     }
 
-    requirement def SafeDelivery :>> SystemRequirement {
+    requirement def SafeDelivery :> SystemRequirement {
         attribute redefines name = "Drug delivery within +/- 5% accuracy";
     }
 
-    part def OverInfusion :>> Hazard {
+    part def OverInfusion :> Hazard {
         attribute redefines name = "Over-infusion of drug";
     }
 
-    part def FlowSensor :>> RiskControl {
+    part def FlowSensor :> RiskControl {
         attribute redefines name = "Flow rate sensor with alarm";
     }
 
