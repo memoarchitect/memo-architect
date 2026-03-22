@@ -8,15 +8,9 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute title : String;
     }
 
-    part def UserProfile {
-        attribute name : String;
-        attribute role : String;
-    }
+    part def UserProfile :> OperationalActor { }
 
-    part def UseEnvironment {
-        attribute name : String;
-        attribute setting : String;
-    }
+    part def UseEnvironment :> OperationalEnvironment { }
 
     requirement def DesignInput {
         attribute inputId : String;

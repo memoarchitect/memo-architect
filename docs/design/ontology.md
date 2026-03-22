@@ -49,7 +49,7 @@ Entity kinds are mapped to SysML v2 constructs:
 
 As the ontology is split:
 
-- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
+- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
 - **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
 - **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
 
@@ -87,6 +87,14 @@ Each relationship type has:
 | `derives` | Need/Requirement → derived Requirement | requirements | Downstream requirement derivation |
 | `refines` | Base concern/use case → refiner | requirements | More precise refinement when generic tracing is too weak |
 | `traceTo` | Element → Element | requirements | Fallback trace only when no stronger stable semantics are worth encoding |
+| `hasSubProcedure` | Procedure → Procedure step | operational | Procedure decomposition for reusable workflow structure |
+| `performedBy` | Procedure → Operational Actor | operational | Explicit performer or user role |
+| `performedOn` | Procedure → Operational Entity | operational | Explicit subject/recipient of a procedure |
+| `occursIn` | Procedure → Operational Environment | operational | Explicit use-context / environment assignment |
+| `usesResource` | Procedure → Resource/element | operational | Procedure-to-resource usage trace |
+| `hasEquipment` | Environment → equipment | operational | Environment resource availability |
+| `hasPersonnel` | Environment → Operational Actor | operational | Environment staffing / user presence |
+| `containsSubstance` | Environment → Substance | operational | Environment material/substance context |
 | `mitigates` | RiskControl → Hazard | risk | ISO 14971 risk mitigation |
 | `causes` | Hazard → HazardousSituation | risk | Causal chain |
 | `leadsTo` | HazardousSituation → Harm | risk | Harm pathway |
@@ -134,7 +142,7 @@ The target package stack is:
 ```text
 @memo/ontology-core
   ├── purpose / program / stakeholder concerns
-  ├── operational
+  ├── operational (including procedures, environments, performers, subjects, resources)
   ├── requirements
   ├── functional
   ├── logical
@@ -156,4 +164,4 @@ The target package stack is:
   └── medical relationship specializations
 ```
 
-Rules, viewpoints, completeness logic, and example models remain outside ontology packages. This separation is deliberate: the ontology carries the medical semantics, while `@memo/medical` carries viewpoint and rule concerns in line with ISO/IEC/IEEE 42010's distinction between model content and viewpoint-driven description.
+Rules, viewpoints, completeness logic, and example models remain outside ontology packages. This separation is deliberate: the ontology carries the reusable model semantics, while `@memo/medical` carries viewpoint and rule concerns in line with ISO/IEC/IEEE 42010's distinction between model content and viewpoint-driven description.

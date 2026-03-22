@@ -10,9 +10,46 @@ package IrrigationPump_Compliance {
         attribute redefines role = "Setup and consumable replacement";
     }
 
+    part arthroscopySurgeon : UserProfile {
+        attribute redefines name = "Arthroscopy Surgeon";
+        attribute redefines role = "Primary operator and irrigation user";
+    }
+
     part operatingRoom : UseEnvironment {
         attribute redefines name = "Operating Room";
         attribute redefines setting = "Arthroscopy procedure suite";
+    }
+
+    part salineIrrigationFluid : Substance {
+        attribute redefines name = "Sterile Saline Irrigation Fluid";
+        attribute redefines category = "Procedure fluid";
+        attribute redefines state = "Liquid";
+    }
+
+    part kneeJointSurgicalSite : OperationalEntity {
+        attribute redefines name = "Patient Knee Joint";
+        attribute redefines category = "Surgical site";
+    }
+
+    part satietyIndicator : Observable {
+        attribute redefines name = "Visualized Joint Space Distension";
+        attribute redefines category = "Procedure outcome cue";
+        attribute redefines measureType = "Visual observation";
+    }
+
+    action procPrimeCassette : Procedure {
+        attribute redefines name = "Prime Irrigation Cassette";
+        attribute redefines objective = "Prepare a sterile, air-free irrigation path before use";
+    }
+
+    action procDeliverIrrigation : Procedure {
+        attribute redefines name = "Deliver Arthroscopy Irrigation";
+        attribute redefines objective = "Maintain irrigation pressure and visualization during the procedure";
+    }
+
+    action procRespondToReservoirAlarm : Procedure {
+        attribute redefines name = "Respond To Reservoir Alarm";
+        attribute redefines objective = "Restore irrigation before the field collapses";
     }
 
     requirement uiReqPrimeConfirmation : UserInterfaceRequirement {
@@ -197,6 +234,30 @@ package IrrigationPump_Compliance {
     connection : ExposesUseError connect scenario ::> primeWorkflowScenario to useError ::> useErrStartBeforePrime;
     connection : ContributesToHazard connect useError ::> useErrStartBeforePrime to hazard ::> hazAirInLine;
     connection : Refines connect refined ::> srPrimeInterlock to refiner ::> uiReqPrimeConfirmation;
+    connection : Refines connect refined ::> ucPrimeCassette to refiner ::> procPrimeCassette;
+    connection : Refines connect refined ::> ucDeliverIrrigation to refiner ::> procDeliverIrrigation;
+    connection : Refines connect refined ::> ucRespondToReservoirAlarm to refiner ::> procRespondToReservoirAlarm;
+    connection : HasSubProcedure connect procedure ::> procDeliverIrrigation to subProcedure ::> procPrimeCassette;
+    connection : HasSubProcedure connect procedure ::> procDeliverIrrigation to subProcedure ::> procRespondToReservoirAlarm;
+    connection : PerformedBy connect procedure ::> procPrimeCassette to performer ::> circulatingNurse;
+    connection : PerformedBy connect procedure ::> procDeliverIrrigation to performer ::> arthroscopySurgeon;
+    connection : PerformedBy connect procedure ::> procRespondToReservoirAlarm to performer ::> circulatingNurse;
+    connection : PerformedOn connect procedure ::> procDeliverIrrigation to subject ::> kneeJointSurgicalSite;
+    connection : PerformedOn connect procedure ::> procRespondToReservoirAlarm to subject ::> kneeJointSurgicalSite;
+    connection : OccursIn connect procedure ::> procPrimeCassette to environment ::> operatingRoom;
+    connection : OccursIn connect procedure ::> procDeliverIrrigation to environment ::> operatingRoom;
+    connection : OccursIn connect procedure ::> procRespondToReservoirAlarm to environment ::> operatingRoom;
+    connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> disposableCassette;
+    connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> salineIrrigationFluid;
+    connection : UsesResource connect procedure ::> procDeliverIrrigation to resource ::> disposableCassette;
+    connection : UsesResource connect procedure ::> procDeliverIrrigation to resource ::> footswitchPedal;
+    connection : UsesResource connect procedure ::> procRespondToReservoirAlarm to resource ::> reservoirScale;
+    connection : HasEquipment connect environment ::> operatingRoom to equipment ::> disposableCassette;
+    connection : HasEquipment connect environment ::> operatingRoom to equipment ::> footswitchPedal;
+    connection : HasEquipment connect environment ::> operatingRoom to equipment ::> reservoirScale;
+    connection : HasPersonnel connect environment ::> operatingRoom to personnel ::> circulatingNurse;
+    connection : HasPersonnel connect environment ::> operatingRoom to personnel ::> arthroscopySurgeon;
+    connection : ContainsSubstance connect environment ::> operatingRoom to substance ::> salineIrrigationFluid;
     connection : Satisfy connect satisfiedBy ::> primeConfirmationDialog to satisfies ::> uiReqPrimeConfirmation;
 
     connection : SupportsOperatingFunction connect performance ::> epControlledIrrigationPressure to function ::> pofMaintainFieldDistension;
