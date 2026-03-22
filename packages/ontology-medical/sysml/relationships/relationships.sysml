@@ -1,5 +1,40 @@
 package MEMO_Ontology_Medical_Relationships {
 
+    connection def HasAnatomicalSite {
+        end subject[1];
+        end site : AnatomicalSite [1];
+    }
+
+    connection def UsesMethod {
+        end procedure : Procedure [1];
+        end method : ProcedureMethod [1];
+    }
+
+    connection def UsesRoute {
+        end procedure : Procedure [1];
+        end route : RouteOfAdministration [1];
+    }
+
+    connection def ProducesObservation {
+        end procedure : Procedure [1];
+        end observation : ClinicalObservation [1];
+    }
+
+    connection def ObservesSubject {
+        end observation : ClinicalObservation [1];
+        end subject[1];
+    }
+
+    connection def AffectsMorphology {
+        end procedure : Procedure [1];
+        end morphology : MorphologyState [1];
+    }
+
+    connection def AppliesEnvironmentQualifier {
+        end environment : OperationalEnvironment [1];
+        end qualifier : ClinicalEnvironmentQualifier [1];
+    }
+
     connection def Mitigates {
         end control : RiskControl [1];
         end hazard : Hazard [1];

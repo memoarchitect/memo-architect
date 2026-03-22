@@ -337,6 +337,11 @@ package InfusionPump {
         attribute redefines humidity = "20-80% RH";
     }
 
+    part clinicalSterilityQualifier : ClinicalEnvironmentQualifier {
+        attribute redefines name = "Controlled clinical cleanliness";
+        attribute redefines qualifierType = "Clinical cleanliness";
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PHYSICAL ARCHITECTURE LAYER — Hardware components
     // ═══════════════════════════════════════════════════════════════════════
@@ -659,6 +664,7 @@ package InfusionPump {
     connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> controlSubsystem;
     connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> pumpSubsystem;
     connection : ComposedOf connect whole ::> infusionPumpSystem to part ::> uiSubsystem;
+    connection : AppliesEnvironmentQualifier connect environment ::> clinicalEnvironment to qualifier ::> clinicalSterilityQualifier;
 
     // Control Electronics → Components
     connection : ComposedOf connect whole ::> controlSubsystem to part ::> mainPCB;

@@ -41,6 +41,51 @@ cosmaLayers:
     color: "#3498DB"
 
 kinds:
+  Patient:
+    label: Patient
+    layer: operational
+    sysmlConstruct: part def
+
+  AnatomicalSite:
+    label: Anatomical Site
+    layer: operational
+    sysmlConstruct: part def
+
+  ProcedureMethod:
+    label: Procedure Method
+    layer: operational
+    sysmlConstruct: part def
+
+  RouteOfAdministration:
+    label: Route Of Administration
+    layer: operational
+    sysmlConstruct: part def
+
+  ClinicalStep:
+    label: Clinical Step
+    layer: operational
+    sysmlConstruct: action def
+
+  TreatmentPathway:
+    label: Treatment Pathway
+    layer: operational
+    sysmlConstruct: action def
+
+  ClinicalObservation:
+    label: Clinical Observation
+    layer: operational
+    sysmlConstruct: part def
+
+  MorphologyState:
+    label: Morphology State
+    layer: operational
+    sysmlConstruct: part def
+
+  ClinicalEnvironmentQualifier:
+    label: Clinical Environment Qualifier
+    layer: operational
+    sysmlConstruct: part def
+
   UserNeed:
     label: User Need
     layer: requirements
@@ -494,6 +539,41 @@ kinds:
     sysmlConstruct: part def
 
 relationshipTypes:
+  - name: hasAnatomicalSite
+    label: Has Anatomical Site
+    layer: operational
+    color: "#C0392B"
+
+  - name: usesMethod
+    label: Uses Method
+    layer: operational
+    color: "#CD6155"
+
+  - name: usesRoute
+    label: Uses Route
+    layer: operational
+    color: "#E74C3C"
+
+  - name: producesObservation
+    label: Produces Observation
+    layer: operational
+    color: "#D35400"
+
+  - name: observesSubject
+    label: Observes Subject
+    layer: operational
+    color: "#AF601A"
+
+  - name: affectsMorphology
+    label: Affects Morphology
+    layer: operational
+    color: "#884EA0"
+
+  - name: appliesEnvironmentQualifier
+    label: Applies Environment Qualifier
+    layer: operational
+    color: "#7D3C98"
+
   - name: mitigates
     label: Mitigates
     layer: risk
@@ -640,6 +720,13 @@ relationshipTypes:
     color: "#E67E22"
 
 relationships:
+  - hasAnatomicalSite
+  - usesMethod
+  - usesRoute
+  - producesObservation
+  - observesSubject
+  - affectsMorphology
+  - appliesEnvironmentQualifier
   - mitigates
   - causes
   - leadsTo

@@ -307,6 +307,11 @@ package InfusionPump {
         attribute redefines humidity = "20-80% RH";
     }
 
+    part clinicalSterilityQualifier : ClinicalEnvironmentQualifier {
+        attribute redefines name = "Controlled clinical cleanliness";
+        attribute redefines qualifierType = "Clinical cleanliness";
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PHYSICAL ARCHITECTURE LAYER — Hardware components
     // ═══════════════════════════════════════════════════════════════════════
@@ -646,6 +651,7 @@ package InfusionPump {
     connection : AllocateTo connect function ::> sfDisplayStatus to structure ::> displayDriver;
 
     // Satisfy (design satisfies requirement)
+    connection : AppliesEnvironmentQualifier connect environment ::> clinicalEnvironment to qualifier ::> clinicalSterilityQualifier;
     connection : Satisfy connect satisfiedBy ::> pumpSubsystem to satisfies ::> sysReqFlowAccuracy;
     connection : Satisfy connect satisfiedBy ::> controlSubsystem to satisfies ::> sysReqOcclusionDetect;
     connection : Satisfy connect satisfiedBy ::> pumpSubsystem to satisfies ::> sysReqAntiFreeFlow;

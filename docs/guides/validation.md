@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 173 | Rules: 48 | Relationships: 53
+Kinds: 182 | Rules: 55 | Relationships: 60
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 48 Medical Closure Rules
+## The 55 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -126,6 +126,18 @@ pnpm memo validate
 | CR-MED-046 | Every **TopEvent** should trigger ≥1 **HazardousSituation** | Warning |
 | CR-MED-047 | Every **DetectionControl** should detect ≥1 **FailureMode** | Warning |
 | CR-MED-048 | Every **DetectionControl** must be verified by ≥1 **Test** | Error |
+
+### Clinical Context — Procedure, Patient, Anatomy, and Observation
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-049 | Every **TreatmentPathway** should contain ≥1 **Procedure** or **ClinicalStep** | Warning |
+| CR-MED-050 | Every **ProcedureMethod** should be used by ≥1 **Procedure** | Warning |
+| CR-MED-051 | Every **RouteOfAdministration** should be used by ≥1 **Procedure** | Warning |
+| CR-MED-052 | Every **ClinicalObservation** should be produced by ≥1 **Procedure** | Warning |
+| CR-MED-053 | Every **ClinicalObservation** should observe ≥1 **Patient**, **AnatomicalSite**, or **MorphologyState** | Warning |
+| CR-MED-054 | Every **MorphologyState** should be affected by ≥1 **Procedure** | Warning |
+| CR-MED-055 | Every **UseEnvironment** should declare ≥1 **ClinicalEnvironmentQualifier** | Warning |
 
 ## The Completeness Bar (Web UI)
 

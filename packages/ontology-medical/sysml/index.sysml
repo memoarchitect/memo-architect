@@ -1,5 +1,6 @@
 package MEMO_Ontology_Medical {
     import MEMO_Ontology_Core::*;
+    import MEMO_Ontology_Medical_ClinicalContext::*;
     import MEMO_Ontology_Medical_DesignControl::*;
     import MEMO_Ontology_Medical_Development::*;
     import MEMO_Ontology_Medical_Platform::*;

@@ -107,6 +107,13 @@ Each relationship type has:
 | `definesTopEvent` | Fault Tree Analysis → Top Event | risk | Declares the fault tree objective |
 | `contributesToEvent` | Basic/Intermediate Event → parent Event | risk | Fault propagation toward the top event |
 | `triggersHazardousSituation` | Top Event → HazardousSituation | risk | Connects fault-tree outcomes into the risk chain |
+| `hasAnatomicalSite` | subject/procedure → Anatomical Site | operational | Connects procedures or recipients to the relevant body site |
+| `usesMethod` | Procedure → Procedure Method | operational | Explicit procedure-method semantics |
+| `usesRoute` | Procedure → Route Of Administration | operational | Explicit route semantics |
+| `producesObservation` | Procedure → Clinical Observation | operational | Procedure outcome / observation production |
+| `observesSubject` | Clinical Observation → patient/site/state | operational | Observation target semantics |
+| `affectsMorphology` | Procedure → Morphology State | operational | Morphology/state change caused by a procedure |
+| `appliesEnvironmentQualifier` | Environment → Clinical Environment Qualifier | operational | Explicit sterile/clinical environment qualifiers |
 | `addressesUseError` | UI Requirement → Use Error | design-control | Explicit IEC 62366 usability trace |
 | `analyzesUseError` | Use Error Analysis → Use Error | design-control | Use-error analysis structure |
 | `evaluatesRequirement` | Validation Case → UI Requirement | verification | Formative/summative evaluation linkage |
@@ -154,6 +161,7 @@ The target package stack is:
   └── relationships
 
 @memo/ontology-medical
+  ├── clinical-context
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── risk-management

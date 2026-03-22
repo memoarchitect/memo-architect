@@ -17,7 +17,7 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 48 |
+| Closure Rules | 55 |
 | Workbench Viewpoints | 6 |
 
 ## Standards Alignment
@@ -79,7 +79,19 @@ concepts live in `@memo/ontology-core`, while medical specializations live in
 - `Procedure`, `OperationalEnvironment`, `Substance`, `Observable`, and performer/subject/resource relations live in the core backbone
 - `UserProfile` now specializes `OperationalActor`
 - `UseEnvironment` now specializes `OperationalEnvironment`
-- medical examples can now model who performs a procedure, where it occurs, what it acts on, and which resources/substances are in play without inventing device-specific terms
+- `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, `TreatmentPathway`, `ClinicalObservation`, `MorphologyState`, and `ClinicalEnvironmentQualifier` now live in `@memo/ontology-medical`
+- medical examples can now model who performs a procedure, where it occurs, what it acts on, which anatomy is involved, which method/route is used, and which observations/outcomes matter without inventing device-specific terms
+
+**Enforced by rules:** CR-MED-049 through CR-MED-055
+
+### External Terminology Boundary
+
+The current boundary is deliberate:
+
+- MEMO models stable backbone concepts locally when they are needed for medical-device design reasoning across many products
+- full external clinical terminologies remain a future import/interoperability concern rather than a required local bundle
+- local kinds such as `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, and `ClinicalObservation` are intentionally lightweight anchor concepts, not an attempt to replicate the full depth of SNOMED CT
+- deeper coding systems, patient taxonomies, and externally maintained clinical hierarchies should flow through the future external ontology import capability once that interoperability layer exists
 
 ### ISO 13485 — QMS, Traceability, and Records
 
