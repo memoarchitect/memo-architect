@@ -225,6 +225,101 @@ describe('evaluateClosureRules', () => {
         const attrViolations = result.violations.filter(v => v.ruleId === 'CR-002');
         expect(attrViolations.length).toBe(0);
     });
+
+    it('supports outgoing relationship rules filtered by related kind', async () => {
+        const config: MEMOConfig = {
+            ...testConfig,
+            kinds: {
+                ...testConfig.kinds,
+                UserNeed: { label: 'User Need', layer: 'requirements', sysmlConstruct: 'requirement def' },
+                UseCase: { label: 'Use Case', layer: 'functional', sysmlConstruct: 'part def' },
+            },
+            relationshipTypes: [
+                ...testConfig.relationshipTypes,
+                { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
+                { name: 'refines', label: 'Refines', layer: 'requirements', color: '#2E86C1' },
+            ],
+            closureRules: [
+                {
+                    id: 'CR-OUT',
+                    description: 'Every UserNeed must derive at least one SystemRequirement',
+                    entity: 'UserNeed',
+                    rule: {
+                        type: 'requireRelationship',
+                        relationship: 'derives',
+                        min: 1,
+                        direction: 'outgoing',
+                        relatedKinds: ['SystemRequirement'],
+                    },
+                    severity: 'warning',
+                },
+            ],
+        };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement un1 : UserNeed { attribute redefines title = "Need"; }
+                requirement sr1 : SystemRequirement { attribute redefines title = "System"; }
+                part uc1 : UseCase { attribute redefines name = "Use case"; }
+                connection : Derives connect source ::> un1 to derived ::> sr1;
+                connection : Refines connect refined ::> un1 to refiner ::> uc1;
+            }
+        `);
+
+        const model = buildMemoModel([doc], config);
+        const result = evaluateClosureRules(model, config);
+
+        expect(result.violations).toHaveLength(0);
+    });
+
+    it('supports incoming relationship rules filtered by related kind', async () => {
+        const config: MEMOConfig = {
+            ...testConfig,
+            kinds: {
+                ...testConfig.kinds,
+                UserNeed: { label: 'User Need', layer: 'requirements', sysmlConstruct: 'requirement def' },
+                Test: { label: 'Test', layer: 'verification', sysmlConstruct: 'part def' },
+            },
+            relationshipTypes: [
+                ...testConfig.relationshipTypes,
+                { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
+                { name: 'verify', label: 'Verify', layer: 'verification', color: '#27AE60' },
+            ],
+            closureRules: [
+                {
+                    id: 'CR-IN',
+                    description: 'Every SystemRequirement must derive from a UserNeed',
+                    entity: 'SystemRequirement',
+                    rule: {
+                        type: 'requireRelationship',
+                        relationship: 'derives',
+                        min: 1,
+                        direction: 'incoming',
+                        relatedKinds: ['UserNeed'],
+                    },
+                    severity: 'warning',
+                },
+            ],
+        };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement un1 : UserNeed { attribute redefines title = "Need"; }
+                requirement sr1 : SystemRequirement { attribute redefines title = "System"; }
+                requirement swr1 : SoftwareRequirement { attribute redefines title = "Software"; }
+                part test1 : Test { attribute redefines name = "Verification"; }
+                connection : Derives connect source ::> swr1 to derived ::> sr1;
+                connection : Verify connect verifiedBy ::> test1 to verifies ::> sr1;
+            }
+        `);
+
+        const model = buildMemoModel([doc], config);
+        const result = evaluateClosureRules(model, config);
+
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations[0].ruleId).toBe('CR-IN');
+        expect(result.violations[0].elementId).toBe('sr1');
+    });
 });
 
 describe('computeCompleteness', () => {
@@ -586,8 +681,8 @@ describe('Infusion pump integration', () => {
         // Should have many elements (actors, requirements, hazards, components, etc.)
         expect(model.elements.size).toBeGreaterThan(50);
 
-        // Should have relationships (mitigates, traceTo, allocateTo, satisfy, verify)
-        expect(model.relationships.length).toBeGreaterThan(15);
+        // Should have relationships across risk, derivation, allocation, satisfaction, and verification.
+        expect(model.relationships.length).toBeGreaterThan(30);
 
         // Check specific elements
         expect(model.elements.get('clinician')).toBeDefined();
@@ -601,7 +696,12 @@ describe('Infusion pump integration', () => {
         expect(mitigates.length).toBe(3); // 3 risk controls
 
         const traceTo = model.relationshipsByType.get('traceTo') || [];
-        expect(traceTo.length).toBeGreaterThanOrEqual(5);
+        expect(traceTo.length).toBe(0);
+
+        const derives = model.relationshipsByType.get('derives') || [];
+        const refines = model.relationshipsByType.get('refines') || [];
+        expect(derives.length).toBeGreaterThanOrEqual(6);
+        expect(refines.length).toBeGreaterThanOrEqual(5);
 
         // Verify relationship indexes
         const hazOverOutgoing = model.outgoing.get('hazOverInfusion') || [];
@@ -620,7 +720,7 @@ describe('Infusion pump integration', () => {
         );
 
         const result = evaluateClosureRules(model, config);
-        expect(result.rulesEvaluated).toBe(21);
+        expect(result.rulesEvaluated).toBe(39);
         // Some rules should pass, some may have violations
         expect(result.violations.length).toBeGreaterThanOrEqual(0);
 

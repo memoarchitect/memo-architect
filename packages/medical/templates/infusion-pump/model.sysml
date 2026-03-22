@@ -629,6 +629,7 @@ package InfusionPump {
     connection : Derives connect source ::> unAccurateDelivery to derived ::> sysReqFlowAccuracy;
     connection : Derives connect source ::> unOcclusionAlert to derived ::> sysReqOcclusionDetect;
     connection : Derives connect source ::> unFreeFlowPrevention to derived ::> sysReqAntiFreeFlow;
+    connection : Derives connect source ::> unOcclusionAlert to derived ::> sysReqAlarmVolume;
     connection : Refines connect refined ::> unAccurateDelivery to refiner ::> ucProgramInfusion;
     connection : Refines connect refined ::> unOcclusionAlert to refiner ::> ucRespondToAlarm;
     connection : Refines connect refined ::> ucProgramInfusion to refiner ::> normalInfusionScenario;

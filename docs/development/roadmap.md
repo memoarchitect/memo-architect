@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 21 rules, 5 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 39 rules, 5 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -231,14 +231,14 @@ Exit criteria:
 
 Bring the workbench validation layer up to the level of the newer ontology concepts:
 
-- [ ] **Add rules for newer medical ontology concepts** — usability specs/validation, software lifecycle artifacts, essential performance, and QMS trace artifacts
-- [ ] **Add stricter traceability checks** — enforce more complete chains across user need → requirement → architecture → risk → verification → evidence where justified
-- [ ] **Align viewpoints with the richer ontology** — update viewpoints so the new concepts are visible in the right review contexts
-- [ ] **Update validation docs/examples** — make the rule outputs and tutorials reflect the expanded medical ontology surface
+- [x] **Add rules for newer medical ontology concepts** — added usability, essential-performance, lifecycle, and QMS/evidence rules on top of the second-pass medical semantics
+- [x] **Add stricter traceability checks** — `@memo/core` closure rules now support direction- and kind-aware relationship checks, and the medical rule pack uses them to enforce more precise chains
+- [x] **Align viewpoints with the richer ontology** — expanded the existing medical viewpoints so lifecycle, QMS, usability, and essential-performance artifacts are visible in the appropriate review contexts
+- [x] **Update validation docs/examples** — refreshed validation docs, tutorial output, and config references to the expanded rule pack
 
 Exit criteria:
-- `@memo/medical` validates the newer ontology concepts, not just the original subset
-- docs and examples show the intended rule coverage
+- [x] `@memo/medical` validates the newer ontology concepts, not just the original subset
+- [x] docs and examples show the intended rule coverage
 
 ### Next Ontology Milestone — Additional Reference Models **[HIGH]**
 

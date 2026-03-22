@@ -66,7 +66,7 @@ my-infusion-pump/
 !!! info "What does `extends: @memo/medical` give you?"
     - **86+ element kinds** across 10 CoSMA layers
     - **16 relationship types** (traceTo, mitigates, verify, etc.)
-    - **21 closure rules** aligned with ISO 14971, IEC 62304, and IEC 60601
+    - **39 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, and IEC 60601
     - **5 viewpoints** with pre-configured SysML v2 diagrams
 
 ---
@@ -280,12 +280,12 @@ You'll see output like:
 ```
 MEMO Validate — my-infusion-pump
 
-Checking 21 closure rules against 24 elements...
+Checking 39 closure rules against 24 elements...
 
-✗ CR-MED-002  hazAirEmbolism — Every Hazard must trace to a SystemFunction or UseCase
-✗ CR-MED-002  hazUnderdose — Every Hazard must trace to a SystemFunction or UseCase
+✗ CR-MED-002  hazAirEmbolism — Every Hazard must cause at least one HazardousSituation
+✗ CR-MED-007  swReqAlarmManager — Every SoftwareRequirement must derive from a SystemRequirement
 ⚠ CR-MED-011  controlFW — Every Software must have safetyClassification attribute
-⚠ CR-MED-012  No UseCase found — Every UseCase should trace to a Scenario
+⚠ CR-MED-012  ucRespondToAlarm — Every UseCase should be refined by a Scenario
 
 Results: 2 errors, 2 warnings — 87% complete
 ```
@@ -293,33 +293,49 @@ Results: 2 errors, 2 warnings — 87% complete
 ### Fix the Gaps
 
 The validation tells you exactly what's missing. Fix by adding the missing
-elements or connections:
+elements or stronger traceability connections:
 
-**Add missing functions and use cases** — create `model/functional/functions.sysml`:
+**Add the missing requirement derivation and scenario refinement**:
 
 ```sysml
-package Functions {
+package RequirementsAndBehavior {
+    import MEMO_Ontology_Medical::*;
+    requirement sysReqAlarmResponse : SystemRequirement {
+        attribute redefines title = "Alarm Response";
+    }
+
+    requirement swReqAlarmManager : SoftwareRequirement {
+        attribute redefines title = "Alarm Manager";
+    }
+
+    part ucRespondToAlarm : UseCase {
+        attribute redefines name = "Respond To Alarm";
+    }
+
+    action occlusionAlarmScenario : Scenario {
+        attribute redefines name = "Occlusion Alarm Response";
+    }
+
+    connection : Derives connect source ::> sysReqAlarmResponse to derived ::> swReqAlarmManager;
+    connection : Refines connect refined ::> ucRespondToAlarm to refiner ::> occlusionAlarmScenario;
+}
+```
+
+**Add the missing hazardous situation**:
+
+```sysml
+package RiskModel {
     import MEMO_Ontology_Medical::*;
 
-    part sfFlowControl : SystemFunction {
-        attribute redefines name = "Flow Rate Control";
-        doc /* Controls fluid delivery at the set rate */
+    requirement hazAirEmbolism : Hazard {
+        attribute redefines title = "Air Embolism";
     }
 
-    part sfAlarmDetection : SystemFunction {
-        attribute redefines name = "Fault Detection & Alarm";
-        doc /* Detects fault conditions and triggers alarms */
+    requirement hsAirInLine : HazardousSituation {
+        attribute redefines title = "Air detected in infusion line during therapy";
     }
 
-    // Allocate functions to components
-    connection : allocateTo connect sfFlowControl to fluidDelivery;
-    connection : allocateTo connect sfAlarmDetection to alarmSubsystem;
-
-    // Trace hazards to functions they affect
-    connection : traceTo connect hazOverdose to sfFlowControl;
-    connection : traceTo connect hazUnderdose to sfFlowControl;
-    connection : traceTo connect hazAirEmbolism to sfFlowControl;
-    connection : traceTo connect hazFreeFlow to sfFlowControl;
+    connection : Causes connect hazard ::> hazAirEmbolism to situation ::> hsAirInLine;
 }
 ```
 

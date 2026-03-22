@@ -34,6 +34,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: mitigates
+      direction: incoming
+      relatedKinds: [RiskControl]
       min: 1
     severity: error
 
@@ -43,6 +45,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: causes
+      direction: outgoing
+      relatedKinds: [HazardousSituation]
       min: 1
     severity: error
 
@@ -52,6 +56,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
       min: 1
     severity: error
 
@@ -61,6 +67,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: identifies
+      direction: outgoing
+      relatedKinds: [Hazard]
       min: 1
     severity: error
 
@@ -70,6 +78,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: causes
+      direction: incoming
+      relatedKinds: [Hazard]
       min: 1
     severity: error
 
@@ -79,6 +89,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: leadsTo
+      direction: incoming
+      relatedKinds: [HazardousSituation]
       min: 1
     severity: warning
 
@@ -88,6 +100,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: derives
+      direction: incoming
+      relatedKinds: [SystemRequirement]
       min: 1
     severity: error
 
@@ -97,6 +111,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: derives
+      direction: incoming
+      relatedKinds: [UserNeed]
       min: 1
     severity: warning
 
@@ -106,6 +122,13 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: satisfy
+      direction: incoming
+      relatedKinds:
+        - LogicalComponent
+        - Subsystem
+        - Component
+        - SoftwareComponent
+        - SoftwareItem
       min: 1
     severity: warning
 
@@ -115,6 +138,13 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: allocateTo
+      direction: outgoing
+      relatedKinds:
+        - LogicalComponent
+        - Subsystem
+        - Software
+        - SoftwareComponent
+        - SoftwareItem
       min: 1
     severity: error
 
@@ -132,6 +162,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: refines
+      direction: outgoing
+      relatedKinds: [Scenario]
       min: 1
     severity: warning
 
@@ -141,6 +173,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
       min: 1
     severity: warning
 
@@ -150,6 +184,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
       min: 1
     severity: warning
 
@@ -159,6 +195,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: derives
+      direction: outgoing
+      relatedKinds: [SystemRequirement]
       min: 1
     severity: warning
 
@@ -168,6 +206,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: preserves
+      direction: incoming
+      relatedKinds: [SafetyFunction]
       min: 1
     severity: warning
 
@@ -177,6 +217,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: addressesUseError
+      direction: outgoing
+      relatedKinds: [UseError]
       min: 1
     severity: warning
 
@@ -186,6 +228,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
       min: 1
     severity: warning
 
@@ -203,6 +247,8 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: documents
+      direction: incoming
+      relatedKinds: [DesignHistoryRecord, ReleaseBaseline, ChangeRecord]
       min: 1
     severity: warning
 
@@ -212,6 +258,226 @@ closureRules:
     rule:
       type: requireRelationship
       relationship: documents
+      direction: incoming
+      relatedKinds: [DesignHistoryRecord, ChangeRecord]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-022
+    description: "Every UseSpecification should specify at least one HazardRelatedUseScenario"
+    entity: UseSpecification
+    rule:
+      type: requireRelationship
+      relationship: specifiesScenario
+      direction: outgoing
+      relatedKinds: [HazardRelatedUseScenario]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-023
+    description: "Every UseErrorAnalysis should analyze at least one UseError"
+    entity: UseErrorAnalysis
+    rule:
+      type: requireRelationship
+      relationship: analyzesUseError
+      direction: outgoing
+      relatedKinds: [UseError]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-024
+    description: "Every UseError should contribute to at least one Hazard"
+    entity: UseError
+    rule:
+      type: requireRelationship
+      relationship: contributesToHazard
+      direction: outgoing
+      relatedKinds: [Hazard]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-025
+    description: "Every FormativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    entity: FormativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evaluatesRequirement
+      direction: outgoing
+      relatedKinds: [UserInterfaceRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-026
+    description: "Every SummativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    entity: SummativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evaluatesRequirement
+      direction: outgoing
+      relatedKinds: [UserInterfaceRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-027
+    description: "Every SummativeEvaluation should be evidenced by at least one ComplianceEvidence record"
+    entity: SummativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evidences
+      direction: incoming
+      relatedKinds: [ComplianceEvidence]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-028
+    description: "Every EssentialPerformance claim should support at least one PrimaryOperatingFunction"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: supportsOperatingFunction
+      direction: outgoing
+      relatedKinds: [PrimaryOperatingFunction]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-029
+    description: "Every EssentialPerformance claim should define at least one EssentialPerformanceLossCondition"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: definesLossCondition
+      direction: outgoing
+      relatedKinds: [EssentialPerformanceLossCondition]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-030
+    description: "Every CollateralStandardRequirement should apply to at least one regulated subject"
+    entity: CollateralStandardRequirement
+    rule:
+      type: requireRelationship
+      relationship: appliesStandardRequirement
+      direction: outgoing
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-031
+    description: "Every ParticularStandardRequirement should apply to at least one regulated subject"
+    entity: ParticularStandardRequirement
+    rule:
+      type: requireRelationship
+      relationship: appliesStandardRequirement
+      direction: outgoing
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-032
+    description: "Every DesignHistoryRecord should document at least one regulated lifecycle or usability artifact"
+    entity: DesignHistoryRecord
+    rule:
+      type: requireRelationship
+      relationship: documents
+      direction: outgoing
+      relatedKinds:
+        - SoftwareDevelopmentPlan
+        - SoftwareRequirementsArtifact
+        - SoftwareArchitectureArtifact
+        - SoftwareDetailedDesign
+        - UseSpecification
+        - UseErrorAnalysis
+        - FormativeEvaluation
+        - SummativeEvaluation
+        - CollateralStandardRequirement
+        - ParticularStandardRequirement
+        - SOUPItem
+        - SoftwareAnomaly
+        - SoftwareProblemReport
+        - ChangeImpactAssessment
+        - ReleaseBaseline
+      min: 1
+    severity: warning
+
+  - id: CR-MED-033
+    description: "Every ComplianceEvidence record should evidence at least one regulated subject"
+    entity: ComplianceEvidence
+    rule:
+      type: requireRelationship
+      relationship: evidences
+      direction: outgoing
+      relatedKinds: [FormativeEvaluation, SummativeEvaluation, UserInterfaceRequirement, UseErrorAnalysis]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-034
+    description: "Every ReleaseBaseline should document at least one software realization or evaluation artifact"
+    entity: ReleaseBaseline
+    rule:
+      type: requireRelationship
+      relationship: documents
+      direction: outgoing
+      relatedKinds: [SoftwareSystem, SoftwareItem, SOUPEvaluation]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-035
+    description: "Every SoftwareDevelopmentProcess should govern at least one lifecycle activity"
+    entity: SoftwareDevelopmentProcess
+    rule:
+      type: requireRelationship
+      relationship: governsActivity
+      direction: outgoing
+      relatedKinds:
+        - SoftwareRequirementsAnalysisActivity
+        - SoftwareArchitecturalDesignActivity
+        - SoftwareDetailedDesignActivity
+        - SoftwareUnitImplementationActivity
+        - SoftwareVerificationActivity
+      min: 1
+    severity: warning
+
+  - id: CR-MED-036
+    description: "Every SoftwareMaintenanceProcess should govern at least one problem-resolution activity"
+    entity: SoftwareMaintenanceProcess
+    rule:
+      type: requireRelationship
+      relationship: governsActivity
+      direction: outgoing
+      relatedKinds: [ProblemResolutionActivity]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-037
+    description: "Every SoftwareRequirementsAnalysisActivity should produce at least one SoftwareRequirementsArtifact"
+    entity: SoftwareRequirementsAnalysisActivity
+    rule:
+      type: requireRelationship
+      relationship: producesWorkProduct
+      direction: outgoing
+      relatedKinds: [SoftwareRequirementsArtifact]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-038
+    description: "Every SoftwareArchitecturalDesignActivity should produce architecture or detailed-design work products"
+    entity: SoftwareArchitecturalDesignActivity
+    rule:
+      type: requireRelationship
+      relationship: producesWorkProduct
+      direction: outgoing
+      relatedKinds: [SoftwareArchitectureArtifact, SoftwareDetailedDesign]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-039
+    description: "Every ProblemResolutionActivity should produce at least one problem report or change impact assessment"
+    entity: ProblemResolutionActivity
+    rule:
+      type: requireRelationship
+      relationship: producesWorkProduct
+      direction: outgoing
+      relatedKinds: [SoftwareProblemReport, ChangeImpactAssessment]
       min: 1
     severity: warning
 
@@ -226,15 +492,25 @@ viewpoints:
       - Risk
       - RiskControl
       - SafetyGoal
+      - UseError
+      - EssentialPerformance
+      - SafetyFunction
+      - Test
+      - ComplianceEvidence
     visibleRelationships:
       - mitigates
       - causes
       - leadsTo
       - identifies
       - contributesToHazard
+      - implementsRiskControl
+      - protectsEssentialPerformance
+      - verify
+      - evidences
     visibleLayers:
       - risk
       - safety
+      - verification
     diagrams:
       - id: diag-risk-chain
         name: Risk Mitigation Chain
@@ -258,8 +534,16 @@ viewpoints:
       - UseError
       - CollateralStandardRequirement
       - ParticularStandardRequirement
+      - UseSpecification
+      - UseErrorAnalysis
+      - UsabilitySpecification
       - FormativeEvaluation
       - SummativeEvaluation
+      - UIScreen
+      - UIPanel
+      - UIElement
+      - ComplianceEvidence
+      - DesignHistoryRecord
       - SystemFunction
       - ComponentFunction
       - Test
@@ -267,18 +551,29 @@ viewpoints:
       - mitigates
       - preserves
       - addressesUseError
+      - analyzesUseError
+      - specifiesScenario
+      - exposesUseError
+      - contributesToHazard
       - allocateTo
       - supportsOperatingFunction
       - definesLossCondition
       - protectsEssentialPerformance
       - implementsRiskControl
       - appliesStandardRequirement
+      - evaluatesRequirement
+      - satisfy
+      - documents
+      - evidences
       - verify
     visibleLayers:
       - risk
       - safety
       - functional
+      - design-control
       - verification
+      - qms
+      - ui
     diagrams:
       - id: diag-safety-mitigation
         name: Safety Mitigation
@@ -317,6 +612,12 @@ viewpoints:
       - SOUPEvaluation
       - SoftwareProblemReport
       - ChangeImpactAssessment
+      - DesignHistoryRecord
+      - ReleaseBaseline
+      - ComplianceEvidence
+      - SystemRequirement
+      - SoftwareRequirement
+      - RiskControl
       - SoftwareComponent
       - SoftwareModule
       - Firmware
@@ -332,13 +633,20 @@ viewpoints:
       - composedOf
       - dependency
       - realization
+      - derives
+      - satisfy
+      - verify
       - documents
+      - evidences
       - governsActivity
       - producesWorkProduct
     visibleLayers:
       - software
       - software-lifecycle
       - interfaces
+      - requirements
+      - verification
+      - qms
     diagrams:
       - id: diag-sw-decomposition
         name: Software Decomposition
@@ -364,6 +672,11 @@ viewpoints:
       - UsabilityValidation
       - FormativeEvaluation
       - SummativeEvaluation
+      - UIElement
+      - UIScreen
+      - UIPanel
+      - ComplianceEvidence
+      - DesignHistoryRecord
       - EssentialPerformance
       - BasicSafety
       - Test
@@ -377,6 +690,11 @@ viewpoints:
       - evaluatesRequirement
       - contributesToHazard
       - preserves
+      - satisfy
+      - documents
+      - evidences
+      - supportsOperatingFunction
+      - definesLossCondition
       - verify
     visibleLayers:
       - requirements
@@ -385,6 +703,8 @@ viewpoints:
       - risk
       - safety
       - verification
+      - qms
+      - ui
     diagrams:
       - id: diag-usability-trace
         name: Usability Trace
