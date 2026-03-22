@@ -24,7 +24,7 @@ This uses Turborepo to build all workspace packages in dependency order, includi
 1. `@memo/ontology-core` — Domain-agnostic MBSE backbone ontology
 2. `@memo/ontology-medical` — Reusable medical device development backbone
 3. `@memo/core` — Parser, model builder, validator, completeness tracker
-4. `@memo/medical` — Medical domain configuration
+4. `@memo/medical-modeling-profile` — Medical domain configuration
 5. `@memo/cli` — Command-line interface
 6. `@memo/web` — React web application
 

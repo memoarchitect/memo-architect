@@ -89,7 +89,7 @@ memo init <name> [options]
 
 ```
 <name>/
-  memo.config.yaml          # Config extending @memo/medical
+  memo.config.yaml          # Config extending @memo/medical-modeling-profile
   model/
     <name>.sysml            # Starter file with System, Requirement, Hazard
 ```

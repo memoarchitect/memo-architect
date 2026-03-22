@@ -40,14 +40,14 @@ my-device/
 projectName: my-device
 projectType: device
 
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 
 ontologies:
   - name: memo-ontology-medical
     version: "^0.1.0"
 ```
 
-The key line is `extends: "@memo/medical"`. This gives you:
+The key line is `extends: "@memo/medical-modeling-profile"`. This gives you:
 
 - **250+ element kinds** across 10+ CoSMA layers (business, requirements, risk,
   functional, logical, physical, software, interfaces, verification, UI)

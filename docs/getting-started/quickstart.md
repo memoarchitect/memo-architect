@@ -12,7 +12,7 @@ This scaffolds:
 
 ```
 my-device/
-  memo.config.yaml     # Project config extending @memo/medical
+  memo.config.yaml     # Project config extending @memo/medical-modeling-profile
   model/
     my-device.sysml    # Starter SysML v2 file
 ```

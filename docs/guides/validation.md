@@ -310,7 +310,7 @@ Add validation to your CI pipeline to block merges with incomplete traceability:
 You can define additional closure rules in your `memo.config.yaml`:
 
 ```yaml
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 
 closureRules:
   - id: CR-PROJ-001

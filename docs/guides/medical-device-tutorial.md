@@ -58,12 +58,12 @@ This creates:
 
 ```
 my-infusion-pump/
-├── memo.config.yaml      # Extends @memo/medical (250+ element kinds)
+├── memo.config.yaml      # Extends @memo/medical-modeling-profile (250+ element kinds)
 └── model/
     └── my-infusion-pump.sysml   # Starter file
 ```
 
-!!! info "What does `extends: @memo/medical` give you?"
+!!! info "What does `extends: @memo/medical-modeling-profile` give you?"
     - **250+ element kinds** across 10+ CoSMA layers
     - **110+ relationship types** including cyber/integration, clinical-evidence, lifecycle-operations, data-messaging, and FMEA / fault-tree risk-analysis traces
     - **109 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, privacy/data-governance and terminology-import boundary semantics, regulated lifecycle/configuration traceability, and event-driven data-interface semantics
@@ -423,7 +423,7 @@ jobs:
 
 ```
 my-device/
-├── memo.config.yaml                 # Project config (extends @memo/medical)
+├── memo.config.yaml                 # Project config (extends @memo/medical-modeling-profile)
 ├── data/                            # Source CSV files (keep for reference)
 │   ├── requirements.csv
 │   ├── hazards.csv

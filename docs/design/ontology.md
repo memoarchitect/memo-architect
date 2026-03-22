@@ -186,7 +186,7 @@ packages/ontology-medical/
   memo.config.yaml
 ```
 
-`@memo/medical` extends `@memo/ontology-medical` for rules, viewpoints, and templates.
+`@memo/medical-modeling-profile` extends `@memo/ontology-medical` for rules, viewpoints, and templates.
 
 ## Target Package Stack
 
@@ -224,4 +224,4 @@ The target package stack is:
   └── medical relationship specializations
 ```
 
-Rules, viewpoints, completeness logic, and example models remain outside ontology packages. This separation is deliberate: the ontology carries the reusable model semantics, while `@memo/medical` carries viewpoint and rule concerns in line with ISO/IEC/IEEE 42010's distinction between model content and viewpoint-driven description.
+Rules, viewpoints, completeness logic, and example models remain outside ontology packages. This separation is deliberate: the ontology carries the reusable model semantics, while `@memo/medical-modeling-profile` carries viewpoint and rule concerns in line with ISO/IEC/IEEE 42010's distinction between model content and viewpoint-driven description.

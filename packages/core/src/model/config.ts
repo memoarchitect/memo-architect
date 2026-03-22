@@ -1,6 +1,6 @@
 // ─── MEMO Configuration Types ─────────────────────────────────────────────────
 //
-// Domain packages (e.g. @memo/medical) implement MEMOConfig as config.yaml.
+// Domain packages (e.g. @memo/medical-modeling-profile) implement MEMOConfig as config.yaml.
 // Projects inherit from domain configs via the `extends` field.
 // The CLI merges the inheritance chain at startup.
 //
@@ -248,7 +248,7 @@ export interface MEMOConfig {
     /** Project type: "ontology" or "device" */
     projectType: ProjectType;
 
-    /** Parent config to inherit from, e.g. '@memo/medical' */
+    /** Parent config to inherit from, e.g. '@memo/medical-modeling-profile' */
     extends?: string;
 
     /** Ontology references (device projects only) */

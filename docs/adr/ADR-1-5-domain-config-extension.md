@@ -11,12 +11,12 @@ Domain configurations (medical, automotive, generic) extend the core ontology vi
 ### Extension Mechanism
 
 1. **Core ontology** (`@memo/ontology`) defines base entity types and relationships.
-2. **Domain package** (`@memo/medical`) provides a `config.yaml` that:
+2. **Domain package** (`@memo/medical-modeling-profile`) provides a `config.yaml` that:
    - Adds domain-specific entity kinds (e.g., MedicalHazard, DHF_Document)
    - Adds domain-specific closure rules (e.g., ISO 14971 completeness checks)
    - Adds CoSMA layer mappings for visualization
    - Provides starter templates
-3. **Project** inherits via `extends: '@memo/medical'` in `.memo/config.yaml`.
+3. **Project** inherits via `extends: '@memo/medical-modeling-profile'` in `.memo/config.yaml`.
 4. **Project can override** — add project-specific kinds, relax/tighten rules.
 
 ### Why This Design
@@ -129,7 +129,7 @@ export interface MEMOConfig {
   /** Project name (set by `memo init`) */
   projectName: string;
 
-  /** Parent config to inherit from, e.g. '@memo/medical' */
+  /** Parent config to inherit from, e.g. '@memo/medical-modeling-profile' */
   extends?: string;
 
   /** CoSMA visualization layers */
@@ -157,7 +157,7 @@ export interface MEMOConfig {
 
 ## Config Inheritance Example
 
-### Domain Config (`@memo/medical/src/config.yaml`)
+### Domain Config (`@memo/medical-modeling-profile/src/config.yaml`)
 
 ```yaml
 # This file IS the domain — it adds medical entity kinds,
@@ -202,7 +202,7 @@ closureRules:
 
 ```yaml
 projectName: my-pump
-extends: '@memo/medical'
+extends: '@memo/medical-modeling-profile'
 
 # Project can add additional kinds or override rules
 # All medical kinds, layers, relationships, and rules are inherited

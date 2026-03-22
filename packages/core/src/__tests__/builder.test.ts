@@ -666,7 +666,7 @@ function loadResolvedConfig(configPath: string): MEMOConfig {
 
 describe('Infusion pump integration', () => {
     const PUMP_FILE = resolve('/Users/someshkashyap/sandbox/memo/examples/infusion-pump/model/infusion-pump.sysml');
-    const CONFIG_FILE = resolve('/Users/someshkashyap/sandbox/memo/packages/medical/memo.config.yaml');
+    const CONFIG_FILE = resolve('/Users/someshkashyap/sandbox/memo/packages/medical-modeling-profile/memo.config.yaml');
 
     it('builds model from infusion-pump.sysml', async () => {
         const source = readFileSync(PUMP_FILE, 'utf-8');
