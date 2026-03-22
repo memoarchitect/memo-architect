@@ -49,8 +49,8 @@ Entity kinds are mapped to SysML v2 constructs:
 
 As the ontology is split:
 
-- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, system-of-systems integration, message/data-modeling semantics, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, clinical evaluation / claims semantics, lifecycle-operations semantics, regulated product-configuration anchors, and ROS-specialized messaging/platform semantics.
+- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, system-of-systems integration, event-driven/request-response/message/data-modeling semantics, reusable platform-integration specializations such as ROS and RabbitMQ, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, clinical evaluation / claims semantics, lifecycle-operations semantics, and regulated product-configuration anchors.
 - **Extensions** still carry device-family or technology-specific concepts when the repo eventually supports them as independent packages. The current medical backbone only includes reusable product-family/configuration semantics that are broadly applicable across regulated medical devices.
 
 ### SysML v2 Compliance Boundary
@@ -199,6 +199,7 @@ The target package stack is:
   ├── logical (including system-of-systems anchors)
   ├── physical
   ├── software
+  ├── platform (including event-driven services, brokers, and reusable ROS/RabbitMQ specializations)
   ├── interfaces (including data interfaces, protocols, profiles, endpoints, messages, schemas, pub-sub, and request-response semantics)
   ├── analysis
   ├── verification
@@ -212,7 +213,6 @@ The target package stack is:
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── operations-service
   ├── product-line
-  ├── platform (including ROS-specialized nodes, topics, publications, subscriptions, services, and message-schema types)
   ├── risk-management (including residual risk, benefit-risk, and post-market anchors)
   ├── risk-analysis (FTA / FMEA semantics on top of medical risk management)
   ├── software-lifecycle

@@ -66,7 +66,7 @@ my-infusion-pump/
 !!! info "What does `extends: @memo/medical` give you?"
     - **250+ element kinds** across 10+ CoSMA layers
     - **110+ relationship types** including cyber/integration, clinical-evidence, lifecycle-operations, data-messaging, and FMEA / fault-tree risk-analysis traces
-    - **97 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, regulated lifecycle/configuration traceability, and ROS-style data-interface semantics
+    - **97 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, regulated lifecycle/configuration traceability, and event-driven data-interface semantics
     - **10 viewpoints** with pre-configured SysML v2 diagrams
 
 ---

@@ -13,7 +13,7 @@ It now provides:
 - cybersecurity, connected-system, and terminology-binding semantics for FDA-aligned cyber devices and interoperable clinical integrations
 - clinical evaluation, clinical evidence, and clinical claims semantics connected back to intended use, benefit-risk, and QMS records
 - manufacturing, installation, service, preventive-maintenance, calibration, and regulated product-configuration semantics
-- reusable data-messaging semantics in `@memo/ontology-core` plus ROS-specialized nodes, topics, publications, subscriptions, services, and message schemas in `@memo/ontology-medical`
+- reusable data-messaging semantics in `@memo/ontology-core`, including event-driven services, brokers, ROS specializations, and RabbitMQ specializations that are not specific to medical devices
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -155,16 +155,16 @@ These semantics are intended for reusable regulated medical-device backbone reas
 
 **Enforced by rules:** CR-MED-080 through CR-MED-089
 
-### Data Messaging and ROS-Style Interface Semantics
+### Data Messaging and Event-Driven Interface Semantics
 
-The ontology-level data-modeling backbone is now split across `@memo/ontology-core`
-and `@memo/ontology-medical`:
+The ontology-level data-modeling backbone now lives in `@memo/ontology-core`:
 
 - domain-agnostic data-exchange concepts such as `PublishSubscribeChannel`, `RequestResponseInterface`, `Message`, `RequestMessage`, `ResponseMessage`, `MessageSchema`, and `MessageField` live in `@memo/ontology-core`
-- generic typed messaging relations such as `publishesTo`, `subscribesTo`, `publishesMessage`, `consumesMessage`, `servesInterface`, `invokesInterface`, `carriesRequestMessage`, `carriesResponseMessage`, `definesMessageSchema`, and `hasMessageField` also live in `@memo/ontology-core`
-- ROS-specialized concepts such as `RosNode`, `RosTopic`, `RosPublication`, `RosSubscription`, `RosService`, `RosServiceCall`, `RosServiceServer`, `RosMessage`, `RosRequest`, `RosResponse`, and `RosMessageSchema` live in `@memo/ontology-medical`
+- event-driven microservice and broker concepts such as `EventDrivenService`, `MessageBroker`, `EventBus`, `TopicChannel`, `QueueChannel`, `MessageProducer`, `MessageConsumer`, `BrokerExchange`, and `BrokerQueue` also live in `@memo/ontology-core`
+- generic typed messaging relations such as `publishesTo`, `subscribesTo`, `publishesMessage`, `consumesMessage`, `servesInterface`, `invokesInterface`, `carriesRequestMessage`, `carriesResponseMessage`, `brokersChannel`, `routesToChannel`, `definesMessageSchema`, and `hasMessageField` also live in `@memo/ontology-core`
+- technology specializations such as `RosNode` / `RosTopic` / `RosService` and `RabbitMqBroker` / `RabbitMqExchange` / `RabbitMqQueue` now also live in `@memo/ontology-core` because they are reusable integration-platform concepts rather than medical-only semantics
 
-This keeps reusable interface/data semantics in the core MBSE backbone while still supporting platform-specific modeling of ROS-style software integration where teams need it.
+This keeps reusable interface/data semantics in the core MBSE backbone while still supporting platform-specific modeling of ROS, RabbitMQ, and similar non-medical integration technologies where teams need them.
 
 **Enforced by rules:** CR-MED-090 through CR-MED-097
 
