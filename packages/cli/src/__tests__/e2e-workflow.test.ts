@@ -152,6 +152,43 @@ describe('E2E: memo init → validate → export', () => {
         expect(content).toContain('rankdir=LR');
         expect(content).toMatch(/"[^"]+" -> "[^"]+"/); // edges exist
     });
+
+    it('memo ontology export sysand bundles the ontology dependency stack', () => {
+        const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
+        const outputDir = join(tmpDir, 'ontology-project');
+
+        run(`ontology export sysand -o ${outputDir}`, exampleDir);
+
+        expect(existsSync(join(outputDir, '.project.json'))).toBe(true);
+        expect(existsSync(join(outputDir, '.meta.json'))).toBe(true);
+        expect(existsSync(join(outputDir, 'README.md'))).toBe(true);
+        expect(existsSync(join(outputDir, 'sysand-lock.toml'))).toBe(true);
+        expect(existsSync(join(outputDir, 'docs', 'model-structure.md'))).toBe(true);
+        expect(existsSync(join(outputDir, 'docs', 'model-structure.json'))).toBe(true);
+
+        expect(existsSync(join(outputDir, 'packages', 'memo-ontology-core', 'sysml', 'index.sysml'))).toBe(true);
+        expect(existsSync(join(outputDir, 'packages', 'memo-ontology-medical', 'sysml', 'index.sysml'))).toBe(true);
+        expect(existsSync(join(outputDir, 'packages', 'memo-medical-modeling-profile', 'memo.config.yaml'))).toBe(true);
+
+        const lockContent = readFileSync(join(outputDir, 'sysand-lock.toml'), 'utf-8');
+        expect(lockContent).toContain('@memo/ontology-core');
+        expect(lockContent).toContain('@memo/ontology-medical');
+        expect(lockContent).toContain('@memo/medical-modeling-profile');
+
+        const projectJson = JSON.parse(readFileSync(join(outputDir, '.project.json'), 'utf-8'));
+        expect(projectJson.name).toBe('infusion-pump');
+        expect(projectJson.publisher).toBe('untitled');
+        expect(projectJson.version).toBe('2.0.0');
+        expect(projectJson.usage).toEqual([]);
+
+        const metaJson = JSON.parse(readFileSync(join(outputDir, '.meta.json'), 'utf-8'));
+        expect(metaJson.index.MEMO_Ontology_Core).toBe('packages/memo-ontology-core/sysml/index.sysml');
+        expect(metaJson.index.MEMO_Ontology_Medical).toBe('packages/memo-ontology-medical/sysml/index.sysml');
+        expect(metaJson.checksum['packages/memo-ontology-core/sysml/index.sysml']).toEqual({
+            value: '',
+            algorithm: 'NONE',
+        });
+    });
 });
 
 describe('E2E: custom model validation', () => {

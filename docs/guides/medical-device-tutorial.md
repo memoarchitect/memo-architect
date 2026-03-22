@@ -378,7 +378,7 @@ graph LR
 
     ```sysml
     requirement newReq : SystemRequirement {
-        attribute redefines name = "New Requirement";
+        attribute redefines title = "New Requirement";
         attribute redefines priority = "High";
         doc /* Description of the requirement */
     }
@@ -429,9 +429,9 @@ my-device/
 │   ├── hazards.csv
 │   └── traceability.csv
 ├── model/                           # SysML v2 model files
-│   ├── business/
+│   ├── purpose/
 │   │   ├── actors.sysml             # Stakeholders, actors
-│   │   └── use-cases.sysml          # Use cases, scenarios
+│   │   └── stakeholder-concerns.sysml
 │   ├── requirements/
 │   │   ├── user-needs.sysml
 │   │   ├── system-requirements.sysml
@@ -445,6 +445,7 @@ my-device/
 │   │   ├── physical.sysml           # MCUs, electrical, mechanical
 │   │   └── software.sysml           # Firmware, software components
 │   ├── functional/
+│   │   ├── use-cases.sysml
 │   │   └── functions.sysml          # System functions, allocation
 │   ├── interfaces/
 │   │   └── ports.sysml              # Ports, interfaces, data types
@@ -528,10 +529,10 @@ MEMO models are **plain text SysML files** stored in Git:
 
 | Layer | Element Examples | Color |
 |-------|-----------------|-------|
-| Business | Actor, Stakeholder, UseCase | Pink |
+| Purpose | Actor, Stakeholder, Goal | Pink |
 | Requirements | UserNeed, SystemRequirement | Blue |
 | Risk | Hazard, RiskControl, Harm | Red |
-| Functional | SystemFunction, ComponentFunction | Orange |
+| Functional | UseCase, Scenario, SystemFunction | Orange |
 | Logical | System, Subsystem, LogicalComponent | Indigo |
 | Physical | Microcontroller, ElectricalComponent | Teal |
 | Software | Software, Firmware | Purple |

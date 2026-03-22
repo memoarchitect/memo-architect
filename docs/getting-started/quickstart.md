@@ -23,16 +23,18 @@ Open `model/my-device.sysml`:
 
 ```sysml
 package my_device {
-    part def MyDeviceSystem :> System {
+    import MEMO_Ontology_Medical::*;
+
+    part myDeviceSystem : System {
         attribute redefines name = "my-device";
     }
 
-    requirement def MainRequirement :> SystemRequirement {
-        attribute redefines name = "Main system requirement";
+    requirement mainRequirement : SystemRequirement {
+        attribute redefines title = "Main system requirement";
     }
 
-    part def ExampleHazard :> Hazard {
-        attribute redefines name = "Example hazard";
+    requirement exampleHazard : Hazard {
+        attribute redefines title = "Example hazard";
     }
 }
 ```
@@ -61,14 +63,14 @@ Edit your `.sysml` file and save. The dev server detects the change and instantl
 ### Adding a risk control relationship:
 
 ```sysml
-part def FlowSensor :> RiskControl {
-    attribute redefines name = "Flow rate monitoring sensor";
+requirement flowSensorControl : RiskControl {
+    attribute redefines title = "Flow rate monitoring sensor";
 }
 
-connection : mitigates connect FlowSensor to ExampleHazard;
+connection : Mitigates connect control ::> flowSensorControl to hazard ::> exampleHazard;
 ```
 
-The diagram will show a `mitigates` edge from FlowSensor to ExampleHazard, and the closure rule CR-MED-001 will be satisfied.
+The diagram will show a `mitigates` edge from `flowSensorControl` to `exampleHazard`, and the closure rule CR-MED-001 will be satisfied.
 
 ## 5. Validate Your Model
 
@@ -86,7 +88,7 @@ Project: my-device
 
   Violations:
     ERROR  CR-MED-001  Hazard "Example hazard" has no mitigates relationship
-    WARN   CR-MED-007  Requirement "Main system requirement" has no traceTo
+    WARN   CR-MED-007  Requirement "Main system requirement" has no derives relationship
 
   Completeness:
     risk          ████░░░░░░  50%

@@ -110,12 +110,12 @@ Common kinds for medical devices:
 
     | Kind | Layer | Construct |
     |------|-------|-----------|
-    | Actor | business | part |
-    | Stakeholder | business | part |
-    | UseCase | business | part |
-    | Scenario | business | action |
-    | SystemFunction | functional | part |
-    | ComponentFunction | functional | part |
+    | Actor | purpose | part |
+    | Stakeholder | purpose | part |
+    | UseCase | functional | part |
+    | Scenario | functional | action |
+    | SystemFunction | functional | action |
+    | ComponentFunction | functional | action |
 
 === "Verification"
 
@@ -181,10 +181,10 @@ After elements are imported, connect them with a relationships CSV:
 ```csv
 sourceId,targetId,type
 hazOverdose,rcFlowSensor,mitigates
-sysReqFlowControl,unFlowControl,traceTo
-swReqPIDLoop,sysReqFlowControl,traceTo
+unFlowControl,sysReqFlowControl,derives
+sysReqFlowControl,swReqPIDLoop,derives
 testFlowAccuracy,sysReqFlowControl,verify
-rcFlowSensor,testFlowCalibration,verify
+testFlowCalibration,rcFlowSensor,verify
 ```
 
 ```bash
@@ -205,7 +205,9 @@ pnpm memo import csv-rel relationships.csv -o model/traceability.sysml
 
 | Type | Label | Use For |
 |------|-------|---------|
-| `traceTo` | Trace To | General traceability (requirements → needs) |
+| `derives` | Derives | Need/requirement decomposition where the upstream source is known |
+| `refines` | Refines | Use case / concern refinement |
+| `traceTo` | Trace To | General traceability fallback when no stronger stable semantics apply |
 | `allocateTo` | Allocate To | Function → component allocation |
 | `satisfy` | Satisfy | Component → requirement satisfaction |
 | `verify` | Verify | Test → requirement verification |
@@ -235,7 +237,7 @@ Then validate for completeness:
 pnpm memo validate
 ```
 
-This checks all 39 medical closure rules and tells you what's missing.
+This checks all 109 medical closure rules and tells you what's missing.
 
 ## Practical Example: Migrating from Excel
 
@@ -250,6 +252,10 @@ REQ001,Flow rate accuracy,SystemRequirement,System shall maintain +-5% accuracy,
 REQ002,Alarm response time,SystemRequirement,Alarm shall sound within 2 seconds,Critical
 REQ003,Battery life,SystemRequirement,Device shall operate for 8 hours on battery,Medium
 ```
+
+The `name` CSV column is the importer's display-label field. For requirement
+and risk kinds it maps onto the ontology's `title` attribute; for parts and
+actions it maps onto `name`.
 
 !!! warning "ID format"
     MEMO IDs must start with a letter or underscore and contain only letters,

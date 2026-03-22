@@ -20,6 +20,22 @@ Instead of looking at the entire model at once, you focus on one concern:
 | **Software Architecture** | Software decomposition | BDD, IBD, PKG |
 | **Physical Architecture** | Hardware and physical BOM | BDD, IBD, PKG |
 
+## Semantic Home vs Viewpoint
+
+Organize ontology packages and model files by each kind's semantic home.
+Use viewpoints as review and navigation slices that cut across those homes.
+
+| Semantic Home | Typical Kinds | Common Viewpoints |
+|-----------|-----------|-----------|
+| **Purpose** | Actor, Stakeholder, Goal, Concern | Use Case View, Requirements Traceability |
+| **Requirements** | UserNeed, SystemRequirement, SoftwareRequirement, UserInterfaceRequirement | Requirements Traceability, Software Architecture, Usability Engineering |
+| **Functional / Operational** | UseCase, Scenario, SystemFunction, Procedure, UserActivity | System Architecture, Usability Engineering, Safety Analysis |
+| **Logical / Physical** | System, Subsystem, LogicalComponent, PhysicalComponent, Microcontroller | System Architecture, Physical Architecture, Lifecycle Operations |
+| **Software / Interfaces** | SoftwareComponent, Firmware, DataInterface, Message, RosNode | Software Architecture, Data & Messaging, Cybersecurity & Interoperability |
+| **Risk / Safety** | Hazard, Harm, RiskControl, EssentialPerformance, SafetyFunction | Risk Overview, Risk Analysis, Safety Analysis, Usability Engineering |
+| **QMS / Lifecycle** | DesignHistoryRecord, SoftwareWorkProduct, RiskManagementReport | Software Architecture, Clinical Evidence & Claims, Lifecycle Operations |
+| **UI** | UIElement, UIScreen, UIPanel | Usability Engineering, Safety Analysis |
+
 ## Using Viewpoints in the Web UI
 
 1. Launch the dev server: `pnpm memo dev --port 3000`

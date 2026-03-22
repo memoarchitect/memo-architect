@@ -243,7 +243,7 @@ Every hazard needs at least one risk control mitigating it:
 ```sysml
 // Add a risk control
 requirement rcAlarmSystem : RiskControl {
-    attribute redefines name = "Audible Alarm System";
+    attribute redefines title = "Audible Alarm System";
 }
 
 // Connect it to the hazard
