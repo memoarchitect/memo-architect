@@ -268,6 +268,22 @@ Exit criteria:
 - [x] risk-analysis traces connect directly into the existing medical risk-management ontology
 - [x] at least one reference model exercises the new concepts end to end
 
+### Next Ontology Milestone — Clinical Context Enrichment **[HIGH]**
+
+Continue the paper-driven ontology enrichment by pulling more of the clinical and procedural context into the backbone:
+
+- [ ] **Add patient / subject ontology semantics** — introduce patient, anatomical-site, and recipient-of-procedure concepts where the meaning is stable enough for `@memo/ontology-medical`
+- [ ] **Deepen procedure semantics** — add explicit method, route, clinical-step, and treatment-pathway semantics on top of the new core `Procedure` structure
+- [ ] **Enrich clinical environment modeling** — capture sterile context, available equipment, personnel, substances, and relevant environmental qualifiers without collapsing into device-family specifics
+- [ ] **Add observable / outcome context** — model clinically meaningful observations, morphology/state changes, and measurable outcomes that procedures and device functions act upon
+- [ ] **Evaluate terminology import boundaries** — decide how far MEMO should align with or import patient/clinical terminology from external ontologies (for example SNOMED-style patient, procedure, anatomy, and observable hierarchies) without overloading the core workbench
+- [ ] **Exercise the richer clinical context in examples and viewpoints** — extend the reference models and medical viewpoints so the new patient/context concepts are used in live models rather than documented only in theory
+
+Exit criteria:
+- [ ] `@memo/ontology-medical` covers patient/subject, anatomy, procedure-context, and observation semantics needed for early medical-device design reasoning
+- [ ] at least one reference model uses the enriched clinical context end to end
+- [ ] roadmap direction is explicit about what should be modeled locally versus imported from external clinical ontologies
+
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
 Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
