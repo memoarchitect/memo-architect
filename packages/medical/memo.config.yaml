@@ -580,6 +580,83 @@ closureRules:
       min: 1
     severity: error
 
+  - id: CR-MED-049
+    description: "Every TreatmentPathway should contain at least one Procedure or ClinicalStep"
+    entity: TreatmentPathway
+    rule:
+      type: requireRelationship
+      relationship: hasSubProcedure
+      direction: outgoing
+      relatedKinds: [Procedure, ClinicalStep]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-050
+    description: "Every ProcedureMethod should be used by at least one Procedure"
+    entity: ProcedureMethod
+    rule:
+      type: requireRelationship
+      relationship: usesMethod
+      direction: incoming
+      relatedKinds: [Procedure, ClinicalStep, TreatmentPathway]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-051
+    description: "Every RouteOfAdministration should be used by at least one Procedure"
+    entity: RouteOfAdministration
+    rule:
+      type: requireRelationship
+      relationship: usesRoute
+      direction: incoming
+      relatedKinds: [Procedure, ClinicalStep, TreatmentPathway]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-052
+    description: "Every ClinicalObservation should be produced by at least one Procedure"
+    entity: ClinicalObservation
+    rule:
+      type: requireRelationship
+      relationship: producesObservation
+      direction: incoming
+      relatedKinds: [Procedure, ClinicalStep, TreatmentPathway]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-053
+    description: "Every ClinicalObservation should observe at least one Patient, AnatomicalSite, or MorphologyState"
+    entity: ClinicalObservation
+    rule:
+      type: requireRelationship
+      relationship: observesSubject
+      direction: outgoing
+      relatedKinds: [Patient, AnatomicalSite, MorphologyState]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-054
+    description: "Every MorphologyState should be affected by at least one Procedure"
+    entity: MorphologyState
+    rule:
+      type: requireRelationship
+      relationship: affectsMorphology
+      direction: incoming
+      relatedKinds: [Procedure, ClinicalStep, TreatmentPathway]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-055
+    description: "Every UseEnvironment should declare at least one ClinicalEnvironmentQualifier"
+    entity: UseEnvironment
+    rule:
+      type: requireRelationship
+      relationship: appliesEnvironmentQualifier
+      direction: outgoing
+      relatedKinds: [ClinicalEnvironmentQualifier]
+      min: 1
+    severity: warning
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -818,12 +895,21 @@ viewpoints:
     visibleKinds:
       - UserNeed
       - UserProfile
+      - Patient
+      - AnatomicalSite
       - UseEnvironment
+      - ClinicalEnvironmentQualifier
       - UserActivity
       - Procedure
+      - ClinicalStep
+      - TreatmentPathway
+      - ProcedureMethod
+      - RouteOfAdministration
       - OperationalEnvironment
       - Substance
       - Observable
+      - ClinicalObservation
+      - MorphologyState
       - UserInterfaceRequirement
       - UseError
       - UseSpecification
@@ -845,6 +931,13 @@ viewpoints:
       - derives
       - refines
       - hasSubProcedure
+      - hasAnatomicalSite
+      - usesMethod
+      - usesRoute
+      - producesObservation
+      - observesSubject
+      - affectsMorphology
+      - appliesEnvironmentQualifier
       - performedBy
       - performedOn
       - occursIn

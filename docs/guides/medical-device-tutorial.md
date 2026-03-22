@@ -66,7 +66,7 @@ my-infusion-pump/
 !!! info "What does `extends: @memo/medical` give you?"
     - **86+ element kinds** across 10 CoSMA layers
     - **20+ relationship types** including FMEA / fault-tree risk-analysis traces
-    - **48 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, and IEC 60601
+    - **55 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, and IEC 60601
     - **6 viewpoints** with pre-configured SysML v2 diagrams
 
 ---
@@ -202,12 +202,12 @@ Create `data/traceability.csv`:
 
 ```csv
 sourceId,targetId,type
-sysReqFlowAccuracy,unFlowControl,traceTo
-sysReqAlarmResponse,unAlarmVisibility,traceTo
-sysReqBattery,unFlowControl,traceTo
-swReqPIDControl,sysReqFlowAccuracy,traceTo
-swReqAlarmManager,sysReqAlarmResponse,traceTo
-swReqDataLog,sysReqFlowAccuracy,traceTo
+unFlowControl,sysReqFlowAccuracy,derives
+unAlarmVisibility,sysReqAlarmResponse,derives
+unFlowControl,sysReqBattery,derives
+sysReqFlowAccuracy,swReqPIDControl,derives
+sysReqAlarmResponse,swReqAlarmManager,derives
+sysReqFlowAccuracy,swReqDataLog,derives
 rcFlowSensor,hazOverdose,mitigates
 rcFlowSensor,hazUnderdose,mitigates
 rcAirDetector,hazAirEmbolism,mitigates
@@ -280,7 +280,7 @@ You'll see output like:
 ```
 MEMO Validate — my-infusion-pump
 
-Checking 48 closure rules against 24 elements...
+Checking 55 closure rules against 24 elements...
 
 ✗ CR-MED-002  hazAirEmbolism — Every Hazard must cause at least one HazardousSituation
 ✗ CR-MED-007  swReqAlarmManager — Every SoftwareRequirement must derive from a SystemRequirement
@@ -515,7 +515,7 @@ MEMO models are **plain text SysML files** stored in Git:
 
 | Relationship | Pattern | ISO Standard |
 |-------------|---------|-------------|
-| `traceTo` | Requirement → Requirement | IEC 62304 |
+| `derives` | Need/Requirement → derived Requirement | IEC 62304 |
 | `satisfy` | LogicalComponent → Requirement | IEC 62304 |
 | `verify` | Test → Requirement | IEC 62304 |
 | `mitigates` | RiskControl → Hazard | ISO 14971 |

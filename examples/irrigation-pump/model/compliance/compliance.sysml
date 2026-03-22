@@ -15,9 +15,20 @@ package IrrigationPump_Compliance {
         attribute redefines role = "Primary operator and irrigation user";
     }
 
+    part patientCase : Patient {
+        attribute redefines name = "Arthroscopy Patient";
+        attribute redefines category = "Surgical recipient";
+        attribute redefines careContext = "Outpatient orthopedic procedure";
+    }
+
     part operatingRoom : UseEnvironment {
         attribute redefines name = "Operating Room";
         attribute redefines setting = "Arthroscopy procedure suite";
+    }
+
+    part sterileField : ClinicalEnvironmentQualifier {
+        attribute redefines name = "Sterile operating field";
+        attribute redefines qualifierType = "Sterility";
     }
 
     part salineIrrigationFluid : Substance {
@@ -26,28 +37,53 @@ package IrrigationPump_Compliance {
         attribute redefines state = "Liquid";
     }
 
-    part kneeJointSurgicalSite : OperationalEntity {
+    part kneeJointSurgicalSite : AnatomicalSite {
         attribute redefines name = "Patient Knee Joint";
         attribute redefines category = "Surgical site";
+        attribute redefines bodyRegion = "Knee joint";
+        attribute redefines laterality = "Target limb";
     }
 
-    part satietyIndicator : Observable {
-        attribute redefines name = "Visualized Joint Space Distension";
+    part obsJointDistensionMaintained : ClinicalObservation {
+        attribute redefines name = "Joint Space Distension Maintained";
         attribute redefines category = "Procedure outcome cue";
         attribute redefines measureType = "Visual observation";
+        attribute redefines interpretation = "Adequate distension maintained for visualization";
     }
 
-    action procPrimeCassette : Procedure {
+    part morphologyJointSpaceExpanded : MorphologyState {
+        attribute redefines name = "Joint Space Expanded";
+        attribute redefines category = "Morphology state";
+        attribute redefines measureType = "Anatomical state";
+        attribute redefines state = "Distended";
+    }
+
+    part methodPeristalticPressureControl : ProcedureMethod {
+        attribute redefines name = "Closed-loop peristaltic pressure regulation";
+        attribute redefines methodType = "Pressure-control method";
+    }
+
+    part routeArthroscopicCannulaDelivery : RouteOfAdministration {
+        attribute redefines name = "Arthroscopic cannula irrigation route";
+        attribute redefines routeType = "Minimally invasive fluid delivery";
+    }
+
+    action pathwayArthroscopyIrrigation : TreatmentPathway {
+        attribute redefines name = "Arthroscopy irrigation support pathway";
+        attribute redefines objective = "Establish and maintain irrigation support across setup, delivery, and alarm recovery";
+    }
+
+    action procPrimeCassette : ClinicalStep {
         attribute redefines name = "Prime Irrigation Cassette";
         attribute redefines objective = "Prepare a sterile, air-free irrigation path before use";
     }
 
-    action procDeliverIrrigation : Procedure {
+    action procDeliverIrrigation : ClinicalStep {
         attribute redefines name = "Deliver Arthroscopy Irrigation";
         attribute redefines objective = "Maintain irrigation pressure and visualization during the procedure";
     }
 
-    action procRespondToReservoirAlarm : Procedure {
+    action procRespondToReservoirAlarm : ClinicalStep {
         attribute redefines name = "Respond To Reservoir Alarm";
         attribute redefines objective = "Restore irrigation before the field collapses";
     }
@@ -237,16 +273,25 @@ package IrrigationPump_Compliance {
     connection : Refines connect refined ::> ucPrimeCassette to refiner ::> procPrimeCassette;
     connection : Refines connect refined ::> ucDeliverIrrigation to refiner ::> procDeliverIrrigation;
     connection : Refines connect refined ::> ucRespondToReservoirAlarm to refiner ::> procRespondToReservoirAlarm;
+    connection : HasSubProcedure connect procedure ::> pathwayArthroscopyIrrigation to subProcedure ::> procPrimeCassette;
+    connection : HasSubProcedure connect procedure ::> pathwayArthroscopyIrrigation to subProcedure ::> procDeliverIrrigation;
+    connection : HasSubProcedure connect procedure ::> pathwayArthroscopyIrrigation to subProcedure ::> procRespondToReservoirAlarm;
     connection : HasSubProcedure connect procedure ::> procDeliverIrrigation to subProcedure ::> procPrimeCassette;
     connection : HasSubProcedure connect procedure ::> procDeliverIrrigation to subProcedure ::> procRespondToReservoirAlarm;
     connection : PerformedBy connect procedure ::> procPrimeCassette to performer ::> circulatingNurse;
     connection : PerformedBy connect procedure ::> procDeliverIrrigation to performer ::> arthroscopySurgeon;
     connection : PerformedBy connect procedure ::> procRespondToReservoirAlarm to performer ::> circulatingNurse;
-    connection : PerformedOn connect procedure ::> procDeliverIrrigation to subject ::> kneeJointSurgicalSite;
-    connection : PerformedOn connect procedure ::> procRespondToReservoirAlarm to subject ::> kneeJointSurgicalSite;
+    connection : PerformedOn connect procedure ::> procDeliverIrrigation to subject ::> patientCase;
+    connection : PerformedOn connect procedure ::> procRespondToReservoirAlarm to subject ::> patientCase;
+    connection : HasAnatomicalSite connect subject ::> procDeliverIrrigation to site ::> kneeJointSurgicalSite;
+    connection : HasAnatomicalSite connect subject ::> procRespondToReservoirAlarm to site ::> kneeJointSurgicalSite;
     connection : OccursIn connect procedure ::> procPrimeCassette to environment ::> operatingRoom;
     connection : OccursIn connect procedure ::> procDeliverIrrigation to environment ::> operatingRoom;
     connection : OccursIn connect procedure ::> procRespondToReservoirAlarm to environment ::> operatingRoom;
+    connection : AppliesEnvironmentQualifier connect environment ::> operatingRoom to qualifier ::> sterileField;
+    connection : UsesMethod connect procedure ::> procDeliverIrrigation to method ::> methodPeristalticPressureControl;
+    connection : UsesMethod connect procedure ::> procRespondToReservoirAlarm to method ::> methodPeristalticPressureControl;
+    connection : UsesRoute connect procedure ::> procDeliverIrrigation to route ::> routeArthroscopicCannulaDelivery;
     connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> disposableCassette;
     connection : UsesResource connect procedure ::> procPrimeCassette to resource ::> salineIrrigationFluid;
     connection : UsesResource connect procedure ::> procDeliverIrrigation to resource ::> disposableCassette;
@@ -258,6 +303,11 @@ package IrrigationPump_Compliance {
     connection : HasPersonnel connect environment ::> operatingRoom to personnel ::> circulatingNurse;
     connection : HasPersonnel connect environment ::> operatingRoom to personnel ::> arthroscopySurgeon;
     connection : ContainsSubstance connect environment ::> operatingRoom to substance ::> salineIrrigationFluid;
+    connection : ProducesObservation connect procedure ::> procDeliverIrrigation to observation ::> obsJointDistensionMaintained;
+    connection : ObservesSubject connect observation ::> obsJointDistensionMaintained to subject ::> patientCase;
+    connection : ObservesSubject connect observation ::> obsJointDistensionMaintained to subject ::> kneeJointSurgicalSite;
+    connection : ObservesSubject connect observation ::> obsJointDistensionMaintained to subject ::> morphologyJointSpaceExpanded;
+    connection : AffectsMorphology connect procedure ::> procDeliverIrrigation to morphology ::> morphologyJointSpaceExpanded;
     connection : Satisfy connect satisfiedBy ::> primeConfirmationDialog to satisfies ::> uiReqPrimeConfirmation;
 
     connection : SupportsOperatingFunction connect performance ::> epControlledIrrigationPressure to function ::> pofMaintainFieldDistension;

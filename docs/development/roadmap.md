@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 48 rules, 6 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 55 rules, 6 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -246,7 +246,7 @@ Prove the ontology against more than a single infusion-pump reference:
 
 - [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
 - [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
-- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 39-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 55-rule medical pack, exposing only the pre-existing infusion behavior warnings
 - [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
@@ -272,17 +272,17 @@ Exit criteria:
 
 Continue the paper-driven ontology enrichment by pulling more of the clinical and procedural context into the backbone:
 
-- [ ] **Add patient / subject ontology semantics** — introduce patient, anatomical-site, and recipient-of-procedure concepts where the meaning is stable enough for `@memo/ontology-medical`
-- [ ] **Deepen procedure semantics** — add explicit method, route, clinical-step, and treatment-pathway semantics on top of the new core `Procedure` structure
-- [ ] **Enrich clinical environment modeling** — capture sterile context, available equipment, personnel, substances, and relevant environmental qualifiers without collapsing into device-family specifics
-- [ ] **Add observable / outcome context** — model clinically meaningful observations, morphology/state changes, and measurable outcomes that procedures and device functions act upon
-- [ ] **Evaluate terminology import boundaries** — decide how far MEMO should align with or import patient/clinical terminology from external ontologies (for example SNOMED-style patient, procedure, anatomy, and observable hierarchies) without overloading the core workbench
-- [ ] **Exercise the richer clinical context in examples and viewpoints** — extend the reference models and medical viewpoints so the new patient/context concepts are used in live models rather than documented only in theory
+- [x] **Add patient / subject ontology semantics** — added `Patient`, `AnatomicalSite`, and richer recipient-of-procedure traces to `@memo/ontology-medical`
+- [x] **Deepen procedure semantics** — added `ProcedureMethod`, `RouteOfAdministration`, `ClinicalStep`, and `TreatmentPathway` semantics on top of the new core `Procedure` structure
+- [x] **Enrich clinical environment modeling** — added `ClinicalEnvironmentQualifier` plus explicit sterile/context/resource modeling on top of the core procedure-context relations
+- [x] **Add observable / outcome context** — added `ClinicalObservation` and `MorphologyState` semantics so procedures can produce observations and act on clinically meaningful states
+- [x] **Evaluate terminology import boundaries** — docs now state that MEMO keeps lightweight local anchor concepts while deeper SNOMED-style taxonomies remain future external-import work
+- [x] **Exercise the richer clinical context in examples and viewpoints** — extended the irrigation and infusion reference models and the medical usability view so the new patient/context concepts are exercised in live models
 
 Exit criteria:
-- [ ] `@memo/ontology-medical` covers patient/subject, anatomy, procedure-context, and observation semantics needed for early medical-device design reasoning
-- [ ] at least one reference model uses the enriched clinical context end to end
-- [ ] roadmap direction is explicit about what should be modeled locally versus imported from external clinical ontologies
+- [x] `@memo/ontology-medical` covers patient/subject, anatomy, procedure-context, and observation semantics needed for early medical-device design reasoning
+- [x] at least one reference model uses the enriched clinical context end to end
+- [x] roadmap direction is explicit about what should be modeled locally versus imported from external clinical ontologies
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
