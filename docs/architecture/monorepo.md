@@ -39,7 +39,7 @@ memo/
 │   │       └── pack-kpar.ts             # Package as .kpar archive
 │   │
 │   ├── medical/                 # @memo/medical — workbench config
-│   │   └── memo.config.yaml             # 131 kinds, 21 rules, 5 viewpoints
+│   │   └── memo.config.yaml             # 131 kinds, 39 rules, 5 viewpoints
 │   │
 │   ├── cli/                     # @memo/cli — command-line interface
 │   │   └── src/

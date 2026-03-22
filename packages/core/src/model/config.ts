@@ -79,17 +79,35 @@ export interface ClosureRule {
     completenessLayer?: string;
 }
 
+export type RelationshipRuleDirection = 'any' | 'incoming' | 'outgoing';
+
 export type ClosureRuleDefinition =
-    | { type: 'requireRelationship'; relationship: string; min: number; max?: number }
+    | {
+          type: 'requireRelationship';
+          relationship: string;
+          min: number;
+          max?: number;
+          direction?: RelationshipRuleDirection;
+          relatedKinds?: string[];
+      }
     | {
           type: 'conditionalRequireRelationship';
           condition: RuleCondition;
           relationship: string;
           min: number;
+          direction?: RelationshipRuleDirection;
+          relatedKinds?: string[];
       }
     | { type: 'requireAttribute'; attribute: string }
     | { type: 'uniqueAttribute'; attribute: string }
-    | { type: 'cardinalityCheck'; relationship: string; min: number; max: number };
+    | {
+          type: 'cardinalityCheck';
+          relationship: string;
+          min: number;
+          max: number;
+          direction?: RelationshipRuleDirection;
+          relatedKinds?: string[];
+      };
 
 export interface RuleCondition {
     attribute: string;

@@ -72,7 +72,7 @@ memo/
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
 │   ├── ontology/    @memo/ontology — Transitional broad ontology package being split
-│   └── medical/     @memo/medical  — Medical domain config (15 closure rules, 7 viewpoints)
+│   └── medical/     @memo/medical  — Medical domain config (39 closure rules, 5 viewpoints)
 ├── examples/
 │   └── infusion-pump/              — Complete working example (74 elements)
 └── docs/                           — MkDocs documentation site

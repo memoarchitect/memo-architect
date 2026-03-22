@@ -17,6 +17,7 @@ closureRules:
       type: requireRelationship
       relationship: mitigates
       direction: incoming    # A RiskControl mitigates *this* Hazard
+      relatedKinds: [RiskControl]
       min: 1
     severity: error
     completenessLayer: risk
@@ -33,6 +34,7 @@ closureRules:
       type: requireRelationship
       relationship: string   # Relationship type (e.g., "mitigates")
       direction: incoming|outgoing|any  # Which direction to check
+      relatedKinds: [string] # Optional filter on the related element kind(s)
       min: number            # Minimum required count
     severity: error|warning|info
     completenessLayer: string  # CoSMA layer for completeness tracking
@@ -44,7 +46,7 @@ The `evaluateClosureRules()` function in `@memo/core`:
 
 1. Iterates over each closure rule in the config
 2. Finds all elements matching the rule's `entity` kind
-3. For each matching element, counts relationships of the specified type and direction
+3. For each matching element, counts relationships of the specified type, direction, and optional related-kind filter
 4. If the count is below `min`, creates a `Violation`
 
 ```typescript
@@ -71,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 21 closure rules aligned with ISO 14971, IEC 62304, and IEC 60601 usability/safety concerns:
+The medical config includes 39 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, and IEC 60601 usability/safety concerns:
 
 Representative rules:
 
@@ -90,6 +92,11 @@ Representative rules:
 | CR-MED-012 | UseCase | Should be refined by at least one Scenario via `refines` | warning |
 | CR-MED-016 | EssentialPerformance | Should be preserved by a SafetyFunction via `preserves` | warning |
 | CR-MED-017 | UserInterfaceRequirement | Should address at least one UseError via `addressesUseError` | warning |
+| CR-MED-025 | FormativeEvaluation | Should evaluate a UserInterfaceRequirement via `evaluatesRequirement` | warning |
+| CR-MED-027 | SummativeEvaluation | Should be evidenced by ComplianceEvidence via `evidences` | warning |
+| CR-MED-032 | DesignHistoryRecord | Should document lifecycle/usability artifacts via `documents` | warning |
+| CR-MED-035 | SoftwareDevelopmentProcess | Should govern lifecycle activities via `governsActivity` | warning |
+| CR-MED-038 | SoftwareArchitecturalDesignActivity | Should produce architecture/design work products via `producesWorkProduct` | warning |
 
 ## CLI Output
 
@@ -122,6 +129,7 @@ closureRules:
       type: requireRelationship
       relationship: association
       direction: incoming
+      relatedKinds: [Stakeholder]
       min: 1
     severity: warning
     completenessLayer: logical

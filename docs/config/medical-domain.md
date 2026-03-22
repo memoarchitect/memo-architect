@@ -15,7 +15,7 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 21 |
+| Closure Rules | 39 |
 | Workbench Viewpoints | 5 |
 
 ## Standards Alignment
@@ -47,7 +47,7 @@ medical workbench package adds traceability and completeness rules over them:
 In the layered ontology, `UserNeed` remains the preferred medical-device term and
 specializes the core `StakeholderNeed` concept.
 
-**Enforced by rules:** CR-MED-007 through CR-MED-021
+**Enforced by rules:** CR-MED-007 through CR-MED-039
 
 ### IEC 60601 / IEC 60601-1-6 — Safety, Essential Performance, and Usability
 
@@ -60,7 +60,7 @@ The medical workbench package adds usability and essential-performance checks ov
 - User interface requirements linked to use errors and implemented UI elements
 - Usability requirements verified by tests/validation artifacts
 
-**Enforced by rules:** CR-MED-016 through CR-MED-018
+**Enforced by rules:** CR-MED-016 through CR-MED-033
 
 ## Usage
 

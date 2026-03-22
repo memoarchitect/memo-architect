@@ -4,7 +4,7 @@
 // Returns violations for elements that fail their rules.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MEMOConfig, ClosureRule, ClosureRuleDefinition, RuleCondition } from '../model/config.js';
+import type { MEMOConfig, ClosureRule, ClosureRuleDefinition, RuleCondition, RelationshipRuleDirection } from '../model/config.js';
 import type { MemoModel, MemoElement, MemoRelationship } from '../model/semantic.js';
 import type { Violation, ValidationResult } from './types.js';
 import { validateBehavior } from './behavior-validator.js';
@@ -79,19 +79,43 @@ export function evaluateClosureRules(
 }
 
 function evaluateRule(rule: ClosureRule, element: MemoElement, model: MemoModel): boolean {
-    const def = rule.rule;
+        const def = rule.rule;
     switch (def.type) {
         case 'requireRelationship':
-            return !checkRequireRelationship(element, def.relationship, def.min, def.max, model);
+            return !checkRequireRelationship(
+                element,
+                def.relationship,
+                def.min,
+                def.max,
+                model,
+                def.direction,
+                def.relatedKinds
+            );
         case 'conditionalRequireRelationship':
             return checkCondition(element, def.condition)
-                && !checkRequireRelationship(element, def.relationship, def.min, undefined, model);
+                && !checkRequireRelationship(
+                    element,
+                    def.relationship,
+                    def.min,
+                    undefined,
+                    model,
+                    def.direction,
+                    def.relatedKinds
+                );
         case 'requireAttribute':
             return !checkRequireAttribute(element, def.attribute);
         case 'uniqueAttribute':
             return !checkUniqueAttribute(element, def.attribute, model);
         case 'cardinalityCheck':
-            return !checkRequireRelationship(element, def.relationship, def.min, def.max, model);
+            return !checkRequireRelationship(
+                element,
+                def.relationship,
+                def.min,
+                def.max,
+                model,
+                def.direction,
+                def.relatedKinds
+            );
         default:
             return false;
     }
@@ -107,17 +131,49 @@ function checkRequireRelationship(
     relType: string,
     min: number,
     max: number | undefined,
-    model: MemoModel
+    model: MemoModel,
+    direction: RelationshipRuleDirection = 'any',
+    relatedKinds?: string[]
 ): boolean {
-    const outgoing = model.outgoing.get(element.id) || [];
-    const incoming = model.incoming.get(element.id) || [];
-    const all = [...outgoing, ...incoming];
-
-    const count = all.filter(r => r.type === relType).length;
+    const relevant = getRelevantRelationships(element, relType, model, direction, relatedKinds);
+    const count = relevant.length;
 
     if (count < min) return false;
     if (max !== undefined && count > max) return false;
     return true;
+}
+
+function getRelevantRelationships(
+    element: MemoElement,
+    relType: string,
+    model: MemoModel,
+    direction: RelationshipRuleDirection,
+    relatedKinds?: string[]
+): MemoRelationship[] {
+    const directions = direction === 'any' ? ['outgoing', 'incoming'] : [direction];
+    const matchingKinds = relatedKinds ? new Set(relatedKinds) : undefined;
+    const relationships: MemoRelationship[] = [];
+
+    for (const dir of directions) {
+        const candidates =
+            dir === 'outgoing'
+                ? (model.outgoing.get(element.id) || [])
+                : (model.incoming.get(element.id) || []);
+
+        for (const rel of candidates) {
+            if (rel.type !== relType) continue;
+
+            if (matchingKinds) {
+                const relatedId = dir === 'outgoing' ? rel.targetId : rel.sourceId;
+                const related = model.elements.get(relatedId);
+                if (!related || !matchingKinds.has(related.kind)) continue;
+            }
+
+            relationships.push(rel);
+        }
+    }
+
+    return relationships;
 }
 
 function checkRequireAttribute(element: MemoElement, attribute: string): boolean {

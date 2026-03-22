@@ -12,6 +12,10 @@ package InfusionPump_Requirements {
         attribute redefines title = "Accurate Medication Delivery";
     }
 
+    requirement unAlarmAudibility : UserNeed {
+        attribute redefines title = "Alarm Audibility In Clinical Use";
+    }
+
     // System Requirements
     requirement srFlowAccuracy : SystemRequirement {
         attribute redefines title = "Flow Rate Accuracy";
@@ -34,6 +38,7 @@ package InfusionPump_Requirements {
 
     // Stable semantics: requirements derive downward and implement risk controls.
     connection : Derives connect source ::> unAccurateDelivery to derived ::> srFlowAccuracy;
+    connection : Derives connect source ::> unAlarmAudibility to derived ::> srAlarmAudibility;
     connection : ImplementsRiskControl connect implementer ::> srFlowAccuracy to control ::> rcFlowRateLimiter;
     connection : ImplementsRiskControl connect implementer ::> srAlarmAudibility to control ::> rcOcclusionAlarm;
     connection : Derives connect source ::> srAlarmAudibility to derived ::> swrAlarmManagement;

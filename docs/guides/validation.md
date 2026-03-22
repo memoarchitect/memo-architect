@@ -12,17 +12,18 @@ pnpm memo validate
 This parses your model, checks all closure rules, and reports gaps:
 
 ```
-MEMO Validate — my-device
+📋 MEMO Validate
 
-Checking 21 closure rules against 74 elements...
+Project: my-device (device)
+Kinds: 157 | Rules: 39 | Relationships: 36
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
 
-✗ CR-MED-007  Every SoftwareRequirement must trace to SystemRequirement
+✗ CR-MED-007  Every SoftwareRequirement must derive from SystemRequirement
               Missing: swReqLogging (Audit Logging)
 
-⚠ CR-MED-008  Every SystemRequirement should trace to UserNeed
+⚠ CR-MED-008  Every SystemRequirement should derive from UserNeed
               Missing: sysReqBattery (Battery Life)
 
 Results: 2 errors, 1 warning — 94% complete
@@ -31,14 +32,14 @@ Results: 2 errors, 1 warning — 94% complete
 - **Errors** (`✗`) — must be fixed; `memo validate` exits with code 1 (blocks CI)
 - **Warnings** (`⚠`) — should be fixed; does not block CI
 
-## The 21 Medical Closure Rules
+## The 39 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
 | Rule | Check | Severity |
 |------|-------|----------|
 | CR-MED-001 | Every **Hazard** must have ≥1 `mitigates` relationship | Error |
-| CR-MED-002 | Every **Hazard** must trace to ≥1 SystemFunction or UseCase | Error |
+| CR-MED-002 | Every **Hazard** must cause ≥1 `HazardousSituation` | Error |
 | CR-MED-003 | Every **RiskControl** must be verified by ≥1 Test | Error |
 | CR-MED-004 | Every **Risk** must identify ≥1 Hazard | Error |
 | CR-MED-005 | Every **HazardousSituation** must be caused by a Hazard | Error |
@@ -48,9 +49,13 @@ Results: 2 errors, 1 warning — 94% complete
 
 | Rule | Check | Severity |
 |------|-------|----------|
-| CR-MED-007 | Every **SoftwareRequirement** must trace to SystemRequirement | Error |
-| CR-MED-008 | Every **SystemRequirement** should trace to UserNeed | Warning |
-| CR-MED-009 | Every **SystemRequirement** should be satisfied by LogicalComponent | Warning |
+| CR-MED-007 | Every **SoftwareRequirement** must derive from **SystemRequirement** | Error |
+| CR-MED-008 | Every **SystemRequirement** should derive from **UserNeed** | Warning |
+| CR-MED-009 | Every **SystemRequirement** should be satisfied by architecture | Warning |
+| CR-MED-012 | Every **UseCase** should be refined by ≥1 **Scenario** | Warning |
+| CR-MED-013 | Every **SystemRequirement** should be verified by ≥1 **Test** | Warning |
+| CR-MED-014 | Every **SoftwareRequirement** should be verified by ≥1 **Test** | Warning |
+| CR-MED-015 | Every **UserNeed** should derive ≥1 **SystemRequirement** | Warning |
 
 ### Architecture Completeness
 
@@ -58,26 +63,40 @@ Results: 2 errors, 1 warning — 94% complete
 |------|-------|----------|
 | CR-MED-010 | Every **SystemFunction** must be allocated to LogicalComponent/Software | Error |
 | CR-MED-011 | Every **Software** must have `safetyClassification` attribute | Error |
-| CR-MED-012 | Every **UseCase** should trace to ≥1 Scenario | Warning |
-
-### Verification
-
-| Rule | Check | Severity |
-|------|-------|----------|
-| CR-MED-013 | Every **SystemRequirement** should be verified by ≥1 Test | Warning |
-| CR-MED-014 | Every **SoftwareRequirement** should be verified by ≥1 Test | Warning |
-| CR-MED-015 | Every **UserNeed** should trace to ≥1 UseCase | Warning |
-
-### Safety, Usability, and Lifecycle Hardening
-
-| Rule | Check | Severity |
-|------|-------|----------|
-| CR-MED-016 | Every **EssentialPerformance** should be preserved by ≥1 SafetyFunction | Warning |
-| CR-MED-017 | Every **UserInterfaceRequirement** should address ≥1 UseError | Warning |
-| CR-MED-018 | Every **UserInterfaceRequirement** should be verified by ≥1 Test | Warning |
 | CR-MED-019 | Every **SoftwareItem** must have `safetyClass` | Error |
+
+### Usability, Safety, and Standards Semantics
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-016 | Every **EssentialPerformance** should be preserved by ≥1 **SafetyFunction** | Warning |
+| CR-MED-017 | Every **UserInterfaceRequirement** should address ≥1 **UseError** | Warning |
+| CR-MED-018 | Every **UserInterfaceRequirement** should be verified by ≥1 **Test** | Warning |
+| CR-MED-022 | Every **UseSpecification** should specify ≥1 **HazardRelatedUseScenario** | Warning |
+| CR-MED-023 | Every **UseErrorAnalysis** should analyze ≥1 **UseError** | Warning |
+| CR-MED-024 | Every **UseError** should contribute to ≥1 **Hazard** | Warning |
+| CR-MED-025 | Every **FormativeEvaluation** should evaluate ≥1 **UserInterfaceRequirement** | Warning |
+| CR-MED-026 | Every **SummativeEvaluation** should evaluate ≥1 **UserInterfaceRequirement** | Warning |
+| CR-MED-027 | Every **SummativeEvaluation** should be evidenced by **ComplianceEvidence** | Warning |
+| CR-MED-028 | Every **EssentialPerformance** should support ≥1 **PrimaryOperatingFunction** | Warning |
+| CR-MED-029 | Every **EssentialPerformance** should define ≥1 loss condition | Warning |
+| CR-MED-030 | Every **CollateralStandardRequirement** should apply to a regulated subject | Warning |
+| CR-MED-031 | Every **ParticularStandardRequirement** should apply to a regulated subject | Warning |
+
+### Lifecycle, QMS, and Evidence Structure
+
+| Rule | Check | Severity |
+|------|-------|----------|
 | CR-MED-020 | Every **SOUPItem** should be documented by ≥1 record/evidence link | Warning |
 | CR-MED-021 | Every **SoftwareAnomaly** should be documented by ≥1 record/evidence link | Warning |
+| CR-MED-032 | Every **DesignHistoryRecord** should document regulated lifecycle/usability artifacts | Warning |
+| CR-MED-033 | Every **ComplianceEvidence** should evidence a regulated subject | Warning |
+| CR-MED-034 | Every **ReleaseBaseline** should document software realization/evaluation artifacts | Warning |
+| CR-MED-035 | Every **SoftwareDevelopmentProcess** should govern ≥1 lifecycle activity | Warning |
+| CR-MED-036 | Every **SoftwareMaintenanceProcess** should govern ≥1 problem-resolution activity | Warning |
+| CR-MED-037 | Every **SoftwareRequirementsAnalysisActivity** should produce ≥1 requirements work product | Warning |
+| CR-MED-038 | Every **SoftwareArchitecturalDesignActivity** should produce architecture/design work products | Warning |
+| CR-MED-039 | Every **ProblemResolutionActivity** should produce problem-resolution work products | Warning |
 
 ## The Completeness Bar (Web UI)
 
@@ -106,10 +125,10 @@ requirement rcAlarmSystem : RiskControl {
 connection : mitigates connect rcAlarmSystem to hazAirEmbolism;
 ```
 
-### "SoftwareRequirement not traced to SystemRequirement" (CR-MED-007)
+### "SoftwareRequirement not derived from SystemRequirement" (CR-MED-007)
 
 ```sysml
-connection : traceTo connect swReqLogging to sysReqAuditTrail;
+connection : Derives connect source ::> sysReqAuditTrail to derived ::> swReqLogging;
 ```
 
 ### "Software missing safetyClassification" (CR-MED-011)
@@ -129,7 +148,21 @@ part testBattery : Test {
     attribute redefines testType = "System";
 }
 
-connection : verify connect testBattery to sysReqBattery;
+connection : Verify connect verifiedBy ::> testBattery to verifies ::> sysReqBattery;
+```
+
+### "SummativeEvaluation has no evidence" (CR-MED-027)
+
+```sysml
+part evidenceAlarmWorkflow : ComplianceEvidence {
+    attribute redefines recordId = "EV-010";
+    attribute redefines title = "Alarm workflow summative report";
+    attribute redefines artifactType = "Usability Test Report";
+}
+
+connection : Evidences
+    connect evidence ::> evidenceAlarmWorkflow
+    to subject ::> summativeEvalAlarmWorkflow;
 ```
 
 ## Using Validation in CI
@@ -156,11 +189,14 @@ extends: "@memo/medical"
 
 closureRules:
   - id: CR-PROJ-001
-    description: "Every LogicalComponent must be allocated to a PhysicalModule"
-    sourceKind: LogicalComponent
-    relationship: allocateTo
-    targetKinds: [PhysicalModule]
-    minCount: 1
+    description: "Every UserInterfaceRequirement should be implemented by a UI element"
+    entity: UserInterfaceRequirement
+    rule:
+      type: requireRelationship
+      relationship: satisfy
+      direction: incoming
+      relatedKinds: [UIElement, UIScreen, UIPanel]
+      min: 1
     severity: warning
 ```
 
