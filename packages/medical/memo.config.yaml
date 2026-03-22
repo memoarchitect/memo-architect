@@ -1344,9 +1344,12 @@ viewpoints:
       - SoftwareRequirement
       - RiskControl
       - SoftwareComponent
+      - EventDrivenService
+      - MessageBroker
       - SoftwareModule
       - Firmware
       - Docker
+      - RabbitMqBroker
       - OperatingSystem
       - RosNode
       - RosTopic
@@ -1561,8 +1564,15 @@ viewpoints:
     visibleKinds:
       - DataInterface
       - PublishSubscribeChannel
+      - EventBus
+      - TopicChannel
+      - QueueChannel
       - RequestResponseInterface
       - SoftwareInterface
+      - MessageProducer
+      - MessageConsumer
+      - BrokerExchange
+      - BrokerQueue
       - PublisherInterface
       - SubscriberInterface
       - ServiceProviderInterface
@@ -1591,6 +1601,10 @@ viewpoints:
       - RosResponse
       - RosMessageSchema
       - RosMessageField
+      - RabbitMqExchange
+      - RabbitMqQueue
+      - RabbitMqPublisher
+      - RabbitMqConsumer
       - SoftwareComponent
     visibleRelationships:
       - exposesInterface
@@ -1603,6 +1617,8 @@ viewpoints:
       - invokesInterface
       - carriesRequestMessage
       - carriesResponseMessage
+      - brokersChannel
+      - routesToChannel
       - definesMessageSchema
       - hasMessageField
       - documents

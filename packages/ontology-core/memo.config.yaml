@@ -360,6 +360,21 @@ kinds:
     layer: software
     sysmlConstruct: part def
 
+  Docker:
+    label: Docker
+    layer: software
+    sysmlConstruct: part def
+
+  EventDrivenService:
+    label: Event Driven Service
+    layer: software
+    sysmlConstruct: part def
+
+  MessageBroker:
+    label: Message Broker
+    layer: software
+    sysmlConstruct: part def
+
   Port:
     label: Port
     layer: interfaces
@@ -405,6 +420,21 @@ kinds:
     layer: interfaces
     sysmlConstruct: interface def
 
+  EventBus:
+    label: Event Bus
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  TopicChannel:
+    label: Topic Channel
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  QueueChannel:
+    label: Queue Channel
+    layer: interfaces
+    sysmlConstruct: interface def
+
   RequestResponseInterface:
     label: Request Response Interface
     layer: interfaces
@@ -442,6 +472,26 @@ kinds:
 
   ServiceConsumerInterface:
     label: Service Consumer Interface
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  MessageProducer:
+    label: Message Producer
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  MessageConsumer:
+    label: Message Consumer
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  BrokerExchange:
+    label: Broker Exchange
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  BrokerQueue:
+    label: Broker Queue
     layer: interfaces
     sysmlConstruct: interface def
 
@@ -504,6 +554,106 @@ kinds:
     label: Message Field
     layer: interfaces
     sysmlConstruct: part def
+
+  RosNode:
+    label: ROS Node
+    layer: software
+    sysmlConstruct: part def
+
+  RosTopic:
+    label: ROS Topic
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosService:
+    label: ROS Service
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosPublication:
+    label: ROS Publication
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosSubscription:
+    label: ROS Subscription
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosServiceCall:
+    label: ROS Service Call
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosServiceServer:
+    label: ROS Service Server
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RosMessage:
+    label: ROS Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosEventMessage:
+    label: ROS Event Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosStateMessage:
+    label: ROS State Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosCommandMessage:
+    label: ROS Command Message
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosRequest:
+    label: ROS Request
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosResponse:
+    label: ROS Response
+    layer: interfaces
+    sysmlConstruct: item def
+
+  RosMessageSchema:
+    label: ROS Message Schema
+    layer: interfaces
+    sysmlConstruct: part def
+
+  RosMessageField:
+    label: ROS Message Field
+    layer: interfaces
+    sysmlConstruct: part def
+
+  RabbitMqBroker:
+    label: RabbitMQ Broker
+    layer: software
+    sysmlConstruct: part def
+
+  RabbitMqExchange:
+    label: RabbitMQ Exchange
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RabbitMqQueue:
+    label: RabbitMQ Queue
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RabbitMqPublisher:
+    label: RabbitMQ Publisher
+    layer: interfaces
+    sysmlConstruct: interface def
+
+  RabbitMqConsumer:
+    label: RabbitMQ Consumer
+    layer: interfaces
+    sysmlConstruct: interface def
 
   DataType:
     label: Data Type
@@ -696,6 +846,16 @@ relationshipTypes:
     layer: interfaces
     color: "#3498DB"
 
+  - name: brokersChannel
+    label: Brokers Channel
+    layer: interfaces
+    color: "#5DADE2"
+
+  - name: routesToChannel
+    label: Routes To Channel
+    layer: interfaces
+    color: "#85C1E9"
+
   - name: definesMessageSchema
     label: Defines Message Schema
     layer: interfaces
@@ -797,6 +957,8 @@ relationships:
   - invokesInterface
   - carriesRequestMessage
   - carriesResponseMessage
+  - brokersChannel
+  - routesToChannel
   - definesMessageSchema
   - hasMessageField
   - realization

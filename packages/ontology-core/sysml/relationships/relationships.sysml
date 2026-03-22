@@ -125,6 +125,16 @@ package MEMO_Ontology_Core_Relationships {
         end response : ResponseMessage [1];
     }
 
+    connection def BrokersChannel {
+        end broker : MessageBroker [1];
+        end channel : PublishSubscribeChannel [1];
+    }
+
+    connection def RoutesToChannel {
+        end sourceChannel : PublishSubscribeChannel [1];
+        end targetChannel : PublishSubscribeChannel [1];
+    }
+
     connection def DefinesMessageSchema {
         end schema : MessageSchema [1];
         end message : Message [1];

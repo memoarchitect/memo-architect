@@ -329,19 +329,20 @@ Exit criteria:
 - [x] `@memo/ontology-medical` supports reusable regulated product-family / configuration semantics without falling back to generic trace links
 - [x] ontology files validate cleanly inside MEMO's supported SysML v2 subset
 
-### Next Ontology Milestone — Data Modeling and ROS Interface Semantics **[HIGH]**
+### Next Ontology Milestone — Data Modeling, Event-Driven Services, and Technology Specializations **[HIGH]**
 
 Refine the ontology so message-oriented software integration can be modeled with typed semantics instead of generic interfaces and trace links:
 
-- [x] **Add reusable data-modeling semantics to the core backbone** — added publish/subscribe channels, request/response interfaces, message types, schemas, fields, and typed messaging relationships in `@memo/ontology-core`
-- [x] **Add ROS-specialized platform semantics in the medical layer** — added `RosPublication`, `RosSubscription`, `RosServiceCall`, `RosServiceServer`, `RosMessage`, `RosRequest`, `RosResponse`, and ROS message-schema/field concepts in `@memo/ontology-medical`
-- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates ROS-style topic/service/message structures and includes a dedicated data-messaging viewpoint
-- [x] **Exercise the new semantics in a live reference model** — the infusion-pump reference model now includes ROS-style nodes, topics, publishers, subscribers, services, messages, and schemas
+- [x] **Add reusable data-modeling semantics to the core backbone** — added publish/subscribe channels, request/response interfaces, message types, schemas, fields, broker routing, and typed messaging relationships in `@memo/ontology-core`
+- [x] **Add event-driven microservice and broker backbone semantics** — added `EventDrivenService`, `MessageBroker`, `EventBus`, `TopicChannel`, `QueueChannel`, `MessageProducer`, `MessageConsumer`, `BrokerExchange`, and `BrokerQueue` in `@memo/ontology-core`
+- [x] **Add reusable technology specializations on top of the backbone** — added ROS and RabbitMQ specializations in `@memo/ontology-core` instead of the medical layer so those concepts remain cross-domain
+- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates ROS-style topic/service/message structures and includes a dedicated data-messaging viewpoint over the shared event-driven backbone
+- [x] **Exercise the new semantics in live reference models** — the infusion-pump reference model now includes both ROS-style messaging and a RabbitMQ-backed brokered alarm relay slice
 
 Exit criteria:
-- [x] `@memo/ontology-core` supports reusable message/data-model semantics
-- [x] `@memo/ontology-medical` supports ROS-specialized interface semantics without pushing them into the frozen legacy package
-- [x] at least one reference model exercises publishers, subscribers, services, messages, and schemas end to end
+- [x] `@memo/ontology-core` supports reusable message/data-model semantics plus event-driven microservice and broker semantics
+- [x] ROS and RabbitMQ specializations build on top of that backbone without being modeled as medical-only ontology concepts
+- [x] at least one reference model exercises publishers, subscribers, brokered routing, services, messages, and schemas end to end
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

@@ -617,6 +617,19 @@ package InfusionPump {
     interface def StartInfusionClient :> RosServiceCall { }
     interface def StartInfusionServer :> RosServiceServer { }
 
+    part alarmIntegrationBroker : RabbitMqBroker {
+        attribute redefines name = "Alarm Integration Broker";
+    }
+
+    part nurseStationAlarmRelay : EventDrivenService {
+        attribute redefines name = "Nurse Station Alarm Relay";
+    }
+
+    interface def AlarmExchange :> RabbitMqExchange { }
+    interface def NurseStationAlarmQueue :> RabbitMqQueue { }
+    interface def AlarmBrokerPublisher :> RabbitMqPublisher { }
+    interface def AlarmBrokerConsumer :> RabbitMqConsumer { }
+
     item def PumpStatusMsg :> RosStateMessage { }
     item def AlarmEventMsg :> RosEventMessage { }
     item def StartInfusionRequestMsg :> RosRequest { }
@@ -877,6 +890,16 @@ package InfusionPump {
     connection : CarriesResponseMessage connect service ::> StartInfusionService to response ::> StartInfusionResponseMsg;
     connection : InvokesInterface connect consumer ::> StartInfusionClient to service ::> StartInfusionService;
     connection : ServesInterface connect provider ::> StartInfusionServer to service ::> StartInfusionService;
+    connection : ExposesInterface connect provider ::> nurseStationAlarmRelay to dataInterface ::> AlarmExchange;
+    connection : BrokersChannel connect broker ::> alarmIntegrationBroker to channel ::> AlarmExchange;
+    connection : BrokersChannel connect broker ::> alarmIntegrationBroker to channel ::> NurseStationAlarmQueue;
+    connection : RoutesToChannel connect sourceChannel ::> AlarmExchange to targetChannel ::> NurseStationAlarmQueue;
+    connection : CarriesExchangeItem connect dataInterface ::> AlarmExchange to exchangeItem ::> AlarmEventMsg;
+    connection : CarriesExchangeItem connect dataInterface ::> NurseStationAlarmQueue to exchangeItem ::> AlarmEventMsg;
+    connection : PublishesTo connect publisher ::> AlarmBrokerPublisher to channel ::> AlarmExchange;
+    connection : PublishesMessage connect publisher ::> AlarmBrokerPublisher to message ::> AlarmEventMsg;
+    connection : SubscribesTo connect subscriber ::> AlarmBrokerConsumer to channel ::> NurseStationAlarmQueue;
+    connection : ConsumesMessage connect subscriber ::> AlarmBrokerConsumer to message ::> AlarmEventMsg;
     connection : DefinesMessageSchema connect schema ::> schemaPumpStatus to message ::> PumpStatusMsg;
     connection : DefinesMessageSchema connect schema ::> schemaAlarmEvent to message ::> AlarmEventMsg;
     connection : DefinesMessageSchema connect schema ::> schemaStartInfusionRequest to message ::> StartInfusionRequestMsg;
@@ -888,6 +911,8 @@ package InfusionPump {
     connection : HasMessageField connect schema ::> schemaStartInfusionResponse to field ::> fieldAcceptanceStatus;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> telemetryGatewayNode;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> therapySupervisorNode;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> alarmIntegrationBroker;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> nurseStationAlarmRelay;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaPumpStatus;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaAlarmEvent;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaStartInfusionRequest;

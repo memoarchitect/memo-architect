@@ -53,8 +53,8 @@ graph TD
 | `functional` | Functional Analysis | `#E67E22` | SystemFunction, ComponentFunction, UserActivity, UIFunction, UseCase, Scenario |
 | `logical` | Logical Architecture | `#7B68EE` | System, Subsystem, Component, LogicalComponent, ArchitectureDecision, QualityAttribute |
 | `physical` | Physical Architecture | `#95A5A6` | PhysicalComponent, ElectricalComponent, MechanicalComponent, HardwareNode, ComputingDevice, FPGA, Microcontroller |
-| `software` | Software Architecture | `#F39C12` | Software, SoftwareComponent, SoftwareModule, Firmware, Docker, OperatingSystem, RosNode |
-| `interfaces` | Interfaces & Ports | `#1ABC9C` | Port, DataPort, FlowPort, Interface, SoftwareInterface, RosTopic, RosService, DataType |
+| `software` | Software Architecture | `#F39C12` | Software, SoftwareComponent, EventDrivenService, MessageBroker, SoftwareModule, Firmware, Docker, OperatingSystem, RosNode, RabbitMqBroker |
+| `interfaces` | Interfaces & Ports | `#1ABC9C` | Port, DataInterface, PublishSubscribeChannel, RequestResponseInterface, Message, MessageSchema, SoftwareInterface, RosTopic, RosService, RabbitMqExchange, RabbitMqQueue, DataType |
 | `verification` | Verification | `#2ECC71` | Test |
 | `ui` | UI Realization | `#3498DB` | UIScreen, UIPanel, UIElement |
 

@@ -73,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 97 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, cybersecurity/interoperability semantics, clinical-evidence / claims semantics, lifecycle-configuration semantics, and ROS-style data-messaging semantics:
+The medical config includes 97 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, cybersecurity/interoperability semantics, clinical-evidence / claims semantics, lifecycle-configuration semantics, and event-driven / ROS-specialized data-messaging semantics:
 
 Representative rules:
 
