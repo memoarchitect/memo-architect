@@ -71,7 +71,6 @@ memo/
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-│   ├── ontology/    @memo/ontology — Transitional broad ontology package being split
 │   └── medical/     @memo/medical  — Medical domain config (109 closure rules, 11 viewpoints)
 ├── examples/
 │   ├── infusion-pump/              — Primary infusion-device reference model
@@ -85,7 +84,7 @@ memo/
 .sysml files (chokidar watch)
   → Langium parser (SysML v2 subset)
   → Semantic model (MemoModel)
-  → Closure rule engine (97 medical closure rules)
+  → Closure rule engine (109 medical closure rules)
   → Completeness tracker (per-layer %)
   → WebSocket broadcast → React web app
 ```

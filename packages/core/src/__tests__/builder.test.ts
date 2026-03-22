@@ -651,7 +651,7 @@ describe('Multi-file model splitting', () => {
 function loadResolvedConfig(configPath: string): MEMOConfig {
     const config = loadConfig(configPath);
     return resolveConfig(config, (packageName: string) => {
-        // Map @memo/ontology → packages/ontology/memo.config.yaml
+        // Map @memo package names to workspace package configs
         const shortName = packageName.replace(/^@memo\//, '');
         const parentPath = resolve('/Users/someshkashyap/sandbox/memo/packages', shortName, 'memo.config.yaml');
         try {

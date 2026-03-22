@@ -9,9 +9,10 @@ import { resolve, join } from 'node:path';
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
 
-const ONTOLOGY_DIR = resolve(
-    '/Users/someshkashyap/sandbox/memo/packages/ontology/sysml'
-);
+const ONTOLOGY_DIRS = [
+    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-core/sysml'),
+    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-medical/sysml'),
+];
 
 function getSysmlFiles(dir: string): string[] {
     const files: string[] = [];
@@ -26,14 +27,16 @@ function getSysmlFiles(dir: string): string[] {
 }
 
 describe('Split ontology files', () => {
-    const files = getSysmlFiles(ONTOLOGY_DIR);
+    const files = ONTOLOGY_DIRS.flatMap(getSysmlFiles);
 
     it('found expected number of files', () => {
-        expect(files.length).toBeGreaterThanOrEqual(12); // 10 entity + 1 relationship + 1 index
+        expect(files.length).toBeGreaterThanOrEqual(20);
     });
 
     for (const file of files) {
-        const relPath = file.replace(ONTOLOGY_DIR + '/', '');
+        const relPath = file
+            .replace(ONTOLOGY_DIRS[0] + '/', 'ontology-core/')
+            .replace(ONTOLOGY_DIRS[1] + '/', 'ontology-medical/');
         it(`parses ${relPath} without errors`, async () => {
             const source = readFileSync(file, 'utf-8');
             const doc = await parse(source);

@@ -75,27 +75,27 @@ describe('Import', () => {
     it('parses wildcard import', async () => {
         const model = await parseValid(`
             package Test {
-                import MEMO_Ontology::*;
+                import MEMO_Ontology_Medical::*;
             }
         `);
         const pkg = model.members[0] as PackageDeclaration;
         const imp = pkg.members[0];
         expect(imp.$type).toBe('ImportDeclaration');
         if (imp.$type === 'ImportDeclaration') {
-            expect(imp.path).toBe('MEMO_Ontology::*');
+            expect(imp.path).toBe('MEMO_Ontology_Medical::*');
         }
     });
 
     it('parses qualified import', async () => {
         const model = await parseValid(`
             package Test {
-                import MEMO_Ontology::Actor;
+                import MEMO_Ontology_Core::Stakeholder;
             }
         `);
         const pkg = model.members[0] as PackageDeclaration;
         const imp = pkg.members[0];
         if (imp.$type === 'ImportDeclaration') {
-            expect(imp.path).toBe('MEMO_Ontology::Actor');
+            expect(imp.path).toBe('MEMO_Ontology_Core::Stakeholder');
         }
     });
 });
@@ -628,7 +628,7 @@ describe('Integration: Device model subset', () => {
     it('parses a representative infusion pump subset', async () => {
         const model = await parseValid(`
             package InfusionPump {
-                import MEMO_Ontology::*;
+                import MEMO_Ontology_Medical::*;
 
                 // Business layer
                 part clinician : Actor {
