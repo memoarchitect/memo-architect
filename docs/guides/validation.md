@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 232 | Rules: 89 | Relationships: 101
+Kinds: 258 | Rules: 97 | Relationships: 111
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 89 Medical Closure Rules
+## The 97 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -192,6 +192,19 @@ pnpm memo validate
 | CR-MED-087 | Every **ProductVariant** should support at least one **Accessory** | Warning |
 | CR-MED-088 | Every **ConfigurationBaseline** should configure at least one subject | Warning |
 | CR-MED-089 | Every **VariantConstraint** should constrain at least one **ProductVariant** | Warning |
+
+### Data Messaging and ROS-Style Interfaces
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-090 | Every **RosTopic** should carry at least one ROS message | Warning |
+| CR-MED-091 | Every **RosPublication** should publish to at least one **RosTopic** | Warning |
+| CR-MED-092 | Every **RosSubscription** should subscribe to at least one **RosTopic** | Warning |
+| CR-MED-093 | Every **RosMessageSchema** should define at least one ROS message | Warning |
+| CR-MED-094 | Every **RosService** should carry at least one request message | Warning |
+| CR-MED-095 | Every **RosService** should carry at least one response message | Warning |
+| CR-MED-096 | Every **RosServiceCall** should invoke at least one **RosService** | Warning |
+| CR-MED-097 | Every **RosServiceServer** should serve at least one **RosService** | Warning |
 
 ## The Completeness Bar (Web UI)
 

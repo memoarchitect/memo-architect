@@ -73,7 +73,7 @@ This means a model can be 100% complete even with warnings, but never with error
 
 ## Medical Domain Rules
 
-The medical config includes 89 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, cybersecurity/interoperability semantics, clinical-evidence / claims semantics, and lifecycle-configuration semantics:
+The medical config includes 97 closure rules aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601 usability/safety concerns, structured FMEA / fault-tree analysis, richer clinical-context semantics, residual-risk / post-market governance semantics, cybersecurity/interoperability semantics, clinical-evidence / claims semantics, lifecycle-configuration semantics, and ROS-style data-messaging semantics:
 
 Representative rules:
 
@@ -117,6 +117,10 @@ Representative rules:
 | CR-MED-084 | InstallationQualification | Should qualify at least one installed subject via `qualifiesInstallation` | warning |
 | CR-MED-085 | ProductFamily | Should declare at least one ProductVariant via `hasProductVariant` | warning |
 | CR-MED-088 | ConfigurationBaseline | Should configure at least one subject via `configuresItem` | warning |
+| CR-MED-090 | RosTopic | Should carry at least one ROS message via `carriesExchangeItem` | warning |
+| CR-MED-091 | RosPublication | Should publish to at least one RosTopic via `publishesTo` | warning |
+| CR-MED-093 | RosMessageSchema | Should define at least one ROS message via `definesMessageSchema` | warning |
+| CR-MED-096 | RosServiceCall | Should invoke at least one RosService via `invokesInterface` | warning |
 
 ## CLI Output
 

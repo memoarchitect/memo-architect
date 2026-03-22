@@ -1035,6 +1035,93 @@ closureRules:
       min: 1
     severity: warning
 
+  - id: CR-MED-090
+    description: "Every RosTopic should carry at least one ROS message"
+    entity: RosTopic
+    rule:
+      type: requireRelationship
+      relationship: carriesExchangeItem
+      direction: outgoing
+      relatedKinds: [RosMessage, RosEventMessage, RosStateMessage, RosCommandMessage]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-091
+    description: "Every RosPublication should publish to at least one ROS topic"
+    entity: RosPublication
+    rule:
+      type: requireRelationship
+      relationship: publishesTo
+      direction: outgoing
+      relatedKinds: [RosTopic]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-092
+    description: "Every RosSubscription should subscribe to at least one ROS topic"
+    entity: RosSubscription
+    rule:
+      type: requireRelationship
+      relationship: subscribesTo
+      direction: outgoing
+      relatedKinds: [RosTopic]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-093
+    description: "Every RosMessageSchema should define at least one ROS message"
+    entity: RosMessageSchema
+    rule:
+      type: requireRelationship
+      relationship: definesMessageSchema
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-094
+    description: "Every RosService should carry at least one request message"
+    entity: RosService
+    rule:
+      type: requireRelationship
+      relationship: carriesRequestMessage
+      direction: outgoing
+      relatedKinds: [RosRequest]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-095
+    description: "Every RosService should carry at least one response message"
+    entity: RosService
+    rule:
+      type: requireRelationship
+      relationship: carriesResponseMessage
+      direction: outgoing
+      relatedKinds: [RosResponse]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-096
+    description: "Every RosServiceCall should invoke at least one ROS service"
+    entity: RosServiceCall
+    rule:
+      type: requireRelationship
+      relationship: invokesInterface
+      direction: outgoing
+      relatedKinds: [RosService]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-097
+    description: "Every RosServiceServer should serve at least one ROS service"
+    entity: RosServiceServer
+    rule:
+      type: requireRelationship
+      relationship: servesInterface
+      direction: outgoing
+      relatedKinds: [RosService]
+      min: 1
+    severity: warning
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -1467,6 +1554,69 @@ viewpoints:
         viewpointId: lifecycle-ops-view
         auto: true
         description: Manufacturing, installation, service, and product-variant semantics on the regulated backbone
+
+  - id: data-messaging-view
+    label: Data & Messaging
+    supportedDiagramTypes: [bdd, pkg, ibd]
+    visibleKinds:
+      - DataInterface
+      - PublishSubscribeChannel
+      - RequestResponseInterface
+      - SoftwareInterface
+      - PublisherInterface
+      - SubscriberInterface
+      - ServiceProviderInterface
+      - ServiceConsumerInterface
+      - ExchangeItem
+      - Message
+      - EventMessage
+      - StateMessage
+      - CommandMessage
+      - RequestMessage
+      - ResponseMessage
+      - MessageSchema
+      - MessageField
+      - RosNode
+      - RosTopic
+      - RosService
+      - RosPublication
+      - RosSubscription
+      - RosServiceCall
+      - RosServiceServer
+      - RosMessage
+      - RosEventMessage
+      - RosStateMessage
+      - RosCommandMessage
+      - RosRequest
+      - RosResponse
+      - RosMessageSchema
+      - RosMessageField
+      - SoftwareComponent
+    visibleRelationships:
+      - exposesInterface
+      - carriesExchangeItem
+      - publishesTo
+      - subscribesTo
+      - publishesMessage
+      - consumesMessage
+      - servesInterface
+      - invokesInterface
+      - carriesRequestMessage
+      - carriesResponseMessage
+      - definesMessageSchema
+      - hasMessageField
+      - documents
+    visibleLayers:
+      - software
+      - interfaces
+      - qms
+    diagrams:
+      - id: diag-data-messaging
+        name: Data Messaging Semantics
+        diagramType: bdd
+        viewpointId: data-messaging-view
+        auto: true
+        description: Message schemas, publish/subscribe channels, request/response interfaces, and ROS specializations
 
   - id: usability-view
     label: Usability Engineering (IEC 62366 / IEC 60601-1-6)

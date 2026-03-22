@@ -13,6 +13,7 @@ It now provides:
 - cybersecurity, connected-system, and terminology-binding semantics for FDA-aligned cyber devices and interoperable clinical integrations
 - clinical evaluation, clinical evidence, and clinical claims semantics connected back to intended use, benefit-risk, and QMS records
 - manufacturing, installation, service, preventive-maintenance, calibration, and regulated product-configuration semantics
+- reusable data-messaging semantics in `@memo/ontology-core` plus ROS-specialized nodes, topics, publications, subscriptions, services, and message schemas in `@memo/ontology-medical`
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -21,8 +22,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 89 |
-| Workbench Viewpoints | 9 |
+| Closure Rules | 97 |
+| Workbench Viewpoints | 10 |
 
 ## Standards Alignment
 
@@ -153,6 +154,19 @@ The regulated lifecycle and product-configuration anchors now also live in `@mem
 These semantics are intended for reusable regulated medical-device backbone reasoning, not device-specific SKU taxonomy.
 
 **Enforced by rules:** CR-MED-080 through CR-MED-089
+
+### Data Messaging and ROS-Style Interface Semantics
+
+The ontology-level data-modeling backbone is now split across `@memo/ontology-core`
+and `@memo/ontology-medical`:
+
+- domain-agnostic data-exchange concepts such as `PublishSubscribeChannel`, `RequestResponseInterface`, `Message`, `RequestMessage`, `ResponseMessage`, `MessageSchema`, and `MessageField` live in `@memo/ontology-core`
+- generic typed messaging relations such as `publishesTo`, `subscribesTo`, `publishesMessage`, `consumesMessage`, `servesInterface`, `invokesInterface`, `carriesRequestMessage`, `carriesResponseMessage`, `definesMessageSchema`, and `hasMessageField` also live in `@memo/ontology-core`
+- ROS-specialized concepts such as `RosNode`, `RosTopic`, `RosPublication`, `RosSubscription`, `RosService`, `RosServiceCall`, `RosServiceServer`, `RosMessage`, `RosRequest`, `RosResponse`, and `RosMessageSchema` live in `@memo/ontology-medical`
+
+This keeps reusable interface/data semantics in the core MBSE backbone while still supporting platform-specific modeling of ROS-style software integration where teams need it.
+
+**Enforced by rules:** CR-MED-090 through CR-MED-097
 
 ### SysML v2 Compliance Boundary
 

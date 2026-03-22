@@ -85,6 +85,56 @@ package MEMO_Ontology_Core_Relationships {
         end exchangeItem : ExchangeItem [1];
     }
 
+    connection def PublishesTo {
+        end publisher[1];
+        end channel : PublishSubscribeChannel [1];
+    }
+
+    connection def SubscribesTo {
+        end subscriber[1];
+        end channel : PublishSubscribeChannel [1];
+    }
+
+    connection def PublishesMessage {
+        end publisher[1];
+        end message : Message [1];
+    }
+
+    connection def ConsumesMessage {
+        end subscriber[1];
+        end message : Message [1];
+    }
+
+    connection def ServesInterface {
+        end provider[1];
+        end service : RequestResponseInterface [1];
+    }
+
+    connection def InvokesInterface {
+        end consumer[1];
+        end service : RequestResponseInterface [1];
+    }
+
+    connection def CarriesRequestMessage {
+        end service : RequestResponseInterface [1];
+        end request : RequestMessage [1];
+    }
+
+    connection def CarriesResponseMessage {
+        end service : RequestResponseInterface [1];
+        end response : ResponseMessage [1];
+    }
+
+    connection def DefinesMessageSchema {
+        end schema : MessageSchema [1];
+        end message : Message [1];
+    }
+
+    connection def HasMessageField {
+        end schema : MessageSchema [1];
+        end field : MessageField [0..*];
+    }
+
     connection def Realization {
         end realizing[1];
         end realized[1];

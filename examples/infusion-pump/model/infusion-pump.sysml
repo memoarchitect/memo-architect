@@ -598,6 +598,84 @@ package InfusionPump {
     interface def MotorCommandInterface :> SoftwareInterface { }
     interface def AlarmNotificationInterface :> SoftwareInterface { }
 
+    part telemetryGatewayNode : RosNode {
+        attribute redefines name = "Telemetry Gateway Node";
+    }
+
+    part therapySupervisorNode : RosNode {
+        attribute redefines name = "Therapy Supervisor Node";
+    }
+
+    interface def PumpStatusTopic :> RosTopic { }
+    interface def AlarmEventTopic :> RosTopic { }
+    interface def StartInfusionService :> RosService { }
+
+    interface def PumpStatusPublisher :> RosPublication { }
+    interface def PumpStatusSubscriber :> RosSubscription { }
+    interface def AlarmEventPublisher :> RosPublication { }
+    interface def AlarmEventSubscriber :> RosSubscription { }
+    interface def StartInfusionClient :> RosServiceCall { }
+    interface def StartInfusionServer :> RosServiceServer { }
+
+    item def PumpStatusMsg :> RosStateMessage { }
+    item def AlarmEventMsg :> RosEventMessage { }
+    item def StartInfusionRequestMsg :> RosRequest { }
+    item def StartInfusionResponseMsg :> RosResponse { }
+
+    part schemaPumpStatus : RosMessageSchema {
+        attribute redefines schemaId = "ROSMSG-INF-001";
+        attribute redefines title = "PumpStatus message schema";
+        attribute redefines encoding = "ROS 2 IDL";
+    }
+
+    part schemaAlarmEvent : RosMessageSchema {
+        attribute redefines schemaId = "ROSMSG-INF-002";
+        attribute redefines title = "AlarmEvent message schema";
+        attribute redefines encoding = "ROS 2 IDL";
+    }
+
+    part schemaStartInfusionRequest : RosMessageSchema {
+        attribute redefines schemaId = "ROSMSG-INF-003";
+        attribute redefines title = "StartInfusion request schema";
+        attribute redefines encoding = "ROS 2 IDL";
+    }
+
+    part schemaStartInfusionResponse : RosMessageSchema {
+        attribute redefines schemaId = "ROSMSG-INF-004";
+        attribute redefines title = "StartInfusion response schema";
+        attribute redefines encoding = "ROS 2 IDL";
+    }
+
+    part fieldPumpRateMlPerHr : RosMessageField {
+        attribute redefines name = "pump_rate_ml_per_hr";
+        attribute redefines typeName = "float32";
+        attribute redefines cardinality = "1";
+    }
+
+    part fieldInfusionState : RosMessageField {
+        attribute redefines name = "infusion_state";
+        attribute redefines typeName = "string";
+        attribute redefines cardinality = "1";
+    }
+
+    part fieldAlarmCode : RosMessageField {
+        attribute redefines name = "alarm_code";
+        attribute redefines typeName = "string";
+        attribute redefines cardinality = "1";
+    }
+
+    part fieldRequestedRate : RosMessageField {
+        attribute redefines name = "requested_rate_ml_per_hr";
+        attribute redefines typeName = "float32";
+        attribute redefines cardinality = "1";
+    }
+
+    part fieldAcceptanceStatus : RosMessageField {
+        attribute redefines name = "accepted";
+        attribute redefines typeName = "boolean";
+        attribute redefines cardinality = "1";
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // UI WIREFRAME LAYER
     // ═══════════════════════════════════════════════════════════════════════
@@ -782,5 +860,37 @@ package InfusionPump {
     connection : Evidences connect evidence ::> evidenceFormativeUiFindings to subject ::> useErrorAnalysisAlarmWorkflow;
     connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> summativeEvalAlarmWorkflow;
     connection : Evidences connect evidence ::> evidenceUsabilitySummary to subject ::> uiReqAlarmAcknowledgement;
+    connection : ExposesInterface connect provider ::> telemetryGatewayNode to dataInterface ::> PumpStatusTopic;
+    connection : ExposesInterface connect provider ::> telemetryGatewayNode to dataInterface ::> AlarmEventTopic;
+    connection : ExposesInterface connect provider ::> therapySupervisorNode to dataInterface ::> StartInfusionService;
+    connection : CarriesExchangeItem connect dataInterface ::> PumpStatusTopic to exchangeItem ::> PumpStatusMsg;
+    connection : CarriesExchangeItem connect dataInterface ::> AlarmEventTopic to exchangeItem ::> AlarmEventMsg;
+    connection : PublishesTo connect publisher ::> PumpStatusPublisher to channel ::> PumpStatusTopic;
+    connection : PublishesMessage connect publisher ::> PumpStatusPublisher to message ::> PumpStatusMsg;
+    connection : SubscribesTo connect subscriber ::> PumpStatusSubscriber to channel ::> PumpStatusTopic;
+    connection : ConsumesMessage connect subscriber ::> PumpStatusSubscriber to message ::> PumpStatusMsg;
+    connection : PublishesTo connect publisher ::> AlarmEventPublisher to channel ::> AlarmEventTopic;
+    connection : PublishesMessage connect publisher ::> AlarmEventPublisher to message ::> AlarmEventMsg;
+    connection : SubscribesTo connect subscriber ::> AlarmEventSubscriber to channel ::> AlarmEventTopic;
+    connection : ConsumesMessage connect subscriber ::> AlarmEventSubscriber to message ::> AlarmEventMsg;
+    connection : CarriesRequestMessage connect service ::> StartInfusionService to request ::> StartInfusionRequestMsg;
+    connection : CarriesResponseMessage connect service ::> StartInfusionService to response ::> StartInfusionResponseMsg;
+    connection : InvokesInterface connect consumer ::> StartInfusionClient to service ::> StartInfusionService;
+    connection : ServesInterface connect provider ::> StartInfusionServer to service ::> StartInfusionService;
+    connection : DefinesMessageSchema connect schema ::> schemaPumpStatus to message ::> PumpStatusMsg;
+    connection : DefinesMessageSchema connect schema ::> schemaAlarmEvent to message ::> AlarmEventMsg;
+    connection : DefinesMessageSchema connect schema ::> schemaStartInfusionRequest to message ::> StartInfusionRequestMsg;
+    connection : DefinesMessageSchema connect schema ::> schemaStartInfusionResponse to message ::> StartInfusionResponseMsg;
+    connection : HasMessageField connect schema ::> schemaPumpStatus to field ::> fieldPumpRateMlPerHr;
+    connection : HasMessageField connect schema ::> schemaPumpStatus to field ::> fieldInfusionState;
+    connection : HasMessageField connect schema ::> schemaAlarmEvent to field ::> fieldAlarmCode;
+    connection : HasMessageField connect schema ::> schemaStartInfusionRequest to field ::> fieldRequestedRate;
+    connection : HasMessageField connect schema ::> schemaStartInfusionResponse to field ::> fieldAcceptanceStatus;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> telemetryGatewayNode;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> therapySupervisorNode;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaPumpStatus;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaAlarmEvent;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaStartInfusionRequest;
+    connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaStartInfusionResponse;
     connection : Refines connect refined ::> ucMonitorInfusion to refiner ::> normalInfusionScenario;
 }
