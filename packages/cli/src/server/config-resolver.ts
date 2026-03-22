@@ -1,8 +1,8 @@
 // ─── Config Resolver ──────────────────────────────────────────────────────────
 //
 // Resolves the `extends` chain for MEMO configs.
-// Handles: "@memo/medical" → find memo.config.yaml in node_modules/@memo/medical
-// or in workspace packages/medical/
+// Handles: "@memo/medical-modeling-profile" → find memo.config.yaml in node_modules/@memo/medical-modeling-profile
+// or in workspace packages/medical-modeling-profile/
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -58,7 +58,7 @@ function resolveFromNodeModules(packageName: string, fromDir: string): string | 
 
 function resolveFromWorkspace(packageName: string, fromDir: string): string | undefined {
     // Map package names to workspace directories
-    // @memo/medical → packages/medical, @memo/ontology-medical → packages/ontology-medical
+    // @memo/medical-modeling-profile → packages/medical-modeling-profile, @memo/ontology-medical → packages/ontology-medical
     const shortName = packageName.replace(/^@memo\//, '');
 
     // Walk up to find the monorepo root (has pnpm-workspace.yaml or packages/ dir)

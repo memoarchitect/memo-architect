@@ -1,7 +1,7 @@
 // ─── memo init ───────────────────────────────────────────────────────────────
 //
 // Scaffolds a new MEMO project with:
-//   - memo.config.yaml (extends @memo/medical)
+//   - memo.config.yaml (extends @memo/medical-modeling-profile)
 //   - model/ directory with a starter .sysml file
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ export async function initCommand(
 projectName: ${name}
 projectType: device
 
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 
 ontologies:
   - name: memo-ontology-medical

@@ -128,7 +128,7 @@ These are too specific for both core and `@memo/ontology-medical`:
 
 These remain rules/config/workbench concerns:
 
-- closure rules in `packages/medical/memo.config.yaml`
+- closure rules in `packages/medical-modeling-profile/memo.config.yaml`
 - viewpoint filtering and diagram declarations in `packages/ontology/memo.config.yaml`
 - completeness logic and compliance workflows
 
@@ -146,4 +146,4 @@ The current ontology must add the following before the split is complete:
 
 - The current `@memo/ontology` package should be considered transitional and broad, not the final standalone core release.
 - Future work will split the package without changing the architectural intent recorded here.
-- `@memo/medical` should eventually depend on `@memo/ontology-medical`, not directly on a monolithic base ontology.
+- `@memo/medical-modeling-profile` should eventually depend on `@memo/ontology-medical`, not directly on a monolithic base ontology.

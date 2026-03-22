@@ -1,11 +1,11 @@
-# @memo/medical — Medical workbench package
+# @memo/medical-modeling-profile — Medical modeling profile package
 # Extends @memo/ontology-medical with:
 #   - closure rules
 #   - medical viewpoints
 #   - starter scaffolding
 #   - closure rules, viewpoints, and starter scaffolding only
 
-projectName: "@memo/medical"
+projectName: "@memo/medical-modeling-profile"
 projectType: device
 
 ontologies:
@@ -15,9 +15,9 @@ ontologies:
 extends: "@memo/ontology-medical"
 
 ontologyMetadata:
-  id: "@memo/medical"
+  id: "@memo/medical-modeling-profile"
   version: "2.0.0"
-  description: "Medical workbench package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical"
+  description: "Medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical"
   author: "SysAnd"
   license: "Apache-2.0"
   tags:
@@ -25,7 +25,7 @@ ontologyMetadata:
     - ISO-14971
     - IEC-62304
     - IEC-60601
-    - workbench
+    - modeling-profile
 
 closureRules:
   - id: CR-MED-001

@@ -46,9 +46,9 @@ cd "$REPO_DIR/packages/core"
 CORE_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
 echo "  ✓ @memo/core     → $(basename "$CORE_TGZ")"
 
-cd "$REPO_DIR/packages/medical"
+cd "$REPO_DIR/packages/medical-modeling-profile"
 MEDICAL_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
-echo "  ✓ @memo/medical  → $(basename "$MEDICAL_TGZ")"
+echo "  ✓ @memo/medical-modeling-profile  → $(basename "$MEDICAL_TGZ")"
 
 cd "$REPO_DIR/packages/cli"
 CLI_TGZ=$(pnpm pack --pack-destination "$TARBALLS_DIR" 2>/dev/null | tail -1)
@@ -105,7 +105,7 @@ check_file "node_modules/@memo/ontology-core/memo.config.yaml"
 check_file "node_modules/@memo/ontology-core/sysml/index.sysml"
 check_file "node_modules/@memo/ontology-medical/memo.config.yaml"
 check_file "node_modules/@memo/ontology-medical/sysml/index.sysml"
-check_file "node_modules/@memo/medical/memo.config.yaml"
+check_file "node_modules/@memo/medical-modeling-profile/memo.config.yaml"
 
 echo ""
 

@@ -1,8 +1,8 @@
-# Infusion Pump Project — example device model using @memo/medical config
+# Infusion Pump Project — example device model using @memo/medical-modeling-profile config
 projectName: infusion-pump
 projectType: device
 
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 
 ontologies:
   - name: memo-ontology-medical

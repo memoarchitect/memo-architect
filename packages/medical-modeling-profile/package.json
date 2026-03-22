@@ -1,7 +1,7 @@
 {
-  "name": "@memo/medical",
+  "name": "@memo/medical-modeling-profile",
   "version": "2.0.0",
-  "description": "MEMO medical workbench package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical",
+  "description": "MEMO medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",

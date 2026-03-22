@@ -7,7 +7,7 @@ Complete reference for all fields in `memo.config.yaml`.
 ```yaml
 projectName: string          # Project name (required)
 projectType: ontology|device # "ontology" for shared types, "device" for projects
-extends: string              # Parent config package (e.g., "@memo/medical")
+extends: string              # Parent config package (e.g., "@memo/medical-modeling-profile")
 ontologies:                  # Referenced ontology packages
   - name: string
     version: string
@@ -160,7 +160,7 @@ firstRun:
 ## Full Example
 
 ```yaml
-projectName: "@memo/medical"
+projectName: "@memo/medical-modeling-profile"
 projectType: device
 extends: "@memo/ontology-medical"
 

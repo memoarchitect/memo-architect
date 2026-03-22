@@ -7,8 +7,8 @@ MEMO uses a YAML-based configuration system with inheritance chains for domain r
 ```mermaid
 graph TD
     Core["@memo/ontology-core<br/>memo.config.yaml<br/>(domain-agnostic backbone)"] --> MedicalOntology["@memo/ontology-medical<br/>memo.config.yaml<br/>(medical ontology backbone)"]
-    MedicalOntology --> Medical["@memo/medical<br/>memo.config.yaml<br/>(rules, viewpoints, templates)"]
-    Medical --> Project["your-project/<br/>memo.config.yaml<br/>(extends: @memo/medical)"]
+    MedicalOntology --> Medical["@memo/medical-modeling-profile<br/>memo.config.yaml<br/>(rules, viewpoints, templates)"]
+    Medical --> Project["your-project/<br/>memo.config.yaml<br/>(extends: @memo/medical-modeling-profile)"]
 
     style Core fill:#7B68EE,color:#fff
     style MedicalOntology fill:#C0392B,color:#fff
@@ -24,13 +24,13 @@ A project config can extend a domain config:
 # your-project/memo.config.yaml
 projectName: ventilator
 projectType: device
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 ```
 
-The CLI resolves `@memo/medical` by searching:
+The CLI resolves `@memo/medical-modeling-profile` by searching:
 
-1. `node_modules/@memo/medical/memo.config.yaml`
-2. Workspace `packages/medical/memo.config.yaml` (monorepo)
+1. `node_modules/@memo/medical-modeling-profile/memo.config.yaml`
+2. Workspace `packages/medical-modeling-profile/memo.config.yaml` (monorepo)
 
 ## Merge Strategy
 

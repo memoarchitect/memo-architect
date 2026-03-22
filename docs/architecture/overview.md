@@ -39,7 +39,7 @@ graph TD
         MedRels[Medical Relationships]
     end
 
-    subgraph "@memo/medical"
+    subgraph "@memo/medical-modeling-profile"
         MedConfig[Medical Workbench Config]
         Rules[109 Closure Rules]
         Viewpoints[Medical Viewpoints]
@@ -91,7 +91,7 @@ graph TD
 | `@memo/core` | Parser, model, validation | `parseFiles`, `buildMemoModel`, `modelToDTO`, `evaluateClosureRules`, `computeCompleteness` |
 | `@memo/ontology-core` | Core ontology backbone | Domain-agnostic SysML v2 MBSE types |
 | `@memo/ontology-medical` | Medical ontology backbone | Medical device development types built on core |
-| `@memo/medical` | Medical workbench config | `memo.config.yaml` with rules, viewpoints, and starter templates |
+| `@memo/medical-modeling-profile` | Medical modeling profile | `memo.config.yaml` with rules, viewpoints, and starter templates |
 | `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
 | `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
 
@@ -100,7 +100,7 @@ graph TD
 ```
 @memo/web ──> @memo/core
 @memo/cli ──> @memo/core
-@memo/medical ──> @memo/ontology-medical
+@memo/medical-modeling-profile ──> @memo/ontology-medical
 @memo/cli ──> @memo/ontology-medical
 @memo/ontology-medical ──> @memo/ontology-core
 @memo/core (standalone)

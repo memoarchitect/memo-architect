@@ -43,8 +43,8 @@ memo/
 │   │   │   └── index.sysml              # Package entry
 │   │   └── memo.config.yaml             # Medical ontology config
 │   │
-│   ├── medical/                 # @memo/medical — workbench config
-│   │   └── memo.config.yaml             # medical workbench rules, viewpoints, and templates
+│   ├── medical-modeling-profile/   # @memo/medical-modeling-profile — modeling profile config
+│   │   └── memo.config.yaml             # medical modeling profile rules, viewpoints, and templates
 │   │
 │   ├── cli/                     # @memo/cli — command-line interface
 │   │   └── src/
@@ -103,7 +103,7 @@ Turborepo manages the build pipeline with these task definitions:
 The `^build` dependency ensures the ontology/build chain is respected:
 
 ```
-@memo/ontology-core → @memo/ontology-medical → @memo/medical → @memo/cli
+@memo/ontology-core → @memo/ontology-medical → @memo/medical-modeling-profile → @memo/cli
 ```
 
 ## Key Commands

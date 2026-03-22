@@ -71,7 +71,7 @@ memo/
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-│   └── medical/     @memo/medical  — Medical domain config (109 closure rules, 11 viewpoints)
+│   └── medical-modeling-profile/ @memo/medical-modeling-profile — Medical modeling profile (109 closure rules, 11 viewpoints)
 ├── examples/
 │   ├── infusion-pump/              — Primary infusion-device reference model
 │   └── irrigation-pump/            — Second medical reference model for pressure-control workflows

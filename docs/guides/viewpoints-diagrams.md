@@ -137,7 +137,7 @@ diagram definitions — useful for custom tooling or reports.
 Define custom viewpoints in your `memo.config.yaml`:
 
 ```yaml
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 
 viewpoints:
   - id: my-custom-view

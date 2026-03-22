@@ -39,7 +39,7 @@ The MEMO ontology publishes as a **versioned SysML v2 package** distributed via 
 The MEMO CLI resolves SysML v2 `import` statements by:
 1. Looking in `node_modules/@memo/ontology/sysml/` for `MEMO_Ontology` package
 2. Following standard npm resolution (local → workspace → global)
-3. Domain packages (e.g., `@memo/medical`) extend the ontology and are resolved the same way
+3. Domain packages (e.g., `@memo/medical-modeling-profile`) extend the ontology and are resolved the same way
 
 ## Consequences
 
@@ -110,7 +110,7 @@ package InfusionPump {
   "version": "0.1.0",
   "dependencies": {
     "@memo/ontology": "^1.0.0",
-    "@memo/medical": "^1.0.0"
+    "@memo/medical-modeling-profile": "^1.0.0"
   }
 }
 ```

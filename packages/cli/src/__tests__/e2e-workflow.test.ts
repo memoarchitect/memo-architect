@@ -64,7 +64,7 @@ describe('E2E: memo init → validate → export', () => {
         const config = readFileSync(join(projectDir, 'memo.config.yaml'), 'utf-8');
         expect(config).toContain('projectName: test-device');
         expect(config).toContain('projectType: device');
-        expect(config).toContain('extends: "@memo/medical"');
+        expect(config).toContain('extends: "@memo/medical-modeling-profile"');
     });
 
     it('memo init refuses to overwrite existing directory', () => {
@@ -158,17 +158,17 @@ describe('E2E: custom model validation', () => {
     let projectDir: string;
 
     beforeAll(() => {
-        // Create a test project inside the monorepo so config resolution finds @memo/medical
+        // Create a test project inside the monorepo so config resolution finds @memo/medical-modeling-profile
         projectDir = join(REPO_ROOT, '.test-custom-device-' + process.pid);
         rmSync(projectDir, { recursive: true, force: true });
         mkdirSync(projectDir, { recursive: true });
         mkdirSync(join(projectDir, 'model'), { recursive: true });
 
-        // Write a minimal config that extends @memo/medical
+        // Write a minimal config that extends @memo/medical-modeling-profile
         writeFileSync(join(projectDir, 'memo.config.yaml'), `
 projectName: custom-device
 projectType: device
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 `);
 
         // Write a SysML model with elements and a traced relationship

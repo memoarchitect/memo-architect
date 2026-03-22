@@ -1,12 +1,12 @@
 # Medical Domain Configuration
 
-The `@memo/medical` package is the medical workbench configuration layered on top of `@memo/ontology-medical`.
+The `@memo/medical-modeling-profile` package is the medical modeling profile layered on top of `@memo/ontology-medical`.
 
 It now provides:
 
 - closure rules for ISO 14971, IEC 62304, and IEC 60601 traceability/completeness
 - medical-specific viewpoints and starter scaffolding
-- workbench validation, viewpoints, and starter templates on top of the medical ontology
+- validation, viewpoints, and starter templates on top of the medical ontology
 - second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
 - structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
 - residual-risk, benefit-risk, and production/post-production signal semantics connected into the medical risk and QMS backbone
@@ -23,13 +23,13 @@ It now provides:
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
 | Closure Rules | 109 |
-| Workbench Viewpoints | 11 |
+| Modeling Viewpoints | 11 |
 
 ## Standards Alignment
 
 ### ISO 14971 — Risk Management
 
-The ontology-level risk concepts live in `@memo/ontology-medical`. The `@memo/medical`
+The ontology-level risk concepts live in `@memo/ontology-medical`. The `@memo/medical-modeling-profile`
 package adds the validation and viewpoint layer that operationalizes them:
 
 - Hazard identification → `Hazard` elements
@@ -53,7 +53,7 @@ failure-analysis artifacts are modeled as part of risk analysis, not as detached
 ### IEC 62304 — Software Lifecycle
 
 The ontology-level software lifecycle concepts live in `@memo/ontology-medical`. The
-medical workbench package adds traceability and completeness rules over them:
+medical modeling profile package adds traceability and completeness rules over them:
 
 - User needs → System requirements → Software requirements
 - Explicit lifecycle processes → activities → work products
@@ -70,7 +70,7 @@ specializes the core `StakeholderNeed` concept.
 ### IEC 60601 / IEC 60601-1-6 — Safety, Essential Performance, and Usability
 
 The ontology-level safety, design-control, and product-UI concepts live in `@memo/ontology-medical`.
-The medical workbench package adds usability and essential-performance checks over them:
+The medical modeling profile package adds usability and essential-performance checks over them:
 
 - Use specifications, use-error analysis, and formative/summative evaluations
 - Essential performance linked to safety functions, risk controls, and explicit loss conditions
@@ -108,7 +108,7 @@ The current boundary is deliberate:
 ### ISO 13485 — QMS, Traceability, and Records
 
 The ontology-level QMS and record concepts live in `@memo/ontology-medical`, and the
-medical workbench package uses them to keep regulated records tied to lifecycle,
+medical modeling profile package uses them to keep regulated records tied to lifecycle,
 usability, and risk-analysis artifacts:
 
 - Design history and release records → `DesignHistoryRecord`, `ReleaseBaseline`, `ChangeRecord`
@@ -197,7 +197,7 @@ The ontology packages validate cleanly within that supported subset. MEMO should
 
 ### ISO/IEC/IEEE 42010 — Viewpoint Separation
 
-`@memo/ontology-medical` carries the medical semantics, while `@memo/medical`
+`@memo/ontology-medical` carries the medical semantics, while `@memo/medical-modeling-profile`
 adds viewpoint definitions on top. The dedicated risk-analysis viewpoint keeps
 FMEA / FTA concerns separate from broader safety and software views, which is
 consistent with ISO/IEC/IEEE 42010's viewpoint-driven architecture-description direction.
@@ -209,11 +209,11 @@ Projects extend the medical config:
 ```yaml
 projectName: my-device
 projectType: device
-extends: "@memo/medical"
+extends: "@memo/medical-modeling-profile"
 ```
 
 Projects inherit:
 
 - `@memo/ontology-core` via `@memo/ontology-medical`
 - `@memo/ontology-medical`
-- `@memo/medical` rules, viewpoints, and starter templates
+- `@memo/medical-modeling-profile` rules, viewpoints, and starter templates

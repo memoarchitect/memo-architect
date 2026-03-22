@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 subset parser grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 109 rules, 11 viewpoints)
+- [x] Medical domain config evolved into layered ontology + modeling-profile split (`@memo/ontology-medical` + `@memo/medical-modeling-profile`, 109 rules, 11 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -58,7 +58,7 @@ The medical backbone is intended to support traceable development against **ISO 
 
 ### Phase 3 — Modular Ontology & Multi-Mode Web App
 
-- [x] **Modular ontology architecture** — layered `@memo/ontology-core` + `@memo/ontology-medical` with `@memo/medical` on top
+- [x] **Modular ontology architecture** — layered `@memo/ontology-core` + `@memo/ontology-medical` with `@memo/medical-modeling-profile` on top
 - [x] **Ontology metadata** — `OntologyMetadata` type with id, version, description, author, license, tags
 - [x] **Config merge deduplication** — `dedup()` for cosmaLayers, relationshipTypes, closureRules
 - [x] **External ontology types** — `ExternalOntologyRef` and `LibraryRef` type definitions
@@ -157,7 +157,7 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Classify current ontology content** — documented in ADR-1-6 with core / medical / extension buckets
 - [x] **Remove core contamination** — clean backbone responsibilities now live in `@memo/ontology-core` and `@memo/ontology-medical`; the legacy `@memo/ontology` package is explicitly marked as compatibility-only, and ROS-specific references were removed from its generic interface viewpoint
 - [x] **Add missing P0 method concepts** — legacy `@memo/ontology` now includes first-cut operational concepts, requirement/specification containers, analysis abstractions, and normalized SysML relationship definitions
-- [x] **Keep rules/views separate** — `@memo/medical` now extends `@memo/ontology-medical` and carries workbench rules/viewpoints/templates, with only transitional compatibility kinds left outside the ontology packages
+- [x] **Keep rules/views separate** — `@memo/medical-modeling-profile` now extends `@memo/ontology-medical` and carries profile rules/viewpoints/templates, with only transitional compatibility kinds left outside the ontology packages
 
 ### Next Milestone — `@memo/ontology-core` **[CRITICAL]**
 
@@ -179,10 +179,10 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 ### Next Milestone — Ontology Migration **[HIGH]**
 
 - [x] **Default medical entrypoints** — `memo init`, starter template imports, medical guides, and example configs now point at `@memo/ontology-medical` / `MEMO_Ontology_Medical`
-- [x] **Move common medical-development kinds into ontology** — `UserNeed`, `SoftwareRequirement`, `HardwareRequirement`, `OtherRequirement`, `UserActivity`, `Component`, and `EnvironmentElement` now live in `@memo/ontology-medical` instead of only `@memo/medical`
-- [x] **Move generic platform kinds into core** — `Microcontroller`, `FPGA`, and `SingleBoardComputer` now live in `@memo/ontology-core` instead of only `@memo/medical`
+- [x] **Move common medical-development kinds into ontology** — `UserNeed`, `SoftwareRequirement`, `HardwareRequirement`, `OtherRequirement`, `UserActivity`, `Component`, and `EnvironmentElement` now live in `@memo/ontology-medical` instead of only `@memo/medical-modeling-profile`
+- [x] **Move generic platform kinds into core** — `Microcontroller`, `FPGA`, and `SingleBoardComputer` now live in `@memo/ontology-core` instead of only `@memo/medical-modeling-profile`
 - [x] **Move reusable compliance and rationale kinds into ontology** — `Standard` and `RegulatoryRequirement` now live in `@memo/ontology-medical`, and `Question` now lives in `@memo/ontology-core`
-- [x] **Remove remaining transitional duplicates from `@memo/medical`** — reusable UI/platform realization kinds and medical software defaults now live in the ontology layer, leaving the workbench package focused on rules, viewpoints, and templates
+- [x] **Remove remaining transitional duplicates from `@memo/medical-modeling-profile`** — reusable UI/platform realization kinds and medical software defaults now live in the ontology layer, leaving the modeling profile package focused on rules, viewpoints, and templates
 - [x] **Migrate examples off compatibility-only kinds** — starter/example models now use the layered backbone vocabulary, with `UserNeed` retained as the preferred medical-facing specialization on top of core `StakeholderNeed`
 
 ### Next Milestone — Standards Hardening **[CRITICAL]**
@@ -191,7 +191,7 @@ Refactor the ontology roadmap so MEMO has a clean base ontology plus a standards
 - [x] **Verification semantics widened** — `Verify` now supports broader medical verification subjects instead of only generic requirements
 - [x] **IEC 62304 lifecycle hardening** — added development plan, architecture, detailed design, SOUP evaluation, problem report, and change impact concepts to `@memo/ontology-medical`
 - [x] **IEC 60601 usability/safety hardening** — added user interface requirement, use error, hazard-related use scenario, usability specification/validation, and primary operating function concepts
-- [x] **Medical workbench rules/viewpoints extended** — added 60601/62304 closure rules and a dedicated usability engineering viewpoint
+- [x] **Medical modeling-profile rules/viewpoints extended** — added 60601/62304 closure rules and a dedicated usability engineering viewpoint
 
 ### Next Milestone — Compatibility Retirement + Standards Traceability **[HIGH]**
 
@@ -237,7 +237,7 @@ Bring the workbench validation layer up to the level of the newer ontology conce
 - [x] **Update validation docs/examples** — refreshed validation docs, tutorial output, and config references to the expanded rule pack
 
 Exit criteria:
-- [x] `@memo/medical` validates the newer ontology concepts, not just the original subset
+- [x] `@memo/medical-modeling-profile` validates the newer ontology concepts, not just the original subset
 - [x] docs and examples show the intended rule coverage
 
 ### Next Ontology Milestone — Additional Reference Models **[HIGH]**
@@ -261,7 +261,7 @@ Promote FTA / FMEA / deeper ISO 14971 analysis structure into the medical ontolo
 - [x] **Add fault-tree ontology concepts** — added explicit fault-tree semantics such as `TopEvent`, `IntermediateEvent`, `BasicEvent`, `FaultTreeGate`, and typed propagation/gate relationships
 - [x] **Tie analysis semantics into the existing risk backbone** — connected FMEA / FTA artifacts to `Hazard`, `HazardousSituation`, and `RiskControl` through `escalatesToRisk`, `triggersHazardousSituation`, `detectsFailureMode`, and existing mitigation/verification traces
 - [x] **Exercise the new semantics in live medical examples** — extended `examples/irrigation-pump` with failure analysis and fault propagation on the shared medical backbone
-- [x] **Add workbench validation on top of the ontology** — extended `@memo/medical` with FMEA / FTA closure rules and a dedicated risk-analysis viewpoint without collapsing ontology and tooling concerns
+- [x] **Add workbench validation on top of the ontology** — extended `@memo/medical-modeling-profile` with FMEA / FTA closure rules and a dedicated risk-analysis viewpoint without collapsing ontology and tooling concerns
 
 Exit criteria:
 - [x] `@memo/ontology-medical` contains first-class FTA / FMEA / structured risk-analysis semantics
@@ -292,7 +292,7 @@ Continue refining the medical risk backbone so it covers residual-risk acceptanc
 - [x] **Add risk-governance record semantics** — added `RiskManagementPlan` and `RiskManagementReport` as first-class ontology artifacts tied to the medical risk backbone
 - [x] **Add production/post-production signal semantics** — added `ProductionPostProductionSignal` plus typed monitoring relations back into hazards, harms, risks, and controls
 - [x] **Tie governance semantics into live examples and views** — the irrigation reference model now exercises plan/report/residual-risk/post-market traces, and the medical risk viewpoints surface them
-- [x] **Add workbench validation on top of the ontology** — `@memo/medical` now validates risk-governance and post-market artifacts with dedicated closure rules
+- [x] **Add workbench validation on top of the ontology** — `@memo/medical-modeling-profile` now validates risk-governance and post-market artifacts with dedicated closure rules
 
 Exit criteria:
 - [x] `@memo/ontology-medical` covers residual risk, benefit-risk, and post-market anchors needed for ISO 14971 / ISO 13485 reasoning
@@ -306,7 +306,7 @@ Refine the ontology so connected medical cyber devices and interoperable system-
 - [x] **Add FDA/IEC-aligned medical cybersecurity semantics** — added `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `Vulnerability`, `SecurityControl`, `SBOMArtifact`, and `SecureUpdateCapability` in `@memo/ontology-medical`
 - [x] **Add terminology-boundary anchor semantics** — added `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` so models can reference external terminology intent and versioning without embedding full imported hierarchies
 - [x] **Exercise the new semantics in live examples** — the irrigation reference model now includes hospital-system integration surfaces, cyber threat/control traces, SBOM/update artifacts, and terminology bindings
-- [x] **Add workbench validation and viewpoints on top of the ontology** — `@memo/medical` now validates cybersecurity and terminology-binding artifacts and includes a dedicated cybersecurity/interoperability viewpoint
+- [x] **Add workbench validation and viewpoints on top of the ontology** — `@memo/medical-modeling-profile` now validates cybersecurity and terminology-binding artifacts and includes a dedicated cybersecurity/interoperability viewpoint
 
 Exit criteria:
 - [x] `@memo/ontology-core` supports reusable system-of-systems and data-interface modeling
@@ -336,7 +336,7 @@ Refine the ontology so message-oriented software integration can be modeled with
 - [x] **Add reusable data-modeling semantics to the core backbone** — added publish/subscribe channels, request/response interfaces, message types, schemas, fields, broker routing, and typed messaging relationships in `@memo/ontology-core`
 - [x] **Add event-driven microservice and broker backbone semantics** — added `EventDrivenService`, `MessageBroker`, `EventBus`, `TopicChannel`, `QueueChannel`, `MessageProducer`, `MessageConsumer`, `BrokerExchange`, and `BrokerQueue` in `@memo/ontology-core`
 - [x] **Add reusable technology specializations on top of the backbone** — added ROS and RabbitMQ specializations in `@memo/ontology-core` instead of the medical layer so those concepts remain cross-domain
-- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates ROS-style topic/service/message structures and includes a dedicated data-messaging viewpoint over the shared event-driven backbone
+- [x] **Add workbench validation and viewpoint support** — `@memo/medical-modeling-profile` now validates ROS-style topic/service/message structures and includes a dedicated data-messaging viewpoint over the shared event-driven backbone
 - [x] **Exercise the new semantics in live reference models** — the infusion-pump reference model now includes both ROS-style messaging and a RabbitMQ-backed brokered alarm relay slice
 
 Exit criteria:
@@ -352,7 +352,7 @@ Refine the medical backbone so connected-device data governance can be modeled e
 - [x] **Ground the privacy semantics in HIPAA/GDPR-relevant modeling concerns** — the ontology now distinguishes HIPAA-style permission bases, GDPR-style lawful bases, controller/processor roles, minimum-necessary handling, privacy-by-design assessment, retention, and data-subject request handling without trying to encode legal advice in the ontology itself
 - [x] **Deepen the external ontology import boundary** — added `TerminologyImportBoundary`, `ImportedTerminologySubset`, `ImportedConceptBinding`, and `ImportProvenanceRecord` so models can represent governed import scope, local-to-external binding, and provenance without embedding full imported hierarchies
 - [x] **Exercise the new semantics in live examples** — the irrigation reference model now classifies perioperative exchange payloads as PHI/personal data, governs connected processing activities, models optional consent-governed secondary analytics, and records terminology subset/provenance boundaries
-- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates privacy/governance and import-boundary artifacts and includes a dedicated privacy/import viewpoint
+- [x] **Add workbench validation and viewpoint support** — `@memo/medical-modeling-profile` now validates privacy/governance and import-boundary artifacts and includes a dedicated privacy/import viewpoint
 
 Exit criteria:
 - [x] `@memo/ontology-medical` supports privacy/data-governance semantics needed for connected medical-device modeling
