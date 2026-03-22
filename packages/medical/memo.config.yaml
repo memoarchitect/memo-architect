@@ -657,6 +657,78 @@ closureRules:
       min: 1
     severity: warning
 
+  - id: CR-MED-056
+    description: "Every RiskManagementPlan should plan at least one risk-management subject"
+    entity: RiskManagementPlan
+    rule:
+      type: requireRelationship
+      relationship: plansRiskManagement
+      direction: outgoing
+      relatedKinds:
+        - Risk
+        - FailureAnalysis
+        - FailureModesAndEffectsAnalysis
+        - FaultTreeAnalysis
+        - ResidualRiskEvaluation
+        - BenefitRiskAssessment
+      min: 1
+    severity: warning
+
+  - id: CR-MED-057
+    description: "Every ResidualRiskEvaluation should assess at least one Risk, HazardousSituation, or Harm"
+    entity: ResidualRiskEvaluation
+    rule:
+      type: requireRelationship
+      relationship: assessesResidualRisk
+      direction: outgoing
+      relatedKinds: [Risk, HazardousSituation, Harm]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-058
+    description: "Every BenefitRiskAssessment should weigh at least one ClinicalBenefit"
+    entity: BenefitRiskAssessment
+    rule:
+      type: requireRelationship
+      relationship: weighsAgainstBenefit
+      direction: outgoing
+      relatedKinds: [ClinicalBenefit]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-059
+    description: "Every BenefitRiskAssessment should conclude at least one ResidualRiskEvaluation or OverallResidualRiskEvaluation"
+    entity: BenefitRiskAssessment
+    rule:
+      type: requireRelationship
+      relationship: concludesBenefitRisk
+      direction: outgoing
+      relatedKinds: [ResidualRiskEvaluation, OverallResidualRiskEvaluation]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-060
+    description: "Every RiskManagementReport should conclude at least one OverallResidualRiskEvaluation"
+    entity: RiskManagementReport
+    rule:
+      type: requireRelationship
+      relationship: concludesOverallResidualRisk
+      direction: outgoing
+      relatedKinds: [OverallResidualRiskEvaluation]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-061
+    description: "Every ProductionPostProductionSignal should monitor at least one regulated risk subject"
+    entity: ProductionPostProductionSignal
+    rule:
+      type: requireRelationship
+      relationship: monitorsRiskSubject
+      direction: outgoing
+      relatedKinds: [Risk, Hazard, Harm, RiskControl]
+      min: 1
+    severity: warning
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -667,12 +739,19 @@ viewpoints:
       - Harm
       - Risk
       - RiskControl
+      - ClinicalBenefit
+      - BenefitRiskAssessment
+      - ResidualRiskEvaluation
+      - OverallResidualRiskEvaluation
       - DetectionControl
       - FailureModesAndEffectsAnalysis
       - FailureMode
       - FailureEffect
       - FaultTreeAnalysis
       - TopEvent
+      - RiskManagementPlan
+      - RiskManagementReport
+      - ProductionPostProductionSignal
       - SafetyGoal
       - UseError
       - EssentialPerformance
@@ -684,6 +763,12 @@ viewpoints:
       - causes
       - leadsTo
       - identifies
+      - plansRiskManagement
+      - assessesResidualRisk
+      - weighsAgainstBenefit
+      - concludesBenefitRisk
+      - concludesOverallResidualRisk
+      - monitorsRiskSubject
       - analyzesFailureMode
       - resultsInFailureEffect
       - escalatesToRisk
@@ -717,6 +802,10 @@ viewpoints:
       - FailureMode
       - FailureCause
       - FailureEffect
+      - ClinicalBenefit
+      - BenefitRiskAssessment
+      - ResidualRiskEvaluation
+      - OverallResidualRiskEvaluation
       - DetectionControl
       - TopEvent
       - IntermediateEvent
@@ -726,9 +815,18 @@ viewpoints:
       - HazardousSituation
       - Harm
       - RiskControl
+      - RiskManagementPlan
+      - RiskManagementReport
+      - ProductionPostProductionSignal
       - Test
       - DesignHistoryRecord
     visibleRelationships:
+      - plansRiskManagement
+      - assessesResidualRisk
+      - weighsAgainstBenefit
+      - concludesBenefitRisk
+      - concludesOverallResidualRisk
+      - monitorsRiskSubject
       - analyzesFailureMode
       - hasFailureCause
       - resultsInFailureEffect

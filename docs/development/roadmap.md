@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 55 rules, 6 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 61 rules, 6 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -246,7 +246,7 @@ Prove the ontology against more than a single infusion-pump reference:
 
 - [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
 - [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
-- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 55-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 61-rule medical pack, exposing only the pre-existing infusion behavior warnings
 - [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
@@ -283,6 +283,20 @@ Exit criteria:
 - [x] `@memo/ontology-medical` covers patient/subject, anatomy, procedure-context, and observation semantics needed for early medical-device design reasoning
 - [x] at least one reference model uses the enriched clinical context end to end
 - [x] roadmap direction is explicit about what should be modeled locally versus imported from external clinical ontologies
+
+### Next Ontology Milestone — Risk Governance & Post-Market Semantics **[HIGH]**
+
+Continue refining the medical risk backbone so it covers residual-risk acceptance, benefit-risk rationale, and production/post-production feedback:
+
+- [x] **Add residual-risk and benefit semantics** — added `ClinicalBenefit`, `ResidualRiskEvaluation`, `OverallResidualRiskEvaluation`, and richer `BenefitRiskAssessment` semantics to `@memo/ontology-medical`
+- [x] **Add risk-governance record semantics** — added `RiskManagementPlan` and `RiskManagementReport` as first-class ontology artifacts tied to the medical risk backbone
+- [x] **Add production/post-production signal semantics** — added `ProductionPostProductionSignal` plus typed monitoring relations back into hazards, harms, risks, and controls
+- [x] **Tie governance semantics into live examples and views** — the irrigation reference model now exercises plan/report/residual-risk/post-market traces, and the medical risk viewpoints surface them
+- [x] **Add workbench validation on top of the ontology** — `@memo/medical` now validates risk-governance and post-market artifacts with dedicated closure rules
+
+Exit criteria:
+- [x] `@memo/ontology-medical` covers residual risk, benefit-risk, and post-market anchors needed for ISO 14971 / ISO 13485 reasoning
+- [x] at least one reference model exercises the new semantics end to end
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

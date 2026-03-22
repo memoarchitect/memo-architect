@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 182 | Rules: 55 | Relationships: 60
+Kinds: 188 | Rules: 61 | Relationships: 66
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 55 Medical Closure Rules
+## The 61 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -138,6 +138,17 @@ pnpm memo validate
 | CR-MED-053 | Every **ClinicalObservation** should observe ≥1 **Patient**, **AnatomicalSite**, or **MorphologyState** | Warning |
 | CR-MED-054 | Every **MorphologyState** should be affected by ≥1 **Procedure** | Warning |
 | CR-MED-055 | Every **UseEnvironment** should declare ≥1 **ClinicalEnvironmentQualifier** | Warning |
+
+### Risk Governance and Post-Market Feedback — ISO 14971 / ISO 13485
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-056 | Every **RiskManagementPlan** should plan at least one regulated risk-management subject | Warning |
+| CR-MED-057 | Every **ResidualRiskEvaluation** should assess ≥1 **Risk**, **HazardousSituation**, or **Harm** | Warning |
+| CR-MED-058 | Every **BenefitRiskAssessment** should weigh at least one **ClinicalBenefit** | Warning |
+| CR-MED-059 | Every **BenefitRiskAssessment** should conclude ≥1 **ResidualRiskEvaluation** or **OverallResidualRiskEvaluation** | Warning |
+| CR-MED-060 | Every **RiskManagementReport** should conclude ≥1 **OverallResidualRiskEvaluation** | Warning |
+| CR-MED-061 | Every **ProductionPostProductionSignal** should monitor at least one regulated risk subject | Warning |
 
 ## The Completeness Bar (Web UI)
 
