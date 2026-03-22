@@ -9,7 +9,7 @@
 //   memo export json    — Export model as JSON
 //   memo export dot     — Export model as Graphviz DOT
 //   memo ontology show  — Show resolved ontology summary
-//   memo ontology export— Export ontology as OWL/RDF
+//   memo ontology export— Export ontology as OWL/RDF or a SysAnd project
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Command } from 'commander';
@@ -18,7 +18,11 @@ import { devCommand } from '../commands/dev.js';
 import { initCommand } from '../commands/init.js';
 import { buildCommand } from '../commands/build.js';
 import { exportJsonCommand, exportDotCommand } from '../commands/export.js';
-import { ontologyShowCommand, ontologyExportOwlCommand } from '../commands/ontology.js';
+import {
+    ontologyShowCommand,
+    ontologyExportOwlCommand,
+    ontologyExportSysandCommand,
+} from '../commands/ontology.js';
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
 
 const program = new Command();
@@ -121,6 +125,14 @@ ontologyExportCmd
     .option('--namespace <uri>', 'Ontology namespace URI', 'https://sysand.dev/ontology/memo#')
     .action(async (options: { output?: string; namespace?: string }) => {
         await ontologyExportOwlCommand({ ...options, format: 'xml' });
+    });
+
+ontologyExportCmd
+    .command('sysand')
+    .description('Export ontology dependency stack as a SysAnd project')
+    .option('-o, --output <dir>', 'Output directory path')
+    .action(async (options: { output?: string }) => {
+        await ontologyExportSysandCommand(options);
     });
 
 // ─── memo import ──────────────────────────────────────────────────────────

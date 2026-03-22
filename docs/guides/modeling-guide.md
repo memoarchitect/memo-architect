@@ -11,8 +11,8 @@ enforce this chain:
 
 ```mermaid
 graph TD
-    UN[User Need] -->|traceTo| SR[System Requirement]
-    SR -->|traceTo| SwR[Software Requirement]
+    UN[User Need] -->|derives| SR[System Requirement]
+    SR -->|derives| SwR[Software Requirement]
     SR -->|satisfy| COMP[Logical Component / Software]
     SR -->|verify| TEST[Test]
     SwR -->|verify| TEST
@@ -22,7 +22,7 @@ graph TD
     RC[RiskControl] -->|mitigates| HAZ
     RC -->|verify| TEST
     SF[System Function] -->|allocateTo| COMP
-    UC[Use Case] -->|traceTo| SCEN[Scenario]
+    UC[Use Case] -->|refines| SCEN[Scenario]
 ```
 
 Your goal is to fill in this chain for every element in your model.
@@ -34,27 +34,27 @@ Your goal is to fill in this chain for every element in your model.
 ```sysml
 // User needs — medical-facing specialization of core StakeholderNeed
 requirement unFlowControl : UserNeed {
-    attribute redefines name = "Adjustable Flow Rate";
+    attribute redefines title = "Adjustable Flow Rate";
     doc /* Clinician needs to set and adjust infusion flow rate */
 }
 
 // System requirements — what the system must do
 requirement sysReqFlowAccuracy : SystemRequirement {
-    attribute redefines name = "Flow Rate Accuracy";
+    attribute redefines title = "Flow Rate Accuracy";
     attribute redefines priority = "High";
     doc /* System shall maintain flow rate within +-5% of set value */
 }
 
 // Software requirements — what the software must do
 requirement swReqPIDControl : SoftwareRequirement {
-    attribute redefines name = "PID Flow Control";
+    attribute redefines title = "PID Flow Control";
     attribute redefines safetyClassification = "C";
     doc /* Software shall implement PID control loop at 100ms interval */
 }
 
-// Trace the chain: SwReq → SysReq → UserNeed
-connection : traceTo connect sysReqFlowAccuracy to unFlowControl;
-connection : traceTo connect swReqPIDControl to sysReqFlowAccuracy;
+// Requirement derivation flows from need -> system -> software
+connection : Derives connect source ::> unFlowControl to derived ::> sysReqFlowAccuracy;
+connection : Derives connect source ::> sysReqFlowAccuracy to derived ::> swReqPIDControl;
 ```
 
 ### Risk Management (ISO 14971)
@@ -62,18 +62,17 @@ connection : traceTo connect swReqPIDControl to sysReqFlowAccuracy;
 ```sysml
 // The hazard
 requirement hazOverdose : Hazard {
-    attribute redefines name = "Over-infusion";
-    attribute redefines severity = "Critical";
+    attribute redefines title = "Over-infusion";
 }
 
 // What situation leads to it
 requirement hsOccludedSensor : HazardousSituation {
-    attribute redefines name = "Occluded Flow Sensor";
+    attribute redefines title = "Occluded Flow Sensor";
 }
 
 // The resulting harm
 requirement harmOverdose : Harm {
-    attribute redefines name = "Medication Overdose";
+    attribute redefines title = "Medication Overdose";
     attribute redefines severity = "Critical";
 }
 
@@ -83,9 +82,9 @@ connection : leadsTo connect hsOccludedSensor to harmOverdose;
 
 // Risk control
 requirement rcFlowSensor : RiskControl {
-    attribute redefines name = "Redundant Flow Sensor";
+    attribute redefines title = "Redundant Flow Sensor";
 }
-connection : mitigates connect rcFlowSensor to hazOverdose;
+connection : Mitigates connect control ::> rcFlowSensor to hazard ::> hazOverdose;
 ```
 
 ### Architecture
@@ -141,7 +140,9 @@ Use these relationship types to build traceability:
 
 | Relationship | From → To | Purpose |
 |-------------|-----------|---------|
-| `traceTo` | Requirement → Requirement | Requirements decomposition |
+| `derives` | Need/Requirement → derived Requirement | Requirements decomposition with stable semantics |
+| `refines` | UseCase / concern → scenario / refiner | Refinement when generic tracing is too weak |
+| `traceTo` | Element → Element | Fallback trace when no stronger stable semantics apply |
 | `satisfy` | LogicalComponent → Requirement | Design satisfies requirement |
 | `verify` | Test → Requirement / RiskControl | Verification coverage |
 | `allocateTo` | Function → LogicalComponent | Functional allocation |
@@ -155,15 +156,22 @@ Use these relationship types to build traceability:
 
 ### By CoSMA Layer (recommended)
 
+Organize source files by each element's semantic home. Use viewpoints such as
+physical, software, risk, usability, and safety for reviews; do not treat
+viewpoints as the primary ownership boundary for the ontology or model files.
+
 ```
 model/
-├── business/
+├── purpose/
 │   ├── actors.sysml
-│   └── use-cases.sysml
+│   └── stakeholder-concerns.sysml
 ├── requirements/
 │   ├── user-needs.sysml
 │   ├── system-requirements.sysml
 │   └── software-requirements.sysml
+├── functional/
+│   ├── use-cases.sysml
+│   └── system-functions.sysml
 ├── risk/
 │   ├── hazards.sysml
 │   ├── risk-controls.sysml
@@ -191,7 +199,7 @@ package SystemRequirements {
     import MEMO_Ontology_Medical::*;
 
     requirement sysReq001 : SystemRequirement {
-        attribute redefines name = "Flow Accuracy";
+        attribute redefines title = "Flow Accuracy";
     }
 }
 ```
@@ -217,12 +225,15 @@ with `attribute redefines`:
 
 ```sysml
 requirement myReq : SystemRequirement {
-    attribute redefines name = "My Requirement";
+    attribute redefines title = "My Requirement";
     attribute redefines priority = "High";
     attribute redefines status = "Draft";
     attribute redefines rationale = "Needed for FDA 510(k)";
 }
 ```
+
+Requirements and risk claims generally use `title`. Parts and actions
+generally use `name`.
 
 You can also add custom attributes:
 

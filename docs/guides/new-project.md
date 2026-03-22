@@ -49,7 +49,7 @@ ontologies:
 
 The key line is `extends: "@memo/medical-modeling-profile"`. This gives you:
 
-- **250+ element kinds** across 10+ CoSMA layers (business, requirements, risk,
+- **250+ element kinds** across 10+ CoSMA layers (purpose, requirements, risk,
   functional, logical, physical, software, interfaces, verification, UI)
 - **110+ relationship types** including cyber/integration, clinical-evidence, lifecycle-operations, data-messaging, and risk-analysis traces
 - **109 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, privacy/data-governance and terminology-import boundary semantics, regulated lifecycle/configuration traceability, and event-driven data-interface semantics
@@ -63,10 +63,10 @@ it automatically belongs to its layer.
 
 | Layer | Example Kinds | Purpose |
 |-------|---------------|---------|
-| **Business** | Actor, Stakeholder, UseCase, Scenario | Who uses the device and why |
+| **Purpose** | Actor, Stakeholder, Goal, Concern | Who cares about the device and why |
 | **Requirements** | UserNeed, SystemRequirement, SoftwareRequirement | What the device must do |
 | **Risk** | Hazard, HazardousSituation, Harm, Risk, RiskControl | ISO 14971 risk management |
-| **Functional** | SystemFunction, ComponentFunction, UserActivity | What functions the device performs |
+| **Functional** | UseCase, Scenario, SystemFunction, ComponentFunction | Workflows and functions the device performs |
 | **Logical** | System, Subsystem, LogicalComponent | Logical decomposition |
 | **Physical** | Microcontroller, ElectricalComponent, MechanicalComponent | Physical hardware |
 | **Software** | Software, SoftwareComponent, Firmware | Software architecture |
@@ -89,18 +89,21 @@ package MyDevice {
 
     // A requirement
     requirement sysReqSafeCutting : SystemRequirement {
-        attribute redefines name = "Safe Cutting";
+        attribute redefines title = "Safe Cutting";
         doc /* The device shall stop cutting if tissue resistance exceeds 5N */
     }
 
     // A hazard (risk layer)
     requirement hazExcessiveForce : Hazard {
-        attribute redefines name = "Excessive Cutting Force";
-        attribute redefines severity = "Critical";
+        attribute redefines title = "Excessive Cutting Force";
     }
 
-    // Connect them
-    connection : mitigates connect hazExcessiveForce to sysReqSafeCutting;
+    requirement rcForceLimiter : RiskControl {
+        attribute redefines title = "Force limiting control";
+    }
+
+    // Connect the risk control to the hazard
+    connection : Mitigates connect control ::> rcForceLimiter to hazard ::> hazExcessiveForce;
 }
 ```
 
@@ -112,7 +115,8 @@ package MyDevice {
 | `requirement myId : KindName { ... }` | Requirements, hazards, risks |
 | `action myId : KindName { ... }` | Activities, scenarios, use cases |
 | `connection : relType connect source to target;` | Relationships |
-| `attribute redefines name = "...";` | Set display name |
+| `attribute redefines title = "...";` | Set the display label for requirements and risk claims |
+| `attribute redefines name = "...";` | Set the display label for parts and actions |
 | `doc /* ... */` | Add documentation |
 
 !!! info "Construct is automatic"
@@ -168,12 +172,14 @@ As your model grows, split into multiple files:
 my-device/
 ├── memo.config.yaml
 └── model/
-    ├── business/
-    │   └── actors-usecases.sysml
+    ├── purpose/
+    │   └── actors-stakeholders.sysml
     ├── requirements/
     │   ├── user-needs.sysml
     │   ├── system-requirements.sysml
     │   └── software-requirements.sysml
+    ├── functional/
+    │   └── use-cases-and-functions.sysml
     ├── risk/
     │   └── hazard-analysis.sysml
     ├── architecture/

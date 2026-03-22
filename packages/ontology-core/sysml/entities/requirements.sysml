@@ -11,6 +11,8 @@ package MEMO_Ontology_Core_Requirements {
     requirement def Requirement {
         attribute reqId : String;
         attribute title : String;
+        attribute priority : String;
+        attribute status : String;
         attribute rationale : String;
         attribute category : RequirementCategory;
     }

@@ -57,14 +57,14 @@ package ${toIdentifier(name)} {
     // ─── Example Requirement ────────────────────────────────────────
 
     requirement mainRequirement : SystemRequirement {
-        attribute redefines name = "Main system requirement";
+        attribute redefines title = "Main system requirement";
         doc /* TODO: define your first system requirement */
     }
 
     // ─── Example Hazard ─────────────────────────────────────────────
 
-    part exampleHazard : Hazard {
-        attribute redefines name = "Example hazard";
+    requirement exampleHazard : Hazard {
+        attribute redefines title = "Example hazard";
         doc /* TODO: identify hazards per ISO 14971 */
     }
 }
