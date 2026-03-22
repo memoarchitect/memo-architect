@@ -20,6 +20,51 @@ package MEMO_Ontology_Medical_Relationships {
         end hazard : Hazard [1];
     }
 
+    connection def AnalyzesFailureMode {
+        end analysis : FailureModesAndEffectsAnalysis [1];
+        end failureMode : FailureMode [1];
+    }
+
+    connection def HasFailureCause {
+        end failureMode : FailureMode [1];
+        end cause : FailureCause [1];
+    }
+
+    connection def ResultsInFailureEffect {
+        end failureMode : FailureMode [1];
+        end effect : FailureEffect [1];
+    }
+
+    connection def EscalatesToRisk {
+        end effect : FailureEffect [1];
+        end subject[1];
+    }
+
+    connection def DetectsFailureMode {
+        end control : RiskControl [1];
+        end failureMode : FailureMode [1];
+    }
+
+    connection def DefinesTopEvent {
+        end analysis : FaultTreeAnalysis [1];
+        end topEvent : TopEvent [1];
+    }
+
+    connection def UsesGate {
+        end event[1];
+        end gate : FaultTreeGate [1];
+    }
+
+    connection def ContributesToEvent {
+        end contributor[1];
+        end event[1];
+    }
+
+    connection def TriggersHazardousSituation {
+        end event[1];
+        end situation : HazardousSituation [1];
+    }
+
     connection def Preserves {
         end function : SafetyFunction [1];
         end performance : EssentialPerformance [1];

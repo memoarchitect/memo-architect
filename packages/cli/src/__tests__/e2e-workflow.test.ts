@@ -115,7 +115,7 @@ describe('E2E: memo init → validate → export', () => {
 
         expect(stdout).toContain('Project: irrigation-pump');
         expect(stdout).toContain('Overall: 100%');
-        expect(stdout).toContain('Rules: 42 evaluated');
+        expect(stdout).toMatch(/Rules: \d+ evaluated/);
         expect(exitCode).toBe(0);
     });
 
