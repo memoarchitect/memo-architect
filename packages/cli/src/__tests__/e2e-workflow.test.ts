@@ -85,18 +85,17 @@ describe('E2E: memo init → validate → export', () => {
         expect(stdout).toContain('Completeness by Layer');
         expect(stdout).toContain('Overall:');
 
-        // Exit code 1 because there are errors (expected)
-        expect(exitCode).toBe(1);
+        // Exit code 0 because the example has warnings only
+        expect(exitCode).toBe(0);
     });
 
-    it('memo validate shows specific violations', () => {
+    it('memo validate shows known infusion-pump warnings', () => {
         const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
         const { stdout } = runMayFail('validate', exampleDir);
 
-        // Check for known violations
-        expect(stdout).toContain('CR-MED-');
-        expect(stdout).toContain('Errors');
-        expect(stdout).toContain('Hazard');
+        expect(stdout).toContain('Warnings (3)');
+        expect(stdout).toContain('BV-001');
+        expect(stdout).toContain('performInfusion');
     });
 
     it('memo validate reports layer-level completeness', () => {
@@ -104,10 +103,20 @@ describe('E2E: memo init → validate → export', () => {
         const { stdout } = runMayFail('validate', exampleDir);
 
         // Expect per-layer percentages
-        expect(stdout).toContain('Business Analysis');
+        expect(stdout).toContain('Purpose & Stakeholders');
         expect(stdout).toContain('Risk Management');
         expect(stdout).toContain('Requirements');
         expect(stdout).toMatch(/\d+%/);
+    });
+
+    it('memo validate runs on irrigation-pump example', () => {
+        const exampleDir = join(REPO_ROOT, 'examples/irrigation-pump');
+        const { stdout, exitCode } = runMayFail('validate', exampleDir);
+
+        expect(stdout).toContain('Project: irrigation-pump');
+        expect(stdout).toContain('Overall: 100%');
+        expect(stdout).toContain('Rules: 42 evaluated');
+        expect(exitCode).toBe(0);
     });
 
     it('memo export json produces valid JSON', () => {

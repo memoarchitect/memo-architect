@@ -32,6 +32,21 @@ Results: 2 errors, 1 warning — 94% complete
 - **Errors** (`✗`) — must be fixed; `memo validate` exits with code 1 (blocks CI)
 - **Warnings** (`⚠`) — should be fixed; does not block CI
 
+The repo now includes two medical reference models on the same shared backbone:
+
+- `examples/infusion-pump` — richer infusion trace model with known behavior warnings only
+- `examples/irrigation-pump` — surgical irrigation model stressing pressure control, disposable setup, and reservoir alarming
+
+Use both when changing ontology semantics or medical closure rules:
+
+```bash
+cd examples/infusion-pump
+pnpm memo validate
+
+cd ../irrigation-pump
+pnpm memo validate
+```
+
 ## The 39 Medical Closure Rules
 
 ### Risk Management — ISO 14971

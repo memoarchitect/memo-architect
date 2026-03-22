@@ -20,7 +20,7 @@ pnpm run build
 
 # Run the infusion-pump example with live reload
 pnpm example:dev
-# → opens http://localhost:3000 with 74 elements, 92% completeness
+# → opens http://localhost:3000 with the primary infusion-pump reference model
 ```
 
 ### CLI Usage
@@ -74,7 +74,8 @@ memo/
 │   ├── ontology/    @memo/ontology — Transitional broad ontology package being split
 │   └── medical/     @memo/medical  — Medical domain config (39 closure rules, 5 viewpoints)
 ├── examples/
-│   └── infusion-pump/              — Complete working example (74 elements)
+│   ├── infusion-pump/              — Primary infusion-device reference model
+│   └── irrigation-pump/            — Second medical reference model for pressure-control workflows
 └── docs/                           — MkDocs documentation site
 ```
 
@@ -84,7 +85,7 @@ memo/
 .sysml files (chokidar watch)
   → Langium parser (SysML v2 subset)
   → Semantic model (MemoModel)
-  → Closure rule engine (15 ISO 14971 / IEC 62304 rules)
+  → Closure rule engine (39 medical closure rules)
   → Completeness tracker (per-layer %)
   → WebSocket broadcast → React web app
 ```
@@ -100,22 +101,25 @@ memo/
 | Web UI | React 18 + ReactFlow + Zustand |
 | Layout | ELK.js (layered auto-layout) |
 | Styling | Tailwind CSS 4 |
-| Testing | Vitest (69 tests) |
+| Testing | Vitest |
 
 ## Development
 
 ```bash
 pnpm install
 pnpm run build        # Build all packages (Turborepo cached)
-pnpm run test         # Run all tests (69 passing)
+pnpm run test         # Run all tests
 pnpm run type-check   # TypeScript type checking
 
 # Run the example project (from the repo root)
 pnpm example:dev
 
-# Or run from the example directory
+# Or validate both medical reference models directly
 cd examples/infusion-pump
-node ../../packages/cli/lib/bin/memo.js dev
+node ../../packages/cli/lib/bin/memo.js validate
+
+cd ../irrigation-pump
+node ../../packages/cli/lib/bin/memo.js validate
 ```
 
 ## Documentation

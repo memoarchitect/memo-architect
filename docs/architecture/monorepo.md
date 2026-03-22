@@ -72,14 +72,8 @@ memo/
 │               └── GapBar.tsx           # Bottom violations bar
 │
 ├── examples/
-│   └── infusion-pump/          # Example project
-│       ├── memo.config.yaml
-│       └── model/
-│           ├── infusion-pump.sysml
-│           ├── risk/
-│           ├── requirements/
-│           ├── architecture/
-│           └── verification/
+│   ├── infusion-pump/          # Infusion-device reference model
+│   └── irrigation-pump/        # Surgical irrigation reference model
 │
 ├── docs/                        # This documentation (MkDocs)
 │   └── adr/                    # Architecture Decision Records
