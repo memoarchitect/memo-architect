@@ -66,8 +66,8 @@ my-infusion-pump/
 !!! info "What does `extends: @memo/medical` give you?"
     - **250+ element kinds** across 10+ CoSMA layers
     - **110+ relationship types** including cyber/integration, clinical-evidence, lifecycle-operations, data-messaging, and FMEA / fault-tree risk-analysis traces
-    - **97 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, regulated lifecycle/configuration traceability, and event-driven data-interface semantics
-    - **10 viewpoints** with pre-configured SysML v2 diagrams
+    - **109 closure rules** aligned with ISO 14971, IEC 62304, IEC 62366, IEC 60601, FDA-aligned cybersecurity expectations, privacy/data-governance and terminology-import boundary semantics, regulated lifecycle/configuration traceability, and event-driven data-interface semantics
+    - **11 viewpoints** with pre-configured SysML v2 diagrams
 
 ---
 
@@ -280,7 +280,7 @@ You'll see output like:
 ```
 MEMO Validate — my-infusion-pump
 
-Checking 97 closure rules against 24 elements...
+Checking 109 closure rules against 24 elements...
 
 ✗ CR-MED-002  hazAirEmbolism — Every Hazard must cause at least one HazardousSituation
 ✗ CR-MED-007  swReqAlarmManager — Every SoftwareRequirement must derive from a SystemRequirement

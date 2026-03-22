@@ -292,6 +292,105 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Embedded UI framework SOUP evaluation";
     }
 
+    part dataClassProcedureSummaryPayload : ProtectedHealthInformation {
+        attribute redefines name = "Procedure summary payload PHI classification";
+        attribute redefines sensitivity = "individually identifiable perioperative status data";
+    }
+
+    part dataClassPerioperativeObservation : SpecialCategoryPersonalData {
+        attribute redefines name = "Perioperative observation personal-data classification";
+        attribute redefines sensitivity = "health-data special category";
+    }
+
+    action procProcedureStatusExchange : DataProcessingActivity {
+        attribute redefines name = "Process procedure-status exchange";
+        attribute redefines purpose = "Transmit clinically necessary procedure status and device state into perioperative documentation systems";
+    }
+
+    action procAlarmStatusRelay : DataProcessingActivity {
+        attribute redefines name = "Process alarm-status relay";
+        attribute redefines purpose = "Relay active alarm state into connected perioperative alarm infrastructure";
+    }
+
+    action procQualityAnalyticsExport : DataProcessingActivity {
+        attribute redefines name = "Process quality analytics export";
+        attribute redefines purpose = "Produce a minimized secondary-use dataset for quality analytics after de-identification or consent-governed export";
+    }
+
+    part hospitalControllerRole : DataControllerRole {
+        attribute redefines name = "Hospital Provider Organization";
+        attribute redefines role = "HIPAA covered entity and GDPR controller";
+    }
+
+    part integrationVendorProcessorRole : DataProcessorRole {
+        attribute redefines name = "Perioperative Integration Service";
+        attribute redefines role = "Business associate and GDPR processor";
+    }
+
+    part basisHipaaTreatmentIntegration : HIPAAPermissionBasis {
+        attribute redefines basisId = "HIPAA-IRR-001";
+        attribute redefines title = "Treatment and health-care operations disclosure basis";
+    }
+
+    part basisGdprClinicalCare : LawfulBasis {
+        attribute redefines basisId = "GDPR-IRR-001";
+        attribute redefines title = "Clinical-care processing lawful basis";
+    }
+
+    part basisGdprExplicitConsentAnalytics : LawfulBasis {
+        attribute redefines basisId = "GDPR-IRR-002";
+        attribute redefines title = "Explicit consent for optional quality analytics export";
+    }
+
+    part consentQualityAnalyticsReuse : ConsentRecord {
+        attribute redefines recordId = "CONS-IRR-001";
+        attribute redefines title = "Optional quality analytics export consent";
+        attribute redefines scope = "Secondary analytics use outside direct care";
+    }
+
+    part privacyNoticePerioperativeIntegration : PrivacyNotice {
+        attribute redefines recordId = "PN-IRR-001";
+        attribute redefines title = "Perioperative integration privacy notice";
+        attribute redefines noticeScope = "Connected alarm and procedure-status interfaces";
+    }
+
+    part retentionPolicyProcedureStatus : DataRetentionPolicy {
+        attribute redefines policyId = "RET-IRR-001";
+        attribute redefines retentionPeriod = "Audit and procedure-status records retained per perioperative record and quality-system policy";
+    }
+
+    part minimumNecessaryProcedureStatus : MinimumNecessaryPolicy {
+        attribute redefines policyId = "MIN-IRR-001";
+    }
+
+    part deIdentificationAnalyticsExport : DeIdentificationMethod {
+        attribute redefines methodName = "Safe-harbor and expert-reviewed de-identification profile for analytics export";
+    }
+
+    part pseudonymizationProcedureStatus : PseudonymizationMethod {
+        attribute redefines methodName = "Case-token replacement before cross-system analytics export";
+    }
+
+    part privacyAssessmentConnectedOR : PrivacyImpactAssessment {
+        attribute redefines recordId = "PIA-IRR-001";
+        attribute redefines title = "Connected OR privacy impact assessment";
+        attribute redefines scope = "Procedure-status exchange, alarm relay, secondary analytics, and terminology-boundary governance";
+    }
+
+    part accessRequestProcedureStatusLogs : AccessRequest {
+        attribute redefines recordId = "DSR-IRR-001";
+        attribute redefines title = "Procedure-status log access request handling";
+        attribute redefines requestId = "REQ-IRR-001";
+        attribute redefines requestType = "Access";
+    }
+
+    part erasureRequestAnalyticsExport : ErasureRequest {
+        attribute redefines recordId = "DSR-IRR-002";
+        attribute redefines title = "Analytics export erasure workflow anchor";
+        attribute redefines requestId = "REQ-IRR-002";
+        attribute redefines requestType = "Erasure";
+    }
+
     part terminologyBindingProcedureStatus : TerminologyBinding {
         attribute redefines bindingId = "TB-IRR-001";
         attribute redefines bindingStrength = "required";
@@ -325,6 +424,37 @@ package IrrigationPump_Compliance {
         attribute redefines canonicalUri = "https://memo.example/ConceptMap/device-status-to-loinc";
         attribute redefines version = "1.0.0";
         attribute redefines title = "Device Status To LOINC Concept Map";
+    }
+
+    part terminologyImportBoundaryPerioperative : TerminologyImportBoundary {
+        attribute redefines boundaryId = "TIB-IRR-001";
+        attribute redefines scope = "Imported clinical terminology subsets are limited to perioperative device-status and procedure-summary concepts required for documented integrations";
+    }
+
+    part importedSubsetSnomedProcedureStatus : ImportedTerminologySubset {
+        attribute redefines subsetId = "SUB-IRR-001";
+        attribute redefines title = "SNOMED CT perioperative procedure-status subset";
+        attribute redefines version = "2026-03";
+    }
+
+    part importedSubsetLoincProcedureMetrics : ImportedTerminologySubset {
+        attribute redefines subsetId = "SUB-IRR-002";
+        attribute redefines title = "LOINC procedure metrics subset";
+        attribute redefines version = "2.81";
+    }
+
+    part importedBindingProcedureStatusSummary : ImportedConceptBinding {
+        attribute redefines bindingId = "ICB-IRR-001";
+        attribute redefines localConcept = "ProcedureSummaryPayload.status";
+        attribute redefines externalConcept = "SNOMED CT arthroscopy procedure-status subset and mapped LOINC summary";
+    }
+
+    part importProvenanceProcedureStatus : ImportProvenanceRecord {
+        attribute redefines recordId = "IMP-IRR-001";
+        attribute redefines title = "Procedure-status terminology import provenance";
+        attribute redefines artifactType = "Terminology import provenance package";
+        attribute redefines sourceUri = "http://snomed.info/sct and http://loinc.org";
+        attribute redefines sourceVersion = "SNOMED CT 2026-03 / LOINC 2.81";
     }
 
     part anomalyPressureSpike : SoftwareAnomaly {
@@ -652,10 +782,55 @@ package IrrigationPump_Compliance {
     connection : MaintainsSbom connect sbom ::> sbomIrrigationRelease to subject ::> soupUiFramework;
     connection : SupportsSecureUpdate connect capability ::> secureUpdateIrrigationController to subject ::> swSystemIrrigationController;
     connection : SupportsSecureUpdate connect capability ::> secureUpdateIrrigationController to subject ::> assetAlarmIntegrationChannel;
+    connection : ClassifiesData connect classification ::> dataClassProcedureSummaryPayload to subject ::> ProcedureSummaryPayload;
+    connection : ClassifiesData connect classification ::> dataClassProcedureSummaryPayload to subject ::> ProcedureStatusFHIRInterface;
+    connection : ClassifiesData connect classification ::> dataClassPerioperativeObservation to subject ::> obsJointDistensionMaintained;
+    connection : ClassifiesData connect classification ::> dataClassPerioperativeObservation to subject ::> patientCase;
+    connection : ProcessesData connect activity ::> procProcedureStatusExchange to subject ::> ProcedureSummaryPayload;
+    connection : ProcessesData connect activity ::> procProcedureStatusExchange to subject ::> ProcedureStatusFHIRInterface;
+    connection : ProcessesData connect activity ::> procAlarmStatusRelay to subject ::> AlarmStatusPayload;
+    connection : ProcessesData connect activity ::> procAlarmStatusRelay to subject ::> AlarmStatusFHIRInterface;
+    connection : ProcessesData connect activity ::> procQualityAnalyticsExport to subject ::> ProcedureSummaryPayload;
+    connection : GovernedByProcessingBasis connect activity ::> procProcedureStatusExchange to basis ::> basisHipaaTreatmentIntegration;
+    connection : GovernedByProcessingBasis connect activity ::> procProcedureStatusExchange to basis ::> basisGdprClinicalCare;
+    connection : GovernedByProcessingBasis connect activity ::> procAlarmStatusRelay to basis ::> basisHipaaTreatmentIntegration;
+    connection : GovernedByProcessingBasis connect activity ::> procAlarmStatusRelay to basis ::> basisGdprClinicalCare;
+    connection : GovernedByProcessingBasis connect activity ::> procQualityAnalyticsExport to basis ::> basisGdprExplicitConsentAnalytics;
+    connection : ControlsProcessing connect controller ::> hospitalControllerRole to activity ::> procProcedureStatusExchange;
+    connection : ControlsProcessing connect controller ::> hospitalControllerRole to activity ::> procAlarmStatusRelay;
+    connection : ControlsProcessing connect controller ::> hospitalControllerRole to activity ::> procQualityAnalyticsExport;
+    connection : ProcessesOnBehalfOf connect processor ::> integrationVendorProcessorRole to activity ::> procProcedureStatusExchange;
+    connection : ProcessesOnBehalfOf connect processor ::> integrationVendorProcessorRole to activity ::> procAlarmStatusRelay;
+    connection : RequiresConsent connect subject ::> procQualityAnalyticsExport to consent ::> consentQualityAnalyticsReuse;
+    connection : ProvidesPrivacyNotice connect subject ::> ProcedureStatusFHIRInterface to notice ::> privacyNoticePerioperativeIntegration;
+    connection : ProvidesPrivacyNotice connect subject ::> AlarmStatusFHIRInterface to notice ::> privacyNoticePerioperativeIntegration;
+    connection : GovernedByRetentionPolicy connect subject ::> ProcedureStatusFHIRInterface to policy ::> retentionPolicyProcedureStatus;
+    connection : GovernedByRetentionPolicy connect subject ::> procQualityAnalyticsExport to policy ::> retentionPolicyProcedureStatus;
+    connection : AppliesMinimumNecessary connect activity ::> procProcedureStatusExchange to policy ::> minimumNecessaryProcedureStatus;
+    connection : AppliesMinimumNecessary connect activity ::> procAlarmStatusRelay to policy ::> minimumNecessaryProcedureStatus;
+    connection : AppliesMinimumNecessary connect activity ::> procQualityAnalyticsExport to policy ::> minimumNecessaryProcedureStatus;
+    connection : DeIdentifiesData connect method ::> deIdentificationAnalyticsExport to subject ::> procQualityAnalyticsExport;
+    connection : PseudonymizesData connect method ::> pseudonymizationProcedureStatus to subject ::> procQualityAnalyticsExport;
+    connection : AssessesPrivacyImpact connect assessment ::> privacyAssessmentConnectedOR to subject ::> procProcedureStatusExchange;
+    connection : AssessesPrivacyImpact connect assessment ::> privacyAssessmentConnectedOR to subject ::> procAlarmStatusRelay;
+    connection : AssessesPrivacyImpact connect assessment ::> privacyAssessmentConnectedOR to subject ::> ProcedureStatusFHIRInterface;
+    connection : AssessesPrivacyImpact connect assessment ::> privacyAssessmentConnectedOR to subject ::> terminologyImportBoundaryPerioperative;
+    connection : RespondsToDataSubjectRequest connect request ::> accessRequestProcedureStatusLogs to subject ::> procProcedureStatusExchange;
+    connection : RespondsToDataSubjectRequest connect request ::> erasureRequestAnalyticsExport to subject ::> procQualityAnalyticsExport;
     connection : BindsTerminology connect binding ::> terminologyBindingProcedureStatus to subject ::> ProcedureStatusFHIRInterface;
     connection : ReferencesCodeSystem connect binding ::> terminologyBindingProcedureStatus to codeSystem ::> codeSystemSnomedCt;
     connection : ReferencesValueSet connect binding ::> terminologyBindingProcedureStatus to valueSet ::> valueSetProcedureStatusSummary;
     connection : UsesConceptMap connect binding ::> terminologyBindingProcedureStatus to conceptMap ::> conceptMapDeviceToLoinc;
+    connection : ScopesTerminologyReference connect subset ::> importedSubsetSnomedProcedureStatus to reference ::> codeSystemSnomedCt;
+    connection : ScopesTerminologyReference connect subset ::> importedSubsetLoincProcedureMetrics to reference ::> codeSystemLoinc;
+    connection : BindsImportedConcept connect binding ::> terminologyBindingProcedureStatus to importedConcept ::> importedBindingProcedureStatusSummary;
+    connection : GovernedByImportBoundary connect boundary ::> terminologyImportBoundaryPerioperative to subject ::> terminologyBindingProcedureStatus;
+    connection : GovernedByImportBoundary connect boundary ::> terminologyImportBoundaryPerioperative to subject ::> conceptMapDeviceToLoinc;
+    connection : GovernedByImportBoundary connect boundary ::> terminologyImportBoundaryPerioperative to subject ::> importedSubsetSnomedProcedureStatus;
+    connection : GovernedByImportBoundary connect boundary ::> terminologyImportBoundaryPerioperative to subject ::> importedSubsetLoincProcedureMetrics;
+    connection : ProvidesImportProvenance connect record ::> importProvenanceProcedureStatus to subject ::> importedSubsetSnomedProcedureStatus;
+    connection : ProvidesImportProvenance connect record ::> importProvenanceProcedureStatus to subject ::> importedSubsetLoincProcedureMetrics;
+    connection : ProvidesImportProvenance connect record ::> importProvenanceProcedureStatus to subject ::> importedBindingProcedureStatusSummary;
     connection : MapsSourceCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to sourceSystem ::> codeSystemDeviceStatus;
     connection : MapsTargetCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to targetSystem ::> codeSystemLoinc;
     connection : HasProductVariant connect family ::> productFamilyArthroscopyPlatform to variant ::> variantIntegratedORConsole;
@@ -744,7 +919,21 @@ package IrrigationPump_Compliance {
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> threatModelIntegratedORConnectivity;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> sbomIrrigationRelease;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> secureUpdateIrrigationController;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procProcedureStatusExchange;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procAlarmStatusRelay;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> procQualityAnalyticsExport;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> hospitalControllerRole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> integrationVendorProcessorRole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> consentQualityAnalyticsReuse;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> privacyNoticePerioperativeIntegration;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> retentionPolicyProcedureStatus;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> privacyAssessmentConnectedOR;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> terminologyBindingProcedureStatus;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> terminologyImportBoundaryPerioperative;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> importedSubsetSnomedProcedureStatus;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> importedSubsetLoincProcedureMetrics;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> importedBindingProcedureStatusSummary;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> importProvenanceProcedureStatus;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> collateralAlarmStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> particularIrrigationStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> clinicalEvalPlanIrrigationConsole;

@@ -102,6 +102,7 @@ The current boundary is deliberate:
 - full external clinical terminologies remain a future import/interoperability concern rather than a required local bundle
 - local kinds such as `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, and `ClinicalObservation` are intentionally lightweight anchor concepts, not an attempt to replicate the full depth of SNOMED CT
 - terminology anchor kinds such as `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` capture integration intent and versioned references without embedding full external terminology content in the local ontology
+- deeper import-boundary kinds such as `TerminologyImportBoundary`, `ImportedTerminologySubset`, `ImportedConceptBinding`, and `ImportProvenanceRecord` now capture governed subset scope, local-to-imported concept alignment, and provenance without pretending MEMO already imports or hosts full external ontologies
 - deeper coding systems, patient taxonomies, and externally maintained clinical hierarchies should flow through the future external ontology import capability once that interoperability layer exists
 
 ### ISO 13485 — QMS, Traceability, and Records
@@ -127,6 +128,21 @@ and `@memo/ontology-medical`:
 - medical examples can now model cyber-device interfaces, secure integration controls, threat models, SBOM/update artifacts, and versioned clinical-terminology bindings without pretending to import full external terminologies into the local model
 
 **Enforced by rules:** CR-MED-062 through CR-MED-074
+
+### Privacy, Data Governance, and Import Boundary — HIPAA / GDPR
+
+The ontology-level privacy and import-governance semantics now also live in `@memo/ontology-medical`:
+
+- governed data-classification anchors → `PersonalDataCategory`, `SpecialCategoryPersonalData`, `ProtectedHealthInformation`
+- governed processing/activity semantics → `DataProcessingActivity`
+- explicit legal/governance basis anchors → `ProcessingBasis`, `LawfulBasis`, `HIPAAPermissionBasis`, `ConsentRecord`, `PrivacyNotice`, `DataRetentionPolicy`, `MinimumNecessaryPolicy`
+- accountable roles and privacy-by-design anchors → `DataControllerRole`, `DataProcessorRole`, `PrivacyImpactAssessment`, `DataSubjectRequest`
+- data-handling safeguards → `DeIdentificationMethod`, `PseudonymizationMethod`
+- deeper external terminology import-boundary anchors → `TerminologyImportBoundary`, `ImportedTerminologySubset`, `ImportedConceptBinding`, `ImportProvenanceRecord`
+
+These concepts are intended to support architecture and traceability reasoning for connected medical devices. They are not a substitute for legal review. The medical examples now capture HIPAA-style permission basis and minimum-necessary handling alongside GDPR-style lawful-basis, controller/processor, privacy-impact, retention, and request-handling semantics.
+
+**Enforced by rules:** CR-MED-098 through CR-MED-109
 
 ### Clinical Evaluation, Evidence, and Claims
 

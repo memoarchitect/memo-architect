@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 subset parser grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 97 rules, 10 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 109 rules, 11 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -343,6 +343,21 @@ Exit criteria:
 - [x] `@memo/ontology-core` supports reusable message/data-model semantics plus event-driven microservice and broker semantics
 - [x] ROS and RabbitMQ specializations build on top of that backbone without being modeled as medical-only ontology concepts
 - [x] at least one reference model exercises publishers, subscribers, brokered routing, services, messages, and schemas end to end
+
+### Next Ontology Milestone — Privacy, Data Governance, and External Ontology Import Boundary **[CRITICAL]**
+
+Refine the medical backbone so connected-device data governance can be modeled explicitly, including HIPAA/GDPR-driven privacy concerns and governed boundaries around imported clinical terminology:
+
+- [x] **Add privacy and data-governance semantics to the medical backbone** — added `PersonalDataCategory`, `SpecialCategoryPersonalData`, `ProtectedHealthInformation`, `DataProcessingActivity`, controller/processor roles, consent/notice/retention/minimum-necessary policies, de-identification, pseudonymization, privacy-impact assessment, and data-subject-request anchors to `@memo/ontology-medical`
+- [x] **Ground the privacy semantics in HIPAA/GDPR-relevant modeling concerns** — the ontology now distinguishes HIPAA-style permission bases, GDPR-style lawful bases, controller/processor roles, minimum-necessary handling, privacy-by-design assessment, retention, and data-subject request handling without trying to encode legal advice in the ontology itself
+- [x] **Deepen the external ontology import boundary** — added `TerminologyImportBoundary`, `ImportedTerminologySubset`, `ImportedConceptBinding`, and `ImportProvenanceRecord` so models can represent governed import scope, local-to-external binding, and provenance without embedding full imported hierarchies
+- [x] **Exercise the new semantics in live examples** — the irrigation reference model now classifies perioperative exchange payloads as PHI/personal data, governs connected processing activities, models optional consent-governed secondary analytics, and records terminology subset/provenance boundaries
+- [x] **Add workbench validation and viewpoint support** — `@memo/medical` now validates privacy/governance and import-boundary artifacts and includes a dedicated privacy/import viewpoint
+
+Exit criteria:
+- [x] `@memo/ontology-medical` supports privacy/data-governance semantics needed for connected medical-device modeling
+- [x] `@memo/ontology-medical` supports deeper terminology import-boundary semantics without collapsing into full ontology import tooling
+- [x] at least one reference model exercises PHI/personal-data classification, governed processing, retention/notice/assessment, and terminology subset/provenance semantics end to end
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 

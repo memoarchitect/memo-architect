@@ -72,7 +72,7 @@ memo/
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
 │   ├── ontology/    @memo/ontology — Transitional broad ontology package being split
-│   └── medical/     @memo/medical  — Medical domain config (97 closure rules, 10 viewpoints)
+│   └── medical/     @memo/medical  — Medical domain config (109 closure rules, 11 viewpoints)
 ├── examples/
 │   ├── infusion-pump/              — Primary infusion-device reference model
 │   └── irrigation-pump/            — Second medical reference model for pressure-control workflows

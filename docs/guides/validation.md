@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 272 | Rules: 97 | Relationships: 113
+Kinds: 296 | Rules: 109 | Relationships: 130
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -205,6 +205,23 @@ pnpm memo validate
 | CR-MED-095 | Every **RosService** should carry at least one response message | Warning |
 | CR-MED-096 | Every **RosServiceCall** should invoke at least one **RosService** | Warning |
 | CR-MED-097 | Every **RosServiceServer** should serve at least one **RosService** | Warning |
+
+### Privacy, Data Governance, and External Ontology Import Boundary
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-098 | Every **DataProcessingActivity** should process at least one data-bearing subject | Warning |
+| CR-MED-099 | Every **DataProcessingActivity** should be governed by at least one **ProcessingBasis** | Warning |
+| CR-MED-100 | Every **DataProcessingActivity** should declare at least one **DataControllerRole** | Warning |
+| CR-MED-101 | Every **PersonalDataCategory** should classify at least one governed subject | Warning |
+| CR-MED-102 | Every **ConsentRecord** should support at least one governed subject | Warning |
+| CR-MED-103 | Every **DataRetentionPolicy** should govern at least one subject | Warning |
+| CR-MED-104 | Every **PrivacyImpactAssessment** should assess at least one processing or interface subject | Warning |
+| CR-MED-105 | Every **ImportedTerminologySubset** should scope at least one **ClinicalCodeSystemReference** | Warning |
+| CR-MED-106 | Every **TerminologyImportBoundary** should govern at least one terminology/import subject | Warning |
+| CR-MED-107 | Every **ImportProvenanceRecord** should provide provenance for at least one imported terminology artifact | Warning |
+| CR-MED-108 | Every **TerminologyBinding** should bind at least one **ImportedConceptBinding** when imported terminology subsets are modeled | Warning |
+| CR-MED-109 | Every **MinimumNecessaryPolicy** should apply to at least one **DataProcessingActivity** | Warning |
 
 ## The Completeness Bar (Web UI)
 

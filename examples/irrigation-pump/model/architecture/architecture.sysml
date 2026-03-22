@@ -101,9 +101,13 @@ package IrrigationPump_Architecture {
 
     interface def FHIRDeviceObservationProfile :> InteroperabilityProfile { }
 
-    item def AlarmStatusPayload;
+    item def AlarmStatusPayload :> EventMessage {
+        attribute redefines semanticRole = "alarm-status";
+    }
 
-    item def ProcedureSummaryPayload;
+    item def ProcedureSummaryPayload :> StateMessage {
+        attribute redefines semanticRole = "procedure-summary";
+    }
 
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> fluidPathSubsystem;
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> sensingSubsystem;

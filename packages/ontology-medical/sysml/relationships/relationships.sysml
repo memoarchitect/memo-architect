@@ -230,6 +230,91 @@ package MEMO_Ontology_Medical_Relationships {
         end targetSystem : ClinicalCodeSystemReference [1];
     }
 
+    connection def ClassifiesData {
+        end classification : PersonalDataCategory [1];
+        end subject[1];
+    }
+
+    connection def ProcessesData {
+        end activity : DataProcessingActivity [1];
+        end subject[1];
+    }
+
+    connection def GovernedByProcessingBasis {
+        end activity : DataProcessingActivity [1];
+        end basis : ProcessingBasis [1];
+    }
+
+    connection def RequiresConsent {
+        end subject[1];
+        end consent : ConsentRecord [1];
+    }
+
+    connection def ProvidesPrivacyNotice {
+        end subject[1];
+        end notice : PrivacyNotice [1];
+    }
+
+    connection def GovernedByRetentionPolicy {
+        end subject[1];
+        end policy : DataRetentionPolicy [1];
+    }
+
+    connection def AppliesMinimumNecessary {
+        end activity : DataProcessingActivity [1];
+        end policy : MinimumNecessaryPolicy [1];
+    }
+
+    connection def DeIdentifiesData {
+        end method : DeIdentificationMethod [1];
+        end subject[1];
+    }
+
+    connection def PseudonymizesData {
+        end method : PseudonymizationMethod [1];
+        end subject[1];
+    }
+
+    connection def ControlsProcessing {
+        end controller : DataControllerRole [1];
+        end activity : DataProcessingActivity [1];
+    }
+
+    connection def ProcessesOnBehalfOf {
+        end processor : DataProcessorRole [1];
+        end activity : DataProcessingActivity [1];
+    }
+
+    connection def AssessesPrivacyImpact {
+        end assessment : PrivacyImpactAssessment [1];
+        end subject[1];
+    }
+
+    connection def RespondsToDataSubjectRequest {
+        end request : DataSubjectRequest [1];
+        end subject[1];
+    }
+
+    connection def ScopesTerminologyReference {
+        end subset : ImportedTerminologySubset [1];
+        end reference : ClinicalCodeSystemReference [1];
+    }
+
+    connection def BindsImportedConcept {
+        end binding : TerminologyBinding [1];
+        end importedConcept : ImportedConceptBinding [1];
+    }
+
+    connection def GovernedByImportBoundary {
+        end boundary : TerminologyImportBoundary [1];
+        end subject[1];
+    }
+
+    connection def ProvidesImportProvenance {
+        end record : ImportProvenanceRecord [1];
+        end subject[1];
+    }
+
     connection def AnalyzesFailureMode {
         end analysis : FailureModesAndEffectsAnalysis [1];
         end failureMode : FailureMode [1];

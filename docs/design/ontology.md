@@ -50,7 +50,7 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, system-of-systems integration, event-driven/request-response/message/data-modeling semantics, reusable platform-integration specializations such as ROS and RabbitMQ, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, clinical evaluation / claims semantics, lifecycle-operations semantics, and regulated product-configuration anchors.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, privacy/data-governance anchors, clinical-terminology and import-boundary anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, clinical evaluation / claims semantics, lifecycle-operations semantics, and regulated product-configuration anchors.
 - **Extensions** still carry device-family or technology-specific concepts when the repo eventually supports them as independent packages. The current medical backbone only includes reusable product-family/configuration semantics that are broadly applicable across regulated medical devices.
 
 ### SysML v2 Compliance Boundary
@@ -139,6 +139,11 @@ Each relationship type has:
 | `bindsTerminology` | Terminology Binding → interface/observation | interfaces | Associates an interface with external clinical terminology semantics |
 | `referencesCodeSystem` / `referencesValueSet` | Terminology Binding → terminology reference | interfaces | Records versioned external terminology anchors without importing their full content |
 | `usesConceptMap` / `mapsSourceCodeSystem` / `mapsTargetCodeSystem` | Binding/concept map → terminology systems | interfaces | Captures translation boundaries between device-local and external clinical terminology |
+| `classifiesData` / `processesData` | data classification / processing activity → data-bearing subject | privacy | Captures which exchanges, observations, or patient contexts contain governed personal data and which activities process them |
+| `governedByProcessingBasis` / `requiresConsent` | processing subject → basis/consent | privacy | Models HIPAA permission bases, GDPR lawful bases, and consent-governed secondary uses explicitly |
+| `governedByRetentionPolicy` / `providesPrivacyNotice` / `appliesMinimumNecessary` | governed subject/activity → policy/notice | privacy | Captures retention, notice, and minimization/default-access constraints instead of burying them in free text |
+| `controlsProcessing` / `processesOnBehalfOf` / `assessesPrivacyImpact` / `respondsToDataSubjectRequest` | controller/processor/assessment/request → governed activity | privacy | Keeps controller/processor roles, privacy-by-design assessment, and request handling explicit in the model |
+| `scopesTerminologyReference` / `bindsImportedConcept` / `governedByImportBoundary` / `providesImportProvenance` | subset/binding/boundary/provenance → terminology subject | interfaces / qms | Represents subset scope, local-to-imported concept binding, governance boundary, and provenance for future terminology import work |
 | `claimsForUse` | Clinical Claim → Intended Use / Indication | design-control | Binds claims to the clinical use context they are meant to support |
 | `supportsClinicalClaim` / `evaluatesClinicalClaim` | Clinical evidence / evaluation report → Clinical Claim | qms | Connects claims to evidence sources and governed clinical-evaluation conclusions |
 | `manufacturesSubject` / `installsSubject` / `maintainsSubject` / `calibratesSubject` | Lifecycle procedure → device subject | operational | Makes manufacturing, installation, maintenance, and calibration first-class lifecycle traces |
@@ -212,6 +217,7 @@ The target package stack is:
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── operations-service
+  ├── privacy-import-governance
   ├── product-line
   ├── risk-management (including residual risk, benefit-risk, and post-market anchors)
   ├── risk-analysis (FTA / FMEA semantics on top of medical risk management)
