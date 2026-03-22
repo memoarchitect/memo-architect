@@ -10,6 +10,7 @@ It now provides:
 - second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
 - structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
 - residual-risk, benefit-risk, and production/post-production signal semantics connected into the medical risk and QMS backbone
+- cybersecurity, connected-system, and terminology-binding semantics for FDA-aligned cyber devices and interoperable clinical integrations
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -18,8 +19,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 61 |
-| Workbench Viewpoints | 6 |
+| Closure Rules | 74 |
+| Workbench Viewpoints | 7 |
 
 ## Standards Alignment
 
@@ -35,14 +36,16 @@ package adds the validation and viewpoint layer that operationalizes them:
 - Risk control → `RiskControl` elements with `mitigates` relationships
 - Residual-risk and benefit-risk reasoning → `ResidualRiskEvaluation`, `OverallResidualRiskEvaluation`, `ClinicalBenefit`, and `BenefitRiskAssessment`
 - Governance and feedback anchors → `RiskManagementPlan`, `RiskManagementReport`, and `ProductionPostProductionSignal`
+- Cybersecurity anchors → `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `Vulnerability`, `SecurityControl`, `SBOMArtifact`, and `SecureUpdateCapability`
 - Verification → `Test` elements with `verify` relationships to controls
 - Failure-analysis trace → `escalatesToRisk`, `triggersHazardousSituation`, and `detectsFailureMode` connect analysis results directly into the ISO 14971 chain
 - Governance trace → `plansRiskManagement`, `assessesResidualRisk`, `weighsAgainstBenefit`, `concludesBenefitRisk`, `concludesOverallResidualRisk`, and `monitorsRiskSubject` connect planning, acceptability, benefit-risk rationale, and post-market feedback into that same chain
+- Cyber trace → `modelsThreat`, `threatensAsset`, `exploitsVulnerability`, `mitigatesThreat`, `securesInterface`, `maintainsSbom`, and `supportsSecureUpdate` connect threat modeling, secure design controls, SBOMs, and update capability into the regulated backbone
 
 This follows the direction of ISO 14971:2019 plus ISO/TR 24971:2020 guidance:
 failure-analysis artifacts are modeled as part of risk analysis, not as detached UI-only tooling.
 
-**Enforced by rules:** CR-MED-001 through CR-MED-006, CR-MED-040 through CR-MED-048, and CR-MED-056 through CR-MED-061
+**Enforced by rules:** CR-MED-001 through CR-MED-006, CR-MED-040 through CR-MED-048, CR-MED-056 through CR-MED-061, and CR-MED-062 through CR-MED-074
 
 ### IEC 62304 — Software Lifecycle
 
@@ -95,6 +98,7 @@ The current boundary is deliberate:
 - MEMO models stable backbone concepts locally when they are needed for medical-device design reasoning across many products
 - full external clinical terminologies remain a future import/interoperability concern rather than a required local bundle
 - local kinds such as `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, and `ClinicalObservation` are intentionally lightweight anchor concepts, not an attempt to replicate the full depth of SNOMED CT
+- terminology anchor kinds such as `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` capture integration intent and versioned references without embedding full external terminology content in the local ontology
 - deeper coding systems, patient taxonomies, and externally maintained clinical hierarchies should flow through the future external ontology import capability once that interoperability layer exists
 
 ### ISO 13485 — QMS, Traceability, and Records
@@ -107,7 +111,19 @@ usability, and risk-analysis artifacts:
 - Objective evidence → `ComplianceEvidence`
 - Risk-governance records → `RiskManagementPlan` and `RiskManagementReport`
 - Production/post-production feedback → `ProductionPostProductionSignal`
+- Cybersecurity lifecycle records → SBOMs, secure-update capability descriptions, and post-market cyber review signals can be documented and evidenced alongside other regulated artifacts
 - Risk-analysis artifacts documented under QMS trace → FMEA / fault-tree analyses can be documented alongside lifecycle and usability artifacts
+
+### Cybersecurity and Interoperability — FDA / IEC 81001-5-1 / IEC 80001 / HL7 FHIR
+
+The ontology-level connected-system and interface semantics are split between `@memo/ontology-core`
+and `@memo/ontology-medical`:
+
+- domain-agnostic system-of-systems and interface concepts such as `SystemOfSystems`, `DataInterface`, `DataEndpoint`, `CommunicationProtocol`, and `InteroperabilityProfile` live in `@memo/ontology-core`
+- medical cybersecurity and clinical-terminology anchors such as `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `SecurityControl`, `SBOMArtifact`, `SecureUpdateCapability`, `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` live in `@memo/ontology-medical`
+- medical examples can now model cyber-device interfaces, secure integration controls, threat models, SBOM/update artifacts, and versioned clinical-terminology bindings without pretending to import full external terminologies into the local model
+
+**Enforced by rules:** CR-MED-062 through CR-MED-074
 
 **Enforced by rules:** CR-MED-020 through CR-MED-039
 

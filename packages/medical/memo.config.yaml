@@ -725,7 +725,155 @@ closureRules:
       type: requireRelationship
       relationship: monitorsRiskSubject
       direction: outgoing
-      relatedKinds: [Risk, Hazard, Harm, RiskControl]
+      relatedKinds: [Risk, Hazard, Harm, RiskControl, SecurityControl]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-062
+    description: "Every CybersecurityRequirement should be satisfied by at least one software, structure, or interface element"
+    entity: CybersecurityRequirement
+    rule:
+      type: requireRelationship
+      relationship: satisfy
+      direction: incoming
+      relatedKinds:
+        - Software
+        - SoftwareSystem
+        - SoftwareItem
+        - SoftwareComponent
+        - LogicalComponent
+        - DataInterface
+        - SecureUpdateCapability
+      min: 1
+    severity: warning
+
+  - id: CR-MED-063
+    description: "Every ThreatModel should model at least one ThreatScenario"
+    entity: ThreatModel
+    rule:
+      type: requireRelationship
+      relationship: modelsThreat
+      direction: outgoing
+      relatedKinds: [ThreatScenario]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-064
+    description: "Every ThreatScenario should threaten at least one CyberAsset"
+    entity: ThreatScenario
+    rule:
+      type: requireRelationship
+      relationship: threatensAsset
+      direction: outgoing
+      relatedKinds: [CyberAsset]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-065
+    description: "Every ThreatScenario should exploit at least one Vulnerability"
+    entity: ThreatScenario
+    rule:
+      type: requireRelationship
+      relationship: exploitsVulnerability
+      direction: outgoing
+      relatedKinds: [Vulnerability]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-066
+    description: "Every SecurityControl should mitigate at least one ThreatScenario"
+    entity: SecurityControl
+    rule:
+      type: requireRelationship
+      relationship: mitigatesThreat
+      direction: outgoing
+      relatedKinds: [ThreatScenario]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-067
+    description: "Every SecurityControl should secure at least one DataInterface"
+    entity: SecurityControl
+    rule:
+      type: requireRelationship
+      relationship: securesInterface
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-068
+    description: "Every TerminologyBinding should bind at least one DataInterface or ClinicalObservation"
+    entity: TerminologyBinding
+    rule:
+      type: requireRelationship
+      relationship: bindsTerminology
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-069
+    description: "Every TerminologyBinding should reference at least one ClinicalCodeSystemReference"
+    entity: TerminologyBinding
+    rule:
+      type: requireRelationship
+      relationship: referencesCodeSystem
+      direction: outgoing
+      relatedKinds: [ClinicalCodeSystemReference]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-070
+    description: "Every TerminologyBinding should reference at least one ClinicalValueSetReference"
+    entity: TerminologyBinding
+    rule:
+      type: requireRelationship
+      relationship: referencesValueSet
+      direction: outgoing
+      relatedKinds: [ClinicalValueSetReference]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-071
+    description: "Every ClinicalConceptMapReference should identify at least one source code system"
+    entity: ClinicalConceptMapReference
+    rule:
+      type: requireRelationship
+      relationship: mapsSourceCodeSystem
+      direction: outgoing
+      relatedKinds: [ClinicalCodeSystemReference]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-072
+    description: "Every ClinicalConceptMapReference should identify at least one target code system"
+    entity: ClinicalConceptMapReference
+    rule:
+      type: requireRelationship
+      relationship: mapsTargetCodeSystem
+      direction: outgoing
+      relatedKinds: [ClinicalCodeSystemReference]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-073
+    description: "Every SBOMArtifact should describe at least one software subject"
+    entity: SBOMArtifact
+    rule:
+      type: requireRelationship
+      relationship: maintainsSbom
+      direction: outgoing
+      relatedKinds: [SoftwareSystem, SoftwareItem, SOUPItem]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-074
+    description: "Every SecureUpdateCapability should support at least one software or cyber asset subject"
+    entity: SecureUpdateCapability
+    rule:
+      type: requireRelationship
+      relationship: supportsSecureUpdate
+      direction: outgoing
+      relatedKinds: [SoftwareSystem, SoftwareItem, CyberAsset]
       min: 1
     severity: warning
 
@@ -986,6 +1134,78 @@ viewpoints:
         viewpointId: software-view
         auto: true
         description: Software components and lifecycle decomposition
+
+  - id: cybersecurity-view
+    label: Cybersecurity & Interoperability
+    supportedDiagramTypes: [bdd, req, pkg]
+    visibleKinds:
+      - SystemOfSystems
+      - SystemExternal
+      - DataInterface
+      - DataEndpoint
+      - CommunicationProtocol
+      - InteroperabilityProfile
+      - ExchangeItem
+      - CybersecurityRequirement
+      - AuthenticationRequirement
+      - AuthorizationRequirement
+      - AuditLogRequirement
+      - CyberAsset
+      - ThreatModel
+      - ThreatScenario
+      - Vulnerability
+      - SecurityControl
+      - SBOMArtifact
+      - SecureUpdateCapability
+      - SoftwareSystem
+      - SoftwareItem
+      - SOUPItem
+      - ProductionPostProductionSignal
+      - TerminologyBinding
+      - ClinicalCodeSystemReference
+      - ClinicalValueSetReference
+      - ClinicalConceptMapReference
+    visibleRelationships:
+      - participatesInSystemOfSystems
+      - exposesInterface
+      - hasEndpoint
+      - implementsProtocol
+      - conformsToProfile
+      - carriesExchangeItem
+      - satisfy
+      - modelsThreat
+      - threatensAsset
+      - exploitsVulnerability
+      - mitigatesThreat
+      - securesInterface
+      - maintainsSbom
+      - supportsSecureUpdate
+      - bindsTerminology
+      - referencesCodeSystem
+      - referencesValueSet
+      - usesConceptMap
+      - mapsSourceCodeSystem
+      - mapsTargetCodeSystem
+      - monitorsRiskSubject
+      - documents
+      - evidences
+      - verify
+    visibleLayers:
+      - logical
+      - interfaces
+      - requirements
+      - risk
+      - software
+      - software-lifecycle
+      - qms
+      - verification
+    diagrams:
+      - id: diag-cybersecurity-trace
+        name: Cybersecurity And Interoperability Trace
+        diagramType: bdd
+        viewpointId: cybersecurity-view
+        auto: true
+        description: Connected-system interfaces, cyber threats and controls, and terminology bindings
 
   - id: usability-view
     label: Usability Engineering (IEC 62366 / IEC 60601-1-6)

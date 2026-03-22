@@ -85,6 +85,71 @@ package MEMO_Ontology_Medical_Relationships {
         end subject[1];
     }
 
+    connection def ModelsThreat {
+        end model : ThreatModel [1];
+        end threat : ThreatScenario [1];
+    }
+
+    connection def ThreatensAsset {
+        end threat : ThreatScenario [1];
+        end asset : CyberAsset [1];
+    }
+
+    connection def ExploitsVulnerability {
+        end threat : ThreatScenario [1];
+        end vulnerability : Vulnerability [1];
+    }
+
+    connection def MitigatesThreat {
+        end control : SecurityControl [1];
+        end threat : ThreatScenario [1];
+    }
+
+    connection def SecuresInterface {
+        end control : SecurityControl [1];
+        end dataInterface : DataInterface [1];
+    }
+
+    connection def MaintainsSbom {
+        end sbom : SBOMArtifact [1];
+        end subject[1];
+    }
+
+    connection def SupportsSecureUpdate {
+        end capability : SecureUpdateCapability [1];
+        end subject[1];
+    }
+
+    connection def BindsTerminology {
+        end binding : TerminologyBinding [1];
+        end subject[1];
+    }
+
+    connection def ReferencesCodeSystem {
+        end binding : TerminologyBinding [1];
+        end codeSystem : ClinicalCodeSystemReference [1];
+    }
+
+    connection def ReferencesValueSet {
+        end binding : TerminologyBinding [1];
+        end valueSet : ClinicalValueSetReference [1];
+    }
+
+    connection def UsesConceptMap {
+        end binding : TerminologyBinding [1];
+        end conceptMap : ClinicalConceptMapReference [1];
+    }
+
+    connection def MapsSourceCodeSystem {
+        end conceptMap : ClinicalConceptMapReference [1];
+        end sourceSystem : ClinicalCodeSystemReference [1];
+    }
+
+    connection def MapsTargetCodeSystem {
+        end conceptMap : ClinicalConceptMapReference [1];
+        end targetSystem : ClinicalCodeSystemReference [1];
+    }
+
     connection def AnalyzesFailureMode {
         end analysis : FailureModesAndEffectsAnalysis [1];
         end failureMode : FailureMode [1];

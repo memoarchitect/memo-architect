@@ -92,6 +92,18 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Prime confirmation shall require completion acknowledgment before irrigation can start";
     }
 
+    requirement cyberReqAuthenticatedAlarmIntegration : AuthenticationRequirement {
+        attribute redefines title = "Remote alarm integration shall require authenticated system-to-system sessions";
+    }
+
+    requirement cyberReqAuthorizedStatusExchange : AuthorizationRequirement {
+        attribute redefines title = "Procedure-status exchange shall only permit authorized perioperative systems to retrieve data";
+    }
+
+    requirement cyberReqAuditRemoteEvents : AuditLogRequirement {
+        attribute redefines title = "The system shall log remote alarm and procedure-status exchanges for cybersecurity review";
+    }
+
     requirement useErrStartBeforePrime : UseError {
         attribute redefines title = "Clinician starts irrigation before confirming prime completion";
     }
@@ -140,6 +152,16 @@ package IrrigationPump_Compliance {
         attribute redefines name = "Surgical Irrigation Control System";
     }
 
+    part assetAlarmIntegrationChannel : CyberAsset {
+        attribute redefines name = "Alarm integration channel";
+        attribute redefines assetType = "Networked interface";
+    }
+
+    part assetProcedureStatusChannel : CyberAsset {
+        attribute redefines name = "Procedure-status exchange channel";
+        attribute redefines assetType = "Clinical data interface";
+    }
+
     part swItemPressureController : SoftwareItem {
         attribute redefines name = "Pressure Controller Item";
         attribute redefines safetyClass = SoftwareSafetyClass::C;
@@ -153,6 +175,45 @@ package IrrigationPump_Compliance {
     part soupUiFramework : SOUPItem {
         attribute redefines name = "Embedded UI Framework";
         attribute redefines supplier = "Third-party supplier";
+    }
+
+    part threatModelIntegratedORConnectivity : ThreatModel {
+        attribute redefines title = "Threat model for integrated perioperative connectivity";
+    }
+
+    requirement threatUnauthorizedAlarmSuppression : ThreatScenario {
+        attribute redefines threatId = "THR-IRR-001";
+        attribute redefines title = "Unauthorized client suppresses or alters remote alarm state";
+    }
+
+    requirement threatProcedureStatusDisclosure : ThreatScenario {
+        attribute redefines threatId = "THR-IRR-002";
+        attribute redefines title = "Unauthorized perioperative system retrieves procedure-status data";
+    }
+
+    requirement vulnSharedIntegrationCredential : Vulnerability {
+        attribute redefines vulnerabilityId = "VUL-IRR-001";
+        attribute redefines title = "Shared integration credential reused across multiple clients";
+    }
+
+    requirement vulnWeakAuditCoverage : Vulnerability {
+        attribute redefines vulnerabilityId = "VUL-IRR-002";
+        attribute redefines title = "Remote interface events are not captured with sufficient audit detail";
+    }
+
+    requirement scMutualTlsGateway : SecurityControl {
+        attribute redefines rcId = "SC-IRR-001";
+        attribute redefines title = "Mutual TLS for remote alarm and status interfaces";
+    }
+
+    requirement scRoleScopedApiAccess : SecurityControl {
+        attribute redefines rcId = "SC-IRR-002";
+        attribute redefines title = "Role-scoped API authorization for perioperative integrations";
+    }
+
+    requirement scRemoteAuditTrail : SecurityControl {
+        attribute redefines rcId = "SC-IRR-003";
+        attribute redefines title = "Tamper-evident audit trail for remote integration events";
     }
 
     part swPlanIrrigationController : SoftwareDevelopmentPlan {
@@ -171,8 +232,51 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Prime workflow and alarm handling detailed design";
     }
 
+    part sbomIrrigationRelease : SBOMArtifact {
+        attribute redefines title = "SBOM for integrated irrigation controller release";
+    }
+
+    part secureUpdateIrrigationController : SecureUpdateCapability {
+        attribute redefines name = "Signed update and integrity validation capability";
+    }
+
     part soupEvalUiFramework : SOUPEvaluation {
         attribute redefines title = "Embedded UI framework SOUP evaluation";
+    }
+
+    part terminologyBindingProcedureStatus : TerminologyBinding {
+        attribute redefines bindingId = "TB-IRR-001";
+        attribute redefines bindingStrength = "required";
+    }
+
+    part codeSystemDeviceStatus : ClinicalCodeSystemReference {
+        attribute redefines canonicalUri = "https://memo.example/CodeSystem/irrigation-device-status";
+        attribute redefines version = "1.0.0";
+        attribute redefines title = "Irrigation Device Status Code System";
+    }
+
+    part codeSystemLoinc : ClinicalCodeSystemReference {
+        attribute redefines canonicalUri = "http://loinc.org";
+        attribute redefines version = "2.81";
+        attribute redefines title = "LOINC";
+    }
+
+    part codeSystemSnomedCt : ClinicalCodeSystemReference {
+        attribute redefines canonicalUri = "http://snomed.info/sct";
+        attribute redefines version = "international";
+        attribute redefines title = "SNOMED CT";
+    }
+
+    part valueSetProcedureStatusSummary : ClinicalValueSetReference {
+        attribute redefines canonicalUri = "https://memo.example/ValueSet/arthroscopy-procedure-status";
+        attribute redefines version = "1.0.0";
+        attribute redefines title = "Arthroscopy Procedure Status Summary Value Set";
+    }
+
+    part conceptMapDeviceToLoinc : ClinicalConceptMapReference {
+        attribute redefines canonicalUri = "https://memo.example/ConceptMap/device-status-to-loinc";
+        attribute redefines version = "1.0.0";
+        attribute redefines title = "Device Status To LOINC Concept Map";
     }
 
     part anomalyPressureSpike : SoftwareAnomaly {
@@ -231,6 +335,14 @@ package IrrigationPump_Compliance {
         attribute redefines artifactType = "Usability Test Report";
     }
 
+    part signalCyberIntegrationReview : ProductionPostProductionSignal {
+        attribute redefines recordId = "PPS-IRR-002";
+        attribute redefines title = "Remote integration cybersecurity review signal";
+        attribute redefines artifactType = "Cybersecurity monitoring review";
+        attribute redefines signalId = "SIG-IRR-002";
+        attribute redefines sourceType = "Authentication-failure and audit-log review";
+    }
+
     part signalReservoirCollapseTrend : ProductionPostProductionSignal {
         attribute redefines recordId = "PMS-IRR-001";
         attribute redefines title = "Reservoir depletion complaint trend review";
@@ -282,6 +394,11 @@ package IrrigationPump_Compliance {
     part testReservoirAlarm : Test {
         attribute redefines testId = "TC-IRR-SYS-002";
         attribute redefines name = "Reservoir depletion alarm verification";
+    }
+
+    part testCyberIntegration : Test {
+        attribute redefines testId = "TC-IRR-CY-001";
+        attribute redefines name = "Cybersecurity integration verification";
     }
 
     connection : AddressesUseError connect uiRequirement ::> uiReqPrimeConfirmation to useError ::> useErrStartBeforePrime;
@@ -344,6 +461,35 @@ package IrrigationPump_Compliance {
     connection : ConcludesOverallResidualRisk connect report ::> riskReportIrrigationConsole to evaluation ::> overallResidualRiskEvalIrrigation;
     connection : MonitorsRiskSubject connect signal ::> signalReservoirCollapseTrend to subject ::> harmLossOfVisualization;
     connection : MonitorsRiskSubject connect signal ::> signalReservoirCollapseTrend to subject ::> rcReservoirLowAlarm;
+    connection : MonitorsRiskSubject connect signal ::> signalCyberIntegrationReview to subject ::> scMutualTlsGateway;
+    connection : MonitorsRiskSubject connect signal ::> signalCyberIntegrationReview to subject ::> scRemoteAuditTrail;
+
+    connection : Satisfy connect satisfiedBy ::> alarmCoordinatorModule to satisfies ::> cyberReqAuthenticatedAlarmIntegration;
+    connection : Satisfy connect satisfiedBy ::> perioperativeDocumentationSystem to satisfies ::> cyberReqAuthorizedStatusExchange;
+    connection : Satisfy connect satisfiedBy ::> secureUpdateIrrigationController to satisfies ::> cyberReqAuditRemoteEvents;
+    connection : ModelsThreat connect model ::> threatModelIntegratedORConnectivity to threat ::> threatUnauthorizedAlarmSuppression;
+    connection : ModelsThreat connect model ::> threatModelIntegratedORConnectivity to threat ::> threatProcedureStatusDisclosure;
+    connection : ThreatensAsset connect threat ::> threatUnauthorizedAlarmSuppression to asset ::> assetAlarmIntegrationChannel;
+    connection : ThreatensAsset connect threat ::> threatProcedureStatusDisclosure to asset ::> assetProcedureStatusChannel;
+    connection : ExploitsVulnerability connect threat ::> threatUnauthorizedAlarmSuppression to vulnerability ::> vulnSharedIntegrationCredential;
+    connection : ExploitsVulnerability connect threat ::> threatProcedureStatusDisclosure to vulnerability ::> vulnWeakAuditCoverage;
+    connection : MitigatesThreat connect control ::> scMutualTlsGateway to threat ::> threatUnauthorizedAlarmSuppression;
+    connection : MitigatesThreat connect control ::> scRoleScopedApiAccess to threat ::> threatProcedureStatusDisclosure;
+    connection : MitigatesThreat connect control ::> scRemoteAuditTrail to threat ::> threatProcedureStatusDisclosure;
+    connection : SecuresInterface connect control ::> scMutualTlsGateway to dataInterface ::> AlarmStatusFHIRInterface;
+    connection : SecuresInterface connect control ::> scMutualTlsGateway to dataInterface ::> ProcedureStatusFHIRInterface;
+    connection : SecuresInterface connect control ::> scRoleScopedApiAccess to dataInterface ::> ProcedureStatusFHIRInterface;
+    connection : SecuresInterface connect control ::> scRemoteAuditTrail to dataInterface ::> AlarmStatusFHIRInterface;
+    connection : MaintainsSbom connect sbom ::> sbomIrrigationRelease to subject ::> swSystemIrrigationController;
+    connection : MaintainsSbom connect sbom ::> sbomIrrigationRelease to subject ::> soupUiFramework;
+    connection : SupportsSecureUpdate connect capability ::> secureUpdateIrrigationController to subject ::> swSystemIrrigationController;
+    connection : SupportsSecureUpdate connect capability ::> secureUpdateIrrigationController to subject ::> assetAlarmIntegrationChannel;
+    connection : BindsTerminology connect binding ::> terminologyBindingProcedureStatus to subject ::> ProcedureStatusFHIRInterface;
+    connection : ReferencesCodeSystem connect binding ::> terminologyBindingProcedureStatus to codeSystem ::> codeSystemSnomedCt;
+    connection : ReferencesValueSet connect binding ::> terminologyBindingProcedureStatus to valueSet ::> valueSetProcedureStatusSummary;
+    connection : UsesConceptMap connect binding ::> terminologyBindingProcedureStatus to conceptMap ::> conceptMapDeviceToLoinc;
+    connection : MapsSourceCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to sourceSystem ::> codeSystemDeviceStatus;
+    connection : MapsTargetCodeSystem connect conceptMap ::> conceptMapDeviceToLoinc to targetSystem ::> codeSystemLoinc;
 
     connection : Satisfy connect satisfiedBy ::> swItemPressureController to satisfies ::> swrPressureControlLoop;
     connection : Satisfy connect satisfiedBy ::> swItemAlarmSupervisor to satisfies ::> swrAlarmCoordinator;
@@ -364,6 +510,12 @@ package IrrigationPump_Compliance {
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> swrReservoirEstimation;
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> swrAlarmCoordinator;
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> rcReservoirLowAlarm;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> scMutualTlsGateway;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> scRoleScopedApiAccess;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> scRemoteAuditTrail;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> cyberReqAuthenticatedAlarmIntegration;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> cyberReqAuthorizedStatusExchange;
+    connection : Verify connect verifiedBy ::> testCyberIntegration to verifies ::> cyberReqAuditRemoteEvents;
 
     connection : GovernsActivity connect process ::> swDevProcessIrrigationController to activity ::> swRequirementsPressureControl;
     connection : GovernsActivity connect process ::> swDevProcessIrrigationController to activity ::> swArchitecturePressureControl;
@@ -393,6 +545,10 @@ package IrrigationPump_Compliance {
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> ftaReservoirAlarmLoss;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> riskPlanIrrigationConsole;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> riskReportIrrigationConsole;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> threatModelIntegratedORConnectivity;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> sbomIrrigationRelease;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> secureUpdateIrrigationController;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> terminologyBindingProcedureStatus;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> collateralAlarmStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> particularIrrigationStandard;
 
@@ -401,9 +557,11 @@ package IrrigationPump_Compliance {
     connection : Evidences connect evidence ::> evidenceSummativePrimeWorkflow to subject ::> summativeEvalPrimeWorkflow;
     connection : Evidences connect evidence ::> evidenceSummativePrimeWorkflow to subject ::> uiReqPrimeConfirmation;
     connection : Evidences connect evidence ::> signalReservoirCollapseTrend to subject ::> overallResidualRiskEvalIrrigation;
+    connection : Evidences connect evidence ::> signalCyberIntegrationReview to subject ::> threatModelIntegratedORConnectivity;
 
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swSystemIrrigationController;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swItemPressureController;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> swItemAlarmSupervisor;
     connection : Documents connect record ::> releaseBaseline20 to subject ::> soupEvalUiFramework;
+    connection : Documents connect record ::> releaseBaseline20 to subject ::> sbomIrrigationRelease;
 }

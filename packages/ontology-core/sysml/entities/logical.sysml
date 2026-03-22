@@ -4,6 +4,8 @@ package MEMO_Ontology_Core_Logical {
         attribute name : String;
     }
 
+    part def SystemOfSystems :> System { }
+
     part def SystemExternal :> System { }
 
     part def Subsystem {

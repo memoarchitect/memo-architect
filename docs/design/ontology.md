@@ -49,8 +49,8 @@ Entity kinds are mapped to SysML v2 constructs:
 
 As the ontology is split:
 
-- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
+- **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, system-of-systems integration, analysis, verification, and procedure-context semantics such as environments, performers, subjects, and resources.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, residual-risk / benefit-risk governance, cybersecurity, clinical-terminology anchors, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
 - **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
 
 ### Compatibility Policy
@@ -87,6 +87,12 @@ Each relationship type has:
 | `derives` | Need/Requirement → derived Requirement | requirements | Downstream requirement derivation |
 | `refines` | Base concern/use case → refiner | requirements | More precise refinement when generic tracing is too weak |
 | `traceTo` | Element → Element | requirements | Fallback trace only when no stronger stable semantics are worth encoding |
+| `participatesInSystemOfSystems` | System → System Of Systems | logical | Explicit system-of-systems membership for connected device ecosystems |
+| `exposesInterface` | System/component → Data Interface | interfaces | Declares a system-owned integration surface |
+| `hasEndpoint` | Data Interface → Data Endpoint | interfaces | Binds an interface to a concrete endpoint/port |
+| `implementsProtocol` | Interface subject → Communication Protocol | interfaces | Captures wire/API protocol semantics |
+| `conformsToProfile` | Interface subject → Interoperability Profile | interfaces | Captures profile-level interoperability commitments |
+| `carriesExchangeItem` | Data Interface → Exchange Item | interfaces | Declares the payload or message family an interface carries |
 | `hasSubProcedure` | Procedure → Procedure step | operational | Procedure decomposition for reusable workflow structure |
 | `performedBy` | Procedure → Operational Actor | operational | Explicit performer or user role |
 | `performedOn` | Procedure → Operational Entity | operational | Explicit subject/recipient of a procedure |
@@ -105,6 +111,16 @@ Each relationship type has:
 | `concludesBenefitRisk` | Benefit-Risk Assessment → residual-risk subject | risk | Captures the assessment outcome over residual-risk evaluations |
 | `concludesOverallResidualRisk` | Risk Management Report → Overall Residual Risk Evaluation | qms | Records overall residual-risk acceptability in a governed report |
 | `monitorsRiskSubject` | Production/Post-Production Signal → Hazard/Harm/Risk/Control | qms | Feeds production/post-production learning back into the risk backbone |
+| `modelsThreat` | Threat Model → Threat Scenario | risk | Connects cybersecurity analysis structure to concrete threat scenarios |
+| `threatensAsset` | Threat Scenario → Cyber Asset | risk | Declares the cyber asset under attack |
+| `exploitsVulnerability` | Threat Scenario → Vulnerability | risk | Captures the vulnerability a threat depends on |
+| `mitigatesThreat` | Security Control → Threat Scenario | risk | Connects a security control to the threat it reduces |
+| `securesInterface` | Security Control → Data Interface | risk | Declares which integration surface the control protects |
+| `maintainsSbom` | SBOM Artifact → software subject | software-lifecycle | Links SBOM content to the software it enumerates |
+| `supportsSecureUpdate` | Secure Update Capability → software/cyber asset | software-lifecycle | Captures update/authenticity capability for connected devices |
+| `bindsTerminology` | Terminology Binding → interface/observation | interfaces | Associates an interface with external clinical terminology semantics |
+| `referencesCodeSystem` / `referencesValueSet` | Terminology Binding → terminology reference | interfaces | Records versioned external terminology anchors without importing their full content |
+| `usesConceptMap` / `mapsSourceCodeSystem` / `mapsTargetCodeSystem` | Binding/concept map → terminology systems | interfaces | Captures translation boundaries between device-local and external clinical terminology |
 | `analyzesFailureMode` | FMEA → Failure Mode | risk | Structured failure analysis coverage |
 | `hasFailureCause` | Failure Mode → Failure Cause | risk | Captures why a failure mode occurs |
 | `resultsInFailureEffect` | Failure Mode → Failure Effect | risk | Captures what the failure mode produces |
@@ -158,16 +174,17 @@ The target package stack is:
   ├── operational (including procedures, environments, performers, subjects, resources)
   ├── requirements
   ├── functional
-  ├── logical
+  ├── logical (including system-of-systems anchors)
   ├── physical
   ├── software
-  ├── interfaces
+  ├── interfaces (including data interfaces, protocols, profiles, endpoints)
   ├── analysis
   ├── verification
   └── relationships
 
 @memo/ontology-medical
   ├── clinical-context
+  ├── cybersecurity-interoperability
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── risk-management (including residual risk, benefit-risk, and post-market anchors)

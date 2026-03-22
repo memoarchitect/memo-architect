@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 61 rules, 6 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 74 rules, 7 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -246,7 +246,7 @@ Prove the ontology against more than a single infusion-pump reference:
 
 - [x] **Add a second medical reference model** — `examples/irrigation-pump` is now a surgical irrigation console reference model built on the shared medical backbone
 - [x] **Exercise different ontology slices** — the irrigation model stresses disposable setup, pressure regulation, depletion alarming, and a different software/physical partition than infusion pump
-- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 61-rule medical pack, exposing only the pre-existing infusion behavior warnings
+- [x] **Compare rule behavior across examples** — infusion pump and irrigation pump both validate against the same 74-rule medical pack, exposing only the pre-existing infusion behavior warnings
 - [x] **Use findings to refine ontology boundaries** — the second example validated the existing `@memo/ontology-medical` concepts without adding new device-specific ontology primitives
 
 Exit criteria:
@@ -296,6 +296,21 @@ Continue refining the medical risk backbone so it covers residual-risk acceptanc
 
 Exit criteria:
 - [x] `@memo/ontology-medical` covers residual risk, benefit-risk, and post-market anchors needed for ISO 14971 / ISO 13485 reasoning
+- [x] at least one reference model exercises the new semantics end to end
+
+### Next Ontology Milestone — Cybersecurity, Systems Integration, and Terminology Boundary **[CRITICAL]**
+
+Refine the ontology so connected medical cyber devices and interoperable system-of-systems contexts can be modeled without collapsing into product-specific ad hoc traces:
+
+- [x] **Add system-of-systems and interface semantics to the core backbone** — added `SystemOfSystems`, `DataInterface`, `DataEndpoint`, `CommunicationProtocol`, `InteroperabilityProfile`, and typed integration relationships in `@memo/ontology-core`
+- [x] **Add FDA/IEC-aligned medical cybersecurity semantics** — added `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `Vulnerability`, `SecurityControl`, `SBOMArtifact`, and `SecureUpdateCapability` in `@memo/ontology-medical`
+- [x] **Add terminology-boundary anchor semantics** — added `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` so models can reference external terminology intent and versioning without embedding full imported hierarchies
+- [x] **Exercise the new semantics in live examples** — the irrigation reference model now includes hospital-system integration surfaces, cyber threat/control traces, SBOM/update artifacts, and terminology bindings
+- [x] **Add workbench validation and viewpoints on top of the ontology** — `@memo/medical` now validates cybersecurity and terminology-binding artifacts and includes a dedicated cybersecurity/interoperability viewpoint
+
+Exit criteria:
+- [x] `@memo/ontology-core` supports reusable system-of-systems and data-interface modeling
+- [x] `@memo/ontology-medical` supports medical cybersecurity and external-clinical-terminology anchor semantics
 - [x] at least one reference model exercises the new semantics end to end
 
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**

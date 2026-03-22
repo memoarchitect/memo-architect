@@ -55,6 +55,36 @@ package MEMO_Ontology_Core_Relationships {
         end supplier[1];
     }
 
+    connection def ParticipatesInSystemOfSystems {
+        end system[1];
+        end systemOfSystems : SystemOfSystems [1];
+    }
+
+    connection def ExposesInterface {
+        end provider[1];
+        end dataInterface : DataInterface [1];
+    }
+
+    connection def HasEndpoint {
+        end dataInterface : DataInterface [1];
+        end endpoint : DataEndpoint [1];
+    }
+
+    connection def ImplementsProtocol {
+        end subject[1];
+        end protocol : CommunicationProtocol [1];
+    }
+
+    connection def ConformsToProfile {
+        end subject[1];
+        end profile : InteroperabilityProfile [1];
+    }
+
+    connection def CarriesExchangeItem {
+        end dataInterface : DataInterface [1];
+        end exchangeItem : ExchangeItem [1];
+    }
+
     connection def Realization {
         end realizing[1];
         end realized[1];

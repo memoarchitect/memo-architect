@@ -7,6 +7,18 @@ package IrrigationPump_Architecture {
         attribute redefines name = "Surgical Irrigation Console";
     }
 
+    part perioperativeIntegrationEnvironment : SystemOfSystems {
+        attribute redefines name = "Perioperative Integration Environment";
+    }
+
+    part hospitalAlarmRouter : SystemExternal {
+        attribute redefines name = "Hospital Alarm Router";
+    }
+
+    part perioperativeDocumentationSystem : SystemExternal {
+        attribute redefines name = "Perioperative Documentation System";
+    }
+
     part fluidPathSubsystem : LogicalComponent {
         attribute redefines name = "Fluid Path Subsystem";
     }
@@ -75,6 +87,24 @@ package IrrigationPump_Architecture {
         attribute redefines name = "Prime Confirmation Dialog";
     }
 
+    port consoleIntegrationEndpoint : DataEndpoint { }
+
+    port alarmRouterEndpoint : DataEndpoint { }
+
+    port documentationEndpoint : DataEndpoint { }
+
+    interface def AlarmStatusFHIRInterface :> DataInterface { }
+
+    interface def ProcedureStatusFHIRInterface :> DataInterface { }
+
+    interface def HL7FHIRRestProtocol :> CommunicationProtocol { }
+
+    interface def FHIRDeviceObservationProfile :> InteroperabilityProfile { }
+
+    item def AlarmStatusPayload;
+
+    item def ProcedureSummaryPayload;
+
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> fluidPathSubsystem;
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> sensingSubsystem;
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> alarmSubsystem;
@@ -84,6 +114,23 @@ package IrrigationPump_Architecture {
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> pressureSensorBoard;
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> reservoirScale;
     connection : ComposedOf connect whole ::> irrigationConsole to part ::> footswitchPedal;
+    connection : ParticipatesInSystemOfSystems connect system ::> irrigationConsole to systemOfSystems ::> perioperativeIntegrationEnvironment;
+    connection : ParticipatesInSystemOfSystems connect system ::> hospitalAlarmRouter to systemOfSystems ::> perioperativeIntegrationEnvironment;
+    connection : ParticipatesInSystemOfSystems connect system ::> perioperativeDocumentationSystem to systemOfSystems ::> perioperativeIntegrationEnvironment;
+    connection : ExposesInterface connect provider ::> irrigationConsole to dataInterface ::> AlarmStatusFHIRInterface;
+    connection : ExposesInterface connect provider ::> hospitalAlarmRouter to dataInterface ::> AlarmStatusFHIRInterface;
+    connection : ExposesInterface connect provider ::> irrigationConsole to dataInterface ::> ProcedureStatusFHIRInterface;
+    connection : ExposesInterface connect provider ::> perioperativeDocumentationSystem to dataInterface ::> ProcedureStatusFHIRInterface;
+    connection : HasEndpoint connect dataInterface ::> AlarmStatusFHIRInterface to endpoint ::> consoleIntegrationEndpoint;
+    connection : HasEndpoint connect dataInterface ::> AlarmStatusFHIRInterface to endpoint ::> alarmRouterEndpoint;
+    connection : HasEndpoint connect dataInterface ::> ProcedureStatusFHIRInterface to endpoint ::> consoleIntegrationEndpoint;
+    connection : HasEndpoint connect dataInterface ::> ProcedureStatusFHIRInterface to endpoint ::> documentationEndpoint;
+    connection : ImplementsProtocol connect subject ::> AlarmStatusFHIRInterface to protocol ::> HL7FHIRRestProtocol;
+    connection : ImplementsProtocol connect subject ::> ProcedureStatusFHIRInterface to protocol ::> HL7FHIRRestProtocol;
+    connection : ConformsToProfile connect subject ::> AlarmStatusFHIRInterface to profile ::> FHIRDeviceObservationProfile;
+    connection : ConformsToProfile connect subject ::> ProcedureStatusFHIRInterface to profile ::> FHIRDeviceObservationProfile;
+    connection : CarriesExchangeItem connect dataInterface ::> AlarmStatusFHIRInterface to exchangeItem ::> AlarmStatusPayload;
+    connection : CarriesExchangeItem connect dataInterface ::> ProcedureStatusFHIRInterface to exchangeItem ::> ProcedureSummaryPayload;
 
     connection : Satisfy connect satisfiedBy ::> fluidPathSubsystem to satisfies ::> srPressureRegulation;
     connection : Satisfy connect satisfiedBy ::> sensingSubsystem to satisfies ::> srReservoirLowAlarm;
