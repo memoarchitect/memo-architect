@@ -15,7 +15,7 @@ This parses your model, checks all closure rules, and reports gaps:
 📋 MEMO Validate
 
 Project: my-device (device)
-Kinds: 157 | Rules: 39 | Relationships: 36
+Kinds: 168 | Rules: 48 | Relationships: 45
 
 ✗ CR-MED-001  Every Hazard must have ≥1 mitigates relationship
               Missing: hazAirEmbolism (Air Embolism)
@@ -47,7 +47,7 @@ cd ../irrigation-pump
 pnpm memo validate
 ```
 
-## The 39 Medical Closure Rules
+## The 48 Medical Closure Rules
 
 ### Risk Management — ISO 14971
 
@@ -112,6 +112,20 @@ pnpm memo validate
 | CR-MED-037 | Every **SoftwareRequirementsAnalysisActivity** should produce ≥1 requirements work product | Warning |
 | CR-MED-038 | Every **SoftwareArchitecturalDesignActivity** should produce architecture/design work products | Warning |
 | CR-MED-039 | Every **ProblemResolutionActivity** should produce problem-resolution work products | Warning |
+
+### Structured Risk Analysis — ISO 14971 / ISO/TR 24971
+
+| Rule | Check | Severity |
+|------|-------|----------|
+| CR-MED-040 | Every **FailureModesAndEffectsAnalysis** should analyze ≥1 **FailureMode** | Warning |
+| CR-MED-041 | Every **FailureMode** should have ≥1 **FailureCause** | Warning |
+| CR-MED-042 | Every **FailureMode** should result in ≥1 **FailureEffect** | Warning |
+| CR-MED-043 | Every **FailureEffect** should escalate to ≥1 **Hazard** or **HazardousSituation** | Warning |
+| CR-MED-044 | Every **FaultTreeAnalysis** should define ≥1 **TopEvent** | Warning |
+| CR-MED-045 | Every **TopEvent** should have ≥1 contributing **BasicEvent** or **IntermediateEvent** | Warning |
+| CR-MED-046 | Every **TopEvent** should trigger ≥1 **HazardousSituation** | Warning |
+| CR-MED-047 | Every **DetectionControl** should detect ≥1 **FailureMode** | Warning |
+| CR-MED-048 | Every **DetectionControl** must be verified by ≥1 **Test** | Error |
 
 ## The Completeness Bar (Web UI)
 

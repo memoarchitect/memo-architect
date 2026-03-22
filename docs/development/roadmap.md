@@ -31,7 +31,7 @@ The medical backbone is intended to support traceable development against **ISO 
 - [x] Langium SysML v2 parser with full grammar
 - [x] Ontology with 60+ entity types and a layered relationship vocabulary
 - [x] Ontology viewer (standalone HTML)
-- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 39 rules, 5 viewpoints)
+- [x] Medical domain config evolved into layered ontology + workbench split (`@memo/ontology-medical` + `@memo/medical`, 48 rules, 6 viewpoints)
 - [x] Semantic model layer (`MemoModel`, `MemoModelDTO`)
 - [x] Model builder (AST to semantic model)
 - [x] Parser utilities
@@ -253,6 +253,21 @@ Exit criteria:
 - [x] at least two strong reference models validate on the shared backbone
 - [x] ontology changes are driven by cross-example evidence rather than a single product
 
+### Next Ontology Milestone — Structured Risk Analysis Semantics **[CRITICAL]**
+
+Promote FTA / FMEA / deeper ISO 14971 analysis structure into the medical ontology backbone instead of treating it as UI-only tooling:
+
+- [x] **Add FMEA ontology concepts** — added first-class medical failure-analysis concepts such as `FailureMode`, `FailureCause`, `FailureEffect`, `DetectionControl`, and `FailureModesAndEffectsAnalysis` in `@memo/ontology-medical`
+- [x] **Add fault-tree ontology concepts** — added explicit fault-tree semantics such as `TopEvent`, `IntermediateEvent`, `BasicEvent`, `FaultTreeGate`, and typed propagation/gate relationships
+- [x] **Tie analysis semantics into the existing risk backbone** — connected FMEA / FTA artifacts to `Hazard`, `HazardousSituation`, and `RiskControl` through `escalatesToRisk`, `triggersHazardousSituation`, `detectsFailureMode`, and existing mitigation/verification traces
+- [x] **Exercise the new semantics in live medical examples** — extended `examples/irrigation-pump` with failure analysis and fault propagation on the shared medical backbone
+- [x] **Add workbench validation on top of the ontology** — extended `@memo/medical` with FMEA / FTA closure rules and a dedicated risk-analysis viewpoint without collapsing ontology and tooling concerns
+
+Exit criteria:
+- [x] `@memo/ontology-medical` contains first-class FTA / FMEA / structured risk-analysis semantics
+- [x] risk-analysis traces connect directly into the existing medical risk-management ontology
+- [x] at least one reference model exercises the new concepts end to end
+
 ### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
 
 Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
@@ -274,7 +289,7 @@ Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
 - [ ] **External Ontology Import (M35)** — OWL/JSON-LD/SysAnd import for interoperability
 - [ ] **Ontology Editor (M4)** — Visual editor for kinds, relationships, layers, closure rules
 - [ ] **Relationship/Traceability Matrix (M6)** — N×N matrix with presets (ISO 14971/IEC 62304)
-- [ ] **FMEA + Risk Analysis (M9)** — ISO 14971 FMEA table with risk chains
+- [ ] **FMEA + Risk Analysis (M9)** — tooling and tabular analysis workflows built on top of the structured medical risk-analysis ontology
 
 ### Phase 7b — Compliance & Productivity **[HIGH]**
 

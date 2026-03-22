@@ -201,6 +201,61 @@ kinds:
     layer: risk
     sysmlConstruct: part def
 
+  FailureAnalysis:
+    label: Failure Analysis
+    layer: risk
+    sysmlConstruct: part def
+
+  FailureModesAndEffectsAnalysis:
+    label: Failure Modes And Effects Analysis
+    layer: risk
+    sysmlConstruct: part def
+
+  FaultTreeAnalysis:
+    label: Fault Tree Analysis
+    layer: risk
+    sysmlConstruct: part def
+
+  FailureMode:
+    label: Failure Mode
+    layer: risk
+    sysmlConstruct: requirement def
+
+  FailureCause:
+    label: Failure Cause
+    layer: risk
+    sysmlConstruct: requirement def
+
+  FailureEffect:
+    label: Failure Effect
+    layer: risk
+    sysmlConstruct: requirement def
+
+  DetectionControl:
+    label: Detection Control
+    layer: risk
+    sysmlConstruct: requirement def
+
+  TopEvent:
+    label: Top Event
+    layer: risk
+    sysmlConstruct: requirement def
+
+  IntermediateEvent:
+    label: Intermediate Event
+    layer: risk
+    sysmlConstruct: requirement def
+
+  BasicEvent:
+    label: Basic Event
+    layer: risk
+    sysmlConstruct: requirement def
+
+  FaultTreeGate:
+    label: Fault Tree Gate
+    layer: risk
+    sysmlConstruct: part def
+
   SafetyGoal:
     label: Safety Goal
     layer: safety
@@ -459,6 +514,51 @@ relationshipTypes:
     layer: risk
     color: "#D35400"
 
+  - name: analyzesFailureMode
+    label: Analyzes Failure Mode
+    layer: risk
+    color: "#CB4335"
+
+  - name: hasFailureCause
+    label: Has Failure Cause
+    layer: risk
+    color: "#B03A2E"
+
+  - name: resultsInFailureEffect
+    label: Results In Failure Effect
+    layer: risk
+    color: "#A93226"
+
+  - name: escalatesToRisk
+    label: Escalates To Risk
+    layer: risk
+    color: "#922B21"
+
+  - name: detectsFailureMode
+    label: Detects Failure Mode
+    layer: risk
+    color: "#CD6155"
+
+  - name: definesTopEvent
+    label: Defines Top Event
+    layer: risk
+    color: "#884EA0"
+
+  - name: usesGate
+    label: Uses Gate
+    layer: risk
+    color: "#7D3C98"
+
+  - name: contributesToEvent
+    label: Contributes To Event
+    layer: risk
+    color: "#6C3483"
+
+  - name: triggersHazardousSituation
+    label: Triggers Hazardous Situation
+    layer: risk
+    color: "#5B2C6F"
+
   - name: preserves
     label: Preserves
     layer: safety
@@ -544,6 +644,15 @@ relationships:
   - causes
   - leadsTo
   - identifies
+  - analyzesFailureMode
+  - hasFailureCause
+  - resultsInFailureEffect
+  - escalatesToRisk
+  - detectsFailureMode
+  - definesTopEvent
+  - usesGate
+  - contributesToEvent
+  - triggersHazardousSituation
   - preserves
   - addressesUseError
   - analyzesUseError

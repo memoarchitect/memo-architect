@@ -481,6 +481,105 @@ closureRules:
       min: 1
     severity: warning
 
+  - id: CR-MED-040
+    description: "Every FailureModesAndEffectsAnalysis should analyze at least one FailureMode"
+    entity: FailureModesAndEffectsAnalysis
+    rule:
+      type: requireRelationship
+      relationship: analyzesFailureMode
+      direction: outgoing
+      relatedKinds: [FailureMode]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-041
+    description: "Every FailureMode should have at least one FailureCause"
+    entity: FailureMode
+    rule:
+      type: requireRelationship
+      relationship: hasFailureCause
+      direction: outgoing
+      relatedKinds: [FailureCause]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-042
+    description: "Every FailureMode should result in at least one FailureEffect"
+    entity: FailureMode
+    rule:
+      type: requireRelationship
+      relationship: resultsInFailureEffect
+      direction: outgoing
+      relatedKinds: [FailureEffect]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-043
+    description: "Every FailureEffect should escalate to at least one Hazard or HazardousSituation"
+    entity: FailureEffect
+    rule:
+      type: requireRelationship
+      relationship: escalatesToRisk
+      direction: outgoing
+      relatedKinds: [Hazard, HazardousSituation]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-044
+    description: "Every FaultTreeAnalysis should define at least one TopEvent"
+    entity: FaultTreeAnalysis
+    rule:
+      type: requireRelationship
+      relationship: definesTopEvent
+      direction: outgoing
+      relatedKinds: [TopEvent]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-045
+    description: "Every TopEvent should have at least one contributing BasicEvent or IntermediateEvent"
+    entity: TopEvent
+    rule:
+      type: requireRelationship
+      relationship: contributesToEvent
+      direction: incoming
+      relatedKinds: [BasicEvent, IntermediateEvent]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-046
+    description: "Every TopEvent should trigger at least one HazardousSituation"
+    entity: TopEvent
+    rule:
+      type: requireRelationship
+      relationship: triggersHazardousSituation
+      direction: outgoing
+      relatedKinds: [HazardousSituation]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-047
+    description: "Every DetectionControl should detect at least one FailureMode"
+    entity: DetectionControl
+    rule:
+      type: requireRelationship
+      relationship: detectsFailureMode
+      direction: outgoing
+      relatedKinds: [FailureMode]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-048
+    description: "Every DetectionControl must be verified by at least one Test"
+    entity: DetectionControl
+    rule:
+      type: requireRelationship
+      relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
+      min: 1
+    severity: error
+
 viewpoints:
   - id: risk-overview
     label: Risk Overview (ISO 14971)
@@ -491,6 +590,12 @@ viewpoints:
       - Harm
       - Risk
       - RiskControl
+      - DetectionControl
+      - FailureModesAndEffectsAnalysis
+      - FailureMode
+      - FailureEffect
+      - FaultTreeAnalysis
+      - TopEvent
       - SafetyGoal
       - UseError
       - EssentialPerformance
@@ -502,6 +607,13 @@ viewpoints:
       - causes
       - leadsTo
       - identifies
+      - analyzesFailureMode
+      - resultsInFailureEffect
+      - escalatesToRisk
+      - detectsFailureMode
+      - definesTopEvent
+      - contributesToEvent
+      - triggersHazardousSituation
       - contributesToHazard
       - implementsRiskControl
       - protectsEssentialPerformance
@@ -518,6 +630,51 @@ viewpoints:
         viewpointId: risk-overview
         auto: true
         description: Hazard to RiskControl to Test mitigation chain
+
+  - id: risk-analysis-view
+    label: Risk Analysis (FMEA / FTA)
+    supportedDiagramTypes: [risk, req, pkg]
+    visibleKinds:
+      - FailureModesAndEffectsAnalysis
+      - FaultTreeAnalysis
+      - FailureMode
+      - FailureCause
+      - FailureEffect
+      - DetectionControl
+      - TopEvent
+      - IntermediateEvent
+      - BasicEvent
+      - FaultTreeGate
+      - Hazard
+      - HazardousSituation
+      - Harm
+      - RiskControl
+      - Test
+      - DesignHistoryRecord
+    visibleRelationships:
+      - analyzesFailureMode
+      - hasFailureCause
+      - resultsInFailureEffect
+      - escalatesToRisk
+      - detectsFailureMode
+      - definesTopEvent
+      - usesGate
+      - contributesToEvent
+      - triggersHazardousSituation
+      - mitigates
+      - verify
+      - documents
+    visibleLayers:
+      - risk
+      - verification
+      - qms
+    diagrams:
+      - id: diag-risk-analysis
+        name: Failure Analysis And Fault Propagation
+        diagramType: risk
+        viewpointId: risk-analysis-view
+        auto: true
+        description: FMEA and fault-tree traces linked back to hazards, situations, controls, and verification
 
   - id: safety-view
     label: Safety Analysis

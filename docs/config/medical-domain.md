@@ -8,6 +8,7 @@ It now provides:
 - medical-specific viewpoints and starter scaffolding
 - workbench validation, viewpoints, and starter templates on top of the medical ontology
 - second-pass medical semantics for IEC 62366 usability engineering, IEC 60601 safety structure, and IEC 62304 lifecycle work products
+- structured FMEA / fault-tree risk-analysis semantics connected into the medical risk backbone
 
 ## Overview
 
@@ -15,8 +16,8 @@ It now provides:
 |---|---|
 | Primary role | Rules + viewpoints + templates |
 | Extends | `@memo/ontology-medical` |
-| Closure Rules | 39 |
-| Workbench Viewpoints | 5 |
+| Closure Rules | 48 |
+| Workbench Viewpoints | 6 |
 
 ## Standards Alignment
 
@@ -27,10 +28,16 @@ package adds the validation and viewpoint layer that operationalizes them:
 
 - Hazard identification → `Hazard` elements
 - Risk analysis → `HazardousSituation`, `Harm`, `Risk` elements
+- Structured failure analysis → `FailureModesAndEffectsAnalysis`, `FailureMode`, `FailureCause`, `FailureEffect`, `DetectionControl`
+- Fault propagation analysis → `FaultTreeAnalysis`, `TopEvent`, `IntermediateEvent`, `BasicEvent`, `FaultTreeGate`
 - Risk control → `RiskControl` elements with `mitigates` relationships
 - Verification → `Test` elements with `verify` relationships to controls
+- Failure-analysis trace → `escalatesToRisk`, `triggersHazardousSituation`, and `detectsFailureMode` connect analysis results directly into the ISO 14971 chain
 
-**Enforced by rules:** CR-MED-001 through CR-MED-006
+This follows the direction of ISO 14971:2019 plus ISO/TR 24971:2020 guidance:
+failure-analysis artifacts are modeled as part of risk analysis, not as detached UI-only tooling.
+
+**Enforced by rules:** CR-MED-001 through CR-MED-006 and CR-MED-040 through CR-MED-048
 
 ### IEC 62304 — Software Lifecycle
 
@@ -61,6 +68,25 @@ The medical workbench package adds usability and essential-performance checks ov
 - Usability requirements verified by tests/validation artifacts
 
 **Enforced by rules:** CR-MED-016 through CR-MED-033
+
+### ISO 13485 — QMS, Traceability, and Records
+
+The ontology-level QMS and record concepts live in `@memo/ontology-medical`, and the
+medical workbench package uses them to keep regulated records tied to lifecycle,
+usability, and risk-analysis artifacts:
+
+- Design history and release records → `DesignHistoryRecord`, `ReleaseBaseline`, `ChangeRecord`
+- Objective evidence → `ComplianceEvidence`
+- Risk-analysis artifacts documented under QMS trace → FMEA / fault-tree analyses can be documented alongside lifecycle and usability artifacts
+
+**Enforced by rules:** CR-MED-020 through CR-MED-039
+
+### ISO/IEC/IEEE 42010 — Viewpoint Separation
+
+`@memo/ontology-medical` carries the medical semantics, while `@memo/medical`
+adds viewpoint definitions on top. The dedicated risk-analysis viewpoint keeps
+FMEA / FTA concerns separate from broader safety and software views, which is
+consistent with ISO/IEC/IEEE 42010's viewpoint-driven architecture-description direction.
 
 ## Usage
 

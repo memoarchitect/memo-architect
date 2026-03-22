@@ -50,7 +50,7 @@ Entity kinds are mapped to SysML v2 constructs:
 As the ontology is split:
 
 - **Core** keeps reusable MBSE concepts such as stakeholders, requirements, functions, logical/physical/software architecture, interfaces, analysis, and verification.
-- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, and the second-pass 62366 / 60601 / 62304 backbone.
+- **Medical base** adds medical-device-specific concepts such as `UserNeed`, risk management, design-control/usability artifacts, software lifecycle semantics, safety/essential-performance concepts, structured FTA / FMEA risk-analysis semantics, and the second-pass 62366 / 60601 / 62304 backbone.
 - **Extensions** carry product-family or technology-specific concepts when the repo eventually supports them as independent packages.
 
 ### Compatibility Policy
@@ -91,6 +91,14 @@ Each relationship type has:
 | `causes` | Hazard → HazardousSituation | risk | Causal chain |
 | `leadsTo` | HazardousSituation → Harm | risk | Harm pathway |
 | `identifies` | Risk → Hazard | risk | Risk record identifies the associated hazard |
+| `analyzesFailureMode` | FMEA → Failure Mode | risk | Structured failure analysis coverage |
+| `hasFailureCause` | Failure Mode → Failure Cause | risk | Captures why a failure mode occurs |
+| `resultsInFailureEffect` | Failure Mode → Failure Effect | risk | Captures what the failure mode produces |
+| `escalatesToRisk` | Failure Effect → Hazard/HazardousSituation | risk | Connects analysis effects into ISO 14971 risk structure |
+| `detectsFailureMode` | RiskControl/DetectionControl → Failure Mode | risk | Detection-oriented control trace |
+| `definesTopEvent` | Fault Tree Analysis → Top Event | risk | Declares the fault tree objective |
+| `contributesToEvent` | Basic/Intermediate Event → parent Event | risk | Fault propagation toward the top event |
+| `triggersHazardousSituation` | Top Event → HazardousSituation | risk | Connects fault-tree outcomes into the risk chain |
 | `addressesUseError` | UI Requirement → Use Error | design-control | Explicit IEC 62366 usability trace |
 | `analyzesUseError` | Use Error Analysis → Use Error | design-control | Use-error analysis structure |
 | `evaluatesRequirement` | Validation Case → UI Requirement | verification | Formative/summative evaluation linkage |
@@ -141,10 +149,11 @@ The target package stack is:
   ├── design-control
   ├── medical-development (`UserNeed` on top of `StakeholderNeed`)
   ├── risk-management
+  ├── risk-analysis (FTA / FMEA semantics on top of medical risk management)
   ├── software-lifecycle
   ├── safety-essential-performance
   ├── regulatory-trace references
   └── medical relationship specializations
 ```
 
-Rules, viewpoints, completeness logic, and example models remain outside ontology packages.
+Rules, viewpoints, completeness logic, and example models remain outside ontology packages. This separation is deliberate: the ontology carries the medical semantics, while `@memo/medical` carries viewpoint and rule concerns in line with ISO/IEC/IEEE 42010's distinction between model content and viewpoint-driven description.

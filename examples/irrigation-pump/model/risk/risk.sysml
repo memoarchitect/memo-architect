@@ -71,9 +71,88 @@ package IrrigationPump_Risk {
         attribute redefines title = "Reservoir Low Alarm";
     }
 
+    requirement dcPressurePlausibilityCheck : DetectionControl {
+        attribute redefines rcId = "RC-IRR-004";
+        attribute redefines title = "Pressure Sensor Plausibility Check";
+    }
+
+    part fmeaPressureAndAlarmIntegrity : FailureModesAndEffectsAnalysis {
+        attribute redefines title = "Pressure regulation and reservoir alarm FMEA";
+    }
+
+    requirement fmPressureSensorDrift : FailureMode {
+        attribute redefines failureModeId = "FM-IRR-001";
+        attribute redefines title = "Pressure sensor drifts high during irrigation";
+    }
+
+    requirement fcPressureTransducerBias : FailureCause {
+        attribute redefines causeId = "FC-IRR-001";
+        attribute redefines title = "Pressure transducer bias after sterilization cycle";
+    }
+
+    requirement feUncontrolledPressureRise : FailureEffect {
+        attribute redefines effectId = "FE-IRR-001";
+        attribute redefines title = "Control loop drives irrigation pressure above the intended setting";
+    }
+
+    requirement fmReservoirScaleDisconnect : FailureMode {
+        attribute redefines failureModeId = "FM-IRR-002";
+        attribute redefines title = "Reservoir scale disconnects during the procedure";
+    }
+
+    requirement fcScaleCableDislodged : FailureCause {
+        attribute redefines causeId = "FC-IRR-002";
+        attribute redefines title = "Scale cable is dislodged when the pole is repositioned";
+    }
+
+    requirement feLateReservoirAlarm : FailureEffect {
+        attribute redefines effectId = "FE-IRR-002";
+        attribute redefines title = "Reservoir depletion alarm occurs too late for clinician response";
+    }
+
+    part ftaReservoirAlarmLoss : FaultTreeAnalysis {
+        attribute redefines title = "Late reservoir alarm fault tree";
+    }
+
+    requirement teLateReservoirAlarm : TopEvent {
+        attribute redefines eventId = "TE-IRR-001";
+        attribute redefines title = "Late reservoir alarm during active irrigation";
+    }
+
+    requirement ieReservoirStateUndetected : IntermediateEvent {
+        attribute redefines eventId = "IE-IRR-001";
+        attribute redefines title = "Reservoir state becomes unavailable to the alarm supervisor";
+    }
+
+    requirement beScaleInputUnavailable : BasicEvent {
+        attribute redefines eventId = "BE-IRR-001";
+        attribute redefines title = "Reservoir scale input is unavailable";
+    }
+
+    requirement beVolumeEstimateFrozen : BasicEvent {
+        attribute redefines eventId = "BE-IRR-002";
+        attribute redefines title = "Reservoir estimate remains frozen at a stale value";
+    }
+
+    requirement beAlarmCoordinatorHung : BasicEvent {
+        attribute redefines eventId = "BE-IRR-003";
+        attribute redefines title = "Alarm coordinator stops updating the low-reservoir state";
+    }
+
+    part gateReservoirStateUndetected : FaultTreeGate {
+        attribute redefines name = "Reservoir state unavailable OR gate";
+        attribute redefines gateType = FaultTreeGateType::Or;
+    }
+
+    part gateLateReservoirAlarm : FaultTreeGate {
+        attribute redefines name = "Late reservoir alarm OR gate";
+        attribute redefines gateType = FaultTreeGateType::Or;
+    }
+
     connection : Mitigates connect control ::> rcPressureLimiter to hazard ::> hazOverpressure;
     connection : Mitigates connect control ::> rcPrimeCompletionInterlock to hazard ::> hazAirInLine;
     connection : Mitigates connect control ::> rcReservoirLowAlarm to hazard ::> hazLossOfIrrigation;
+    connection : Mitigates connect control ::> dcPressurePlausibilityCheck to hazard ::> hazOverpressure;
 
     connection : Causes connect hazard ::> hazOverpressure to situation ::> hsJointOverdistension;
     connection : Causes connect hazard ::> hazAirInLine to situation ::> hsUnprimedFluidPath;
@@ -84,4 +163,24 @@ package IrrigationPump_Risk {
     connection : LeadsTo connect situation ::> hsCollapsedField to harm ::> harmLossOfVisualization;
 
     connection : Identifies connect risk ::> riskPressureInjury to hazard ::> hazOverpressure;
+
+    connection : AnalyzesFailureMode connect analysis ::> fmeaPressureAndAlarmIntegrity to failureMode ::> fmPressureSensorDrift;
+    connection : AnalyzesFailureMode connect analysis ::> fmeaPressureAndAlarmIntegrity to failureMode ::> fmReservoirScaleDisconnect;
+    connection : HasFailureCause connect failureMode ::> fmPressureSensorDrift to cause ::> fcPressureTransducerBias;
+    connection : HasFailureCause connect failureMode ::> fmReservoirScaleDisconnect to cause ::> fcScaleCableDislodged;
+    connection : ResultsInFailureEffect connect failureMode ::> fmPressureSensorDrift to effect ::> feUncontrolledPressureRise;
+    connection : ResultsInFailureEffect connect failureMode ::> fmReservoirScaleDisconnect to effect ::> feLateReservoirAlarm;
+    connection : EscalatesToRisk connect effect ::> feUncontrolledPressureRise to subject ::> hazOverpressure;
+    connection : EscalatesToRisk connect effect ::> feLateReservoirAlarm to subject ::> hsCollapsedField;
+    connection : DetectsFailureMode connect control ::> dcPressurePlausibilityCheck to failureMode ::> fmPressureSensorDrift;
+    connection : DetectsFailureMode connect control ::> rcReservoirLowAlarm to failureMode ::> fmReservoirScaleDisconnect;
+
+    connection : DefinesTopEvent connect analysis ::> ftaReservoirAlarmLoss to topEvent ::> teLateReservoirAlarm;
+    connection : UsesGate connect event ::> ieReservoirStateUndetected to gate ::> gateReservoirStateUndetected;
+    connection : UsesGate connect event ::> teLateReservoirAlarm to gate ::> gateLateReservoirAlarm;
+    connection : ContributesToEvent connect contributor ::> beScaleInputUnavailable to event ::> ieReservoirStateUndetected;
+    connection : ContributesToEvent connect contributor ::> beVolumeEstimateFrozen to event ::> ieReservoirStateUndetected;
+    connection : ContributesToEvent connect contributor ::> ieReservoirStateUndetected to event ::> teLateReservoirAlarm;
+    connection : ContributesToEvent connect contributor ::> beAlarmCoordinatorHung to event ::> teLateReservoirAlarm;
+    connection : TriggersHazardousSituation connect event ::> teLateReservoirAlarm to situation ::> hsCollapsedField;
 }

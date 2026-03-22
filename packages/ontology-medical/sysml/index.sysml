@@ -4,6 +4,7 @@ package MEMO_Ontology_Medical {
     import MEMO_Ontology_Medical_Development::*;
     import MEMO_Ontology_Medical_Platform::*;
     import MEMO_Ontology_Medical_Risk::*;
+    import MEMO_Ontology_Medical_RiskAnalysis::*;
     import MEMO_Ontology_Medical_SoftwareLifecycle::*;
     import MEMO_Ontology_Medical_Safety::*;
     import MEMO_Ontology_Medical_UI::*;

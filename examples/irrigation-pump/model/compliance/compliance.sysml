@@ -220,6 +220,7 @@ package IrrigationPump_Compliance {
     connection : Verify connect verifiedBy ::> testPressureControl to verifies ::> srPressureRegulation;
     connection : Verify connect verifiedBy ::> testPressureControl to verifies ::> swrPressureControlLoop;
     connection : Verify connect verifiedBy ::> testPressureControl to verifies ::> rcPressureLimiter;
+    connection : Verify connect verifiedBy ::> testPressureControl to verifies ::> dcPressurePlausibilityCheck;
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> srReservoirLowAlarm;
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> srAlarmAudibility;
     connection : Verify connect verifiedBy ::> testReservoirAlarm to verifies ::> swrReservoirEstimation;
@@ -250,6 +251,8 @@ package IrrigationPump_Compliance {
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> useErrorAnalysisPrimeWorkflow;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> formativeEvalPrimeWorkflow;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> summativeEvalPrimeWorkflow;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> fmeaPressureAndAlarmIntegrity;
+    connection : Documents connect record ::> dhfIrrigationTrace to subject ::> ftaReservoirAlarmLoss;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> collateralAlarmStandard;
     connection : Documents connect record ::> dhfIrrigationTrace to subject ::> particularIrrigationStandard;
 
