@@ -1,10 +1,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { MEMOConfig, CosmaLayer, ViewpointDefinition } from './config.js';
+import type { MEMOConfig, CosmaLayer, ClosureRule, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
 const RENDERING_FILENAMES = ['memo.rendering.yaml', 'memo.rendering.yml'];
+const RULES_FILENAMES = ['memo.rules.yaml', 'memo.rules.yml'];
 
 /**
  * Locate the nearest config file by walking up from `startDir`.
@@ -47,8 +48,29 @@ export function loadRenderingLayers(configDir: string): CosmaLayer[] {
 }
 
 /**
+ * Load closure rules from a memo.rules.yaml file.
+ * Returns the closureRules array, or empty array if file not found.
+ */
+export function loadClosureRules(configDir: string): ClosureRule[] {
+    for (const name of RULES_FILENAMES) {
+        const candidate = resolve(configDir, name);
+        if (existsSync(candidate)) {
+            try {
+                const raw = readFileSync(candidate, 'utf-8');
+                const parsed = parseYaml(raw);
+                return parsed?.closureRules ?? [];
+            } catch {
+                // skip malformed file
+            }
+        }
+    }
+    return [];
+}
+
+/**
  * Load and parse a MEMOConfig from a YAML file.
  * Also loads `memo.rendering.yaml` if present (layers → cosmaLayers).
+ * Also loads `memo.rules.yaml` if present (closureRules).
  * Does NOT resolve `extends` — call `resolveConfig` for that.
  */
 export function loadConfig(filePath: string): MEMOConfig {
@@ -65,6 +87,13 @@ export function loadConfig(filePath: string): MEMOConfig {
         ? dedup([...cosmaLayersFromConfig, ...renderingLayers], l => l.id)
         : cosmaLayersFromConfig;
 
+    // Load closure rules from memo.rules.yaml (new format)
+    const rulesFromFile = loadClosureRules(configDir);
+    const rulesFromConfig: ClosureRule[] = parsed.closureRules ?? [];
+    const mergedRules = rulesFromFile.length > 0
+        ? dedup([...rulesFromConfig, ...rulesFromFile], r => r.id)
+        : rulesFromConfig;
+
     // Apply defaults
     return {
         projectName: parsed.projectName ?? 'untitled',
@@ -77,7 +106,7 @@ export function loadConfig(filePath: string): MEMOConfig {
         cosmaLayers: mergedLayers,
         kinds: parsed.kinds ?? {},
         relationshipTypes: parsed.relationshipTypes ?? [],
-        closureRules: parsed.closureRules ?? [],
+        closureRules: mergedRules,
         viewpoints: parsed.viewpoints,
         workflows: parsed.workflows,
         firstRun: parsed.firstRun,
