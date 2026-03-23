@@ -13,7 +13,9 @@
   "files": [
     "lib/",
     "sysml/",
-    "memo.config.yaml"
+    "memo.config.yaml",
+    "memo.package.yaml",
+    ".project.json"
   ],
   "keywords": [
     "sysml",

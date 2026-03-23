@@ -1,0 +1,7 @@
+name: "@memo/medical-modeling-profile"
+version: "2.0.0"
+type: profile
+extends: "@memo/ontology-medical"
+description: "Closure rules, viewpoints, and starter templates for medical device modeling"
+license: "Apache-2.0"
+tags: ["medical-device", "iso-14971", "iec-62304", "modeling-profile"]

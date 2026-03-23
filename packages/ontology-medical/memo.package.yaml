@@ -1,0 +1,7 @@
+name: "@memo/ontology-medical"
+version: "0.1.0"
+type: ontology
+extends: "@memo/ontology-core"
+description: "Medical device backbone (ISO 14971, IEC 62304, IEC 62366)"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "medical-device", "14971", "62304", "60601", "13485"]

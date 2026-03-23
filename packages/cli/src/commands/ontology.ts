@@ -147,7 +147,8 @@ export async function ontologyExportSysandCommand(options: {
     const exportEntries = configChain.filter((entry, index) => {
         return index < configChain.length - 1 ||
             !!entry.config.ontologyMetadata ||
-            entry.config.projectType === 'ontology';
+            entry.config.projectType === 'ontology' ||
+            entry.config.projectType === 'profile';
     });
 
     if (exportEntries.length === 0) {
