@@ -359,61 +359,128 @@ Exit criteria:
 - [x] `@memo/ontology-medical` supports deeper terminology import-boundary semantics without collapsing into full ontology import tooling
 - [x] at least one reference model exercises PHI/personal-data classification, governed processing, retention/notice/assessment, and terminology subset/provenance semantics end to end
 
-### Phase 7 — Unified View Architecture (M33) **[CRITICAL]**
+## Adoption Strategy
 
-Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
+MEMO has a strong foundation: differentiated wedge in regulated medical-device architecture, serious standards-aware ontology, practical CLI workflows, and reference models that make it more than a diagram toy. But it is **not yet ready for broad adoption** by startups and mid-size medical device companies.
 
-- [ ] **Model Explorer panel** — Elements grouped by kind/layer/package (replaces Catalog mode)
-- [ ] **View Explorer panel** — Views organized under viewpoints in tree (replaces ViewpointBrowser)
-- [ ] **Unified Canvas** — Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ, etc.)
-- [ ] **View creation** — Users can create new views under any viewpoint
-- [ ] **Auto-generated views** — Grouped under viewpoint (e.g., "Auto: Physical Decomposition" under physical-view)
-- [ ] **Tools panel** — DSM, Consistency Analysis, FMEA accessible from toolbar icon (replaces DSM mode)
-- [ ] **Breadcrumb navigation** — Viewpoint > View path above canvas
-- [ ] **Remove separate ActionFlow mode** — AFD becomes a view type under behavior-view
-- [ ] **Remove separate DSM mode** — DSM becomes a tool in toolbar
-- [ ] **Remove separate Scenario mode** — Scenarios become views under behavioral viewpoints
+**Four adoption blockers (in priority order):**
 
-### Phase 7a — Core MBSE Capabilities **[CRITICAL]**
+1. **UI cohesion** — The app is 6-mode (`catalog`, `diagram`, `actionflow`, `dsm`, `scenario`, `ontology`) while the architecture says view-centric ISO 42010. Users see tabs, not a unified workbench.
+2. **Compliance outputs** — For real startup use, doc generation, CI outputs, trace matrices, and review artifacts matter at least as much as modeling.
+3. **Package ecosystem** — Users need reusable packages, profiles, and extension flows. The package story is emerging but incomplete.
+4. **Contributor ergonomics** — Broad open-source adoption requires a stable extension model, package semantics, and easier contribution paths.
 
-- [ ] **Element Libraries (M34)** — Reusable standard component libraries (`library package`)
-- [ ] **External Ontology Import (M35)** — OWL/JSON-LD/SysAnd import for interoperability
-- [ ] **Ontology Editor (M4)** — Visual editor for kinds, relationships, layers, closure rules
-- [ ] **Relationship/Traceability Matrix (M6)** — N×N matrix with presets (ISO 14971/IEC 62304)
-- [ ] **FMEA + Risk Analysis (M9)** — tooling and tabular analysis workflows built on top of the structured medical risk-analysis ontology
+**Priority sequence for reaching adoption:**
 
-### Phase 7b — Compliance & Productivity **[HIGH]**
+1. Become the **easiest serious tool** for medical-device architecture review and traceability
+2. Become the **easiest tool to generate** useful compliance documentation and evidence artifacts
+3. Become the **easiest tool to extend** with reusable medical and technical packages
+4. Only after that, deepen ecosystem and advanced imports
 
-- [ ] **DHF Generator Engine (M14)** — Design History File data generator + HTML renderer
-- [ ] **DHF Web Preview (M15)** — DHF preview mode in web app
-- [ ] **CI Integration (M19)** — `memo validate` with exit code + JSON/JUnit output
-- [ ] **Cmd+K Search (M12)** — Global fuzzy search command palette
-- [ ] **Properties Tabs + Editing (M10)** — Inline editing of element properties
-- [ ] **Static Build + Export (M20)** — `memo build` command, .kpar packaging
+**The adoption test:** A 15–100 person medical device company can model architecture and traceability in SysML, run validation in CI, generate review-ready outputs, add domain packages (software lifecycle, usability, cybersecurity, EtherCAT, etc.), and adopt the tool without MBSE specialists full-time.
 
-### Phase 8 — Enhanced Experience **[MEDIUM]**
+The rearchitecture (Phase 7–9 below) is foundational work that enables everything else. It is NOT the product — it makes the product possible.
 
-- [ ] **Custom Viewpoints UI (M5)** — CRUD for viewpoints
-- [ ] **Right-Click Context Menus (M7)** — Diagram nodes and browser rows
-- [ ] **Tabular View (M8)** — Spreadsheet view of elements
-- [ ] **Focus Mode (M13)** — Ego-graph focus on selected node
-- [ ] **Scenario Editor + Diff (M22)** — Source navigation, model diff
-- [ ] **VS Code Extension (M26)** — LSP for .sysml files
-- [ ] **Statistics Dashboard (M21)** — Model statistics cards
+---
 
-### Phase 9 — LLM Integration **[LOW]**
+## Milestone Roadmap
 
-- [ ] **Model Q&A (M29)** — Natural language questions about the model
-- [ ] **Completeness assistant** — LLM suggests missing elements
-- [ ] **Model generation (M30)** — Generate SysML v2 from natural language
-- [ ] **Report drafting** — LLM generates regulatory narratives
+All milestones numbered in strict execution order. One authoritative sequence, no conflicting docs.
 
-### Phase 10 — Ecosystem **[LOW]**
+**Partially complete items (accounted for in milestone scoping):**
+- SysAnd export (`memo ontology export sysand`) exists in `packages/cli/src/commands/ontology.ts` — M48 hardens it
+- `library package` grammar and PackageRegistry exist — M59 builds on it
+- OntologyViewer component exists in web app — M60 extracts it
+- `medical-modeling-profile` has `projectType: device` instead of `profile` — M36 fixes it
 
-- [ ] **Domain Packages (M31)** — Automotive (ISO 26262), Aerospace (DO-178C)
-- [ ] **Plugin System (M28)** — Custom rules, visualizations, exporters
-- [ ] **EA/Cameo Import (M27)** — Migration tools from Enterprise Architect, Cameo
-- [ ] **Cloud + Collaboration (M32)** — Hosted deployment, real-time sync
+### Phase 7: Package & Registry Foundation **[CRITICAL]**
+
+The rearchitecture core. Eliminates ~2,900 lines of YAML duplication by making SysML v2 the single source of truth for kinds and relationships. See `docs/architecture/platform-strategy.md` for full architecture spec.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M36 | Package semantics cleanup | **Done** | None | Fix `medical-modeling-profile` projectType (device→profile). Add `ontology`/`profile`/`library` type discriminator to package manifest. Create `memo.package.yaml` for all 3 ontology packages. Add `.project.json` SysAnd manifests. |
+| M37 | Directory restructure — ontology-core | **Done** | M36 | Move `sysml/entities/*.sysml` → `sysml/<layer>/<file>.sysml` (Apollo-11 pattern). 11 layer directories. Update `index.sysml`. Delete `entities/`. |
+| M38 | Directory restructure — ontology-medical | **Done** | M36 | Same as M37 for medical package. 14 entity files → layer directories. |
+| M39 | KindRegistry — SysML-driven kind discovery | **Done** | M37, M38 | New `KindRegistry` class: walks `*Definition` AST nodes, derives layer from directory path via `resolveLayerFromPath()`, produces kind metadata matching old `config.kinds`. 19 new tests. |
+| M40 | RelationshipRegistry — SysML-driven relationship discovery | Not started | M39 | New `RelationshipRegistry` from `ConnectionDefinition` AST nodes. PascalCase→camelCase normalization. |
+| M41 | Dual-mode builder — registry + config fallback | Not started | M39, M40 | Modify `buildMemoModel()` to accept optional registries. Registry takes precedence over `config.kinds` at `builder.ts:262`. Backward compatible — existing tests unchanged. |
+| M42 | Ontology loader — wire registries into CLI | Not started | M41 | Pipeline: parse ontology SysML → populate registries → pass to builder. Wire into `memo dev` and `memo validate`. Integration test with infusion-pump example. |
+
+**Parallelization:** {M37, M38} after M36. M39 after both. M40 after M39. M41 after M40. M42 after M41.
+
+### Phase 8: Config Decomposition **[CRITICAL]**
+
+Decompose `memo.config.yaml` (~2,900 lines across 3 packages) into purpose-specific files. Remove kind and relationship duplication from YAML.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M43 | Extract memo.rendering.yaml | Not started | M42 | Extract `cosmaLayers` from config into `memo.rendering.yaml`. Use `layers` key (not `cosmaLayers`). Update web app + CLI to read from new file. Config-loader accepts both old and new key for backward compat. |
+| M44 | Extract memo.rules.yaml | Not started | M42 | Extract `closureRules` from `medical-modeling-profile/memo.config.yaml` into `memo.rules.yaml`. Update validator to load rules from new file. |
+| M45 | Remove config.kinds | Not started | M42, M43 | Delete `kinds:` sections from all configs (~1,500 lines). Builder uses KindRegistry only. Make `kinds` optional in MEMOConfig. Update all builder tests. |
+| M46 | Remove config.relationshipTypes | Not started | M45 | Delete `relationshipTypes:` sections (~700 lines). Builder uses RelationshipRegistry only. |
+| M47 | Delete legacy config | Not started | M45, M46 | Remove `memo.config.yaml` from ontology packages entirely. Slim `MEMOConfig` type. Example projects use new format. Config-loader falls back to `memo.config.yaml` for user projects. |
+
+**Parallelization:** {M43, M44} after M42. M45 after M43. M46 after M45. M47 after M46.
+
+### Phase 9: Package Lifecycle & Interop **[HIGH]**
+
+Make packages installable, lockable, and exportable. This is what turns the ontology from "code in a repo" into "a package ecosystem."
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M48 | Harden SysAnd export + round-trip validation | Partial | M47 | Existing `memo ontology export sysand` works but predates config decomposition. Update to use registries + new config files. Add round-trip test: export → re-import → compare. |
+| M49 | Ontology lock + change detection | Not started | M47 | `memo.lock.yaml` created at project init. On `memo dev`/`memo validate`, compare current ontology ID with lock. If changed: full validation, clear error messages. No auto-migration. |
+| M50 | memo init with ontology selection | Not started | M49 | `memo init --ontology @memo/medical-modeling-profile`. Prompt for selection if interactive. Creates new-format config files + lock. |
+| M51 | memo install — package resolution | Not started | M50 | `memo install <git-url\|npm-pkg\|local-path>`. Installs to `memo_packages/` or `node_modules/`. Adds to `memo.package.yaml` dependencies. Resolution order: git subtree workspace → workspace → `memo_packages/` → `node_modules/`. |
+
+**Parallelization:** M48 and M49 can run in parallel after M47. M50 after M49. M51 after M50.
+
+### Phase 10: Unified Workbench UX **[CRITICAL]**
+
+The #1 adoption blocker. Replace 6-mode tab system with ISO 42010-aligned view-centric architecture.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M52 | Unified view architecture | Not started | M47 | Replace `AppMode` 6-mode switcher in `App.tsx` with view-centric layout. Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ). Remove separate ActionFlow, DSM, Scenario modes. |
+| M53 | Model Explorer + View Explorer | Not started | M52 | Left panel: Model Explorer (elements by kind/layer/package) + View Explorer (views under viewpoints in tree). Replaces Catalog mode and ViewpointBrowser. |
+| M54 | Properties panel + inline editing | Not started | M52 | Right panel: element properties, attributes, relationships, violations. Inline editing of attributes. |
+| M55 | Tools panel + productivity | Not started | M52 | DSM, Consistency, FMEA accessible from toolbar icon. Cmd+K search. Context menus on diagram nodes and browser rows. Breadcrumb navigation. |
+
+**Parallelization:** {M53, M54, M55} after M52.
+
+### Phase 11: Compliance & Productivity **[HIGH]**
+
+The #2 adoption blocker. Generate review-ready compliance outputs.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M56 | CI integration | Not started | M47 | `memo validate --format junit` with exit codes. JSON output for CI dashboards. |
+| M57 | Traceability matrix | Not started | M52 | N×N matrix with presets (ISO 14971 risk→control, IEC 62304 req→test). Filterable by viewpoint. |
+| M58 | DHF generator | Not started | M52 | Design History File data generator + HTML renderer. `memo export dhf`. Web preview mode. |
+
+**Parallelization:** M56 independent of M52 (pure CLI). {M57, M58} after M52.
+
+### Phase 12: Extension Ecosystem **[MEDIUM]**
+
+The #3 adoption blocker. Make it easy to create, share, and consume domain packages.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M59 | Static build + reusable package authoring | Partial | M47, M51 | `memo build` produces static HTML + data bundle. `.kpar` archive. Package templates, `memo create-package`, contribution guide. Builds on existing `library package` grammar/PackageRegistry. |
+| M60 | Standalone ontology viewer | Partial | M47 | Extract existing `OntologyViewer.tsx` into standalone Vite app at `tools/ontology-viewer/`. Read-only. Loads any ontology package. |
+| M61 | VS Code extension | Not started | M47 | LSP for `.sysml` files. Syntax highlighting, go-to-definition, diagnostics. |
+
+### Deferred (no milestone IDs until dependencies clear)
+
+| Item | Reason |
+|------|--------|
+| External ontology import (OWL/JSON-LD/SysAnd) | Import before package model is stable is premature |
+| LLM integration (Q&A, generation, report drafting) | Nice-to-have, not adoption-critical |
+| EA/Cameo import | Migration tools — after core adoption proven |
+| Cloud + collaboration | Hosted deployment — after local tool is solid |
+| Domain packages (automotive, aerospace) | After medical vertical proven |
+| Plugin system | After extension model stable |
 
 ---
 
@@ -425,7 +492,12 @@ Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
 | **DSM/FMEA are tools, not views** | Analysis tools (DSM, consistency, FMEA) are accessed from a toolbar, not as separate modes. They operate on the model and can be invoked from CLI too. |
 | **Activity diagrams are views** | Action Flow Diagram is a view type (AFD) under behavior-view, not a top-level mode. |
 | **Arcadia-aligned layers** | Operational Analysis → Functional Need → Logical Architecture → Physical Architecture, following Capella/Arcadia methodology. |
-| **30 concrete viewpoints** | Based on Starman SA taxonomy: Domain (Clinical, Business, Jobs, Capability, Environment), Behavioral (Use Case, Usability, Stakeholder Need, Risk, Requirement), Functional, Logical (Data, Control), Implementational (Hardware, Software, Timing, Network, Security, Deployment), Operational (Communication, Development, Service, Manufacturing, Execution, Process). |
+| **SysML v2 is single source of truth** | Kinds/relationships derived from SysML AST, not YAML catalogs. `KindRegistry`/`RelationshipRegistry` replace `config.kinds`/`config.relationshipTypes`. |
+| **Directory = Layer (Apollo-11 pattern)** | `sysml/<layer>/<file>.sysml` determines architecture layer. No YAML needed to assign layers. |
+| **Config decomposes into purpose-specific files** | `memo.package.yaml` (identity) + `memo.rendering.yaml` (visualization) + `memo.rules.yaml` (validation) replace monolithic `memo.config.yaml`. |
+| **Ontology locked per project** | Selected at `memo init`, changing shows validation errors, no auto-migration. |
+| **Two-repo split** | `memo-base` (ontology, Layer 2) and `memo-architect` (tool, Layer 3) evolve independently. Git subtree for local dev. |
+| **Adoption before ecosystem** | Unified UX → compliance outputs → package ecosystem → advanced features. |
 
 ---
 
@@ -433,7 +505,9 @@ Replace 6-mode tab system with ISO 42010-aligned view-centric architecture:
 
 | Issue | Priority | Notes |
 |---|---|---|
+| 6-mode architecture needs replacement | Critical | Current modes don't match ISO 42010. Phase 10 addresses this. |
+| ~~`medical-modeling-profile` has `projectType: device`~~ | ~~High~~ | Fixed in M36. |
+| ~2,900 lines YAML duplication | High | Kinds/rels duplicated in SysML + YAML. Phase 7-8 eliminates this. |
 | Web bundle size (1.8 MB) | Low | Consider code splitting for ReactFlow/ELK |
 | No web component tests | Medium | `@memo/web` has no test infrastructure yet |
 | Small viewport layout overlap | Low | 3-panel layouts need min-width breakpoints |
-| 6-mode architecture needs replacement | Critical | Current modes (catalog, diagram, actionflow, dsm, scenario, ontology) don't match ISO 42010. Phase 7 addresses this. |
