@@ -1,9 +1,10 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { MEMOConfig, ViewpointDefinition } from './config.js';
+import type { MEMOConfig, CosmaLayer, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
+const RENDERING_FILENAMES = ['memo.rendering.yaml', 'memo.rendering.yml'];
 
 /**
  * Locate the nearest config file by walking up from `startDir`.
@@ -26,12 +27,43 @@ export function findConfigFile(startDir: string): string | undefined {
 }
 
 /**
+ * Load rendering layers from a memo.rendering.yaml file.
+ * Returns the layers array, or empty array if file not found.
+ */
+export function loadRenderingLayers(configDir: string): CosmaLayer[] {
+    for (const name of RENDERING_FILENAMES) {
+        const candidate = resolve(configDir, name);
+        if (existsSync(candidate)) {
+            try {
+                const raw = readFileSync(candidate, 'utf-8');
+                const parsed = parseYaml(raw);
+                return parsed?.layers ?? [];
+            } catch {
+                // skip malformed file
+            }
+        }
+    }
+    return [];
+}
+
+/**
  * Load and parse a MEMOConfig from a YAML file.
+ * Also loads `memo.rendering.yaml` if present (layers → cosmaLayers).
  * Does NOT resolve `extends` — call `resolveConfig` for that.
  */
 export function loadConfig(filePath: string): MEMOConfig {
     const raw = readFileSync(filePath, 'utf-8');
     const parsed = parseYaml(raw);
+
+    // Load rendering layers from memo.rendering.yaml (new format)
+    const configDir = dirname(filePath);
+    const renderingLayers = loadRenderingLayers(configDir);
+
+    // Merge: memo.rendering.yaml layers take precedence, then cosmaLayers from config
+    const cosmaLayersFromConfig: CosmaLayer[] = parsed.cosmaLayers ?? [];
+    const mergedLayers = renderingLayers.length > 0
+        ? dedup([...cosmaLayersFromConfig, ...renderingLayers], l => l.id)
+        : cosmaLayersFromConfig;
 
     // Apply defaults
     return {
@@ -42,7 +74,7 @@ export function loadConfig(filePath: string): MEMOConfig {
         ontologyMetadata: parsed.ontologyMetadata,
         externalOntologies: parsed.externalOntologies,
         libraries: parsed.libraries,
-        cosmaLayers: parsed.cosmaLayers ?? [],
+        cosmaLayers: mergedLayers,
         kinds: parsed.kinds ?? {},
         relationshipTypes: parsed.relationshipTypes ?? [],
         closureRules: parsed.closureRules ?? [],
