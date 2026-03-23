@@ -416,7 +416,7 @@ Decompose `memo.config.yaml` (~2,900 lines across 3 packages) into purpose-speci
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
 | M43 | Extract memo.rendering.yaml | **Done** | M42 | Extract `cosmaLayers` from config into `memo.rendering.yaml`. Use `layers` key (not `cosmaLayers`). Config-loader loads both old and new format, merges with dedup. 9 new tests. |
-| M44 | Extract memo.rules.yaml | Not started | M42 | Extract `closureRules` from `medical-modeling-profile/memo.config.yaml` into `memo.rules.yaml`. Update validator to load rules from new file. |
+| M44 | Extract memo.rules.yaml | **Done** | M42 | Extract `closureRules` (109 rules) from `medical-modeling-profile/memo.config.yaml` into `memo.rules.yaml`. Config-loader loads both old and new format, merges with dedup. 8 new tests. |
 | M45 | Remove config.kinds | Not started | M42, M43 | Delete `kinds:` sections from all configs (~1,500 lines). Builder uses KindRegistry only. Make `kinds` optional in MEMOConfig. Update all builder tests. |
 | M46 | Remove config.relationshipTypes | Not started | M45 | Delete `relationshipTypes:` sections (~700 lines). Builder uses RelationshipRegistry only. |
 | M47 | Delete legacy config | Not started | M45, M46 | Remove `memo.config.yaml` from ontology packages entirely. Slim `MEMOConfig` type. Example projects use new format. Config-loader falls back to `memo.config.yaml` for user projects. |

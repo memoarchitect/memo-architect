@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { loadConfig, loadRenderingLayers } from '../model/config-loader.js';
+import { loadConfig, loadRenderingLayers, loadClosureRules } from '../model/config-loader.js';
 
 const TMP_DIR = resolve(__dirname, '__tmp_config_test__');
 
@@ -131,6 +131,168 @@ layers:
     });
 });
 
+// ─── loadClosureRules Tests ──────────────────────────────────────────────────
+
+describe('loadClosureRules', () => {
+    it('loads rules from memo.rules.yaml', () => {
+        writeFileSync(join(TMP_DIR, 'memo.rules.yaml'), `
+closureRules:
+  - id: CR-TEST-001
+    description: "Every Hazard must have a RiskControl"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: error
+  - id: CR-TEST-002
+    description: "Every Risk must identify a Hazard"
+    entity: Risk
+    rule:
+      type: requireRelationship
+      relationship: identifies
+      direction: outgoing
+      min: 1
+    severity: warning
+`);
+        const rules = loadClosureRules(TMP_DIR);
+        expect(rules).toHaveLength(2);
+        expect(rules[0].id).toBe('CR-TEST-001');
+        expect(rules[0].entity).toBe('Hazard');
+        expect(rules[0].severity).toBe('error');
+        expect(rules[1].id).toBe('CR-TEST-002');
+    });
+
+    it('returns empty array if no rules file exists', () => {
+        const rules = loadClosureRules(TMP_DIR);
+        expect(rules).toEqual([]);
+    });
+
+    it('returns empty array for malformed rules file', () => {
+        writeFileSync(join(TMP_DIR, 'memo.rules.yaml'), 'not: valid: yaml: [');
+        const rules = loadClosureRules(TMP_DIR);
+        expect(rules).toEqual([]);
+    });
+});
+
+// ─── loadConfig with memo.rules.yaml ─────────────────────────────────────────
+
+describe('loadConfig with memo.rules.yaml', () => {
+    it('merges rules from memo.rules.yaml into closureRules', () => {
+        writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
+projectName: test-project
+projectType: device
+`);
+        writeFileSync(join(TMP_DIR, 'memo.rules.yaml'), `
+closureRules:
+  - id: CR-TEST-001
+    description: "Test rule"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: error
+`);
+
+        const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
+        expect(config.closureRules).toHaveLength(1);
+        expect(config.closureRules[0].id).toBe('CR-TEST-001');
+    });
+
+    it('rules file takes precedence over config closureRules for same id', () => {
+        writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
+projectName: test-project
+projectType: device
+closureRules:
+  - id: CR-TEST-001
+    description: "Old description"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: warning
+`);
+        writeFileSync(join(TMP_DIR, 'memo.rules.yaml'), `
+closureRules:
+  - id: CR-TEST-001
+    description: "New description from rules file"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: error
+`);
+
+        const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
+        expect(config.closureRules).toHaveLength(1);
+        expect(config.closureRules[0].description).toBe('New description from rules file');
+        expect(config.closureRules[0].severity).toBe('error');
+    });
+
+    it('backward compat: closureRules still works without rules file', () => {
+        writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
+projectName: test-project
+projectType: device
+closureRules:
+  - id: CR-TEST-001
+    description: "Test rule"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: error
+`);
+
+        const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
+        expect(config.closureRules).toHaveLength(1);
+        expect(config.closureRules[0].id).toBe('CR-TEST-001');
+    });
+
+    it('merges both sources when both have different rule ids', () => {
+        writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
+projectName: test-project
+projectType: device
+closureRules:
+  - id: CR-TEST-001
+    description: "Config rule"
+    entity: Hazard
+    rule:
+      type: requireRelationship
+      relationship: mitigates
+      direction: incoming
+      min: 1
+    severity: error
+`);
+        writeFileSync(join(TMP_DIR, 'memo.rules.yaml'), `
+closureRules:
+  - id: CR-TEST-002
+    description: "Rules file rule"
+    entity: Risk
+    rule:
+      type: requireRelationship
+      relationship: identifies
+      direction: outgoing
+      min: 1
+    severity: warning
+`);
+
+        const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
+        expect(config.closureRules).toHaveLength(2);
+        const ids = config.closureRules.map(r => r.id);
+        expect(ids).toContain('CR-TEST-001');
+        expect(ids).toContain('CR-TEST-002');
+    });
+});
+
 // ─── Integration: real ontology packages ────────────────────────────────────
 
 describe('loadConfig with real ontology rendering files', () => {
@@ -158,5 +320,25 @@ describe('loadConfig with real ontology rendering files', () => {
         expect(layerIds).toContain('risk');
         expect(layerIds).toContain('design-control');
         expect(layerIds).toContain('safety');
+    });
+
+    it('medical-modeling-profile loads closure rules from memo.rules.yaml', () => {
+        const configPath = resolve(__dirname, '../../../medical-modeling-profile/memo.config.yaml');
+        const config = loadConfig(configPath);
+
+        // Rules should come from memo.rules.yaml (not config, since we extracted them)
+        expect(config.closureRules.length).toBeGreaterThanOrEqual(100);
+
+        // Verify specific rules are present
+        const ruleIds = config.closureRules.map(r => r.id);
+        expect(ruleIds).toContain('CR-MED-001');
+        expect(ruleIds).toContain('CR-MED-041');
+        expect(ruleIds).toContain('CR-MED-109');
+
+        // Verify rule structure
+        const rule1 = config.closureRules.find(r => r.id === 'CR-MED-001')!;
+        expect(rule1.entity).toBe('Hazard');
+        expect(rule1.severity).toBe('error');
+        expect(rule1.rule.type).toBe('requireRelationship');
     });
 });
