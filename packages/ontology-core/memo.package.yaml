@@ -1,0 +1,6 @@
+name: "@memo/ontology-core"
+version: "0.1.0"
+type: ontology
+description: "Domain-agnostic MBSE backbone (11 architecture layers, 165 kinds)"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "arcadia", "42010"]

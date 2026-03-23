@@ -1,0 +1,6 @@
+{
+  "type": "modeling-profile",
+  "name": "@memo/medical-modeling-profile",
+  "version": "2.0.0",
+  "usage": ["rules", "viewpoints", "templates"]
+}

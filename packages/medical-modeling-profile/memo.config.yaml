@@ -6,7 +6,7 @@
 #   - closure rules, viewpoints, and starter scaffolding only
 
 projectName: "@memo/medical-modeling-profile"
-projectType: device
+projectType: profile
 
 ontologies:
   - name: memo-ontology-medical

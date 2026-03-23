@@ -4,13 +4,15 @@
 // Projects inherit from domain configs via the `extends` field.
 // The CLI merges the inheritance chain at startup.
 //
-// Two project types:
-//   - "ontology" — shared type system (like EA MDG Technology)
+// Four project types:
+//   - "ontology" — shared type system (kinds + relationships)
+//   - "profile"  — closure rules, viewpoints, templates (extends an ontology)
+//   - "library"  — reusable model elements (instances, not types)
 //   - "device"   — specific medical device model referencing an ontology
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Project type discriminator */
-export type ProjectType = 'ontology' | 'device';
+export type ProjectType = 'ontology' | 'profile' | 'library' | 'device';
 
 /** A CoSMA visualization layer grouping related entity kinds */
 export interface CosmaLayer {
@@ -245,7 +247,7 @@ export interface MEMOConfig {
     /** Project name (set by `memo init`) */
     projectName: string;
 
-    /** Project type: "ontology" or "device" */
+    /** Project type: "ontology", "profile", "library", or "device" */
     projectType: ProjectType;
 
     /** Parent config to inherit from, e.g. '@memo/medical-modeling-profile' */
