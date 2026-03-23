@@ -7,7 +7,8 @@
 import { resolve } from 'node:path';
 import { readdirSync, statSync } from 'node:fs';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, loadOntologyRegistries } from '@memo/core';
+import type { BuilderRegistries } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
@@ -49,6 +50,23 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     console.log(chalk.gray(`Project: ${config.projectName} (${config.projectType})`));
     console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds).length} | Rules: ${config.closureRules.length} | Relationships: ${config.relationshipTypes.length}`));
 
+    // 2b. Load ontology registries (SysML-driven kind/relationship discovery)
+    let ontologyRegistries: BuilderRegistries | undefined;
+    try {
+        const loadResult = await loadOntologyRegistries(configPath);
+        if (loadResult.fileCount > 0) {
+            ontologyRegistries = loadResult.registries;
+            const kr = loadResult.registries.kindRegistry;
+            const rr = loadResult.registries.relationshipRegistry;
+            console.log(chalk.gray(
+                `Ontology: ${kr?.size ?? 0} kinds, ${rr?.size ?? 0} relationships ` +
+                `(from ${loadResult.fileCount} SysML files)`
+            ));
+        }
+    } catch (e) {
+        console.log(chalk.yellow(`  ⚠ Could not load ontology registries: ${e instanceof Error ? e.message : e}`));
+    }
+
     // 3. Find SysML files
     const sysmlFiles = findSysmlFiles(cwd);
     if (sysmlFiles.length === 0) {
@@ -69,7 +87,7 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     }
 
     // 5. Build model
-    const model = buildMemoModel(documents, config, parseErrors);
+    const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
     console.log(chalk.cyan(`Model: ${model.elements.size} elements, ${model.relationships.length} relationships\n`));
 
     // 6. Validate
