@@ -30,6 +30,10 @@ export * from './model/config-loader.js';
 export * from './model/semantic.js';
 export * from './model/parser-utils.js';
 export * from './model/builder.js';
+export * from './model/layer-resolver.js';
+export * from './model/kind-registry.js';
+export * from './model/relationship-registry.js';
+export * from './model/ontology-loader.js';
 
 // ─── Validation + Completeness ──────────────────────────────────────────────
 export * from './validator/types.js';

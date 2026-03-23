@@ -10,7 +10,8 @@ import { resolve } from 'node:path';
 import { readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries } from '@memo/core';
+import type { BuilderRegistries } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import type { ServerMessage, ViewpointDTO, CosmaLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
@@ -67,6 +68,23 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     let buildCount = 0;
     console.log(chalk.gray(`Project: ${config.projectName}`));
 
+    // 1b. Load ontology registries (SysML-driven kind/relationship discovery)
+    let ontologyRegistries: BuilderRegistries | undefined;
+    try {
+        const loadResult = await loadOntologyRegistries(configPath);
+        if (loadResult.fileCount > 0) {
+            ontologyRegistries = loadResult.registries;
+            const kr = loadResult.registries.kindRegistry;
+            const rr = loadResult.registries.relationshipRegistry;
+            console.log(chalk.gray(
+                `Ontology: ${kr?.size ?? 0} kinds, ${rr?.size ?? 0} relationships ` +
+                `(from ${loadResult.fileCount} SysML files)`
+            ));
+        }
+    } catch (e) {
+        console.log(chalk.yellow(`  ⚠ Could not load ontology registries: ${e instanceof Error ? e.message : e}`));
+    }
+
     // 2. Initial parse + build
     async function rebuild(): Promise<{
         messages: ServerMessage[];
@@ -74,7 +92,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         buildCount++;
         const sysmlFiles = findSysmlFiles(cwd);
         const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
-        const model = buildMemoModel(documents, config, errors);
+        const model = buildMemoModel(documents, config, errors, ontologyRegistries);
         const validation = validateModel(model, config);
         const completeness = computeCompleteness(model, validation, config);
 
