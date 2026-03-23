@@ -8,16 +8,34 @@ MEMO is a SysML v2 MBSE tool for medical device architecture per ISO 14971, IEC 
 
 **ISO 42010-aligned:** Viewpoint → View → Model. All diagram types (BDD, IBD, ACT, AFD, REQ, etc.) are views under viewpoints, not separate app modes. Follows Arcadia/Capella methodology layers.
 
-**Target UI (Phase 7 — not yet implemented):**
+**Three-layer product model (MEMO = Medical Engineering Modeling Ontology):**
+- Layer 1: SysAnd/SysML v2 ecosystem — publish to, don't build
+- Layer 2: MEMO (the ontology) — `memo-base` repo — `@memo/ontology-core` → `@memo/ontology-medical` → `@memo/medical-modeling-profile`
+- Layer 3: MEMO Architect (the tool) — `memo-architect` repo — device modeling app (CLI + web), imports ontology, adds tools (DSM, FMEA, DHF, completeness)
+
+**Two-repo split (Phase 7-9, in progress):**
+- `memo-base` repo (Layer 2): ontology-core, ontology-medical, medical-modeling-profile — evolves independently
+- `memo-architect` repo (Layer 3): core, cli, web, tools — depends on specific ontology version
+- Git subtree pulls `memo-base` into `memo-architect/ontology/` for local development
+- See `docs/architecture/platform-strategy.md` for full spec
+
+**SysML-as-Source-of-Truth (Phase 7-8, in progress):**
+- Kinds and relationships are defined in SysML files only — `part def Hazard { }`, `connection def Mitigates { }`
+- `KindRegistry` and `RelationshipRegistry` replace `config.kinds` and `config.relationshipTypes` by parsing the SysML AST
+- Architecture layer derived from directory path: `sysml/risk/hazard.sysml` → risk layer (Apollo-11 pattern)
+- Config decomposes into small files: `memo.package.yaml` (identity) + `memo.rendering.yaml` (layer colors) + `memo.rules.yaml` (closure rules)
+
+**Target UI (Phase 10 — not yet implemented):**
 - Left: Model Explorer (elements) + View Explorer (views under viewpoints)
 - Center: Unified Canvas (renders any view type)
 - Right: Properties Panel
 - Toolbar: Tools (DSM, Consistency, FMEA) + Create View
 
-**Current UI (6-mode tabs — to be replaced in Phase 7):**
+**Current UI (6-mode tabs — to be replaced in Phase 10):**
 - catalog, diagram, actionflow, dsm, scenario, ontology
 
 **Reference documents for architecture vision:**
+- `docs/architecture/platform-strategy.md` — Finalized platform architecture
 - `/Users/someshkashyap/Downloads/System Architecture Document-wip.pdf`
 - `/Users/someshkashyap/Downloads/System Architecture Overview.pdf`
 - `/Users/someshkashyap/EA/NewMDG/AfferaMDG.qea` (SQLite, 78 stereotypes)
@@ -39,14 +57,28 @@ MEMO is a SysML v2 MBSE tool for medical device architecture per ISO 14971, IEC 
 
 ```
 packages/
-  core/       — Langium grammar, parser, model builder, validator, serializers
-  cli/        — CLI commands (init, dev, validate, export, import, ontology)
-  web/        — React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
-  ontology/   — Base MBSE ontology config (52 kinds, 12 rels, 9 layers, 8 viewpoints)
-  medical/    — Medical domain extension (13 kinds, 4 rels, 15 ISO closure rules, 4 viewpoints)
+  core/                      — Langium grammar, parser, model builder, validator, serializers
+  cli/                       — CLI commands (init, dev, validate, export, import, ontology)
+  web/                       — React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
+  ontology-core/             — Domain-agnostic MBSE backbone (11 architecture layers, 165 kinds, OWL exporter)
+  ontology-medical/          — Medical device backbone extending core (15 entity domains, 200+ kinds, OWL exporter)
+  medical-modeling-profile/  — Modeling profile with closure rules, viewpoints, and templates (extends ontology-medical)
 examples/
-  infusion-pump/   — 74-element multi-file medical device model
-  irrigation-pump/ — Behavior-focused example with parallel flows
+  infusion-pump/             — Multi-file medical device model with compliance/risk models
+  irrigation-pump/           — Behavior-focused example with architecture, risk, and compliance models
+```
+
+**Target package structure (after Phase 7-8 rearchitecture):**
+```
+packages/ontology-core/
+  .project.json              — SysAnd manifest
+  memo.package.yaml          — Identity (name, version, license)
+  memo.rendering.yaml        — Architecture layer colors/icons (~30 lines)
+  sysml/
+    purpose/business.sysml   — Directory = architecture layer (Apollo-11 pattern)
+    operational/...
+    requirements/...
+    relationships/...
 ```
 
 ## Build & Test Commands
@@ -56,6 +88,24 @@ pnpm run build        # Build all packages (Turborepo cached)
 pnpm run test         # Run all tests (130+ passing)
 pnpm run dev          # Start dev server (packages/cli: memo dev)
 ```
+
+## Executing Milestones
+
+When asked to "execute M<N>" or "run milestone M<N>", follow this protocol:
+
+1. **Read context first** (in this order):
+   - This file (`CLAUDE.md`) — project overview, tech stack, decisions
+   - `docs/development/roadmap.md` — milestone scope, dependencies, acceptance criteria
+   - `docs/architecture/platform-strategy.md` — architecture spec (package format, registries, SysAnd)
+   - `docs/architecture/rearchitect-prompt.md` — execution guide with key files, architecture context, session discipline
+
+2. **Verify baseline:** `pnpm run build && pnpm run test` (all 130+ tests must pass)
+3. **Work on `main`** — trunk-based development, no feature branches. Commit directly to `main`.
+4. **Execute:** Follow milestone scope from `roadmap.md`. Read all affected files before modifying. Run tests after each logical change.
+5. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/infusion-pump && memo dev`.
+6. **Commit:** `M<ID>: <milestone title>`
+
+**Do NOT:** attempt multiple milestones per session, modify files outside scope, add improvements beyond scope, create feature branches, push without being asked.
 
 ## GitLab Project Management
 
@@ -77,49 +127,54 @@ glab issue create -R somesh_sandbox/memo --title "..." --milestone "M33: ..."
 glab issue close -R somesh_sandbox/memo <issue-number>
 ```
 
-### Milestone Inventory (35 milestones as of March 2026)
+### Milestone Inventory
 
-**Closed (7):**
-- M1: Diagram-First Browser (Phase 4D)
-- M2: Collapsible Sidebar + Git Identity (Phase 4D)
-- M3: Multi-File SysML Resolution (Phase 4)
-- M11: Vertical Completeness Bar (Phase 4D)
-- M16: Behavior Viewpoint (Phase 5)
-- M17: FBS Tree + DSM (Phase 6a/6b)
-- M18: Functional-Logical Consistency (Phase 6c)
+**Authoritative roadmap:** `docs/development/roadmap.md` — single source of truth for all milestones.
 
-**Active — Tier 1 CRITICAL (core MBSE workflow):**
-- M33: Unified View Architecture — Replace 6-mode tabs with view-centric explorer + unified canvas
-- M4: Ontology Editor — Visual editor for kinds, relationships, layers, closure rules
-- M6: Relationship/Traceability Matrix — N×N matrix (ISO 14971/IEC 62304)
-- M9: FMEA + Risk Analysis — ISO 14971 FMEA table with risk chains
-- M34: Element Libraries — Reusable standard component libraries
-- M35: External Ontology Import — OWL/JSON-LD/SysAnd interoperability
+**Closed (M1-M35):** M1-M3, M11, M16-M18 completed. M4-M35 closed — to be recreated post-rearchitecture.
 
-**Active — Tier 2 HIGH (productivity & compliance):**
-- M14: DHF Generator Engine — Design History File generator
-- M15: DHF Web Preview — DHF preview in web app
-- M19: CI Integration — JSON/JUnit output, exit codes
-- M12: Cmd+K Search — Global fuzzy search
-- M10: Properties Tabs + Editing — Inline editing
-- M20: Static Build + Export — memo build, .kpar
+**Active milestones (in execution order):**
 
-**Active — Tier 3 MEDIUM (enhanced experience):**
-- M5: Custom Viewpoints UI
-- M7: Right-Click Context Menus
-- M8: Tabular View
-- M13: Focus Mode
-- M22: Scenario Editor + Diff
-- M26: VS Code Extension
-- M21: Statistics Dashboard
+Phase 7 — Package & Registry Foundation:
+- M36: Package semantics cleanup (fix projectType, memo.package.yaml, .project.json)
+- M37: Directory restructure — ontology-core (Apollo-11)
+- M38: Directory restructure — ontology-medical (Apollo-11)
+- M39: KindRegistry — SysML-driven kind discovery
+- M40: RelationshipRegistry — SysML-driven relationship discovery
+- M41: Dual-mode builder — registry + config fallback
+- M42: Ontology loader — wire registries into CLI
 
-**Active — Tier 4 LOW (future):**
-- M23: Guided Wizard
-- M24: Working Sets
-- M25: Onboarding + Performance
-- M27: EA/Cameo Import
-- M28: Plugin System
-- M29-M32: LLM, Domain Packages, Cloud
+Phase 8 — Config Decomposition:
+- M43: Extract memo.rendering.yaml (cosmaLayers → layers)
+- M44: Extract memo.rules.yaml
+- M45: Remove config.kinds (~1,500 lines)
+- M46: Remove config.relationshipTypes (~700 lines)
+- M47: Delete legacy memo.config.yaml
+
+Phase 9 — Package Lifecycle:
+- M48: Harden SysAnd export + round-trip validation
+- M49: Ontology lock + change detection
+- M50: memo init with ontology selection
+- M51: memo install — package resolution
+
+Phase 10 — Unified Workbench UX:
+- M52: Unified view architecture (replace 6-mode tabs)
+- M53: Model Explorer + View Explorer
+- M54: Properties panel + inline editing
+- M55: Tools panel + productivity (DSM/FMEA toolbar, Cmd+K, context menus)
+
+Phase 11 — Compliance & Productivity:
+- M56: CI integration (exit codes, JUnit)
+- M57: Traceability matrix
+- M58: DHF generator
+- M59: Static build + .kpar packaging
+
+Phase 12 — Extension Ecosystem:
+- M59: Reusable package authoring + consumption
+- M60: Standalone ontology viewer
+- M61: VS Code extension
+
+Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M52
 
 ### Issue Labels
 
@@ -144,6 +199,7 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 | 6a — FBS | decomposedBy, FBS tree with ELK MRTree, expand/collapse | - |
 | 6b — DSM | computeDSM(), clustering, interactive DSMView, allocation overlay | 9 |
 | 6c — Consistency | analyzeConsistency(), bezier edges, FONT tokens across components | - |
+| Ontology Backbone | Three-tier split: `ontology-core` → `ontology-medical` → `medical-modeling-profile`. ADR-1-6/1-7. 26 SysML entity files, 2 OWL exporters, updated examples | 130+ |
 
 **Total tests: 130+**
 
@@ -157,13 +213,21 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 - **State management** — Zustand store in `packages/web/src/store/model-store.ts`
 - **Config-driven viewpoints** — Defined in memo.config.yaml, not hardcoded
 - **Auto-generated diagrams** — CLI generates from viewpoint config on rebuild
+- **Three-tier ontology** — `ontology-core` (domain-agnostic) → `ontology-medical` (regulated medical) → `medical-modeling-profile` (rules/viewpoints/templates). See ADR-1-6
+- **SysML v2 is single source of truth** — Kinds/relationships derived from SysML AST, not YAML catalogs (Phase 7)
+- **Directory = Layer (Apollo-11 pattern)** — `sysml/<layer>/<file>.sysml` determines architecture layer (Phase 7)
+- **Config decomposes into purpose-specific files** — `memo.package.yaml` + `memo.rendering.yaml` + `memo.rules.yaml` replace monolithic `memo.config.yaml` (Phase 8)
+- **Ontology locked per project** — Selected at `memo init`, changing shows validation errors, no auto-migration (Phase 9)
+- **Standalone ontology viewer** — Read-only tool at `tools/ontology-viewer/`, not a mode in MEMO Architect (Phase 12)
+- **Two-repo split** — `memo-base` (ontology, Layer 2) and `memo-architect` (tool, Layer 3) are separate git repos; git subtree for local dev
+- **Adoption before ecosystem** — Unified UX → compliance outputs → package ecosystem → advanced features
 
 ## Session Status (March 2026)
 
-**Last completed:** Phase 6c (Consistency + Visual Polish) — all code complete, build passes, 130+ tests pass.
+**Last completed:** Roadmap consolidation — merged three conflicting plan documents (`roadmap.md`, `platform-strategy.md`, `rearchitect-prompt.md`) into single authoritative roadmap. Resequenced milestones based on CPO product strategy: package semantics → registries → config decomposition → package lifecycle → unified UX → compliance outputs → extension ecosystem. Fixed phase numbering conflict (Phase 8 had different meanings across docs). Incorporated adoption-first priorities.
 
-**Current phase:** Ontology Backbone Restructuring — split the current ontology direction into `@memo/ontology-core` (domain-agnostic MBSE backbone) and `@memo/ontology-medical` (medical device development backbone for ISO 13485 / ISO 14971 / IEC 62304 / IEC 60601-1).
+**Previously completed:** Ontology Backbone Restructuring — three-tier split into `@memo/ontology-core` → `@memo/ontology-medical` → `@memo/medical-modeling-profile`. Platform architecture finalized in `docs/architecture/platform-strategy.md`. 130+ tests passing.
 
-**Next up:** Phase 7 (M33 — Unified View Architecture) continues, but the ontology work now starts with defining the `core` and `ontology-medical` package boundaries before expanding compliance features.
+**Next up:** Phase 7 begins with M36 (package semantics cleanup), then M37/M38 (directory restructure) in parallel, then M39 (KindRegistry). All milestones M4-M35 closed — to be recreated post-rearchitecture.
 
-**GitLab milestones updated:** M16/M17/M18 closed, M33/M34/M35 created, all milestones have Tier descriptions.
+**GitLab milestones:** M36-M54 exist from previous session but milestone content is stale relative to the consolidated roadmap. GitLab needs updating to match `docs/development/roadmap.md`.
