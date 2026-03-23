@@ -415,7 +415,7 @@ Decompose `memo.config.yaml` (~2,900 lines across 3 packages) into purpose-speci
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M43 | Extract memo.rendering.yaml | Not started | M42 | Extract `cosmaLayers` from config into `memo.rendering.yaml`. Use `layers` key (not `cosmaLayers`). Update web app + CLI to read from new file. Config-loader accepts both old and new key for backward compat. |
+| M43 | Extract memo.rendering.yaml | **Done** | M42 | Extract `cosmaLayers` from config into `memo.rendering.yaml`. Use `layers` key (not `cosmaLayers`). Config-loader loads both old and new format, merges with dedup. 9 new tests. |
 | M44 | Extract memo.rules.yaml | Not started | M42 | Extract `closureRules` from `medical-modeling-profile/memo.config.yaml` into `memo.rules.yaml`. Update validator to load rules from new file. |
 | M45 | Remove config.kinds | Not started | M42, M43 | Delete `kinds:` sections from all configs (~1,500 lines). Builder uses KindRegistry only. Make `kinds` optional in MEMOConfig. Update all builder tests. |
 | M46 | Remove config.relationshipTypes | Not started | M45 | Delete `relationshipTypes:` sections (~700 lines). Builder uses RelationshipRegistry only. |

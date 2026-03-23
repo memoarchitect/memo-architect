@@ -1,0 +1,31 @@
+# @memo/ontology-medical rendering configuration
+# Medical-domain architecture layer colors (extends core layers)
+
+layers:
+  - id: design-control
+    label: Design Control
+    color: "#5B8DEF"
+
+  - id: risk
+    label: Risk Management
+    color: "#E74C3C"
+
+  - id: software-lifecycle
+    label: Software Lifecycle
+    color: "#F39C12"
+
+  - id: safety
+    label: Safety & Essential Performance
+    color: "#C0392B"
+
+  - id: qms
+    label: QMS & Records
+    color: "#2C3E50"
+
+  - id: privacy
+    label: Privacy & Governance
+    color: "#16A085"
+
+  - id: ui
+    label: UI Realization
+    color: "#3498DB"

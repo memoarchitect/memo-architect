@@ -1,0 +1,43 @@
+# @memo/ontology-core rendering configuration
+# Architecture layer colors for visualization (ISO 42010 layers)
+
+layers:
+  - id: purpose
+    label: Purpose & Stakeholders
+    color: "#8E44AD"
+
+  - id: operational
+    label: Operational Analysis
+    color: "#C0392B"
+
+  - id: requirements
+    label: Requirements
+    color: "#4A90D9"
+
+  - id: functional
+    label: Functional Analysis
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical Architecture
+    color: "#7B68EE"
+
+  - id: physical
+    label: Physical Architecture
+    color: "#95A5A6"
+
+  - id: software
+    label: Software Architecture
+    color: "#F39C12"
+
+  - id: interfaces
+    label: Interfaces & Contracts
+    color: "#1ABC9C"
+
+  - id: analysis
+    label: Analysis & Constraints
+    color: "#16A085"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"
