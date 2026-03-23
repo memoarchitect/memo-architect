@@ -4,3 +4,5 @@ export * from './semantic.js';
 export * from './parser-utils.js';
 export * from './builder.js';
 export * from './package-registry.js';
+export * from './layer-resolver.js';
+export * from './kind-registry.js';
