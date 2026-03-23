@@ -404,7 +404,7 @@ The rearchitecture core. Eliminates ~2,900 lines of YAML duplication by making S
 | M38 | Directory restructure — ontology-medical | **Done** | M36 | Same as M37 for medical package. 14 entity files → layer directories. |
 | M39 | KindRegistry — SysML-driven kind discovery | **Done** | M37, M38 | New `KindRegistry` class: walks `*Definition` AST nodes, derives layer from directory path via `resolveLayerFromPath()`, produces kind metadata matching old `config.kinds`. 19 new tests. |
 | M40 | RelationshipRegistry — SysML-driven relationship discovery | **Done** | M39 | New `RelationshipRegistry` from `ConnectionDefinition` AST nodes. PascalCase→camelCase normalization. 19 new tests. |
-| M41 | Dual-mode builder — registry + config fallback | Not started | M39, M40 | Modify `buildMemoModel()` to accept optional registries. Registry takes precedence over `config.kinds` at `builder.ts:262`. Backward compatible — existing tests unchanged. |
+| M41 | Dual-mode builder — registry + config fallback | **Done** | M39, M40 | Modify `buildMemoModel()` to accept optional registries. Registry takes precedence over `config.kinds` at `builder.ts:262`. Backward compatible — existing tests unchanged. 6 new tests. |
 | M42 | Ontology loader — wire registries into CLI | Not started | M41 | Pipeline: parse ontology SysML → populate registries → pass to builder. Wire into `memo dev` and `memo validate`. Integration test with infusion-pump example. |
 
 **Parallelization:** {M37, M38} after M36. M39 after both. M40 after M39. M41 after M40. M42 after M41.

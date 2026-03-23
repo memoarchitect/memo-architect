@@ -6,7 +6,9 @@ import { parseHelper } from 'langium/test';
 import { createMemoSysMLServices } from '../language/memo-sysml-module.js';
 import type { Model } from '../language/generated/ast.js';
 import type { MEMOConfig } from '../model/config.js';
-import { buildMemoModel } from '../model/builder.js';
+import { buildMemoModel, type BuilderRegistries } from '../model/builder.js';
+import { KindRegistry } from '../model/kind-registry.js';
+import { RelationshipRegistry } from '../model/relationship-registry.js';
 import { evaluateClosureRules } from '../validator/rule-engine.js';
 import { computeCompleteness } from '../completeness/tracker.js';
 import type { ParsedDocument } from '../model/parser-utils.js';
@@ -727,5 +729,159 @@ describe('Infusion pump integration', () => {
         const completeness = computeCompleteness(model, result, config);
         expect(completeness.totalElements).toBeGreaterThan(50);
         expect(completeness.layers.length).toBeGreaterThanOrEqual(2);
+    });
+});
+
+// ─── Dual-mode builder: registry-first resolution (M41) ─────────────────────
+
+describe('Dual-mode builder with registries', () => {
+    /** Create a KindRegistry with a few test kinds */
+    function createTestKindRegistry(): KindRegistry {
+        const kr = new KindRegistry();
+        kr.register({ name: 'Hazard', label: 'Hazard', layer: 'risk', sysmlConstruct: 'requirement def' });
+        kr.register({ name: 'RiskControl', label: 'Risk Control', layer: 'risk', sysmlConstruct: 'requirement def' });
+        kr.register({ name: 'SystemRequirement', label: 'System Req', layer: 'requirements', sysmlConstruct: 'requirement def' });
+        kr.register({ name: 'Actor', label: 'Actor', layer: 'purpose', sysmlConstruct: 'part def' });
+        kr.register({ name: 'Software', label: 'Software', layer: 'software', sysmlConstruct: 'part def' });
+        return kr;
+    }
+
+    /** Create a RelationshipRegistry with a few test relationship types */
+    function createTestRelRegistry(): RelationshipRegistry {
+        const rr = new RelationshipRegistry();
+        rr.register({ sysmlName: 'Mitigates', name: 'mitigates', label: 'Mitigates', layer: 'crosscutting', ends: [] });
+        rr.register({ sysmlName: 'TraceTo', name: 'traceTo', label: 'Trace To', layer: 'crosscutting', ends: [] });
+        return rr;
+    }
+
+    it('resolves kinds from registry when provided', async () => {
+        const registries: BuilderRegistries = {
+            kindRegistry: createTestKindRegistry(),
+            relationshipRegistry: createTestRelRegistry(),
+        };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                part clinician : Actor {
+                    attribute redefines name = "Clinician";
+                }
+            }
+        `);
+
+        // Use empty config kinds — registry should provide the resolution
+        const emptyKindsConfig: MEMOConfig = { ...testConfig, kinds: {} };
+        const model = buildMemoModel([doc], emptyKindsConfig, [], registries);
+
+        const el = model.elements.get('clinician')!;
+        expect(el).toBeDefined();
+        expect(el.kind).toBe('Actor');
+        // Registry provides 'purpose' layer instead of config's 'business'
+        expect(el.layer).toBe('purpose');
+    });
+
+    it('falls back to config when registry does not have the kind', async () => {
+        const registries: BuilderRegistries = {
+            kindRegistry: new KindRegistry(), // empty registry
+        };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                part clinician : Actor {
+                    attribute redefines name = "Clinician";
+                }
+            }
+        `);
+
+        const model = buildMemoModel([doc], testConfig, [], registries);
+
+        const el = model.elements.get('clinician')!;
+        expect(el).toBeDefined();
+        expect(el.kind).toBe('Actor');
+        expect(el.layer).toBe('business'); // from config fallback
+    });
+
+    it('registry takes precedence over config for same kind', async () => {
+        const kr = new KindRegistry();
+        // Register Hazard with a different layer than config
+        kr.register({ name: 'Hazard', label: 'Hazard', layer: 'safety', sysmlConstruct: 'requirement def' });
+
+        const registries: BuilderRegistries = { kindRegistry: kr };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement h1 : Hazard {
+                    attribute redefines title = "H1";
+                }
+            }
+        `);
+
+        const model = buildMemoModel([doc], testConfig, [], registries);
+
+        const el = model.elements.get('h1')!;
+        expect(el.kind).toBe('Hazard');
+        // Registry's 'safety' takes precedence over config's 'risk'
+        expect(el.layer).toBe('safety');
+    });
+
+    it('resolves qualified type names through registry', async () => {
+        const registries: BuilderRegistries = {
+            kindRegistry: createTestKindRegistry(),
+        };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement h1 : RiskPkg::Hazard {
+                    attribute redefines title = "H1";
+                }
+            }
+        `);
+
+        const emptyKindsConfig: MEMOConfig = { ...testConfig, kinds: {} };
+        const model = buildMemoModel([doc], emptyKindsConfig, [], registries);
+
+        const el = model.elements.get('h1')!;
+        expect(el.kind).toBe('Hazard');
+        expect(el.layer).toBe('risk');
+    });
+
+    it('resolves action usage kinds from registry', async () => {
+        const kr = new KindRegistry();
+        kr.register({ name: 'OperationalActivity', label: 'Op Activity', layer: 'operational', sysmlConstruct: 'action def' });
+
+        const registries: BuilderRegistries = { kindRegistry: kr };
+
+        const doc = await parseDoc(`
+            package TestPkg {
+                action doSomething : OperationalActivity;
+            }
+        `);
+
+        const emptyKindsConfig: MEMOConfig = { ...testConfig, kinds: {} };
+        const model = buildMemoModel([doc], emptyKindsConfig, [], registries);
+
+        const el = model.elements.get('doSomething')!;
+        expect(el.kind).toBe('OperationalActivity');
+        expect(el.layer).toBe('operational');
+    });
+
+    it('produces identical output without registries (backward compat)', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement rc1 : RiskControl {
+                    attribute redefines title = "Control 1";
+                }
+                requirement haz1 : Hazard {
+                    attribute redefines title = "Hazard 1";
+                }
+                connection : Mitigates connect control ::> rc1 to hazard ::> haz1;
+            }
+        `);
+
+        const modelWithout = buildMemoModel([doc], testConfig);
+        const modelWith = buildMemoModel([doc], testConfig, [], undefined);
+
+        expect(modelWith.elements.size).toBe(modelWithout.elements.size);
+        expect(modelWith.relationships.length).toBe(modelWithout.relationships.length);
+        expect(modelWith.elements.get('haz1')?.layer).toBe(modelWithout.elements.get('haz1')?.layer);
     });
 });

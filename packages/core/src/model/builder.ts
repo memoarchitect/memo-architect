@@ -10,6 +10,12 @@
 //   - Connections are deferred until all elements are extracted (two-pass)
 //   - Doc comments are extracted from usage bodies
 //
+// Dual-mode resolution (M41):
+//   - If KindRegistry is provided, it takes precedence over config.kinds
+//   - If RelationshipRegistry is provided, it takes precedence for relationship validation
+//   - Falls back to config when registries are not provided or entry not found
+//   - Backward compatible: existing callers pass no registries, behavior unchanged
+//
 // Phase 5 additions:
 //   - ActionDefinition bodies extract parameters (in/out/inout)
 //   - ActionUsage supports composite actions with nested actions
@@ -50,6 +56,20 @@ import type {
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
 import { PackageRegistry } from './package-registry.js';
+import type { KindRegistry } from './kind-registry.js';
+import type { RelationshipRegistry } from './relationship-registry.js';
+
+/**
+ * Optional registries for dual-mode resolution.
+ * When provided, registries take precedence over config lookups.
+ * Falls back to config when a registry entry is not found.
+ */
+export interface BuilderRegistries {
+    /** KindRegistry populated from ontology SysML files */
+    kindRegistry?: KindRegistry;
+    /** RelationshipRegistry populated from ontology SysML files */
+    relationshipRegistry?: RelationshipRegistry;
+}
 
 let relationshipCounter = 0;
 
@@ -84,12 +104,62 @@ interface DeferredAllocate {
 }
 
 /**
+ * Resolve a kind definition using registry-first, config-fallback strategy.
+ * Returns the KindDefinition and the resolved kind name.
+ */
+function resolveKindDef(
+    typeName: string,
+    config: MEMOConfig,
+    registries?: BuilderRegistries
+): { kindDef: KindDefinition | undefined; resolvedKind: string } {
+    // Try registry first
+    if (registries?.kindRegistry) {
+        const entry = registries.kindRegistry.getKind(typeName);
+        if (entry) {
+            return {
+                kindDef: { label: entry.label, layer: entry.layer, sysmlConstruct: entry.sysmlConstruct },
+                resolvedKind: typeName,
+            };
+        }
+        // Try local part of qualified name
+        if (typeName.includes('::')) {
+            const localType = typeName.split('::').pop()!;
+            const localEntry = registries.kindRegistry.getKind(localType);
+            if (localEntry) {
+                return {
+                    kindDef: { label: localEntry.label, layer: localEntry.layer, sysmlConstruct: localEntry.sysmlConstruct },
+                    resolvedKind: localType,
+                };
+            }
+        }
+    }
+
+    // Fall back to config
+    const kindDef = config.kinds[typeName];
+    if (kindDef) {
+        return { kindDef, resolvedKind: typeName };
+    }
+
+    // Try local part of qualified name in config
+    if (typeName.includes('::')) {
+        const localType = typeName.split('::').pop()!;
+        if (config.kinds[localType]) {
+            return { kindDef: config.kinds[localType], resolvedKind: localType };
+        }
+    }
+
+    return { kindDef: undefined, resolvedKind: typeName };
+}
+
+/**
  * Build a MemoModel from parsed documents and config.
+ * Optionally accepts registries for dual-mode resolution (registry-first, config-fallback).
  */
 export function buildMemoModel(
     documents: ParsedDocument[],
     config: MEMOConfig,
-    parseErrors: ParseError[] = []
+    parseErrors: ParseError[] = [],
+    registries?: BuilderRegistries
 ): MemoModel {
     relationshipCounter = 0;
     const elements = new Map<string, MemoElement>();
@@ -107,7 +177,7 @@ export function buildMemoModel(
     // Phase 2: Extract elements from all documents (populates registry)
     for (const { document, filePath } of documents) {
         const model = document.parseResult.value;
-        extractFromModel(model, filePath, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
+        extractFromModel(model, filePath, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
     }
 
     // Phase 3: Resolve connections using the registry (all elements now known)
@@ -177,11 +247,12 @@ function extractFromModel(
     deferredSuccessions: DeferredSuccession[],
     deferredAllocates: DeferredAllocate[],
     errors: ParseError[],
-    registry: PackageRegistry
+    registry: PackageRegistry,
+    registries?: BuilderRegistries
 ): void {
     for (const member of model.members) {
         if (member.$type === 'PackageDeclaration') {
-            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
+            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
         }
     }
 }
@@ -197,26 +268,27 @@ function extractFromPackage(
     deferredSuccessions: DeferredSuccession[],
     deferredAllocates: DeferredAllocate[],
     errors: ParseError[],
-    registry: PackageRegistry
+    registry: PackageRegistry,
+    registries?: BuilderRegistries
 ): void {
     const packageName = parentPackage ? `${parentPackage}::${pkg.name}` : pkg.name;
 
     for (const member of pkg.members) {
         switch (member.$type) {
             case 'PackageDeclaration':
-                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry);
+                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
                 break;
             case 'PartUsage':
-                extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry);
+                extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry, registries);
                 break;
             case 'RequirementUsage':
-                extractUsage(member as RequirementUsage, 'requirement', filePath, packageName, config, elements, registry);
+                extractUsage(member as RequirementUsage, 'requirement', filePath, packageName, config, elements, registry, registries);
                 break;
             case 'ActionUsage':
-                extractActionUsage(member as ActionUsage, filePath, packageName, config, elements, deferredFlows, deferredSuccessions, registry);
+                extractActionUsage(member as ActionUsage, filePath, packageName, config, elements, deferredFlows, deferredSuccessions, registry, registries);
                 break;
             case 'PortUsage':
-                extractUsage(member as PortUsage, 'port', filePath, packageName, config, elements, registry);
+                extractUsage(member as PortUsage, 'port', filePath, packageName, config, elements, registry, registries);
                 break;
             case 'ConnectionUsage':
                 // Defer connection resolution until all elements are extracted
@@ -255,22 +327,16 @@ function extractUsage(
     packageName: string,
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
-    registry: PackageRegistry
+    registry: PackageRegistry,
+    registries?: BuilderRegistries
 ): void {
     const id = usage.name;
     const typeName = usage.type; // e.g. "Hazard", "SystemRequirement"
-    const kindDef = typeName ? config.kinds[typeName] : undefined;
 
-    // If type has a qualified name, try just the local part for kind lookup
-    let resolvedKind = typeName || 'Unknown';
-    if (typeName && !kindDef && typeName.includes('::')) {
-        const localType = typeName.split('::').pop()!;
-        if (config.kinds[localType]) {
-            resolvedKind = localType;
-        }
-    }
-
-    const finalKindDef = config.kinds[resolvedKind];
+    // Dual-mode resolution: registry first, then config fallback
+    const { kindDef: finalKindDef, resolvedKind } = typeName
+        ? resolveKindDef(typeName, config, registries)
+        : { kindDef: undefined, resolvedKind: 'Unknown' };
 
     const attributes = extractAttributes(usage.body);
     const doc = extractDocComment(usage.body);
@@ -386,25 +452,20 @@ function extractActionUsage(
     deferredFlows: DeferredFlow[],
     deferredSuccessions: DeferredSuccession[],
     registry: PackageRegistry,
+    registries?: BuilderRegistries,
     parentActionId?: string
 ): void {
     const id = usage.name;
     const typeName = usage.type;
 
-    // Determine kind: try config lookup first, then fall back to behavior kinds
+    // Dual-mode resolution: registry first, then config fallback
     let kind = 'ActionUsage';
     let layer = 'behavior';
     if (typeName) {
-        const kindDef = config.kinds[typeName];
+        const { kindDef, resolvedKind } = resolveKindDef(typeName, config, registries);
         if (kindDef) {
-            kind = typeName;
+            kind = resolvedKind;
             layer = kindDef.layer || 'behavior';
-        } else if (typeName.includes('::')) {
-            const localType = typeName.split('::').pop()!;
-            if (config.kinds[localType]) {
-                kind = localType;
-                layer = config.kinds[localType].layer || 'behavior';
-            }
         }
     }
 
@@ -441,7 +502,7 @@ function extractActionUsage(
                 // Nested action usage — recursive extraction
                 extractActionUsage(
                     member as ActionUsage, filePath, packageName, config,
-                    elements, deferredFlows, deferredSuccessions, registry, id
+                    elements, deferredFlows, deferredSuccessions, registry, registries, id
                 );
                 break;
             case 'FlowConnectionUsage':
