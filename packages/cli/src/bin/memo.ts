@@ -25,6 +25,7 @@ import {
 } from '../commands/ontology.js';
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
 import { lockCommand } from '../commands/lock.js';
+import { installCommand } from '../commands/install.js';
 
 const program = new Command();
 
@@ -93,6 +94,15 @@ exportCmd
     .option('--viewpoint <id>', 'Filter by viewpoint ID')
     .action(async (options: { output: string; viewpoint?: string }) => {
         await exportDotCommand(options);
+    });
+
+program
+    .command('install')
+    .description('Install an ontology package (git URL, npm package, or local path)')
+    .argument('<source>', 'Package source: git URL, npm package name, or local path')
+    .option('--mode <mode>', 'Force install mode: git, npm, or local')
+    .action(async (source: string, options: { mode?: string }) => {
+        await installCommand(source, options as any);
     });
 
 program

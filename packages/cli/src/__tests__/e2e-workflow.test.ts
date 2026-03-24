@@ -482,3 +482,95 @@ package CustomDevice {
         expect(stdout).toContain('SystemRequirement');
     });
 });
+
+describe('E2E: memo install', () => {
+    let projectDir: string;
+    let fakeOntologyDir: string;
+
+    beforeAll(() => {
+        // Create a project inside the monorepo for config resolution
+        projectDir = join(REPO_ROOT, '.test-install-' + process.pid);
+        rmSync(projectDir, { recursive: true, force: true });
+
+        // Use memo init to create a properly configured project
+        run(`init ${projectDir}`, REPO_ROOT);
+
+        // Create a fake local ontology package to install
+        fakeOntologyDir = join(REPO_ROOT, '.test-fake-ontology-' + process.pid);
+        rmSync(fakeOntologyDir, { recursive: true, force: true });
+        mkdirSync(fakeOntologyDir, { recursive: true });
+
+        writeFileSync(join(fakeOntologyDir, 'memo.package.yaml'), `
+name: "@test/fake-ontology"
+version: "1.0.0"
+type: ontology
+extends: "@memo/ontology-core"
+description: "Fake ontology for testing memo install"
+`);
+
+        mkdirSync(join(fakeOntologyDir, 'sysml', 'custom'), { recursive: true });
+        writeFileSync(join(fakeOntologyDir, 'sysml', 'custom', 'custom.sysml'), `
+package FakeOntology {
+    part def CustomKind { }
+}
+`);
+    });
+
+    afterAll(() => {
+        rmSync(projectDir, { recursive: true, force: true });
+        rmSync(fakeOntologyDir, { recursive: true, force: true });
+    });
+
+    it('memo install --mode local symlinks a local package into memo_packages/', () => {
+        const output = run(`install ${fakeOntologyDir} --mode local`, projectDir);
+
+        expect(output).toContain('Installing package (local)');
+        expect(output).toContain('Installed @test/fake-ontology');
+
+        // Check symlink was created
+        const linkPath = join(projectDir, 'memo_packages', 'fake-ontology');
+        expect(existsSync(linkPath)).toBe(true);
+
+        // Check memo.package.yaml has the dependency
+        const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
+        expect(config).toContain('@test/fake-ontology');
+    });
+
+    it('memo install --mode local refuses non-existent path', () => {
+        const { exitCode, stdout } = runMayFail('install /nonexistent/path --mode local', projectDir);
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('does not exist');
+    });
+
+    it('memo install detects local paths automatically', () => {
+        // Create another fake package
+        const anotherDir = join(REPO_ROOT, '.test-another-ontology-' + process.pid);
+        rmSync(anotherDir, { recursive: true, force: true });
+        mkdirSync(anotherDir, { recursive: true });
+        writeFileSync(join(anotherDir, 'memo.package.yaml'), `
+name: "@test/another-ontology"
+version: "2.0.0"
+type: ontology
+description: "Another fake ontology"
+`);
+
+        try {
+            const output = run(`install ${anotherDir}`, projectDir);
+            expect(output).toContain('Installing package (local)');
+            expect(output).toContain('Installed @test/another-ontology');
+        } finally {
+            rmSync(anotherDir, { recursive: true, force: true });
+        }
+    });
+
+    it('memo install requires a project config', () => {
+        const emptyDir = mkdtempSync(join(tmpdir(), 'memo-empty-'));
+        try {
+            const { exitCode, stdout } = runMayFail('install some-package', emptyDir);
+            expect(exitCode).not.toBe(0);
+            expect(stdout).toContain('No memo.package.yaml');
+        } finally {
+            rmSync(emptyDir, { recursive: true, force: true });
+        }
+    });
+});
