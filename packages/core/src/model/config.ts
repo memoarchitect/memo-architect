@@ -268,8 +268,8 @@ export interface MEMOConfig {
     /** CoSMA visualization layers */
     cosmaLayers?: CosmaLayer[];
 
-    /** Entity kind definitions (keyed by kind identifier) */
-    kinds: Record<string, KindDefinition>;
+    /** Entity kind definitions (keyed by kind identifier). Optional — prefer KindRegistry. */
+    kinds?: Record<string, KindDefinition>;
 
     /** Typed relationship definitions with CoSMA layer mapping */
     relationshipTypes: RelationshipType[];

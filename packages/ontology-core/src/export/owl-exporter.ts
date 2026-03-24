@@ -81,7 +81,7 @@ export function exportToOwlTurtle(
         }
     }
 
-    for (const [kindName, kindDef] of Object.entries(config.kinds)) {
+    for (const [kindName, kindDef] of Object.entries(config.kinds ?? {})) {
         lines.push(`${prefix}:${kindName} a owl:Class ;`);
         lines.push(`    rdfs:label "${escape(kindDef.label)}" ;`);
         if (kindDef.layer) {
@@ -141,7 +141,7 @@ export function exportToOwlXml(
         lines.push('');
     }
 
-    for (const [kindName, kindDef] of Object.entries(config.kinds)) {
+    for (const [kindName, kindDef] of Object.entries(config.kinds ?? {})) {
         lines.push(`  <owl:Class rdf:about="${namespace}${kindName}">`);
         lines.push(`    <rdfs:label>${escapeXml(kindDef.label)}</rdfs:label>`);
         if (kindDef.layer) {

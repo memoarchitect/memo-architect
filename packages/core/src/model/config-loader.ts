@@ -204,7 +204,7 @@ function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
             [...(parent.cosmaLayers ?? []), ...(child.cosmaLayers ?? [])],
             l => l.id
         ),
-        kinds: { ...parent.kinds, ...child.kinds },
+        kinds: { ...(parent.kinds ?? {}), ...(child.kinds ?? {}) },
         relationshipTypes: dedup(
             [...parent.relationshipTypes, ...child.relationshipTypes],
             r => r.name

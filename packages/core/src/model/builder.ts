@@ -134,8 +134,9 @@ function resolveKindDef(
         }
     }
 
-    // Fall back to config
-    const kindDef = config.kinds[typeName];
+    // Fall back to config (if kinds are present)
+    const kinds = config.kinds ?? {};
+    const kindDef = kinds[typeName];
     if (kindDef) {
         return { kindDef, resolvedKind: typeName };
     }
@@ -143,8 +144,8 @@ function resolveKindDef(
     // Try local part of qualified name in config
     if (typeName.includes('::')) {
         const localType = typeName.split('::').pop()!;
-        if (config.kinds[localType]) {
-            return { kindDef: config.kinds[localType], resolvedKind: localType };
+        if (kinds[localType]) {
+            return { kindDef: kinds[localType], resolvedKind: localType };
         }
     }
 
