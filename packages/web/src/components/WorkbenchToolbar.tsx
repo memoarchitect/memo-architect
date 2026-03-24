@@ -1,0 +1,76 @@
+import { useModelStore, type ActiveView } from '../store/model-store';
+
+interface ToolAction {
+    id: string;
+    label: string;
+    icon: string;
+    view: ActiveView;
+}
+
+const TOOLS: ToolAction[] = [
+    { id: 'dsm', label: 'DSM', icon: '\u25A4', view: { type: 'dsm' } },
+    { id: 'actionflow', label: 'Action Flow', icon: '\u21C6', view: { type: 'actionflow' } },
+    { id: 'ontology', label: 'Ontology', icon: '\u25C9', view: { type: 'ontology' } },
+];
+
+export function WorkbenchToolbar() {
+    const model = useModelStore(s => s.model);
+    const activeView = useModelStore(s => s.activeView);
+    const setActiveView = useModelStore(s => s.setActiveView);
+
+    const elementCount = model ? Object.keys(model.elements).length : 0;
+    const relCount = model ? model.relationships.length : 0;
+
+    return (
+        <div
+            className="flex items-center gap-2 px-5 py-2"
+            style={{ background: '#1B3A4B', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'relative', zIndex: 10 }}
+        >
+            {/* Project info */}
+            <div className="flex items-center gap-3">
+                <span className="text-xs font-medium" style={{ color: '#2DD4A8' }}>
+                    MEMO Workbench
+                </span>
+                {model && (
+                    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                        {elementCount} elements &middot; {relCount} relationships
+                    </span>
+                )}
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Tool buttons */}
+            <div className="flex items-center gap-1">
+                <span className="text-xs mr-2" style={{ color: 'rgba(255,255,255,0.35)' }}>Tools:</span>
+                {TOOLS.map(tool => {
+                    const isActive = activeView.type === tool.view.type;
+                    return (
+                        <button
+                            key={tool.id}
+                            onClick={() => setActiveView(isActive ? { type: 'welcome' } : tool.view)}
+                            className="px-3 py-1 text-xs font-medium rounded-md transition-all"
+                            style={
+                                isActive
+                                    ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
+                                    : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
+                            }
+                            title={tool.label}
+                        >
+                            <span className="mr-1">{tool.icon}</span>
+                            {tool.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Logo */}
+            <img
+                src="/memo-top.png"
+                alt="MEMO"
+                className="ml-3"
+                style={{ height: 56, marginTop: -4, marginBottom: -10 }}
+            />
+        </div>
+    );
+}

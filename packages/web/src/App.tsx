@@ -1,22 +1,88 @@
 import { useEffect } from 'react';
 import { useModelStore } from './store/model-store';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
-import { ModeSwitcher } from './components/ModeSwitcher';
+import { WorkbenchToolbar } from './components/WorkbenchToolbar';
+import { ExplorerPanel } from './components/ExplorerPanel';
+import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
 import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
-import { PropertiesPanel } from './components/PropertiesPanel';
 import { DiagramCanvas } from './views/DiagramCanvas';
-import { CatalogExplorer } from './views/CatalogExplorer';
-import { ScenarioCatalog } from './views/ScenarioCatalog';
-import { OntologyViewer } from './views/OntologyViewer';
-import { ViewpointBrowser } from './components/ViewpointBrowser';
 import { ActionFlowDiagram } from './views/ActionFlowDiagram';
 import { DSMView } from './views/DSMView';
+import { OntologyViewer } from './views/OntologyViewer';
+
+function UnifiedCanvas() {
+    const activeView = useModelStore(s => s.activeView);
+    const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
+    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const selectDiagram = useModelStore(s => s.selectDiagram);
+
+    // Sync legacy selectedDiagramId with activeView for DiagramCanvas compatibility
+    useEffect(() => {
+        if (activeView.type === 'diagram') {
+            if (selectedDiagramId !== activeView.diagramId) {
+                selectDiagram(activeView.diagramId);
+            }
+        }
+    }, [activeView, selectedDiagramId, selectDiagram]);
+
+    switch (activeView.type) {
+        case 'diagram':
+            return <DiagramCanvas />;
+        case 'actionflow':
+            return <ActionFlowDiagram />;
+        case 'dsm':
+            return <DSMView />;
+        case 'ontology':
+            return <OntologyViewer />;
+        case 'welcome':
+        default:
+            return <WelcomeCanvas />;
+    }
+}
+
+function WelcomeCanvas() {
+    const model = useModelStore(s => s.model);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+
+    const diagramCount = model?.diagrams?.length ?? 0;
+    const elementCount = model ? Object.keys(model.elements).length : 0;
+
+    return (
+        <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
+            <div className="text-center max-w-lg" style={{ lineHeight: '1.7' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.7 }}>{'\u25A6'}</div>
+                <h2 className="text-sm font-semibold mb-2" style={{ color: '#374151' }}>
+                    Select a view to get started
+                </h2>
+                <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>
+                    Use the Explorer panel to browse model elements or select a diagram view.
+                </p>
+                {diagramCount > 0 && (
+                    <button
+                        className="px-4 py-2 text-xs font-medium rounded-lg transition-colors"
+                        style={{ background: '#2DD4A815', color: '#1B3A4B', border: '1px solid #2DD4A840' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#2DD4A830'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#2DD4A815'}
+                        onClick={() => setExplorerTab('views')}
+                    >
+                        Browse {diagramCount} diagrams
+                    </button>
+                )}
+                {diagramCount === 0 && elementCount > 0 && (
+                    <p className="text-xs" style={{ color: '#6B7280' }}>
+                        {elementCount} elements loaded. Use the Tools menu for DSM, Action Flow, or Ontology views.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export function App() {
     const connected = useModelStore(s => s.connected);
     const model = useModelStore(s => s.model);
-    const activeMode = useModelStore(s => s.activeMode);
 
     useEffect(() => {
         if (!loadEmbeddedData()) {
@@ -26,9 +92,11 @@ export function App() {
 
     const elementCount = model ? Object.keys(model.elements).length : 0;
 
-    const renderContent = () => {
-        if (!connected) {
-            return (
+    // Connection state
+    if (!connected) {
+        return (
+            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+                <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                     <div className="text-center max-w-md">
                         <span className="animate-pulse text-lg">{'\u25CF'}</span>
@@ -55,22 +123,30 @@ export function App() {
                         </div>
                     </div>
                 </div>
-            );
-        }
+            </div>
+        );
+    }
 
-        if (!model) {
-            return (
+    // Waiting for model
+    if (!model) {
+        return (
+            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+                <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                     <div className="text-center">
                         <span className="animate-pulse text-lg">{'\u25CF'}</span>
                         <div className="text-sm mt-2">Waiting for model data...</div>
                     </div>
                 </div>
-            );
-        }
+            </div>
+        );
+    }
 
-        if (elementCount === 0) {
-            return (
+    // Empty model
+    if (elementCount === 0) {
+        return (
+            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+                <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#6B7280' }}>
                     <div className="text-center max-w-lg" style={{ lineHeight: '1.7' }}>
                         <div style={{ fontSize: '40px', marginBottom: '16px' }}>{'\u{1F3D7}\uFE0F'}</div>
@@ -99,61 +175,31 @@ export function App() {
                         </div>
                     </div>
                 </div>
-            );
-        }
+            </div>
+        );
+    }
 
-        switch (activeMode) {
-            case 'catalog':
-                return (
-                    <CatalogExplorer />
-                );
-            case 'diagram':
-                return (
-                    <>
-                        <ViewpointBrowser />
-                        <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
-                            <DiagramCanvas />
-                        </div>
-                        <PropertiesPanel />
-                    </>
-                );
-            case 'scenario':
-                return (
-                    <>
-                        <ScenarioCatalog />
-                        <PropertiesPanel />
-                    </>
-                );
-            case 'actionflow':
-                return (
-                    <>
-                        <ActionFlowDiagram />
-                        <PropertiesPanel />
-                    </>
-                );
-            case 'dsm':
-                return (
-                    <>
-                        <DSMView />
-                        <PropertiesPanel />
-                    </>
-                );
-            case 'ontology':
-                return <OntologyViewer />;
-        }
-    };
-
+    // ─── Unified Workbench Layout ────────────────────────────────────────────
     return (
         <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
-            {/* Mode switcher */}
-            <ModeSwitcher />
+            {/* Toolbar */}
+            <WorkbenchToolbar />
 
             {/* Completeness bar */}
             <CompletenessBar />
 
-            {/* Main content */}
+            {/* Main 3-panel layout */}
             <div className="flex flex-1 overflow-hidden">
-                {renderContent()}
+                {/* Left: Explorer (Model + Views) */}
+                <ExplorerPanel />
+
+                {/* Center: Unified Canvas */}
+                <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+                    <UnifiedCanvas />
+                </div>
+
+                {/* Right: Properties Panel */}
+                <UnifiedPropertiesPanel />
             </div>
 
             {/* Gap bar (violations) */}
