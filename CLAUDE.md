@@ -224,10 +224,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** Roadmap consolidation — merged three conflicting plan documents (`roadmap.md`, `platform-strategy.md`, `rearchitect-prompt.md`) into single authoritative roadmap. Resequenced milestones based on CPO product strategy: package semantics → registries → config decomposition → package lifecycle → unified UX → compliance outputs → extension ecosystem. Fixed phase numbering conflict (Phase 8 had different meanings across docs). Incorporated adoption-first priorities.
+**Last completed:** M45 (Remove config.kinds) — deleted ~1,500 lines of `kinds:` sections from ontology-core and ontology-medical `memo.config.yaml`. Made `kinds` optional in `MEMOConfig`. Updated all `config.kinds` references across builder, config-loader, CSV IO, OWL exporters, and CLI commands. 240 tests passing.
 
-**Previously completed:** Ontology Backbone Restructuring — three-tier split into `@memo/ontology-core` → `@memo/ontology-medical` → `@memo/medical-modeling-profile`. Platform architecture finalized in `docs/architecture/platform-strategy.md`. 130+ tests passing.
+**Previously completed:** M36-M44 (Phase 7 complete, Phase 8 in progress). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** Phase 7 begins with M36 (package semantics cleanup), then M37/M38 (directory restructure) in parallel, then M39 (KindRegistry). All milestones M4-M35 closed — to be recreated post-rearchitecture.
+**Next up:** M46 (Remove config.relationshipTypes), then M47 (Delete legacy config). After that, Phase 9 begins.
 
-**GitLab milestones:** M36-M54 exist from previous session but milestone content is stale relative to the consolidated roadmap. GitLab needs updating to match `docs/development/roadmap.md`.
+**GitLab milestones:** M36-M54 exist. M36-M45 closed.
