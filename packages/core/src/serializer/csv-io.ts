@@ -309,7 +309,7 @@ export function parseRelationshipsCsv(
     }
 
     // Build valid relationship type set
-    const validRelTypes = new Set(config.relationshipTypes.map((r) => r.name));
+    const validRelTypes = new Set((config.relationshipTypes ?? []).map((r) => r.name));
 
     for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
         const row = rows[rowIdx];
@@ -446,7 +446,7 @@ export function generateRelationshipTemplate(config: MEMOConfig): string {
     const lines = [headers.map(escapeCsvField).join(',')];
 
     // Add one example row per relationship type
-    for (const relType of config.relationshipTypes) {
+    for (const relType of (config.relationshipTypes ?? [])) {
         const row = [
             'source_element_id',   // sourceId
             'target_element_id',   // targetId

@@ -199,7 +199,7 @@ export async function importTemplateCommand(
     } else if (templateType === 'relationships' || templateType === 'relations') {
         csv = generateRelationshipTemplate(config);
         defaultFile = 'relationships-template.csv';
-        console.log(chalk.blue(`Generating relationship template with ${config.relationshipTypes.length} types`));
+        console.log(chalk.blue(`Generating relationship template with ${(config.relationshipTypes ?? []).length} types`));
     } else {
         console.error(chalk.red(`Unknown template type: '${templateType}'. Use 'elements' or 'relationships'.`));
         process.exit(1);
