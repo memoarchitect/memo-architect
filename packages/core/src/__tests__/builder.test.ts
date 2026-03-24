@@ -655,7 +655,7 @@ function loadResolvedConfig(configPath: string): MEMOConfig {
     return resolveConfig(config, (packageName: string) => {
         // Map @memo package names to workspace package configs
         const shortName = packageName.replace(/^@memo\//, '');
-        const parentPath = resolve('/Users/someshkashyap/sandbox/memo/packages', shortName, 'memo.config.yaml');
+        const parentPath = resolve('/Users/someshkashyap/sandbox/memo/packages', shortName, 'memo.package.yaml');
         try {
             return loadConfig(parentPath);
         } catch {
@@ -668,7 +668,7 @@ function loadResolvedConfig(configPath: string): MEMOConfig {
 
 describe('Infusion pump integration', () => {
     const PUMP_FILE = resolve('/Users/someshkashyap/sandbox/memo/examples/infusion-pump/model/infusion-pump.sysml');
-    const CONFIG_FILE = resolve('/Users/someshkashyap/sandbox/memo/packages/medical-modeling-profile/memo.config.yaml');
+    const CONFIG_FILE = resolve('/Users/someshkashyap/sandbox/memo/packages/medical-modeling-profile/memo.package.yaml');
 
     it('builds model from infusion-pump.sysml', async () => {
         const source = readFileSync(PUMP_FILE, 'utf-8');

@@ -46,7 +46,7 @@ export async function buildCommand(options: {
     // 1. Find and load config
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('❌ No memo config found. Run `memo init` first.'));
         process.exit(1);
     }
 

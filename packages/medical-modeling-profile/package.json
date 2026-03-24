@@ -21,8 +21,9 @@
     "lib/",
     "src/",
     "templates/",
-    "memo.config.yaml",
     "memo.package.yaml",
+    "memo.rules.yaml",
+    "memo.viewpoints.yaml",
     ".project.json"
   ],
   "keywords": [

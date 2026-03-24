@@ -1,31 +1,5 @@
-# @memo/medical-modeling-profile — Medical modeling profile package
-# Extends @memo/ontology-medical with:
-#   - closure rules
-#   - medical viewpoints
-#   - starter scaffolding
-#   - closure rules, viewpoints, and starter scaffolding only
-
-projectName: "@memo/medical-modeling-profile"
-projectType: profile
-
-ontologies:
-  - name: memo-ontology-medical
-    version: "^0.1.0"
-
-extends: "@memo/ontology-medical"
-
-ontologyMetadata:
-  id: "@memo/medical-modeling-profile"
-  version: "2.0.0"
-  description: "Medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical"
-  author: "SysAnd"
-  license: "Apache-2.0"
-  tags:
-    - medical-device
-    - ISO-14971
-    - IEC-62304
-    - IEC-60601
-    - modeling-profile
+# @memo/medical-modeling-profile — viewpoint definitions
+# Medical device viewpoints for ISO 42010-aligned model views
 
 viewpoints:
   - id: risk-overview

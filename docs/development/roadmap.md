@@ -419,7 +419,7 @@ Decompose `memo.config.yaml` (~2,900 lines across 3 packages) into purpose-speci
 | M44 | Extract memo.rules.yaml | **Done** | M42 | Extract `closureRules` (109 rules) from `medical-modeling-profile/memo.config.yaml` into `memo.rules.yaml`. Config-loader loads both old and new format, merges with dedup. 8 new tests. |
 | M45 | Remove config.kinds | **Done** | M42, M43 | Delete `kinds:` sections from all configs (~1,500 lines). Builder uses KindRegistry only. Make `kinds` optional in MEMOConfig. Update all builder tests. |
 | M46 | Remove config.relationshipTypes | **Done** | M45 | Delete `relationshipTypes:` sections (~700 lines). Builder uses RelationshipRegistry only. |
-| M47 | Delete legacy config | Not started | M45, M46 | Remove `memo.config.yaml` from ontology packages entirely. Slim `MEMOConfig` type. Example projects use new format. Config-loader falls back to `memo.config.yaml` for user projects. |
+| M47 | Delete legacy config | **Done** | M45, M46 | Remove `memo.config.yaml` from ontology packages entirely. Slim `MEMOConfig` type. Example projects use new format. Config-loader falls back to `memo.config.yaml` for user projects. |
 
 **Parallelization:** {M43, M44} after M42. M45 after M43. M46 after M45. M47 after M46.
 

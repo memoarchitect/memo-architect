@@ -1,15 +1,22 @@
 // ─── Config Resolver ──────────────────────────────────────────────────────────
 //
 // Resolves the `extends` chain for MEMO configs.
-// Handles: "@memo/medical-modeling-profile" → find memo.config.yaml in node_modules/@memo/medical-modeling-profile
-// or in workspace packages/medical-modeling-profile/
+// Handles: "@memo/medical-modeling-profile" → find config in node_modules or workspace packages
+// Supports both new format (memo.package.yaml) and legacy (memo.config.yaml).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { parse as parseYaml } from 'yaml';
 import type { MEMOConfig } from '@memo/core';
 import { loadConfig, resolveConfig } from '@memo/core';
+
+/** Ordered list of config filenames to search for (new format first, then legacy) */
+const CONFIG_SEARCH_ORDER = [
+    'memo.package.yaml',
+    'memo.package.yml',
+    'memo.config.yaml',
+    'memo.config.yml',
+];
 
 export interface ConfigChainEntry {
     configPath: string;
@@ -75,14 +82,12 @@ function resolveParentConfigPath(packageName: string, fromDir: string): string |
 }
 
 function resolveFromNodeModules(packageName: string, fromDir: string): string | undefined {
-    // Walk up from fromDir looking for node_modules/<packageName>/memo.config.yaml
     let dir = resolve(fromDir);
     while (true) {
-        const candidate = resolve(dir, 'node_modules', packageName, 'memo.config.yaml');
-        if (existsSync(candidate)) return candidate;
-
-        const candidateYml = resolve(dir, 'node_modules', packageName, 'memo.config.yml');
-        if (existsSync(candidateYml)) return candidateYml;
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const candidate = resolve(dir, 'node_modules', packageName, configName);
+            if (existsSync(candidate)) return candidate;
+        }
 
         const parent = dirname(dir);
         if (parent === dir) break;
@@ -92,19 +97,15 @@ function resolveFromNodeModules(packageName: string, fromDir: string): string | 
 }
 
 function resolveFromWorkspace(packageName: string, fromDir: string): string | undefined {
-    // Map package names to workspace directories
-    // @memo/medical-modeling-profile → packages/medical-modeling-profile, @memo/ontology-medical → packages/ontology-medical
     const shortName = packageName.replace(/^@memo\//, '');
 
-    // Walk up to find the monorepo root (has pnpm-workspace.yaml or packages/ dir)
     let dir = resolve(fromDir);
     while (true) {
         const packagesDir = resolve(dir, 'packages', shortName);
-        const candidate = resolve(packagesDir, 'memo.config.yaml');
-        if (existsSync(candidate)) return candidate;
-
-        const candidateYml = resolve(packagesDir, 'memo.config.yml');
-        if (existsSync(candidateYml)) return candidateYml;
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const candidate = resolve(packagesDir, configName);
+            if (existsSync(candidate)) return candidate;
+        }
 
         const parent = dirname(dir);
         if (parent === dir) break;

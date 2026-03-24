@@ -54,7 +54,7 @@ export async function importCsvCommand(
     // Load config
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('No memo config found. Run `memo init` first.'));
         process.exit(1);
     }
     const config = await loadAndResolveConfig(configPath);
@@ -116,7 +116,7 @@ export async function importRelCsvCommand(
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('No memo config found. Run `memo init` first.'));
         process.exit(1);
     }
     const config = await loadAndResolveConfig(configPath);
@@ -184,7 +184,7 @@ export async function importTemplateCommand(
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('No memo config found. Run `memo init` first.'));
         process.exit(1);
     }
     const config = await loadAndResolveConfig(configPath);

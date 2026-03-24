@@ -13,8 +13,8 @@
   "files": [
     "lib/",
     "sysml/",
-    "memo.config.yaml",
     "memo.package.yaml",
+    "memo.rendering.yaml",
     ".project.json"
   ],
   "keywords": [
