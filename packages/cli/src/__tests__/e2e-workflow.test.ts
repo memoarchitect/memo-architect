@@ -179,15 +179,88 @@ describe('E2E: memo init → validate → export', () => {
         expect(projectJson.name).toBe('infusion-pump');
         expect(projectJson.publisher).toBe('untitled');
         expect(projectJson.version).toBe('2.0.0');
-        expect(projectJson.usage).toEqual([]);
+        // Usage derived from package types: ontology → kinds/relationships, profile → rules/viewpoints/templates
+        expect(projectJson.usage.length).toBeGreaterThan(0);
+        expect(projectJson.usage).toContain('kinds');
+        expect(projectJson.usage).toContain('relationships');
 
         const metaJson = JSON.parse(readFileSync(join(outputDir, '.meta.json'), 'utf-8'));
         expect(metaJson.index.MEMO_Ontology_Core).toBe('packages/memo-ontology-core/sysml/index.sysml');
         expect(metaJson.index.MEMO_Ontology_Medical).toBe('packages/memo-ontology-medical/sysml/index.sysml');
-        expect(metaJson.checksum['packages/memo-ontology-core/sysml/index.sysml']).toEqual({
-            value: '',
-            algorithm: 'NONE',
-        });
+        // SHA-256 checksums computed for exported files
+        const coreChecksum = metaJson.checksum['packages/memo-ontology-core/sysml/index.sysml'];
+        expect(coreChecksum.algorithm).toBe('SHA-256');
+        expect(coreChecksum.value).toMatch(/^[a-f0-9]{64}$/);
+
+        // Per-package .project.json should be copied
+        expect(existsSync(join(outputDir, 'packages', 'memo-ontology-core', '.project.json'))).toBe(true);
+        const corePkgJson = JSON.parse(readFileSync(join(outputDir, 'packages', 'memo-ontology-core', '.project.json'), 'utf-8'));
+        expect(corePkgJson.name).toBe('@memo/ontology-core');
+        expect(corePkgJson.usage).toContain('kinds');
+    });
+
+    it('round-trip: exported SysAnd project has loadable registries', async () => {
+        const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
+        const outputDir = join(tmpDir, 'round-trip-export');
+
+        run(`ontology export sysand -o ${outputDir}`, exampleDir);
+
+        // Verify the exported project has the expected structure
+        const profileDir = join(outputDir, 'packages', 'memo-medical-modeling-profile');
+        expect(existsSync(join(profileDir, 'memo.package.yaml'))).toBe(true);
+        expect(existsSync(join(profileDir, 'memo.rules.yaml'))).toBe(true);
+        expect(existsSync(join(profileDir, 'memo.viewpoints.yaml'))).toBe(true);
+
+        // Verify ontology packages have rendering configs
+        const coreDir = join(outputDir, 'packages', 'memo-ontology-core');
+        expect(existsSync(join(coreDir, 'memo.package.yaml'))).toBe(true);
+        expect(existsSync(join(coreDir, 'memo.rendering.yaml'))).toBe(true);
+        expect(existsSync(join(coreDir, 'sysml', 'index.sysml'))).toBe(true);
+
+        const medicalDir = join(outputDir, 'packages', 'memo-ontology-medical');
+        expect(existsSync(join(medicalDir, 'memo.package.yaml'))).toBe(true);
+        expect(existsSync(join(medicalDir, 'memo.rendering.yaml'))).toBe(true);
+
+        // Load config from the exported profile package
+        const { loadConfig } = await import('@memo/core');
+        const exportedConfig = loadConfig(join(profileDir, 'memo.package.yaml'));
+
+        // Verify identity and extends chain preserved
+        expect(exportedConfig.projectName).toBe('@memo/medical-modeling-profile');
+        expect(exportedConfig.projectType).toBe('profile');
+        expect(exportedConfig.extends).toBe('@memo/ontology-medical');
+
+        // Verify rules preserved in export
+        expect(exportedConfig.closureRules.length).toBeGreaterThanOrEqual(100);
+        const ruleIds = exportedConfig.closureRules.map(r => r.id);
+        expect(ruleIds).toContain('CR-MED-001');
+
+        // Verify viewpoints preserved in export
+        expect(exportedConfig.viewpoints).toBeDefined();
+        expect(exportedConfig.viewpoints!.length).toBeGreaterThanOrEqual(10);
+        const vpIds = exportedConfig.viewpoints!.map(v => v.id);
+        expect(vpIds).toContain('risk-overview');
+        expect(vpIds).toContain('software-view');
+
+        // Verify exported ontology-core config loads correctly
+        const coreConfig = loadConfig(join(coreDir, 'memo.package.yaml'));
+        expect(coreConfig.projectName).toBe('@memo/ontology-core');
+        expect(coreConfig.projectType).toBe('ontology');
+        expect(coreConfig.cosmaLayers!.length).toBeGreaterThanOrEqual(10);
+
+        // Verify lock file has all packages
+        const lockContent = readFileSync(join(outputDir, 'sysand-lock.toml'), 'utf-8');
+        expect(lockContent).toContain('@memo/ontology-core');
+        expect(lockContent).toContain('@memo/ontology-medical');
+        expect(lockContent).toContain('@memo/medical-modeling-profile');
+
+        // Verify checksums are consistent (re-read a file and hash it)
+        const metaJson = JSON.parse(readFileSync(join(outputDir, '.meta.json'), 'utf-8'));
+        const indexSysmlPath = 'packages/memo-ontology-core/sysml/index.sysml';
+        const { createHash } = await import('node:crypto');
+        const actualContent = readFileSync(join(outputDir, indexSysmlPath));
+        const expectedHash = createHash('sha256').update(actualContent).digest('hex');
+        expect(metaJson.checksum[indexSysmlPath].value).toBe(expectedHash);
     });
 });
 
