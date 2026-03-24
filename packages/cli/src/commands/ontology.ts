@@ -8,10 +8,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { basename, dirname, extname, relative, resolve } from 'node:path';
 import chalk from 'chalk';
 import type { MEMOConfig } from '@memo/core';
-import { findConfigFile } from '@memo/core';
+import { findConfigFile, loadOntologyRegistries } from '@memo/core';
 import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology-medical';
 import { loadAndResolveConfig, loadConfigChain, type ConfigChainEntry } from '../server/config-resolver.js';
 
@@ -45,33 +46,62 @@ export async function ontologyShowCommand(): Promise<void> {
     }
     console.log('');
 
-    // Kinds by layer
-    const kindEntries = Object.entries(config.kinds ?? {});
-    console.log(chalk.bold(`  Kinds (${kindEntries.length}):`));
-    const byLayer = new Map<string, string[]>();
-    for (const [name, def] of kindEntries) {
-        const layer = def.layer || 'unknown';
-        if (!byLayer.has(layer)) byLayer.set(layer, []);
-        byLayer.get(layer)!.push(name);
-    }
-    for (const l of layers) {
-        const kinds = byLayer.get(l.id) || [];
-        if (kinds.length > 0) {
-            console.log(`    ${chalk.hex(l.color)(l.label)}: ${kinds.join(', ')}`);
+    // Load registries for kinds and relationships
+    const loadResult = await loadOntologyRegistries(configPath);
+    const kindRegistry = loadResult.registries.kindRegistry;
+    const relationshipRegistry = loadResult.registries.relationshipRegistry;
+
+    // Kinds by layer (from registry)
+    if (kindRegistry) {
+        const kindEntries = kindRegistry.entries();
+        console.log(chalk.bold(`  Kinds (${kindEntries.length}):`));
+        const byLayer = new Map<string, string[]>();
+        for (const entry of kindEntries) {
+            const layer = entry.layer || 'unknown';
+            if (!byLayer.has(layer)) byLayer.set(layer, []);
+            byLayer.get(layer)!.push(entry.name);
         }
-    }
-    // Show any kinds not in a known layer
-    for (const [layer, kinds] of byLayer) {
-        if (!layers.find(l => l.id === layer)) {
-            console.log(`    ${layer}: ${kinds.join(', ')}`);
+        for (const l of layers) {
+            const kinds = byLayer.get(l.id) || [];
+            if (kinds.length > 0) {
+                console.log(`    ${chalk.hex(l.color)(l.label)}: ${kinds.join(', ')}`);
+            }
+        }
+        // Show any kinds not in a known layer
+        for (const [layer, kinds] of byLayer) {
+            if (!layers.find(l => l.id === layer)) {
+                console.log(`    ${layer}: ${kinds.join(', ')}`);
+            }
+        }
+    } else {
+        // Fallback to config kinds (legacy)
+        const kindEntries = Object.entries(config.kinds ?? {});
+        console.log(chalk.bold(`  Kinds (${kindEntries.length}):`));
+        const byLayer = new Map<string, string[]>();
+        for (const [name, def] of kindEntries) {
+            const layer = def.layer || 'unknown';
+            if (!byLayer.has(layer)) byLayer.set(layer, []);
+            byLayer.get(layer)!.push(name);
+        }
+        for (const l of layers) {
+            const kinds = byLayer.get(l.id) || [];
+            if (kinds.length > 0) {
+                console.log(`    ${chalk.hex(l.color)(l.label)}: ${kinds.join(', ')}`);
+            }
         }
     }
     console.log('');
 
-    // Relationships
-    const relTypes = config.relationshipTypes ?? [];
-    console.log(chalk.bold(`  Relationships (${relTypes.length}):`));
-    console.log(`    ${relTypes.map(r => r.name).join(', ')}`);
+    // Relationships (from registry)
+    if (relationshipRegistry) {
+        const relEntries = relationshipRegistry.entries();
+        console.log(chalk.bold(`  Relationships (${relEntries.length}):`));
+        console.log(`    ${relEntries.map(r => r.name).join(', ')}`);
+    } else {
+        const relTypes = config.relationshipTypes ?? [];
+        console.log(chalk.bold(`  Relationships (${relTypes.length}):`));
+        console.log(`    ${relTypes.map(r => r.name).join(', ')}`);
+    }
     console.log('');
 
     // Closure rules
@@ -171,7 +201,7 @@ export async function ontologyExportSysandCommand(options: {
 
     mkdirSync(resolve(outputDir, 'docs'), { recursive: true });
     writeFileSync(resolve(outputDir, '.project.json'), JSON.stringify(renderProjectJson(currentEntry.config, exportedPackages), null, 2));
-    writeFileSync(resolve(outputDir, '.meta.json'), JSON.stringify(renderMetaJson(exportedPackages), null, 2));
+    writeFileSync(resolve(outputDir, '.meta.json'), JSON.stringify(renderMetaJson(exportedPackages, outputDir), null, 2));
     writeFileSync(resolve(outputDir, '.gitignore'), ['sysand_env/', 'output/'].join('\n') + '\n');
     writeFileSync(resolve(outputDir, 'README.md'), renderReadme(currentEntry.config, exportedPackages));
     writeFileSync(resolve(outputDir, 'sysand-lock.toml'), renderSysandLock(currentEntry.config, exportedPackages));
@@ -218,6 +248,7 @@ function exportConfigPackage(entry: ConfigChainEntry, packagesDir: string): Expo
     const copied: string[] = [];
     const sources: ExportedSource[] = [];
 
+    // Copy the primary config file
     cpSync(entry.configPath, resolve(targetDir, basename(entry.configPath)));
     copied.push(basename(entry.configPath));
 
@@ -228,6 +259,13 @@ function exportConfigPackage(entry: ConfigChainEntry, packagesDir: string): Expo
             cpSync(companionPath, resolve(targetDir, companion));
             copied.push(companion);
         }
+    }
+
+    // Copy per-package .project.json if it exists
+    const projectJsonPath = resolve(sourceDir, '.project.json');
+    if (existsSync(projectJsonPath)) {
+        cpSync(projectJsonPath, resolve(targetDir, '.project.json'));
+        copied.push('.project.json');
     }
 
     for (const folderName of ['sysml', 'templates']) {
@@ -278,23 +316,46 @@ function renderProjectJson(
     currentConfig: MEMOConfig,
     packages: ExportedPackage[],
 ): Record<string, unknown> {
+    // Derive usage from package types
+    const usageSet = new Set<string>();
+    for (const pkg of packages) {
+        if (pkg.projectType === 'ontology') {
+            usageSet.add('kinds');
+            usageSet.add('relationships');
+        } else if (pkg.projectType === 'profile') {
+            usageSet.add('rules');
+            usageSet.add('viewpoints');
+            usageSet.add('templates');
+        }
+    }
+
     return {
         name: currentConfig.projectName,
         publisher: currentConfig.ontologyMetadata?.author || 'untitled',
         version: currentConfig.ontologyMetadata?.version || packages[packages.length - 1]?.version || '0.0.1',
-        usage: [],
+        usage: Array.from(usageSet).sort(),
     };
 }
 
-function renderMetaJson(packages: ExportedPackage[]): Record<string, unknown> {
+function renderMetaJson(packages: ExportedPackage[], outputDir: string): Record<string, unknown> {
     const index: Record<string, string> = {};
     const checksum: Record<string, { value: string; algorithm: string }> = {};
 
     for (const pkg of packages) {
         for (const source of pkg.sources) {
+            // Compute SHA-256 checksum from the exported file
+            const filePath = resolve(outputDir, source.path);
+            let hash = '';
+            try {
+                const content = readFileSync(filePath);
+                hash = createHash('sha256').update(content).digest('hex');
+            } catch {
+                // File read failed — leave hash empty
+            }
+
             checksum[source.path] = {
-                value: '',
-                algorithm: 'NONE',
+                value: hash,
+                algorithm: 'SHA-256',
             };
             for (const symbol of source.symbols) {
                 index[symbol] = source.path;
