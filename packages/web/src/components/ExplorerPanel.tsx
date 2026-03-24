@@ -1,13 +1,77 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
     useModelStore,
     getElementsByLayer,
     getDiagramsForViewpoint,
+    getRelationshipsForElement,
     type ExplorerTab,
 } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
 import { FONT } from '../styles/tokens';
 import type { MemoElement, DiagramDTO } from '@memo/core';
+
+// ─── Element Context Menu ────────────────────────────────────────────────────
+
+interface CtxMenuState { x: number; y: number; elementId: string; }
+
+function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
+    const model = useModelStore(s => s.model);
+    const selectElement = useModelStore(s => s.selectElement);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+
+    const el = model?.elements[menu.elementId];
+    if (!el) return null;
+
+    const rels = getRelationshipsForElement(model, menu.elementId);
+    const outgoing = rels.filter(r => r.sourceId === menu.elementId);
+
+    const actions = [
+        { label: 'View properties', action: () => selectElement(menu.elementId) },
+        ...(outgoing.length > 0 ? [{
+            label: `Show ${outgoing.length} outgoing relationships`,
+            action: () => selectElement(menu.elementId),
+        }] : []),
+        { label: `Copy ID: ${el.id}`, action: () => navigator.clipboard?.writeText(el.id) },
+        { label: `Copy name: ${el.name}`, action: () => navigator.clipboard?.writeText(el.name) },
+    ];
+
+    return (
+        <div
+            ref={ref}
+            className="fixed z-50 rounded-lg overflow-hidden py-1"
+            style={{
+                left: menu.x, top: menu.y,
+                background: '#FFFFFF', border: '1px solid #E5E5E0',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '180px',
+            }}
+        >
+            <div className="px-3 py-1.5 text-xs font-medium truncate" style={{ color: '#9CA3AF', borderBottom: '1px solid #E5E5E0' }}>
+                {el.name}
+            </div>
+            {actions.map((a, i) => (
+                <div
+                    key={i}
+                    className="px-3 py-1.5 text-xs cursor-pointer"
+                    style={{ color: '#374151' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => { a.action(); onClose(); }}
+                >
+                    {a.label}
+                </div>
+            ))}
+        </div>
+    );
+}
 
 // ─── Tab Switcher ────────────────────────────────────────────────────────────
 
@@ -45,6 +109,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const validation = useModelStore(s => s.validation);
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
 
     const toggleExpand = (key: string) => {
         setExpanded(prev => {
@@ -171,6 +236,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
                                                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                                                 onClick={() => selectElement(el.id)}
+                                                onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, elementId: el.id }); }}
                                             >
                                                 <span className="truncate flex-1" style={{ color: isSelected ? '#1B3A4B' : '#374151' }}>
                                                     {el.name}
@@ -189,6 +255,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     </div>
                 );
             })}
+            {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
         </div>
     );
 }

@@ -6,10 +6,13 @@ import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
 import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
+import { CommandPalette } from './components/CommandPalette';
+import { Breadcrumb } from './components/Breadcrumb';
 import { DiagramCanvas } from './views/DiagramCanvas';
 import { ActionFlowDiagram } from './views/ActionFlowDiagram';
 import { DSMView } from './views/DSMView';
 import { OntologyViewer } from './views/OntologyViewer';
+import { TraceabilityMatrix } from './views/TraceabilityMatrix';
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -33,6 +36,8 @@ function UnifiedCanvas() {
             return <ActionFlowDiagram />;
         case 'dsm':
             return <DSMView />;
+        case 'traceability':
+            return <TraceabilityMatrix />;
         case 'ontology':
             return <OntologyViewer />;
         case 'welcome':
@@ -188,6 +193,9 @@ export function App() {
             {/* Completeness bar */}
             <CompletenessBar />
 
+            {/* Breadcrumb */}
+            <Breadcrumb />
+
             {/* Main 3-panel layout */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Left: Explorer (Model + Views) */}
@@ -204,6 +212,9 @@ export function App() {
 
             {/* Gap bar (violations) */}
             <GapBar />
+
+            {/* Command palette (Cmd+K) */}
+            <CommandPalette />
         </div>
     );
 }

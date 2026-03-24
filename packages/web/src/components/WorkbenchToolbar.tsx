@@ -9,6 +9,7 @@ interface ToolAction {
 
 const TOOLS: ToolAction[] = [
     { id: 'dsm', label: 'DSM', icon: '\u25A4', view: { type: 'dsm' } },
+    { id: 'traceability', label: 'Trace Matrix', icon: '\u2637', view: { type: 'traceability' } },
     { id: 'actionflow', label: 'Action Flow', icon: '\u21C6', view: { type: 'actionflow' } },
     { id: 'ontology', label: 'Ontology', icon: '\u25C9', view: { type: 'ontology' } },
 ];

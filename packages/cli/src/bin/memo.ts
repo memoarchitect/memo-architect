@@ -18,6 +18,7 @@ import { devCommand } from '../commands/dev.js';
 import { initCommand } from '../commands/init.js';
 import { buildCommand } from '../commands/build.js';
 import { exportJsonCommand, exportDotCommand } from '../commands/export.js';
+import { exportDhfCommand } from '../commands/dhf.js';
 import {
     ontologyShowCommand,
     ontologyExportOwlCommand,
@@ -38,8 +39,10 @@ program
     .command('validate')
     .description('Validate the model against closure rules and show completeness')
     .argument('[dir]', 'Project directory', '.')
-    .action(async (dir: string) => {
-        await validateCommand(dir);
+    .option('--format <format>', 'Output format: text, junit, json', 'text')
+    .option('-o, --output <file>', 'Write output to file instead of stdout')
+    .action(async (dir: string, opts: { format?: string; output?: string }) => {
+        await validateCommand(dir, { format: opts.format as any, output: opts.output });
     });
 
 program
@@ -85,6 +88,14 @@ exportCmd
     .option('--no-pretty', 'Minified JSON output')
     .action(async (options: { output: string; pretty: boolean }) => {
         await exportJsonCommand(options);
+    });
+
+exportCmd
+    .command('dhf')
+    .description('Export Design History File (DHF) as HTML report')
+    .option('-o, --output <file>', 'Output file path', 'dhf-report.html')
+    .action(async (options: { output: string }) => {
+        await exportDhfCommand(options);
     });
 
 exportCmd
