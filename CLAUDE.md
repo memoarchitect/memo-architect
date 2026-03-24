@@ -224,10 +224,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** M46 (Remove config.relationshipTypes) — deleted ~786 lines of `relationshipTypes:` and `relationships:` sections from ontology-core and ontology-medical `memo.config.yaml`. Made `relationshipTypes` optional in `MEMOConfig`. Config files now contain only identity, cosmaLayers, and empty closureRules. 240 tests passing.
+**Last completed:** M47 (Delete legacy config) — deleted `memo.config.yaml` from all 3 ontology packages (ontology-core, ontology-medical, medical-modeling-profile). Created `memo.viewpoints.yaml` for profile viewpoints/firstRun. Config-loader now supports `memo.package.yaml` as primary format with `memo.config.yaml` fallback for user projects. Config-resolver and ontology-loader updated to search new format first. SysAnd export copies companion files. Phase 8 complete. 240 tests passing.
 
-**Previously completed:** M36-M45 (Phase 7 complete, Phase 8 nearly complete). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M46 (Phase 7 complete, Phase 8 complete). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** M47 (Delete legacy config — remove `memo.config.yaml` from ontology packages entirely). After that, Phase 9 begins.
+**Next up:** M48 (Harden SysAnd export + round-trip validation). Phase 9 begins.
 
-**GitLab milestones:** M36-M54 exist. M36-M46 closed.
+**GitLab milestones:** M36-M54 exist. M36-M47 closed.

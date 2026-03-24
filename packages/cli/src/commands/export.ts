@@ -64,7 +64,7 @@ export async function exportJsonCommand(options: {
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo.config.yaml found.'));
+        console.error(chalk.red('❌ No memo config found.'));
         process.exit(1);
     }
 
@@ -108,7 +108,7 @@ export async function exportDotCommand(options: {
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo.config.yaml found.'));
+        console.error(chalk.red('❌ No memo config found.'));
         process.exit(1);
     }
 

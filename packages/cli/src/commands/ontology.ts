@@ -22,7 +22,7 @@ export async function ontologyShowCommand(): Promise<void> {
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('\u274C No memo.config.yaml found.'));
+        console.error(chalk.red('\u274C No memo config found.'));
         process.exit(1);
     }
 
@@ -103,7 +103,7 @@ export async function ontologyExportOwlCommand(options: {
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('\u274C No memo.config.yaml found.'));
+        console.error(chalk.red('\u274C No memo config found.'));
         process.exit(1);
     }
 
@@ -139,7 +139,7 @@ export async function ontologyExportSysandCommand(options: {
 
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('\u274C No memo.config.yaml found.'));
+        console.error(chalk.red('\u274C No memo config found.'));
         process.exit(1);
     }
 
@@ -220,6 +220,15 @@ function exportConfigPackage(entry: ConfigChainEntry, packagesDir: string): Expo
 
     cpSync(entry.configPath, resolve(targetDir, basename(entry.configPath)));
     copied.push(basename(entry.configPath));
+
+    // Copy companion config files (new format: rendering, rules, viewpoints)
+    for (const companion of ['memo.rendering.yaml', 'memo.rules.yaml', 'memo.viewpoints.yaml']) {
+        const companionPath = resolve(sourceDir, companion);
+        if (existsSync(companionPath)) {
+            cpSync(companionPath, resolve(targetDir, companion));
+            copied.push(companion);
+        }
+    }
 
     for (const folderName of ['sysml', 'templates']) {
         const sourcePath = resolve(sourceDir, folderName);

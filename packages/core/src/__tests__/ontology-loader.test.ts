@@ -8,7 +8,7 @@ const PACKAGES_DIR = resolve(__dirname, '../../..');
 
 describe('loadOntologyRegistries', () => {
     it('loads registries from medical-modeling-profile config', async () => {
-        const configPath = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.config.yaml');
+        const configPath = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
         // Should find ontology-medical and ontology-core SysML dirs
@@ -58,7 +58,7 @@ describe('loadOntologyRegistries', () => {
     });
 
     it('loads registries from ontology-core config directly', async () => {
-        const configPath = resolve(PACKAGES_DIR, 'ontology-core/memo.config.yaml');
+        const configPath = resolve(PACKAGES_DIR, 'ontology-core/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
         // Should find just ontology-core sysml dir
@@ -86,12 +86,12 @@ describe('Infusion pump with ontology registries', () => {
         type Model = import('../language/generated/ast.js').Model;
 
         const PUMP_FILE = resolve(PACKAGES_DIR, '../examples/infusion-pump/model/infusion-pump.sysml');
-        const CONFIG_FILE = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.config.yaml');
+        const CONFIG_FILE = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.package.yaml');
 
         // Load config
         const config = resolveConfig(loadConfig(CONFIG_FILE), (packageName: string) => {
             const shortName = packageName.replace(/^@memo\//, '');
-            const parentPath = resolve(PACKAGES_DIR, shortName, 'memo.config.yaml');
+            const parentPath = resolve(PACKAGES_DIR, shortName, 'memo.package.yaml');
             try { return loadConfig(parentPath); } catch { return undefined; }
         });
 

@@ -168,7 +168,7 @@ describe('E2E: memo init → validate → export', () => {
 
         expect(existsSync(join(outputDir, 'packages', 'memo-ontology-core', 'sysml', 'index.sysml'))).toBe(true);
         expect(existsSync(join(outputDir, 'packages', 'memo-ontology-medical', 'sysml', 'index.sysml'))).toBe(true);
-        expect(existsSync(join(outputDir, 'packages', 'memo-medical-modeling-profile', 'memo.config.yaml'))).toBe(true);
+        expect(existsSync(join(outputDir, 'packages', 'memo-medical-modeling-profile', 'memo.package.yaml'))).toBe(true);
 
         const lockContent = readFileSync(join(outputDir, 'sysand-lock.toml'), 'utf-8');
         expect(lockContent).toContain('@memo/ontology-core');

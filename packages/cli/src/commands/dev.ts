@@ -59,7 +59,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     // 1. Find and load config
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('❌ No memo config found (memo.package.yaml or memo.config.yaml). Run `memo init` first.'));
         process.exit(1);
     }
 

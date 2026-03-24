@@ -1,6 +1,6 @@
 // ─── File Watcher ────────────────────────────────────────────────────────────
 //
-// Watches .sysml and memo.config.yaml for changes using chokidar.
+// Watches .sysml and memo config files for changes using chokidar.
 // Debounces rapid saves and triggers a callback on change.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,10 @@ export function createFileWatcher(
             `${projectDir}/**/*.sysml`,
             `${projectDir}/**/memo.config.yaml`,
             `${projectDir}/**/memo.config.yml`,
+            `${projectDir}/**/memo.package.yaml`,
+            `${projectDir}/**/memo.rendering.yaml`,
+            `${projectDir}/**/memo.rules.yaml`,
+            `${projectDir}/**/memo.viewpoints.yaml`,
         ],
         {
             ignored: [

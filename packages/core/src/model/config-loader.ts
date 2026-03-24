@@ -4,16 +4,27 @@ import { parse as parseYaml } from 'yaml';
 import type { MEMOConfig, CosmaLayer, ClosureRule, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
+const PACKAGE_FILENAMES = ['memo.package.yaml', 'memo.package.yml'];
 const RENDERING_FILENAMES = ['memo.rendering.yaml', 'memo.rendering.yml'];
 const RULES_FILENAMES = ['memo.rules.yaml', 'memo.rules.yml'];
+const VIEWPOINTS_FILENAMES = ['memo.viewpoints.yaml', 'memo.viewpoints.yml'];
 
 /**
  * Locate the nearest config file by walking up from `startDir`.
+ * Prefers memo.package.yaml (new format), falls back to memo.config.yaml (legacy).
  * Returns the resolved path or undefined if not found.
  */
 export function findConfigFile(startDir: string): string | undefined {
     let dir = resolve(startDir);
     while (true) {
+        // Prefer new package format
+        for (const name of PACKAGE_FILENAMES) {
+            const candidate = resolve(dir, name);
+            if (existsSync(candidate)) {
+                return candidate;
+            }
+        }
+        // Fall back to legacy config
         for (const name of CONFIG_FILENAMES) {
             const candidate = resolve(dir, name);
             if (existsSync(candidate)) {
@@ -68,31 +79,94 @@ export function loadClosureRules(configDir: string): ClosureRule[] {
 }
 
 /**
+ * Load viewpoints from a memo.viewpoints.yaml file.
+ * Returns the viewpoints array, or undefined if file not found.
+ */
+export function loadViewpoints(configDir: string): { viewpoints?: ViewpointDefinition[]; firstRun?: MEMOConfig['firstRun'] } {
+    for (const name of VIEWPOINTS_FILENAMES) {
+        const candidate = resolve(configDir, name);
+        if (existsSync(candidate)) {
+            try {
+                const raw = readFileSync(candidate, 'utf-8');
+                const parsed = parseYaml(raw);
+                return {
+                    viewpoints: parsed?.viewpoints,
+                    firstRun: parsed?.firstRun,
+                };
+            } catch {
+                // skip malformed file
+            }
+        }
+    }
+    return {};
+}
+
+/**
+ * Check if a file path is a new-format package file (memo.package.yaml).
+ */
+function isPackageFile(filePath: string): boolean {
+    const name = filePath.split('/').pop() ?? '';
+    return PACKAGE_FILENAMES.includes(name);
+}
+
+/**
  * Load and parse a MEMOConfig from a YAML file.
- * Also loads `memo.rendering.yaml` if present (layers → cosmaLayers).
- * Also loads `memo.rules.yaml` if present (closureRules).
+ * Supports both new format (memo.package.yaml) and legacy format (memo.config.yaml).
+ * Also loads memo.rendering.yaml, memo.rules.yaml, and memo.viewpoints.yaml if present.
  * Does NOT resolve `extends` — call `resolveConfig` for that.
  */
 export function loadConfig(filePath: string): MEMOConfig {
     const raw = readFileSync(filePath, 'utf-8');
     const parsed = parseYaml(raw);
+    const configDir = dirname(filePath);
 
     // Load rendering layers from memo.rendering.yaml (new format)
-    const configDir = dirname(filePath);
     const renderingLayers = loadRenderingLayers(configDir);
 
+    // Load closure rules from memo.rules.yaml (new format)
+    const rulesFromFile = loadClosureRules(configDir);
+
+    // Load viewpoints from memo.viewpoints.yaml (new format)
+    const viewpointsData = loadViewpoints(configDir);
+
+    if (isPackageFile(filePath)) {
+        // New format: memo.package.yaml — identity only, combine with companion files
+        return {
+            projectName: parsed.name ?? 'untitled',
+            projectType: parsed.type ?? 'device',
+            extends: parsed.extends,
+            ontologies: parsed.ontologies,
+            ontologyMetadata: parsed.name ? {
+                id: parsed.name,
+                version: parsed.version ?? '0.0.0',
+                description: parsed.description ?? '',
+                author: parsed.author,
+                license: parsed.license,
+                tags: parsed.tags,
+            } : undefined,
+            cosmaLayers: renderingLayers,
+            closureRules: rulesFromFile,
+            viewpoints: viewpointsData.viewpoints,
+            firstRun: viewpointsData.firstRun,
+        };
+    }
+
+    // Legacy format: memo.config.yaml
     // Merge: memo.rendering.yaml layers take precedence, then cosmaLayers from config
     const cosmaLayersFromConfig: CosmaLayer[] = parsed.cosmaLayers ?? [];
     const mergedLayers = renderingLayers.length > 0
         ? dedup([...cosmaLayersFromConfig, ...renderingLayers], l => l.id)
         : cosmaLayersFromConfig;
 
-    // Load closure rules from memo.rules.yaml (new format)
-    const rulesFromFile = loadClosureRules(configDir);
+    // Merge rules
     const rulesFromConfig: ClosureRule[] = parsed.closureRules ?? [];
     const mergedRules = rulesFromFile.length > 0
         ? dedup([...rulesFromConfig, ...rulesFromFile], r => r.id)
         : rulesFromConfig;
+
+    // Merge viewpoints from file if present
+    const viewpointsFromConfig = parsed.viewpoints;
+    const mergedViewpoints = viewpointsData.viewpoints ?? viewpointsFromConfig;
 
     // Apply defaults
     return {
@@ -104,12 +178,12 @@ export function loadConfig(filePath: string): MEMOConfig {
         externalOntologies: parsed.externalOntologies,
         libraries: parsed.libraries,
         cosmaLayers: mergedLayers,
-        kinds: parsed.kinds ?? {},
-        relationshipTypes: parsed.relationshipTypes ?? [],
+        kinds: parsed.kinds,
+        relationshipTypes: parsed.relationshipTypes,
         closureRules: mergedRules,
-        viewpoints: parsed.viewpoints,
+        viewpoints: mergedViewpoints,
         workflows: parsed.workflows,
-        firstRun: parsed.firstRun,
+        firstRun: viewpointsData.firstRun ?? parsed.firstRun,
     };
 }
 
@@ -204,7 +278,10 @@ function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
             [...(parent.cosmaLayers ?? []), ...(child.cosmaLayers ?? [])],
             l => l.id
         ),
-        kinds: { ...(parent.kinds ?? {}), ...(child.kinds ?? {}) },
+        kinds: {
+            ...(parent.kinds ?? {}),
+            ...(child.kinds ?? {}),
+        },
         relationshipTypes: dedup(
             [...(parent.relationshipTypes ?? []), ...(child.relationshipTypes ?? [])],
             r => r.name

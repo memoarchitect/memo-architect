@@ -40,7 +40,7 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     // 1. Find config
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo.config.yaml found. Run `memo init` first.'));
+        console.error(chalk.red('❌ No memo config found. Run `memo init` first.'));
         process.exit(1);
     }
     console.log(chalk.gray(`Config: ${configPath}`));

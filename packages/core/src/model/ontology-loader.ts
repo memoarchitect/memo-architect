@@ -87,7 +87,8 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
         if (extendsMatch) {
             extendsPackage = extendsMatch[1];
         }
-        const typeMatch = content.match(/^projectType:\s*(\w+)/m);
+        // Match both legacy (projectType:) and new format (type:)
+        const typeMatch = content.match(/^(?:projectType|type):\s*(\w+)/m);
         if (typeMatch) {
             projectType = typeMatch[1];
         }
@@ -116,30 +117,44 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
     if (projectType === 'ontology' && !extendsPackage) {
         const coreDir = resolve(packageDir, '../ontology-core');
         const coreSysml = resolve(coreDir, 'sysml');
-        const coreConfig = resolve(coreDir, 'memo.config.yaml');
-        if (existsSync(coreSysml) && !seen.has(resolve(coreConfig))) {
+        // Check for any config file format to mark as seen
+        const coreConfigKey = resolve(coreDir, 'memo.package.yaml');
+        if (existsSync(coreSysml) && !seen.has(coreConfigKey)) {
             dirs.push(coreDir);
-            seen.add(resolve(coreConfig));
+            seen.add(coreConfigKey);
         }
     }
 }
 
+/** Ordered list of config filenames to search for (new format first, then legacy) */
+const CONFIG_SEARCH_ORDER = [
+    'memo.package.yaml',
+    'memo.package.yml',
+    'memo.config.yaml',
+    'memo.config.yml',
+];
+
 /**
- * Resolve a @memo/package-name to its memo.config.yaml path.
+ * Resolve a @memo/package-name to its config file path.
+ * Prefers memo.package.yaml (new format), falls back to memo.config.yaml (legacy).
  * Searches: workspace packages (monorepo), then node_modules.
  */
 function resolvePackageConfig(packageName: string, fromDir: string): string | undefined {
     const shortName = packageName.replace(/^@memo\//, '');
 
-    // Walk up to find packages/<shortName>/memo.config.yaml
     let dir = resolve(fromDir);
     while (true) {
-        const candidate = resolve(dir, 'packages', shortName, 'memo.config.yaml');
-        if (existsSync(candidate)) return candidate;
+        // Try workspace packages
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const candidate = resolve(dir, 'packages', shortName, configName);
+            if (existsSync(candidate)) return candidate;
+        }
 
-        // Also try node_modules
-        const nmCandidate = resolve(dir, 'node_modules', packageName, 'memo.config.yaml');
-        if (existsSync(nmCandidate)) return nmCandidate;
+        // Try node_modules
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const nmCandidate = resolve(dir, 'node_modules', packageName, configName);
+            if (existsSync(nmCandidate)) return nmCandidate;
+        }
 
         const parent = dirname(dir);
         if (parent === dir) break;

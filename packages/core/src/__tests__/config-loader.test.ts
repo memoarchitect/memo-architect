@@ -295,12 +295,12 @@ closureRules:
 
 // ─── Integration: real ontology packages ────────────────────────────────────
 
-describe('loadConfig with real ontology rendering files', () => {
-    it('ontology-core loads rendering layers from memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-core/memo.config.yaml');
+describe('loadConfig with real ontology package files', () => {
+    it('ontology-core loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
+        const configPath = resolve(__dirname, '../../../ontology-core/memo.package.yaml');
         const config = loadConfig(configPath);
 
-        // Should have layers from both cosmaLayers (config) and memo.rendering.yaml
+        // Should have layers from memo.rendering.yaml
         expect(config.cosmaLayers!.length).toBeGreaterThanOrEqual(10);
 
         // Verify specific layers are present
@@ -309,10 +309,14 @@ describe('loadConfig with real ontology rendering files', () => {
         expect(layerIds).toContain('requirements');
         expect(layerIds).toContain('software');
         expect(layerIds).toContain('verification');
+
+        // Verify identity from memo.package.yaml
+        expect(config.projectName).toBe('@memo/ontology-core');
+        expect(config.projectType).toBe('ontology');
     });
 
-    it('ontology-medical loads rendering layers from memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-medical/memo.config.yaml');
+    it('ontology-medical loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
+        const configPath = resolve(__dirname, '../../../ontology-medical/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have medical layers
@@ -320,13 +324,16 @@ describe('loadConfig with real ontology rendering files', () => {
         expect(layerIds).toContain('risk');
         expect(layerIds).toContain('design-control');
         expect(layerIds).toContain('safety');
+
+        // Verify extends chain
+        expect(config.extends).toBe('@memo/ontology-core');
     });
 
-    it('medical-modeling-profile loads closure rules from memo.rules.yaml', () => {
-        const configPath = resolve(__dirname, '../../../medical-modeling-profile/memo.config.yaml');
+    it('medical-modeling-profile loads closure rules from memo.package.yaml + memo.rules.yaml', () => {
+        const configPath = resolve(__dirname, '../../../medical-modeling-profile/memo.package.yaml');
         const config = loadConfig(configPath);
 
-        // Rules should come from memo.rules.yaml (not config, since we extracted them)
+        // Rules should come from memo.rules.yaml
         expect(config.closureRules.length).toBeGreaterThanOrEqual(100);
 
         // Verify specific rules are present
@@ -340,5 +347,17 @@ describe('loadConfig with real ontology rendering files', () => {
         expect(rule1.entity).toBe('Hazard');
         expect(rule1.severity).toBe('error');
         expect(rule1.rule.type).toBe('requireRelationship');
+
+        // Verify viewpoints loaded from memo.viewpoints.yaml
+        expect(config.viewpoints).toBeDefined();
+        expect(config.viewpoints!.length).toBeGreaterThanOrEqual(10);
+        const vpIds = config.viewpoints!.map(v => v.id);
+        expect(vpIds).toContain('risk-overview');
+        expect(vpIds).toContain('safety-view');
+        expect(vpIds).toContain('software-view');
+
+        // Verify firstRun loaded from memo.viewpoints.yaml
+        expect(config.firstRun).toBeDefined();
+        expect(config.firstRun!.template).toBe('infusion-pump');
     });
 });
