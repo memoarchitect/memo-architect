@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve } from 'node:path';
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, loadOntologyRegistries } from '@memo/core';
 import type { BuilderRegistries } from '@memo/core';
@@ -34,7 +34,10 @@ function findSysmlFiles(dir: string): string[] {
     return files;
 }
 
-export async function validateCommand(projectDir?: string): Promise<void> {
+export type ValidateFormat = 'text' | 'junit' | 'json';
+
+export async function validateCommand(projectDir?: string, options?: { format?: ValidateFormat; output?: string }): Promise<void> {
+    const format = options?.format || 'text';
     const cwd = resolve(projectDir || process.cwd());
     console.log(chalk.bold('\n📋 MEMO Validate\n'));
 
@@ -103,11 +106,74 @@ export async function validateCommand(projectDir?: string): Promise<void> {
 
     // 6. Validate
     const result = validateModel(model, config);
+    const completeness = computeCompleteness(model, result, config);
 
-    // Print violations grouped by severity
     const errors = result.violations.filter(v => v.severity === 'error');
     const warnings = result.violations.filter(v => v.severity === 'warning');
     const infos = result.violations.filter(v => v.severity === 'info');
+
+    // ─── Output format dispatch ──────────────────────────────────────────────
+
+    if (format === 'junit') {
+        const xml = generateJUnit(result, completeness, config.projectName || 'memo');
+        if (options?.output) {
+            writeFileSync(resolve(cwd, options.output), xml);
+            console.log(chalk.green(`JUnit XML written to ${options.output}`));
+        } else {
+            process.stdout.write(xml);
+        }
+        if (errors.length > 0) process.exitCode = 1;
+        return;
+    }
+
+    if (format === 'json') {
+        const jsonOutput = {
+            projectName: config.projectName,
+            timestamp: new Date().toISOString(),
+            summary: {
+                elements: model.elements.size,
+                relationships: model.relationships.length,
+                rulesEvaluated: result.rulesEvaluated,
+                rulesPassed: result.rulesPassed,
+                violations: result.violations.length,
+                errors: errors.length,
+                warnings: warnings.length,
+                infos: infos.length,
+                completeness: completeness.overall,
+            },
+            violations: result.violations.map(v => ({
+                ruleId: v.ruleId,
+                severity: v.severity,
+                elementId: v.elementId,
+                elementKind: v.elementKind,
+                elementName: v.elementName,
+                description: v.description,
+            })),
+            completeness: {
+                overall: completeness.overall,
+                completeElements: completeness.completeElements,
+                totalElements: completeness.totalElements,
+                layers: completeness.layers.map(l => ({
+                    id: l.layerId,
+                    label: l.layerLabel,
+                    percentage: l.percentage,
+                    complete: l.completeElements,
+                    total: l.totalElements,
+                })),
+            },
+        };
+        const jsonStr = JSON.stringify(jsonOutput, null, 2);
+        if (options?.output) {
+            writeFileSync(resolve(cwd, options.output), jsonStr);
+            console.log(chalk.green(`JSON report written to ${options.output}`));
+        } else {
+            process.stdout.write(jsonStr + '\n');
+        }
+        if (errors.length > 0) process.exitCode = 1;
+        return;
+    }
+
+    // ─── Default text output ─────────────────────────────────────────────────
 
     if (errors.length > 0) {
         console.log(chalk.red.bold(`Errors (${errors.length}):`));
@@ -133,9 +199,6 @@ export async function validateCommand(projectDir?: string): Promise<void> {
         console.log();
     }
 
-    // 7. Completeness
-    const completeness = computeCompleteness(model, result, config);
-
     console.log(chalk.bold('Completeness by Layer:'));
     for (const layer of completeness.layers) {
         if (layer.totalElements === 0) continue;
@@ -153,6 +216,64 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     if (errors.length > 0) {
         process.exitCode = 1;
     }
+}
+
+// ─── JUnit XML Generator ─────────────────────────────────────────────────────
+
+function generateJUnit(
+    result: ReturnType<typeof validateModel>,
+    completeness: ReturnType<typeof computeCompleteness>,
+    projectName: string,
+): string {
+    const escXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const errors = result.violations.filter(v => v.severity === 'error');
+    const warnings = result.violations.filter(v => v.severity === 'warning');
+    const allTests = result.rulesEvaluated;
+    const failures = errors.length;
+    const skipped = 0;
+
+    const lines: string[] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        `<testsuites name="${escXml(projectName)}" tests="${allTests}" failures="${failures}" errors="0" skipped="${skipped}" timestamp="${new Date().toISOString()}">`,
+        `  <testsuite name="closure-rules" tests="${allTests}" failures="${failures}" errors="0" skipped="${skipped}">`,
+        `    <properties>`,
+        `      <property name="completeness" value="${completeness.overall}%" />`,
+        `      <property name="elements" value="${completeness.totalElements}" />`,
+        `      <property name="warnings" value="${warnings.length}" />`,
+        `    </properties>`,
+    ];
+
+    // Each violation becomes a test case
+    for (const v of result.violations) {
+        const className = `${v.elementKind}.${escXml(v.elementName)}`;
+        const testName = `[${v.ruleId}] ${escXml(v.description)}`;
+
+        if (v.severity === 'error') {
+            lines.push(`    <testcase classname="${className}" name="${testName}">`);
+            lines.push(`      <failure message="${escXml(v.description)}" type="${v.ruleId}">`);
+            lines.push(`        ${escXml(v.ruleId)}: ${escXml(v.description)} (element: ${escXml(v.elementName)}, kind: ${escXml(v.elementKind)})`);
+            lines.push(`      </failure>`);
+            lines.push(`    </testcase>`);
+        } else if (v.severity === 'warning') {
+            lines.push(`    <testcase classname="${className}" name="${testName}">`);
+            lines.push(`      <system-out>WARNING: ${escXml(v.description)}</system-out>`);
+            lines.push(`    </testcase>`);
+        } else {
+            lines.push(`    <testcase classname="${className}" name="${testName}" />`);
+        }
+    }
+
+    // Passing rules (no violations = passed)
+    const passedCount = result.rulesPassed;
+    if (passedCount > 0) {
+        lines.push(`    <testcase classname="summary" name="${passedCount} rules passed with no violations" />`);
+    }
+
+    lines.push(`  </testsuite>`);
+    lines.push(`</testsuites>`);
+
+    return lines.join('\n') + '\n';
 }
 
 function makeBar(pct: number, width: number = 20): string {

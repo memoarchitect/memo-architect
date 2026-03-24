@@ -22,6 +22,7 @@ export type ActiveView =
     | { type: 'actionflow' }
     | { type: 'dsm' }
     | { type: 'ontology' }
+    | { type: 'traceability' }
     | { type: 'welcome' };
 
 /** Which explorer tab is active in the left panel */

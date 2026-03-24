@@ -445,7 +445,7 @@ The #1 adoption blocker. Replace 6-mode tab system with ISO 42010-aligned view-c
 | M52 | Unified view architecture | Done | M47 | Replace `AppMode` 6-mode switcher in `App.tsx` with view-centric layout. Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ). Remove separate ActionFlow, DSM, Scenario modes. |
 | M53 | Model Explorer + View Explorer | Done | M52 | Left panel: Model Explorer (elements by kind/layer/package) + View Explorer (views under viewpoints in tree). Replaces Catalog mode and ViewpointBrowser. |
 | M54 | Properties panel + inline editing | Done | M52 | Right panel: element properties, attributes, relationships, violations. Inline editing of attributes. |
-| M55 | Tools panel + productivity | Not started | M52 | DSM, Consistency, FMEA accessible from toolbar icon. Cmd+K search. Context menus on diagram nodes and browser rows. Breadcrumb navigation. |
+| M55 | Tools panel + productivity | Done | M52 | DSM, Consistency, FMEA accessible from toolbar icon. Cmd+K search. Context menus on diagram nodes and browser rows. Breadcrumb navigation. |
 
 **Parallelization:** {M53, M54, M55} after M52.
 
@@ -455,9 +455,9 @@ The #2 adoption blocker. Generate review-ready compliance outputs.
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M56 | CI integration | Not started | M47 | `memo validate --format junit` with exit codes. JSON output for CI dashboards. |
-| M57 | Traceability matrix | Not started | M52 | N×N matrix with presets (ISO 14971 risk→control, IEC 62304 req→test). Filterable by viewpoint. |
-| M58 | DHF generator | Not started | M52 | Design History File data generator + HTML renderer. `memo export dhf`. Web preview mode. |
+| M56 | CI integration | Done | M47 | `memo validate --format junit` with exit codes. JSON output for CI dashboards. |
+| M57 | Traceability matrix | Done | M52 | N×N matrix with presets (ISO 14971 risk→control, IEC 62304 req→test). Filterable by viewpoint. |
+| M58 | DHF generator | Done | M52 | Design History File data generator + HTML renderer. `memo export dhf`. Web preview mode. |
 
 **Parallelization:** M56 independent of M52 (pure CLI). {M57, M58} after M52.
 

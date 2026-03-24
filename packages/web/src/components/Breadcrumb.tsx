@@ -1,0 +1,100 @@
+import { useModelStore, getDiagram } from '../store/model-store';
+import { DIAGRAM_TYPE_META } from '../constants';
+
+export function Breadcrumb() {
+    const activeView = useModelStore(s => s.activeView);
+    const model = useModelStore(s => s.model);
+    const selectedElementId = useModelStore(s => s.selectedElementId);
+    const selectElement = useModelStore(s => s.selectElement);
+    const setActiveView = useModelStore(s => s.setActiveView);
+
+    const crumbs: { label: string; onClick?: () => void }[] = [];
+
+    // Build breadcrumb trail based on active view
+    switch (activeView.type) {
+        case 'diagram': {
+            const diagram = getDiagram(model, activeView.diagramId);
+            if (diagram) {
+                const vpLabel = diagram.viewpointId === '__model'
+                    ? 'Model Viewpoint'
+                    : model?.viewpoints?.find(v => v.id === diagram.viewpointId)?.label || diagram.viewpointId;
+                crumbs.push({ label: vpLabel });
+                const meta = DIAGRAM_TYPE_META[diagram.diagramType];
+                crumbs.push({ label: `${meta?.code || diagram.diagramType}: ${diagram.name}` });
+            }
+            break;
+        }
+        case 'dsm':
+            crumbs.push({ label: 'Tools' });
+            crumbs.push({ label: 'DSM' });
+            break;
+        case 'traceability':
+            crumbs.push({ label: 'Tools' });
+            crumbs.push({ label: 'Traceability Matrix' });
+            break;
+        case 'actionflow':
+            crumbs.push({ label: 'Tools' });
+            crumbs.push({ label: 'Action Flow' });
+            break;
+        case 'ontology':
+            crumbs.push({ label: 'Tools' });
+            crumbs.push({ label: 'Ontology' });
+            break;
+        case 'welcome':
+            crumbs.push({ label: 'Home' });
+            break;
+    }
+
+    // Add selected element if any
+    if (selectedElementId && model) {
+        const el = model.elements[selectedElementId];
+        if (el) {
+            crumbs.push({
+                label: el.name,
+                onClick: () => selectElement(el.id),
+            });
+        }
+    }
+
+    if (crumbs.length === 0) return null;
+
+    return (
+        <div className="flex items-center gap-1 px-4 py-1.5" style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E0' }}>
+            <button
+                className="text-xs px-1 py-0.5 rounded transition-colors"
+                style={{ color: '#9CA3AF' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#374151'; e.currentTarget.style.background = '#F0F0ED'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.background = 'transparent'; }}
+                onClick={() => setActiveView({ type: 'welcome' })}
+                title="Home"
+            >
+                {'\u2302'}
+            </button>
+            {crumbs.map((crumb, i) => (
+                <span key={i} className="flex items-center gap-1">
+                    <span className="text-xs" style={{ color: '#D1D5DB' }}>/</span>
+                    {crumb.onClick ? (
+                        <button
+                            className="text-xs px-1 py-0.5 rounded transition-colors"
+                            style={{ color: '#374151' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            onClick={crumb.onClick}
+                        >
+                            {crumb.label}
+                        </button>
+                    ) : (
+                        <span className="text-xs" style={{ color: i === crumbs.length - 1 ? '#374151' : '#9CA3AF' }}>
+                            {crumb.label}
+                        </span>
+                    )}
+                </span>
+            ))}
+
+            <div className="flex-1" />
+            <kbd className="px-1.5 py-0.5 rounded text-xs" style={{ background: '#F0F0ED', color: '#9CA3AF', fontSize: '9px' }}>
+                {'\u2318'}K
+            </kbd>
+        </div>
+    );
+}
