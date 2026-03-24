@@ -206,7 +206,7 @@ function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
         ),
         kinds: { ...(parent.kinds ?? {}), ...(child.kinds ?? {}) },
         relationshipTypes: dedup(
-            [...parent.relationshipTypes, ...child.relationshipTypes],
+            [...(parent.relationshipTypes ?? []), ...(child.relationshipTypes ?? [])],
             r => r.name
         ),
         closureRules: dedup(

@@ -60,7 +60,7 @@ export function exportToOwlTurtle(
         lines.push('');
     }
 
-    for (const rel of config.relationshipTypes) {
+    for (const rel of (config.relationshipTypes ?? [])) {
         lines.push(`${prefix}:${rel.name} a owl:ObjectProperty ;`);
         lines.push(`    rdfs:label "${escape(rel.label)}" ;`);
         lines.push(`    ${prefix}:layer "${rel.layer}" .`);
@@ -92,7 +92,7 @@ export function exportToOwlXml(
         lines.push('  </owl:Class>');
     }
 
-    for (const rel of config.relationshipTypes) {
+    for (const rel of (config.relationshipTypes ?? [])) {
         lines.push(`  <owl:ObjectProperty rdf:about="${namespace}${rel.name}">`);
         lines.push(`    <rdfs:label>${escapeXml(rel.label)}</rdfs:label>`);
         lines.push('  </owl:ObjectProperty>');

@@ -69,8 +69,9 @@ export async function ontologyShowCommand(): Promise<void> {
     console.log('');
 
     // Relationships
-    console.log(chalk.bold(`  Relationships (${config.relationshipTypes.length}):`));
-    console.log(`    ${config.relationshipTypes.map(r => r.name).join(', ')}`);
+    const relTypes = config.relationshipTypes ?? [];
+    console.log(chalk.bold(`  Relationships (${relTypes.length}):`));
+    console.log(`    ${relTypes.map(r => r.name).join(', ')}`);
     console.log('');
 
     // Closure rules
@@ -124,7 +125,7 @@ export async function ontologyExportOwlCommand(options: {
     writeFileSync(outputPath, content);
 
     const kindCount = Object.keys(config.kinds ?? {}).length;
-    const relCount = config.relationshipTypes.length;
+    const relCount = (config.relationshipTypes ?? []).length;
     console.log(chalk.cyan(`  ${kindCount} kinds, ${relCount} relationships`));
     console.log(chalk.green(`\n\u2705 Exported to ${outputPath}\n`));
 }

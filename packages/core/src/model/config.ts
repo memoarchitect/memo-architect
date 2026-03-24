@@ -271,8 +271,8 @@ export interface MEMOConfig {
     /** Entity kind definitions (keyed by kind identifier). Optional — prefer KindRegistry. */
     kinds?: Record<string, KindDefinition>;
 
-    /** Typed relationship definitions with CoSMA layer mapping */
-    relationshipTypes: RelationshipType[];
+    /** Typed relationship definitions with CoSMA layer mapping. Optional — prefer RelationshipRegistry. */
+    relationshipTypes?: RelationshipType[];
 
     /** Closure rules for model validation */
     closureRules: ClosureRule[];

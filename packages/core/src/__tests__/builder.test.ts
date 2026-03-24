@@ -237,7 +237,7 @@ describe('evaluateClosureRules', () => {
                 UseCase: { label: 'Use Case', layer: 'functional', sysmlConstruct: 'part def' },
             },
             relationshipTypes: [
-                ...testConfig.relationshipTypes,
+                ...(testConfig.relationshipTypes ?? []),
                 { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
                 { name: 'refines', label: 'Refines', layer: 'requirements', color: '#2E86C1' },
             ],
@@ -283,7 +283,7 @@ describe('evaluateClosureRules', () => {
                 Test: { label: 'Test', layer: 'verification', sysmlConstruct: 'part def' },
             },
             relationshipTypes: [
-                ...testConfig.relationshipTypes,
+                ...(testConfig.relationshipTypes ?? []),
                 { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
                 { name: 'verify', label: 'Verify', layer: 'verification', color: '#27AE60' },
             ],
