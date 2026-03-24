@@ -224,10 +224,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** M50 (memo init with ontology selection) — `memo init` now accepts `--ontology <package>` flag (default: `@memo/medical-modeling-profile`). Creates `memo.package.yaml` (new format) instead of legacy `memo.config.yaml`. `--list-ontologies` discovers and lists available ontology packages from workspace. Validates selected ontology exists. SysML import auto-resolves based on ontology ancestry chain. Lock file created at init. 249 tests passing.
+**Last completed:** M51 (memo install — package resolution) — `memo install` supports 3 modes: git clone, npm install, local symlink. Auto-detects mode from source argument. Installs to `memo_packages/` (git/local) or `node_modules/` (npm). Adds dependency to `memo.package.yaml`. Config-resolver updated with 4-tier resolution: ontology/packages/ → packages/ → memo_packages/ → node_modules/. 253 tests passing.
 
-**Previously completed:** M36-M49 (Phase 7 complete, Phase 8 complete, Phase 9: M48 SysAnd hardening, M49 ontology lock). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M50 (Phase 7 complete, Phase 8 complete, Phase 9: M48-M50). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** M51 (memo install — package resolution).
+**Next up:** M52 (Unified view architecture — Phase 10).
 
-**GitLab milestones:** M36-M54 exist. M36-M50 closed.
+**GitLab milestones:** M36-M54 exist. M36-M51 closed.

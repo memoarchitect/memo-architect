@@ -432,7 +432,7 @@ Make packages installable, lockable, and exportable. This is what turns the onto
 | M48 | Harden SysAnd export + round-trip validation | **Done** | M47 | Existing `memo ontology export sysand` works but predates config decomposition. Update to use registries + new config files. Add round-trip test: export → re-import → compare. |
 | M49 | Ontology lock + change detection | **Done** | M47 | `memo.lock.yaml` created at project init. On `memo dev`/`memo validate`, compare current ontology ID with lock. If changed: full validation, clear error messages. No auto-migration. |
 | M50 | memo init with ontology selection | **Done** | M49 | `memo init --ontology @memo/medical-modeling-profile`. Prompt for selection if interactive. Creates new-format config files + lock. |
-| M51 | memo install — package resolution | Not started | M50 | `memo install <git-url\|npm-pkg\|local-path>`. Installs to `memo_packages/` or `node_modules/`. Adds to `memo.package.yaml` dependencies. Resolution order: git subtree workspace → workspace → `memo_packages/` → `node_modules/`. |
+| M51 | memo install — package resolution | **Done** | M50 | `memo install <git-url\|npm-pkg\|local-path>`. Installs to `memo_packages/` or `node_modules/`. Adds to `memo.package.yaml` dependencies. Resolution order: git subtree workspace → workspace → `memo_packages/` → `node_modules/`. |
 
 **Parallelization:** M48 and M49 can run in parallel after M47. M50 after M49. M51 after M50.
 

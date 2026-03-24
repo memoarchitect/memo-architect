@@ -70,13 +70,27 @@ function loadConfigChainInternal(configPath: string, seen: Set<string>): ConfigC
 }
 
 function resolveParentConfigPath(packageName: string, fromDir: string): string | undefined {
-    // Strategy 1: node_modules resolution
-    const nmPath = resolveFromNodeModules(packageName, fromDir);
-    if (nmPath) return nmPath;
+    // Resolution order (per platform-strategy.md §6):
+    // 1. ontology/packages/<name>/ (git subtree workspace)
+    // 2. packages/<name>/          (workspace)
+    // 3. memo_packages/<name>/     (local installs via `memo install`)
+    // 4. node_modules/<name>/      (npm installs)
 
-    // Strategy 2: workspace packages (monorepo)
+    // Strategy 1: git subtree workspace (ontology/)
+    const subtreePath = resolveFromSubtreeWorkspace(packageName, fromDir);
+    if (subtreePath) return subtreePath;
+
+    // Strategy 2: workspace packages (monorepo packages/)
     const wsPath = resolveFromWorkspace(packageName, fromDir);
     if (wsPath) return wsPath;
+
+    // Strategy 3: memo_packages/ (local installs)
+    const localPath = resolveFromMemoPackages(packageName, fromDir);
+    if (localPath) return localPath;
+
+    // Strategy 4: node_modules resolution
+    const nmPath = resolveFromNodeModules(packageName, fromDir);
+    if (nmPath) return nmPath;
 
     return undefined;
 }
@@ -96,8 +110,26 @@ function resolveFromNodeModules(packageName: string, fromDir: string): string | 
     return undefined;
 }
 
+function resolveFromSubtreeWorkspace(packageName: string, fromDir: string): string | undefined {
+    const shortName = packageName.replace(/^@[^/]+\//, '');
+
+    let dir = resolve(fromDir);
+    while (true) {
+        const subtreeDir = resolve(dir, 'ontology', 'packages', shortName);
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const candidate = resolve(subtreeDir, configName);
+            if (existsSync(candidate)) return candidate;
+        }
+
+        const parent = dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return undefined;
+}
+
 function resolveFromWorkspace(packageName: string, fromDir: string): string | undefined {
-    const shortName = packageName.replace(/^@memo\//, '');
+    const shortName = packageName.replace(/^@[^/]+\//, '');
 
     let dir = resolve(fromDir);
     while (true) {
@@ -105,6 +137,27 @@ function resolveFromWorkspace(packageName: string, fromDir: string): string | un
         for (const configName of CONFIG_SEARCH_ORDER) {
             const candidate = resolve(packagesDir, configName);
             if (existsSync(candidate)) return candidate;
+        }
+
+        const parent = dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return undefined;
+}
+
+function resolveFromMemoPackages(packageName: string, fromDir: string): string | undefined {
+    const shortName = packageName.replace(/^@[^/]+\//, '');
+
+    let dir = resolve(fromDir);
+    while (true) {
+        // Try both the short name and the full scoped name path
+        for (const dirName of [shortName, packageName]) {
+            const pkgDir = resolve(dir, 'memo_packages', dirName);
+            for (const configName of CONFIG_SEARCH_ORDER) {
+                const candidate = resolve(pkgDir, configName);
+                if (existsSync(candidate)) return candidate;
+            }
         }
 
         const parent = dirname(dir);
