@@ -5,9 +5,11 @@
 //   - model/ directory with a starter .sysml file
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import chalk from 'chalk';
+import { findConfigFile } from '@memo/core';
+import { createLockFile } from '../lock.js';
 
 export async function initCommand(
     name: string,
@@ -72,6 +74,17 @@ package ${toIdentifier(name)} {
 
     writeFileSync(resolve(projectDir, 'model', `${name}.sysml`), sysmlContent);
     console.log(chalk.gray(`  Created model/${name}.sysml`));
+
+    // Create ontology lock file
+    const configPath = findConfigFile(projectDir);
+    if (configPath) {
+        try {
+            const { lock } = createLockFile(configPath);
+            console.log(chalk.gray(`  Created memo.lock.yaml (locked to ${lock.ontology} v${lock.version})`));
+        } catch (e) {
+            console.log(chalk.yellow(`  ⚠ Could not create lock file: ${e instanceof Error ? e.message : e}`));
+        }
+    }
 
     console.log(chalk.green(`\n✅ Project created at ./${name}`));
     console.log(chalk.gray(`\n  Next steps:`));

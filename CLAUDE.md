@@ -224,10 +224,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** M48 (Harden SysAnd export + round-trip validation) — `ontology show` uses registries for kinds/relationships. SysAnd export now has SHA-256 checksums in `.meta.json`, derived `usage` in `.project.json`, copies per-package `.project.json` and all companion config files. Round-trip test verifies exported project re-imports with matching config/rules/viewpoints/checksums. 241 tests passing.
+**Last completed:** M49 (Ontology lock + change detection) — `memo.lock.yaml` created at `memo init` with ontology identity, version, package chain, and SHA-256 checksums. `memo dev` and `memo validate` check lock on startup; exit with clear error if ontology ID, version, or package checksums change. `memo lock` command regenerates the lock file. No auto-migration (intentional for regulated medical device dev). 246 tests passing.
 
-**Previously completed:** M36-M47 (Phase 7 complete, Phase 8 complete). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M48 (Phase 7 complete, Phase 8 complete, M48 SysAnd hardening). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** M49 (Ontology lock + change detection).
+**Next up:** M50 (memo init with ontology selection).
 
-**GitLab milestones:** M36-M54 exist. M36-M48 closed.
+**GitLab milestones:** M36-M54 exist. M36-M49 closed.
