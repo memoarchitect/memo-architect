@@ -56,9 +56,11 @@ program
 program
     .command('init')
     .description('Scaffold a new MEMO project')
-    .argument('<name>', 'Project name')
+    .argument('[name]', 'Project name')
     .option('-t, --template <template>', 'Template to use', 'medical')
-    .action(async (name: string, options: { template: string }) => {
+    .option('--ontology <package>', 'Ontology package to use', '@memo/medical-modeling-profile')
+    .option('--list-ontologies', 'List available ontology packages')
+    .action(async (name: string | undefined, options: { template: string; ontology: string; listOntologies?: boolean }) => {
         await initCommand(name, options);
     });
 

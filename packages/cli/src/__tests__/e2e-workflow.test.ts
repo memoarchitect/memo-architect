@@ -49,7 +49,7 @@ describe('E2E: memo init → validate → export', () => {
         rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('memo init creates project structure', () => {
+    it('memo init creates project structure with memo.package.yaml', () => {
         const output = run('init test-device', tmpDir);
 
         expect(output).toContain('Creating MEMO project: test-device');
@@ -57,13 +57,13 @@ describe('E2E: memo init → validate → export', () => {
 
         const projectDir = join(tmpDir, 'test-device');
         expect(existsSync(projectDir)).toBe(true);
-        expect(existsSync(join(projectDir, 'memo.config.yaml'))).toBe(true);
+        expect(existsSync(join(projectDir, 'memo.package.yaml'))).toBe(true);
         expect(existsSync(join(projectDir, 'model', 'test-device.sysml'))).toBe(true);
 
-        // Check config content
-        const config = readFileSync(join(projectDir, 'memo.config.yaml'), 'utf-8');
-        expect(config).toContain('projectName: test-device');
-        expect(config).toContain('projectType: device');
+        // Check new-format config content
+        const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
+        expect(config).toContain('name: "test-device"');
+        expect(config).toContain('type: device');
         expect(config).toContain('extends: "@memo/medical-modeling-profile"');
 
         // Check lock file created
@@ -77,6 +77,44 @@ describe('E2E: memo init → validate → export', () => {
     it('memo init refuses to overwrite existing directory', () => {
         const { exitCode } = runMayFail('init test-device', tmpDir);
         expect(exitCode).not.toBe(0);
+    });
+
+    it('memo init --ontology selects a different ontology', () => {
+        // Run from REPO_ROOT so ontology packages are discoverable
+        const output = run(`init ${join(tmpDir, 'test-core-device')} --ontology @memo/ontology-core`, REPO_ROOT);
+
+        expect(output).toContain('Creating MEMO project');
+        expect(output).toContain('Project created');
+
+        const projectDir = join(tmpDir, 'test-core-device');
+        const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
+        expect(config).toContain('extends: "@memo/ontology-core"');
+
+        // SysML should import the core ontology
+        const sysml = readFileSync(join(projectDir, 'model', `test-core-device.sysml`), 'utf-8');
+        expect(sysml).toContain('import MEMO_Ontology_Core::*');
+
+        // Lock file should exist
+        expect(existsSync(join(projectDir, 'memo.lock.yaml'))).toBe(true);
+    });
+
+    it('memo init --ontology rejects unknown ontology', () => {
+        // Run from REPO_ROOT so ontology packages are discoverable (and validation triggers)
+        const { exitCode, stdout } = runMayFail(
+            `init ${join(tmpDir, 'test-bad')} --ontology @memo/nonexistent`,
+            REPO_ROOT
+        );
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('not found');
+    });
+
+    it('memo init --list-ontologies shows available packages', () => {
+        // Run from REPO_ROOT so packages are discoverable
+        const output = run('init --list-ontologies', REPO_ROOT);
+        expect(output).toContain('@memo/ontology-core');
+        expect(output).toContain('@memo/ontology-medical');
+        expect(output).toContain('@memo/medical-modeling-profile');
+        expect(output).toContain('(default)');
     });
 
     it('memo validate runs on infusion-pump example', () => {
