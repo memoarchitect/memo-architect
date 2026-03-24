@@ -13,7 +13,20 @@ import type {
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 
+/** @deprecated Legacy 6-mode type — kept for backward compat during transition */
 export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm';
+
+/** Active view in the unified canvas */
+export type ActiveView =
+    | { type: 'diagram'; diagramId: string }
+    | { type: 'actionflow' }
+    | { type: 'dsm' }
+    | { type: 'ontology' }
+    | { type: 'welcome' };
+
+/** Which explorer tab is active in the left panel */
+export type ExplorerTab = 'model' | 'views';
+
 export type GroupBy = 'layer' | 'kind' | 'construct' | 'source';
 export type CatalogGroupBy = 'semantic';  // V-Cycle is the only sensible top-level grouping
 
@@ -33,11 +46,14 @@ export interface ModelState {
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
+    activeView: ActiveView;
+    explorerTab: ExplorerTab;
     selectedElementId: string | null;
     selectedViewpointId: string | null;
     selectedDiagramId: string | null;
     searchTerm: string;
     sidebarCollapsed: boolean;
+    propertiesPanelCollapsed: boolean;
     hiddenLayers: Set<string>;
     ontologyGroupBy: GroupBy;
     collapsedGroups: Set<string>;
@@ -60,11 +76,14 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setActiveMode: (mode: AppMode) => void;
+    setActiveView: (view: ActiveView) => void;
+    setExplorerTab: (tab: ExplorerTab) => void;
     selectElement: (id: string | null) => void;
     selectViewpoint: (id: string | null) => void;
     selectDiagram: (id: string | null) => void;
     setSearchTerm: (term: string) => void;
     toggleSidebar: () => void;
+    togglePropertiesPanel: () => void;
     toggleLayerVisibility: (layer: string) => void;
     setOntologyGroupBy: (groupBy: GroupBy) => void;
     toggleGroupCollapsed: (groupId: string) => void;
@@ -95,11 +114,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // UI state
     activeMode: 'catalog' as AppMode,
+    activeView: { type: 'welcome' } as ActiveView,
+    explorerTab: 'model' as ExplorerTab,
     selectedElementId: null,
     selectedViewpointId: null,
     selectedDiagramId: null,
     searchTerm: '',
     sidebarCollapsed: false,
+    propertiesPanelCollapsed: false,
     hiddenLayers: new Set<string>(),
     ontologyGroupBy: 'layer' as GroupBy,
     collapsedGroups: new Set<string>(),
@@ -122,6 +144,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setCompleteness: (completeness) => set({ completeness }),
     setConnected: (connected) => set({ connected }),
     setActiveMode: (mode) => set({ activeMode: mode }),
+    setActiveView: (view) => set({ activeView: view }),
+    setExplorerTab: (tab) => set({ explorerTab: tab }),
     selectElement: (id) => set({ selectedElementId: id }),
     selectViewpoint: (id) => set({ selectedViewpointId: id, selectedDiagramId: null }),
     selectDiagram: (id) => {
@@ -143,6 +167,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     },
     setSearchTerm: (term) => set({ searchTerm: term }),
     toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+    togglePropertiesPanel: () => set((s) => ({ propertiesPanelCollapsed: !s.propertiesPanelCollapsed })),
     toggleLayerVisibility: (layer) => set((s) => {
         const next = new Set(s.hiddenLayers);
         if (next.has(layer)) next.delete(layer);

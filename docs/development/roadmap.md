@@ -442,9 +442,9 @@ The #1 adoption blocker. Replace 6-mode tab system with ISO 42010-aligned view-c
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M52 | Unified view architecture | Not started | M47 | Replace `AppMode` 6-mode switcher in `App.tsx` with view-centric layout. Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ). Remove separate ActionFlow, DSM, Scenario modes. |
-| M53 | Model Explorer + View Explorer | Not started | M52 | Left panel: Model Explorer (elements by kind/layer/package) + View Explorer (views under viewpoints in tree). Replaces Catalog mode and ViewpointBrowser. |
-| M54 | Properties panel + inline editing | Not started | M52 | Right panel: element properties, attributes, relationships, violations. Inline editing of attributes. |
+| M52 | Unified view architecture | Done | M47 | Replace `AppMode` 6-mode switcher in `App.tsx` with view-centric layout. Single canvas renders any view type (BDD, IBD, ACT, AFD, REQ). Remove separate ActionFlow, DSM, Scenario modes. |
+| M53 | Model Explorer + View Explorer | Done | M52 | Left panel: Model Explorer (elements by kind/layer/package) + View Explorer (views under viewpoints in tree). Replaces Catalog mode and ViewpointBrowser. |
+| M54 | Properties panel + inline editing | Done | M52 | Right panel: element properties, attributes, relationships, violations. Inline editing of attributes. |
 | M55 | Tools panel + productivity | Not started | M52 | DSM, Consistency, FMEA accessible from toolbar icon. Cmd+K search. Context menus on diagram nodes and browser rows. Breadcrumb navigation. |
 
 **Parallelization:** {M53, M54, M55} after M52.
