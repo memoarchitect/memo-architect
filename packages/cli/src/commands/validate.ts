@@ -48,7 +48,7 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     // 2. Load and resolve config
     const config = loadAndResolveConfig(configPath);
     console.log(chalk.gray(`Project: ${config.projectName} (${config.projectType})`));
-    console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds).length} | Rules: ${config.closureRules.length} | Relationships: ${config.relationshipTypes.length}`));
+    console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds ?? {}).length} | Rules: ${config.closureRules.length} | Relationships: ${config.relationshipTypes.length}`));
 
     // 2b. Load ontology registries (SysML-driven kind/relationship discovery)
     let ontologyRegistries: BuilderRegistries | undefined;

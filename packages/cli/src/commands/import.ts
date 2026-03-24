@@ -195,7 +195,7 @@ export async function importTemplateCommand(
     if (templateType === 'elements') {
         csv = generateElementTemplate(config);
         defaultFile = 'elements-template.csv';
-        console.log(chalk.blue(`Generating element template with ${Object.keys(config.kinds).length} kinds`));
+        console.log(chalk.blue(`Generating element template with ${Object.keys(config.kinds ?? {}).length} kinds`));
     } else if (templateType === 'relationships' || templateType === 'relations') {
         csv = generateRelationshipTemplate(config);
         defaultFile = 'relationships-template.csv';

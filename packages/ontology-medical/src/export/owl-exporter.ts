@@ -50,7 +50,7 @@ export function exportToOwlTurtle(
     lines.push('    .');
     lines.push('');
 
-    for (const [kindName, kindDef] of Object.entries(config.kinds)) {
+    for (const [kindName, kindDef] of Object.entries(config.kinds ?? {})) {
         lines.push(`${prefix}:${kindName} a owl:Class ;`);
         lines.push(`    rdfs:label "${escape(kindDef.label)}" ;`);
         if (kindDef.layer) {
@@ -86,7 +86,7 @@ export function exportToOwlXml(
     lines.push(`  <owl:Ontology rdf:about="${ns}"/>`);
     lines.push('');
 
-    for (const [kindName, kindDef] of Object.entries(config.kinds)) {
+    for (const [kindName, kindDef] of Object.entries(config.kinds ?? {})) {
         lines.push(`  <owl:Class rdf:about="${namespace}${kindName}">`);
         lines.push(`    <rdfs:label>${escapeXml(kindDef.label)}</rdfs:label>`);
         lines.push('  </owl:Class>');

@@ -46,7 +46,7 @@ export async function ontologyShowCommand(): Promise<void> {
     console.log('');
 
     // Kinds by layer
-    const kindEntries = Object.entries(config.kinds);
+    const kindEntries = Object.entries(config.kinds ?? {});
     console.log(chalk.bold(`  Kinds (${kindEntries.length}):`));
     const byLayer = new Map<string, string[]>();
     for (const [name, def] of kindEntries) {
@@ -123,7 +123,7 @@ export async function ontologyExportOwlCommand(options: {
     const outputPath = resolve(cwd, options.output || `ontology${ext}`);
     writeFileSync(outputPath, content);
 
-    const kindCount = Object.keys(config.kinds).length;
+    const kindCount = Object.keys(config.kinds ?? {}).length;
     const relCount = config.relationshipTypes.length;
     console.log(chalk.cyan(`  ${kindCount} kinds, ${relCount} relationships`));
     console.log(chalk.green(`\n\u2705 Exported to ${outputPath}\n`));

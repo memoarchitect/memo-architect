@@ -186,9 +186,10 @@ export function parseElementsCsv(
             errors.push(`Row ${lineNum}: missing required field 'kind'`);
             continue;
         }
-        const kindDef: KindDefinition | undefined = config.kinds[kind];
+        const kinds = config.kinds ?? {};
+        const kindDef: KindDefinition | undefined = kinds[kind];
         if (!kindDef) {
-            const validKinds = Object.keys(config.kinds).sort();
+            const validKinds = Object.keys(kinds).sort();
             errors.push(`Row ${lineNum}: unknown kind '${kind}'. Valid kinds: ${validKinds.join(', ')}`);
             continue;
         }
@@ -408,7 +409,7 @@ function sysmlConstructToUsage(sysmlConstruct: string): string {
 export function generateElementTemplate(config: MEMOConfig): string {
     // Gather all default attribute keys across all kinds
     const attrKeysSet = new Set<string>();
-    for (const kindDef of Object.values(config.kinds)) {
+    for (const kindDef of Object.values(config.kinds ?? {})) {
         if (kindDef.defaultAttributes) {
             for (const key of Object.keys(kindDef.defaultAttributes)) {
                 attrKeysSet.add(key);
@@ -421,7 +422,7 @@ export function generateElementTemplate(config: MEMOConfig): string {
     const lines = [headers.map(escapeCsvField).join(',')];
 
     // Add one example row per kind
-    for (const [kindKey, kindDef] of Object.entries(config.kinds)) {
+    for (const [kindKey, kindDef] of Object.entries(config.kinds ?? {})) {
         const construct = sysmlConstructToUsage(kindDef.sysmlConstruct);
         const row = [
             `example_${kindKey.toLowerCase()}`,    // id
