@@ -65,6 +65,13 @@ describe('E2E: memo init → validate → export', () => {
         expect(config).toContain('projectName: test-device');
         expect(config).toContain('projectType: device');
         expect(config).toContain('extends: "@memo/medical-modeling-profile"');
+
+        // Check lock file created
+        expect(existsSync(join(projectDir, 'memo.lock.yaml'))).toBe(true);
+        const lock = readFileSync(join(projectDir, 'memo.lock.yaml'), 'utf-8');
+        expect(lock).toContain('ontology:');
+        expect(lock).toContain('version:');
+        expect(lock).toContain('lockedAt:');
     });
 
     it('memo init refuses to overwrite existing directory', () => {
@@ -261,6 +268,120 @@ describe('E2E: memo init → validate → export', () => {
         const actualContent = readFileSync(join(outputDir, indexSysmlPath));
         const expectedHash = createHash('sha256').update(actualContent).digest('hex');
         expect(metaJson.checksum[indexSysmlPath].value).toBe(expectedHash);
+    });
+});
+
+describe('E2E: ontology lock + change detection', () => {
+    let projectDir: string;
+
+    beforeAll(() => {
+        // Create a test project inside the monorepo so config resolution finds ontology packages
+        projectDir = join(REPO_ROOT, '.test-lock-' + process.pid);
+        rmSync(projectDir, { recursive: true, force: true });
+        mkdirSync(projectDir, { recursive: true });
+        mkdirSync(join(projectDir, 'model'), { recursive: true });
+
+        writeFileSync(join(projectDir, 'memo.config.yaml'), `
+projectName: lock-test
+projectType: device
+extends: "@memo/medical-modeling-profile"
+`);
+
+        writeFileSync(join(projectDir, 'model', 'device.sysml'), `
+package LockTest {
+    import MEMO_Ontology_Medical::*;
+    part sys : System {
+        attribute redefines name = "Lock Test";
+    }
+}
+`);
+    });
+
+    afterAll(() => {
+        rmSync(projectDir, { recursive: true, force: true });
+    });
+
+    it('memo lock creates memo.lock.yaml', () => {
+        const output = run('lock', projectDir);
+
+        expect(output).toContain('Lock file written');
+        expect(output).toContain('@memo/medical-modeling-profile');
+        expect(existsSync(join(projectDir, 'memo.lock.yaml'))).toBe(true);
+
+        const lock = readFileSync(join(projectDir, 'memo.lock.yaml'), 'utf-8');
+        expect(lock).toContain('ontology: "@memo/medical-modeling-profile"');
+        expect(lock).toContain('version:');
+        expect(lock).toContain('lockedAt:');
+        expect(lock).toContain('packages:');
+        // Should have all 3 ontology packages in the chain
+        expect(lock).toContain('@memo/ontology-core');
+        expect(lock).toContain('@memo/ontology-medical');
+        expect(lock).toContain('@memo/medical-modeling-profile');
+    });
+
+    it('memo validate succeeds with matching lock', () => {
+        // Lock file was created in previous test
+        const { stdout, exitCode } = runMayFail('validate', projectDir);
+
+        expect(stdout).toContain('locked to');
+        expect(stdout).toContain('Model:');
+        expect(exitCode).toBe(0);
+    });
+
+    it('memo validate fails when ontology ID changes', () => {
+        // Tamper the lock file to simulate an ontology change
+        const lockPath = join(projectDir, 'memo.lock.yaml');
+        const lock = readFileSync(lockPath, 'utf-8');
+        writeFileSync(lockPath, lock.replace(
+            '@memo/medical-modeling-profile',
+            '@memo/some-other-ontology'
+        ));
+
+        const { stdout, exitCode } = runMayFail('validate', projectDir);
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('Ontology mismatch');
+        expect(stdout).toContain('@memo/some-other-ontology');
+
+        // Restore the lock file for subsequent tests
+        writeFileSync(lockPath, lock);
+    });
+
+    it('memo validate fails when ontology version changes', () => {
+        const lockPath = join(projectDir, 'memo.lock.yaml');
+        const lock = readFileSync(lockPath, 'utf-8');
+        writeFileSync(lockPath, lock.replace(
+            /version: "[^"]+"\nlockedAt/,
+            'version: "99.0.0"\nlockedAt'
+        ));
+
+        const { stdout, exitCode } = runMayFail('validate', projectDir);
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('version changed');
+
+        // Restore
+        writeFileSync(lockPath, lock);
+    });
+
+    it('memo lock regenerates after ontology changes', () => {
+        // First tamper the lock
+        const lockPath = join(projectDir, 'memo.lock.yaml');
+        const oldLock = readFileSync(lockPath, 'utf-8');
+        writeFileSync(lockPath, oldLock.replace(
+            '@memo/medical-modeling-profile',
+            '@memo/some-other-ontology'
+        ));
+
+        // Verify validate fails
+        const { exitCode: fail } = runMayFail('validate', projectDir);
+        expect(fail).not.toBe(0);
+
+        // Regenerate lock
+        const output = run('lock', projectDir);
+        expect(output).toContain('Lock file written');
+
+        // Now validate should pass
+        const { exitCode: pass } = runMayFail('validate', projectDir);
+        expect(pass).toBe(0);
     });
 });
 

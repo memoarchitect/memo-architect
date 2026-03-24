@@ -12,6 +12,7 @@ import type { BuilderRegistries } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
+import { checkLockFile } from '../lock.js';
 
 /**
  * Find all .sysml files recursively from a directory.
@@ -48,6 +49,16 @@ export async function validateCommand(projectDir?: string): Promise<void> {
     // 2. Load and resolve config
     const config = loadAndResolveConfig(configPath);
     console.log(chalk.gray(`Project: ${config.projectName} (${config.projectType})`));
+
+    // 2a. Check ontology lock
+    const lockCheck = checkLockFile(configPath);
+    if (!lockCheck.ok) {
+        console.error(chalk.red(`\n❌ ${lockCheck.message}\n`));
+        process.exit(1);
+    }
+    if (lockCheck.locked) {
+        console.log(chalk.gray(`Ontology: locked to ${lockCheck.locked.ontology} v${lockCheck.locked.version}`));
+    }
     console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds ?? {}).length} | Rules: ${config.closureRules.length} | Relationships: ${(config.relationshipTypes ?? []).length}`));
 
     // 2b. Load ontology registries (SysML-driven kind/relationship discovery)

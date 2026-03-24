@@ -18,6 +18,7 @@ import type { ServerMessage, ViewpointDTO, CosmaLayerDTO, DiagramDTO, ModelMetad
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { createDevServer } from '../server/dev-server.js';
 import { createFileWatcher } from '../server/file-watcher.js';
+import { checkLockFile } from '../lock.js';
 
 /** Gather git info for model metadata */
 function getGitInfo(cwd: string): Partial<ModelMetadata> {
@@ -67,6 +68,16 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     const gitInfo = getGitInfo(cwd);
     let buildCount = 0;
     console.log(chalk.gray(`Project: ${config.projectName}`));
+
+    // 1a. Check ontology lock
+    const lockCheck = checkLockFile(configPath);
+    if (!lockCheck.ok) {
+        console.error(chalk.red(`\n❌ ${lockCheck.message}\n`));
+        process.exit(1);
+    }
+    if (lockCheck.locked) {
+        console.log(chalk.gray(`Ontology: locked to ${lockCheck.locked.ontology} v${lockCheck.locked.version}`));
+    }
 
     // 1b. Load ontology registries (SysML-driven kind/relationship discovery)
     let ontologyRegistries: BuilderRegistries | undefined;

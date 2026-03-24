@@ -24,6 +24,7 @@ import {
     ontologyExportSysandCommand,
 } from '../commands/ontology.js';
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
+import { lockCommand } from '../commands/lock.js';
 
 const program = new Command();
 
@@ -90,6 +91,13 @@ exportCmd
     .option('--viewpoint <id>', 'Filter by viewpoint ID')
     .action(async (options: { output: string; viewpoint?: string }) => {
         await exportDotCommand(options);
+    });
+
+program
+    .command('lock')
+    .description('Regenerate memo.lock.yaml from the current ontology')
+    .action(async () => {
+        await lockCommand();
     });
 
 // ─── memo ontology ──────────────────────────────────────────────────────────
