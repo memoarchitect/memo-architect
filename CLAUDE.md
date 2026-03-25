@@ -180,6 +180,13 @@ Phase 16 — Cloud & Collaboration:
 - M77: Domain packages (automotive, aerospace)
 - M78: Plugin system
 
+Phase 17 — Productivity & Polish: ✅ Complete (M79-M83 done)
+- M79: Scenario editor + model diff
+- M80: Guided compliance wizard
+- M81: Working sets + workspace persistence
+- M82: Statistics dashboard
+- M83: Onboarding tour + performance (code splitting)
+
 Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dashboard)
 
 ### Issue Labels
@@ -230,10 +237,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M61 (Phase 12: VS Code extension) — TextMate grammar for `.sysml` syntax highlighting, diagnostics from `memo validate --format json` on save, language configuration (brackets, folding, indentation), commands (Validate Model, Open in Browser). Roadmap replanned with Phase 13 (DHF Workbench), Phase 14 (Developer Experience & Import), Phase 15 (LLM Integration), Phase 16 (Cloud & Collaboration). 253 tests passing.
+**Last completed:** M79-M83 (Phase 17: Productivity & Polish) — Scenario editor with step editing and element linking, model diff with snapshot comparison, guided compliance wizard for ISO 14971 / IEC 62304, working sets with localStorage persistence, statistics dashboard with layer/kind/relationship analytics, first-run onboarding tour, code splitting (main bundle 64KB, down from 1.8MB). 253 tests passing.
 
-**Previously completed:** M36-M60 (Phase 7-12 complete). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M61 (Phase 7-12 complete). Roadmap consolidation. Ontology Backbone Restructuring.
 
 **Next up:** Phase 13 (DHF Workbench, M62-M68).
 
-**GitLab milestones:** M36-M61 exist. M36-M61 closed.
+**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed.
