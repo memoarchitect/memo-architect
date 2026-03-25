@@ -155,7 +155,7 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 
 Phase 12 — Extension Ecosystem: ✅ Complete (M59-M61 done)
 
-Phase 13 — DHF Workbench:
+Phase 13 — DHF Workbench: ✅ Complete (M62-M68 done)
 - M62: DHF Document Registry, Markdown Templates & Document IR
 - M63: DHF Content Generator — Model Query Engine
 - M64: Export Plugins — HTML, DOCX, PDF, Markdown
@@ -237,10 +237,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M79-M83 (Phase 17: Productivity & Polish) — Scenario editor with step editing and element linking, model diff with snapshot comparison, guided compliance wizard for ISO 14971 / IEC 62304, working sets with localStorage persistence, statistics dashboard with layer/kind/relationship analytics, first-run onboarding tour, code splitting (main bundle 64KB, down from 1.8MB). 253 tests passing.
+**Last completed:** M62-M68 (Phase 13: DHF Workbench) — 18-document registry (rmp, har, fmea, rtm, sad, soup, etc.), Document IR (format-agnostic AST), model query engine, template engine with section generators, 3 export plugins (HTML, Markdown, DOCX/Word-HTML), `memo.dhf.yaml` config, full DHF CLI (`memo export dhf`, `memo dhf status/snapshot/diff/redline/review-packet`), web dashboard with card grid and drilldown. 288 tests passing.
 
-**Previously completed:** M36-M61 (Phase 7-12 complete). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** Phase 13 (DHF Workbench, M62-M68).
+**Next up:** Phase 14 (Developer Experience & Import, M69-M71).
 
-**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed.
+**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed.

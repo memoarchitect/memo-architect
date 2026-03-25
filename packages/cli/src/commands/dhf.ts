@@ -1,19 +1,26 @@
-// ─── memo export dhf ─────────────────────────────────────────────────────────
+// ─── DHF CLI Commands ────────────────────────────────────────────────────────
 //
-// Generates a Design History File (DHF) HTML report from the model.
-// Contains: element inventory, traceability chains, validation summary,
-// completeness per layer, and relationship coverage.
+// Full DHF workbench CLI: export, status, snapshot, redline, diff, review-packet.
+// Replaces the M58 stub with Phase 13 implementation.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve } from 'node:path';
 import { readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries } from '@memo/core';
-import type { BuilderRegistries } from '@memo/core';
-import { validateModel } from '@memo/core';
-import { computeCompleteness } from '@memo/core';
-import type { ViewpointDTO, CosmaLayerDTO, MemoElement, MemoRelationship } from '@memo/core';
+import {
+    findConfigFile, parseFiles, buildMemoModel, loadOntologyRegistries,
+    validateModel, computeCompleteness,
+    DHF_DOCUMENT_TYPES, getDocumentType, getDocumentsByGroup, getAllDocumentIds,
+    compileDocument, loadDhfConfig, isDocumentEnabled,
+    getPlugin, getAvailableFormats,
+    createSnapshot, saveSnapshot, loadSnapshots, loadLatestSnapshot,
+    diffSnapshots, generateRedlineDocument,
+} from '@memo/core';
+import type { BuilderRegistries, DhfExportFormat, DhfDocument, MemoModel, MEMOConfig, DhfConfig } from '@memo/core';
+import type { ValidationResult, CompletenessReport } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
+
+// ─── Shared: find SysML files ────────────────────────────────────────────────
 
 function findSysmlFiles(dir: string): string[] {
     const files: string[] = [];
@@ -30,270 +37,311 @@ function findSysmlFiles(dir: string): string[] {
     return files;
 }
 
-export async function exportDhfCommand(options: {
-    output?: string;
-}): Promise<void> {
-    const cwd = process.cwd();
-    console.log(chalk.bold('\n📋 MEMO Export → Design History File (DHF)\n'));
+// ─── Shared: load model ──────────────────────────────────────────────────────
 
+interface LoadedModel {
+    model: MemoModel;
+    config: MEMOConfig;
+    validation: ValidationResult;
+    completeness: CompletenessReport;
+    dhfConfig: DhfConfig | undefined;
+}
+
+async function loadModel(): Promise<LoadedModel> {
+    const cwd = process.cwd();
     const configPath = findConfigFile(cwd);
     if (!configPath) {
-        console.error(chalk.red('❌ No memo config found.'));
+        console.error(chalk.red('No memo config found.'));
         process.exit(1);
     }
 
     const config = loadAndResolveConfig(configPath);
-    console.log(chalk.gray(`Project: ${config.projectName}`));
-
-    // Load ontology registries
     let ontologyRegistries: BuilderRegistries | undefined;
     try {
         const loadResult = await loadOntologyRegistries(configPath);
-        if (loadResult.fileCount > 0) {
-            ontologyRegistries = loadResult.registries;
-        }
+        if (loadResult.fileCount > 0) ontologyRegistries = loadResult.registries;
     } catch { /* skip */ }
 
-    // Parse and build
     const sysmlFiles = findSysmlFiles(cwd);
     const { documents, errors: parseErrors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
     const validation = validateModel(model, config);
     const completeness = computeCompleteness(model, validation, config);
+    const dhfConfig = loadDhfConfig(cwd);
 
-    // Gather data
+    return { model, config, validation, completeness, dhfConfig };
+}
+
+// ─── Resolve target documents ────────────────────────────────────────────────
+
+function resolveTargets(target?: string, group?: string, dhfConfig?: DhfConfig): string[] {
+    if (target) {
+        // Single document target
+        const doc = getDocumentType(target);
+        if (!doc) {
+            console.error(chalk.red(`Unknown document type: ${target}`));
+            console.error(chalk.gray(`Available: ${getAllDocumentIds().join(', ')}`));
+            process.exit(1);
+        }
+        return [target];
+    }
+
+    if (group) {
+        return getDocumentsByGroup(group).map(d => d.id);
+    }
+
+    // All enabled documents
+    return getAllDocumentIds().filter(id => isDocumentEnabled(id, dhfConfig));
+}
+
+// ─── memo export dhf ─────────────────────────────────────────────────────────
+
+export async function exportDhfCommand(options: {
+    output?: string;
+    target?: string;
+    format?: string;
+    group?: string;
+}): Promise<void> {
+    const cwd = process.cwd();
+    console.log(chalk.bold('\nMEMO DHF Export\n'));
+
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const format = (options.format || dhfConfig?.defaultFormat || 'html') as DhfExportFormat;
+    const targets = resolveTargets(options.target, options.group, dhfConfig);
+
+    const plugin = getPlugin(format);
+    if (!plugin) {
+        console.error(chalk.red(`Unknown format: ${format}. Available: ${getAvailableFormats().join(', ')}`));
+        process.exit(1);
+    }
+
+    console.log(chalk.gray(`Format: ${format} | Documents: ${targets.length}`));
+
+    const outputDir = resolve(cwd, options.output || 'dhf-output');
+    if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
+
+    let exported = 0;
+    for (const targetId of targets) {
+        const docType = getDocumentType(targetId)!;
+        const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+        const result = await plugin.render(doc);
+
+        const filename = `${targetId}${result.extension}`;
+        const filepath = resolve(outputDir, filename);
+        writeFileSync(filepath, result.content);
+        exported++;
+
+        const statusIcon = doc.status === 'complete' ? chalk.green('OK') : doc.status === 'partial' ? chalk.yellow('PARTIAL') : chalk.red('EMPTY');
+        console.log(chalk.cyan(`  ${docType.title} → ${filename} [${statusIcon}]`));
+    }
+
+    console.log(chalk.green(`\nExported ${exported} documents to ${outputDir}\n`));
+}
+
+// ─── memo dhf status ─────────────────────────────────────────────────────────
+
+export async function dhfStatusCommand(options: {
+    verbose?: boolean;
+    target?: string;
+}): Promise<void> {
+    console.log(chalk.bold('\nMEMO DHF Status\n'));
+
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const targets = resolveTargets(options.target, undefined, dhfConfig);
+
     const elements = Array.from(model.elements.values());
-    const relationships = model.relationships;
+    const errors = validation.violations.filter(v => v.severity === 'error').length;
+    const warnings = validation.violations.filter(v => v.severity === 'warning').length;
 
-    const errors = validation.violations.filter(v => v.severity === 'error');
-    const warnings = validation.violations.filter(v => v.severity === 'warning');
+    console.log(chalk.gray(`Project: ${config.projectName || 'MEMO Project'}`));
+    console.log(chalk.gray(`Elements: ${elements.length} | Relationships: ${model.relationships.length} | Completeness: ${completeness.overall}%`));
+    console.log(chalk.gray(`Errors: ${errors} | Warnings: ${warnings}\n`));
 
-    // Group elements by layer
-    const byLayer = new Map<string, MemoElement[]>();
-    for (const el of elements) {
-        if (!byLayer.has(el.layer)) byLayer.set(el.layer, []);
-        byLayer.get(el.layer)!.push(el);
+    // Column headers
+    console.log(chalk.bold('  Document                                      Status     Elements  Gaps'));
+    console.log(chalk.gray('  ' + '─'.repeat(74)));
+
+    for (const targetId of targets) {
+        const docType = getDocumentType(targetId)!;
+        const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+
+        const title = docType.title.padEnd(44);
+        const statusStr = doc.status === 'complete'
+            ? chalk.green('COMPLETE')
+            : doc.status === 'partial' ? chalk.yellow('PARTIAL ')
+            : chalk.red('EMPTY   ');
+        const elCount = String(doc.totalElements).padStart(6);
+        const gapCount = String(doc.totalGaps).padStart(6);
+
+        console.log(`  ${title} ${statusStr} ${elCount} ${gapCount}`);
+
+        if (options.verbose) {
+            for (const section of doc.sections) {
+                const secStatus = section.status === 'complete'
+                    ? chalk.green('OK')
+                    : section.status === 'partial' ? chalk.yellow('!!')
+                    : chalk.red('--');
+                console.log(chalk.gray(`    ${secStatus} ${section.title} (${section.elementCount || 0} elements, ${section.gapCount || 0} gaps)`));
+            }
+        }
     }
 
-    // Group relationships by type
-    const byRelType = new Map<string, MemoRelationship[]>();
-    for (const rel of relationships) {
-        if (!byRelType.has(rel.type)) byRelType.set(rel.type, []);
-        byRelType.get(rel.type)!.push(rel);
-    }
-
-    // Build traceability chains (element → outgoing rels → targets)
-    const outgoing = new Map<string, MemoRelationship[]>();
-    for (const rel of relationships) {
-        if (!outgoing.has(rel.sourceId)) outgoing.set(rel.sourceId, []);
-        outgoing.get(rel.sourceId)!.push(rel);
-    }
-
-    // Generate HTML
-    const html = generateDhfHtml({
-        projectName: config.projectName || 'MEMO Project',
-        timestamp: new Date().toISOString(),
-        elements,
-        relationships,
-        byLayer,
-        byRelType,
-        outgoing,
-        validation,
-        completeness,
-        errors,
-        warnings,
-        elementMap: model.elements,
-    });
-
-    const outputPath = resolve(cwd, options.output || 'dhf-report.html');
-    writeFileSync(outputPath, html);
-
-    console.log(chalk.cyan(`  ${elements.length} elements, ${relationships.length} relationships`));
-    console.log(chalk.cyan(`  ${validation.rulesEvaluated} rules evaluated, ${errors.length} errors, ${warnings.length} warnings`));
-    console.log(chalk.green(`\n✅ DHF report written to ${outputPath}\n`));
+    console.log('');
 }
 
-// ─── HTML Generator ──────────────────────────────────────────────────────────
+// ─── memo dhf snapshot ───────────────────────────────────────────────────────
 
-function esc(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export async function dhfSnapshotCommand(options: {
+    target?: string;
+    label?: string;
+}): Promise<void> {
+    const cwd = process.cwd();
+    console.log(chalk.bold('\nMEMO DHF Snapshot\n'));
+
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const targets = resolveTargets(options.target, undefined, dhfConfig);
+
+    for (const targetId of targets) {
+        const docType = getDocumentType(targetId)!;
+        const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+        const snapshot = createSnapshot(doc, options.label);
+        const filepath = saveSnapshot(cwd, snapshot);
+        console.log(chalk.cyan(`  ${docType.title} → ${snapshot.id}`));
+    }
+
+    console.log(chalk.green(`\nSnapshots saved to .memo/dhf-snapshots/\n`));
 }
 
-interface DhfData {
-    projectName: string;
-    timestamp: string;
-    elements: MemoElement[];
-    relationships: MemoRelationship[];
-    byLayer: Map<string, MemoElement[]>;
-    byRelType: Map<string, MemoRelationship[]>;
-    outgoing: Map<string, MemoRelationship[]>;
-    validation: ReturnType<typeof validateModel>;
-    completeness: ReturnType<typeof computeCompleteness>;
-    errors: any[];
-    warnings: any[];
-    elementMap: Map<string, MemoElement>;
+// ─── memo dhf diff ───────────────────────────────────────────────────────────
+
+export async function dhfDiffCommand(options: {
+    target: string;
+}): Promise<void> {
+    const cwd = process.cwd();
+    console.log(chalk.bold('\nMEMO DHF Diff\n'));
+
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const docType = getDocumentType(options.target);
+    if (!docType) {
+        console.error(chalk.red(`Unknown document type: ${options.target}`));
+        process.exit(1);
+    }
+
+    const baseline = loadLatestSnapshot(cwd, options.target);
+    if (!baseline) {
+        console.error(chalk.yellow(`No previous snapshot found for ${options.target}. Run 'memo dhf snapshot' first.`));
+        process.exit(1);
+    }
+
+    const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+    const current = createSnapshot(doc);
+    const diff = diffSnapshots(baseline, current);
+
+    console.log(chalk.gray(`Baseline: ${baseline.label || baseline.id} (${new Date(baseline.timestamp).toLocaleDateString()})`));
+    console.log(chalk.gray(`Current:  ${current.id} (${new Date(current.timestamp).toLocaleDateString()})\n`));
+
+    console.log(`  Element delta: ${diff.elementDelta >= 0 ? chalk.green(`+${diff.elementDelta}`) : chalk.red(String(diff.elementDelta))}`);
+    console.log(`  Gap delta:     ${diff.gapDelta <= 0 ? chalk.green(String(diff.gapDelta)) : chalk.red(`+${diff.gapDelta}`)}`);
+    console.log(`  Status:        ${diff.statusChange}\n`);
+
+    const changed = diff.changedSections.filter(s => s.changeType !== 'unchanged');
+    if (changed.length > 0) {
+        console.log(chalk.bold('  Changed sections:'));
+        for (const s of changed) {
+            const icon = s.changeType === 'added' ? chalk.green('+')
+                : s.changeType === 'removed' ? chalk.red('-')
+                : chalk.yellow('~');
+            console.log(`    ${icon} ${s.title} (${s.changeType})`);
+        }
+    } else {
+        console.log(chalk.green('  No changes detected.'));
+    }
+    console.log('');
 }
 
-function generateDhfHtml(data: DhfData): string {
-    const { projectName, timestamp, elements, relationships, byLayer, byRelType, outgoing, validation, completeness, errors, warnings, elementMap } = data;
+// ─── memo dhf redline ────────────────────────────────────────────────────────
 
-    const layerColors: Record<string, string> = {
-        business: '#8E44AD', requirements: '#4A90D9', risk: '#E74C3C', functional: '#E67E22',
-        behavior: '#FF6B6B', logical: '#7B68EE', physical: '#95A5A6', software: '#F39C12',
-        interfaces: '#1ABC9C', verification: '#2ECC71', ui: '#3498DB',
-    };
+export async function dhfRedlineCommand(options: {
+    target: string;
+    format?: string;
+    output?: string;
+}): Promise<void> {
+    const cwd = process.cwd();
+    console.log(chalk.bold('\nMEMO DHF Redline\n'));
 
-    let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DHF Report — ${esc(projectName)}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; background: #f8f9fa; line-height: 1.6; }
-  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
-  h1 { font-size: 24px; font-weight: 700; color: #1B3A4B; margin-bottom: 4px; }
-  h2 { font-size: 18px; font-weight: 600; color: #1B3A4B; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #2DD4A8; }
-  h3 { font-size: 14px; font-weight: 600; color: #374151; margin: 16px 0 8px; }
-  .meta { color: #6B7280; font-size: 13px; margin-bottom: 24px; }
-  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
-  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
-  .card-value { font-size: 28px; font-weight: 700; color: #1B3A4B; }
-  .card-label { font-size: 12px; color: #6B7280; margin-top: 2px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 16px; }
-  th, td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left; }
-  th { background: #f3f4f6; font-weight: 600; color: #374151; }
-  tr:nth-child(even) { background: #f9fafb; }
-  .badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-  .badge-error { background: #fef2f2; color: #dc2626; }
-  .badge-warning { background: #fffbeb; color: #d97706; }
-  .badge-ok { background: #ecfdf5; color: #10b981; }
-  .pct-bar { display: inline-block; height: 8px; border-radius: 4px; }
-  .layer-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>Design History File</h1>
-  <div class="meta">${esc(projectName)} &middot; Generated ${new Date(timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-
-  <!-- Summary -->
-  <h2>Summary</h2>
-  <div class="summary-grid">
-    <div class="card"><div class="card-value">${elements.length}</div><div class="card-label">Elements</div></div>
-    <div class="card"><div class="card-value">${relationships.length}</div><div class="card-label">Relationships</div></div>
-    <div class="card"><div class="card-value">${completeness.overall}%</div><div class="card-label">Completeness</div></div>
-    <div class="card"><div class="card-value">${validation.rulesEvaluated}</div><div class="card-label">Rules Evaluated</div></div>
-    <div class="card"><div class="card-value">${errors.length}</div><div class="card-label">Errors</div></div>
-    <div class="card"><div class="card-value">${warnings.length}</div><div class="card-label">Warnings</div></div>
-  </div>
-
-  <!-- Completeness -->
-  <h2>Completeness by Layer</h2>
-  <table>
-    <thead><tr><th>Layer</th><th>Coverage</th><th>Complete</th><th>Total</th></tr></thead>
-    <tbody>`;
-
-    for (const layer of completeness.layers) {
-        if (layer.totalElements === 0) continue;
-        const color = layerColors[layer.layerId] || '#6B7280';
-        const pctColor = layer.percentage >= 80 ? '#10b981' : layer.percentage >= 50 ? '#d97706' : '#dc2626';
-        html += `
-      <tr>
-        <td><span class="layer-dot" style="background:${color}"></span>${esc(layer.layerLabel)}</td>
-        <td><span class="pct-bar" style="width:${layer.percentage}px;background:${pctColor}"></span> ${layer.percentage}%</td>
-        <td>${layer.completeElements}</td>
-        <td>${layer.totalElements}</td>
-      </tr>`;
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const docType = getDocumentType(options.target);
+    if (!docType) {
+        console.error(chalk.red(`Unknown document type: ${options.target}`));
+        process.exit(1);
     }
 
-    html += `
-    </tbody>
-  </table>
-
-  <!-- Element Inventory -->
-  <h2>Element Inventory</h2>`;
-
-    for (const [layer, els] of Array.from(byLayer.entries()).sort()) {
-        const color = layerColors[layer] || '#6B7280';
-        html += `
-  <h3><span class="layer-dot" style="background:${color}"></span>${esc(layer)} (${els.length})</h3>
-  <table>
-    <thead><tr><th>Name</th><th>Kind</th><th>Construct</th><th>File</th></tr></thead>
-    <tbody>`;
-        for (const el of els.sort((a, b) => a.name.localeCompare(b.name))) {
-            html += `
-      <tr><td>${esc(el.name)}</td><td>${esc(el.kind)}</td><td>${esc(el.construct)}</td><td style="color:#9ca3af;font-size:11px">${esc(el.file)}</td></tr>`;
-        }
-        html += `
-    </tbody>
-  </table>`;
+    const baseline = loadLatestSnapshot(cwd, options.target);
+    if (!baseline) {
+        console.error(chalk.yellow(`No previous snapshot found for ${options.target}. Run 'memo dhf snapshot' first.`));
+        process.exit(1);
     }
 
-    // Traceability
-    html += `
-  <h2>Traceability</h2>
-  <table>
-    <thead><tr><th>Relationship Type</th><th>Count</th></tr></thead>
-    <tbody>`;
-    for (const [type, rels] of Array.from(byRelType.entries()).sort()) {
-        html += `
-      <tr><td>${esc(type)}</td><td>${rels.length}</td></tr>`;
-    }
-    html += `
-    </tbody>
-  </table>
+    const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+    const current = createSnapshot(doc);
+    const diff = diffSnapshots(baseline, current);
+    const redlineDoc = generateRedlineDocument(diff);
 
-  <h3>Trace Chains (first 50 elements)</h3>
-  <table>
-    <thead><tr><th>Source</th><th>Relationship</th><th>Target</th></tr></thead>
-    <tbody>`;
-
-    let traceCount = 0;
-    for (const el of elements) {
-        const rels = outgoing.get(el.id) || [];
-        for (const rel of rels) {
-            if (traceCount >= 200) break;
-            const target = elementMap.get(rel.targetId);
-            html += `
-      <tr><td>${esc(el.name)} <span style="color:#9ca3af">(${esc(el.kind)})</span></td>
-      <td><span class="badge" style="background:#eff6ff;color:#2563eb">${esc(rel.type)}</span></td>
-      <td>${esc(target?.name || rel.targetId)} <span style="color:#9ca3af">(${esc(target?.kind || '?')})</span></td></tr>`;
-            traceCount++;
-        }
-        if (traceCount >= 200) break;
+    const format = (options.format || 'html') as DhfExportFormat;
+    const plugin = getPlugin(format);
+    if (!plugin) {
+        console.error(chalk.red(`Unknown format: ${format}`));
+        process.exit(1);
     }
 
-    html += `
-    </tbody>
-  </table>`;
+    const result = await plugin.render(redlineDoc);
+    const outputPath = resolve(cwd, options.output || `${options.target}-redline${result.extension}`);
+    writeFileSync(outputPath, result.content);
 
-    // Violations
-    if (errors.length > 0 || warnings.length > 0) {
-        html += `
-  <h2>Validation Issues</h2>
-  <table>
-    <thead><tr><th>Severity</th><th>Rule</th><th>Element</th><th>Description</th></tr></thead>
-    <tbody>`;
-        for (const v of validation.violations) {
-            const badge = v.severity === 'error' ? 'badge-error' : v.severity === 'warning' ? 'badge-warning' : 'badge-ok';
-            html += `
-      <tr><td><span class="badge ${badge}">${esc(v.severity)}</span></td><td>${esc(v.ruleId)}</td><td>${esc(v.elementName)} (${esc(v.elementKind)})</td><td>${esc(v.description)}</td></tr>`;
-        }
-        html += `
-    </tbody>
-  </table>`;
+    console.log(chalk.green(`Redline document written to ${outputPath}\n`));
+}
+
+// ─── memo dhf review-packet ──────────────────────────────────────────────────
+
+export async function dhfReviewPacketCommand(options: {
+    format?: string;
+    output?: string;
+}): Promise<void> {
+    const cwd = process.cwd();
+    console.log(chalk.bold('\nMEMO DHF Review Packet\n'));
+
+    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const format = (options.format || 'html') as DhfExportFormat;
+    const targets = resolveTargets(undefined, undefined, dhfConfig);
+
+    const plugin = getPlugin(format);
+    if (!plugin) {
+        console.error(chalk.red(`Unknown format: ${format}`));
+        process.exit(1);
     }
 
-    html += `
-  <div class="footer">
-    Generated by MEMO &middot; ${esc(timestamp)} &middot; ${elements.length} elements, ${relationships.length} relationships
-  </div>
-</div>
-</body>
-</html>`;
+    const outputDir = resolve(cwd, options.output || 'dhf-review-packet');
+    if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
-    return html;
+    let exported = 0;
+    for (const targetId of targets) {
+        const docType = getDocumentType(targetId)!;
+        const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+        const result = await plugin.render(doc);
+
+        const filename = `${targetId}${result.extension}`;
+        writeFileSync(resolve(outputDir, filename), result.content);
+        exported++;
+    }
+
+    // Also generate snapshots for the review packet
+    for (const targetId of targets) {
+        const docType = getDocumentType(targetId)!;
+        const doc = compileDocument({ model, validation, completeness, config, dhfConfig, documentType: docType });
+        const snapshot = createSnapshot(doc, 'review-packet');
+        saveSnapshot(cwd, snapshot);
+    }
+
+    console.log(chalk.green(`Review packet: ${exported} documents exported to ${outputDir}`));
+    console.log(chalk.gray(`Snapshots saved to .memo/dhf-snapshots/\n`));
 }

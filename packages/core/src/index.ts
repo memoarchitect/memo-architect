@@ -49,5 +49,8 @@ export * from './analysis/dsm.js';
 export * from './serializer/csv-io.js';
 export * from './serializer/sysml-generator.js';
 
+// ─── DHF (Design History File workbench) ────────────────────────────────────
+export * from './dhf/index.js';
+
 // ─── Protocol (WebSocket messages) ──────────────────────────────────────────
 export * from './protocol/messages.js';
