@@ -32,6 +32,9 @@ import {
     ontologyExportSysandCommand,
 } from '../commands/ontology.js';
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
+import { importEaCommand, importCameoCommand } from '../commands/import-ea.js';
+import { importSysandCommand } from '../commands/import-sysand.js';
+import { importOwlCommand } from '../commands/import-owl.js';
 import { lockCommand } from '../commands/lock.js';
 import { installCommand } from '../commands/install.js';
 import { createPackageCommand } from '../commands/create-package.js';
@@ -196,7 +199,7 @@ ontologyExportCmd
 
 const importCmd = program
     .command('import')
-    .description('Import elements and relationships from CSV files');
+    .description('Import models from CSV, Sparx EA, Cameo, SysAnd, or OWL/JSON-LD');
 
 importCmd
     .command('csv')
@@ -227,6 +230,49 @@ importCmd
     .option('-o, --output <file>', 'Output CSV file path')
     .action(async (type: string, options: { output?: string }) => {
         await importTemplateCommand(type, options);
+    });
+
+importCmd
+    .command('ea')
+    .description('Import from Sparx EA JSON export (.json)')
+    .argument('<file>', 'EA JSON export file')
+    .option('-o, --output <file>', 'Output .sysml file path')
+    .option('--package <name>', 'SysML package name')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (file: string, options: { output?: string; package?: string; dryRun?: boolean }) => {
+        await importEaCommand(file, options);
+    });
+
+importCmd
+    .command('cameo')
+    .description('Import from MagicDraw/Cameo XMI or JSON (.xml/.json)')
+    .argument('<file>', 'Cameo XMI/XML or JSON file')
+    .option('-o, --output <file>', 'Output .sysml file path')
+    .option('--package <name>', 'SysML package name')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (file: string, options: { output?: string; package?: string; dryRun?: boolean }) => {
+        await importCameoCommand(file, options);
+    });
+
+importCmd
+    .command('sysand')
+    .description('Import a SysAnd project directory (.project.json + SysML files)')
+    .argument('<dir>', 'SysAnd project directory')
+    .option('--verify', 'Verify round-trip against current ontology')
+    .action(async (dir: string, options: { verify?: boolean }) => {
+        await importSysandCommand(dir, options);
+    });
+
+importCmd
+    .command('owl')
+    .description('Import an OWL/Turtle or JSON-LD ontology')
+    .argument('<file>', 'OWL/Turtle (.ttl/.owl) or JSON-LD (.jsonld/.json) file')
+    .option('-o, --output <file>', 'Output .sysml file path')
+    .option('--package <name>', 'SysML package name')
+    .option('--package-dir <dir>', 'Create full ontology package directory')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (file: string, options: { output?: string; package?: string; packageDir?: string; dryRun?: boolean }) => {
+        await importOwlCommand(file, options);
     });
 
 // ─── memo dhf ────────────────────────────────────────────────────────────────

@@ -149,7 +149,7 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 - M24 (Working Sets) → candidate for future Phase 17
 - M25 (Onboarding) → partially by M50 (`memo init`)
 
-**Closed (M36-M61):** All Phase 7-12 milestones complete.
+**Closed (M36-M71):** All Phase 7-14 milestones complete.
 
 **Active milestones (in execution order):**
 
@@ -164,10 +164,10 @@ Phase 13 — DHF Workbench: ✅ Complete (M62-M68 done)
 - M67: DHF Redline & Change Tracking
 - M68: DHF Web Dashboard — Landing Page & Drilldown
 
-Phase 14 — Developer Experience & Import:
-- M69: EA/Cameo import
-- M70: SysAnd import
-- M71: OWL/JSON-LD ontology import
+Phase 14 — Developer Experience & Import: ✅ Complete (M69-M71 done)
+- M69: EA/Cameo import (`memo import ea`, `memo import cameo`)
+- M70: SysAnd import (`memo import sysand` with round-trip verification)
+- M71: OWL/JSON-LD ontology import (`memo import owl` with `--package-dir`)
 
 Phase 15 — LLM Integration:
 - M72: Model Q&A
@@ -237,10 +237,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M62-M68 (Phase 13: DHF Workbench) — 18-document registry (rmp, har, fmea, rtm, sad, soup, etc.), Document IR (format-agnostic AST), model query engine, template engine with section generators, 3 export plugins (HTML, Markdown, DOCX/Word-HTML), `memo.dhf.yaml` config, full DHF CLI (`memo export dhf`, `memo dhf status/snapshot/diff/redline/review-packet`), web dashboard with card grid and drilldown. 288 tests passing.
+**Last completed:** M69-M71 (Phase 14: Developer Experience & Import) — EA/Cameo import (`memo import ea`, `memo import cameo`), SysAnd import with round-trip verification (`memo import sysand --verify`), OWL/JSON-LD ontology import with package generation (`memo import owl --package-dir`). Core importers with stereotype→kind mapping via KindRegistry. 314 tests passing.
 
-**Previously completed:** M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** Phase 14 (Developer Experience & Import, M69-M71).
+**Next up:** Phase 15 (LLM Integration, M72-M74).
 
-**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed.
+**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed. M69-M71 closed.

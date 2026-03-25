@@ -490,9 +490,9 @@ Migration and import tools for teams moving from legacy tooling. VS Code integra
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
 | M61 | VS Code extension | Not started | M47 | TextMate grammar for `.sysml` syntax highlighting. Basic LSP: diagnostics from `memo validate`, go-to-definition for kind references, hover info. Extension published to VS Code marketplace. |
-| M69 | EA/Cameo import | Not started | M39, M40 | `memo import ea <qea-file>` reads Sparx EA SQLite (.qea/.eap). Maps stereotypes → kinds via ontology registry. `memo import cameo <mdzip>` reads MagicDraw XML. Produces .sysml files. |
-| M70 | SysAnd import | Not started | M48 | `memo import sysand <project-dir>` reads `.project.json` + SysML files from a SysAnd project. Populates registries. Round-trip verified: export → import → diff = clean. |
-| M71 | OWL/JSON-LD ontology import | Not started | M39 | `memo import owl <file>` reads OWL/Turtle or JSON-LD. Maps classes → kinds, object properties → relationships. Produces ontology package with SysML files. |
+| M69 | EA/Cameo import | Done | M39, M40 | `memo import ea <json>` reads Sparx EA JSON export. Maps stereotypes → kinds via ontology registry. `memo import cameo <xml/json>` reads MagicDraw XMI/XML or JSON. Produces .sysml files. |
+| M70 | SysAnd import | Done | M48 | `memo import sysand <project-dir>` reads `.project.json` + SysML files from a SysAnd project. Populates registries. Round-trip verified: export → import → diff = clean. |
+| M71 | OWL/JSON-LD ontology import | Done | M39 | `memo import owl <file>` reads OWL/Turtle or JSON-LD. Maps classes → kinds, object properties → relationships. Produces ontology package with SysML files via `--package-dir`. |
 
 ### Phase 15: LLM Integration **[MEDIUM]**
 
