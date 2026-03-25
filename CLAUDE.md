@@ -131,50 +131,56 @@ glab issue close -R somesh_sandbox/memo <issue-number>
 
 **Authoritative roadmap:** `docs/development/roadmap.md` — single source of truth for all milestones.
 
-**Closed (M1-M35):** M1-M3, M11, M16-M18 completed. M4-M35 closed — to be recreated post-rearchitecture.
+**Closed (M1-M3, M11, M16-M18):** Original foundation milestones — completed.
+
+**Closed (M4-M35):** Batch-closed pre-rearchitecture milestones. Disposition:
+- M33 (Unified View) → superseded by M52
+- M26 (VS Code) → superseded by M61
+- M34 (Libraries) → superseded by M59
+- M35 (Import) → partially by M48; remainder in M70-M71
+- M27 (EA/Cameo) → deferred to M69
+- M28 (Plugin) → deferred to M78
+- M29-M30 (LLM) → deferred to M72-M74
+- M31 (Domain Pkgs) → deferred to M77
+- M32 (Cloud) → deferred to M75-M76
+- M21 (Stats Dashboard) → absorbed into Phase 13 DHF dashboard (M68)
+- M22 (Scenario/Diff) → candidate for future Phase 17
+- M23 (Guided Wizard) → candidate for future Phase 17
+- M24 (Working Sets) → candidate for future Phase 17
+- M25 (Onboarding) → partially by M50 (`memo init`)
+
+**Closed (M36-M61):** All Phase 7-12 milestones complete.
 
 **Active milestones (in execution order):**
 
-Phase 7 — Package & Registry Foundation:
-- M36: Package semantics cleanup (fix projectType, memo.package.yaml, .project.json)
-- M37: Directory restructure — ontology-core (Apollo-11)
-- M38: Directory restructure — ontology-medical (Apollo-11)
-- M39: KindRegistry — SysML-driven kind discovery
-- M40: RelationshipRegistry — SysML-driven relationship discovery
-- M41: Dual-mode builder — registry + config fallback
-- M42: Ontology loader — wire registries into CLI
+Phase 12 — Extension Ecosystem: ✅ Complete (M59-M61 done)
 
-Phase 8 — Config Decomposition:
-- M43: Extract memo.rendering.yaml (cosmaLayers → layers)
-- M44: Extract memo.rules.yaml
-- M45: Remove config.kinds (~1,500 lines)
-- M46: Remove config.relationshipTypes (~700 lines)
-- M47: Delete legacy memo.config.yaml
+Phase 13 — DHF Workbench:
+- M62: DHF Document Registry, Markdown Templates & Document IR
+- M63: DHF Content Generator — Model Query Engine
+- M64: Export Plugins — HTML, DOCX, PDF, Markdown
+- M65: DHF Configuration & Customization
+- M66: DHF CLI — Export, Status & Targeting
+- M67: DHF Redline & Change Tracking
+- M68: DHF Web Dashboard — Landing Page & Drilldown
 
-Phase 9 — Package Lifecycle:
-- M48: Harden SysAnd export + round-trip validation
-- M49: Ontology lock + change detection
-- M50: memo init with ontology selection
-- M51: memo install — package resolution
+Phase 14 — Developer Experience & Import:
+- M69: EA/Cameo import
+- M70: SysAnd import
+- M71: OWL/JSON-LD ontology import
 
-Phase 10 — Unified Workbench UX:
-- M52: Unified view architecture (replace 6-mode tabs)
-- M53: Model Explorer + View Explorer
-- M54: Properties panel + inline editing
-- M55: Tools panel + productivity (DSM/FMEA toolbar, Cmd+K, context menus)
+Phase 15 — LLM Integration:
+- M72: Model Q&A
+- M73: SysML generation from natural language
+- M74: DHF draft assistant
 
-Phase 11 — Compliance & Productivity:
-- M56: CI integration (exit codes, JUnit)
-- M57: Traceability matrix
-- M58: DHF generator
-- M59: Static build + .kpar packaging
+Phase 16 — Cloud & Collaboration:
+- M75: Cloud deployment
+- M76: Multi-user collaboration
+- M77: Domain packages (automotive, aerospace)
+- M78: Plugin system
 
-Phase 12 — Extension Ecosystem:
-- M59: Reusable package authoring + consumption
-- M60: Standalone ontology viewer
-- M61: VS Code extension
-
-Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M52
+Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dashboard)
 
 ### Issue Labels
 
@@ -224,10 +230,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** M59-M60 (Phase 12: Extension Ecosystem) — `memo create-package` scaffolds ontology/profile/library/device packages with Apollo-11 directory structure, memo.package.yaml, .project.json, memo.rendering.yaml. `memo build --kpar` produces .kpar archives (tar+gzip). Standalone ontology viewer at `tools/ontology-viewer/` — Vite+React app, loads `memo export json` via drag-and-drop, shows kinds/relationships/viewpoints. 253 tests passing.
+**Last completed:** M61 (Phase 12: VS Code extension) — TextMate grammar for `.sysml` syntax highlighting, diagnostics from `memo validate --format json` on save, language configuration (brackets, folding, indentation), commands (Validate Model, Open in Browser). Roadmap replanned with Phase 13 (DHF Workbench), Phase 14 (Developer Experience & Import), Phase 15 (LLM Integration), Phase 16 (Cloud & Collaboration). 253 tests passing.
 
-**Previously completed:** M36-M58 (Phase 7-11 complete). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M60 (Phase 7-12 complete). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** M61 (VS Code extension) or Phase 13 (DHF Workbench).
+**Next up:** Phase 13 (DHF Workbench, M62-M68).
 
-**GitLab milestones:** M36-M60 exist. M36-M60 closed.
+**GitLab milestones:** M36-M61 exist. M36-M61 closed.
