@@ -169,10 +169,10 @@ Phase 14 — Developer Experience & Import: ✅ Complete (M69-M71 done)
 - M70: SysAnd import (`memo import sysand` with round-trip verification)
 - M71: OWL/JSON-LD ontology import (`memo import owl` with `--package-dir`)
 
-Phase 15 — LLM Integration:
-- M72: Model Q&A
-- M73: SysML generation from natural language
-- M74: DHF draft assistant
+Phase 15 — LLM Integration: ✅ Complete (M72-M74 done)
+- M72: Model Q&A (`memo ask` with context-aware RAG)
+- M73: SysML generation from natural language (`memo generate`)
+- M74: DHF draft assistant (`memo dhf draft`)
 
 Phase 16 — Cloud & Collaboration:
 - M75: Cloud deployment
@@ -237,10 +237,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M69-M71 (Phase 14: Developer Experience & Import) — EA/Cameo import (`memo import ea`, `memo import cameo`), SysAnd import with round-trip verification (`memo import sysand --verify`), OWL/JSON-LD ontology import with package generation (`memo import owl --package-dir`). Core importers with stereotype→kind mapping via KindRegistry. 314 tests passing.
+**Last completed:** M72-M74 (Phase 15: LLM Integration) — `memo ask` for model Q&A with context-aware RAG, `memo generate` for SysML generation from natural language, `memo dhf draft` for LLM-assisted DHF document drafting. Provider-agnostic (Anthropic/OpenAI via env vars). 331 tests passing.
 
-**Previously completed:** M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M69-M71 (Phase 14). M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** Phase 15 (LLM Integration, M72-M74).
+**Next up:** Phase 16 (Cloud & Collaboration, M75-M78).
 
-**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed. M69-M71 closed.
+**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed.

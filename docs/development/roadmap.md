@@ -494,15 +494,15 @@ Migration and import tools for teams moving from legacy tooling. VS Code integra
 | M70 | SysAnd import | Done | M48 | `memo import sysand <project-dir>` reads `.project.json` + SysML files from a SysAnd project. Populates registries. Round-trip verified: export → import → diff = clean. |
 | M71 | OWL/JSON-LD ontology import | Done | M39 | `memo import owl <file>` reads OWL/Turtle or JSON-LD. Maps classes → kinds, object properties → relationships. Produces ontology package with SysML files via `--package-dir`. |
 
-### Phase 15: LLM Integration **[MEDIUM]**
+### Phase 15: LLM Integration **[MEDIUM]** ✅ Complete
 
 AI-assisted modeling and document generation. Not adoption-critical but a strong differentiator.
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M72 | Model Q&A | Not started | M42 | `memo ask "<question>"` queries the model using LLM. "What hazards have no risk controls?" "Show trace from REQ-001 to verification." Context-aware RAG over model elements. |
-| M73 | SysML generation from natural language | Not started | M72 | `memo generate "<description>"` produces SysML definitions. "Add a pressure sensor component with USB interface." LLM generates valid .sysml files using ontology context. |
-| M74 | DHF draft assistant | Not started | M63, M72 | `memo dhf draft --target rmp` uses LLM to fill gap sections in DHF documents. Generates boilerplate regulatory text, risk descriptions, verification rationale. Human reviews before export. |
+| M72 | Model Q&A | Done | M42 | `memo ask "<question>"` queries the model using LLM. "What hazards have no risk controls?" "Show trace from REQ-001 to verification." Context-aware RAG over model elements. Provider-agnostic (Anthropic/OpenAI) via env vars. |
+| M73 | SysML generation from natural language | Done | M72 | `memo generate "<description>"` produces SysML definitions. "Add a pressure sensor component with USB interface." LLM generates valid .sysml files using ontology context. |
+| M74 | DHF draft assistant | Done | M63, M72 | `memo dhf draft --target rmp` uses LLM to fill gap sections in DHF documents. Generates boilerplate regulatory text, risk descriptions, verification rationale. Human reviews before export. |
 
 ### Phase 16: Cloud & Collaboration **[LOW]**
 

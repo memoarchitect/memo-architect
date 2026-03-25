@@ -55,5 +55,8 @@ export * from './importer/index.js';
 // ─── DHF (Design History File workbench) ────────────────────────────────────
 export * from './dhf/index.js';
 
+// ─── LLM (AI-assisted modeling & document drafting) ─────────────────────────
+export * from './llm/index.js';
+
 // ─── Protocol (WebSocket messages) ──────────────────────────────────────────
 export * from './protocol/messages.js';
