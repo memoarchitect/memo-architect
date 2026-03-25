@@ -49,6 +49,9 @@ export * from './analysis/dsm.js';
 export * from './serializer/csv-io.js';
 export * from './serializer/sysml-generator.js';
 
+// ─── Importers (EA, Cameo, SysAnd, OWL/JSON-LD) ────────────────────────────
+export * from './importer/index.js';
+
 // ─── DHF (Design History File workbench) ────────────────────────────────────
 export * from './dhf/index.js';
 

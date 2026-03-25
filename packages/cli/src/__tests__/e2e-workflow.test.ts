@@ -574,3 +574,136 @@ description: "Another fake ontology"
         }
     });
 });
+
+describe('E2E: import ea/cameo/sysand/owl', () => {
+    let tmpDir: string;
+
+    beforeAll(() => {
+        tmpDir = mkdtempSync(join(tmpdir(), 'memo-import-e2e-'));
+    });
+
+    afterAll(() => {
+        rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('memo import ea imports from EA JSON export', () => {
+        const eaJson = JSON.stringify({
+            elements: [
+                { id: 1, name: 'Overheating', type: 'Class', stereotype: 'Hazard', notes: 'Thermal hazard' },
+                { id: 2, name: 'Temp Monitor', type: 'Class', stereotype: 'RiskControl' },
+            ],
+            connectors: [
+                { id: 1, sourceId: 2, targetId: 1, type: 'Dependency', stereotype: 'mitigates' },
+            ],
+        });
+        writeFileSync(join(tmpDir, 'ea-export.json'), eaJson);
+
+        const output = run(`import ea ea-export.json --dry-run`, tmpDir);
+        expect(output).toContain('Sparx EA');
+        expect(output).toContain('2 mapped');
+        expect(output).toContain('Overheating : Hazard');
+        expect(output).toContain('Temp_Monitor : RiskControl');
+        expect(output).toContain('Mitigates');
+    });
+
+    it('memo import cameo imports from Cameo JSON export', () => {
+        const cameoJson = JSON.stringify({
+            elements: [
+                { id: 'e1', name: 'Shock Hazard', type: 'uml:Class', stereotypes: ['Hazard'] },
+                { id: 'e2', name: 'Insulation', type: 'uml:Class', stereotypes: ['RiskControl'] },
+            ],
+            relationships: [
+                { id: 'r1', sourceId: 'e2', targetId: 'e1', type: 'sysml:Satisfy' },
+            ],
+        });
+        writeFileSync(join(tmpDir, 'cameo-export.json'), cameoJson);
+
+        const output = run(`import cameo cameo-export.json --dry-run`, tmpDir);
+        expect(output).toContain('MagicDraw/Cameo');
+        expect(output).toContain('2 mapped');
+        expect(output).toContain('Shock_Hazard : Hazard');
+        expect(output).toContain('Insulation : RiskControl');
+    });
+
+    it('memo import sysand imports a SysAnd project directory', () => {
+        // First export a SysAnd project from an example
+        const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
+        const sysandDir = join(tmpDir, 'sysand-project');
+        run(`ontology export sysand -o ${sysandDir}`, exampleDir);
+
+        // Now import it
+        const output = run(`import sysand ${sysandDir}`, tmpDir);
+        expect(output).toContain('SysAnd Project');
+        expect(output).toContain('Kinds:');
+        expect(output).toContain('Relationships:');
+    });
+
+    it('memo import sysand --verify performs round-trip check', () => {
+        const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
+        const sysandDir = join(tmpDir, 'sysand-roundtrip');
+        run(`ontology export sysand -o ${sysandDir}`, exampleDir);
+
+        const output = run(`import sysand ${sysandDir} --verify`, exampleDir);
+        expect(output).toContain('Round-trip');
+    });
+
+    it('memo import owl imports from OWL/Turtle', () => {
+        const turtle = `
+@prefix memo: <https://example.org/memo#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<https://example.org/memo> a owl:Ontology ;
+    dcterms:title "Test OWL Import" ;
+    owl:versionInfo "1.0.0" ;
+    .
+
+memo:Hazard a owl:Class ;
+    rdfs:label "Hazard" ;
+    memo:layer "risk" ;
+    memo:sysmlConstruct "part def" ;
+    .
+
+memo:mitigates a owl:ObjectProperty ;
+    rdfs:label "mitigates" ;
+    .
+`;
+        writeFileSync(join(tmpDir, 'test-ontology.ttl'), turtle);
+
+        const output = run(`import owl test-ontology.ttl --dry-run`, tmpDir);
+        expect(output).toContain('OWL/JSON-LD');
+        expect(output).toContain('Classes:    1');
+        expect(output).toContain('Properties: 1');
+        expect(output).toContain('part def Hazard');
+        expect(output).toContain('connection def Mitigates');
+    });
+
+    it('memo import owl --package-dir creates ontology package', () => {
+        const turtle = `
+@prefix memo: <https://example.org/memo#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+memo:Hazard a owl:Class ;
+    rdfs:label "Hazard" ;
+    memo:layer "risk" ;
+    .
+
+memo:Requirement a owl:Class ;
+    rdfs:label "Requirement" ;
+    memo:layer "requirements" ;
+    .
+`;
+        writeFileSync(join(tmpDir, 'pkg-test.ttl'), turtle);
+        const pkgDir = join(tmpDir, 'imported-pkg');
+
+        run(`import owl pkg-test.ttl --package-dir ${pkgDir} --package test_pkg`, tmpDir);
+
+        expect(existsSync(join(pkgDir, 'memo.package.yaml'))).toBe(true);
+        expect(existsSync(join(pkgDir, '.project.json'))).toBe(true);
+        expect(existsSync(join(pkgDir, 'sysml', 'index.sysml'))).toBe(true);
+        expect(existsSync(join(pkgDir, 'sysml', 'risk', 'risk.sysml'))).toBe(true);
+        expect(existsSync(join(pkgDir, 'sysml', 'requirements', 'requirements.sysml'))).toBe(true);
+    });
+});
