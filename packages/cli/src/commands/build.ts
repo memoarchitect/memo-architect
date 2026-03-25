@@ -8,8 +8,10 @@
 // Output: a single-page app that works offline without a dev server.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { resolve, dirname } from 'node:path';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
+import { resolve, dirname, basename } from 'node:path';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, createWriteStream, statSync } from 'node:fs';
+import { createGzip } from 'node:zlib';
+import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
 import { validateModel } from '@memo/core';
@@ -37,6 +39,7 @@ function findSysmlFiles(dir: string): string[] {
 export async function buildCommand(options: {
     output?: string;
     singleFile?: boolean;
+    kpar?: boolean;
 }): Promise<void> {
     const cwd = process.cwd();
     const outputDir = resolve(cwd, options.output || 'dist');
@@ -126,7 +129,15 @@ export async function buildCommand(options: {
     }
 
     console.log(chalk.green(`\n✅ Built to ${outputDir}`));
-    console.log(chalk.gray(`   Open ${resolve(outputDir, 'index.html')} in a browser\n`));
+    console.log(chalk.gray(`   Open ${resolve(outputDir, 'index.html')} in a browser`));
+
+    // 6. Optional .kpar packaging
+    if (options.kpar) {
+        const kparPath = await buildKpar(cwd, outputDir, config.projectName || 'memo-project');
+        console.log(chalk.green(`\n📦 Packaged as ${kparPath}`));
+    }
+
+    console.log('');
 }
 
 function resolveWebDist(cwd: string): string | undefined {
@@ -145,6 +156,156 @@ function resolveWebDist(cwd: string): string | undefined {
         }
     }
     return undefined;
+}
+
+// ─── .kpar Archive ────────────────────────────────────────────────────────
+// A .kpar (Knowledge Package Archive) is a tar.gz containing:
+//   - memo.package.yaml (or memo.config.yaml)
+//   - .project.json (SysAnd manifest)
+//   - sysml/ directory (all .sysml files)
+//   - memo.rendering.yaml, memo.rules.yaml (if present)
+//   - dist/ (static HTML build, if present)
+//   - manifest.json (archive metadata)
+//
+// This is a simple tar+gzip implementation using Node built-ins.
+// No external dependencies needed.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function buildKpar(cwd: string, distDir: string, projectName: string): Promise<string> {
+    console.log(chalk.gray('\n  Packaging .kpar archive...'));
+
+    // Collect files for the archive
+    const filesToPack: { path: string; content: Buffer }[] = [];
+
+    // Include config files
+    const configFiles = [
+        'memo.package.yaml', 'memo.config.yaml', '.project.json',
+        'memo.rendering.yaml', 'memo.rules.yaml', 'package.json',
+    ];
+    for (const f of configFiles) {
+        const fullPath = resolve(cwd, f);
+        try {
+            filesToPack.push({ path: f, content: readFileSync(fullPath) });
+        } catch {
+            // skip missing
+        }
+    }
+
+    // Include all .sysml files
+    const sysmlFiles = findSysmlFiles(cwd);
+    for (const f of sysmlFiles) {
+        const relPath = f.startsWith(cwd) ? f.slice(cwd.length + 1) : f;
+        filesToPack.push({ path: relPath, content: readFileSync(f) });
+    }
+
+    // Include dist/ contents
+    try {
+        const distFiles = collectDirFiles(distDir, distDir);
+        for (const df of distFiles) {
+            filesToPack.push({ path: `dist/${df.path}`, content: df.content });
+        }
+    } catch {
+        // no dist
+    }
+
+    // Create manifest
+    const manifest = {
+        format: 'kpar',
+        version: '1.0.0',
+        name: projectName,
+        createdAt: new Date().toISOString(),
+        fileCount: filesToPack.length,
+        files: filesToPack.map(f => f.path),
+    };
+    filesToPack.push({ path: 'manifest.json', content: Buffer.from(JSON.stringify(manifest, null, 2)) });
+
+    // Build tar buffer
+    const tarBuffer = createTar(filesToPack);
+
+    // Gzip and write
+    const kparFileName = `${projectName.replace(/[^a-zA-Z0-9_-]/g, '-')}.kpar`;
+    const kparPath = resolve(cwd, kparFileName);
+    const { Readable } = await import('node:stream');
+    const input = Readable.from([tarBuffer]);
+    const gzip = createGzip({ level: 9 });
+    const output = createWriteStream(kparPath);
+    await pipeline(input, gzip, output);
+
+    const size = statSync(kparPath).size;
+    const sizeStr = size > 1024 * 1024
+        ? `${(size / 1024 / 1024).toFixed(1)} MB`
+        : `${(size / 1024).toFixed(1)} KB`;
+    console.log(chalk.gray(`  ${filesToPack.length} files, ${sizeStr}`));
+
+    return kparPath;
+}
+
+function collectDirFiles(dir: string, baseDir: string): { path: string; content: Buffer }[] {
+    const results: { path: string; content: Buffer }[] = [];
+    try {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const full = resolve(dir, entry.name);
+            if (entry.isDirectory()) {
+                results.push(...collectDirFiles(full, baseDir));
+            } else {
+                const relPath = full.slice(baseDir.length + 1);
+                results.push({ path: relPath, content: readFileSync(full) });
+            }
+        }
+    } catch {
+        // skip
+    }
+    return results;
+}
+
+/** Minimal POSIX tar implementation — no external deps */
+function createTar(files: { path: string; content: Buffer }[]): Buffer {
+    const blocks: Buffer[] = [];
+    for (const file of files) {
+        // 512-byte header
+        const header = Buffer.alloc(512);
+        // Name (first 100 bytes)
+        const nameBytes = Buffer.from(file.path, 'utf-8');
+        nameBytes.copy(header, 0, 0, Math.min(nameBytes.length, 100));
+        // Mode
+        writeOctal(header, 100, 8, 0o644);
+        // UID/GID
+        writeOctal(header, 108, 8, 0);
+        writeOctal(header, 116, 8, 0);
+        // Size
+        writeOctal(header, 124, 12, file.content.length);
+        // Mtime
+        writeOctal(header, 136, 12, Math.floor(Date.now() / 1000));
+        // Type flag (0 = regular file)
+        header[156] = 0x30; // '0'
+        // Magic
+        Buffer.from('ustar\0', 'ascii').copy(header, 257);
+        // Version
+        Buffer.from('00', 'ascii').copy(header, 263);
+        // Checksum
+        header.fill(0x20, 148, 156); // spaces for checksum calculation
+        let checksum = 0;
+        for (let i = 0; i < 512; i++) checksum += header[i];
+        writeOctal(header, 148, 7, checksum);
+        header[155] = 0x20; // space
+
+        blocks.push(header);
+
+        // File content (padded to 512-byte boundary)
+        blocks.push(file.content);
+        const remainder = file.content.length % 512;
+        if (remainder > 0) {
+            blocks.push(Buffer.alloc(512 - remainder));
+        }
+    }
+    // Two 512-byte zero blocks to mark end
+    blocks.push(Buffer.alloc(1024));
+    return Buffer.concat(blocks);
+}
+
+function writeOctal(buf: Buffer, offset: number, length: number, value: number): void {
+    const str = value.toString(8).padStart(length - 1, '0');
+    Buffer.from(str + '\0', 'ascii').copy(buf, offset);
 }
 
 function inlineAssets(html: string, baseDir: string): string {

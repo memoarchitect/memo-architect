@@ -467,8 +467,8 @@ The #3 adoption blocker. Make it easy to create, share, and consume domain packa
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M59 | Static build + reusable package authoring | Partial | M47, M51 | `memo build` produces static HTML + data bundle. `.kpar` archive. Package templates, `memo create-package`, contribution guide. Builds on existing `library package` grammar/PackageRegistry. |
-| M60 | Standalone ontology viewer | Partial | M47 | Extract existing `OntologyViewer.tsx` into standalone Vite app at `tools/ontology-viewer/`. Read-only. Loads any ontology package. |
+| M59 | Static build + reusable package authoring | **Done** | M47, M51 | `memo build` produces static HTML + data bundle. `.kpar` archive (`memo build --kpar`). Package templates, `memo create-package` (ontology/profile/library/device scaffolding). Builds on existing `library package` grammar/PackageRegistry. |
+| M60 | Standalone ontology viewer | **Done** | M47 | Standalone Vite app at `tools/ontology-viewer/`. Read-only. Loads `memo export json` output via drag-and-drop. Kind tree grouped by layer/construct, detail view, card view, relationship types. Decoupled from @memo/web. |
 | M61 | VS Code extension | Not started | M47 | LSP for `.sysml` files. Syntax highlighting, go-to-definition, diagnostics. |
 
 ### Deferred (no milestone IDs until dependencies clear)

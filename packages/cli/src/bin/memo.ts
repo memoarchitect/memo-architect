@@ -27,6 +27,7 @@ import {
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
 import { lockCommand } from '../commands/lock.js';
 import { installCommand } from '../commands/install.js';
+import { createPackageCommand } from '../commands/create-package.js';
 
 const program = new Command();
 
@@ -73,7 +74,8 @@ program
     .description('Build a self-contained static HTML site with the model diagram')
     .option('-o, --output <dir>', 'Output directory', 'dist')
     .option('--single-file', 'Inline all assets into a single index.html')
-    .action(async (options: { output: string; singleFile?: boolean }) => {
+    .option('--kpar', 'Also produce a .kpar archive (Knowledge Package Archive)')
+    .action(async (options: { output: string; singleFile?: boolean; kpar?: boolean }) => {
         await buildCommand(options);
     });
 
@@ -105,6 +107,20 @@ exportCmd
     .option('--viewpoint <id>', 'Filter by viewpoint ID')
     .action(async (options: { output: string; viewpoint?: string }) => {
         await exportDotCommand(options);
+    });
+
+program
+    .command('create-package')
+    .description('Scaffold a new MEMO package (ontology, profile, or library)')
+    .argument('<name>', 'Package name (e.g., @myorg/cardiac-ontology)')
+    .option('-t, --type <type>', 'Package type: ontology, profile, library, device', 'ontology')
+    .option('-e, --extends <package>', 'Package to extend (auto-set for profiles)')
+    .option('-d, --description <desc>', 'Package description')
+    .option('--author <author>', 'Package author')
+    .option('--license <license>', 'License', 'Apache-2.0')
+    .option('-o, --output <dir>', 'Output base directory', '.')
+    .action(async (name: string, options: any) => {
+        await createPackageCommand(name, options);
     });
 
 program

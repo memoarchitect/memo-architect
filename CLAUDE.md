@@ -224,10 +224,10 @@ Critical path: M36 → M37 → M39 → M41 → M42 → M45 → M46 → M47 → M
 
 ## Session Status (March 2026)
 
-**Last completed:** M51 (memo install — package resolution) — `memo install` supports 3 modes: git clone, npm install, local symlink. Auto-detects mode from source argument. Installs to `memo_packages/` (git/local) or `node_modules/` (npm). Adds dependency to `memo.package.yaml`. Config-resolver updated with 4-tier resolution: ontology/packages/ → packages/ → memo_packages/ → node_modules/. 253 tests passing.
+**Last completed:** M59-M60 (Phase 12: Extension Ecosystem) — `memo create-package` scaffolds ontology/profile/library/device packages with Apollo-11 directory structure, memo.package.yaml, .project.json, memo.rendering.yaml. `memo build --kpar` produces .kpar archives (tar+gzip). Standalone ontology viewer at `tools/ontology-viewer/` — Vite+React app, loads `memo export json` via drag-and-drop, shows kinds/relationships/viewpoints. 253 tests passing.
 
-**Previously completed:** M36-M50 (Phase 7 complete, Phase 8 complete, Phase 9: M48-M50). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M36-M58 (Phase 7-11 complete). Roadmap consolidation. Ontology Backbone Restructuring.
 
-**Next up:** M52 (Unified view architecture — Phase 10).
+**Next up:** M61 (VS Code extension) or Phase 13 (DHF Workbench).
 
-**GitLab milestones:** M36-M54 exist. M36-M51 closed.
+**GitLab milestones:** M36-M60 exist. M36-M60 closed.
