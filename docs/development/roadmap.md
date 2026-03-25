@@ -361,25 +361,23 @@ Exit criteria:
 
 ## Adoption Strategy
 
-MEMO has a strong foundation: differentiated wedge in regulated medical-device architecture, serious standards-aware ontology, practical CLI workflows, and reference models that make it more than a diagram toy. But it is **not yet ready for broad adoption** by startups and mid-size medical device companies.
+MEMO has a strong foundation and the core adoption blockers are addressed:
 
-**Four adoption blockers (in priority order):**
+**Adoption blockers — status:**
 
-1. **UI cohesion** — The app is 6-mode (`catalog`, `diagram`, `actionflow`, `dsm`, `scenario`, `ontology`) while the architecture says view-centric ISO 42010. Users see tabs, not a unified workbench.
-2. **Compliance outputs** — For real startup use, doc generation, CI outputs, trace matrices, and review artifacts matter at least as much as modeling.
-3. **Package ecosystem** — Users need reusable packages, profiles, and extension flows. The package story is emerging but incomplete.
-4. **Contributor ergonomics** — Broad open-source adoption requires a stable extension model, package semantics, and easier contribution paths.
+1. **~~UI cohesion~~** ✅ — Unified Workbench with ISO 42010 view-centric architecture (Phase 10, M52-M55). Model Explorer, View Explorer, Properties Panel, Cmd+K, breadcrumb navigation.
+2. **~~Compliance outputs~~** ✅ — CI integration with JUnit/JSON (M56), traceability matrix with 5 presets (M57), basic DHF generator (M58). Phase 13 upgrades DHF to full regulated document workbench.
+3. **~~Package ecosystem~~** ✅ — `memo create-package`, `memo install`, `.kpar` archives, standalone ontology viewer (Phase 9+12, M50-M51, M59-M60).
+4. **Contributor ergonomics** 🔶 — Package semantics stable. VS Code extension (M61) and domain package examples (M77) still needed.
 
-**Priority sequence for reaching adoption:**
+**Remaining priority sequence:**
 
-1. Become the **easiest serious tool** for medical-device architecture review and traceability
-2. Become the **easiest tool to generate** useful compliance documentation and evidence artifacts
-3. Become the **easiest tool to extend** with reusable medical and technical packages
-4. Only after that, deepen ecosystem and advanced imports
+1. **DHF Workbench (Phase 13)** — Full regulated document generation with Markdown templates, DOCX/PDF/HTML export, redline tracking. This is the killer feature for adoption.
+2. **Developer experience (Phase 14)** — VS Code extension, EA/Cameo/SysAnd import for migration.
+3. **LLM integration (Phase 15)** — AI-assisted modeling and document drafting.
+4. **Cloud & ecosystem (Phase 16)** — Multi-user, domain packages, plugin system.
 
-**The adoption test:** A 15–100 person medical device company can model architecture and traceability in SysML, run validation in CI, generate review-ready outputs, add domain packages (software lifecycle, usability, cybersecurity, EtherCAT, etc.), and adopt the tool without MBSE specialists full-time.
-
-The rearchitecture (Phase 7–9 below) is foundational work that enables everything else. It is NOT the product — it makes the product possible.
+**The adoption test:** A 15–100 person medical device company can model architecture and traceability in SysML, run validation in CI, generate review-ready DHF documents in Word/PDF, add domain packages, and adopt the tool without MBSE specialists full-time.
 
 ---
 
@@ -387,11 +385,9 @@ The rearchitecture (Phase 7–9 below) is foundational work that enables everyth
 
 All milestones numbered in strict execution order. One authoritative sequence, no conflicting docs.
 
-**Partially complete items (accounted for in milestone scoping):**
-- SysAnd export (`memo ontology export sysand`) exists in `packages/cli/src/commands/ontology.ts` — M48 hardens it
-- `library package` grammar and PackageRegistry exist — M59 builds on it
-- OntologyViewer component exists in web app — M60 extracts it
-- `medical-modeling-profile` has `projectType: device` instead of `profile` — M36 fixes it
+**Completed phases:** Phase 1-6 (Foundation through Analysis Tools), Ontology Backbone, Phase 7-12 (Rearchitecture through Extension Ecosystem). All 61 milestones (M1-M61) closed.
+
+**Batch-closed M4-M35 disposition:** Superseded by later milestones (M52 replaces M33, M61 replaces M26, M59 replaces M34), deferred to Phase 14-16 (import, LLM, cloud), or added to Phase 17 (productivity/polish). See CLAUDE.md for full mapping.
 
 ### Phase 7: Package & Registry Foundation **[CRITICAL]**
 
@@ -469,18 +465,67 @@ The #3 adoption blocker. Make it easy to create, share, and consume domain packa
 |----|-------|--------|-------------|-------|
 | M59 | Static build + reusable package authoring | **Done** | M47, M51 | `memo build` produces static HTML + data bundle. `.kpar` archive (`memo build --kpar`). Package templates, `memo create-package` (ontology/profile/library/device scaffolding). Builds on existing `library package` grammar/PackageRegistry. |
 | M60 | Standalone ontology viewer | **Done** | M47 | Standalone Vite app at `tools/ontology-viewer/`. Read-only. Loads `memo export json` output via drag-and-drop. Kind tree grouped by layer/construct, detail view, card view, relationship types. Decoupled from @memo/web. |
-| M61 | VS Code extension | Not started | M47 | LSP for `.sysml` files. Syntax highlighting, go-to-definition, diagnostics. |
+| M61 | VS Code extension | **Done** | M47 | TextMate grammar for `.sysml` syntax highlighting. Extension with diagnostics from `memo validate --format json` on save. Commands: Validate Model, Open in Browser. Language configuration (brackets, folding, indentation). |
 
-### Deferred (no milestone IDs until dependencies clear)
+### Phase 13: DHF Workbench **[CRITICAL]**
 
-| Item | Reason |
-|------|--------|
-| External ontology import (OWL/JSON-LD/SysAnd) | Import before package model is stable is premature |
-| LLM integration (Q&A, generation, report drafting) | Nice-to-have, not adoption-critical |
-| EA/Cameo import | Migration tools — after core adoption proven |
-| Cloud + collaboration | Hosted deployment — after local tool is solid |
-| Domain packages (automotive, aerospace) | After medical vertical proven |
-| Plugin system | After extension model stable |
+The primary value proposition for regulated teams. Replaces M58 stub with full Design History File generation from model data.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M62 | DHF Document Registry, Markdown Templates & Document IR | Not started | Ontology | Registry of 18 doc types (rmp, har, fmea, rtm, sad, soup, etc.). Markdown+Handlebars templates with YAML frontmatter. Document IR (format-agnostic AST). Template engine. |
+| M63 | DHF Content Generator — Model Query Engine | Not started | M62 | Handlebars helpers for model queries (`{{#each hazards}}`, `{{this.related}}`, `{{gaps}}`, `{{coverage}}`, `{{xref}}`). Bridge between templates and MemoModel. |
+| M64 | Export Plugins — HTML, DOCX, PDF, Markdown | Not started | M62 | Plugin interface + 4 exporters. DOCX via `docx` npm. PDF via `puppeteer` (optional). HTML standalone. MD as GFM. Redline support in all formats. |
+| M65 | DHF Configuration & Customization | Not started | M62 | `memo.dhf.yaml`: org, phase, standards, per-doc enable/disable, custom sections, approvers, risk matrix, `template_dir` overrides. |
+| M66 | DHF CLI — Export, Status & Targeting | Not started | M63, M64, M65 | `memo export dhf [--target rmp] [--format docx]`. Group aliases. `memo dhf status [--verbose]`. Replaces M58 stub. |
+| M67 | DHF Redline & Change Tracking | Not started | M63, M64 | `memo dhf snapshot/redline/diff/review-packet`. DOCX tracked changes. HTML red/green markup. Review packet bundling. |
+| M68 | DHF Web Dashboard — Landing Page & Drilldown | Not started | M63, M64, M52 | Card grid of all 18 docs with status + gap summary. Click → drilldown: section status, gaps, model elements, change history. Export/snapshot controls. |
+
+**Critical path:** M62 → M63 → M66 (CLI usable). M62 → M64 (export formats). M63 + M64 → M67 (redline). M63 + M64 → M68 (web dashboard).
+
+### Phase 14: Developer Experience & Import **[HIGH]**
+
+Migration and import tools for teams moving from legacy tooling. VS Code integration for modeling ergonomics.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M61 | VS Code extension | Not started | M47 | TextMate grammar for `.sysml` syntax highlighting. Basic LSP: diagnostics from `memo validate`, go-to-definition for kind references, hover info. Extension published to VS Code marketplace. |
+| M69 | EA/Cameo import | Not started | M39, M40 | `memo import ea <qea-file>` reads Sparx EA SQLite (.qea/.eap). Maps stereotypes → kinds via ontology registry. `memo import cameo <mdzip>` reads MagicDraw XML. Produces .sysml files. |
+| M70 | SysAnd import | Not started | M48 | `memo import sysand <project-dir>` reads `.project.json` + SysML files from a SysAnd project. Populates registries. Round-trip verified: export → import → diff = clean. |
+| M71 | OWL/JSON-LD ontology import | Not started | M39 | `memo import owl <file>` reads OWL/Turtle or JSON-LD. Maps classes → kinds, object properties → relationships. Produces ontology package with SysML files. |
+
+### Phase 15: LLM Integration **[MEDIUM]**
+
+AI-assisted modeling and document generation. Not adoption-critical but a strong differentiator.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M72 | Model Q&A | Not started | M42 | `memo ask "<question>"` queries the model using LLM. "What hazards have no risk controls?" "Show trace from REQ-001 to verification." Context-aware RAG over model elements. |
+| M73 | SysML generation from natural language | Not started | M72 | `memo generate "<description>"` produces SysML definitions. "Add a pressure sensor component with USB interface." LLM generates valid .sysml files using ontology context. |
+| M74 | DHF draft assistant | Not started | M63, M72 | `memo dhf draft --target rmp` uses LLM to fill gap sections in DHF documents. Generates boilerplate regulatory text, risk descriptions, verification rationale. Human reviews before export. |
+
+### Phase 16: Cloud & Collaboration **[LOW]**
+
+Hosted deployment and multi-user collaboration. Only after local tool is solid.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M75 | Cloud deployment | Not started | M59 | Docker image for MEMO Architect. `memo serve` mode for team access. Static build + API server. Nginx/Caddy reverse proxy config. |
+| M76 | Multi-user collaboration | Not started | M75 | WebSocket-based live model sync. Conflict resolution for concurrent edits. User presence indicators. Git-backed persistence. |
+| M77 | Domain packages (automotive, aerospace) | Not started | M59, M60 | Prove package ecosystem with non-medical domains. `@memo/ontology-automotive` (ISO 26262). `@memo/ontology-aerospace` (DO-178C). Community contribution templates. |
+| M78 | Plugin system | Not started | M64 | Plugin interface for custom export formats, analysis tools, and validation rules. `memo plugin install <url>`. Plugin manifest format. Sandboxed execution. |
+
+### Phase 17: Productivity & Polish **[LOW]**
+
+Items from the batch-closed M4-M35 milestones that were not superseded by later phases. Nice-to-have features that improve daily workflow.
+
+| ID | Title | Status | Dependencies | Scope |
+|----|-------|--------|-------------|-------|
+| M79 | Scenario editor + model diff | Not started | M52 | Interactive scenario editing in the workbench. Model diff: compare two model states, show added/removed/changed elements. Git-backed version comparison. |
+| M80 | Guided compliance wizard | Not started | M66 | Multi-step wizard for ISO 14971 / IEC 62304 compliance. Walks user through: hazard identification → risk estimation → control measures → verification. Creates SysML elements and relationships automatically. |
+| M81 | Working sets + workspace persistence | Not started | M52 | Named working sets that remember open views, selected elements, panel state. Quick switch between "risk review" and "software design" contexts. Persisted to `.memo/workspaces/`. |
+| M82 | Statistics dashboard | Not started | M52 | Dashboard cards: element counts by layer, relationship density, coverage heatmap, ontology usage. Quick health check for the model. |
+| M83 | Onboarding tour + performance | Not started | M52 | First-run interactive tour. Web Worker for ELK layout (unblock UI thread). Code splitting for ReactFlow/ELK (reduce 1.8MB bundle). |
 
 ---
 
@@ -505,9 +550,11 @@ The #3 adoption blocker. Make it easy to create, share, and consume domain packa
 
 | Issue | Priority | Notes |
 |---|---|---|
-| 6-mode architecture needs replacement | Critical | Current modes don't match ISO 42010. Phase 10 addresses this. |
+| ~~6-mode architecture needs replacement~~ | ~~Critical~~ | Fixed in M52-M55 (Phase 10). Unified Workbench. |
 | ~~`medical-modeling-profile` has `projectType: device`~~ | ~~High~~ | Fixed in M36. |
-| ~2,900 lines YAML duplication | High | Kinds/rels duplicated in SysML + YAML. Phase 7-8 eliminates this. |
+| ~~~2,900 lines YAML duplication~~ | ~~High~~ | Fixed in Phase 7-8. SysML is single source of truth. |
 | Web bundle size (1.8 MB) | Low | Consider code splitting for ReactFlow/ELK |
 | No web component tests | Medium | `@memo/web` has no test infrastructure yet |
 | Small viewport layout overlap | Low | 3-panel layouts need min-width breakpoints |
+| DHF stub is basic HTML only | High | Phase 13 replaces with full document workbench |
+| No VS Code integration | Medium | M61 adds TextMate grammar + basic LSP |
