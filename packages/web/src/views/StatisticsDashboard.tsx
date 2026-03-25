@@ -187,8 +187,8 @@ export function StatisticsDashboard() {
                             Elements by Layer
                         </h3>
                         <div className="space-y-2">
-                            {stats.layers.map(l => (
-                                <div key={l.layer} className="flex items-center gap-2">
+                            {stats.layers.map((l, idx) => (
+                                <div key={`${l.layer}-${idx}`} className="flex items-center gap-2">
                                     <span className="w-20 text-xs truncate" style={{ color: '#374151' }}>{l.label}</span>
                                     <div className="flex-1 h-4 rounded-full overflow-hidden" style={{ background: '#F3F4F6' }}>
                                         <div
@@ -243,8 +243,8 @@ export function StatisticsDashboard() {
                             Top Element Types
                         </h3>
                         <div className="space-y-1">
-                            {stats.topKinds.map(k => (
-                                <div key={k.kind} className="flex items-center gap-2 text-xs">
+                            {stats.topKinds.map((k, idx) => (
+                                <div key={`${k.kind}-${idx}`} className="flex items-center gap-2 text-xs">
                                     <span className="w-2 h-2 rounded-full" style={{ background: LAYER_COLORS[k.layer] || '#95A5A6' }} />
                                     <span className="flex-1 truncate" style={{ color: '#374151' }}>{k.kind}</span>
                                     <span className="font-medium" style={{ color: '#6B7280' }}>{k.count}</span>
@@ -259,8 +259,8 @@ export function StatisticsDashboard() {
                             Relationship Types
                         </h3>
                         <div className="space-y-1">
-                            {stats.relTypes.map(r => (
-                                <div key={r.type} className="flex items-center gap-2 text-xs">
+                            {stats.relTypes.map((r, idx) => (
+                                <div key={`${r.type}-${idx}`} className="flex items-center gap-2 text-xs">
                                     <span className="w-2 h-2 rounded-full" style={{ background: '#4A90D9' }} />
                                     <span className="flex-1 truncate" style={{ color: '#374151' }}>{r.type}</span>
                                     <span className="font-medium" style={{ color: '#6B7280' }}>{r.count}</span>
@@ -280,8 +280,8 @@ export function StatisticsDashboard() {
                             Completeness by Layer
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            {completeness.layers?.map((layer: any) => (
-                                <div key={layer.layer} className="flex items-center gap-2 text-xs">
+                            {completeness.layers?.map((layer: any, idx: number) => (
+                                <div key={`${layer.layer}-${idx}`} className="flex items-center gap-2 text-xs">
                                     <span className="w-2 h-2 rounded-full" style={{ background: LAYER_COLORS[layer.layer] || '#95A5A6' }} />
                                     <span className="flex-1 truncate" style={{ color: '#374151' }}>{layer.layer}</span>
                                     <span className="font-medium" style={{ color: layer.completeness >= 80 ? '#2ECC71' : layer.completeness >= 50 ? '#F39C12' : '#E74C3C' }}>
