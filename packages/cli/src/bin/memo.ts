@@ -38,6 +38,9 @@ import { importOwlCommand } from '../commands/import-owl.js';
 import { lockCommand } from '../commands/lock.js';
 import { installCommand } from '../commands/install.js';
 import { createPackageCommand } from '../commands/create-package.js';
+import { askCommand } from '../commands/ask.js';
+import { generateCommand } from '../commands/generate.js';
+import { dhfDraftCommand } from '../commands/dhf-draft.js';
 
 const program = new Command();
 
@@ -275,6 +278,30 @@ importCmd
         await importOwlCommand(file, options);
     });
 
+// ─── memo ask ────────────────────────────────────────────────────────────────
+
+program
+    .command('ask')
+    .description('Ask a question about the model using LLM')
+    .argument('<question>', 'Natural language question about the model')
+    .option('--layer <layer>', 'Filter context to a specific layer')
+    .option('--kind <kind>', 'Filter context to a specific kind')
+    .action(async (question: string, options: { layer?: string; kind?: string }) => {
+        await askCommand(question, options);
+    });
+
+// ─── memo generate ───────────────────────────────────────────────────────────
+
+program
+    .command('generate')
+    .description('Generate SysML from a natural language description using LLM')
+    .argument('<description>', 'Natural language description of what to generate')
+    .option('-o, --output <file>', 'Output .sysml file path (preview if omitted)')
+    .option('--dry-run', 'Preview generated SysML without writing')
+    .action(async (description: string, options: { output?: string; dryRun?: boolean }) => {
+        await generateCommand(description, options);
+    });
+
 // ─── memo dhf ────────────────────────────────────────────────────────────────
 
 const dhfCmd = program
@@ -315,6 +342,17 @@ dhfCmd
     .option('-o, --output <file>', 'Output file path')
     .action(async (options: { target: string; format?: string; output?: string }) => {
         await dhfRedlineCommand(options);
+    });
+
+dhfCmd
+    .command('draft')
+    .description('Use LLM to draft content for gap sections in a DHF document')
+    .requiredOption('-t, --target <id>', 'Target document ID (e.g., rmp, har, fmea)')
+    .option('-s, --section <id>', 'Draft only a specific section')
+    .option('-f, --format <fmt>', 'Output format: html, md, docx', 'html')
+    .option('-o, --output <dir>', 'Output directory', 'dhf-drafts')
+    .action(async (options: { target: string; section?: string; format?: string; output?: string }) => {
+        await dhfDraftCommand(options);
     });
 
 dhfCmd
