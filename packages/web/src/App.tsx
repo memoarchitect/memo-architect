@@ -20,6 +20,7 @@ const ScenarioEditor = lazy(() => import('./views/ScenarioEditor').then(m => ({ 
 const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m.ModelDiff })));
 const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m => ({ default: m.ComplianceWizard })));
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
+const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -56,6 +57,8 @@ function UnifiedCanvas() {
                 return <ComplianceWizard />;
             case 'statistics':
                 return <StatisticsDashboard />;
+            case 'dhf-dashboard':
+                return <DhfDashboard />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;

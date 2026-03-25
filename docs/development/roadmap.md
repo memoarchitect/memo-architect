@@ -467,19 +467,19 @@ The #3 adoption blocker. Make it easy to create, share, and consume domain packa
 | M60 | Standalone ontology viewer | **Done** | M47 | Standalone Vite app at `tools/ontology-viewer/`. Read-only. Loads `memo export json` output via drag-and-drop. Kind tree grouped by layer/construct, detail view, card view, relationship types. Decoupled from @memo/web. |
 | M61 | VS Code extension | **Done** | M47 | TextMate grammar for `.sysml` syntax highlighting. Extension with diagnostics from `memo validate --format json` on save. Commands: Validate Model, Open in Browser. Language configuration (brackets, folding, indentation). |
 
-### Phase 13: DHF Workbench **[CRITICAL]**
+### Phase 13: DHF Workbench **[CRITICAL]** ✅ Complete
 
 The primary value proposition for regulated teams. Replaces M58 stub with full Design History File generation from model data.
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M62 | DHF Document Registry, Markdown Templates & Document IR | Not started | Ontology | Registry of 18 doc types (rmp, har, fmea, rtm, sad, soup, etc.). Markdown+Handlebars templates with YAML frontmatter. Document IR (format-agnostic AST). Template engine. |
-| M63 | DHF Content Generator — Model Query Engine | Not started | M62 | Handlebars helpers for model queries (`{{#each hazards}}`, `{{this.related}}`, `{{gaps}}`, `{{coverage}}`, `{{xref}}`). Bridge between templates and MemoModel. |
-| M64 | Export Plugins — HTML, DOCX, PDF, Markdown | Not started | M62 | Plugin interface + 4 exporters. DOCX via `docx` npm. PDF via `puppeteer` (optional). HTML standalone. MD as GFM. Redline support in all formats. |
-| M65 | DHF Configuration & Customization | Not started | M62 | `memo.dhf.yaml`: org, phase, standards, per-doc enable/disable, custom sections, approvers, risk matrix, `template_dir` overrides. |
-| M66 | DHF CLI — Export, Status & Targeting | Not started | M63, M64, M65 | `memo export dhf [--target rmp] [--format docx]`. Group aliases. `memo dhf status [--verbose]`. Replaces M58 stub. |
-| M67 | DHF Redline & Change Tracking | Not started | M63, M64 | `memo dhf snapshot/redline/diff/review-packet`. DOCX tracked changes. HTML red/green markup. Review packet bundling. |
-| M68 | DHF Web Dashboard — Landing Page & Drilldown | Not started | M63, M64, M52 | Card grid of all 18 docs with status + gap summary. Click → drilldown: section status, gaps, model elements, change history. Export/snapshot controls. |
+| M62 | DHF Document Registry, Markdown Templates & Document IR | Done | Ontology | Registry of 18 doc types (rmp, har, fmea, rtm, sad, soup, etc.). Markdown+Handlebars templates with YAML frontmatter. Document IR (format-agnostic AST). Template engine. |
+| M63 | DHF Content Generator — Model Query Engine | Done | M62 | Handlebars helpers for model queries (`{{#each hazards}}`, `{{this.related}}`, `{{gaps}}`, `{{coverage}}`, `{{xref}}`). Bridge between templates and MemoModel. |
+| M64 | Export Plugins — HTML, DOCX, PDF, Markdown | Done | M62 | Plugin interface + 3 exporters (HTML, Markdown, DOCX/Word-HTML). PDF via print. Redline support in all formats. |
+| M65 | DHF Configuration & Customization | Done | M62 | `memo.dhf.yaml`: org, phase, standards, per-doc enable/disable, custom sections, approvers, risk matrix, `template_dir` overrides. |
+| M66 | DHF CLI — Export, Status & Targeting | Done | M63, M64, M65 | `memo export dhf [--target rmp] [--format docx]`. Group aliases. `memo dhf status [--verbose]`. Replaces M58 stub. |
+| M67 | DHF Redline & Change Tracking | Done | M63, M64 | `memo dhf snapshot/redline/diff/review-packet`. DOCX tracked changes. HTML red/green markup. Review packet bundling. |
+| M68 | DHF Web Dashboard — Landing Page & Drilldown | Done | M63, M64, M52 | Card grid of all 18 docs with status + gap summary. Click → drilldown: section status, gaps, model elements, change history. Export/snapshot controls. |
 
 **Critical path:** M62 → M63 → M66 (CLI usable). M62 → M64 (export formats). M63 + M64 → M67 (redline). M63 + M64 → M68 (web dashboard).
 

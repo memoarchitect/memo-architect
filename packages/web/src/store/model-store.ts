@@ -27,6 +27,7 @@ export type ActiveView =
     | { type: 'model-diff' }
     | { type: 'compliance-wizard' }
     | { type: 'statistics' }
+    | { type: 'dhf-dashboard' }
     | { type: 'welcome' };
 
 /** Which explorer tab is active in the left panel */

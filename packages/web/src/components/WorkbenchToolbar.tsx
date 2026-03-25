@@ -16,6 +16,7 @@ const TOOLS: ToolAction[] = [
     { id: 'model-diff', label: 'Diff', icon: '\u2194', view: { type: 'model-diff' } },
     { id: 'compliance-wizard', label: 'Compliance', icon: '\u2611', view: { type: 'compliance-wizard' } },
     { id: 'statistics', label: 'Stats', icon: '\u25A6', view: { type: 'statistics' } },
+    { id: 'dhf-dashboard', label: 'DHF', icon: '\u2637', view: { type: 'dhf-dashboard' } },
 ];
 
 export function WorkbenchToolbar() {

@@ -18,7 +18,14 @@ import { devCommand } from '../commands/dev.js';
 import { initCommand } from '../commands/init.js';
 import { buildCommand } from '../commands/build.js';
 import { exportJsonCommand, exportDotCommand } from '../commands/export.js';
-import { exportDhfCommand } from '../commands/dhf.js';
+import {
+    exportDhfCommand,
+    dhfStatusCommand,
+    dhfSnapshotCommand,
+    dhfDiffCommand,
+    dhfRedlineCommand,
+    dhfReviewPacketCommand,
+} from '../commands/dhf.js';
 import {
     ontologyShowCommand,
     ontologyExportOwlCommand,
@@ -94,9 +101,12 @@ exportCmd
 
 exportCmd
     .command('dhf')
-    .description('Export Design History File (DHF) as HTML report')
-    .option('-o, --output <file>', 'Output file path', 'dhf-report.html')
-    .action(async (options: { output: string }) => {
+    .description('Export DHF documents (HTML, Markdown, DOCX)')
+    .option('-o, --output <dir>', 'Output directory', 'dhf-output')
+    .option('-t, --target <id>', 'Target document ID (e.g., rmp, har, fmea)')
+    .option('-f, --format <fmt>', 'Output format: html, md, docx', 'html')
+    .option('-g, --group <group>', 'Document group: risk, design, verification, compliance, all')
+    .action(async (options: { output: string; target?: string; format?: string; group?: string }) => {
         await exportDhfCommand(options);
     });
 
@@ -217,6 +227,57 @@ importCmd
     .option('-o, --output <file>', 'Output CSV file path')
     .action(async (type: string, options: { output?: string }) => {
         await importTemplateCommand(type, options);
+    });
+
+// ─── memo dhf ────────────────────────────────────────────────────────────────
+
+const dhfCmd = program
+    .command('dhf')
+    .description('Design History File workbench');
+
+dhfCmd
+    .command('status')
+    .description('Show DHF document readiness status')
+    .option('-v, --verbose', 'Show section-level detail')
+    .option('-t, --target <id>', 'Target document ID')
+    .action(async (options: { verbose?: boolean; target?: string }) => {
+        await dhfStatusCommand(options);
+    });
+
+dhfCmd
+    .command('snapshot')
+    .description('Create a snapshot of current DHF document state')
+    .option('-t, --target <id>', 'Target document ID (default: all)')
+    .option('-l, --label <label>', 'Snapshot label')
+    .action(async (options: { target?: string; label?: string }) => {
+        await dhfSnapshotCommand(options);
+    });
+
+dhfCmd
+    .command('diff')
+    .description('Compare current state against latest snapshot')
+    .requiredOption('-t, --target <id>', 'Target document ID')
+    .action(async (options: { target: string }) => {
+        await dhfDiffCommand(options);
+    });
+
+dhfCmd
+    .command('redline')
+    .description('Generate redline document showing changes from last snapshot')
+    .requiredOption('-t, --target <id>', 'Target document ID')
+    .option('-f, --format <fmt>', 'Output format: html, md, docx', 'html')
+    .option('-o, --output <file>', 'Output file path')
+    .action(async (options: { target: string; format?: string; output?: string }) => {
+        await dhfRedlineCommand(options);
+    });
+
+dhfCmd
+    .command('review-packet')
+    .description('Generate a complete review packet of all DHF documents')
+    .option('-f, --format <fmt>', 'Output format: html, md, docx', 'html')
+    .option('-o, --output <dir>', 'Output directory')
+    .action(async (options: { format?: string; output?: string }) => {
+        await dhfReviewPacketCommand(options);
     });
 
 program.parse();
