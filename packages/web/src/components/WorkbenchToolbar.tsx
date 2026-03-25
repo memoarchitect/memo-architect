@@ -12,6 +12,10 @@ const TOOLS: ToolAction[] = [
     { id: 'traceability', label: 'Trace Matrix', icon: '\u2637', view: { type: 'traceability' } },
     { id: 'actionflow', label: 'Action Flow', icon: '\u21C6', view: { type: 'actionflow' } },
     { id: 'ontology', label: 'Ontology', icon: '\u25C9', view: { type: 'ontology' } },
+    { id: 'scenario-editor', label: 'Scenarios', icon: '\u25B6', view: { type: 'scenario-editor' } },
+    { id: 'model-diff', label: 'Diff', icon: '\u2194', view: { type: 'model-diff' } },
+    { id: 'compliance-wizard', label: 'Compliance', icon: '\u2611', view: { type: 'compliance-wizard' } },
+    { id: 'statistics', label: 'Stats', icon: '\u25A6', view: { type: 'statistics' } },
 ];
 
 export function WorkbenchToolbar() {

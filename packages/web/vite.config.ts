@@ -8,5 +8,16 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Split heavy dependencies into separate chunks
+                    'react-vendor': ['react', 'react-dom'],
+                    'reactflow': ['@xyflow/react'],
+                    'elk': ['elkjs'],
+                    'zustand': ['zustand'],
+                },
+            },
+        },
     },
 });

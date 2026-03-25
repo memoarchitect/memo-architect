@@ -8,6 +8,7 @@ import {
 } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
 import { FONT } from '../styles/tokens';
+import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import type { MemoElement, DiagramDTO } from '@memo/core';
 
 // ─── Element Context Menu ────────────────────────────────────────────────────
@@ -79,6 +80,7 @@ function TabBar({ active, onChange }: { active: ExplorerTab; onChange: (tab: Exp
     const tabs: { id: ExplorerTab; label: string }[] = [
         { id: 'model', label: 'Model' },
         { id: 'views', label: 'Views' },
+        { id: 'worksets', label: 'Sets' },
     ];
     return (
         <div className="flex" style={{ borderBottom: '1px solid #E5E5E0' }}>
@@ -498,10 +500,13 @@ export function ExplorerPanel() {
             </div>
 
             {/* Content */}
-            {explorerTab === 'model'
-                ? <ModelExplorerContent searchTerm={searchTerm} />
-                : <ViewExplorerContent searchTerm={searchTerm} />
-            }
+            {explorerTab === 'model' && <ModelExplorerContent searchTerm={searchTerm} />}
+            {explorerTab === 'views' && <ViewExplorerContent searchTerm={searchTerm} />}
+            {explorerTab === 'worksets' && (
+                <div className="flex-1 overflow-y-auto px-3 py-2">
+                    <WorkingSetsContent />
+                </div>
+            )}
         </div>
     );
 }

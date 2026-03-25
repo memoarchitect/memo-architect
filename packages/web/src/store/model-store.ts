@@ -23,10 +23,14 @@ export type ActiveView =
     | { type: 'dsm' }
     | { type: 'ontology' }
     | { type: 'traceability' }
+    | { type: 'scenario-editor' }
+    | { type: 'model-diff' }
+    | { type: 'compliance-wizard' }
+    | { type: 'statistics' }
     | { type: 'welcome' };
 
 /** Which explorer tab is active in the left panel */
-export type ExplorerTab = 'model' | 'views';
+export type ExplorerTab = 'model' | 'views' | 'worksets';
 
 export type GroupBy = 'layer' | 'kind' | 'construct' | 'source';
 export type CatalogGroupBy = 'semantic';  // V-Cycle is the only sensible top-level grouping

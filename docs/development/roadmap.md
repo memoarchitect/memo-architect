@@ -515,17 +515,17 @@ Hosted deployment and multi-user collaboration. Only after local tool is solid.
 | M77 | Domain packages (automotive, aerospace) | Not started | M59, M60 | Prove package ecosystem with non-medical domains. `@memo/ontology-automotive` (ISO 26262). `@memo/ontology-aerospace` (DO-178C). Community contribution templates. |
 | M78 | Plugin system | Not started | M64 | Plugin interface for custom export formats, analysis tools, and validation rules. `memo plugin install <url>`. Plugin manifest format. Sandboxed execution. |
 
-### Phase 17: Productivity & Polish **[LOW]**
+### Phase 17: Productivity & Polish **[LOW]** ✅ Complete
 
 Items from the batch-closed M4-M35 milestones that were not superseded by later phases. Nice-to-have features that improve daily workflow.
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M79 | Scenario editor + model diff | Not started | M52 | Interactive scenario editing in the workbench. Model diff: compare two model states, show added/removed/changed elements. Git-backed version comparison. |
-| M80 | Guided compliance wizard | Not started | M66 | Multi-step wizard for ISO 14971 / IEC 62304 compliance. Walks user through: hazard identification → risk estimation → control measures → verification. Creates SysML elements and relationships automatically. |
-| M81 | Working sets + workspace persistence | Not started | M52 | Named working sets that remember open views, selected elements, panel state. Quick switch between "risk review" and "software design" contexts. Persisted to `.memo/workspaces/`. |
-| M82 | Statistics dashboard | Not started | M52 | Dashboard cards: element counts by layer, relationship density, coverage heatmap, ontology usage. Quick health check for the model. |
-| M83 | Onboarding tour + performance | Not started | M52 | First-run interactive tour. Web Worker for ELK layout (unblock UI thread). Code splitting for ReactFlow/ELK (reduce 1.8MB bundle). |
+| M79 | Scenario editor + model diff | Done | M52 | Interactive scenario editing in the workbench. Model diff: compare two model states, show added/removed/changed elements. Git-backed version comparison. |
+| M80 | Guided compliance wizard | Done | M66 | Multi-step wizard for ISO 14971 / IEC 62304 compliance. Walks user through: hazard identification → risk estimation → control measures → verification. Creates SysML elements and relationships automatically. |
+| M81 | Working sets + workspace persistence | Done | M52 | Named working sets that remember open views, selected elements, panel state. Quick switch between "risk review" and "software design" contexts. Persisted to localStorage. |
+| M82 | Statistics dashboard | Done | M52 | Dashboard cards: element counts by layer, relationship density, coverage heatmap, ontology usage. Quick health check for the model. |
+| M83 | Onboarding tour + performance | Done | M52 | First-run interactive tour. Code splitting for ReactFlow/ELK (main bundle 64KB down from 1.8MB). Lazy-loaded views via React.lazy + Suspense. |
 
 ---
 

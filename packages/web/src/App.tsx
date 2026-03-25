@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useModelStore } from './store/model-store';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
@@ -8,11 +8,18 @@ import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
-import { DiagramCanvas } from './views/DiagramCanvas';
-import { ActionFlowDiagram } from './views/ActionFlowDiagram';
-import { DSMView } from './views/DSMView';
-import { OntologyViewer } from './views/OntologyViewer';
-import { TraceabilityMatrix } from './views/TraceabilityMatrix';
+import { OnboardingTour } from './components/OnboardingTour';
+
+// ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
+const DiagramCanvas = lazy(() => import('./views/DiagramCanvas').then(m => ({ default: m.DiagramCanvas })));
+const ActionFlowDiagram = lazy(() => import('./views/ActionFlowDiagram').then(m => ({ default: m.ActionFlowDiagram })));
+const DSMView = lazy(() => import('./views/DSMView').then(m => ({ default: m.DSMView })));
+const OntologyViewer = lazy(() => import('./views/OntologyViewer').then(m => ({ default: m.OntologyViewer })));
+const TraceabilityMatrix = lazy(() => import('./views/TraceabilityMatrix').then(m => ({ default: m.TraceabilityMatrix })));
+const ScenarioEditor = lazy(() => import('./views/ScenarioEditor').then(m => ({ default: m.ScenarioEditor })));
+const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m.ModelDiff })));
+const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m => ({ default: m.ComplianceWizard })));
+const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -29,21 +36,52 @@ function UnifiedCanvas() {
         }
     }, [activeView, selectedDiagramId, selectDiagram]);
 
-    switch (activeView.type) {
-        case 'diagram':
-            return <DiagramCanvas />;
-        case 'actionflow':
-            return <ActionFlowDiagram />;
-        case 'dsm':
-            return <DSMView />;
-        case 'traceability':
-            return <TraceabilityMatrix />;
-        case 'ontology':
-            return <OntologyViewer />;
-        case 'welcome':
-        default:
-            return <WelcomeCanvas />;
+    const renderView = () => {
+        switch (activeView.type) {
+            case 'diagram':
+                return <DiagramCanvas />;
+            case 'actionflow':
+                return <ActionFlowDiagram />;
+            case 'dsm':
+                return <DSMView />;
+            case 'traceability':
+                return <TraceabilityMatrix />;
+            case 'ontology':
+                return <OntologyViewer />;
+            case 'scenario-editor':
+                return <ScenarioEditor />;
+            case 'model-diff':
+                return <ModelDiff />;
+            case 'compliance-wizard':
+                return <ComplianceWizard />;
+            case 'statistics':
+                return <StatisticsDashboard />;
+            case 'welcome':
+            default:
+                return <WelcomeCanvas />;
+        }
+    };
+
+    if (activeView.type === 'welcome') {
+        return <WelcomeCanvas />;
     }
+
+    return (
+        <Suspense fallback={<ViewLoadingFallback />}>
+            {renderView()}
+        </Suspense>
+    );
+}
+
+function ViewLoadingFallback() {
+    return (
+        <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
+            <div className="text-center" style={{ color: '#9CA3AF' }}>
+                <span className="animate-pulse text-lg">{'\u25CF'}</span>
+                <div className="text-xs mt-2">Loading view...</div>
+            </div>
+        </div>
+    );
 }
 
 function WelcomeCanvas() {
@@ -215,6 +253,9 @@ export function App() {
 
             {/* Command palette (Cmd+K) */}
             <CommandPalette />
+
+            {/* First-run onboarding tour */}
+            <OnboardingTour />
         </div>
     );
 }
