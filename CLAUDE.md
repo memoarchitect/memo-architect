@@ -178,7 +178,7 @@ Phase 16 — Cloud & Collaboration:
 - M75: Cloud deployment
 - M76: Multi-user collaboration
 - M77: Domain packages (automotive, aerospace)
-- M78: Plugin system
+- M78: Plugin system ✅
 
 Phase 17 — Productivity & Polish: ✅ Complete (M79-M83 done)
 - M79: Scenario editor + model diff
@@ -237,10 +237,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M72-M74 (Phase 15: LLM Integration) — `memo ask` for model Q&A with context-aware RAG, `memo generate` for SysML generation from natural language, `memo dhf draft` for LLM-assisted DHF document drafting. Provider-agnostic (Anthropic/OpenAI via env vars). 331 tests passing.
+**Last completed:** M78 (Plugin system) — Plugin interface for export, analysis, validation, and generator plugins. `memo plugin list|create|run` CLI. Dynamic loading from npm/local via `memo.plugins.yaml`. Plugin manifest (`memo.plugin.yaml`). Scaffolding with `memo plugin create`. Inspired by EventCatalog generator pattern. 352 tests passing.
 
-**Previously completed:** M69-M71 (Phase 14). M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12). Roadmap consolidation. Ontology Backbone Restructuring.
+**Previously completed:** M72-M74 (Phase 15: LLM Integration). M69-M71 (Phase 14). M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12).
 
-**Next up:** Phase 16 (Cloud & Collaboration, M75-M78).
+**Next up:** Phase 16 remaining (M75-M77: Cloud, Multi-user, Domain packages).
 
-**GitLab milestones:** M36-M61 exist. M36-M61 closed. M79-M83 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed.
+**GitLab milestones:** M36-M61 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed. M78 closed. M79-M83 closed.

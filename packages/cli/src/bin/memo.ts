@@ -41,6 +41,7 @@ import { createPackageCommand } from '../commands/create-package.js';
 import { askCommand } from '../commands/ask.js';
 import { generateCommand } from '../commands/generate.js';
 import { dhfDraftCommand } from '../commands/dhf-draft.js';
+import { pluginListCommand, pluginCreateCommand, pluginRunCommand } from '../commands/plugin.js';
 
 const program = new Command();
 
@@ -300,6 +301,39 @@ program
     .option('--dry-run', 'Preview generated SysML without writing')
     .action(async (description: string, options: { output?: string; dryRun?: boolean }) => {
         await generateCommand(description, options);
+    });
+
+// ─── memo plugin ─────────────────────────────────────────────────────────────
+
+const pluginCmd = program
+    .command('plugin')
+    .description('Plugin management commands');
+
+pluginCmd
+    .command('list')
+    .description('List configured plugins')
+    .action(async () => {
+        await pluginListCommand();
+    });
+
+pluginCmd
+    .command('create')
+    .description('Scaffold a new plugin')
+    .argument('<name>', 'Plugin name')
+    .option('-t, --type <type>', 'Plugin type: export, analysis, validation, generator', 'export')
+    .option('-d, --description <desc>', 'Plugin description')
+    .option('-o, --output <dir>', 'Output directory')
+    .action(async (name: string, options: { type?: string; description?: string; output?: string }) => {
+        await pluginCreateCommand(name, options);
+    });
+
+pluginCmd
+    .command('run')
+    .description('Run a generator or analysis plugin')
+    .argument('<id>', 'Plugin ID')
+    .option('--json', 'Output results as JSON')
+    .action(async (id: string, options: { json?: boolean }) => {
+        await pluginRunCommand(id, options);
     });
 
 // ─── memo dhf ────────────────────────────────────────────────────────────────
