@@ -58,5 +58,8 @@ export * from './dhf/index.js';
 // ─── LLM (AI-assisted modeling & document drafting) ─────────────────────────
 export * from './llm/index.js';
 
+// ─── Plugin System ──────────────────────────────────────────────────────────
+export * from './plugin/index.js';
+
 // ─── Protocol (WebSocket messages) ──────────────────────────────────────────
 export * from './protocol/messages.js';

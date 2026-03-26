@@ -513,7 +513,7 @@ Hosted deployment and multi-user collaboration. Only after local tool is solid.
 | M75 | Cloud deployment | Not started | M59 | Docker image for MEMO Architect. `memo serve` mode for team access. Static build + API server. Nginx/Caddy reverse proxy config. |
 | M76 | Multi-user collaboration | Not started | M75 | WebSocket-based live model sync. Conflict resolution for concurrent edits. User presence indicators. Git-backed persistence. |
 | M77 | Domain packages (automotive, aerospace) | Not started | M59, M60 | Prove package ecosystem with non-medical domains. `@memo/ontology-automotive` (ISO 26262). `@memo/ontology-aerospace` (DO-178C). Community contribution templates. |
-| M78 | Plugin system | Not started | M64 | Plugin interface for custom export formats, analysis tools, and validation rules. `memo plugin install <url>`. Plugin manifest format. Sandboxed execution. |
+| M78 | Plugin system | Done | M64 | Plugin interface for custom export formats, analysis tools, validation rules, and generators. `memo plugin list`, `memo plugin create`, `memo plugin run`. Plugin manifest (`memo.plugin.yaml`), config (`memo.plugins.yaml`), dynamic loading from npm/local. Inspired by EventCatalog generator pattern. |
 
 ### Phase 17: Productivity & Polish **[LOW]** ✅ Complete
 
