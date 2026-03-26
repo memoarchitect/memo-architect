@@ -1,0 +1,10 @@
+# GPCA Infusion Pump — submission-grade reference model
+# Based on University of Minnesota CriSys GPCA project
+projectName: gpca-pump
+projectType: device
+
+extends: "@memo/medical-modeling-profile"
+
+ontologies:
+  - name: memo-ontology-medical
+    version: "^0.1.0"

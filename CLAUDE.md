@@ -187,7 +187,15 @@ Phase 17 — Productivity & Polish: ✅ Complete (M79-M83 done)
 - M82: Statistics dashboard
 - M83: Onboarding tour + performance (code splitting)
 
-Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dashboard)
+Phase 18 — Reference Model — GPCA Infusion Pump:
+- M84: System Context & Requirements Hierarchy (≥80 requirement elements, full traceability)
+- M85: Risk Management — Full ISO 14971 Chain (≥20 hazards, ≥30 risk controls, FMEA)
+- M86: Software Architecture — IEC 62304 Compliance (Class C, ≥8 items, ≥15 units, SOUP)
+- M87: Behavioral Model — State Machine & Action Flows (GPCA state machine, ≥5 action flows)
+- M88: Clinical, Cybersecurity & Post-Market (≥35 elements across 5 domains)
+- M89: DHF Generation & Validation Showcase (≥500 elements, completeness ≥85%)
+
+Critical path: M84 → M85 → M86 → M87 → M89. M84 → M88 → M89.
 
 ### Issue Labels
 
@@ -237,10 +245,10 @@ Critical path: M62 → M63 → M66 (DHF CLI) → M67 (redline) → M68 (web dash
 
 ## Session Status (March 2026)
 
-**Last completed:** M78 (Plugin system) — Plugin interface for export, analysis, validation, and generator plugins. `memo plugin list|create|run` CLI. Dynamic loading from npm/local via `memo.plugins.yaml`. Plugin manifest (`memo.plugin.yaml`). Scaffolding with `memo plugin create`. Inspired by EventCatalog generator pattern. 352 tests passing.
+**Last completed:** M83 (Phase 17: Productivity & Polish). M78 (Plugin system). 352 tests passing.
 
 **Previously completed:** M72-M74 (Phase 15: LLM Integration). M69-M71 (Phase 14). M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12).
 
-**Next up:** Phase 16 remaining (M75-M77: Cloud, Multi-user, Domain packages).
+**Next up:** Phase 18 (M84-M89: GPCA Reference Model). Phase 16 remaining (M75-M77: Cloud, Multi-user, Domain packages).
 
-**GitLab milestones:** M36-M61 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed. M78 closed. M79-M83 closed.
+**GitLab milestones:** M36-M61 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed. M78 closed. M79-M83 closed. M84-M89 active.
