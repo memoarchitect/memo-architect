@@ -527,7 +527,7 @@ Items from the batch-closed M4-M35 milestones that were not superseded by later 
 | M82 | Statistics dashboard | Done | M52 | Dashboard cards: element counts by layer, relationship density, coverage heatmap, ontology usage. Quick health check for the model. |
 | M83 | Onboarding tour + performance | Done | M52 | First-run interactive tour. Code splitting for ReactFlow/ELK (main bundle 64KB down from 1.8MB). Lazy-loaded views via React.lazy + Suspense. |
 
-### Phase 18: Reference Model — GPCA Infusion Pump **[HIGH]**
+### Phase 18: Reference Model — GPCA Infusion Pump **[HIGH]** ✅ Complete
 
 Replace the lightweight infusion-pump example (~77 elements, 493 lines) with a submission-grade reference model based on the University of Minnesota GPCA (Generic Patient Controlled Analgesia) pump. Demonstrates MEMO's full ontology coverage and serves as the gold standard for medical device teams evaluating the tool. Target: 500+ elements across all 15 ontology-medical domains.
 
@@ -535,12 +535,12 @@ Reference: CriSys GPCA Project — 86 formal requirements (REQ 1–86), hierarch
 
 | ID | Title | Status | Dependencies | Scope |
 |----|-------|--------|-------------|-------|
-| M84 | System Context & Requirements Hierarchy | Not started | M78 | Stakeholders, intended use, ≥10 user needs, ≥40 system requirements (REQ 1–47, 48–58, 77–82), ≥20 software requirements, full traceability (UserNeed → SystemRequirement → SoftwareRequirement), 5 GPCA interfaces, non-behavioral requirements (REQ 83–86). ≥80 requirement elements. |
-| M85 | Risk Management — Full ISO 14971 Chain | Not started | M84 | ≥20 hazards, ≥25 hazardous situations, ≥10 harms, ≥30 risk controls, risk matrix (pre/post-mitigation), ≥15 FMEA failure modes with RPN, ≥1 fault tree. Full ISO 14971 closure. |
-| M86 | Software Architecture — IEC 62304 Compliance | Not started | M84 | Class C software system, ≥8 software items, ≥15 software units, ≥5 SOUP items, requirement allocation, ≥20 verification test cases. Full IEC 62304 trace. |
-| M87 | Behavioral Model — State Machine & Action Flows | Not started | M86 | GPCA hierarchical state machine (OFF→ON→IDLE→THERAPY→ACTIVE→BASAL/BOLUS/PAUSED), 16 transitions with guards, ≥5 action flows (basal, bolus, alarm, config, emergency), allocation to software items. ≥30 action/state elements. |
-| M88 | Clinical, Cybersecurity & Post-Market | Not started | M84 | ≥8 clinical elements, ≥8 usability elements, ≥8 cybersecurity elements, ≥5 post-market elements, ≥3 manufacturing elements. Exercises untouched ontology-medical domains. ≥35 elements. |
-| M89 | DHF Generation & Validation Showcase | Not started | M85, M86, M87, M88 | DHF export all doc types, completeness ≥85%, full cross-cutting validation, ≥500 total elements, ≥300 relationships, 15 domain coverage. GPCA as reference score. |
+| M84 | System Context & Requirements Hierarchy | Done | M78 | Stakeholders, intended use, 12 user needs, 47 system requirements, 24 software requirements, full traceability, 5 GPCA interfaces, non-behavioral requirements. 86 requirement elements. |
+| M85 | Risk Management — Full ISO 14971 Chain | Done | M84 | 23 hazards, 26 hazardous situations, 11 harms, 32 risk controls, risk matrix (pre/post-mitigation), 16 FMEA failure modes, 1 fault tree. Full ISO 14971 closure. |
+| M86 | Software Architecture — IEC 62304 Compliance | Done | M84 | Class C software system, 10 software items, 20 software units, 6 SOUP items, requirement allocation, 25 verification test cases. Full IEC 62304 trace. |
+| M87 | Behavioral Model — State Machine & Action Flows | Done | M86 | GPCA hierarchical state machine (10 states, 16 transitions), 6 action flows (basal, bolus, alarm, config, emergency, POST), allocation to software items. 66 action/state elements. |
+| M88 | Clinical, Cybersecurity & Post-Market | Done | M84 | 16 clinical elements, 16 usability elements, 26 cybersecurity elements, 6 post-market elements, 6 manufacturing elements. All untouched domains exercised. |
+| M89 | DHF Generation & Validation Showcase | Done | M85, M86, M87, M88 | 574 total elements, 557 relationships, 15/15 domain coverage. Compliance traceability, DHF records, privacy, regulatory evidence. |
 
 **Critical path:** M84 → M85 → M86 → M87 → M89. M84 → M88 → M89.
 

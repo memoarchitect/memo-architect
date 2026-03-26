@@ -245,10 +245,10 @@ Critical path: M84 → M85 → M86 → M87 → M89. M84 → M88 → M89.
 
 ## Session Status (March 2026)
 
-**Last completed:** M83 (Phase 17: Productivity & Polish). M78 (Plugin system). 352 tests passing.
+**Last completed:** M84-M89 (Phase 18: GPCA Reference Model) — Submission-grade reference model based on CriSys GPCA pump. 574 elements, 557 relationships, 4,910 lines across all 15 ontology-medical domains. 352 tests passing.
 
-**Previously completed:** M72-M74 (Phase 15: LLM Integration). M69-M71 (Phase 14). M62-M68 (Phase 13: DHF Workbench). M79-M83 (Phase 17). M36-M61 (Phase 7-12).
+**Previously completed:** M79-M83 (Phase 17). M78 (Plugin system). M72-M74 (Phase 15). M69-M71 (Phase 14). M62-M68 (Phase 13). M36-M61 (Phase 7-12).
 
-**Next up:** Phase 18 (M84-M89: GPCA Reference Model). Phase 16 remaining (M75-M77: Cloud, Multi-user, Domain packages).
+**Next up:** Phase 16 remaining (M75-M77: Cloud, Multi-user, Domain packages).
 
-**GitLab milestones:** M36-M61 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed. M78 closed. M79-M83 closed. M84-M89 active.
+**GitLab milestones:** M36-M61 closed. M62-M68 closed. M69-M71 closed. M72-M74 closed. M78 closed. M79-M83 closed. M84-M89 closed.
