@@ -40,6 +40,7 @@ export interface ErrorMessage {
 export type ClientMessage =
     | RequestRefreshMessage
     | ElementUpdateMessage
+    | ElementCreateMessage
     | AddRelationshipMessage
     | CsvImportMessage
     | DiagramCreateMessage
@@ -56,6 +57,17 @@ export interface ElementUpdateMessage {
     payload: {
         elementId: string;
         doc?: string;
+        attributes?: Record<string, string>;
+    };
+}
+
+/** Client requests a new element creation in SysML */
+export interface ElementCreateMessage {
+    type: 'element:create';
+    payload: {
+        name: string;
+        kind: string;
+        construct: string;
         attributes?: Record<string, string>;
     };
 }

@@ -114,11 +114,21 @@ export function requestRefresh(): void {
 }
 
 /** Send an element update to the CLI server for 2-way sync */
-export function sendElementUpdate(elementId: string, update: { doc?: string; attributes?: Record<string, string> }): void {
+export function sendElementUpdate(element: any): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'element:update',
-            payload: { elementId, ...update },
+            payload: element,
+        }));
+    }
+}
+
+/** Send a new element creation to the CLI server */
+export function sendElementCreate(element: any): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'element:create',
+            payload: element,
         }));
     }
 }

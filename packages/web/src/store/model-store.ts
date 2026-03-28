@@ -12,6 +12,9 @@ import type {
     DiagramDTO,
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
+import { sendElementUpdate, sendElementCreate } from './ws-client';
+
+export const FOLDER_ATTR = '_folder';
 
 /** @deprecated Legacy 6-mode type — kept for backward compat during transition */
 export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm';
@@ -19,6 +22,7 @@ export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionf
 /** Active view in the unified canvas */
 export type ActiveView =
     | { type: 'diagram'; diagramId: string }
+    | { type: 'element-detail'; elementId: string }
     | { type: 'actionflow' }
     | { type: 'dsm' }
     | { type: 'ontology' }
@@ -40,7 +44,9 @@ export interface ContextMenuState {
     x: number;
     y: number;
     elementId?: string;
-    groupKey?: string;
+    folderId?: string;
+    kind?: string;
+    type: 'element' | 'folder' | 'kind' | 'group';
 }
 
 export interface ModelState {
@@ -63,6 +69,10 @@ export interface ModelState {
     hiddenLayers: Set<string>;
     ontologyGroupBy: GroupBy;
     collapsedGroups: Set<string>;
+
+    // Gap bar
+    gapBarExpanded: boolean;
+    gapBarHeight: number;
 
     // ─── Catalog State ────────────────────────────────────────────────────
     catalogGroupBy: CatalogGroupBy;
@@ -94,6 +104,10 @@ export interface ModelState {
     setOntologyGroupBy: (groupBy: GroupBy) => void;
     toggleGroupCollapsed: (groupId: string) => void;
 
+    // Gap bar actions
+    toggleGapBar: () => void;
+    setGapBarHeight: (height: number) => void;
+
     // Catalog actions
     setCatalogGroupBy: (groupBy: CatalogGroupBy) => void;
     toggleCatalogCollapsed: (groupId: string) => void;
@@ -108,6 +122,11 @@ export interface ModelState {
     setEditingElement: (id: string | null) => void;
     updateElementField: (elementId: string, field: 'doc', value: string) => void;
     updateElementAttribute: (elementId: string, key: string, value: string) => void;
+    updateElementFolder: (elementId: string, folderPath: string) => void;
+    moveFolder: (kind: string, oldPath: string, newPath: string) => void;
+    addElement: (kind: string, name: string, folderPath: string) => void;
+    deleteFolder: (kind: string, folderPath: string) => void;
+    cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
 }
 
@@ -132,6 +151,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
     ontologyGroupBy: 'layer' as GroupBy,
     collapsedGroups: new Set<string>(),
 
+    // Gap bar
+    gapBarExpanded: false,
+    gapBarHeight: 160,
+
     // Catalog state — collapsed by default for semantic grouping
     catalogGroupBy: 'semantic' as CatalogGroupBy,
     catalogCollapsed: new Set<string>(),
@@ -152,7 +175,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setActiveMode: (mode) => set({ activeMode: mode }),
     setActiveView: (view) => set({ activeView: view }),
     setExplorerTab: (tab) => set({ explorerTab: tab }),
-    selectElement: (id) => set({ selectedElementId: id }),
+    selectElement: (id) => {
+        if (id) {
+            set({
+                selectedElementId: id,
+                activeView: { type: 'element-detail', elementId: id },
+            });
+        } else {
+            set({ selectedElementId: id });
+        }
+    },
     selectViewpoint: (id) => set({ selectedViewpointId: id, selectedDiagramId: null }),
     selectDiagram: (id) => {
         if (!id) {
@@ -187,6 +219,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
         else next.add(groupId);
         return { collapsedGroups: next };
     }),
+
+    // Gap bar actions
+    toggleGapBar: () => set((s) => ({ gapBarExpanded: !s.gapBarExpanded })),
+    setGapBarHeight: (height) => set({ gapBarHeight: Math.max(80, Math.min(400, height)) }),
 
     // Catalog actions
     setCatalogGroupBy: (groupBy) => set({ catalogGroupBy: groupBy, catalogCollapsed: new Set() }),
@@ -229,23 +265,135 @@ export const useModelStore = create<ModelState>((set, get) => ({
         edits.set(elementId, { ...current, attributes: attrs });
         return { pendingEdits: edits };
     }),
-    applyEdit: (elementId) => {
+    updateElementFolder: (elementId, folderPath) => {
+        const el = get().model?.elements[elementId];
+        if (!el) return;
+        
+        // Immediate update and sync (DnD usually doesn't have "Save/Cancel")
+        const updated = {
+            ...el,
+            attributes: { ...el.attributes, [FOLDER_ATTR]: folderPath }
+        };
+        
+        set((s) => ({
+            model: s.model ? {
+                ...s.model,
+                elements: { ...s.model.elements, [elementId]: updated }
+            } : null
+        }));
+        
+        sendElementUpdate(updated);
+    },
+    moveFolder: (kind, oldPath, newPath) => {
+        const s = get();
+        if (!s.model) return;
+        const newElements = { ...s.model.elements };
+        const changedIds: string[] = [];
+
+        for (const [id, el] of Object.entries(newElements)) {
+            if (el.kind === kind) {
+                const currentFolder = el.attributes[FOLDER_ATTR] || '';
+                if (currentFolder === oldPath || currentFolder.startsWith(oldPath + '/')) {
+                    const subPath = currentFolder.slice(oldPath.length);
+                    const updatedFolder = (newPath + subPath).replace('//', '/');
+                    const updated = {
+                        ...el,
+                        attributes: { ...el.attributes, [FOLDER_ATTR]: updatedFolder }
+                    };
+                    newElements[id] = updated;
+                    changedIds.push(id);
+                }
+            }
+        }
+
+        if (changedIds.length === 0) return;
+
+        set((state) => ({
+            model: state.model ? { ...state.model, elements: newElements } : null
+        }));
+
+        // Sync to server
+        for (const id of changedIds) {
+            sendElementUpdate(newElements[id]);
+        }
+    },
+    addElement: (kind, name, folderPath) => {
+        const s = get();
+        if (!s.model) return;
+        const id = `${kind.toLowerCase().replace(/\s+/g, '_')}_${Math.random().toString(36).substr(2, 5)}`;
+        const ref = Object.values(s.model.elements).find(e => e.kind === kind);
+        const newElement: MemoElement = {
+            id, name, kind, construct: ref?.construct || 'part',
+            layer: ref?.layer || 'Other', doc: '',
+            attributes: { [FOLDER_ATTR]: folderPath },
+            file: ref?.file || 'model/generated.sysml',
+        };
+
+        set((state) => ({
+            model: state.model ? { ...state.model, elements: { ...state.model.elements, [id]: newElement } } : null,
+            selectedElementId: id,
+            activeView: { type: 'element-detail', elementId: id }
+        }));
+
+        sendElementCreate(newElement);
+    },
+    deleteFolder: (kind, folderPath) => {
+        const s = get();
+        if (!s.model) return;
+        const newElements = { ...s.model.elements };
+        const parentPath = folderPath.includes('/') ? folderPath.split('/').slice(0, -1).join('/') : '';
+        const changedIds: string[] = [];
+
+        for (const [id, el] of Object.entries(newElements)) {
+            if (el.kind === kind) {
+                const currentFolder = el.attributes[FOLDER_ATTR] || '';
+                if (currentFolder === folderPath || currentFolder.startsWith(folderPath + '/')) {
+                    const updatedFolder = currentFolder.replace(folderPath, parentPath).replace('//', '/');
+                    const updated = {
+                        ...el,
+                        attributes: { ...el.attributes, [FOLDER_ATTR]: updatedFolder }
+                    };
+                    newElements[id] = updated;
+                    changedIds.push(id);
+                }
+            }
+        }
+
+        if (changedIds.length === 0) return;
+
+        set((state) => ({
+            model: state.model ? { ...state.model, elements: newElements } : null
+        }));
+
+        for (const id of changedIds) {
+            sendElementUpdate(newElements[id]);
+        }
+    },
+    cancelEdit: (elementId) => set((s) => {
+        const newEdits = new Map(s.pendingEdits);
+        newEdits.delete(elementId);
+        return { pendingEdits: newEdits };
+    }),
+    applyEdit: async (elementId) => {
         const { pendingEdits, model } = get();
         const edit = pendingEdits.get(elementId);
         if (!edit || !model) return;
 
-        // Optimistic update to local model
         const el = model.elements[elementId];
         if (!el) return;
         const updated = { ...el };
         if (edit.doc !== undefined) updated.doc = edit.doc;
         if (edit.attributes) updated.attributes = { ...el.attributes, ...edit.attributes };
 
-        const newModel = {
-            ...model,
-            elements: { ...model.elements, [elementId]: updated },
-        };
+        // 1. Sync to server
+        if (elementId.startsWith('new_')) {
+            sendElementCreate(updated);
+        } else {
+            sendElementUpdate(updated);
+        }
 
+        // 2. Local update
+        const newModel = { ...model, elements: { ...model.elements, [elementId]: updated } };
         const newEdits = new Map(pendingEdits);
         newEdits.delete(elementId);
         set({ model: newModel, pendingEdits: newEdits });

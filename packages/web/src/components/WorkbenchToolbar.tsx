@@ -34,8 +34,8 @@ export function WorkbenchToolbar() {
         >
             {/* Project info */}
             <div className="flex items-center gap-3">
-                <span className="text-xs font-medium" style={{ color: '#2DD4A8' }}>
-                    MEMO Workbench
+                <span className="text-sm font-bold" style={{ color: '#2DD4A8' }}>
+                    MEMO Architect
                 </span>
                 {model && (
                     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -70,12 +70,11 @@ export function WorkbenchToolbar() {
                 })}
             </div>
 
-            {/* Logo */}
             <img
-                src="/memo-top.png"
+                src="/logo.png"
                 alt="MEMO"
                 className="ml-3"
-                style={{ height: 56, marginTop: -4, marginBottom: -10 }}
+                style={{ height: 40, opacity: 0.9 }}
             />
         </div>
     );

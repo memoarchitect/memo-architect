@@ -4,11 +4,51 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const FONT = {
-    badge: '10px',
-    xs: '11px',
-    sm: '12px',
-    md: '13px',
-    lg: '14px',
+    badge: '11px',
+    xs: '12px',
+    sm: '13px',
+    md: '14px',
+    lg: '15px',
+    /** Explorer panel specific sizes */
+    explorer: {
+        heading: '14px',
+        group: '13px',
+        kind: '12px',
+        item: '13px',
+        count: '11px',
+        search: '13px',
+        tab: '13px',
+    },
+} as const;
+
+/** Semantic text colors — ensures consistent contrast throughout the UI */
+export const COLOR = {
+    /** Primary text — headings, element names */
+    primary: '#1a1a1a',
+    /** Secondary text — descriptions, sub-labels */
+    secondary: '#4B5563',
+    /** Muted text — metadata, inactive items */
+    muted: '#6B7280',
+    /** Faint text — placeholders, disabled */
+    faint: '#9CA3AF',
+    /** Surface backgrounds */
+    surface: '#FFFFFF',
+    surfaceAlt: '#F7F7F5',
+    /** Borders */
+    border: '#E5E5E0',
+    borderLight: '#EDEDEA',
+    /** Accent */
+    accent: '#2DD4A8',
+    accentDark: '#1B3A4B',
+} as const;
+
+/** Tree icons for file-explorer style */
+export const ICON = {
+    folderOpen: '📂',
+    folderClosed: '📁',
+    document: '📄',
+    chevronRight: '▶',
+    chevronDown: '▼',
 } as const;
 
 export const SHADOW = {

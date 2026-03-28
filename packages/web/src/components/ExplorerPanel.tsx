@@ -5,20 +5,85 @@ import {
     getDiagramsForViewpoint,
     getRelationshipsForElement,
     type ExplorerTab,
+    FOLDER_ATTR,
 } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
-import { FONT } from '../styles/tokens';
+import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import type { MemoElement, DiagramDTO } from '@memo/core';
 
-// ─── Element Context Menu ────────────────────────────────────────────────────
+// ─── SVG Chevron Icons ───────────────────────────────────────────────────────
 
-interface CtxMenuState { x: number; y: number; elementId: string; }
+function ChevronIcon({ expanded, size = 14, color = COLOR.muted }: { expanded: boolean; size?: number; color?: string }) {
+    return (
+        <svg
+            width={size} height={size}
+            viewBox="0 0 16 16"
+            fill="none"
+            style={{
+                transition: 'transform 150ms ease',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                flexShrink: 0,
+            }}
+        >
+            <path
+                d="M6 4L10 8L6 12"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+// ─── Tree Icons ──────────────────────────────────────────────────────────────
+
+function FolderIcon({ open, color = COLOR.muted }: { open: boolean; color?: string }) {
+    if (open) {
+        return (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M1.5 3.5h4.8l1.2 1.5H14.5v8H1.5z" fill={color} opacity="0.15" stroke={color} strokeWidth="1" strokeLinejoin="round" />
+                <path d="M1.5 5h13v8H1.5z" fill={color} opacity="0.08" />
+            </svg>
+        );
+    }
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M1.5 3.5h4.8l1.2 1.5H14.5v8H1.5z" fill={color} opacity="0.15" stroke={color} strokeWidth="1" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function ItemIcon({ color = COLOR.muted }: { color?: string }) {
+    return (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="2" y="1.5" width="12" height="13" rx="1.5" fill={color} opacity="0.1" stroke={color} strokeWidth="1" />
+            <line x1="5" y1="5.5" x2="11" y2="5.5" stroke={color} strokeWidth="0.8" opacity="0.5" />
+            <line x1="5" y1="8" x2="11" y2="8" stroke={color} strokeWidth="0.8" opacity="0.5" />
+            <line x1="5" y1="10.5" x2="9" y2="10.5" stroke={color} strokeWidth="0.8" opacity="0.5" />
+        </svg>
+    );
+}
+
+// ─── Explorer Context Menu ───────────────────────────────────────────────────
+
+interface CtxMenuState {
+    x: number;
+    y: number;
+    elementId?: string;
+    folderId?: string;
+    kind?: string;
+    type: 'element' | 'folder' | 'kind' | 'group';
+}
 
 function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
     const model = useModelStore(s => s.model);
     const selectElement = useModelStore(s => s.selectElement);
-    const setActiveView = useModelStore(s => s.setActiveView);
+    const addElement = useModelStore(s => s.addElement);
+    const updateElementFolder = useModelStore(s => s.updateElementFolder);
+    const moveFolder = useModelStore(s => s.moveFolder);
+    const deleteFolder = useModelStore(s => s.deleteFolder);
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -29,21 +94,85 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         return () => document.removeEventListener('mousedown', handler);
     }, [onClose]);
 
-    const el = model?.elements[menu.elementId];
-    if (!el) return null;
+    if (!model) return null;
 
-    const rels = getRelationshipsForElement(model, menu.elementId);
-    const outgoing = rels.filter(r => r.sourceId === menu.elementId);
+    let title = '';
+    let actions: { label: string; action: () => void; danger?: boolean }[] = [];
 
-    const actions = [
-        { label: 'View properties', action: () => selectElement(menu.elementId) },
-        ...(outgoing.length > 0 ? [{
-            label: `Show ${outgoing.length} outgoing relationships`,
-            action: () => selectElement(menu.elementId),
-        }] : []),
-        { label: `Copy ID: ${el.id}`, action: () => navigator.clipboard?.writeText(el.id) },
-        { label: `Copy name: ${el.name}`, action: () => navigator.clipboard?.writeText(el.name) },
-    ];
+    if (menu.type === 'element' && menu.elementId) {
+        const el = model.elements[menu.elementId];
+        if (!el) return null;
+        title = el.name;
+        actions = [
+            { label: 'View details', action: () => selectElement(el.id) },
+            {
+                label: 'Move to folder...',
+                action: () => {
+                    const path = window.prompt('Enter new folder path (e.g., Manufacturers/Hardware):', el.attributes[FOLDER_ATTR] || '');
+                    if (path !== null) updateElementFolder(el.id, path);
+                }
+            },
+            { label: 'Copy ID', action: () => navigator.clipboard?.writeText(el.id) },
+        ];
+    } else if (menu.type === 'folder' && menu.folderId && menu.kind) {
+        title = `Folder: ${menu.folderId.split('/').pop()}`;
+        actions = [
+            {
+                label: 'Add Element here',
+                action: () => {
+                    const name = window.prompt('Enter element name:');
+                    if (name) addElement(menu.kind!, name, menu.folderId!);
+                }
+            },
+            {
+                label: 'Add Sub-group',
+                action: () => {
+                    const name = window.prompt('Enter group name:');
+                    if (name) {
+                        const newPath = menu.folderId ? `${menu.folderId}/${name}` : name;
+                        // Just a dummy addElement to "create" the folder
+                        addElement(menu.kind!, `(new ${name} element)`, newPath);
+                    }
+                }
+            },
+            {
+                label: 'Move Folder...',
+                action: () => {
+                    const newPath = window.prompt('Enter new folder path:', menu.folderId);
+                    if (newPath && newPath !== menu.folderId) moveFolder(menu.kind!, menu.folderId!, newPath);
+                }
+            },
+            {
+                label: 'Delete Folder (Move items up)',
+                danger: true,
+                action: () => {
+                    if (window.confirm(`Move all elements in "${menu.folderId}" to its parent group?`)) {
+                        deleteFolder(menu.kind!, menu.folderId!);
+                    }
+                }
+            }
+        ];
+    } else if (menu.type === 'kind' && menu.kind) {
+        title = `Category: ${menu.kind}`;
+        actions = [
+            {
+                label: 'Add Element',
+                action: () => {
+                    const name = window.prompt('Enter element name:');
+                    if (name) addElement(menu.kind!, name, '');
+                }
+            },
+            {
+                label: 'New Group',
+                action: () => {
+                    const name = window.prompt('Enter group name:');
+                    if (name) addElement(menu.kind!, `(new ${name} element)`, name);
+                }
+            }
+        ];
+    }
+
+    if (!actions.length) return null;
 
     return (
         <div
@@ -51,18 +180,21 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             className="fixed z-50 rounded-lg overflow-hidden py-1"
             style={{
                 left: menu.x, top: menu.y,
-                background: '#FFFFFF', border: '1px solid #E5E5E0',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '180px',
+                background: COLOR.surface, border: `1px solid ${COLOR.border}`,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '220px',
             }}
         >
-            <div className="px-3 py-1.5 text-xs font-medium truncate" style={{ color: '#9CA3AF', borderBottom: '1px solid #E5E5E0' }}>
-                {el.name}
+            <div className="px-3 py-1.5 font-bold truncate bg-slate-50" style={{ color: COLOR.primary, fontSize: FONT.xs, borderBottom: `1px solid ${COLOR.border}` }}>
+                {title.toUpperCase()}
             </div>
             {actions.map((a, i) => (
                 <div
                     key={i}
-                    className="px-3 py-1.5 text-xs cursor-pointer"
-                    style={{ color: '#374151' }}
+                    className="px-3 py-2 cursor-pointer transition-colors"
+                    style={{ 
+                        color: a.danger ? '#DC2626' : COLOR.secondary, 
+                        fontSize: FONT.explorer.item 
+                    }}
                     onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     onClick={() => { a.action(); onClose(); }}
@@ -83,22 +215,218 @@ function TabBar({ active, onChange }: { active: ExplorerTab; onChange: (tab: Exp
         { id: 'worksets', label: 'Sets' },
     ];
     return (
-        <div className="flex" style={{ borderBottom: '1px solid #E5E5E0' }}>
+        <div className="flex" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
             {tabs.map(tab => (
                 <button
                     key={tab.id}
                     onClick={() => onChange(tab.id)}
-                    className="flex-1 px-3 py-2 text-xs font-medium transition-colors"
-                    style={
-                        active === tab.id
-                            ? { color: '#1B3A4B', borderBottom: '2px solid #2DD4A8', background: '#FAFAF8' }
-                            : { color: '#9CA3AF', borderBottom: '2px solid transparent' }
-                    }
+                    className="flex-1 px-3 py-2.5 font-medium transition-colors"
+                    style={{
+                        fontSize: FONT.explorer.tab,
+                        ...(active === tab.id
+                            ? { color: COLOR.accentDark, borderBottom: `2px solid ${COLOR.accent}`, background: '#FAFAF8' }
+                            : { color: COLOR.faint, borderBottom: '2px solid transparent' }),
+                    }}
                 >
                     {tab.label}
                 </button>
             ))}
         </div>
+    );
+}
+
+// ─── Model Tree Persistence ─────────────────────────────────────────────────
+
+interface TreeNode {
+    id: string; // f:<path> or e:<id>
+    name: string;
+    type: 'folder' | 'element';
+    children: TreeNode[];
+    element?: MemoElement;
+}
+
+function buildTree(elements: MemoElement[]): TreeNode[] {
+    const root: TreeNode[] = [];
+    const folders = new Map<string, TreeNode>();
+
+    // Sort elements by name first
+    const sorted = [...elements].sort((a, b) => a.name.localeCompare(b.name));
+
+    for (const el of sorted) {
+        const path = el.attributes[FOLDER_ATTR] || '';
+        const parts = path.split('/').filter(Boolean);
+
+        let currentLevel = root;
+        let currentPath = '';
+
+        for (const part of parts) {
+            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            const folderKey = `f:${currentPath}`;
+
+            let folder = currentLevel.find(n => n.id === folderKey);
+            if (!folder) {
+                folder = {
+                    id: folderKey,
+                    name: part,
+                    type: 'folder',
+                    children: [],
+                };
+                currentLevel.push(folder);
+            }
+            currentLevel = folder.children;
+        }
+
+        currentLevel.push({
+            id: el.id,
+            name: el.name,
+            type: 'element',
+            children: [],
+            element: el,
+        });
+    }
+
+    // Sort children: Folders first, then alphabetical Name
+    const sortNodes = (nodes: TreeNode[]) => {
+        nodes.sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+        for (const node of nodes) {
+            if (node.children.length > 0) sortNodes(node.children);
+        }
+    };
+    sortNodes(root);
+
+    return root;
+}
+
+function RecursiveTree({
+    nodes,
+    level,
+    expanded,
+    toggleExpand,
+    selectedElementId,
+    selectElement,
+    violationCounts,
+    baseColor,
+    onContextMenu,
+    onDragStart,
+    onDrop,
+}: {
+    nodes: TreeNode[];
+    level: number;
+    expanded: Set<string>;
+    toggleExpand: (id: string, e?: React.MouseEvent) => void;
+    selectedElementId: string | null;
+    selectElement: (id: string | null) => void;
+    violationCounts: Map<string, number>;
+    baseColor: string;
+    onContextMenu: (e: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
+    onDragStart: (e: React.DragEvent, node: TreeNode) => void;
+    onDrop: (e: React.DragEvent, folderPath: string) => void;
+}) {
+    return (
+        <>
+            {nodes.map(node => {
+                if (node.type === 'folder') {
+                    const isExpanded = expanded.has(node.id);
+                    return (
+                        <div
+                            key={node.id}
+                            style={{ marginLeft: level > 0 ? '16px' : '0' }}
+                            draggable
+                            onDragStart={e => onDragStart(e, node)}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => onDrop(e, node.id.replace('f:', ''))}
+                        >
+                            <div
+                                className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                                style={{ borderRadius: '4px', margin: '0 4px' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                onClick={() => toggleExpand(node.id)}
+                                onContextMenu={e => onContextMenu(e, 'folder', node.id)}
+                            >
+                                <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
+                                <FolderIcon open={isExpanded} color={baseColor} />
+                                <span
+                                    className="font-medium flex-1 truncate"
+                                    style={{ color: COLOR.secondary, fontSize: FONT.explorer.kind }}
+                                >
+                                    {node.name}
+                                </span>
+                            </div>
+                            {isExpanded && (
+                                <RecursiveTree
+                                    nodes={node.children}
+                                    level={level + 1}
+                                    expanded={expanded}
+                                    toggleExpand={toggleExpand}
+                                    selectedElementId={selectedElementId}
+                                    selectElement={selectElement}
+                                    violationCounts={violationCounts}
+                                    baseColor={baseColor}
+                                    onContextMenu={onContextMenu}
+                                    onDragStart={onDragStart}
+                                    onDrop={onDrop}
+                                />
+                            )}
+                        </div>
+                    );
+                } else {
+                    const el = node.element!;
+                    const isSelected = selectedElementId === el.id;
+                    const vCount = violationCounts.get(el.id) || 0;
+                    const layerClr = LAYER_COLORS[el.layer] || baseColor;
+
+                    return (
+                        <div
+                            key={el.id}
+                            className="flex items-center gap-1.5 px-2 py-1 cursor-pointer"
+                            style={{
+                                borderRadius: '4px',
+                                margin: '0 4px',
+                                marginLeft: (level > 0 ? 16 : 0) + 20 + 'px',
+                                background: isSelected ? COLOR.accent + '18' : 'transparent',
+                                fontWeight: isSelected ? 500 : 400,
+                            }}
+                            draggable
+                            onDragStart={e => onDragStart(e, { type: 'element', element: el, id: el.id, name: el.name, children: [] })}
+                            onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
+                            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? COLOR.accent + '18' : 'transparent'; }}
+                            onClick={() => selectElement(el.id)}
+                            onContextMenu={e => onContextMenu(e, 'element', el.id)}
+                        >
+                            <ItemIcon color={layerClr} />
+                            <span
+                                className="truncate flex-1"
+                                style={{
+                                    color: isSelected ? COLOR.accentDark : COLOR.primary,
+                                    fontSize: FONT.explorer.item,
+                                }}
+                            >
+                                {el.name}
+                            </span>
+                            {vCount > 0 && (
+                                <span
+                                    className="px-1 py-0.5 rounded-full"
+                                    style={{
+                                        background: '#FEF2F2',
+                                        color: '#DC2626',
+                                        fontSize: FONT.explorer.count,
+                                        fontWeight: 600,
+                                        minWidth: '16px',
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    {vCount}
+                                </span>
+                            )}
+                        </div>
+                    );
+                }
+            })}
+        </>
     );
 }
 
@@ -108,19 +436,35 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
+    const updateElementFolder = useModelStore(s => s.updateElementFolder);
+    const moveFolder = useModelStore(s => s.moveFolder);
     const validation = useModelStore(s => s.validation);
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
+    const [dragging, setDragging] = useState<{ id: string; kind: string } | null>(null);
 
-    const toggleExpand = (key: string) => {
+    const toggleExpand = useCallback((key: string, e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setExpanded(prev => {
             const next = new Set(prev);
             if (next.has(key)) next.delete(key);
             else next.add(key);
             return next;
         });
-    };
+    }, []);
+
+    const onContextMenu = useCallback((e: React.MouseEvent, type: CtxMenuState['type'], id: string, kind?: string) => {
+        e.preventDefault();
+        setCtxMenu({
+            x: e.clientX,
+            y: e.clientY,
+            type,
+            elementId: type === 'element' ? id : undefined,
+            folderId: type === 'folder' ? id.replace('f:', '') : undefined,
+            kind: kind || (type === 'kind' ? id.replace('k:', '').split(':').pop() : undefined),
+        });
+    }, []);
 
     // Build semantic group tree
     const groupTree = useMemo(() => {
@@ -128,7 +472,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         const elements = Object.values(model.elements);
         const lower = searchTerm.toLowerCase();
 
-        const groups: { group: typeof SEMANTIC_GROUPS[number]; kinds: Map<string, MemoElement[]> }[] = [];
+        const groups: { group: typeof SEMANTIC_GROUPS[number]; kinds: Map<string, TreeNode[]> }[] = [];
 
         for (const sg of SEMANTIC_GROUPS) {
             const kindMap = new Map<string, MemoElement[]>();
@@ -139,28 +483,83 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
                 kindMap.get(el.kind)!.push(el);
             }
+
             if (kindMap.size > 0) {
-                groups.push({ group: sg, kinds: kindMap });
+                const treeMap = new Map<string, TreeNode[]>();
+                for (const [kind, els] of kindMap.entries()) {
+                    treeMap.set(kind, buildTree(els));
+                }
+                groups.push({ group: sg, kinds: treeMap });
             }
         }
 
         // Uncategorized elements
-        const uncategorized = new Map<string, MemoElement[]>();
+        const uncategorizedMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
             if (KIND_TO_GROUP[el.kind]) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-            if (!uncategorized.has(el.kind)) uncategorized.set(el.kind, []);
-            uncategorized.get(el.kind)!.push(el);
+            if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
+            uncategorizedMap.get(el.kind)!.push(el);
         }
-        if (uncategorized.size > 0) {
+
+        if (uncategorizedMap.size > 0) {
+            const treeMap = new Map<string, TreeNode[]>();
+            for (const [kind, els] of uncategorizedMap.entries()) {
+                treeMap.set(kind, buildTree(els));
+            }
             groups.push({
                 group: { id: 'other', label: 'Other', color: '#6B7280', kinds: [] },
-                kinds: uncategorized,
+                kinds: treeMap,
             });
         }
 
         return groups;
     }, [model, searchTerm]);
+
+    // ─── DnD Handlers ───
+
+    const handleDragStart = useCallback((e: React.DragEvent, node: TreeNode, kind: string) => {
+        setDragging({ id: node.id, kind });
+        e.dataTransfer.setData('application/memo-node', JSON.stringify({
+            id: node.id,
+            type: node.type,
+            kind: kind,
+            name: node.name,
+            elementId: node.element?.id,
+            folderPath: node.type === 'folder' ? node.id.replace('f:', '') : undefined
+        }));
+        e.dataTransfer.effectAllowed = 'move';
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent, targetKind: string) => {
+        if (dragging?.kind === targetKind) {
+            e.preventDefault(); // Allow drop
+            e.dataTransfer.dropEffect = 'move';
+        }
+    }, [dragging]);
+
+    const handleDrop = useCallback((e: React.DragEvent, targetFolderPath: string, targetKind: string) => {
+        e.preventDefault();
+        setDragging(null);
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/memo-node'));
+            if (data.kind !== targetKind) return;
+
+            if (data.type === 'element') {
+                updateElementFolder(data.elementId, targetFolderPath);
+            } else if (data.type === 'folder') {
+                // Prevent dropping into self or its own descendant
+                if (targetFolderPath === data.folderPath || targetFolderPath.startsWith(data.folderPath + '/')) {
+                    return;
+                }
+                const subPath = data.folderPath.includes('/') ? data.folderPath.slice(data.folderPath.lastIndexOf('/') + 1) : data.folderPath;
+                const newPath = targetFolderPath ? targetFolderPath + '/' + subPath : subPath;
+                moveFolder(data.kind, data.folderPath, newPath);
+            }
+        } catch (err) {
+            console.error('Drop error:', err);
+        }
+    }, [updateElementFolder, moveFolder]);
 
     // Violation counts per element
     const violationCounts = useMemo(() => {
@@ -174,83 +573,108 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, [validation]);
 
     return (
-        <div className="flex-1 overflow-y-auto text-xs py-1">
+        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
             {groupTree.map(({ group, kinds }) => {
                 const groupKey = `g:${group.id}`;
                 const isExpanded = expanded.has(groupKey);
-                const totalCount = Array.from(kinds.values()).reduce((sum, els) => sum + els.length, 0);
+                
+                // Recursive element counter for group badges
+                const countElements = (nodes: TreeNode[]): number => 
+                    nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
+                
+                const totalCount = Array.from(kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
 
                 return (
                     <div key={group.id} className="mb-0.5">
-                        {/* Group header */}
+                        {/* ── Group header (folder-like) ── */}
                         <div
-                            className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none"
+                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                             style={{ margin: '0 4px', borderRadius: '4px' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             onClick={() => toggleExpand(groupKey)}
+                            onContextMenu={e => onContextMenu(e, 'group', groupKey)}
                         >
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: group.color }} />
-                            <span className="font-medium flex-1 truncate" style={{ color: '#374151' }}>
+                            <ChevronIcon expanded={isExpanded} size={14} color={group.color} />
+                            <FolderIcon open={isExpanded} color={group.color} />
+                            <span
+                                className="font-semibold flex-1 truncate"
+                                style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}
+                            >
                                 {group.label}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded-full" style={{ background: '#F0F0ED', color: '#6B7280', fontSize: '9px', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
+                            <span
+                                className="px-1.5 py-0.5 rounded-full"
+                                style={{
+                                    background: group.color + '15',
+                                    color: group.color,
+                                    fontSize: FONT.explorer.count,
+                                    fontWeight: 600,
+                                    minWidth: '20px',
+                                    textAlign: 'center',
+                                }}
+                            >
                                 {totalCount}
                             </span>
-                            <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{isExpanded ? '\u25BE' : '\u25B8'}</span>
                         </div>
 
-                        {/* Kind sub-groups */}
-                        {isExpanded && Array.from(kinds.entries()).map(([kind, elements]) => {
+                        {/* ── Kind sub-groups ── */}
+                        {isExpanded && Array.from(kinds.entries()).map(([kind, nodes]) => {
                             const kindKey = `k:${group.id}:${kind}`;
                             const isKindExpanded = expanded.has(kindKey);
-                            const layerColor = LAYER_COLORS[elements[0]?.layer] || group.color;
+                            
+                            // Find layer color for this kind from the first element found
+                            const findLayer = (nodes: TreeNode[]): string | undefined => {
+                                for (const n of nodes) {
+                                    if (n.type === 'element') return n.element?.layer;
+                                    const l = findLayer(n.children);
+                                    if (l) return l;
+                                }
+                            };
+                            const kindLayer = findLayer(nodes);
+                            const layerColor = kindLayer ? (LAYER_COLORS[kindLayer] || group.color) : group.color;
 
                             return (
-                                <div key={kind} className="ml-3">
+                                <div
+                                    key={kind}
+                                    style={{ marginLeft: '16px' }}
+                                    onDragOver={e => handleDragOver(e, kind)}
+                                    onDrop={e => handleDrop(e, '', kind)}
+                                >
                                     <div
-                                        className="flex items-center gap-2 px-2 py-1 cursor-pointer select-none"
+                                        className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
                                         style={{ borderRadius: '4px', margin: '0 4px' }}
                                         onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         onClick={() => toggleExpand(kindKey)}
+                                        onContextMenu={e => onContextMenu(e, 'kind', kindKey, kind)}
                                     >
-                                        <span className="px-1.5 py-0.5 rounded" style={{ background: layerColor + '15', color: layerColor, fontSize: FONT.badge, fontWeight: 600 }}>
+                                        <ChevronIcon expanded={isKindExpanded} size={12} color={COLOR.muted} />
+                                        <FolderIcon open={isKindExpanded} color={layerColor} />
+                                        <span
+                                            className="font-medium flex-1 truncate"
+                                            style={{ color: COLOR.secondary, fontSize: FONT.explorer.kind }}
+                                        >
                                             {kind}
                                         </span>
-                                        <span className="flex-1" />
-                                        <span style={{ color: '#9CA3AF', fontSize: '9px' }}>{elements.length}</span>
-                                        <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{isKindExpanded ? '\u25BE' : '\u25B8'}</span>
                                     </div>
 
-                                    {/* Elements */}
-                                    {isKindExpanded && elements.sort((a, b) => a.name.localeCompare(b.name)).map(el => {
-                                        const isSelected = selectedElementId === el.id;
-                                        const vCount = violationCounts.get(el.id) || 0;
-                                        return (
-                                            <div
-                                                key={el.id}
-                                                className="flex items-center gap-1.5 px-2 py-1 cursor-pointer ml-4"
-                                                style={{
-                                                    borderRadius: '4px', margin: '0 4px',
-                                                    background: isSelected ? '#2DD4A818' : 'transparent',
-                                                }}
-                                                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
-                                                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
-                                                onClick={() => selectElement(el.id)}
-                                                onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, elementId: el.id }); }}
-                                            >
-                                                <span className="truncate flex-1" style={{ color: isSelected ? '#1B3A4B' : '#374151' }}>
-                                                    {el.name}
-                                                </span>
-                                                {vCount > 0 && (
-                                                    <span className="px-1 py-0.5 rounded-full" style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '9px', fontWeight: 600, minWidth: '14px', textAlign: 'center' }}>
-                                                        {vCount}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                    {/* ── Recursive Tree Content ── */}
+                                    {isKindExpanded && (
+                                        <RecursiveTree
+                                            nodes={nodes}
+                                            level={0}
+                                            expanded={expanded}
+                                            toggleExpand={toggleExpand}
+                                            selectedElementId={selectedElementId}
+                                            selectElement={selectElement}
+                                            violationCounts={violationCounts}
+                                            baseColor={layerColor}
+                                            onContextMenu={(e, type, id) => onContextMenu(e, type, id, kind)}
+                                            onDragStart={e => handleDragStart(e, nodes[0], kind)}
+                                            onDrop={e => handleDrop(e, '', kind)}
+                                        />
+                                    )}
                                 </div>
                             );
                         })}
@@ -268,7 +692,7 @@ function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
     const meta = DIAGRAM_TYPE_META[diagramType];
     if (!meta) return null;
     return (
-        <span className="px-1 py-0.5 rounded text-xs font-semibold"
+        <span className="px-1.5 py-0.5 rounded font-semibold"
             style={{ background: meta.color + '20', color: meta.color, fontSize: FONT.badge }}
             title={meta.fullName}
         >
@@ -309,23 +733,23 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
 
     return (
-        <div className="flex-1 overflow-y-auto text-xs py-1">
+        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
             {/* Model Viewpoint */}
             <div className="mb-0.5">
                 <div
-                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                     style={{ borderRadius: '4px', margin: '0 4px' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     onClick={() => { selectViewpoint(null); toggleExpand('__model'); }}
                 >
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#2DD4A8' }} />
-                    <span className="font-medium flex-1" style={{ color: '#374151' }}>Model Viewpoint</span>
-                    <span style={{ color: '#9CA3AF', fontSize: '9px' }}>{modelDiagrams.length}</span>
-                    <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{expandedVps.has('__model') ? '\u25BE' : '\u25B8'}</span>
+                    <ChevronIcon expanded={expandedVps.has('__model')} size={14} color={COLOR.accent} />
+                    <FolderIcon open={expandedVps.has('__model')} color={COLOR.accent} />
+                    <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>Model Viewpoint</span>
+                    <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{modelDiagrams.length}</span>
                 </div>
                 {expandedVps.has('__model') && (
-                    <div className="ml-4">
+                    <div style={{ marginLeft: '16px' }}>
                         {filterDiagrams(modelDiagrams).map(diag => (
                             <DiagramRow
                                 key={diag.id}
@@ -344,25 +768,25 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             {/* Named viewpoints */}
             {viewpoints.map(vp => {
                 const isExpanded = expandedVps.has(vp.id);
-                const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || '#6B7280') : '#6B7280';
+                const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const diagrams = getDiagramsForViewpoint(model, vp.id);
 
                 return (
                     <div key={vp.id} className="mb-0.5">
                         <div
-                            className="flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none"
+                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                             style={{ borderRadius: '4px', margin: '0 4px' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             onClick={() => { selectViewpoint(vp.id); toggleExpand(vp.id); }}
                         >
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: vpColor }} />
-                            <span className="font-medium flex-1 truncate" style={{ color: '#374151' }}>{vp.label}</span>
-                            <span style={{ color: '#9CA3AF', fontSize: '9px' }}>{diagrams.length}</span>
-                            <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{isExpanded ? '\u25BE' : '\u25B8'}</span>
+                            <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
+                            <FolderIcon open={isExpanded} color={vpColor} />
+                            <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{vp.label}</span>
+                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{diagrams.length}</span>
                         </div>
                         {isExpanded && (
-                            <div className="ml-4">
+                            <div style={{ marginLeft: '16px' }}>
                                 {filterDiagrams(diagrams).map(diag => (
                                     <DiagramRow
                                         key={diag.id}
@@ -381,10 +805,10 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             })}
 
             {/* Diagram type legend */}
-            <div className="px-3 py-2 mt-2" style={{ borderTop: '1px solid #E5E5E0' }}>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#9CA3AF' }}>
+            <div className="px-3 py-2 mt-2" style={{ borderTop: `1px solid ${COLOR.border}` }}>
+                <div className="flex flex-wrap items-center gap-1.5" style={{ color: COLOR.faint, fontSize: FONT.xs }}>
                     {Object.entries(DIAGRAM_TYPE_META).map(([key, meta]) => (
-                        <span key={key} className="px-1 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: FONT.badge, fontWeight: 600 }}>
+                        <span key={key} className="px-1.5 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: FONT.badge, fontWeight: 600 }}>
                             {meta.code}
                         </span>
                     ))}
@@ -405,23 +829,31 @@ function DiagramRow({ diag, isSelected, onSelect }: {
     return (
         <div
             className="flex items-center gap-2 px-2 py-1 cursor-pointer"
-            style={{ borderRadius: '4px', margin: '0 4px', background: isSelected ? '#2DD4A818' : 'transparent' }}
+            style={{
+                borderRadius: '4px', margin: '0 4px',
+                background: isSelected ? COLOR.accent + '18' : 'transparent',
+                fontSize: FONT.explorer.item,
+            }}
             onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
-            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? COLOR.accent + '18' : 'transparent'; }}
             onClick={onSelect}
             title={[meta?.fullName, diag.description].filter(Boolean).join(' \u2014 ')}
         >
             <DiagramTypeBadge diagramType={diag.diagramType} />
             {diag.auto && (
-                <span className="px-1 py-0.5 rounded text-xs"
-                    style={{ background: '#F0F0ED', color: '#9CA3AF', fontSize: '9px', fontWeight: 600 }}>
+                <span className="px-1 py-0.5 rounded"
+                    style={{ background: '#F0F0ED', color: COLOR.faint, fontSize: FONT.badge, fontWeight: 600 }}>
                     AUTO
                 </span>
             )}
-            <span className="truncate flex-1" style={{ color: '#374151' }}>{diag.name}</span>
+            <span className="truncate flex-1" style={{ color: isSelected ? COLOR.accentDark : COLOR.primary }}>{diag.name}</span>
             {elCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-xs"
-                    style={{ background: '#F0F0ED', color: '#6B7280', fontSize: '9px', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
+                <span className="px-1.5 py-0.5 rounded-full"
+                    style={{
+                        background: '#F0F0ED', color: COLOR.muted,
+                        fontSize: FONT.explorer.count, fontWeight: 600,
+                        minWidth: '18px', textAlign: 'center',
+                    }}>
                     {elCount}
                 </span>
             )}
@@ -447,14 +879,14 @@ export function ExplorerPanel() {
         return (
             <div
                 className="flex flex-col items-center flex-shrink-0 cursor-pointer"
-                style={{ width: '40px', background: 'linear-gradient(180deg, #1B3A4B, #2D6A7A)', borderRight: '1px solid #E5E5E0' }}
+                style={{ width: '40px', background: `linear-gradient(180deg, ${COLOR.accentDark}, #2D6A7A)`, borderRight: `1px solid ${COLOR.border}` }}
                 onClick={toggleSidebar}
                 title="Expand explorer"
             >
-                <div className="py-3" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{'\u25B8'}</div>
+                <div className="py-3" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{'▸'}</div>
                 <div style={{
                     writingMode: 'vertical-rl', textOrientation: 'mixed',
-                    color: '#2DD4A8', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
+                    color: COLOR.accent, fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
                 }}>
                     Explorer
                 </div>
@@ -463,12 +895,12 @@ export function ExplorerPanel() {
     }
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
             {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
+            <div className="flex items-center gap-2 px-4 py-3" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)` }}>
                 <div className="flex-1">
-                    <h1 className="text-xs font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Explorer</h1>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px' }}>
+                    <h1 className="font-bold tracking-wide" style={{ color: COLOR.accent, fontSize: FONT.explorer.heading }}>Explorer</h1>
+                    <p className="mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', fontSize: FONT.xs }}>
                         {elementCount} elements &middot; {relCount} rels
                     </p>
                 </div>
@@ -480,7 +912,7 @@ export function ExplorerPanel() {
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
                     title="Collapse explorer"
                 >
-                    {'\u25C2'}
+                    {'◂'}
                 </button>
             </div>
 
@@ -488,14 +920,19 @@ export function ExplorerPanel() {
             <TabBar active={explorerTab} onChange={setExplorerTab} />
 
             {/* Search */}
-            <div className="px-3 py-2" style={{ borderBottom: '1px solid #E5E5E0' }}>
+            <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
                 <input
                     type="text"
                     placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg focus:outline-none"
-                    style={{ background: '#F7F7F5', border: '1px solid #E5E5E0', color: '#1a1a1a' }}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                    style={{
+                        background: COLOR.surfaceAlt,
+                        border: `1px solid ${COLOR.border}`,
+                        color: COLOR.primary,
+                        fontSize: FONT.explorer.search,
+                    }}
                 />
             </div>
 

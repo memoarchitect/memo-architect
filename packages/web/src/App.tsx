@@ -21,6 +21,7 @@ const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m
 const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m => ({ default: m.ComplianceWizard })));
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
+const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -59,6 +60,8 @@ function UnifiedCanvas() {
                 return <StatisticsDashboard />;
             case 'dhf-dashboard':
                 return <DhfDashboard />;
+            case 'element-detail':
+                return <ElementDetailView />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;
@@ -80,7 +83,7 @@ function ViewLoadingFallback() {
     return (
         <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
             <div className="text-center" style={{ color: '#9CA3AF' }}>
-                <span className="animate-pulse text-lg">{'\u25CF'}</span>
+                <img src="/logo.png" alt="MEMO Logo" style={{ width: '180px', marginBottom: '24px', opacity: 0.4, filter: 'grayscale(1)' }} className="animate-pulse" />
                 <div className="text-xs mt-2">Loading view...</div>
             </div>
         </div>
@@ -97,12 +100,24 @@ function WelcomeCanvas() {
 
     return (
         <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
-            <div className="text-center max-w-lg" style={{ lineHeight: '1.7' }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.7 }}>{'\u25A6'}</div>
-                <h2 className="text-sm font-semibold mb-2" style={{ color: '#374151' }}>
-                    Select a view to get started
+            <div className="text-center max-w-4xl" style={{ lineHeight: '1.7', transform: 'translateY(-88px)' }}>
+                <img 
+                    src="/logo.png" 
+                    alt="MEMO Logo" 
+                    style={{ 
+                        width: '715px', 
+                        maxWidth: '100%',
+                        maxHeight: '65vh',
+                        objectFit: 'contain', 
+                        display: 'block', 
+                        margin: '0 auto -66px auto', 
+                        opacity: 0.95 
+                    }} 
+                />
+                <h2 className="text-lg font-semibold mb-2" style={{ color: '#374151' }}>
+                    Welcome to MEMO Architect
                 </h2>
-                <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>
+                <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
                     Use the Explorer panel to browse model elements or select a diagram view.
                 </p>
                 {diagramCount > 0 && (
@@ -129,6 +144,7 @@ function WelcomeCanvas() {
 export function App() {
     const connected = useModelStore(s => s.connected);
     const model = useModelStore(s => s.model);
+    const activeView = useModelStore(s => s.activeView);
 
     useEffect(() => {
         if (!loadEmbeddedData()) {
@@ -145,7 +161,7 @@ export function App() {
                 <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                     <div className="text-center max-w-md">
-                        <span className="animate-pulse text-lg">{'\u25CF'}</span>
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '180px', display: 'block', margin: '0 auto 24px auto', opacity: 0.4, filter: 'grayscale(1)' }} className="animate-pulse" />
                         <div className="text-sm mt-2 mb-4">Connecting to dev server...</div>
                         <div style={{ color: '#6B7280', fontSize: '13px', lineHeight: '1.6' }}>
                             <p>Start the MEMO dev server from your project directory:</p>
@@ -180,7 +196,7 @@ export function App() {
                 <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
                     <div className="text-center">
-                        <span className="animate-pulse text-lg">{'\u25CF'}</span>
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '180px', display: 'block', margin: '0 auto 24px auto', opacity: 0.4, filter: 'grayscale(1)' }} className="animate-pulse" />
                         <div className="text-sm mt-2">Waiting for model data...</div>
                     </div>
                 </div>
@@ -195,7 +211,7 @@ export function App() {
                 <WorkbenchToolbar />
                 <div className="flex-1 flex items-center justify-center" style={{ color: '#6B7280' }}>
                     <div className="text-center max-w-lg" style={{ lineHeight: '1.7' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '16px' }}>{'\u{1F3D7}\uFE0F'}</div>
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '300px', display: 'block', margin: '0 auto 36px auto', opacity: 0.3, filter: 'grayscale(1)' }} />
                         <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
                             No model elements found
                         </h2>
@@ -247,8 +263,8 @@ export function App() {
                     <UnifiedCanvas />
                 </div>
 
-                {/* Right: Properties Panel */}
-                <UnifiedPropertiesPanel />
+                {/* Right: Properties Panel — hidden in element-detail mode */}
+                {activeView.type !== 'element-detail' && <UnifiedPropertiesPanel />}
             </div>
 
             {/* Gap bar (violations) */}
