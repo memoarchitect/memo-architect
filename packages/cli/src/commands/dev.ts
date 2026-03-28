@@ -194,6 +194,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     // 3. Start dev server
     const server = await createDevServer({
         port,
+        projectRoot: cwd,
         webPackagePath: resolveWebPackage(cwd),
         initialMessages: initial.messages,
     });

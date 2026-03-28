@@ -17,7 +17,7 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
     {
-        title: 'Welcome to MEMO Workbench',
+        title: 'Welcome to MEMO Architect',
         description: 'MEMO is a model-based systems engineering tool for medical device architecture. Let\'s take a quick tour.',
         target: 'center',
         position: 'center',

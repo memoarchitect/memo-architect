@@ -16,7 +16,7 @@ export interface CsvElement {
     name: string;
     kind: string;
     construct: string;
-    layer: string;
+    layer?: string;
     doc: string;
     attributes: Record<string, string>;
 }

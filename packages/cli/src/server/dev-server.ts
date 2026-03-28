@@ -11,6 +11,7 @@ import type { ServerMessage } from '@memo/core';
 
 export interface DevServerOptions {
     port: number;
+    projectRoot: string;
     webPackagePath: string;
     initialMessages: ServerMessage[];
 }
@@ -87,7 +88,7 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
 
         ws.on('close', () => clients.delete(ws));
 
-        ws.on('message', (data: any) => {
+        ws.on('message', async (data: any) => {
             try {
                 const msg = JSON.parse(data.toString());
                 if (msg.type === 'request:refresh') {
@@ -95,9 +96,19 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                     for (const m of initialMessages) {
                         ws.send(JSON.stringify(m));
                     }
+                } else if (msg.type === 'element:update' || msg.type === 'element:create') {
+                    // 1. Persist to FS
+                    const { saveElementToFile } = await import('./persistor.js');
+                    const { projectRoot } = options; 
+                    
+                    const result = saveElementToFile(projectRoot, msg.payload);
+                    if (result.success) {
+                        // The file watcher will catch this change and broadcast to all clients
+                        console.log(`[Persisted] ${msg.type} to ${result.filePath}`);
+                    }
                 }
-            } catch {
-                // ignore invalid messages
+            } catch (e) {
+                console.error('WebSocket Error:', e);
             }
         });
     });
