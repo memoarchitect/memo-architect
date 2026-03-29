@@ -55,66 +55,6 @@ package MEMO_Ontology_Medical_Relationships {
         end subject[1];
     }
 
-    connection def HasProductVariant {
-        end family : ProductFamily [1];
-        end variant : ProductVariant [1];
-    }
-
-    connection def SelectsFeature {
-        end variant : ProductVariant [1];
-        end feature : FeatureOption [1];
-    }
-
-    connection def SupportsAccessory {
-        end subject[1];
-        end accessory : Accessory [1];
-    }
-
-    connection def ConfiguresItem {
-        end baseline : ConfigurationBaseline [1];
-        end subject[1];
-    }
-
-    connection def ConstrainsVariant {
-        end constraint : VariantConstraint [1];
-        end variant : ProductVariant [1];
-    }
-
-    connection def HasAnatomicalSite {
-        end subject[1];
-        end site : AnatomicalSite [1];
-    }
-
-    connection def UsesMethod {
-        end procedure : Procedure [1];
-        end method : ProcedureMethod [1];
-    }
-
-    connection def UsesRoute {
-        end procedure : Procedure [1];
-        end route : RouteOfAdministration [1];
-    }
-
-    connection def ProducesObservation {
-        end procedure : Procedure [1];
-        end observation : ClinicalObservation [1];
-    }
-
-    connection def ObservesSubject {
-        end observation : ClinicalObservation [1];
-        end subject[1];
-    }
-
-    connection def AffectsMorphology {
-        end procedure : Procedure [1];
-        end morphology : MorphologyState [1];
-    }
-
-    connection def AppliesEnvironmentQualifier {
-        end environment : OperationalEnvironment [1];
-        end qualifier : ClinicalEnvironmentQualifier [1];
-    }
-
     connection def Mitigates {
         end control : RiskControl [1];
         end hazard : Hazard [1];
@@ -200,36 +140,6 @@ package MEMO_Ontology_Medical_Relationships {
         end subject[1];
     }
 
-    connection def BindsTerminology {
-        end binding : TerminologyBinding [1];
-        end subject[1];
-    }
-
-    connection def ReferencesCodeSystem {
-        end binding : TerminologyBinding [1];
-        end codeSystem : ClinicalCodeSystemReference [1];
-    }
-
-    connection def ReferencesValueSet {
-        end binding : TerminologyBinding [1];
-        end valueSet : ClinicalValueSetReference [1];
-    }
-
-    connection def UsesConceptMap {
-        end binding : TerminologyBinding [1];
-        end conceptMap : ClinicalConceptMapReference [1];
-    }
-
-    connection def MapsSourceCodeSystem {
-        end conceptMap : ClinicalConceptMapReference [1];
-        end sourceSystem : ClinicalCodeSystemReference [1];
-    }
-
-    connection def MapsTargetCodeSystem {
-        end conceptMap : ClinicalConceptMapReference [1];
-        end targetSystem : ClinicalCodeSystemReference [1];
-    }
-
     connection def ClassifiesData {
         end classification : PersonalDataCategory [1];
         end subject[1];
@@ -240,49 +150,9 @@ package MEMO_Ontology_Medical_Relationships {
         end subject[1];
     }
 
-    connection def GovernedByProcessingBasis {
-        end activity : DataProcessingActivity [1];
-        end basis : ProcessingBasis [1];
-    }
-
-    connection def RequiresConsent {
-        end subject[1];
-        end consent : ConsentRecord [1];
-    }
-
     connection def ProvidesPrivacyNotice {
         end subject[1];
         end notice : PrivacyNotice [1];
-    }
-
-    connection def GovernedByRetentionPolicy {
-        end subject[1];
-        end policy : DataRetentionPolicy [1];
-    }
-
-    connection def AppliesMinimumNecessary {
-        end activity : DataProcessingActivity [1];
-        end policy : MinimumNecessaryPolicy [1];
-    }
-
-    connection def DeIdentifiesData {
-        end method : DeIdentificationMethod [1];
-        end subject[1];
-    }
-
-    connection def PseudonymizesData {
-        end method : PseudonymizationMethod [1];
-        end subject[1];
-    }
-
-    connection def ControlsProcessing {
-        end controller : DataControllerRole [1];
-        end activity : DataProcessingActivity [1];
-    }
-
-    connection def ProcessesOnBehalfOf {
-        end processor : DataProcessorRole [1];
-        end activity : DataProcessingActivity [1];
     }
 
     connection def AssessesPrivacyImpact {
@@ -292,26 +162,6 @@ package MEMO_Ontology_Medical_Relationships {
 
     connection def RespondsToDataSubjectRequest {
         end request : DataSubjectRequest [1];
-        end subject[1];
-    }
-
-    connection def ScopesTerminologyReference {
-        end subset : ImportedTerminologySubset [1];
-        end reference : ClinicalCodeSystemReference [1];
-    }
-
-    connection def BindsImportedConcept {
-        end binding : TerminologyBinding [1];
-        end importedConcept : ImportedConceptBinding [1];
-    }
-
-    connection def GovernedByImportBoundary {
-        end boundary : TerminologyImportBoundary [1];
-        end subject[1];
-    }
-
-    connection def ProvidesImportProvenance {
-        end record : ImportProvenanceRecord [1];
         end subject[1];
     }
 
