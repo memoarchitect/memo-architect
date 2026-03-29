@@ -75,15 +75,15 @@ package InfusionPump_Compliance {
         attribute redefines title = "Pump controller software development plan";
     }
 
-    part swReqSpecPumpController : SoftwareRequirementsArtifact {
+    part swReqSpecPumpController : SoftwareWorkProduct {
         attribute redefines title = "Pump controller software requirements specification";
     }
 
-    part swArchPumpController : SoftwareArchitectureArtifact {
+    part swArchPumpController : SoftwareWorkProduct {
         attribute redefines title = "Pump controller software architecture";
     }
 
-    part swDesignAlarmHandling : SoftwareDetailedDesign {
+    part swDesignAlarmHandling : SoftwareWorkProduct {
         attribute redefines title = "Alarm handling detailed design";
     }
 
@@ -141,27 +141,27 @@ package InfusionPump_Compliance {
         attribute redefines version = "1.0.0";
     }
 
-    action swDevProcessPumpController : SoftwareDevelopmentProcess {
+    action swDevProcessPumpController : SoftwareLifecycleProcess {
         attribute redefines name = "Pump controller software development process";
     }
 
-    action swMaintProcessPumpController : SoftwareMaintenanceProcess {
+    action swMaintProcessPumpController : SoftwareLifecycleProcess {
         attribute redefines name = "Pump controller software maintenance process";
     }
 
-    action swRequirementsAlarmHandling : SoftwareRequirementsAnalysisActivity {
+    action swRequirementsAlarmHandling : SoftwareLifecycleActivity {
         attribute redefines name = "Analyze alarm handling software requirements";
     }
 
-    action swArchitectureAlarmHandling : SoftwareArchitecturalDesignActivity {
+    action swArchitectureAlarmHandling : SoftwareLifecycleActivity {
         attribute redefines name = "Design alarm handling software architecture";
     }
 
-    action swVerificationAlarmHandling : SoftwareVerificationActivity {
+    action swVerificationAlarmHandling : SoftwareLifecycleActivity {
         attribute redefines name = "Verify alarm handling implementation";
     }
 
-    action swProblemResolutionAlarmDelay : ProblemResolutionActivity {
+    action swProblemResolutionAlarmDelay : SoftwareLifecycleActivity {
         attribute redefines name = "Resolve alarm acknowledgement latency anomaly";
     }
 

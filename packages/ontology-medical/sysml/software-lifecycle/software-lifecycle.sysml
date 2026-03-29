@@ -37,39 +37,11 @@ package MEMO_Ontology_Medical_SoftwareLifecycle {
         attribute name : String;
     }
 
-    action def SoftwareDevelopmentProcess :> SoftwareLifecycleProcess { }
-
-    action def SoftwareMaintenanceProcess :> SoftwareLifecycleProcess { }
-
-    action def SoftwareRiskManagementProcess :> SoftwareLifecycleProcess { }
-
-    action def SoftwareRequirementsAnalysisActivity :> SoftwareLifecycleActivity { }
-
-    action def SoftwareArchitecturalDesignActivity :> SoftwareLifecycleActivity { }
-
-    action def SoftwareDetailedDesignActivity :> SoftwareLifecycleActivity { }
-
-    action def SoftwareUnitImplementationActivity :> SoftwareLifecycleActivity { }
-
-    action def SoftwareVerificationActivity :> SoftwareLifecycleActivity { }
-
-    action def ProblemResolutionActivity :> SoftwareLifecycleActivity { }
-
     part def SoftwareWorkProduct {
         attribute title : String;
     }
 
-    part def MaintenanceRelease :> SoftwareWorkProduct {
-        attribute version : String;
-    }
-
-    part def SoftwareRequirementsArtifact :> SoftwareWorkProduct { }
-
     part def SoftwareDevelopmentPlan :> SoftwareWorkProduct { }
-
-    part def SoftwareArchitectureArtifact :> SoftwareWorkProduct { }
-
-    part def SoftwareDetailedDesign :> SoftwareWorkProduct { }
 
     part def SOUPEvaluation :> SoftwareWorkProduct { }
 
