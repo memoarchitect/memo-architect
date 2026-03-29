@@ -5,12 +5,12 @@ package IrrigationPump_Compliance {
     import IrrigationPump_Behavior::*;
     import IrrigationPump_Architecture::*;
 
-    part circulatingNurse : UserProfile {
+    part circulatingNurse : OperationalActor {
         attribute redefines name = "Circulating Nurse";
         attribute redefines role = "Setup and consumable replacement";
     }
 
-    part arthroscopySurgeon : UserProfile {
+    part arthroscopySurgeon : OperationalActor {
         attribute redefines name = "Arthroscopy Surgeon";
         attribute redefines role = "Primary operator and irrigation user";
     }
@@ -21,7 +21,7 @@ package IrrigationPump_Compliance {
         attribute redefines careContext = "Outpatient orthopedic procedure";
     }
 
-    part operatingRoom : UseEnvironment {
+    part operatingRoom : OperationalEnvironment {
         attribute redefines name = "Operating Room";
         attribute redefines setting = "Arthroscopy procedure suite";
     }
@@ -72,7 +72,7 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Provide controlled irrigation support during arthroscopic procedures";
     }
 
-    requirement indicationArthroscopyIrrigation : IndicationForUse {
+    requirement indicationArthroscopyIrrigation : IntendedUse {
         attribute redefines title = "Arthroscopic knee and shoulder procedures requiring controlled irrigation pressure and depletion alarming";
     }
 
@@ -128,7 +128,7 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Clinician starts irrigation before confirming prime completion";
     }
 
-    action primeWorkflowScenario : HazardRelatedUseScenario {
+    action primeWorkflowScenario : OperationalScenario {
         attribute redefines name = "Disposable cassette priming before arthroscopy";
     }
 
