@@ -16,7 +16,7 @@ package MEMO_Ontology_Core_Functional {
         attribute scenarioType : String;
     }
 
-    part def UseCase {
+    action def UseCase {
         attribute name : String;
         attribute status : String;
     }

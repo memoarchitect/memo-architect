@@ -47,7 +47,7 @@ package MEMO_Ontology_Core_Operational {
         attribute scenarioType : String;
     }
 
-    part def MissionPhase {
+    action def MissionPhase {
         attribute name : String;
         attribute order : Integer;
     }

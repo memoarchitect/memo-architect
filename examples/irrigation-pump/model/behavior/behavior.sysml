@@ -1,17 +1,17 @@
 package IrrigationPump_Behavior {
     import MEMO_Ontology_Medical::*;
 
-    part ucPrimeCassette : UseCase {
+    action ucPrimeCassette : UseCase {
         attribute redefines name = "Prime Disposable Cassette";
         attribute redefines status = "Operational";
     }
 
-    part ucDeliverIrrigation : UseCase {
+    action ucDeliverIrrigation : UseCase {
         attribute redefines name = "Deliver Surgical Irrigation";
         attribute redefines status = "Operational";
     }
 
-    part ucRespondToReservoirAlarm : UseCase {
+    action ucRespondToReservoirAlarm : UseCase {
         attribute redefines name = "Respond To Reservoir Alarm";
         attribute redefines status = "Operational";
     }
