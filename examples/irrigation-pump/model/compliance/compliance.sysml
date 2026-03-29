@@ -268,15 +268,15 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Irrigation controller software development plan";
     }
 
-    part swReqSpecIrrigationController : SoftwareRequirementsArtifact {
+    part swReqSpecIrrigationController : SoftwareWorkProduct {
         attribute redefines title = "Irrigation controller software requirements specification";
     }
 
-    part swArchIrrigationController : SoftwareArchitectureArtifact {
+    part swArchIrrigationController : SoftwareWorkProduct {
         attribute redefines title = "Irrigation controller software architecture";
     }
 
-    part swDesignPrimeWorkflow : SoftwareDetailedDesign {
+    part swDesignPrimeWorkflow : SoftwareWorkProduct {
         attribute redefines title = "Prime workflow and alarm handling detailed design";
     }
 
@@ -643,27 +643,27 @@ package IrrigationPump_Compliance {
         attribute redefines version = "2.0.0";
     }
 
-    action swDevProcessIrrigationController : SoftwareDevelopmentProcess {
+    action swDevProcessIrrigationController : SoftwareLifecycleProcess {
         attribute redefines name = "Irrigation controller software development process";
     }
 
-    action swMaintProcessIrrigationController : SoftwareMaintenanceProcess {
+    action swMaintProcessIrrigationController : SoftwareLifecycleProcess {
         attribute redefines name = "Irrigation controller software maintenance process";
     }
 
-    action swRequirementsPressureControl : SoftwareRequirementsAnalysisActivity {
+    action swRequirementsPressureControl : SoftwareLifecycleActivity {
         attribute redefines name = "Analyze pressure control and alarm requirements";
     }
 
-    action swArchitecturePressureControl : SoftwareArchitecturalDesignActivity {
+    action swArchitecturePressureControl : SoftwareLifecycleActivity {
         attribute redefines name = "Design pressure control and alarm software architecture";
     }
 
-    action swVerificationPressureControl : SoftwareVerificationActivity {
+    action swVerificationPressureControl : SoftwareLifecycleActivity {
         attribute redefines name = "Verify pressure regulation and reservoir alarm implementation";
     }
 
-    action swProblemResolutionPressureSpike : ProblemResolutionActivity {
+    action swProblemResolutionPressureSpike : SoftwareLifecycleActivity {
         attribute redefines name = "Resolve pressure spike anomaly during cassette replacement";
     }
 

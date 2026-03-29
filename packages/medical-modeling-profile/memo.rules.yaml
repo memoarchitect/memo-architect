@@ -353,9 +353,7 @@ closureRules:
       direction: outgoing
       relatedKinds:
         - SoftwareDevelopmentPlan
-        - SoftwareRequirementsArtifact
-        - SoftwareArchitectureArtifact
-        - SoftwareDetailedDesign
+        - SoftwareWorkProduct
         - UseSpecification
         - UseErrorAnalysis
         - FormativeEvaluation
@@ -389,66 +387,6 @@ closureRules:
       relationship: documents
       direction: outgoing
       relatedKinds: [SoftwareSystem, SoftwareItem, SOUPEvaluation]
-      min: 1
-    severity: warning
-
-  - id: CR-MED-035
-    description: "Every SoftwareDevelopmentProcess should govern at least one lifecycle activity"
-    entity: SoftwareDevelopmentProcess
-    rule:
-      type: requireRelationship
-      relationship: governsActivity
-      direction: outgoing
-      relatedKinds:
-        - SoftwareRequirementsAnalysisActivity
-        - SoftwareArchitecturalDesignActivity
-        - SoftwareDetailedDesignActivity
-        - SoftwareUnitImplementationActivity
-        - SoftwareVerificationActivity
-      min: 1
-    severity: warning
-
-  - id: CR-MED-036
-    description: "Every SoftwareMaintenanceProcess should govern at least one problem-resolution activity"
-    entity: SoftwareMaintenanceProcess
-    rule:
-      type: requireRelationship
-      relationship: governsActivity
-      direction: outgoing
-      relatedKinds: [ProblemResolutionActivity]
-      min: 1
-    severity: warning
-
-  - id: CR-MED-037
-    description: "Every SoftwareRequirementsAnalysisActivity should produce at least one SoftwareRequirementsArtifact"
-    entity: SoftwareRequirementsAnalysisActivity
-    rule:
-      type: requireRelationship
-      relationship: producesWorkProduct
-      direction: outgoing
-      relatedKinds: [SoftwareRequirementsArtifact]
-      min: 1
-    severity: warning
-
-  - id: CR-MED-038
-    description: "Every SoftwareArchitecturalDesignActivity should produce architecture or detailed-design work products"
-    entity: SoftwareArchitecturalDesignActivity
-    rule:
-      type: requireRelationship
-      relationship: producesWorkProduct
-      direction: outgoing
-      relatedKinds: [SoftwareArchitectureArtifact, SoftwareDetailedDesign]
-      min: 1
-    severity: warning
-
-  - id: CR-MED-039
-    description: "Every ProblemResolutionActivity should produce at least one problem report or change impact assessment"
-    entity: ProblemResolutionActivity
-    rule:
-      type: requireRelationship
-      relationship: producesWorkProduct
-      direction: outgoing
-      relatedKinds: [SoftwareProblemReport, ChangeImpactAssessment]
       min: 1
     severity: warning
 
