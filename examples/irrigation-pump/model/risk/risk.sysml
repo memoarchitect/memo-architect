@@ -95,7 +95,7 @@ package IrrigationPump_Risk {
         attribute redefines title = "Reservoir Low Alarm";
     }
 
-    requirement dcPressurePlausibilityCheck : DetectionControl {
+    requirement dcPressurePlausibilityCheck : RiskControl {
         attribute redefines rcId = "RC-IRR-004";
         attribute redefines title = "Pressure Sensor Plausibility Check";
     }
@@ -143,22 +143,22 @@ package IrrigationPump_Risk {
         attribute redefines title = "Late reservoir alarm during active irrigation";
     }
 
-    requirement ieReservoirStateUndetected : IntermediateEvent {
+    requirement ieReservoirStateUndetected : FaultTreeContributor {
         attribute redefines eventId = "IE-IRR-001";
         attribute redefines title = "Reservoir state becomes unavailable to the alarm supervisor";
     }
 
-    requirement beScaleInputUnavailable : BasicEvent {
+    requirement beScaleInputUnavailable : FaultTreeContributor {
         attribute redefines eventId = "BE-IRR-001";
         attribute redefines title = "Reservoir scale input is unavailable";
     }
 
-    requirement beVolumeEstimateFrozen : BasicEvent {
+    requirement beVolumeEstimateFrozen : FaultTreeContributor {
         attribute redefines eventId = "BE-IRR-002";
         attribute redefines title = "Reservoir estimate remains frozen at a stale value";
     }
 
-    requirement beAlarmCoordinatorHung : BasicEvent {
+    requirement beAlarmCoordinatorHung : FaultTreeContributor {
         attribute redefines eventId = "BE-IRR-003";
         attribute redefines title = "Alarm coordinator stops updating the low-reservoir state";
     }

@@ -7,13 +7,13 @@ package MEMO_Ontology_Medical_RiskAnalysis {
         enum Inhibit;
     }
 
-    part def FailureAnalysis {
+    part def FailureModesAndEffectsAnalysis {
         attribute title : String;
     }
 
-    part def FailureModesAndEffectsAnalysis :> FailureAnalysis { }
-
-    part def FaultTreeAnalysis :> FailureAnalysis { }
+    part def FaultTreeAnalysis {
+        attribute title : String;
+    }
 
     requirement def FailureMode {
         attribute failureModeId : String;
@@ -30,19 +30,12 @@ package MEMO_Ontology_Medical_RiskAnalysis {
         attribute title : String;
     }
 
-    requirement def DetectionControl :> RiskControl { }
-
     requirement def TopEvent {
         attribute eventId : String;
         attribute title : String;
     }
 
-    requirement def IntermediateEvent {
-        attribute eventId : String;
-        attribute title : String;
-    }
-
-    requirement def BasicEvent {
+    requirement def FaultTreeContributor {
         attribute eventId : String;
         attribute title : String;
     }

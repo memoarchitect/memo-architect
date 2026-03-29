@@ -15,7 +15,6 @@ viewpoints:
       - BenefitRiskAssessment
       - ResidualRiskEvaluation
       - OverallResidualRiskEvaluation
-      - DetectionControl
       - FailureModesAndEffectsAnalysis
       - FailureMode
       - FailureEffect
@@ -78,10 +77,8 @@ viewpoints:
       - BenefitRiskAssessment
       - ResidualRiskEvaluation
       - OverallResidualRiskEvaluation
-      - DetectionControl
       - TopEvent
-      - IntermediateEvent
-      - BasicEvent
+      - FaultTreeContributor
       - FaultTreeGate
       - Hazard
       - HazardousSituation

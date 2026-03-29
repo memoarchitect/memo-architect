@@ -1164,37 +1164,37 @@ package GPCA_Risk {
     }
 
     // FMEA Detection Controls
-    requirement dcMotorPositionFeedback : DetectionControl {
+    requirement dcMotorPositionFeedback : RiskControl {
         attribute redefines reqId = "DC-001";
         attribute redefines title = "Motor Position Encoder Feedback";
     }
 
-    requirement dcDualSensorCrossCheck : DetectionControl {
+    requirement dcDualSensorCrossCheck : RiskControl {
         attribute redefines reqId = "DC-002";
         attribute redefines title = "Dual Sensor Cross-Validation";
     }
 
-    requirement dcValvePositionSensor : DetectionControl {
+    requirement dcValvePositionSensor : RiskControl {
         attribute redefines reqId = "DC-003";
         attribute redefines title = "Valve Position Feedback Sensor";
     }
 
-    requirement dcBatteryVoltageMonitor : DetectionControl {
+    requirement dcBatteryVoltageMonitor : RiskControl {
         attribute redefines reqId = "DC-004";
         attribute redefines title = "Battery Voltage Continuous Monitor";
     }
 
-    requirement dcDisplaySelfTest : DetectionControl {
+    requirement dcDisplaySelfTest : RiskControl {
         attribute redefines reqId = "DC-005";
         attribute redefines title = "Display Pixel Self-Test";
     }
 
-    requirement dcButtonDebounce : DetectionControl {
+    requirement dcButtonDebounce : RiskControl {
         attribute redefines reqId = "DC-006";
         attribute redefines title = "Button State Debounce Logic";
     }
 
-    requirement dcCRCIntegrityCheck : DetectionControl {
+    requirement dcCRCIntegrityCheck : RiskControl {
         attribute redefines reqId = "DC-007";
         attribute redefines title = "CRC Integrity Check on Read";
     }
@@ -1286,57 +1286,57 @@ package GPCA_Risk {
         attribute redefines title = "Patient Receives Lethal Overdose";
     }
 
-    requirement ieExcessiveDrugDelivered : IntermediateEvent {
+    requirement ieExcessiveDrugDelivered : FaultTreeContributor {
         attribute redefines reqId = "IE-001";
         attribute redefines title = "Excessive Drug Delivered to Patient";
     }
 
-    requirement ieSafetyInhibitFails : IntermediateEvent {
+    requirement ieSafetyInhibitFails : FaultTreeContributor {
         attribute redefines reqId = "IE-002";
         attribute redefines title = "Safety Inhibit Mechanism Fails";
     }
 
-    requirement ieOverDeliveryUndetected : IntermediateEvent {
+    requirement ieOverDeliveryUndetected : FaultTreeContributor {
         attribute redefines reqId = "IE-003";
         attribute redefines title = "Over-Delivery Goes Undetected";
     }
 
-    requirement beValveStuckOpen : BasicEvent {
+    requirement beValveStuckOpen : FaultTreeContributor {
         attribute redefines reqId = "BE-001";
         attribute redefines title = "Flow Control Valve Stuck Open";
     }
 
-    requirement beMotorRunaway : BasicEvent {
+    requirement beMotorRunaway : FaultTreeContributor {
         attribute redefines reqId = "BE-002";
         attribute redefines title = "Motor Runaway (Control Loop Failure)";
     }
 
-    requirement beLockoutBypass : BasicEvent {
+    requirement beLockoutBypass : FaultTreeContributor {
         attribute redefines reqId = "BE-003";
         attribute redefines title = "Bolus Lockout Timer Bypass";
     }
 
-    requirement beConcentrationMismatch : BasicEvent {
+    requirement beConcentrationMismatch : FaultTreeContributor {
         attribute redefines reqId = "BE-004";
         attribute redefines title = "10x Concentration Mismatch";
     }
 
-    requirement beWatchdogFailure : BasicEvent {
+    requirement beWatchdogFailure : FaultTreeContributor {
         attribute redefines reqId = "BE-005";
         attribute redefines title = "Hardware Watchdog Fails to Fire";
     }
 
-    requirement beBothFlowSensorsFail : BasicEvent {
+    requirement beBothFlowSensorsFail : FaultTreeContributor {
         attribute redefines reqId = "BE-006";
         attribute redefines title = "Both Flow Sensors Fail Simultaneously";
     }
 
-    requirement beSoftwareCrash : BasicEvent {
+    requirement beSoftwareCrash : FaultTreeContributor {
         attribute redefines reqId = "BE-007";
         attribute redefines title = "Software Crash During Delivery";
     }
 
-    requirement beCyberIntrusion : BasicEvent {
+    requirement beCyberIntrusion : FaultTreeContributor {
         attribute redefines reqId = "BE-008";
         attribute redefines title = "Cyber Intrusion Modifies Rate";
     }
