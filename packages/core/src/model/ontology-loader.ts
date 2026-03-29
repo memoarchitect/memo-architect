@@ -65,7 +65,38 @@ function findOntologyPackageDirs(configPath: string): string[] {
     const dirs: string[] = [];
     const seen = new Set<string>();
 
+    // 1. Walk the primary extends chain
     walkExtendsChain(configPath, dirs, seen);
+
+    // 2. Load additional ontologies from the config file's `ontologies` array.
+    // This allows for a "Base + Plugin" model where users can add multiple domain-specific ontologies.
+    try {
+        const content = readFileSync(configPath, 'utf-8');
+        // Lightweight YAML parsing for ontologies:
+        const ontologySection = content.split(/^ontologies:/m)[1];
+        if (ontologySection) {
+            const matches = ontologySection.matchAll(/^\s*-\s*name:\s*"?([\w@\/-]+)"?/gm);
+            for (const match of matches) {
+                let ontologyName = match[1];
+                // Ensure name has @memo/ prefix for resolution if missing
+                if (!ontologyName.startsWith('@memo/')) {
+                    ontologyName = `@memo/${ontologyName}`;
+                }
+                const pkgConfig = resolvePackageConfig(ontologyName, dirname(configPath));
+                if (pkgConfig) {
+                    walkExtendsChain(pkgConfig, dirs, seen);
+                }
+            }
+        }
+    } catch {
+        // Skip inaccessible configs
+    }
+
+    // 3. Ensure @memo/ontology-core is always included as the foundational backbone
+    const coreConfig = resolvePackageConfig('@memo/ontology-core', dirname(configPath));
+    if (coreConfig) {
+        walkExtendsChain(coreConfig, dirs, seen);
+    }
 
     return dirs;
 }

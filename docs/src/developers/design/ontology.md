@@ -6,10 +6,54 @@ The MEMO ontology defines the vocabulary of entity types and relationship types 
 
 MEMO is moving to a layered ontology structure:
 
-- **`@memo/ontology-core`** — domain-agnostic MBSE backbone
-- **`@memo/ontology-medical`** — regulated medical device development backbone built on top of core
-- **Product-family extensions** — device or platform specific packages
+- **`@memo/ontology-core`** — domain-agnostic MBSE backbone (required default)
+- **`@memo/ontology-medical`** — regulated medical device development backbone
+- **Product-family extensions** — domain-specific plugins (e.g., Robotics/ROS, Cybersecurity)
 - **Rules / views / templates** — separate from ontology packages
+
+## Modular Ontology Plugins
+
+MEMO supports a **Base + Plugin** architecture for ontologies. This allows the core platform to remain domain-agnostic while enabling specialized modeling capabilities for specific fields.
+
+### Architecture View
+
+```mermaid
+graph TD
+    ProjectConfig["memo.config.yaml"] --> Base["@memo/ontology-core"]
+    ProjectConfig --> Plugin1["@memo/ontology-medical"]
+    ProjectConfig --> Plugin2["@memo/ontology-ros"]
+
+    Base --> Registry["Kind & Relationship Registry"]
+    Plugin1 --> Registry
+    Plugin2 --> Registry
+
+    Registry --> Modeling["Interactive Modeling Interface"]
+```
+
+### Configuration
+
+Plugins are registered in the project's `memo.config.yaml` file using the `ontologies` array:
+
+```yaml
+projectName: smart-infusion-pump
+projectType: device
+
+# Primary profile for rules and viewpoints
+extends: "@memo/medical-modeling-profile"
+
+# Domain-specific ontology plugins
+ontologies:
+  - name: memo-ontology-medical
+    version: "^0.1.0"
+  - name: memo-ontology-ros      # Example: for robotics integration
+    version: "1.2.0"
+```
+
+### Resolution Logic
+
+1.  **Core Default**: The system always attempts to load `@memo/ontology-core` as the foundational backbone.
+2.  **Extends Chain**: The loader walks the `extends` chain of the configured profile to find parent ontologies.
+3.  **Plugins**: Packages listed in the `ontologies` array are resolved and their `sysml/` contents are merged into the global registry.
 
 ## Design Philosophy
 
