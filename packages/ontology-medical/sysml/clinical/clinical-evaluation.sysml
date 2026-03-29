@@ -15,10 +15,6 @@ package MEMO_Ontology_Medical_ClinicalEvaluation {
         attribute citation : String;
     }
 
-    part def ClinicalInvestigationReference :> ClinicalEvidenceArtifact { }
-
-    part def ClinicalLiteratureReference :> ClinicalEvidenceArtifact { }
-
     part def ClinicalExperienceEvidence :> ClinicalEvidenceArtifact { }
 
     part def ClinicalEvaluationPlan :> QMSRecord {

@@ -8,3 +8,5 @@ extends: "@memo/medical-modeling-profile"
 ontologies:
   - name: memo-ontology-medical
     version: "^0.1.0"
+  - name: "@memo/ontology-clinical"
+    version: "^0.1.0"
