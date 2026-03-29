@@ -9,3 +9,5 @@ ontologies:
     version: "^0.1.0"
   - name: "@memo/ontology-clinical"
     version: "^0.1.0"
+  - name: "@memo/ontology-clinical-interop"
+    version: "^0.1.0"
