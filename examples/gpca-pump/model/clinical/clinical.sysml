@@ -22,7 +22,7 @@ package GPCA_Clinical {
              * under the supervision of trained clinical personnel. */
     }
 
-    requirement indicationAcutePain : IndicationForUse {
+    requirement indicationAcutePain : IntendedUse {
         attribute redefines reqId = "CL-IND-001";
         attribute redefines title = "Acute Post-Operative Pain Management";
         doc /* Management of moderate to severe acute pain in adult
@@ -30,7 +30,7 @@ package GPCA_Clinical {
              * opioid analgesia. */
     }
 
-    requirement indicationChronicPain : IndicationForUse {
+    requirement indicationChronicPain : IntendedUse {
         attribute redefines reqId = "CL-IND-002";
         attribute redefines title = "Chronic Pain Management (Palliative)";
         doc /* Continuous and patient-controlled analgesia for chronic
@@ -156,27 +156,27 @@ package GPCA_Clinical {
     // ═══════════════════════════════════════════════════════════════════════
 
     // User Profiles
-    part userProfileNurse : UserProfile {
+    part userProfileNurse : OperationalActor {
         attribute redefines name = "Registered Nurse (Primary Operator)";
         doc /* RN with PCA training. Configures pump, responds to alarms,
              * monitors patient. Typical shift: 12 hours, 4-6 PCA patients. */
     }
 
-    part userProfilePatient : UserProfile {
+    part userProfilePatient : OperationalActor {
         attribute redefines name = "Hospital Inpatient (Bolus Requester)";
         doc /* Adult patient with cognitive ability to understand bolus
              * concept. May be post-surgical, sedated, or in pain.
              * Limited dexterity possible. */
     }
 
-    part userProfileBiomed : UserProfile {
+    part userProfileBiomed : OperationalActor {
         attribute redefines name = "Biomedical Technician (Maintainer)";
         doc /* Trained technician for pump maintenance, calibration,
              * and troubleshooting. Accesses service menus. */
     }
 
     // Use Scenarios
-    action useScenarioRoutineInfusion : HazardRelatedUseScenario {
+    action useScenarioRoutineInfusion : OperationalScenario {
         attribute redefines name = "Routine Infusion Setup and Monitoring";
         doc /* Nurse configures pump at patient bedside during shift handoff.
              * Scans drug, enters parameters, confirms prescription.
@@ -184,14 +184,14 @@ package GPCA_Clinical {
              * Hazard: Programming error due to distraction. */
     }
 
-    action useScenarioBolusRequest : HazardRelatedUseScenario {
+    action useScenarioBolusRequest : OperationalScenario {
         attribute redefines name = "Patient Bolus Self-Administration";
         doc /* Patient in pain presses bolus button for supplemental dose.
              * May be drowsy, confused, or have limited hand strength.
              * Hazard: Repeated pressing during lockout, misunderstanding. */
     }
 
-    action useScenarioAlarmResponse : HazardRelatedUseScenario {
+    action useScenarioAlarmResponse : OperationalScenario {
         attribute redefines name = "Nurse Response to Pump Alarm";
         doc /* Alarm sounds. Nurse is attending another patient. Must
              * identify alarm source, assess priority, take action.

@@ -235,13 +235,13 @@ closureRules:
     severity: warning
 
   - id: CR-MED-022
-    description: "Every UseSpecification should specify at least one HazardRelatedUseScenario"
+    description: "Every UseSpecification should specify at least one OperationalScenario"
     entity: UseSpecification
     rule:
       type: requireRelationship
       relationship: specifiesScenario
       direction: outgoing
-      relatedKinds: [HazardRelatedUseScenario]
+      relatedKinds: [OperationalScenario]
       min: 1
     severity: warning
 
@@ -770,7 +770,7 @@ closureRules:
       type: requireRelationship
       relationship: claimsForUse
       direction: outgoing
-      relatedKinds: [IntendedUse, IndicationForUse]
+      relatedKinds: [IntendedUse]
       min: 1
     severity: warning
 
@@ -791,7 +791,7 @@ closureRules:
       type: requireRelationship
       relationship: claimsForUse
       direction: outgoing
-      relatedKinds: [IntendedUse, IndicationForUse]
+      relatedKinds: [IntendedUse]
       min: 1
     severity: warning
 

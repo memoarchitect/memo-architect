@@ -12,7 +12,7 @@ package InfusionPump_Compliance {
         attribute redefines title = "Clinician silences alarm without resolving occlusion";
     }
 
-    action alarmAckScenario : HazardRelatedUseScenario {
+    action alarmAckScenario : OperationalScenario {
         attribute redefines name = "Alarm acknowledgement during occlusion";
     }
 

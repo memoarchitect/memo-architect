@@ -331,7 +331,7 @@ package InfusionPump {
     }
 
     // Environment
-    part clinicalEnvironment : UseEnvironment {
+    part clinicalEnvironment : OperationalEnvironment {
         attribute redefines name = "Clinical Environment";
         attribute redefines temperature = "15-35°C";
         attribute redefines humidity = "20-80% RH";
@@ -430,7 +430,7 @@ package InfusionPump {
         attribute redefines title = "Clinician silences an alarm without resolving the infusion issue";
     }
 
-    action alarmAckScenario : HazardRelatedUseScenario {
+    action alarmAckScenario : OperationalScenario {
         attribute redefines name = "Alarm acknowledgement during occlusion";
     }
 

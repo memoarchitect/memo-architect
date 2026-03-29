@@ -323,7 +323,6 @@ viewpoints:
     supportedDiagramTypes: [req, pkg, bdd]
     visibleKinds:
       - IntendedUse
-      - IndicationForUse
       - ClinicalPerformanceClaim
       - ClinicalSafetyClaim
       - ClinicalEvidenceArtifact
@@ -602,9 +601,8 @@ viewpoints:
       - UseError
       - UseSpecification
       - UseErrorAnalysis
-      - HazardRelatedUseScenario
+      - OperationalScenario
       - UsabilitySpecification
-      - UsabilityValidation
       - FormativeEvaluation
       - SummativeEvaluation
       - UIElement

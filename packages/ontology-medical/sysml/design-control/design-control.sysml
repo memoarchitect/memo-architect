@@ -4,14 +4,6 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute title : String;
     }
 
-    requirement def IndicationForUse {
-        attribute title : String;
-    }
-
-    part def UserProfile :> OperationalActor { }
-
-    part def UseEnvironment :> OperationalEnvironment { }
-
     requirement def DesignInput {
         attribute inputId : String;
         attribute title : String;
@@ -47,17 +39,11 @@ package MEMO_Ontology_Medical_DesignControl {
         attribute title : String;
     }
 
-    part def UsabilityValidation :> ValidationCase {
-        attribute title : String;
-    }
-
     part def FormativeEvaluation :> ValidationCase {
         attribute title : String;
     }
 
-    part def SummativeEvaluation :> UsabilityValidation {
+    part def SummativeEvaluation :> ValidationCase {
         attribute title : String;
     }
-
-    action def HazardRelatedUseScenario :> OperationalScenario { }
 }

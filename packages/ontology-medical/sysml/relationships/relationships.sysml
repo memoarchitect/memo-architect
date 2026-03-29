@@ -376,13 +376,13 @@ package MEMO_Ontology_Medical_Relationships {
     }
 
     connection def ExposesUseError {
-        end scenario : HazardRelatedUseScenario [1];
+        end scenario : OperationalScenario [1];
         end useError : UseError [1];
     }
 
     connection def SpecifiesScenario {
         end specification : UseSpecification [1];
-        end scenario : HazardRelatedUseScenario [1];
+        end scenario : OperationalScenario [1];
     }
 
     connection def EvaluatesRequirement {
