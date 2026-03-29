@@ -7,3 +7,7 @@ extends: "@memo/medical-modeling-profile"
 ontologies:
   - name: memo-ontology-medical
     version: "^0.1.0"
+  - name: "@memo/ontology-platform-robotics"
+    version: "^0.1.0"
+  - name: "@memo/ontology-platform-messaging"
+    version: "^0.1.0"
