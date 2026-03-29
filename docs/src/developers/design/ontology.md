@@ -165,6 +165,40 @@ Each relationship type has:
 | `satisfy` | Element → Requirement | requirements | Satisfaction link |
 | `verify` | Test → Requirement/RiskControl | verification | Verification evidence |
 | `documents` / `evidences` | QMS record/evidence → subject | qms | DHF / evidence trace across regulated artifacts |
+## Discovery & Registries
+
+For structural modeling and UI rendering, MEMO needs to identify all available kinds and relationships defined across your project's SysML files. This is handled by the **Registry System**.
+
+### 1. Kind Registry
+The `KindRegistry` is responsible for discovering all `part def`, `requirement def`, `action def`, and other structural definitions.
+
+- **Discovery:** Scans all `.sysml` files in the paths defined in `memo.config.yaml`.
+- **Inheritance Resolution:** Maps the specialization (`:>`) hierarchy so the UI can show inherited attributes.
+- **Metadata Extraction:** Extracts documentation comments and custom attributes (e.g., `primary_color`) for the Workbench.
+
+### 2. Relationship Registry
+The `RelationshipRegistry` manages `connection def` entries.
+
+- **Typed Ends:** Validates that connection ends match the correct kind (e.g., a `mitigates` connection must start at a `RiskControl`).
+- **Inverse Discovery:** Automatically derives the "inverse" relationship name for the UI (e.g., `mitigates` → `mitigatedBy`).
+
+### 3. Caching & Performance
+To ensure a snappy UI, the registries maintain an in-memory graph of the metamodel. This graph is re-generated only when an ontology file changes.
+
+## Authoring New Ontologies
+
+To create a new ontology package:
+
+1. Create a `sysml/` directory with an `index.sysml` entry point.
+2. Define your kinds and connections using standard SysML v2 syntax.
+3. Add a `memo.config.yaml` to the package root:
+   ```yaml
+   name: "@acme/ontology-robotics"
+   version: "1.0.0"
+   paths:
+     - ./sysml
+   ```
+4. Register the package in your project's main `memo.lock` or `package.json`.
 
 ## Ontology Packages
 

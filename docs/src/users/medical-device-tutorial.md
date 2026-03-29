@@ -546,7 +546,7 @@ UI elements in the medical ontology are modeled as product software realization 
 
 ## Next Steps
 
-- **Need more element kinds?** → [Ontology & Type System](../design/ontology.md)
+- **Need more element kinds?** → [Ontology & Type System](../developers/design/ontology.md)
 - **Want to customize rules?** → [Validation & Closure Rules](validation.md)
 - **Creating diagrams for reviews?** → [Viewpoints & Diagrams](viewpoints-diagrams.md)
-- **Setting up CI?** → [Configuration Reference](../config/reference.md)
+- **Setting up CI?** → [Configuration Reference](../developers/config/reference.md)
