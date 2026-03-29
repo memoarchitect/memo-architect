@@ -915,7 +915,7 @@ package GPCA_Requirements {
     // INTERFACES — 5 GPCA System Interfaces
     // ═══════════════════════════════════════════════════════════════════════
 
-    interface def DataEntryInterface : Interface {
+    interface def DataEntryInterface :> Interface {
         attribute redefines name = "Data Entry Interface";
         doc /* Clinician data entry interface for prescription configuration.
              * Includes touchscreen, physical buttons, and barcode scanner.
@@ -925,7 +925,7 @@ package GPCA_Requirements {
              * max bolus count (integer, 1-20), VTBI (mL, 1-9999). */
     }
 
-    interface def BolusRequestInterface : Interface {
+    interface def BolusRequestInterface :> Interface {
         attribute redefines name = "Bolus Request Interface";
         doc /* Patient bolus request interface via dedicated hardware button.
              * Data items: bolus request signal (boolean), request timestamp
@@ -933,7 +933,7 @@ package GPCA_Requirements {
              * with tactile feedback. */
     }
 
-    interface def DrugFlowInterface : Interface {
+    interface def DrugFlowInterface :> Interface {
         attribute redefines name = "Drug Flow Interface";
         doc /* Physical interface between pump mechanism and infusion line.
              * Data items: flow rate command (mL/hr, 0-999), actual flow rate
@@ -942,7 +942,7 @@ package GPCA_Requirements {
              * (integer, position feedback). */
     }
 
-    interface def NotificationInterface : Interface {
+    interface def NotificationInterface :> Interface {
         attribute redefines name = "Notification Interface";
         doc /* Alarm and status notification interface to clinician.
              * Data items: alarm code (enum), priority (low/medium/high),
@@ -951,7 +951,7 @@ package GPCA_Requirements {
              * silence timer remaining (seconds). */
     }
 
-    interface def PharmacyDatabaseInterface : Interface {
+    interface def PharmacyDatabaseInterface :> Interface {
         attribute redefines name = "Pharmacy Database Interface";
         doc /* Network interface to hospital pharmacy database system.
              * Protocol: HL7 FHIR R4 over TLS 1.3.
