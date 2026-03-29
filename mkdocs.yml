@@ -82,6 +82,10 @@ nav:
           - Medical Device Quick Start: users/medical-device-tutorial.md
   - Developers:
       - Codebase Overview: developers/codebase-overview.md
+      - Ontology:
+          - Reference: developers/ontology/reference.md
+          - Design & Type System: developers/design/ontology.md
+          - CoSMA Layers: developers/design/cosma-layers.md
       - Architecture:
           - Overview: developers/architecture/overview.md
           - Monorepo Structure: developers/architecture/monorepo.md
@@ -90,8 +94,6 @@ nav:
           - Platform Strategy: developers/architecture/platform-strategy.md
           - Rearchitecture Prompt: developers/architecture/rearchitect-prompt.md
       - Design:
-          - Ontology & Type System: developers/design/ontology.md
-          - CoSMA Layers: developers/design/cosma-layers.md
           - Viewpoints: developers/design/viewpoints.md
           - Closure Rules & Validation: developers/design/closure-rules.md
           - Configuration System: developers/design/configuration.md
