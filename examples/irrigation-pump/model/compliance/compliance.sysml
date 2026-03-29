@@ -297,7 +297,7 @@ package IrrigationPump_Compliance {
         attribute redefines sensitivity = "individually identifiable perioperative status data";
     }
 
-    part dataClassPerioperativeObservation : SpecialCategoryPersonalData {
+    part dataClassPerioperativeObservation : PersonalDataCategory {
         attribute redefines name = "Perioperative observation personal-data classification";
         attribute redefines sensitivity = "health-data special category";
     }
@@ -317,32 +317,32 @@ package IrrigationPump_Compliance {
         attribute redefines purpose = "Produce a minimized secondary-use dataset for quality analytics after de-identification or consent-governed export";
     }
 
-    part hospitalControllerRole : DataControllerRole {
+    part hospitalControllerRole : OperationalActor {
         attribute redefines name = "Hospital Provider Organization";
         attribute redefines role = "HIPAA covered entity and GDPR controller";
     }
 
-    part integrationVendorProcessorRole : DataProcessorRole {
+    part integrationVendorProcessorRole : OperationalActor {
         attribute redefines name = "Perioperative Integration Service";
         attribute redefines role = "Business associate and GDPR processor";
     }
 
-    part basisHipaaTreatmentIntegration : HIPAAPermissionBasis {
+    part basisHipaaTreatmentIntegration : PrivacyNotice {
         attribute redefines basisId = "HIPAA-IRR-001";
         attribute redefines title = "Treatment and health-care operations disclosure basis";
     }
 
-    part basisGdprClinicalCare : LawfulBasis {
+    part basisGdprClinicalCare : PrivacyNotice {
         attribute redefines basisId = "GDPR-IRR-001";
         attribute redefines title = "Clinical-care processing lawful basis";
     }
 
-    part basisGdprExplicitConsentAnalytics : LawfulBasis {
+    part basisGdprExplicitConsentAnalytics : PrivacyNotice {
         attribute redefines basisId = "GDPR-IRR-002";
         attribute redefines title = "Explicit consent for optional quality analytics export";
     }
 
-    part consentQualityAnalyticsReuse : ConsentRecord {
+    part consentQualityAnalyticsReuse : PrivacyNotice {
         attribute redefines recordId = "CONS-IRR-001";
         attribute redefines title = "Optional quality analytics export consent";
         attribute redefines scope = "Secondary analytics use outside direct care";
@@ -354,20 +354,20 @@ package IrrigationPump_Compliance {
         attribute redefines noticeScope = "Connected alarm and procedure-status interfaces";
     }
 
-    part retentionPolicyProcedureStatus : DataRetentionPolicy {
+    part retentionPolicyProcedureStatus : PrivacyNotice {
         attribute redefines policyId = "RET-IRR-001";
         attribute redefines retentionPeriod = "Audit and procedure-status records retained per perioperative record and quality-system policy";
     }
 
-    part minimumNecessaryProcedureStatus : MinimumNecessaryPolicy {
+    part minimumNecessaryProcedureStatus : PrivacyNotice {
         attribute redefines policyId = "MIN-IRR-001";
     }
 
-    part deIdentificationAnalyticsExport : DeIdentificationMethod {
+    part deIdentificationAnalyticsExport : DataProcessingActivity {
         attribute redefines methodName = "Safe-harbor and expert-reviewed de-identification profile for analytics export";
     }
 
-    part pseudonymizationProcedureStatus : PseudonymizationMethod {
+    part pseudonymizationProcedureStatus : DataProcessingActivity {
         attribute redefines methodName = "Case-token replacement before cross-system analytics export";
     }
 
@@ -377,14 +377,14 @@ package IrrigationPump_Compliance {
         attribute redefines scope = "Procedure-status exchange, alarm relay, secondary analytics, and terminology-boundary governance";
     }
 
-    part accessRequestProcedureStatusLogs : AccessRequest {
+    part accessRequestProcedureStatusLogs : DataSubjectRequest {
         attribute redefines recordId = "DSR-IRR-001";
         attribute redefines title = "Procedure-status log access request handling";
         attribute redefines requestId = "REQ-IRR-001";
         attribute redefines requestType = "Access";
     }
 
-    part erasureRequestAnalyticsExport : ErasureRequest {
+    part erasureRequestAnalyticsExport : DataSubjectRequest {
         attribute redefines recordId = "DSR-IRR-002";
         attribute redefines title = "Analytics export erasure workflow anchor";
         attribute redefines requestId = "REQ-IRR-002";
@@ -426,30 +426,30 @@ package IrrigationPump_Compliance {
         attribute redefines title = "Device Status To LOINC Concept Map";
     }
 
-    part terminologyImportBoundaryPerioperative : TerminologyImportBoundary {
+    part terminologyImportBoundaryPerioperative : DataSubjectRequest {
         attribute redefines boundaryId = "TIB-IRR-001";
         attribute redefines scope = "Imported clinical terminology subsets are limited to perioperative device-status and procedure-summary concepts required for documented integrations";
     }
 
-    part importedSubsetSnomedProcedureStatus : ImportedTerminologySubset {
+    part importedSubsetSnomedProcedureStatus : DataSubjectRequest {
         attribute redefines subsetId = "SUB-IRR-001";
         attribute redefines title = "SNOMED CT perioperative procedure-status subset";
         attribute redefines version = "2026-03";
     }
 
-    part importedSubsetLoincProcedureMetrics : ImportedTerminologySubset {
+    part importedSubsetLoincProcedureMetrics : DataSubjectRequest {
         attribute redefines subsetId = "SUB-IRR-002";
         attribute redefines title = "LOINC procedure metrics subset";
         attribute redefines version = "2.81";
     }
 
-    part importedBindingProcedureStatusSummary : ImportedConceptBinding {
+    part importedBindingProcedureStatusSummary : DataSubjectRequest {
         attribute redefines bindingId = "ICB-IRR-001";
         attribute redefines localConcept = "ProcedureSummaryPayload.status";
         attribute redefines externalConcept = "SNOMED CT arthroscopy procedure-status subset and mapped LOINC summary";
     }
 
-    part importProvenanceProcedureStatus : ImportProvenanceRecord {
+    part importProvenanceProcedureStatus : DataSubjectRequest {
         attribute redefines recordId = "IMP-IRR-001";
         attribute redefines title = "Procedure-status terminology import provenance";
         attribute redefines artifactType = "Terminology import provenance package";
