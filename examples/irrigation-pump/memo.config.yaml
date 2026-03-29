@@ -11,3 +11,5 @@ ontologies:
     version: "^0.1.0"
   - name: "@memo/ontology-clinical-interop"
     version: "^0.1.0"
+  - name: "@memo/medical-product-line-profile"
+    version: "^0.1.0"
