@@ -37,19 +37,19 @@ package InfusionPump {
     }
 
     // Use Cases
-    part ucProgramInfusion : UseCase {
+    action ucProgramInfusion : UseCase {
         attribute redefines name = "Program Infusion";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "User Goal";
     }
 
-    part ucMonitorInfusion : UseCase {
+    action ucMonitorInfusion : UseCase {
         attribute redefines name = "Monitor Infusion";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "User Goal";
     }
 
-    part ucRespondToAlarm : UseCase {
+    action ucRespondToAlarm : UseCase {
         attribute redefines name = "Respond to Alarm";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "Subfunction";

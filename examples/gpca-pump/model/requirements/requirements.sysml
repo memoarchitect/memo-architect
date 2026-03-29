@@ -59,31 +59,31 @@ package GPCA_Requirements {
     // USE CASES & SCENARIOS
     // ═══════════════════════════════════════════════════════════════════════
 
-    part ucConfigurePrescription : UseCase {
+    action ucConfigurePrescription : UseCase {
         attribute redefines name = "Configure Prescription";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "User Goal";
     }
 
-    part ucStartInfusion : UseCase {
+    action ucStartInfusion : UseCase {
         attribute redefines name = "Start Infusion";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "User Goal";
     }
 
-    part ucRequestBolus : UseCase {
+    action ucRequestBolus : UseCase {
         attribute redefines name = "Request Patient Bolus";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "User Goal";
     }
 
-    part ucRespondToAlarm : UseCase {
+    action ucRespondToAlarm : UseCase {
         attribute redefines name = "Respond to Alarm";
         attribute redefines lifecycleStage = "Operation";
         attribute redefines level = "Subfunction";
     }
 
-    part ucPerformMaintenance : UseCase {
+    action ucPerformMaintenance : UseCase {
         attribute redefines name = "Perform Maintenance";
         attribute redefines lifecycleStage = "Maintenance";
         attribute redefines level = "User Goal";
