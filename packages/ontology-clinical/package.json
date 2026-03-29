@@ -1,0 +1,19 @@
+{
+  "name": "@memo/ontology-clinical",
+  "version": "0.1.0",
+  "description": "Niche clinical/pharma concepts — optional extension for surgical, drug-delivery, and anatomy-specific device models",
+  "private": true,
+  "files": [
+    "sysml/",
+    "memo.package.yaml",
+    ".project.json"
+  ],
+  "keywords": [
+    "sysml",
+    "clinical",
+    "pharma",
+    "anatomy",
+    "ontology"
+  ],
+  "license": "Apache-2.0"
+}

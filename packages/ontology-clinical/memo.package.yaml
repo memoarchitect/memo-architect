@@ -1,0 +1,6 @@
+name: "@memo/ontology-clinical"
+version: "0.1.0"
+type: ontology
+description: "Niche clinical/pharma concepts — optional extension for surgical, drug-delivery, and anatomy-specific device models"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "clinical", "pharma", "anatomy"]
