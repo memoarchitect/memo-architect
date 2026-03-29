@@ -1,0 +1,6 @@
+name: "@memo/medical-product-line-profile"
+version: "0.1.0"
+type: ontology
+description: "Product-line and variant management concepts — optional extension for multi-variant medical device product families"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "product-line", "variant-management"]

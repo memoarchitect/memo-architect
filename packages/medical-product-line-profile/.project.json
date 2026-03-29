@@ -1,0 +1,6 @@
+{
+  "type": "ontology-package",
+  "name": "@memo/medical-product-line-profile",
+  "version": "0.1.0",
+  "usage": ["kinds"]
+}
