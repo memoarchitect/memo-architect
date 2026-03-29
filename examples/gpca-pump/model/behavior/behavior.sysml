@@ -14,64 +14,64 @@ package GPCA_Behavior {
     // SYSTEM FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════
 
-    action def sfRegulateFlow : SystemFunction {
+    action def sfRegulateFlow :> SystemFunction {
         attribute redefines name = "Regulate Drug Flow";
         doc /* Top-level system function: deliver drug at prescribed rate
              * under all operating conditions. */
     }
 
-    action def sfDetectSafetyCondition : SystemFunction {
+    action def sfDetectSafetyCondition :> SystemFunction {
         attribute redefines name = "Detect Safety Condition";
         doc /* Continuously monitor for air, occlusion, over/under-infusion,
              * reverse flow, and other safety conditions. */
     }
 
-    action def sfManageAlarms : SystemFunction {
+    action def sfManageAlarms :> SystemFunction {
         attribute redefines name = "Manage Alarms and Notifications";
         doc /* Prioritize, display, escalate, and resolve alarm conditions
              * per GPCA notification action table. */
     }
 
-    action def sfManagePrescription : SystemFunction {
+    action def sfManagePrescription :> SystemFunction {
         attribute redefines name = "Manage Prescription Configuration";
         doc /* Accept, validate, store, and apply prescription parameters
              * from clinician input or pharmacy database. */
     }
 
-    action def sfManageAccess : SystemFunction {
+    action def sfManageAccess :> SystemFunction {
         attribute redefines name = "Manage Access Control";
         doc /* Authenticate users, manage sessions, enforce role-based
              * access to device functions. */
     }
 
-    action def sfLogEvents : SystemFunction {
+    action def sfLogEvents :> SystemFunction {
         attribute redefines name = "Log Events";
         doc /* Record all state changes, alarms, deliveries, and
              * configuration changes with timestamps. */
     }
 
     // Component functions
-    action def cfCalculateFlowRate : ComponentFunction {
+    action def cfCalculateFlowRate :> ComponentFunction {
         attribute redefines name = "Calculate Flow Rate Command";
     }
 
-    action def cfDriveMotor : ComponentFunction {
+    action def cfDriveMotor :> ComponentFunction {
         attribute redefines name = "Drive Pump Motor";
     }
 
-    action def cfReadSensors : ComponentFunction {
+    action def cfReadSensors :> ComponentFunction {
         attribute redefines name = "Read and Fuse Sensor Data";
     }
 
-    action def cfResolveAlarmPriority : ComponentFunction {
+    action def cfResolveAlarmPriority :> ComponentFunction {
         attribute redefines name = "Resolve Alarm Priority";
     }
 
-    action def cfValidatePrescription : ComponentFunction {
+    action def cfValidatePrescription :> ComponentFunction {
         attribute redefines name = "Validate Prescription Against Drug Library";
     }
 
-    action def cfManageLockout : ComponentFunction {
+    action def cfManageLockout :> ComponentFunction {
         attribute redefines name = "Manage Bolus Lockout Timer";
     }
 
@@ -500,27 +500,27 @@ package GPCA_Behavior {
     // FLOW ITEMS
     // ═══════════════════════════════════════════════════════════════════════
 
-    item def DrugFlowItem : ExchangeItem {
+    item def DrugFlowItem :> ExchangeItem {
         attribute redefines name = "Drug Flow Data";
         doc /* Flow rate (mL/hr), cumulative volume (mL), pressure (mmHg). */
     }
 
-    item def NotificationSignal : ExchangeItem {
+    item def NotificationSignal :> ExchangeItem {
         attribute redefines name = "Notification Signal";
         doc /* Alarm code, priority, message, required actions. */
     }
 
-    item def ConfigurationData : ExchangeItem {
+    item def ConfigurationData :> ExchangeItem {
         attribute redefines name = "Configuration Data";
         doc /* Drug name, concentration, rates, doses, limits. */
     }
 
-    item def SensorReading : ExchangeItem {
+    item def SensorReading :> ExchangeItem {
         attribute redefines name = "Sensor Reading";
         doc /* Flow, pressure, air, temperature, door, reservoir level. */
     }
 
-    item def MotorCommand : ExchangeItem {
+    item def MotorCommand :> ExchangeItem {
         attribute redefines name = "Motor Command";
         doc /* Motor speed, direction, enable/disable. */
     }
