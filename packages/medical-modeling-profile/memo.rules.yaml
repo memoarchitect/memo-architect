@@ -446,13 +446,13 @@ closureRules:
     severity: warning
 
   - id: CR-MED-045
-    description: "Every TopEvent should have at least one contributing BasicEvent or IntermediateEvent"
+    description: "Every TopEvent should have at least one contributing FaultTreeContributor"
     entity: TopEvent
     rule:
       type: requireRelationship
       relationship: contributesToEvent
       direction: incoming
-      relatedKinds: [BasicEvent, IntermediateEvent]
+      relatedKinds: [FaultTreeContributor]
       min: 1
     severity: warning
 
@@ -466,28 +466,6 @@ closureRules:
       relatedKinds: [HazardousSituation]
       min: 1
     severity: warning
-
-  - id: CR-MED-047
-    description: "Every DetectionControl should detect at least one FailureMode"
-    entity: DetectionControl
-    rule:
-      type: requireRelationship
-      relationship: detectsFailureMode
-      direction: outgoing
-      relatedKinds: [FailureMode]
-      min: 1
-    severity: warning
-
-  - id: CR-MED-048
-    description: "Every DetectionControl must be verified by at least one Test"
-    entity: DetectionControl
-    rule:
-      type: requireRelationship
-      relationship: verify
-      direction: incoming
-      relatedKinds: [Test]
-      min: 1
-    severity: error
 
   - id: CR-MED-049
     description: "Every TreatmentPathway should contain at least one Procedure or ClinicalStep"
@@ -575,7 +553,6 @@ closureRules:
       direction: outgoing
       relatedKinds:
         - Risk
-        - FailureAnalysis
         - FailureModesAndEffectsAnalysis
         - FaultTreeAnalysis
         - ResidualRiskEvaluation
