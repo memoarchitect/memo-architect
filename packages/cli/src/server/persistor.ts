@@ -8,7 +8,7 @@ import { generateUsage, type MemoElement } from '@memo/core';
  * If the element is new (no 'file' property), it records it in 'model/generated.sysml'.
  * Uses a regex-based usage block replacement for existing elements.
  */
-export function saveElementToFile(cwd: string, element: any): { success: boolean; filePath: string } {
+export function saveElementToFile(cwd: string, element: any): { success: boolean; filePath: string; error?: string } {
     const relativePath = element.file || 'model/generated.sysml';
     const filePath = resolve(cwd, relativePath);
 
@@ -73,6 +73,6 @@ export function saveElementToFile(cwd: string, element: any): { success: boolean
         return { success: true, filePath: relativePath };
     } catch (e) {
         log(`CRITICAL: Failed to write to ${filePath}: ${e}`);
-        return { success: false, error: String(e) };
+        return { success: false, filePath: relativePath, error: String(e) };
     }
 }

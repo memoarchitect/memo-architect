@@ -918,14 +918,4 @@ package InfusionPump {
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaStartInfusionRequest;
     connection : Documents connect record ::> dhfSoftwareTrace to subject ::> schemaStartInfusionResponse;
     connection : Refines connect refined ::> ucMonitorInfusion to refiner ::> normalInfusionScenario;
-
-    part stakeholder_hterm : Stakeholder {
-        attribute redefines name = "(new Test element)";
-        attribute redefines _folder = "Test";
-    }
-
-    requirement systemrequirement_ov2wf : SystemRequirement {
-        attribute redefines name = "(new Test element)";
-        attribute redefines _folder = "Test";
-    }
 }
