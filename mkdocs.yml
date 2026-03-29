@@ -54,43 +54,60 @@ markdown_extensions:
   - toc:
       permalink: true
 
+docs_dir: docs/src
+site_dir: docs/dist
+
 plugins:
   - search
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quickstart.md
-      - CLI Reference: getting-started/cli-reference.md
-  - Architecture:
-      - Overview: architecture/overview.md
-      - Monorepo Structure: architecture/monorepo.md
-      - Data Flow: architecture/data-flow.md
-      - WebSocket Protocol: architecture/websocket-protocol.md
-  - Design:
-      - Ontology & Type System: design/ontology.md
-      - CoSMA Layers: design/cosma-layers.md
-      - Viewpoints: design/viewpoints.md
-      - Closure Rules & Validation: design/closure-rules.md
-      - Configuration System: design/configuration.md
-  - Configuration:
-      - memo.config.yaml Reference: config/reference.md
-      - Medical Domain: config/medical-domain.md
-  - Guides:
-      - Overview: guides/index.md
-      - "Tutorial: Medical Device Quick Start": guides/medical-device-tutorial.md
-      - Starting a New Project: guides/new-project.md
-      - Importing Existing Data: guides/importing-data.md
-      - Modeling Your Device: guides/modeling-guide.md
-      - Validation & Closure Rules: guides/validation.md
-      - Viewpoints & Diagrams: guides/viewpoints-diagrams.md
-  - Development:
-      - Contributing: development/contributing.md
-      - Roadmap: development/roadmap.md
-  - ADR:
-      - ADR-1-1 Entity Type Mapping: adr/ADR-1-1-entity-type-mapping.md
-      - ADR-1-2 Relationship Representation: adr/ADR-1-2-relationship-representation.md
-      - ADR-1-3 Ontology Package Structure: adr/ADR-1-3-ontology-package-structure.md
-      - ADR-1-4 Closure Rule Representation: adr/ADR-1-4-closure-rule-representation.md
-      - ADR-1-5 Domain Config Extension: adr/ADR-1-5-domain-config-extension.md
+  - Users:
+      - Installation: users/installation.md
+      - Running MEMO: users/running.md
+      - Command Line Usage: users/cli-usage.md
+      - Workbench UI Usage: users/ui-usage.md
+      - Workbench Features:
+          - DHF Workbench: users/dhf-workbench.md
+          - Analysis Tools: users/analysis-tools.md
+          - Intelligence & AI: users/ai-features.md
+      - Guides:
+          - Overview: users/guides-index.md
+          - Starting a New Project: users/new-project.md
+          - Modeling Your Device: users/modeling-guide.md
+          - Importing Existing Data: users/importing-data.md
+          - Validation & Closure Rules: users/validation.md
+          - Viewpoints & Diagrams: users/viewpoints-diagrams.md
+      - Tutorials:
+          - Medical Device Quick Start: users/medical-device-tutorial.md
+  - Developers:
+      - Codebase Overview: developers/codebase-overview.md
+      - Architecture:
+          - Overview: developers/architecture/overview.md
+          - Monorepo Structure: developers/architecture/monorepo.md
+          - Data Flow: developers/architecture/data-flow.md
+          - WebSocket Protocol: developers/architecture/websocket-protocol.md
+          - Platform Strategy: developers/architecture/platform-strategy.md
+          - Rearchitecture Prompt: developers/architecture/rearchitect-prompt.md
+      - Design:
+          - Ontology & Type System: developers/design/ontology.md
+          - CoSMA Layers: developers/design/cosma-layers.md
+          - Viewpoints: developers/design/viewpoints.md
+          - Closure Rules & Validation: developers/design/closure-rules.md
+          - Configuration System: developers/design/configuration.md
+      - Configuration:
+          - memo.config.yaml Reference: developers/config/reference.md
+          - Medical Domain: developers/config/medical-domain.md
+      - Roadmap: developers/development/roadmap.md
+      - Plugin Development: developers/plugin-development.md
+      - ADR:
+          - ADR-1-1 Entity Type Mapping: developers/adr/ADR-1-1-entity-type-mapping.md
+          - ADR-1-2 Relationship Representation: developers/adr/ADR-1-2-relationship-representation.md
+          - ADR-1-3 Ontology Package Structure: developers/adr/ADR-1-3-ontology-package-structure.md
+          - ADR-1-4 Closure Rule Representation: developers/adr/ADR-1-4-closure-rule-representation.md
+          - ADR-1-5 Domain Config Extension: developers/adr/ADR-1-5-domain-config-extension.md
+          - ADR-1-6 Ontology Split: developers/adr/ADR-1-6-ontology-core-medical-split.md
+          - ADR-1-7 Legacy Compatibility: developers/adr/ADR-1-7-legacy-ontology-compatibility-policy.md
+      - Contributing: developers/development/contributing.md
+
+

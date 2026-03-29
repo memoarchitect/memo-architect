@@ -122,7 +122,7 @@ package MyDevice {
 !!! info "Construct is automatic"
     You don't need to memorize which SysML construct to use. When you import via
     CSV, MEMO auto-derives the construct from the element kind. In `.sysml` files,
-    refer to the [ontology reference](../design/ontology.md) for which construct
+    refer to the [ontology reference](../developers/design/ontology.md) for which construct
     each kind uses.
 
 ## 4. Launch the Dev Server

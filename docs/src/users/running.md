@@ -118,6 +118,6 @@ The parser recursively finds all `.sysml` files — organize however suits your 
 
 ## Next Steps
 
-- Read the [CLI Reference](cli-reference.md) for all commands and options
-- Explore the [Configuration Reference](../config/reference.md) to customize kinds, rules, and viewpoints
-- See the [Architecture Overview](../architecture/overview.md) to understand the tool internals
+- Read the [CLI Usage](cli-usage.md) for all commands and options
+- Explore the [Configuration Reference](../developers/config/reference.md) to customize kinds, rules, and viewpoints
+- See the [Architecture Overview](../developers/architecture/overview.md) to understand the tool internals
