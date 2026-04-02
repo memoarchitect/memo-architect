@@ -22,6 +22,8 @@ export interface ActionParameter {
 export interface MemoElement {
     /** Unique element identifier (usage name from SysML) */
     id: string;
+    /** Stable short ID for deep-linking, e.g. "SW-REQ-4291" (set by builder) */
+    shortId?: string;
     /** Human-readable name (from 'attribute redefines name = ...' or id) */
     name: string;
     /** The kind key matching config.kinds, e.g. "Hazard", "SystemRequirement" */

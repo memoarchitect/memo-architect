@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
+import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
@@ -9,6 +10,8 @@ import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
+import { CatalogHomePage } from './views/CatalogHomePage';
+import { ElementCollectionPage } from './views/ElementCollectionPage';
 
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
 const DiagramCanvas = lazy(() => import('./views/DiagramCanvas').then(m => ({ default: m.DiagramCanvas })));
@@ -244,6 +247,9 @@ export function App() {
     // ─── Unified Workbench Layout ────────────────────────────────────────────
     return (
         <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+            {/* Sync URL → store on load / navigation */}
+            <UrlNavigationSync />
+
             {/* Toolbar */}
             <WorkbenchToolbar />
 
@@ -258,12 +264,21 @@ export function App() {
                 {/* Left: Explorer (Model + Views) */}
                 <ExplorerPanel />
 
-                {/* Center: Unified Canvas */}
+                {/* Center: route-aware canvas */}
                 <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
-                    <UnifiedCanvas />
+                    <Routes>
+                        {/* Catalog routes — new deep-link pages */}
+                        <Route path="/catalog" element={<CatalogHomePage />} />
+                        <Route path="/catalog/:family" element={<FamilyRoute />} />
+                        <Route path="/catalog/:family/:shortId" element={<ElementPermalinkRoute />} />
+                        {/* Diagram routes */}
+                        <Route path="/diagrams/:diagramType/:diagramId" element={<DiagramPermalinkRoute />} />
+                        {/* Default: existing state-driven canvas */}
+                        <Route path="*" element={<UnifiedCanvas />} />
+                    </Routes>
                 </div>
 
-                {/* Right: Properties Panel — hidden in element-detail mode */}
+                {/* Right: Properties Panel — hidden in element-detail and catalog modes */}
                 {activeView.type !== 'element-detail' && <UnifiedPropertiesPanel />}
             </div>
 
@@ -277,4 +292,94 @@ export function App() {
             <OnboardingTour />
         </div>
     );
+}
+
+// ─── URL-driven route components ─────────────────────────────────────────────
+
+/** Renders /catalog/:family */
+function FamilyRoute() {
+    const { family = '' } = useParams<{ family: string }>();
+    return <ElementCollectionPage family={family.toUpperCase()} />;
+}
+
+/** Renders /catalog/:family/:shortId — finds element by shortId and shows its detail */
+function ElementPermalinkRoute() {
+    const { shortId = '' } = useParams<{ shortId: string }>();
+    const model = useModelStore(s => s.model);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const selectElement = useModelStore(s => s.selectElement);
+
+    useEffect(() => {
+        if (!model) return;
+        const element = Object.values(model.elements).find(
+            el => (el.shortId ?? el.id) === shortId
+        );
+        if (element) {
+            selectElement(element.id);
+            setActiveView({ type: 'element-detail', elementId: element.id });
+        }
+    }, [shortId, model, setActiveView, selectElement]);
+
+    // Render the ElementDetailView via the active view state
+    return (
+        <Suspense fallback={<ViewLoadingFallback />}>
+            <ElementDetailView />
+        </Suspense>
+    );
+}
+
+/** Renders /diagrams/:diagramType/:diagramId */
+function DiagramPermalinkRoute() {
+    const { diagramId = '' } = useParams<{ diagramType: string; diagramId: string }>();
+    const model = useModelStore(s => s.model);
+    const selectDiagram = useModelStore(s => s.selectDiagram);
+    const setActiveView = useModelStore(s => s.setActiveView);
+
+    useEffect(() => {
+        if (!model) return;
+        const diagram = model.diagrams?.find(
+            d => d.id === diagramId || d.id.toLowerCase().replace(/\s+/g, '-') === diagramId
+        );
+        if (diagram) {
+            selectDiagram(diagram.id);
+            setActiveView({ type: 'diagram', diagramId: diagram.id });
+        }
+    }, [diagramId, model, selectDiagram, setActiveView]);
+
+    return (
+        <Suspense fallback={<ViewLoadingFallback />}>
+            <DiagramCanvas />
+        </Suspense>
+    );
+}
+
+/**
+ * Listens to location changes and syncs the store's navigation back to the URL
+ * when the user navigates via the sidebar (store → URL push).
+ * Also handles deep-link on initial load.
+ */
+function UrlNavigationSync() {
+    const activeView = useModelStore(s => s.activeView);
+    const model = useModelStore(s => s.model);
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Store → URL: when the user clicks an element in the explorer, push to history
+    useEffect(() => {
+        if (activeView.type === 'element-detail' && model) {
+            const elementId = (activeView as { type: 'element-detail'; elementId: string }).elementId;
+            const element = model.elements[elementId];
+            if (element) {
+                const shortId = element.shortId ?? element.id;
+                const family = shortId.split('-')[0];
+                const url = `/catalog/${family}/${shortId}`;
+                if (location.pathname !== url) {
+                    navigate(url, { replace: false });
+                }
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView]);
+
+    return null;
 }
