@@ -56,6 +56,7 @@ import type {
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
 import { PackageRegistry } from './package-registry.js';
+import { generateShortId } from './short-id.js';
 import type { KindRegistry } from './kind-registry.js';
 import type { RelationshipRegistry } from './relationship-registry.js';
 
@@ -347,6 +348,7 @@ function extractUsage(
 
     const element: MemoElement = {
         id,
+        shortId: generateShortId(resolvedKind, id),
         name: displayName,
         kind: resolvedKind,
         construct,
@@ -393,6 +395,7 @@ function extractActionDefinition(
 
     const element: MemoElement = {
         id,
+        shortId: generateShortId('ActionDefinition', id),
         name: id,
         kind: 'ActionDefinition',
         construct: 'action',
@@ -426,6 +429,7 @@ function extractItemDefinition(
 
     const element: MemoElement = {
         id,
+        shortId: generateShortId('ItemDefinition', id),
         name: id,
         kind: 'ItemDefinition',
         construct: 'item',
@@ -482,6 +486,7 @@ function extractActionUsage(
 
     const element: MemoElement = {
         id,
+        shortId: generateShortId(kind, id),
         name: displayName,
         kind,
         construct: 'action',

@@ -1,5 +1,6 @@
 import { useModelStore, getDiagram } from '../store/model-store';
 import { DIAGRAM_TYPE_META } from '../constants';
+import { useNavigate } from 'react-router-dom';
 
 export function Breadcrumb() {
     const activeView = useModelStore(s => s.activeView);
@@ -7,6 +8,7 @@ export function Breadcrumb() {
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const navigate = useNavigate();
 
     const crumbs: { label: string; onClick?: () => void }[] = [];
 
@@ -21,6 +23,26 @@ export function Breadcrumb() {
                 crumbs.push({ label: vpLabel });
                 const meta = DIAGRAM_TYPE_META[diagram.diagramType];
                 crumbs.push({ label: `${meta?.code || diagram.diagramType}: ${diagram.name}` });
+            }
+            break;
+        }
+        case 'element-detail': {
+            const elementId = (activeView as { type: 'element-detail'; elementId: string }).elementId;
+            const el = model?.elements[elementId];
+            if (el) {
+                const shortId = el.shortId ?? el.id;
+                const family = shortId.split('-')[0];
+                crumbs.push({
+                    label: 'Catalog',
+                    onClick: () => navigate('/catalog'),
+                });
+                crumbs.push({
+                    label: family,
+                    onClick: () => navigate(`/catalog/${family}`),
+                });
+                crumbs.push({
+                    label: `${shortId} ${el.name}`,
+                });
             }
             break;
         }
@@ -45,8 +67,8 @@ export function Breadcrumb() {
             break;
     }
 
-    // Add selected element if any
-    if (selectedElementId && model) {
+    // Add selected element for non-element-detail views
+    if (selectedElementId && model && activeView.type !== 'element-detail') {
         const el = model.elements[selectedElementId];
         if (el) {
             crumbs.push({
