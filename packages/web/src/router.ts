@@ -14,7 +14,7 @@
 // e.g. shortId "SW-REQ-4291" → prefix "SW-REQ" → family "SW"
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { prefixToFamily, kindToPrefix } from '@memo/core';
+import { prefixToFamily, kindToPrefix } from './short-id';
 
 /** Build the family segment from a kind name. */
 export function kindToFamily(kind: string): string {

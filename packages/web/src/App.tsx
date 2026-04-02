@@ -148,6 +148,8 @@ export function App() {
     const connected = useModelStore(s => s.connected);
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
+    const { pathname } = useLocation();
+    const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
 
     useEffect(() => {
         if (!loadEmbeddedData()) {
@@ -279,7 +281,7 @@ export function App() {
                 </div>
 
                 {/* Right: Properties Panel — hidden in element-detail and catalog modes */}
-                {activeView.type !== 'element-detail' && <UnifiedPropertiesPanel />}
+                {activeView.type !== 'element-detail' && !isCatalogRoute && <UnifiedPropertiesPanel />}
             </div>
 
             {/* Gap bar (violations) */}

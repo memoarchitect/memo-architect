@@ -10,7 +10,7 @@ import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
-import { kindToPrefix, prefixToFamily } from '@memo/core';
+import { kindToPrefix, prefixToFamily } from '../short-id';
 
 export function CatalogHomePage() {
     const model = useModelStore(s => s.model);
