@@ -3,6 +3,7 @@ import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router
 import { useModelStore } from './store/model-store';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
+import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
 import { CompletenessBar } from './components/CompletenessBar';
@@ -254,6 +255,9 @@ export function App() {
 
             {/* Toolbar */}
             <WorkbenchToolbar />
+
+            {/* Primary nav bar */}
+            <ModeSwitcher />
 
             {/* Completeness bar */}
             <CompletenessBar />
