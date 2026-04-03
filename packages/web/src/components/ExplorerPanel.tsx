@@ -1039,20 +1039,14 @@ export function ExplorerPanel() {
                 </>
             ) : (
                 <>
-                    {/* catalog mode: full Model / Views / Sets tabs */}
-                    <TabBar active={explorerTab} onChange={setExplorerTab} />
+                    {/* catalog / default mode: model element tree */}
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                        <input type="text"
-                            placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
+                        <input type="text" placeholder="Search elements..."
                             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                             className="w-full px-3 py-2 rounded-lg focus:outline-none"
                             style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                     </div>
-                    {explorerTab === 'model' && <ModelExplorerContent searchTerm={searchTerm} />}
-                    {explorerTab === 'views' && <ViewExplorerContent searchTerm={searchTerm} />}
-                    {explorerTab === 'worksets' && (
-                        <div className="flex-1 overflow-y-auto px-3 py-2"><WorkingSetsContent /></div>
-                    )}
+                    <ModelExplorerContent searchTerm={searchTerm} />
                 </>
             )}
         </div>
