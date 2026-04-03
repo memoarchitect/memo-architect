@@ -864,8 +864,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 violationCounts={violationCounts}
                                                 baseColor={layerColor}
                                                 onContextMenu={(e, type, id) => onContextMenu(e, type, id, kind)}
-                                                onDragStart={e => handleDragStart(e, nodes[0], kind)}
-                                                onDrop={e => handleDrop(e, '', kind)}
+                                                onDragStart={(e, node) => handleDragStart(e, node, kind)}
+                                                onDrop={(e, folderPath) => handleDrop(e, folderPath, kind)}
                                                 isUndefined={isUndefinedGroup}
                                             />
                                         )}
