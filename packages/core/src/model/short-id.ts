@@ -110,44 +110,36 @@ export function prefixToFamily(prefix: string): string {
 }
 
 /**
- * djb2 hash — fast, non-cryptographic, deterministic.
- * Produces a stable 32-bit integer for any string.
+ * Assign sequential short IDs to a group of elements of the same kind.
+ *
+ * Elements are sorted by their SysML id (lexicographic) for a deterministic,
+ * stable order — adding a new element appends it at its sort position, and
+ * deleting one does not renumber the survivors.
+ *
+ * Format: {KIND-PREFIX}-{n}  e.g. "HZD-1", "HZD-2", "SW-REQ-1", "SW-REQ-2"
+ *
+ * Returns a Map from element id → shortId.
  */
-function djb2(s: string): number {
-    let h = 5381;
-    for (let i = 0; i < s.length; i++) {
-        h = ((h << 5) + h) ^ s.charCodeAt(i);
-        h = h >>> 0; // keep unsigned 32-bit
-    }
-    return h;
-}
-
-/**
- * Generate a stable 4-digit sequence number from an element id.
- * Range: 1000–9999 (always 4 digits).
- */
-function sequenceNumber(elementId: string): number {
-    return (djb2(elementId) % 9000) + 1000;
-}
-
-/**
- * Generate the short ID for a MemoElement.
- * Format: {KIND-PREFIX}-{4-digit-hash}
- * e.g. "SW-REQ-4291", "HZD-1823", "SYS-COMP-7432"
- */
-export function generateShortId(kind: string, elementId: string): string {
+export function assignSequentialShortIds(
+    kind: string,
+    elementIds: string[],
+): Map<string, string> {
     const prefix = kindToPrefix(kind);
-    const seq = sequenceNumber(elementId);
-    return `${prefix}-${seq}`;
+    const sorted = [...elementIds].sort((a, b) => a.localeCompare(b));
+    const out = new Map<string, string>();
+    for (let i = 0; i < sorted.length; i++) {
+        out.set(sorted[i], `${prefix}-${i + 1}`);
+    }
+    return out;
 }
 
 /**
- * Parse a shortId back to its prefix and sequence components.
- * e.g. "SW-REQ-4291" → { prefix: "SW-REQ", seq: 4291 }
+ * Parse a shortId back to its prefix and sequence number.
+ * e.g. "SW-REQ-3" → { prefix: "SW-REQ", seq: 3 }
  * Returns null if the format is unrecognised.
  */
 export function parseShortId(shortId: string): { prefix: string; seq: number } | null {
-    const match = shortId.match(/^(.+)-(\d{4})$/);
+    const match = shortId.match(/^(.+)-(\d+)$/);
     if (!match) return null;
     return { prefix: match[1], seq: parseInt(match[2], 10) };
 }

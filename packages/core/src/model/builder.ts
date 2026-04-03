@@ -56,7 +56,7 @@ import type {
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
 import { PackageRegistry } from './package-registry.js';
-import { generateShortId } from './short-id.js';
+import { assignSequentialShortIds } from './short-id.js';
 import type { KindRegistry } from './kind-registry.js';
 import type { RelationshipRegistry } from './relationship-registry.js';
 
@@ -213,6 +213,15 @@ export function buildMemoModel(
         elementsByLayer.get(el.layer)!.push(el);
     }
 
+    // Assign sequential short IDs: sort each kind group by element id, then
+    // assign PREFIX-1, PREFIX-2, ... Deletion-stable (survivors keep their seq).
+    for (const [kind, kindElements] of elementsByKind) {
+        const idToShortId = assignSequentialShortIds(kind, kindElements.map(e => e.id));
+        for (const el of kindElements) {
+            (el as MemoElement).shortId = idToShortId.get(el.id);
+        }
+    }
+
     const relationshipsByType = new Map<string, MemoRelationship[]>();
     const outgoing = new Map<string, MemoRelationship[]>();
     const incoming = new Map<string, MemoRelationship[]>();
@@ -348,7 +357,6 @@ function extractUsage(
 
     const element: MemoElement = {
         id,
-        shortId: generateShortId(resolvedKind, id),
         name: displayName,
         kind: resolvedKind,
         construct,
@@ -395,7 +403,6 @@ function extractActionDefinition(
 
     const element: MemoElement = {
         id,
-        shortId: generateShortId('ActionDefinition', id),
         name: id,
         kind: 'ActionDefinition',
         construct: 'action',
@@ -429,7 +436,6 @@ function extractItemDefinition(
 
     const element: MemoElement = {
         id,
-        shortId: generateShortId('ItemDefinition', id),
         name: id,
         kind: 'ItemDefinition',
         construct: 'item',
@@ -486,7 +492,6 @@ function extractActionUsage(
 
     const element: MemoElement = {
         id,
-        shortId: generateShortId(kind, id),
         name: displayName,
         kind,
         construct: 'action',
