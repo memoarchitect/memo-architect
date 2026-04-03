@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { MEMOConfig, CosmaLayer, ClosureRule, ViewpointDefinition } from './config.js';
+import type { MEMOConfig, ArchLayer, ClosureRule, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
 const PACKAGE_FILENAMES = ['memo.package.yaml', 'memo.package.yml'];
@@ -42,7 +42,7 @@ export function findConfigFile(startDir: string): string | undefined {
  * Load rendering layers from a memo.rendering.yaml file.
  * Returns the layers array, or empty array if file not found.
  */
-export function loadRenderingLayers(configDir: string): CosmaLayer[] {
+export function loadRenderingLayers(configDir: string): ArchLayer[] {
     for (const name of RENDERING_FILENAMES) {
         const candidate = resolve(configDir, name);
         if (existsSync(candidate)) {
@@ -144,7 +144,7 @@ export function loadConfig(filePath: string): MEMOConfig {
                 license: parsed.license,
                 tags: parsed.tags,
             } : undefined,
-            cosmaLayers: renderingLayers,
+            architectureLayers: renderingLayers,
             closureRules: rulesFromFile,
             viewpoints: viewpointsData.viewpoints,
             firstRun: viewpointsData.firstRun,
@@ -152,11 +152,12 @@ export function loadConfig(filePath: string): MEMOConfig {
     }
 
     // Legacy format: memo.config.yaml
-    // Merge: memo.rendering.yaml layers take precedence, then cosmaLayers from config
-    const cosmaLayersFromConfig: CosmaLayer[] = parsed.cosmaLayers ?? [];
+    // Merge: memo.rendering.yaml layers take precedence, then architectureLayers from config
+    // Support both old (cosmaLayers) and new (architectureLayers) config key names
+    const archLayersFromConfig: ArchLayer[] = (parsed as any).architectureLayers ?? (parsed as any).cosmaLayers ?? [];
     const mergedLayers = renderingLayers.length > 0
-        ? dedup([...cosmaLayersFromConfig, ...renderingLayers], l => l.id)
-        : cosmaLayersFromConfig;
+        ? dedup([...archLayersFromConfig, ...renderingLayers], l => l.id)
+        : archLayersFromConfig;
 
     // Merge rules
     const rulesFromConfig: ClosureRule[] = parsed.closureRules ?? [];
@@ -177,7 +178,7 @@ export function loadConfig(filePath: string): MEMOConfig {
         ontologyMetadata: parsed.ontologyMetadata,
         externalOntologies: parsed.externalOntologies,
         libraries: parsed.libraries,
-        cosmaLayers: mergedLayers,
+        architectureLayers: mergedLayers,
         kinds: parsed.kinds,
         relationshipTypes: parsed.relationshipTypes,
         closureRules: mergedRules,
@@ -274,8 +275,8 @@ function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
             ...(parent.libraries ?? []),
             ...(child.libraries ?? []),
         ] : undefined,
-        cosmaLayers: dedup(
-            [...(parent.cosmaLayers ?? []), ...(child.cosmaLayers ?? [])],
+        architectureLayers: dedup(
+            [...(parent.architectureLayers ?? []), ...(child.architectureLayers ?? [])],
             l => l.id
         ),
         kinds: {

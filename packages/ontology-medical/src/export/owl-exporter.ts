@@ -1,6 +1,6 @@
 export interface OntologyConfig {
     projectName: string;
-    cosmaLayers?: { id: string; label: string; color: string }[];
+    architectureLayers?: { id: string; label: string; color: string }[];
     kinds: Record<string, {
         label: string;
         layer?: string;

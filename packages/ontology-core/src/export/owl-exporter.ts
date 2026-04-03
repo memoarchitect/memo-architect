@@ -6,7 +6,7 @@
 
 export interface OntologyConfig {
     projectName: string;
-    cosmaLayers?: { id: string; label: string; color: string }[];
+    architectureLayers?: { id: string; label: string; color: string }[];
     kinds: Record<string, {
         label: string;
         layer?: string;
@@ -71,8 +71,8 @@ export function exportToOwlTurtle(
     lines.push(`${prefix}:severity a owl:AnnotationProperty .`);
     lines.push('');
 
-    if (config.cosmaLayers && config.cosmaLayers.length > 0) {
-        for (const layer of config.cosmaLayers) {
+    if (config.architectureLayers && config.architectureLayers.length > 0) {
+        for (const layer of config.architectureLayers) {
             lines.push(`${prefix}:Layer_${capitalize(layer.id)} a owl:Class ;`);
             lines.push(`    rdfs:label "${escape(layer.label)}" ;`);
             lines.push(`    ${prefix}:color "${layer.color}" ;`);
@@ -132,8 +132,8 @@ export function exportToOwlXml(
     lines.push(`  <owl:Ontology rdf:about="${ns}"/>`);
     lines.push('');
 
-    if (config.cosmaLayers) {
-        for (const layer of config.cosmaLayers) {
+    if (config.architectureLayers) {
+        for (const layer of config.architectureLayers) {
             lines.push(`  <owl:Class rdf:about="${namespace}Layer_${capitalize(layer.id)}">`);
             lines.push(`    <rdfs:label>${escapeXml(layer.label)}</rdfs:label>`);
             lines.push('  </owl:Class>');

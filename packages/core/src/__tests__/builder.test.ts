@@ -56,7 +56,7 @@ const testConfig: MEMOConfig = {
             severity: 'error',
         },
     ],
-    cosmaLayers: [
+    architectureLayers: [
         { id: 'risk', label: 'Risk', color: '#E74C3C' },
         { id: 'requirements', label: 'Requirements', color: '#4A90D9' },
         { id: 'software', label: 'Software', color: '#F39C12' },

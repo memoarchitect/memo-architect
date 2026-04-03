@@ -39,7 +39,7 @@ export async function ontologyShowCommand(): Promise<void> {
     console.log('');
 
     // Layers
-    const layers = config.cosmaLayers || [];
+    const layers = config.architectureLayers || [];
     console.log(chalk.bold(`  Layers (${layers.length}):`));
     for (const l of layers) {
         console.log(`    ${chalk.hex(l.color)('\u25CF')} ${l.label} (${l.id})`);

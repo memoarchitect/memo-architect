@@ -11,7 +11,7 @@ import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
-import type { ViewpointDTO, CosmaLayerDTO } from '@memo/core';
+import type { ViewpointDTO, ArchLayerDTO } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 
 function findSysmlFiles(dir: string): string[] {
@@ -43,13 +43,13 @@ function buildFullModel(cwd: string, config: any) {
         visibleLayers: vp.visibleLayers,
     }));
 
-    const cosmaLayers: CosmaLayerDTO[] | undefined = config.cosmaLayers?.map((cl: any) => ({
+    const architectureLayers: ArchLayerDTO[] | undefined = config.architectureLayers?.map((cl: any) => ({
         id: cl.id,
         label: cl.label,
         color: cl.color,
     }));
 
-    return { sysmlFiles, viewpoints, cosmaLayers };
+    return { sysmlFiles, viewpoints, architectureLayers };
 }
 
 // ─── memo export json ────────────────────────────────────────────────────────
@@ -69,13 +69,13 @@ export async function exportJsonCommand(options: {
     }
 
     const config = loadAndResolveConfig(configPath);
-    const { sysmlFiles, viewpoints, cosmaLayers } = buildFullModel(cwd, config);
+    const { sysmlFiles, viewpoints, architectureLayers } = buildFullModel(cwd, config);
 
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, errors);
     const validation = validateModel(model, config);
     const completeness = computeCompleteness(model, validation, config);
-    const dto = modelToDTO(model, { viewpoints, cosmaLayers });
+    const dto = modelToDTO(model, { viewpoints, architectureLayers });
 
     const output = {
         projectName: config.projectName,
@@ -113,11 +113,11 @@ export async function exportDotCommand(options: {
     }
 
     const config = loadAndResolveConfig(configPath);
-    const { sysmlFiles, viewpoints, cosmaLayers } = buildFullModel(cwd, config);
+    const { sysmlFiles, viewpoints, architectureLayers } = buildFullModel(cwd, config);
 
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, errors);
-    const dto = modelToDTO(model, { viewpoints, cosmaLayers });
+    const dto = modelToDTO(model, { viewpoints, architectureLayers });
 
     // Filter by viewpoint if specified
     let elements = Object.values(dto.elements);
@@ -138,7 +138,7 @@ export async function exportDotCommand(options: {
 
     // Layer colors for DOT
     const layerColors: Record<string, string> = {};
-    for (const cl of cosmaLayers ?? []) {
+    for (const cl of architectureLayers ?? []) {
         layerColors[cl.id] = cl.color;
     }
 

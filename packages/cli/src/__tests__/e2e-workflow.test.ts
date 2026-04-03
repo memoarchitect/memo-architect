@@ -291,7 +291,7 @@ describe('E2E: memo init → validate → export', () => {
         const coreConfig = loadConfig(join(coreDir, 'memo.package.yaml'));
         expect(coreConfig.projectName).toBe('@memo/ontology-core');
         expect(coreConfig.projectType).toBe('ontology');
-        expect(coreConfig.cosmaLayers!.length).toBeGreaterThanOrEqual(10);
+        expect(coreConfig.architectureLayers!.length).toBeGreaterThanOrEqual(10);
 
         // Verify lock file has all packages
         const lockContent = readFileSync(join(outputDir, 'sysand-lock.toml'), 'utf-8');

@@ -154,8 +154,10 @@ export function App() {
     const { pathname } = useLocation();
     const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
     const activeMode = useModelStore(s => s.activeMode);
-    // Scenario and Ontology have their own internal explorer in the center panel
-    const showExplorer = activeMode !== 'scenario' && activeMode !== 'ontology';
+    // Scenario and Ontology have their own internal explorer in the center panel.
+    // Check both activeMode and activeView.type to avoid dual sidebars if they diverge.
+    const showExplorer = activeMode !== 'scenario' && activeMode !== 'ontology'
+        && activeView.type !== 'ontology' && activeView.type !== 'scenario-editor';
 
     useEffect(() => {
         if (!loadEmbeddedData()) {

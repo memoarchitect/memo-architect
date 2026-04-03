@@ -46,7 +46,7 @@ export function computeCompleteness(
     let totalElements = 0;
     let completeElements = 0;
 
-    for (const layer of config.cosmaLayers || []) {
+    for (const layer of config.architectureLayers || []) {
         const layerElements = model.elementsByLayer.get(layer.id) || [];
         const total = layerElements.length;
         const complete = layerElements.filter(e => !elementsWithErrors.has(e.id)).length;

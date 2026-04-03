@@ -39,7 +39,7 @@ function createMockContext(): PluginContext {
     const config: MEMOConfig = {
         projectName: 'Test',
         projectType: 'device',
-        cosmaLayers: [],
+        architectureLayers: [],
         closureRules: [],
         viewpoints: [],
         workflows: [],
