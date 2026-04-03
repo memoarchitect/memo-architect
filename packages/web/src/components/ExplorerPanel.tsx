@@ -1007,7 +1007,11 @@ export function ExplorerPanel() {
             <div className="flex items-center gap-2 px-4 py-3" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)` }}>
                 <div className="flex-1">
                     <h1 className="font-bold tracking-wide" style={{ color: COLOR.accent, fontSize: FONT.explorer.heading }}>
-                        {activeMode === 'dhf' ? 'DHF Explorer' : 'Explorer'}
+                        {activeMode === 'dhf' ? 'DHF Explorer'
+                            : activeMode === 'diagram' ? 'Diagrams'
+                            : activeMode === 'scenario' ? 'Scenarios'
+                            : activeMode === 'ontology' ? 'Ontology'
+                            : 'Explorer'}
                     </h1>
                     <p className="mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', fontSize: FONT.xs }}>
                         {activeMode === 'dhf' ? '18 documents' : `${elementCount} elements \u00b7 ${relCount} rels`}
@@ -1025,38 +1029,44 @@ export function ExplorerPanel() {
                 </button>
             </div>
 
-            {/* DHF mode: show DHF document tree instead of model/views tabs */}
+            {/* Content — mode-aware, no redundant tabs when top nav provides context */}
             {activeMode === 'dhf' ? (
                 <DhfExplorerContent />
-            ) : (
+            ) : activeMode === 'diagram' ? (
                 <>
-                    {/* Tab bar */}
-                    <TabBar active={explorerTab} onChange={setExplorerTab} />
-
-                    {/* Search */}
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                        <input
-                            type="text"
-                            placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
-                            value={searchTerm}
+                        <input type="text" placeholder="Search diagrams..." value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                            style={{
-                                background: COLOR.surfaceAlt,
-                                border: `1px solid ${COLOR.border}`,
-                                color: COLOR.primary,
-                                fontSize: FONT.explorer.search,
-                            }}
-                        />
+                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                     </div>
-
-                    {/* Content */}
+                    <ViewExplorerContent searchTerm={searchTerm} />
+                </>
+            ) : activeMode === 'scenario' || activeMode === 'ontology' ? (
+                <>
+                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <input type="text" placeholder="Search elements..." value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                    </div>
+                    <ModelExplorerContent searchTerm={searchTerm} />
+                </>
+            ) : (
+                <>
+                    {/* catalog mode: full Model / Views / Sets tabs */}
+                    <TabBar active={explorerTab} onChange={setExplorerTab} />
+                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <input type="text"
+                            placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
+                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                    </div>
                     {explorerTab === 'model' && <ModelExplorerContent searchTerm={searchTerm} />}
                     {explorerTab === 'views' && <ViewExplorerContent searchTerm={searchTerm} />}
                     {explorerTab === 'worksets' && (
-                        <div className="flex-1 overflow-y-auto px-3 py-2">
-                            <WorkingSetsContent />
-                        </div>
+                        <div className="flex-1 overflow-y-auto px-3 py-2"><WorkingSetsContent /></div>
                     )}
                 </>
             )}
