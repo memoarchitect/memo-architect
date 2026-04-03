@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const FONT = {
-    badge: '11px',
+    badge: '12px',
     xs: '12px',
     sm: '13px',
     md: '14px',
@@ -15,7 +15,7 @@ export const FONT = {
         group: '13px',
         kind: '12px',
         item: '13px',
-        count: '11px',
+        count: '12px',
         search: '13px',
         tab: '13px',
     },

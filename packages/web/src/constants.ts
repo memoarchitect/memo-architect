@@ -1,6 +1,6 @@
 // ─── Shared Design Constants ─────────────────────────────────────────────────
 //
-// Single source of truth for CoSMA layer colors and design tokens.
+// Single source of truth for architecture layer colors and design tokens.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const LAYER_COLORS: Record<string, string> = {

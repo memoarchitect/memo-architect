@@ -18,7 +18,7 @@ export function parseModelJson(json: unknown): OntologyData {
     const elementsObj = (model.elements || {}) as Record<string, Record<string, unknown>>;
     const relsArr = (model.relationships || []) as Array<Record<string, unknown>>;
     const viewpoints = (model.viewpoints || []) as Array<Record<string, unknown>>;
-    const cosmaLayers = (model.cosmaLayers || []) as Array<Record<string, unknown>>;
+    const cosmaLayers = (model.architectureLayers || model.cosmaLayers || []) as Array<Record<string, unknown>>;
 
     // Extract kinds from elements
     const kindMap = new Map<string, KindInfo>();

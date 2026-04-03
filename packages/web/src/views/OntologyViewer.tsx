@@ -41,7 +41,7 @@ export function OntologyViewer() {
     // Extract kinds from model DTO config data
     const kinds = useMemo((): KindInfo[] => {
         if (!model) return [];
-        // Build from cosmaLayers + elements: infer available kinds from model elements
+        // Build from architectureLayers + elements: infer available kinds from model elements
         const kindMap = new Map<string, KindInfo>();
         for (const el of Object.values(model.elements)) {
             if (!kindMap.has(el.kind)) {

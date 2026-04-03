@@ -14,8 +14,8 @@
 /** Project type discriminator */
 export type ProjectType = 'ontology' | 'profile' | 'library' | 'device';
 
-/** A CoSMA visualization layer grouping related entity kinds */
-export interface CosmaLayer {
+/** An architecture visualization layer grouping related entity kinds */
+export interface ArchLayer {
     /** Unique layer identifier, e.g. "requirements", "architecture" */
     id: string;
     /** Human-readable label for the layer */
@@ -30,7 +30,7 @@ export interface RelationshipType {
     name: string;
     /** Human-readable label, e.g. "Mitigates" */
     label: string;
-    /** CoSMA layer this relationship belongs to */
+    /** Architecture layer this relationship belongs to */
     layer: string;
     /** Hex color for relationship visualization */
     color: string;
@@ -53,7 +53,7 @@ export type SysMLConstruct =
 export interface KindDefinition {
     /** Human-readable label */
     label: string;
-    /** CoSMA layer this kind belongs to */
+    /** Architecture layer this kind belongs to */
     layer?: string;
     /** SysML v2 construct this kind maps to */
     sysmlConstruct: SysMLConstruct;
@@ -77,7 +77,7 @@ export interface ClosureRule {
     rule: ClosureRuleDefinition;
     /** Error severity when rule is violated */
     severity: 'error' | 'warning' | 'info';
-    /** CoSMA layer this rule contributes completeness to */
+    /** Architecture layer this rule contributes completeness to */
     completenessLayer?: string;
 }
 
@@ -152,7 +152,7 @@ export interface ViewpointDefinition {
     visibleKinds: string[];
     /** Relationship types visible in this viewpoint */
     visibleRelationships: string[];
-    /** CoSMA layers visible in this viewpoint */
+    /** Architecture layers visible in this viewpoint */
     visibleLayers: string[];
     /** SysML v2 diagram types supported by this viewpoint */
     supportedDiagramTypes?: DiagramType[];
@@ -265,13 +265,13 @@ export interface MEMOConfig {
     /** Reusable element library imports */
     libraries?: LibraryRef[];
 
-    /** CoSMA visualization layers */
-    cosmaLayers?: CosmaLayer[];
+    /** Architecture visualization layers */
+    architectureLayers?: ArchLayer[];
 
     /** Entity kind definitions (keyed by kind identifier). Optional — prefer KindRegistry. */
     kinds?: Record<string, KindDefinition>;
 
-    /** Typed relationship definitions with CoSMA layer mapping. Optional — prefer RelationshipRegistry. */
+    /** Typed relationship definitions with architecture layer mapping. Optional — prefer RelationshipRegistry. */
     relationshipTypes?: RelationshipType[];
 
     /** Closure rules for model validation */

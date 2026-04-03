@@ -49,8 +49,8 @@ layers:
 // ─── loadConfig with memo.rendering.yaml ────────────────────────────────────
 
 describe('loadConfig with memo.rendering.yaml', () => {
-    it('merges rendering layers into cosmaLayers', () => {
-        // Config with no cosmaLayers
+    it('merges rendering layers into architectureLayers', () => {
+        // Config with no architectureLayers
         writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
 projectName: test-project
 projectType: device
@@ -63,11 +63,11 @@ layers:
 `);
 
         const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
-        expect(config.cosmaLayers).toHaveLength(1);
-        expect(config.cosmaLayers![0].id).toBe('risk');
+        expect(config.architectureLayers).toHaveLength(1);
+        expect(config.architectureLayers![0].id).toBe('risk');
     });
 
-    it('rendering layers take precedence over config cosmaLayers for same id', () => {
+    it('rendering layers take precedence over config architectureLayers for same id', () => {
         writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
 projectName: test-project
 projectType: device
@@ -84,12 +84,12 @@ layers:
 `);
 
         const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
-        expect(config.cosmaLayers).toHaveLength(1);
-        expect(config.cosmaLayers![0].label).toBe('Risk Management');
-        expect(config.cosmaLayers![0].color).toBe('#E74C3C');
+        expect(config.architectureLayers).toHaveLength(1);
+        expect(config.architectureLayers![0].label).toBe('Risk Management');
+        expect(config.architectureLayers![0].color).toBe('#E74C3C');
     });
 
-    it('backward compat: cosmaLayers still works without rendering file', () => {
+    it('backward compat: legacy cosmaLayers YAML key is read into architectureLayers', () => {
         writeFileSync(join(TMP_DIR, 'memo.config.yaml'), `
 projectName: test-project
 projectType: device
@@ -103,8 +103,8 @@ cosmaLayers:
 `);
 
         const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
-        expect(config.cosmaLayers).toHaveLength(2);
-        expect(config.cosmaLayers![0].id).toBe('risk');
+        expect(config.architectureLayers).toHaveLength(2);
+        expect(config.architectureLayers![0].id).toBe('risk');
     });
 
     it('merges both sources when both have different layer ids', () => {
@@ -124,8 +124,8 @@ layers:
 `);
 
         const config = loadConfig(join(TMP_DIR, 'memo.config.yaml'));
-        expect(config.cosmaLayers).toHaveLength(2);
-        const ids = config.cosmaLayers!.map(l => l.id);
+        expect(config.architectureLayers).toHaveLength(2);
+        const ids = config.architectureLayers!.map(l => l.id);
         expect(ids).toContain('risk');
         expect(ids).toContain('requirements');
     });
@@ -301,10 +301,10 @@ describe('loadConfig with real ontology package files', () => {
         const config = loadConfig(configPath);
 
         // Should have layers from memo.rendering.yaml
-        expect(config.cosmaLayers!.length).toBeGreaterThanOrEqual(10);
+        expect(config.architectureLayers!.length).toBeGreaterThanOrEqual(10);
 
         // Verify specific layers are present
-        const layerIds = config.cosmaLayers!.map(l => l.id);
+        const layerIds = config.architectureLayers!.map(l => l.id);
         expect(layerIds).toContain('purpose');
         expect(layerIds).toContain('requirements');
         expect(layerIds).toContain('software');
@@ -320,7 +320,7 @@ describe('loadConfig with real ontology package files', () => {
         const config = loadConfig(configPath);
 
         // Should have medical layers
-        const layerIds = config.cosmaLayers!.map(l => l.id);
+        const layerIds = config.architectureLayers!.map(l => l.id);
         expect(layerIds).toContain('risk');
         expect(layerIds).toContain('design-control');
         expect(layerIds).toContain('safety');

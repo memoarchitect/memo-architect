@@ -16,7 +16,7 @@ import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
-import type { ViewpointDTO, CosmaLayerDTO } from '@memo/core';
+import type { ViewpointDTO, ArchLayerDTO } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 
 function findSysmlFiles(dir: string): string[] {
@@ -72,13 +72,13 @@ export async function buildCommand(options: {
         visibleLayers: vp.visibleLayers,
     }));
 
-    const cosmaLayers: CosmaLayerDTO[] | undefined = config.cosmaLayers?.map(cl => ({
+    const architectureLayers: ArchLayerDTO[] | undefined = config.architectureLayers?.map(cl => ({
         id: cl.id,
         label: cl.label,
         color: cl.color,
     }));
 
-    const dto = modelToDTO(model, { viewpoints, cosmaLayers });
+    const dto = modelToDTO(model, { viewpoints, architectureLayers });
 
     console.log(chalk.cyan(
         `  ${model.elements.size} elements, ${model.relationships.length} relationships, ` +

@@ -92,17 +92,17 @@ function DiagramProperties() {
                             {meta.code}
                         </span>
                     )}
-                    <span style={{ color: '#9CA3AF' }}>{meta?.fullName || diagram.diagramType}</span>
+                    <span style={{ color: '#6B7280' }}>{meta?.fullName || diagram.diagramType}</span>
                 </div>
                 {diagram.auto && (
-                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Auto-generated</div>
+                    <div className="text-xs mt-1" style={{ color: '#6B7280' }}>Auto-generated</div>
                 )}
             </div>
 
             <div className="flex-1 overflow-y-auto">
                 {diagram.description && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Description</div>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Description</div>
                         <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>
                             {diagram.description}
                         </div>
@@ -110,7 +110,7 @@ function DiagramProperties() {
                 )}
 
                 <div className="p-4" style={sectionStyle}>
-                    <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Details</div>
+                    <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Details</div>
                     <div className="space-y-1.5">
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>ID</span>
@@ -129,7 +129,7 @@ function DiagramProperties() {
 
                 {diagram.properties && Object.keys(diagram.properties).length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Properties</div>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Properties</div>
                         <div className="space-y-1.5">
                             {Object.entries(diagram.properties).map(([key, value]) => (
                                 <div key={key} className="flex text-xs">
@@ -143,7 +143,7 @@ function DiagramProperties() {
 
                 {diagram.elementIds && diagram.elementIds.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>
                             Scoped Elements ({diagram.elementIds.length})
                         </div>
                         <div className="text-xs" style={{ color: '#6B7280' }}>
@@ -154,7 +154,7 @@ function DiagramProperties() {
 
                 {diagram.relationshipTypes && diagram.relationshipTypes.length > 0 && (
                     <div className="p-4">
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>
                             Relationship Types
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -223,7 +223,7 @@ function ElementProperties() {
                     <span className="px-2 py-0.5 rounded-md font-medium" style={{ background: layerColor + '18', color: layerColor }}>
                         {element.kind}
                     </span>
-                    <span style={{ color: '#9CA3AF' }}>{element.construct}</span>
+                    <span style={{ color: '#6B7280' }}>{element.construct}</span>
                 </div>
                 <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>
                     {element.layer} layer
@@ -234,7 +234,7 @@ function ElementProperties() {
             <div className="flex-1 overflow-y-auto">
                 {/* Doc — editable */}
                 <div className="p-4" style={sectionStyle}>
-                    <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Description</div>
+                    <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Description</div>
                     <div className="text-xs leading-relaxed">
                         <EditableField
                             value={element.doc || ''}
@@ -247,7 +247,7 @@ function ElementProperties() {
                 {/* Action Parameters */}
                 {element.parameters && element.parameters.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Parameters</div>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Parameters</div>
                         <div className="space-y-1.5">
                             {element.parameters.map((param: any) => (
                                 <div key={param.name} className="flex items-center gap-2 text-xs">
@@ -260,7 +260,7 @@ function ElementProperties() {
                                         {param.direction}
                                     </span>
                                     <span style={{ color: '#374151', fontWeight: 500 }}>{param.name}</span>
-                                    <span style={{ color: '#9CA3AF' }}>:</span>
+                                    <span style={{ color: '#6B7280' }}>:</span>
                                     <span style={{ color: '#6B7280' }}>{param.type}</span>
                                 </div>
                             ))}
@@ -271,7 +271,7 @@ function ElementProperties() {
                 {/* Allocation target */}
                 {element.allocatedTo && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF' }}>Allocated To</div>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Allocated To</div>
                         <div
                             className="text-xs cursor-pointer px-2 py-1 rounded-md transition-colors"
                             style={{ color: '#E67E22' }}
@@ -287,7 +287,7 @@ function ElementProperties() {
                 {/* Attributes — with inline editing */}
                 {attrs.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Attributes</div>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Attributes</div>
                         <div className="space-y-1.5">
                             {attrs.map(([key, value]) => (
                                 <div key={key} className="flex text-xs items-start">
@@ -305,7 +305,7 @@ function ElementProperties() {
                 {/* Relationships */}
                 {relationships.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>
                             Relationships ({relationships.length})
                         </div>
                         <div className="space-y-1">
@@ -320,7 +320,7 @@ function ElementProperties() {
                                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         onClick={() => selectElement(rel.targetId)}
                                     >
-                                        <span style={{ color: '#9CA3AF' }}>&rarr;</span>
+                                        <span style={{ color: '#6B7280' }}>&rarr;</span>
                                         <span className="px-1 py-0.5 rounded" style={{ color: '#2563EB', background: '#EFF6FF', fontSize: FONT.xs }}>
                                             {rel.type}
                                         </span>
@@ -347,7 +347,7 @@ function ElementProperties() {
                                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         onClick={() => selectElement(rel.sourceId)}
                                     >
-                                        <span style={{ color: '#9CA3AF' }}>&larr;</span>
+                                        <span style={{ color: '#6B7280' }}>&larr;</span>
                                         <span className="px-1 py-0.5 rounded" style={{ color: '#10B981', background: '#ECFDF5', fontSize: FONT.xs }}>
                                             {rel.type}
                                         </span>
@@ -370,7 +370,7 @@ function ElementProperties() {
                 {/* Violations / Guidance */}
                 {violations.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#9CA3AF' }}>Guidance</div>
+                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Guidance</div>
                         <div className="space-y-2">
                             {violations.map((v, i) => (
                                 <div
@@ -391,7 +391,7 @@ function ElementProperties() {
                                     }}>
                                         {v.description}
                                     </div>
-                                    <div className="mt-0.5" style={{ color: '#9CA3AF' }}>[{v.ruleId}]</div>
+                                    <div className="mt-0.5" style={{ color: '#6B7280' }}>[{v.ruleId}]</div>
                                 </div>
                             ))}
                         </div>
@@ -435,7 +435,7 @@ export function UnifiedPropertiesPanel() {
                 <div className="py-3" style={{ color: '#9CA3AF', fontSize: '14px' }}>{'\u25C2'}</div>
                 <div style={{
                     writingMode: 'vertical-rl', textOrientation: 'mixed',
-                    color: '#6B7280', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em',
+                    color: '#6B7280', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em',
                 }}>
                     Properties
                 </div>
@@ -450,7 +450,7 @@ export function UnifiedPropertiesPanel() {
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
             {/* Collapse button */}
             <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid #EDEDEA' }}>
-                <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Properties</span>
+                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Properties</span>
                 <button
                     onClick={togglePropertiesPanel}
                     className="flex items-center justify-center"
@@ -469,7 +469,7 @@ export function UnifiedPropertiesPanel() {
                 <DiagramProperties />
             ) : (
                 <div className="flex-1 flex items-center justify-center p-4">
-                    <span className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+                    <span className="text-xs text-center" style={{ color: '#6B7280' }}>
                         Select an element or diagram to view properties
                     </span>
                 </div>

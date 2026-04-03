@@ -192,9 +192,9 @@ export function serializeOntologyContext(config: MEMOConfig): string {
     }
 
     // Architecture layers
-    if (config.cosmaLayers?.length) {
+    if (config.architectureLayers?.length) {
         parts.push('## Architecture Layers');
-        for (const l of config.cosmaLayers) {
+        for (const l of config.architectureLayers) {
             parts.push(`- ${l.id}: ${l.label}`);
         }
         parts.push('');

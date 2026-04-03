@@ -10,7 +10,7 @@ export * from './language/memo-sysml-module.js';
 // ViewpointDefinition (generated from grammar) vs config's ViewpointDefinition.
 export {
     type ProjectType,
-    type CosmaLayer,
+    type ArchLayer,
     type RelationshipType,
     type SysMLConstruct,
     type KindDefinition,

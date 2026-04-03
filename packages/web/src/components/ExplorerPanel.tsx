@@ -439,7 +439,7 @@ function RecursiveTree({
                                     expanded={expanded}
                                     toggleExpand={toggleExpand}
                                     selectedElementId={selectedElementId}
-                                    selectElement={selectElement}
+                                    selectElement={selectElementAndNavigate}
                                     selectedElementIds={selectedElementIds}
                                     toggleElementSelection={toggleElementSelection}
                                     violationCounts={violationCounts}
@@ -512,7 +512,7 @@ function RecursiveTree({
                             </span>
                             {isUndefined && (
                                 <span title={`Kind "${el.kind}" is not defined in the ontology`}
-                                    style={{ color: '#F59E0B', fontSize: '11px', flexShrink: 0 }}>⚠</span>
+                                    style={{ color: '#F59E0B', fontSize: '12px', flexShrink: 0 }}>⚠</span>
                             )}
                             {vCount > 0 && (
                                 <span
@@ -543,6 +543,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
+    const setActiveView = useModelStore(s => s.setActiveView);
     const selectedElementIds = useModelStore(s => s.selectedElementIds);
     const toggleElementSelection = useModelStore(s => s.toggleElementSelection);
     const selectAllElements = useModelStore(s => s.selectAllElements);
@@ -550,6 +551,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
     const moveFolder = useModelStore(s => s.moveFolder);
     const validation = useModelStore(s => s.validation);
+
+    const selectElementAndNavigate = useCallback((id: string) => {
+        selectElement(id);
+        setActiveView({ type: 'element-detail', elementId: id });
+    }, [selectElement, setActiveView]);
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
@@ -706,14 +712,14 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             {selectionCount > 0 && (
                 <div
                     className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0"
-                    style={{ background: '#FFFBEB', borderBottom: '1px solid #FDE68A', fontSize: '11px' }}
+                    style={{ background: '#FFFBEB', borderBottom: '1px solid #FDE68A', fontSize: '12px' }}
                 >
                     <span style={{ color: '#92400E', fontWeight: 600 }}>{selectionCount} selected</span>
                     <span style={{ color: '#B45309' }}>— Cmd/Ctrl+click to multi-select</span>
                     <button
                         onClick={clearElementSelection}
                         className="ml-auto px-2 py-0.5 rounded"
-                        style={{ color: '#92400E', background: '#FDE68A', fontSize: '11px', fontWeight: 500 }}
+                        style={{ color: '#92400E', background: '#FDE68A', fontSize: '12px', fontWeight: 500 }}
                     >Clear</button>
                 </div>
             )}
@@ -721,13 +727,13 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             {searchTerm && allVisibleElementIds.length > 0 && (
                 <div
                     className="flex items-center gap-2 px-3 py-1"
-                    style={{ background: '#F0F9FF', borderBottom: '1px solid #BAE6FD', fontSize: '11px' }}
+                    style={{ background: '#F0F9FF', borderBottom: '1px solid #BAE6FD', fontSize: '12px' }}
                 >
                     <span style={{ color: '#0369A1' }}>{allVisibleElementIds.length} matching</span>
                     <button
                         onClick={() => selectAllElements(allVisibleElementIds)}
                         className="ml-auto px-2 py-0.5 rounded"
-                        style={{ color: '#0369A1', background: '#BAE6FD', fontSize: '11px', fontWeight: 500 }}
+                        style={{ color: '#0369A1', background: '#BAE6FD', fontSize: '12px', fontWeight: 500 }}
                     >Select All</button>
                 </div>
             )}
@@ -847,7 +853,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 expanded={expanded}
                                                 toggleExpand={toggleExpand}
                                                 selectedElementId={selectedElementId}
-                                                selectElement={selectElement}
+                                                selectElement={selectElementAndNavigate}
                                                 selectedElementIds={selectedElementIds}
                                                 toggleElementSelection={toggleElementSelection}
                                                 violationCounts={violationCounts}

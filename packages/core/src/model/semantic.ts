@@ -30,7 +30,7 @@ export interface MemoElement {
     kind: string;
     /** SysML v2 construct: 'part', 'requirement', 'action', 'port', 'item' */
     construct: string;
-    /** CoSMA layer from config, e.g. "risk", "requirements" */
+    /** Architecture layer from config, e.g. "risk", "requirements" */
     layer: string;
     /** Source file path (relative) */
     file: string;
@@ -93,7 +93,7 @@ export interface MemoModel {
 
     /** Elements grouped by kind */
     elementsByKind: Map<string, MemoElement[]>;
-    /** Elements grouped by CoSMA layer */
+    /** Elements grouped by architecture layer */
     elementsByLayer: Map<string, MemoElement[]>;
     /** Relationships grouped by type */
     relationshipsByType: Map<string, MemoRelationship[]>;
@@ -126,8 +126,8 @@ export interface DiagramDTO {
     relationshipTypes?: string[];
 }
 
-/** CoSMA layer info (serializable subset of config) */
-export interface CosmaLayerDTO {
+/** Architecture layer info (serializable subset of config) */
+export interface ArchLayerDTO {
     id: string;
     label: string;
     color: string;
@@ -154,8 +154,8 @@ export interface MemoModelDTO {
     errors: ParseError[];
     /** Viewpoint definitions from config (for client-side filtering) */
     viewpoints?: ViewpointDTO[];
-    /** CoSMA layer definitions from config */
-    cosmaLayers?: CosmaLayerDTO[];
+    /** Architecture layer definitions from config */
+    architectureLayers?: ArchLayerDTO[];
     /** Diagram definitions from config viewpoints */
     diagrams?: DiagramDTO[];
     /** Model metadata for versioning and attribution */
@@ -165,7 +165,7 @@ export interface MemoModelDTO {
 /** Convert MemoModel to a plain JSON-serializable object */
 export function modelToDTO(
     model: MemoModel,
-    options?: { viewpoints?: ViewpointDTO[]; cosmaLayers?: CosmaLayerDTO[]; diagrams?: DiagramDTO[] }
+    options?: { viewpoints?: ViewpointDTO[]; architectureLayers?: ArchLayerDTO[]; diagrams?: DiagramDTO[] }
 ): MemoModelDTO {
     const elements: Record<string, MemoElement> = {};
     for (const [id, el] of model.elements) {
@@ -176,7 +176,7 @@ export function modelToDTO(
         relationships: model.relationships,
         errors: model.errors,
         viewpoints: options?.viewpoints,
-        cosmaLayers: options?.cosmaLayers,
+        architectureLayers: options?.architectureLayers,
         diagrams: options?.diagrams,
     };
 }

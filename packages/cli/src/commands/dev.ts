@@ -14,7 +14,7 @@ import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyReg
 import type { BuilderRegistries } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
-import type { ServerMessage, ViewpointDTO, CosmaLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
+import type { ServerMessage, ViewpointDTO, ArchLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { createDevServer } from '../server/dev-server.js';
 import { createFileWatcher } from '../server/file-watcher.js';
@@ -112,7 +112,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             `${validation.violations.length} violations, ${completeness.overall}% complete`
         ));
 
-        // Map config viewpoints/cosmaLayers to DTOs
+        // Map config viewpoints/architectureLayers to DTOs
         const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({
             id: vp.id,
             label: vp.label,
@@ -122,18 +122,22 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             supportedDiagramTypes: vp.supportedDiagramTypes,
         }));
 
-        // Collect all diagrams from viewpoints + Model Viewpoint auto-diagrams
-        // Note: context/decomposition diagrams are now defined in viewpoint configs
-        // (context-view, logical-view). Model Viewpoint only holds diagrams that
-        // don't fit a specific viewpoint.
-        const diagrams: DiagramDTO[] = [
-            // Model Viewpoint — cross-cutting overview diagram
-            {
-                id: 'diag-model-overview', name: 'Full Model Overview', diagramType: 'bdd',
-                viewpointId: '__model', auto: true,
-                description: 'All model elements — unfiltered view across all layers',
-            },
-        ];
+        // Collect all diagrams from viewpoints + Model Viewpoint per-layer auto-diagrams.
+        // One diagram per architecture layer (instead of a single unreadable "Full Model Overview").
+        const diagrams: DiagramDTO[] = [];
+        for (const [layerId, layerElements] of model.elementsByLayer.entries()) {
+            if (layerElements.length === 0) continue;
+            const label = layerId.charAt(0).toUpperCase() + layerId.slice(1);
+            diagrams.push({
+                id: `diag-layer-${layerId}`,
+                name: `${label} Layer`,
+                diagramType: 'bdd',
+                viewpointId: '__model',
+                auto: true,
+                description: `${label} architecture layer — ${layerElements.length} elements`,
+                elementIds: layerElements.map(e => e.id),
+            });
+        }
         // Add diagrams from config viewpoints
         if (config.viewpoints) {
             for (const vp of config.viewpoints) {
@@ -155,7 +159,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             }
         }
 
-        const cosmaLayers: CosmaLayerDTO[] | undefined = config.cosmaLayers?.map(cl => ({
+        const architectureLayers: ArchLayerDTO[] | undefined = config.architectureLayers?.map(cl => ({
             id: cl.id,
             label: cl.label,
             color: cl.color,
@@ -169,7 +173,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             ...gitInfo,
         };
 
-        const dto = modelToDTO(model, { viewpoints, cosmaLayers, diagrams });
+        const dto = modelToDTO(model, { viewpoints, architectureLayers, diagrams });
         dto.metadata = metadata;
 
         return {
