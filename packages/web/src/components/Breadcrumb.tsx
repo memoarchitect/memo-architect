@@ -63,7 +63,7 @@ export function Breadcrumb() {
             crumbs.push({ label: 'Ontology' });
             break;
         case 'welcome':
-            crumbs.push({ label: 'Home' });
+            // No breadcrumb on home — MEMO Architect title is already the home button
             break;
     }
 
