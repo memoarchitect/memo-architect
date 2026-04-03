@@ -861,6 +861,112 @@ function DiagramRow({ diag, isSelected, onSelect }: {
     );
 }
 
+// ─── DHF Explorer ────────────────────────────────────────────────────────────
+
+const DHF_GROUPS = [
+    {
+        id: 'risk', label: 'Risk Management', color: '#E74C3C',
+        docs: [
+            { id: 'rmp', title: 'Risk Management Plan' },
+            { id: 'har', title: 'Hazard Analysis Report' },
+            { id: 'fmea', title: 'Failure Mode & Effects Analysis' },
+        ],
+    },
+    {
+        id: 'design', label: 'Design & Architecture', color: '#4A90D9',
+        docs: [
+            { id: 'rtm', title: 'Requirements Traceability Matrix' },
+            { id: 'sad', title: 'System Architecture Description' },
+            { id: 'sds', title: 'Software Design Specification' },
+            { id: 'soup', title: 'SOUP List' },
+            { id: 'dip', title: 'Design Input Plan' },
+            { id: 'dop', title: 'Design Output Plan' },
+        ],
+    },
+    {
+        id: 'verification', label: 'Verification & Validation', color: '#2ECC71',
+        docs: [
+            { id: 'vvp', title: 'V&V Plan' },
+            { id: 'vvr', title: 'V&V Report' },
+        ],
+    },
+    {
+        id: 'compliance', label: 'Compliance & Standards', color: '#8E44AD',
+        docs: [
+            { id: 'sdp', title: 'Software Development Plan' },
+            { id: 'csr', title: 'Clinical Safety Report' },
+            { id: 'uer', title: 'Usability Engineering Report' },
+            { id: 'cybersecurity', title: 'Cybersecurity Documentation' },
+            { id: 'labeling', title: 'Labeling Specification' },
+        ],
+    },
+    {
+        id: 'all', label: 'General', color: '#6B7280',
+        docs: [
+            { id: 'dhf-index', title: 'Design History File Index' },
+            { id: 'change-log', title: 'Design Change Log' },
+        ],
+    },
+] as const;
+
+function DhfExplorerContent() {
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['risk', 'design']));
+
+    function toggleGroup(id: string) {
+        setExpandedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
+
+    return (
+        <div className="flex-1 overflow-y-auto py-2">
+            {DHF_GROUPS.map(group => {
+                const expanded = expandedGroups.has(group.id);
+                return (
+                    <div key={group.id}>
+                        {/* Group header */}
+                        <button
+                            onClick={() => toggleGroup(group.id)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-left"
+                            style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}
+                            onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <span style={{
+                                display: 'inline-block', width: '8px', height: '8px',
+                                borderRadius: '50%', background: group.color, flexShrink: 0,
+                            }} />
+                            <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{group.label}</span>
+                            <ChevronIcon expanded={expanded} size={12} />
+                        </button>
+
+                        {/* Doc items */}
+                        {expanded && group.docs.map(doc => (
+                            <button
+                                key={doc.id}
+                                onClick={() => setActiveView({ type: 'dhf-dashboard' })}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-left"
+                                style={{ paddingLeft: '32px', fontSize: FONT.explorer.element, color: COLOR.primary }}
+                                onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <ItemIcon color={group.color} />
+                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {doc.title}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // ─── Main ExplorerPanel ──────────────────────────────────────────────────────
 
 export function ExplorerPanel() {
@@ -871,6 +977,7 @@ export function ExplorerPanel() {
     const searchTerm = useModelStore(s => s.searchTerm);
     const setSearchTerm = useModelStore(s => s.setSearchTerm);
     const model = useModelStore(s => s.model);
+    const activeMode = useModelStore(s => s.activeMode);
 
     const elementCount = model ? Object.keys(model.elements).length : 0;
     const relCount = model ? model.relationships.length : 0;
@@ -899,9 +1006,11 @@ export function ExplorerPanel() {
             {/* Header */}
             <div className="flex items-center gap-2 px-4 py-3" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)` }}>
                 <div className="flex-1">
-                    <h1 className="font-bold tracking-wide" style={{ color: COLOR.accent, fontSize: FONT.explorer.heading }}>Explorer</h1>
+                    <h1 className="font-bold tracking-wide" style={{ color: COLOR.accent, fontSize: FONT.explorer.heading }}>
+                        {activeMode === 'dhf' ? 'DHF Explorer' : 'Explorer'}
+                    </h1>
                     <p className="mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', fontSize: FONT.xs }}>
-                        {elementCount} elements &middot; {relCount} rels
+                        {activeMode === 'dhf' ? '18 documents' : `${elementCount} elements \u00b7 ${relCount} rels`}
                     </p>
                 </div>
                 <button
@@ -916,33 +1025,40 @@ export function ExplorerPanel() {
                 </button>
             </div>
 
-            {/* Tab bar */}
-            <TabBar active={explorerTab} onChange={setExplorerTab} />
+            {/* DHF mode: show DHF document tree instead of model/views tabs */}
+            {activeMode === 'dhf' ? (
+                <DhfExplorerContent />
+            ) : (
+                <>
+                    {/* Tab bar */}
+                    <TabBar active={explorerTab} onChange={setExplorerTab} />
 
-            {/* Search */}
-            <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                <input
-                    type="text"
-                    placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                    style={{
-                        background: COLOR.surfaceAlt,
-                        border: `1px solid ${COLOR.border}`,
-                        color: COLOR.primary,
-                        fontSize: FONT.explorer.search,
-                    }}
-                />
-            </div>
+                    {/* Search */}
+                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <input
+                            type="text"
+                            placeholder={explorerTab === 'model' ? 'Search elements...' : 'Search diagrams...'}
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                            style={{
+                                background: COLOR.surfaceAlt,
+                                border: `1px solid ${COLOR.border}`,
+                                color: COLOR.primary,
+                                fontSize: FONT.explorer.search,
+                            }}
+                        />
+                    </div>
 
-            {/* Content */}
-            {explorerTab === 'model' && <ModelExplorerContent searchTerm={searchTerm} />}
-            {explorerTab === 'views' && <ViewExplorerContent searchTerm={searchTerm} />}
-            {explorerTab === 'worksets' && (
-                <div className="flex-1 overflow-y-auto px-3 py-2">
-                    <WorkingSetsContent />
-                </div>
+                    {/* Content */}
+                    {explorerTab === 'model' && <ModelExplorerContent searchTerm={searchTerm} />}
+                    {explorerTab === 'views' && <ViewExplorerContent searchTerm={searchTerm} />}
+                    {explorerTab === 'worksets' && (
+                        <div className="flex-1 overflow-y-auto px-3 py-2">
+                            <WorkingSetsContent />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
