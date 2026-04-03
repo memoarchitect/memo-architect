@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, useMemo } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
@@ -7,7 +7,6 @@ import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
 import { BulkEditPanel } from './components/BulkEditPanel';
-import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -95,53 +94,134 @@ function ViewLoadingFallback() {
     );
 }
 
+const WELCOME_GRADIENT = 'linear-gradient(135deg, #EEF7F3 0%, #EAF2F8 55%, #F2EEF8 100%)';
+
 function WelcomeCanvas() {
     const model = useModelStore(s => s.model);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const selectElement = useModelStore(s => s.selectElement);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
 
     const diagramCount = model?.diagrams?.length ?? 0;
     const elementCount = model ? Object.keys(model.elements).length : 0;
 
+    // Quick-browse: up to 8 elements sampled across kinds for variety
+    const quickElements = useMemo(() => {
+        if (!model) return [];
+        const byKind = new Map<string, typeof model.elements[string]>();
+        for (const el of Object.values(model.elements)) {
+            if (!byKind.has(el.kind)) byKind.set(el.kind, el);
+        }
+        return Array.from(byKind.values()).slice(0, 8);
+    }, [model]);
+
+    function openElement(id: string) {
+        selectElement(id);
+        setActiveView({ type: 'element-detail', elementId: id });
+    }
+
     return (
-        <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
-            <div className="text-center max-w-4xl" style={{ lineHeight: '1.7', transform: 'translateY(-88px)' }}>
-                <img 
-                    src="/logo.png" 
-                    alt="MEMO Logo" 
-                    style={{ 
-                        width: '715px', 
-                        maxWidth: '100%',
-                        maxHeight: '65vh',
-                        objectFit: 'contain', 
-                        display: 'block', 
-                        margin: '0 auto -66px auto', 
-                        opacity: 0.95 
-                    }} 
-                />
-                <h2 className="text-lg font-semibold mb-2" style={{ color: '#374151' }}>
-                    Welcome to MEMO Architect
-                </h2>
-                <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
-                    Use the Explorer panel to browse model elements or select a diagram view.
-                </p>
+        <div
+            className="flex-1 flex flex-col items-center justify-center overflow-auto"
+            style={{ background: WELCOME_GRADIENT, padding: '48px 40px' }}
+        >
+            {/* Logo */}
+            <img
+                src="/logo.png"
+                alt="MEMO Logo"
+                style={{ width: '520px', maxWidth: '80vw', maxHeight: '40vh', objectFit: 'contain', marginBottom: '-36px', opacity: 0.97 }}
+            />
+
+            {/* Headline */}
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1B3A4B', marginBottom: '6px', marginTop: 0 }}>
+                MEMO Architect
+            </h2>
+            <p style={{ fontSize: '14px', color: '#4B6E80', marginTop: 0, marginBottom: '24px', maxWidth: '480px', textAlign: 'center', lineHeight: '1.6' }}>
+                SysML-based medical device architecture tool, aligned with ISO&nbsp;14971 and IEC&nbsp;62304.
+            </p>
+
+            {/* Stats pill */}
+            {elementCount > 0 && (
+                <div className="flex items-center gap-4 mb-6" style={{ fontSize: '13px', color: '#4B6E80' }}>
+                    <span><strong style={{ color: '#1B3A4B' }}>{elementCount}</strong> elements</span>
+                    <span style={{ color: '#CBD5DB' }}>·</span>
+                    <span><strong style={{ color: '#1B3A4B' }}>{diagramCount}</strong> diagrams</span>
+                    {model?.relationships && (
+                        <>
+                            <span style={{ color: '#CBD5DB' }}>·</span>
+                            <span><strong style={{ color: '#1B3A4B' }}>{model.relationships.length}</strong> relationships</span>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* CTA buttons */}
+            <div className="flex gap-3 mb-8">
+                <button
+                    onClick={() => setExplorerTab('model')}
+                    className="px-5 py-2.5 text-sm font-semibold rounded-lg transition-all"
+                    style={{ background: '#1B3A4B', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#244D63'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#1B3A4B'}
+                >
+                    Browse Model
+                </button>
                 {diagramCount > 0 && (
                     <button
-                        className="px-4 py-2 text-xs font-medium rounded-lg transition-colors"
-                        style={{ background: '#2DD4A815', color: '#1B3A4B', border: '1px solid #2DD4A840' }}
+                        onClick={() => setExplorerTab('views')}
+                        className="px-5 py-2.5 text-sm font-semibold rounded-lg transition-all"
+                        style={{ background: '#2DD4A815', color: '#1B3A4B', border: '1px solid #2DD4A840', cursor: 'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#2DD4A830'}
                         onMouseLeave={e => e.currentTarget.style.background = '#2DD4A815'}
-                        onClick={() => setExplorerTab('views')}
                     >
-                        Browse {diagramCount} diagrams
+                        View Diagrams ({diagramCount})
                     </button>
                 )}
-                {diagramCount === 0 && elementCount > 0 && (
-                    <p className="text-xs" style={{ color: '#6B7280' }}>
-                        {elementCount} elements loaded. Use the Tools menu for DSM, Action Flow, or Ontology views.
-                    </p>
-                )}
             </div>
+
+            {/* Quick Browse */}
+            {quickElements.length > 0 && (
+                <div style={{ width: '100%', maxWidth: '680px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#7A9BAA', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                        Quick Browse
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                        {quickElements.map(el => (
+                            <button
+                                key={el.id}
+                                onClick={() => openElement(el.id)}
+                                style={{
+                                    textAlign: 'left', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)',
+                                    borderRadius: '8px', padding: '10px 12px', cursor: 'pointer', transition: 'all 0.15s',
+                                    backdropFilter: 'blur(4px)',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.95)';
+                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.7)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                    e.currentTarget.style.transform = 'none';
+                                }}
+                            >
+                                <div style={{ fontSize: '10px', color: '#7A9BAA', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                                    {el.kind}
+                                </div>
+                                <div style={{ fontSize: '13px', color: '#1B3A4B', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {el.name}
+                                </div>
+                                {el.shortId && (
+                                    <div style={{ fontSize: '10px', color: '#9CB8C5', marginTop: '2px', fontFamily: 'monospace' }}>
+                                        {el.shortId}
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -170,28 +250,29 @@ export function App() {
     // Connection state
     if (!connected) {
         return (
-            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+            <div className="flex flex-col h-screen" style={{ background: WELCOME_GRADIENT, color: '#1a1a1a' }}>
                 <WorkbenchToolbar />
-                <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
+                <div className="flex-1 flex items-center justify-center">
                     <div className="text-center max-w-md">
-                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '180px', display: 'block', margin: '0 auto 24px auto', opacity: 0.4, filter: 'grayscale(1)' }} className="animate-pulse" />
-                        <div className="text-sm mt-2 mb-4">Connecting to dev server...</div>
-                        <div style={{ color: '#6B7280', fontSize: '13px', lineHeight: '1.6' }}>
-                            <p>Start the MEMO dev server from your project directory:</p>
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '360px', maxWidth: '80vw', display: 'block', margin: '0 auto -20px auto', opacity: 0.45, filter: 'grayscale(1)' }} className="animate-pulse" />
+                        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1B3A4B', marginBottom: '8px' }}>
+                            MEMO Architect
+                        </h2>
+                        <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '20px' }}>Connecting to dev server…</p>
+                        <div style={{ color: '#6B7280', fontSize: '13px', lineHeight: '1.6', textAlign: 'left', background: 'rgba(255,255,255,0.6)', borderRadius: '10px', padding: '16px 20px', border: '1px solid rgba(255,255,255,0.9)' }}>
+                            <p style={{ fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Start the MEMO dev server:</p>
                             <code style={{
-                                display: 'block', margin: '12px auto', padding: '8px 16px',
-                                background: '#1a1a1a', color: '#E5E7EB', borderRadius: '6px',
-                                fontFamily: 'monospace', fontSize: '13px', width: 'fit-content'
+                                display: 'block', margin: '0 0 12px', padding: '8px 14px',
+                                background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',
+                                fontFamily: 'monospace', fontSize: '13px',
                             }}>
                                 pnpm memo dev --port 3000
                             </code>
-                            <p style={{ marginTop: '8px' }}>
-                                Or use the example project:
-                            </p>
+                            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or try the example project:</p>
                             <code style={{
-                                display: 'block', margin: '12px auto', padding: '8px 16px',
-                                background: '#1a1a1a', color: '#E5E7EB', borderRadius: '6px',
-                                fontFamily: 'monospace', fontSize: '13px', width: 'fit-content'
+                                display: 'block', padding: '8px 14px',
+                                background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',
+                                fontFamily: 'monospace', fontSize: '13px',
                             }}>
                                 pnpm example:dev
                             </code>
@@ -205,12 +286,13 @@ export function App() {
     // Waiting for model
     if (!model) {
         return (
-            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+            <div className="flex flex-col h-screen" style={{ background: WELCOME_GRADIENT, color: '#1a1a1a' }}>
                 <WorkbenchToolbar />
-                <div className="flex-1 flex items-center justify-center" style={{ color: '#9CA3AF' }}>
+                <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
-                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '180px', display: 'block', margin: '0 auto 24px auto', opacity: 0.4, filter: 'grayscale(1)' }} className="animate-pulse" />
-                        <div className="text-sm mt-2">Waiting for model data...</div>
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '360px', maxWidth: '80vw', display: 'block', margin: '0 auto -20px auto', opacity: 0.45, filter: 'grayscale(1)' }} className="animate-pulse" />
+                        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1B3A4B', marginBottom: '6px' }}>MEMO Architect</h2>
+                        <p style={{ color: '#6B7280', fontSize: '14px' }}>Loading model data…</p>
                     </div>
                 </div>
             </div>
@@ -220,31 +302,31 @@ export function App() {
     // Empty model
     if (elementCount === 0) {
         return (
-            <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+            <div className="flex flex-col h-screen" style={{ background: WELCOME_GRADIENT, color: '#1a1a1a' }}>
                 <WorkbenchToolbar />
-                <div className="flex-1 flex items-center justify-center" style={{ color: '#6B7280' }}>
+                <div className="flex-1 flex items-center justify-center">
                     <div className="text-center max-w-lg" style={{ lineHeight: '1.7' }}>
-                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '300px', display: 'block', margin: '0 auto 36px auto', opacity: 0.3, filter: 'grayscale(1)' }} />
-                        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-                            No model elements found
+                        <img src="/logo.png" alt="MEMO Logo" style={{ width: '380px', maxWidth: '80vw', display: 'block', margin: '0 auto -20px auto', opacity: 0.35, filter: 'grayscale(1)' }} />
+                        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A4B', marginBottom: '8px' }}>
+                            Your model is empty
                         </h2>
-                        <p style={{ fontSize: '14px', marginBottom: '20px' }}>
-                            Your project is connected but has no <code>.sysml</code> files with elements yet.
+                        <p style={{ fontSize: '14px', color: '#4B6E80', marginBottom: '20px' }}>
+                            Connected successfully — but no <code>.sysml</code> elements found yet.
                         </p>
                         <div style={{
-                            textAlign: 'left', background: '#F3F4F6', borderRadius: '8px',
-                            padding: '16px 20px', fontSize: '13px',
+                            textAlign: 'left', background: 'rgba(255,255,255,0.65)', borderRadius: '10px',
+                            padding: '16px 20px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.9)',
                         }}>
-                            <p style={{ fontWeight: 600, marginBottom: '8px', color: '#374151' }}>Get started:</p>
-                            <ol style={{ paddingLeft: '18px', margin: 0 }}>
+                            <p style={{ fontWeight: 600, marginBottom: '8px', color: '#1B3A4B' }}>Get started:</p>
+                            <ol style={{ paddingLeft: '18px', margin: 0, color: '#4B6E80' }}>
                                 <li style={{ marginBottom: '6px' }}>
                                     Create a <code>.sysml</code> file in your <code>model/</code> directory
                                 </li>
                                 <li style={{ marginBottom: '6px' }}>
-                                    Or import from CSV: <code>pnpm memo import template elements</code>
+                                    Import from CSV: <code>pnpm memo import template elements</code>
                                 </li>
-                                <li style={{ marginBottom: '6px' }}>
-                                    Or scaffold a new project: <code>pnpm memo init my-device</code>
+                                <li>
+                                    Scaffold a new project: <code>pnpm memo init my-device</code>
                                 </li>
                             </ol>
                         </div>
@@ -297,10 +379,7 @@ export function App() {
                 )}
             </div>
 
-            {/* Completeness color bar */}
-            <CompletenessBar />
-
-            {/* Gap bar (violations) */}
+            {/* Bottom panel: Problems + Completeness (unified, collapsible) */}
             <GapBar />
 
             {/* Command palette (Cmd+K) */}
