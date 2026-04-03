@@ -151,6 +151,9 @@ export function App() {
     const activeView = useModelStore(s => s.activeView);
     const { pathname } = useLocation();
     const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
+    const activeMode = useModelStore(s => s.activeMode);
+    // Scenario and Ontology have their own internal explorer in the center panel
+    const showExplorer = activeMode !== 'scenario' && activeMode !== 'ontology';
 
     useEffect(() => {
         if (!loadEmbeddedData()) {
@@ -264,8 +267,8 @@ export function App() {
 
             {/* Main 3-panel layout */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Left: Explorer (Model + Views) */}
-                <ExplorerPanel />
+                {/* Left: Explorer — hidden for modes with their own internal explorer */}
+                {showExplorer && <ExplorerPanel />}
 
                 {/* Center: route-aware canvas */}
                 <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>

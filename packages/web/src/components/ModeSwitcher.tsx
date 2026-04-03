@@ -124,9 +124,23 @@ export function ModeSwitcher() {
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
 
+    // Modes that have a left sidebar explorer
+    const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf'];
+
     function handleNavClick(modeId: NavModeId) {
+        // Clicking the already-active explorer mode toggles the sidebar (VS Code pattern)
+        if (modeId === activeMode && explorerModes.includes(modeId)) {
+            toggleSidebar();
+            return;
+        }
+        // Switching to an explorer mode: ensure sidebar is open
+        if (explorerModes.includes(modeId) && sidebarCollapsed) {
+            toggleSidebar();
+        }
         setActiveMode(modeId);
         switch (modeId) {
             case 'catalog':
