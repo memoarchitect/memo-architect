@@ -979,9 +979,6 @@ export function ExplorerPanel() {
     const model = useModelStore(s => s.model);
     const activeMode = useModelStore(s => s.activeMode);
 
-    const elementCount = model ? Object.keys(model.elements).length : 0;
-    const relCount = model ? model.relationships.length : 0;
-
     if (sidebarCollapsed) {
         return (
             <div
@@ -1003,20 +1000,8 @@ export function ExplorerPanel() {
 
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)` }}>
-                <div className="flex-1">
-                    <h1 className="font-bold tracking-wide" style={{ color: COLOR.accent, fontSize: FONT.explorer.heading }}>
-                        {activeMode === 'dhf' ? 'DHF Explorer'
-                            : activeMode === 'diagram' ? 'Diagrams'
-                            : activeMode === 'scenario' ? 'Scenarios'
-                            : activeMode === 'ontology' ? 'Ontology'
-                            : 'Explorer'}
-                    </h1>
-                    <p className="mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', fontSize: FONT.xs }}>
-                        {activeMode === 'dhf' ? '18 documents' : `${elementCount} elements \u00b7 ${relCount} rels`}
-                    </p>
-                </div>
+            {/* Header — minimal strip, top nav already shows active mode */}
+            <div className="flex items-center justify-end px-2 py-1" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)`, minHeight: '32px' }}>
                 <button
                     onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
                     className="flex items-center justify-center"
