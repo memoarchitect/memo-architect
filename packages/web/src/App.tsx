@@ -259,9 +259,6 @@ export function App() {
             {/* Primary nav bar */}
             <ModeSwitcher />
 
-            {/* Completeness bar */}
-            <CompletenessBar />
-
             {/* Breadcrumb */}
             <Breadcrumb />
 
@@ -287,6 +284,9 @@ export function App() {
                 {/* Right: Properties Panel — hidden in element-detail and catalog modes */}
                 {activeView.type !== 'element-detail' && !isCatalogRoute && <UnifiedPropertiesPanel />}
             </div>
+
+            {/* Completeness color bar */}
+            <CompletenessBar />
 
             {/* Gap bar (violations) */}
             <GapBar />
