@@ -508,6 +508,11 @@ function RecursiveTree({
                                     fontSize: FONT.explorer.item,
                                 }}
                             >
+                                {el.shortId && (
+                                    <span style={{ color: COLOR.muted, fontWeight: 500, marginRight: '4px' }}>
+                                        [{el.shortId}]
+                                    </span>
+                                )}
                                 {el.name}
                             </span>
                             {isUndefined && (
