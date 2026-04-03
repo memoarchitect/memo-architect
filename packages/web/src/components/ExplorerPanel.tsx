@@ -971,7 +971,6 @@ function DhfExplorerContent() {
 
 export function ExplorerPanel() {
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
-    const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const explorerTab = useModelStore(s => s.explorerTab);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const searchTerm = useModelStore(s => s.searchTerm);
@@ -979,40 +978,10 @@ export function ExplorerPanel() {
     const model = useModelStore(s => s.model);
     const activeMode = useModelStore(s => s.activeMode);
 
-    if (sidebarCollapsed) {
-        return (
-            <div
-                className="flex flex-col items-center flex-shrink-0 cursor-pointer"
-                style={{ width: '40px', background: `linear-gradient(180deg, ${COLOR.accentDark}, #2D6A7A)`, borderRight: `1px solid ${COLOR.border}` }}
-                onClick={toggleSidebar}
-                title="Expand explorer"
-            >
-                <div className="py-3" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{'▸'}</div>
-                <div style={{
-                    writingMode: 'vertical-rl', textOrientation: 'mixed',
-                    color: COLOR.accent, fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
-                }}>
-                    Explorer
-                </div>
-            </div>
-        );
-    }
+    if (sidebarCollapsed) return null;
 
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
-            {/* Header — minimal strip, top nav already shows active mode */}
-            <div className="flex items-center justify-end px-2 py-1" style={{ background: `linear-gradient(135deg, ${COLOR.accentDark}, #2D6A7A)`, minHeight: '32px' }}>
-                <button
-                    onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
-                    className="flex items-center justify-center"
-                    style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', width: '24px', height: '24px', borderRadius: '4px' }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
-                    title="Collapse explorer"
-                >
-                    {'◂'}
-                </button>
-            </div>
 
             {/* Content — mode-aware, no redundant tabs when top nav provides context */}
             {activeMode === 'dhf' ? (
