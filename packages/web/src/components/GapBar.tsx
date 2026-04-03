@@ -78,10 +78,20 @@ export function GapBar() {
                 )}
 
                 {/* Right-aligned metadata */}
-                <span className="ml-auto" style={{ color: COLOR.faint, fontSize: FONT.xs }}>
-                    {validation && <>{validation.rulesEvaluated} rules | {validation.rulesPassed} passed | </>}
-                    {count} elements
-                    {gitInfo && <> | {gitInfo}</>}
+                <span className="ml-auto flex items-center gap-1" style={{ fontSize: FONT.xs }}>
+                    {validation && (
+                        <span style={{ color: COLOR.faint }}>
+                            {validation.rulesEvaluated} rules | {validation.rulesPassed} passed |{' '}
+                        </span>
+                    )}
+                    <strong style={{ color: COLOR.secondary, fontWeight: 700 }}>{count} elements</strong>
+                    {model && (
+                        <>
+                            <span style={{ color: COLOR.faint }}> · </span>
+                            <strong style={{ color: COLOR.secondary, fontWeight: 700 }}>{model.relationships.length} rels</strong>
+                        </>
+                    )}
+                    {gitInfo && <span style={{ color: COLOR.faint }}> | {gitInfo}</span>}
                 </span>
             </div>
 
