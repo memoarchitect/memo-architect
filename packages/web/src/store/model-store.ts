@@ -37,6 +37,17 @@ export type ActiveView =
 /** Which explorer tab is active in the left panel */
 export type ExplorerTab = 'model' | 'views' | 'worksets';
 
+/** Generic analysis issue surfaced by tools (DSM, traceability, etc.) */
+export interface AnalysisIssue {
+    id: string;
+    source: string;        // e.g. 'DSM'
+    severity: 'warning' | 'info';
+    elementId: string;
+    elementName: string;
+    message: string;
+    tag?: string;          // short label, e.g. 'unallocated'
+}
+
 export type GroupBy = 'layer' | 'kind' | 'construct' | 'source';
 export type CatalogGroupBy = 'semantic';  // V-Cycle is the only sensible top-level grouping
 
@@ -81,6 +92,10 @@ export interface ModelState {
     attributeFilter: { key: string; value: string } | null;
     labelFilter: string | null;
     tagFilters: string[];  // active tag filters (AND logic)
+
+    // ─── Analysis issues (from tools: DSM, traceability, etc.) ───────────
+    analysisIssues: AnalysisIssue[];
+    setAnalysisIssues: (issues: AnalysisIssue[]) => void;
 
     // ─── Editing ──────────────────────────────────────────────────────────
     editingElementId: string | null;
@@ -164,6 +179,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     tagFilters: [],
 
     // Editing
+    analysisIssues: [],
     editingElementId: null,
     pendingEdits: new Map(),
 
@@ -172,6 +188,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setValidation: (validation) => set({ validation }),
     setCompleteness: (completeness) => set({ completeness }),
     setConnected: (connected) => set({ connected }),
+    setAnalysisIssues: (issues) => set({ analysisIssues: issues }),
     setActiveMode: (mode) => set({ activeMode: mode }),
     setActiveView: (view) => set({ activeView: view }),
     setExplorerTab: (tab) => set({ explorerTab: tab }),
