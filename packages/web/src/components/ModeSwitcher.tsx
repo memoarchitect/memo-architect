@@ -1,47 +1,217 @@
-import { useModelStore, type AppMode } from '../store/model-store';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useModelStore, type ActiveView } from '../store/model-store';
 
-const MODES: { id: AppMode; label: string; icon: string }[] = [
-    { id: 'catalog', label: 'Model Explorer', icon: '\u2630' },
-    { id: 'diagram', label: 'Diagram', icon: '\u25A6' },
-    { id: 'actionflow', label: 'Action Flow', icon: '\u21C6' },
-    { id: 'dsm', label: 'DSM', icon: '\u25A4' },
-    { id: 'scenario', label: 'Scenarios', icon: '\u25B6' },
-    { id: 'ontology', label: 'Ontology', icon: '\u25C9' },
+const DOCS_URL = 'https://somesh_sandbox.gitlab.io/memo/';
+
+// ─── Primary navigation modes ────────────────────────────────────────────────
+
+const NAV_MODES = [
+    { id: 'catalog', label: 'Model Explorer', icon: '☰' },
+    { id: 'diagram', label: 'Diagrams', icon: '⊟' },
+    { id: 'dhf', label: 'DHF', icon: '⊞' },
+    { id: 'scenario', label: 'Scenarios', icon: '▶' },
+    { id: 'ontology', label: 'Ontology', icon: '◉' },
+] as const;
+
+type NavModeId = typeof NAV_MODES[number]['id'];
+
+// ─── Tools dropdown items ────────────────────────────────────────────────────
+
+interface ToolItem {
+    id: string;
+    label: string;
+    icon: string;
+    view: ActiveView;
+}
+
+const TOOLS: ToolItem[] = [
+    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', view: { type: 'dsm' } },
+    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', view: { type: 'traceability' } },
+    { id: 'statistics', label: 'Statistics Dashboard', icon: '⊠', view: { type: 'statistics' } },
+    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', view: { type: 'compliance-wizard' } },
+    { id: 'model-diff', label: 'Model Diff', icon: '↔', view: { type: 'model-diff' } },
 ];
+
+// ─── Tools dropdown ──────────────────────────────────────────────────────────
+
+function ToolsDropdown({ activeViewType }: { activeViewType: string }) {
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const toolIds = TOOLS.map(t => t.id);
+    const isAnyToolActive = toolIds.includes(activeViewType);
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        if (open) document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button
+                onClick={() => setOpen(o => !o)}
+                className="flex items-center gap-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                style={
+                    isAnyToolActive || open
+                        ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
+                        : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
+                }
+            >
+                <span className="mr-0.5">⚙</span>
+                Tools
+                <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }}>▾</span>
+            </button>
+
+            {open && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        zIndex: 100,
+                        background: '#132D3E',
+                        border: '1px solid rgba(45,212,168,0.2)',
+                        borderRadius: '8px',
+                        minWidth: '220px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        overflow: 'hidden',
+                    }}
+                >
+                    {TOOLS.map((tool, i) => {
+                        const isActive = activeViewType === tool.view.type;
+                        return (
+                            <button
+                                key={tool.id}
+                                onClick={() => {
+                                    setActiveMode('catalog'); // deselect nav mode
+                                    setActiveView(isActive ? { type: 'welcome' } : tool.view);
+                                    setOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                                style={{
+                                    fontSize: '13px',
+                                    color: isActive ? '#2DD4A8' : 'rgba(255,255,255,0.75)',
+                                    background: isActive ? 'rgba(45,212,168,0.1)' : 'transparent',
+                                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                }}
+                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>{tool.icon}</span>
+                                {tool.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Main ModeSwitcher ───────────────────────────────────────────────────────
 
 export function ModeSwitcher() {
     const activeMode = useModelStore(s => s.activeMode);
     const setActiveMode = useModelStore(s => s.setActiveMode);
-    const model = useModelStore(s => s.model);
+    const activeView = useModelStore(s => s.activeView);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const navigate = useNavigate();
 
-    // Element count
-    const count = model ? Object.keys(model.elements).length : 0;
+    function handleNavClick(modeId: NavModeId) {
+        setActiveMode(modeId);
+        switch (modeId) {
+            case 'catalog':
+                navigate('/catalog');
+                break;
+            case 'diagram':
+                // Show views tab in explorer so user can pick a diagram
+                setExplorerTab('views');
+                setActiveView({ type: 'welcome' });
+                navigate('/');
+                break;
+            case 'dhf':
+                setActiveView({ type: 'dhf-dashboard' });
+                navigate('/');
+                break;
+            case 'scenario':
+                setActiveView({ type: 'scenario-editor' });
+                navigate('/');
+                break;
+            case 'ontology':
+                setActiveView({ type: 'ontology' });
+                navigate('/');
+                break;
+        }
+    }
+
+    // Determine which nav mode is "active" from the current view type
+    const activeNavMode: string = (() => {
+        if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
+        if (activeView.type === 'scenario-editor') return 'scenario';
+        if (activeView.type === 'ontology') return 'ontology';
+        if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
+        return activeMode;
+    })();
 
     return (
         <div
-            className="flex items-center gap-2 px-5 py-3"
-            style={{ background: '#1B3A4B', borderBottom: '1px solid rgba(255,255,255,0.08)', overflow: 'visible', position: 'relative', zIndex: 10 }}
+            className="flex items-center gap-1 px-5 py-3"
+            style={{
+                background: '#1B3A4B',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                overflow: 'visible',
+                position: 'relative',
+                zIndex: 10,
+            }}
         >
-            {MODES.map(mode => (
+            {/* Primary nav modes */}
+            {NAV_MODES.map(mode => (
                 <button
                     key={mode.id}
-                    onClick={() => setActiveMode(mode.id)}
+                    onClick={() => handleNavClick(mode.id)}
                     className="px-4 py-1.5 text-sm font-medium rounded-md transition-all"
                     style={
-                        activeMode === mode.id
+                        activeNavMode === mode.id
                             ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
                             : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
                     }
-                    title={mode.label}
                 >
                     <span className="mr-1.5">{mode.icon}</span>
                     {mode.label}
                 </button>
             ))}
 
+            {/* Divider */}
+            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.12)', margin: '0 4px' }} />
+
+            {/* Tools dropdown */}
+            <ToolsDropdown activeViewType={activeView.type} />
+
             <div className="flex-1" />
 
-            {/* Logo — right side */}
+            {/* Help */}
+            <a
+                href={DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+            >
+                ? Help
+            </a>
+
+            {/* Logo */}
             <img
                 src="/memo-top.png"
                 alt="MEMO"

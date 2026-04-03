@@ -1,21 +1,21 @@
 site_name: MEMO — Model-Based Systems Engineering
 site_description: SysML v2 powered MBSE tool for medical device development
 site_author: Somesh Kashyap
-repo_url: https://github.com/someshkashyap/memo
-repo_name: someshkashyap/memo
+repo_url: https://gitlab.com/somesh_sandbox/memo
+repo_name: somesh_sandbox/memo
 
 theme:
   name: material
   palette:
     - scheme: slate
-      primary: deep purple
-      accent: pink
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
     - scheme: default
-      primary: deep purple
-      accent: pink
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -29,7 +29,10 @@ theme:
     - search.highlight
     - search.suggest
   icon:
-    repo: fontawesome/brands/github
+    repo: fontawesome/brands/gitlab
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition

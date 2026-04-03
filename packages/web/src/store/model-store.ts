@@ -17,7 +17,7 @@ import { sendElementUpdate, sendElementCreate } from './ws-client';
 export const FOLDER_ATTR = '_folder';
 
 /** @deprecated Legacy 6-mode type — kept for backward compat during transition */
-export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm';
+export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm' | 'dhf';
 
 /** Active view in the unified canvas */
 export type ActiveView =
