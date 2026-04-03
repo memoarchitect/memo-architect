@@ -133,16 +133,10 @@ export function ScenarioEditor() {
         <div className="flex flex-1 overflow-hidden">
             {/* Left: Scenario list */}
             <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
-                <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, #1B3A4B, #2D6A7A)' }}>
-                    <h2 className="text-sm font-bold tracking-wide" style={{ color: '#2DD4A8' }}>Scenario Editor</h2>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                        {scenarios.length} scenarios
-                    </p>
-                </div>
-                <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #E5E5E0' }}>
+                <div className="px-3 py-2" style={{ borderBottom: '1px solid #E5E5E0' }}>
                     <input
                         type="text"
-                        placeholder="Search scenarios..."
+                        placeholder={`Search ${scenarios.length} scenarios...`}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"

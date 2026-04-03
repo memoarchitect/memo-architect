@@ -16,6 +16,9 @@ const NAV_MODES = [
 
 type NavModeId = typeof NAV_MODES[number]['id'];
 
+// Tool view types — when one of these is active, no nav mode is highlighted
+const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff']);
+
 // ─── Tools dropdown items ────────────────────────────────────────────────────
 
 interface ToolItem {
@@ -91,7 +94,6 @@ function ToolsDropdown({ activeViewType }: { activeViewType: string }) {
                             <button
                                 key={tool.id}
                                 onClick={() => {
-                                    setActiveMode('catalog'); // deselect nav mode
                                     setActiveView(isActive ? { type: 'welcome' } : tool.view);
                                     setOpen(false);
                                 }}
@@ -131,9 +133,21 @@ export function ModeSwitcher() {
     // Modes that have a left sidebar explorer
     const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf'];
 
+    // Determine which nav mode is "active" from the current view type
+    // Returns '' when a tool is open so no nav button is highlighted
+    const activeNavMode: string = (() => {
+        if (TOOL_VIEW_TYPES.has(activeView.type)) return '';
+        if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
+        if (activeView.type === 'scenario-editor') return 'scenario';
+        if (activeView.type === 'ontology') return 'ontology';
+        if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
+        return activeMode;
+    })();
+
     function handleNavClick(modeId: NavModeId) {
         // Clicking the already-active explorer mode toggles the sidebar (VS Code pattern)
-        if (modeId === activeMode && explorerModes.includes(modeId)) {
+        // Use activeNavMode (not activeMode) so a tool overlay doesn't trigger this guard
+        if (modeId === activeNavMode && explorerModes.includes(modeId)) {
             toggleSidebar();
             return;
         }
@@ -166,15 +180,6 @@ export function ModeSwitcher() {
                 break;
         }
     }
-
-    // Determine which nav mode is "active" from the current view type
-    const activeNavMode: string = (() => {
-        if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
-        if (activeView.type === 'scenario-editor') return 'scenario';
-        if (activeView.type === 'ontology') return 'ontology';
-        if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
-        return activeMode;
-    })();
 
     return (
         <div
