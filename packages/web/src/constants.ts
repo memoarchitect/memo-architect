@@ -160,6 +160,12 @@ for (const g of SEMANTIC_GROUPS) {
     }
 }
 
+/** All valid ontology-defined kind names (flat set for fast lookup) */
+export const VALID_ONTOLOGY_KINDS: Set<string> = new Set(Object.keys(KIND_TO_GROUP));
+
+/** All valid ontology kinds sorted alphabetically (for dropdowns) */
+export const VALID_ONTOLOGY_KINDS_SORTED: string[] = [...VALID_ONTOLOGY_KINDS].sort();
+
 // ─── Diagram Type Metadata ──────────────────────────────────────────────────
 // SysML v2 diagram type labels and colors for UI badges.
 // Diagram instances now come from config viewpoints (via model DTO),

@@ -6,6 +6,7 @@ import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
+import { BulkEditPanel } from './components/BulkEditPanel';
 import { CompletenessBar } from './components/CompletenessBar';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
@@ -149,6 +150,7 @@ export function App() {
     const connected = useModelStore(s => s.connected);
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
+    const selectedElementIds = useModelStore(s => s.selectedElementIds);
     const { pathname } = useLocation();
     const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
     const activeMode = useModelStore(s => s.activeMode);
@@ -285,7 +287,12 @@ export function App() {
                 </div>
 
                 {/* Right: Properties Panel — hidden in element-detail and catalog modes */}
-                {activeView.type !== 'element-detail' && !isCatalogRoute && <UnifiedPropertiesPanel />}
+                {/* Switches to BulkEditPanel when 2+ elements selected */}
+                {activeView.type !== 'element-detail' && !isCatalogRoute && (
+                    selectedElementIds.size >= 2
+                        ? <BulkEditPanel />
+                        : <UnifiedPropertiesPanel />
+                )}
             </div>
 
             {/* Completeness color bar */}

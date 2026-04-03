@@ -72,6 +72,7 @@ export interface ModelState {
     activeView: ActiveView;
     explorerTab: ExplorerTab;
     selectedElementId: string | null;
+    selectedElementIds: Set<string>;
     selectedViewpointId: string | null;
     selectedDiagramId: string | null;
     searchTerm: string;
@@ -110,6 +111,11 @@ export interface ModelState {
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
     selectElement: (id: string | null) => void;
+    toggleElementSelection: (id: string) => void;
+    selectAllElements: (ids: string[]) => void;
+    clearElementSelection: () => void;
+    updateElementKind: (elementId: string, newKind: string) => void;
+    bulkUpdateAttributes: (elementIds: string[], attributes: Record<string, string>) => void;
     selectViewpoint: (id: string | null) => void;
     selectDiagram: (id: string | null) => void;
     setSearchTerm: (term: string) => void;
@@ -157,6 +163,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     activeView: { type: 'welcome' } as ActiveView,
     explorerTab: 'model' as ExplorerTab,
     selectedElementId: null,
+    selectedElementIds: new Set<string>(),
     selectedViewpointId: null,
     selectedDiagramId: null,
     searchTerm: '',
@@ -201,6 +208,40 @@ export const useModelStore = create<ModelState>((set, get) => ({
         } else {
             set({ selectedElementId: id });
         }
+    },
+    toggleElementSelection: (id) => set((s) => {
+        const next = new Set(s.selectedElementIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return { selectedElementIds: next };
+    }),
+    selectAllElements: (ids) => set({ selectedElementIds: new Set(ids) }),
+    clearElementSelection: () => set({ selectedElementIds: new Set() }),
+    updateElementKind: (elementId, newKind) => {
+        const { model } = get();
+        if (!model) return;
+        const el = model.elements[elementId];
+        if (!el) return;
+        const updated = { ...el, kind: newKind };
+        set((s) => ({
+            model: s.model ? { ...s.model, elements: { ...s.model.elements, [elementId]: updated } } : null
+        }));
+        sendElementUpdate(updated);
+    },
+    bulkUpdateAttributes: (elementIds, attributes) => {
+        const { model } = get();
+        if (!model) return;
+        const newElements = { ...model.elements };
+        for (const id of elementIds) {
+            const el = newElements[id];
+            if (!el) continue;
+            const updated = { ...el, attributes: { ...el.attributes, ...attributes } };
+            newElements[id] = updated;
+            sendElementUpdate(updated);
+        }
+        set((s) => ({
+            model: s.model ? { ...s.model, elements: newElements } : null
+        }));
     },
     selectViewpoint: (id) => set({ selectedViewpointId: id, selectedDiagramId: null }),
     selectDiagram: (id) => {
