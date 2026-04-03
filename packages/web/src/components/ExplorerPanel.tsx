@@ -7,7 +7,7 @@ import {
     type ExplorerTab,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import type { MemoElement, DiagramDTO } from '@memo/core';
@@ -77,6 +77,61 @@ interface CtxMenuState {
     type: 'element' | 'folder' | 'kind' | 'group';
 }
 
+function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: string; currentKind: string; onClose: () => void }) {
+    const updateElementKind = useModelStore(s => s.updateElementKind);
+    const [selected, setSelected] = useState(currentKind);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+
+    return (
+        <div
+            ref={ref}
+            className="fixed z-50 rounded-lg overflow-hidden py-3 px-4"
+            style={{
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: '#FFFFFF', border: '1px solid #E5E7EB',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.16)', minWidth: '320px',
+            }}
+        >
+            <div className="font-semibold mb-3" style={{ color: '#1B3A4B', fontSize: '13px' }}>
+                Change Element Type
+            </div>
+            <div className="text-xs mb-1" style={{ color: '#6B7280' }}>
+                Current: <span style={{ color: '#DC2626', fontWeight: 600 }}>{currentKind}</span> (not in ontology)
+            </div>
+            <select
+                value={selected}
+                onChange={e => setSelected(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg mb-3 focus:outline-none"
+                style={{ background: '#F9F9F8', border: '1px solid #E5E7EB', color: '#1B3A4B', fontSize: '13px' }}
+            >
+                {VALID_ONTOLOGY_KINDS_SORTED.map(k => (
+                    <option key={k} value={k}>{k}</option>
+                ))}
+            </select>
+            <div className="flex gap-2 justify-end">
+                <button
+                    onClick={onClose}
+                    className="px-3 py-1.5 rounded"
+                    style={{ fontSize: '12px', color: '#6B7280', background: '#F0F0ED' }}
+                >Cancel</button>
+                <button
+                    onClick={() => { updateElementKind(elementId, selected); onClose(); }}
+                    className="px-3 py-1.5 rounded font-medium"
+                    style={{ fontSize: '12px', color: '#FFFFFF', background: '#2DD4A8' }}
+                >Apply</button>
+            </div>
+        </div>
+    );
+}
+
 function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
     const model = useModelStore(s => s.model);
     const selectElement = useModelStore(s => s.selectElement);
@@ -84,6 +139,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
     const moveFolder = useModelStore(s => s.moveFolder);
     const deleteFolder = useModelStore(s => s.deleteFolder);
+    const [showChangeType, setShowChangeType] = useState<{ elementId: string; currentKind: string } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -103,6 +159,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         const el = model.elements[menu.elementId];
         if (!el) return null;
         title = el.name;
+        const isUndefinedKind = !KIND_TO_GROUP[el.kind];
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
             {
@@ -113,6 +170,10 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }
             },
             { label: 'Copy ID', action: () => navigator.clipboard?.writeText(el.id) },
+            ...(isUndefinedKind ? [{
+                label: '⚠ Change Type…',
+                action: () => setShowChangeType({ elementId: el.id, currentKind: el.kind }),
+            }] : []),
         ];
     } else if (menu.type === 'folder' && menu.folderId && menu.kind) {
         title = `Folder: ${menu.folderId.split('/').pop()}`;
@@ -175,34 +236,43 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     if (!actions.length) return null;
 
     return (
-        <div
-            ref={ref}
-            className="fixed z-50 rounded-lg overflow-hidden py-1"
-            style={{
-                left: menu.x, top: menu.y,
-                background: COLOR.surface, border: `1px solid ${COLOR.border}`,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '220px',
-            }}
-        >
-            <div className="px-3 py-1.5 font-bold truncate bg-slate-50" style={{ color: COLOR.primary, fontSize: FONT.xs, borderBottom: `1px solid ${COLOR.border}` }}>
-                {title.toUpperCase()}
-            </div>
-            {actions.map((a, i) => (
-                <div
-                    key={i}
-                    className="px-3 py-2 cursor-pointer transition-colors"
-                    style={{ 
-                        color: a.danger ? '#DC2626' : COLOR.secondary, 
-                        fontSize: FONT.explorer.item 
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    onClick={() => { a.action(); onClose(); }}
-                >
-                    {a.label}
+        <>
+            <div
+                ref={ref}
+                className="fixed z-50 rounded-lg overflow-hidden py-1"
+                style={{
+                    left: menu.x, top: menu.y,
+                    background: COLOR.surface, border: `1px solid ${COLOR.border}`,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: '220px',
+                }}
+            >
+                <div className="px-3 py-1.5 font-bold truncate bg-slate-50" style={{ color: COLOR.primary, fontSize: FONT.xs, borderBottom: `1px solid ${COLOR.border}` }}>
+                    {title.toUpperCase()}
                 </div>
-            ))}
-        </div>
+                {actions.map((a, i) => (
+                    <div
+                        key={i}
+                        className="px-3 py-2 cursor-pointer transition-colors"
+                        style={{
+                            color: a.danger ? '#DC2626' : COLOR.secondary,
+                            fontSize: FONT.explorer.item
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        onClick={() => { a.action(); if (!showChangeType) onClose(); }}
+                    >
+                        {a.label}
+                    </div>
+                ))}
+            </div>
+            {showChangeType && (
+                <ChangeTypeModal
+                    elementId={showChangeType.elementId}
+                    currentKind={showChangeType.currentKind}
+                    onClose={() => { setShowChangeType(null); onClose(); }}
+                />
+            )}
+        </>
     );
 }
 
@@ -307,11 +377,14 @@ function RecursiveTree({
     toggleExpand,
     selectedElementId,
     selectElement,
+    selectedElementIds,
+    toggleElementSelection,
     violationCounts,
     baseColor,
     onContextMenu,
     onDragStart,
     onDrop,
+    isUndefined,
 }: {
     nodes: TreeNode[];
     level: number;
@@ -319,11 +392,14 @@ function RecursiveTree({
     toggleExpand: (id: string, e?: React.MouseEvent) => void;
     selectedElementId: string | null;
     selectElement: (id: string | null) => void;
+    selectedElementIds: Set<string>;
+    toggleElementSelection: (id: string) => void;
     violationCounts: Map<string, number>;
     baseColor: string;
     onContextMenu: (e: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
     onDragStart: (e: React.DragEvent, node: TreeNode) => void;
     onDrop: (e: React.DragEvent, folderPath: string) => void;
+    isUndefined?: boolean;
 }) {
     return (
         <>
@@ -364,11 +440,14 @@ function RecursiveTree({
                                     toggleExpand={toggleExpand}
                                     selectedElementId={selectedElementId}
                                     selectElement={selectElement}
+                                    selectedElementIds={selectedElementIds}
+                                    toggleElementSelection={toggleElementSelection}
                                     violationCounts={violationCounts}
                                     baseColor={baseColor}
                                     onContextMenu={onContextMenu}
                                     onDragStart={onDragStart}
                                     onDrop={onDrop}
+                                    isUndefined={isUndefined}
                                 />
                             )}
                         </div>
@@ -376,28 +455,52 @@ function RecursiveTree({
                 } else {
                     const el = node.element!;
                     const isSelected = selectedElementId === el.id;
+                    const isChecked = selectedElementIds.has(el.id);
                     const vCount = violationCounts.get(el.id) || 0;
                     const layerClr = LAYER_COLORS[el.layer] || baseColor;
 
                     return (
                         <div
                             key={el.id}
-                            className="flex items-center gap-1.5 px-2 py-1 cursor-pointer"
+                            className="group flex items-center gap-1.5 px-2 py-1 cursor-pointer"
                             style={{
                                 borderRadius: '4px',
                                 margin: '0 4px',
                                 marginLeft: (level > 0 ? 16 : 0) + 20 + 'px',
-                                background: isSelected ? COLOR.accent + '18' : 'transparent',
-                                fontWeight: isSelected ? 500 : 400,
+                                background: isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent',
+                                fontWeight: isSelected || isChecked ? 500 : 400,
                             }}
                             draggable
                             onDragStart={e => onDragStart(e, { type: 'element', element: el, id: el.id, name: el.name, children: [] })}
-                            onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
-                            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? COLOR.accent + '18' : 'transparent'; }}
-                            onClick={() => selectElement(el.id)}
+                            onMouseEnter={e => { if (!isSelected && !isChecked) e.currentTarget.style.background = '#F0F0ED'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent'; }}
+                            onClick={e => {
+                                if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                                    e.preventDefault();
+                                    toggleElementSelection(el.id);
+                                } else {
+                                    selectElement(el.id);
+                                }
+                            }}
                             onContextMenu={e => onContextMenu(e, 'element', el.id)}
                         >
-                            <ItemIcon color={layerClr} />
+                            {/* Checkbox — visible when checked or on hover via CSS group */}
+                            <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={e => { e.stopPropagation(); toggleElementSelection(el.id); }}
+                                onClick={e => e.stopPropagation()}
+                                className="flex-shrink-0"
+                                style={{
+                                    width: '12px', height: '12px', cursor: 'pointer',
+                                    opacity: isChecked ? 1 : 0,
+                                    transition: 'opacity 120ms',
+                                    accentColor: '#2DD4A8',
+                                }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLInputElement).style.opacity = '1'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLInputElement).style.opacity = isChecked ? '1' : '0'; }}
+                            />
+                            <ItemIcon color={isUndefined ? '#F59E0B' : layerClr} />
                             <span
                                 className="truncate flex-1"
                                 style={{
@@ -407,6 +510,10 @@ function RecursiveTree({
                             >
                                 {el.name}
                             </span>
+                            {isUndefined && (
+                                <span title={`Kind "${el.kind}" is not defined in the ontology`}
+                                    style={{ color: '#F59E0B', fontSize: '11px', flexShrink: 0 }}>⚠</span>
+                            )}
                             {vCount > 0 && (
                                 <span
                                     className="px-1 py-0.5 rounded-full"
@@ -436,6 +543,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
+    const selectedElementIds = useModelStore(s => s.selectedElementIds);
+    const toggleElementSelection = useModelStore(s => s.toggleElementSelection);
+    const selectAllElements = useModelStore(s => s.selectAllElements);
+    const clearElementSelection = useModelStore(s => s.clearElementSelection);
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
     const moveFolder = useModelStore(s => s.moveFolder);
     const validation = useModelStore(s => s.validation);
@@ -508,7 +619,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 treeMap.set(kind, buildTree(els));
             }
             groups.push({
-                group: { id: 'other', label: 'Other', color: '#6B7280', kinds: [] },
+                group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: '#F59E0B', kinds: [] },
                 kinds: treeMap,
             });
         }
@@ -572,116 +683,189 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         return counts;
     }, [validation]);
 
+    // Collect all visible element IDs for "Select All Matching"
+    const allVisibleElementIds = useMemo(() => {
+        const ids: string[] = [];
+        const countElements = (nodes: TreeNode[]) => {
+            for (const n of nodes) {
+                if (n.type === 'element' && n.element) ids.push(n.element.id);
+                else countElements(n.children);
+            }
+        };
+        for (const { kinds } of groupTree) {
+            for (const nodes of kinds.values()) countElements(nodes);
+        }
+        return ids;
+    }, [groupTree]);
+
+    const selectionCount = selectedElementIds.size;
+
     return (
-        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-            {groupTree.map(({ group, kinds }) => {
-                const groupKey = `g:${group.id}`;
-                const isExpanded = expanded.has(groupKey);
-                
-                // Recursive element counter for group badges
-                const countElements = (nodes: TreeNode[]): number => 
-                    nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
-                
-                const totalCount = Array.from(kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+        <div className="flex-1 flex flex-col overflow-hidden">
+            {/* ── Multi-select toolbar ── */}
+            {selectionCount > 0 && (
+                <div
+                    className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0"
+                    style={{ background: '#FFFBEB', borderBottom: '1px solid #FDE68A', fontSize: '11px' }}
+                >
+                    <span style={{ color: '#92400E', fontWeight: 600 }}>{selectionCount} selected</span>
+                    <span style={{ color: '#B45309' }}>— Cmd/Ctrl+click to multi-select</span>
+                    <button
+                        onClick={clearElementSelection}
+                        className="ml-auto px-2 py-0.5 rounded"
+                        style={{ color: '#92400E', background: '#FDE68A', fontSize: '11px', fontWeight: 500 }}
+                    >Clear</button>
+                </div>
+            )}
+            {/* ── "Select all matching" when search is active ── */}
+            {searchTerm && allVisibleElementIds.length > 0 && (
+                <div
+                    className="flex items-center gap-2 px-3 py-1"
+                    style={{ background: '#F0F9FF', borderBottom: '1px solid #BAE6FD', fontSize: '11px' }}
+                >
+                    <span style={{ color: '#0369A1' }}>{allVisibleElementIds.length} matching</span>
+                    <button
+                        onClick={() => selectAllElements(allVisibleElementIds)}
+                        className="ml-auto px-2 py-0.5 rounded"
+                        style={{ color: '#0369A1', background: '#BAE6FD', fontSize: '11px', fontWeight: 500 }}
+                    >Select All</button>
+                </div>
+            )}
+            <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+                {groupTree.map(({ group, kinds }) => {
+                    const groupKey = `g:${group.id}`;
+                    const isExpanded = expanded.has(groupKey);
+                    const isUndefinedGroup = group.id === 'undefined';
 
-                return (
-                    <div key={group.id} className="mb-0.5">
-                        {/* ── Group header (folder-like) ── */}
-                        <div
-                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
-                            style={{ margin: '0 4px', borderRadius: '4px' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            onClick={() => toggleExpand(groupKey)}
-                            onContextMenu={e => onContextMenu(e, 'group', groupKey)}
-                        >
-                            <ChevronIcon expanded={isExpanded} size={14} color={group.color} />
-                            <FolderIcon open={isExpanded} color={group.color} />
-                            <span
-                                className="font-semibold flex-1 truncate"
-                                style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}
-                            >
-                                {group.label}
-                            </span>
-                            <span
-                                className="px-1.5 py-0.5 rounded-full"
+                    // Recursive element counter for group badges
+                    const countElements = (nodes: TreeNode[]): number =>
+                        nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
+
+                    const totalCount = Array.from(kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+
+                    return (
+                        <div key={group.id} className="mb-0.5">
+                            {/* ── Group header (folder-like) ── */}
+                            <div
+                                className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                                 style={{
-                                    background: group.color + '15',
-                                    color: group.color,
-                                    fontSize: FONT.explorer.count,
-                                    fontWeight: 600,
-                                    minWidth: '20px',
-                                    textAlign: 'center',
+                                    margin: '0 4px', borderRadius: '4px',
+                                    ...(isUndefinedGroup ? { background: '#FFF3CD' } : {}),
                                 }}
+                                onMouseEnter={e => e.currentTarget.style.background = isUndefinedGroup ? '#FDE68A' : '#F0F0ED'}
+                                onMouseLeave={e => e.currentTarget.style.background = isUndefinedGroup ? '#FFF3CD' : 'transparent'}
+                                onClick={() => toggleExpand(groupKey)}
+                                onContextMenu={e => onContextMenu(e, 'group', groupKey)}
                             >
-                                {totalCount}
-                            </span>
-                        </div>
-
-                        {/* ── Kind sub-groups ── */}
-                        {isExpanded && Array.from(kinds.entries()).map(([kind, nodes]) => {
-                            const kindKey = `k:${group.id}:${kind}`;
-                            const isKindExpanded = expanded.has(kindKey);
-                            
-                            // Find layer color for this kind from the first element found
-                            const findLayer = (nodes: TreeNode[]): string | undefined => {
-                                for (const n of nodes) {
-                                    if (n.type === 'element') return n.element?.layer;
-                                    const l = findLayer(n.children);
-                                    if (l) return l;
+                                <ChevronIcon expanded={isExpanded} size={14} color={group.color} />
+                                {isUndefinedGroup
+                                    ? <span style={{ fontSize: '14px', lineHeight: 1, flexShrink: 0 }}>⚠</span>
+                                    : <FolderIcon open={isExpanded} color={group.color} />
                                 }
-                            };
-                            const kindLayer = findLayer(nodes);
-                            const layerColor = kindLayer ? (LAYER_COLORS[kindLayer] || group.color) : group.color;
-
-                            return (
-                                <div
-                                    key={kind}
-                                    style={{ marginLeft: '16px' }}
-                                    onDragOver={e => handleDragOver(e, kind)}
-                                    onDrop={e => handleDrop(e, '', kind)}
+                                <span
+                                    className="font-semibold flex-1 truncate"
+                                    style={{ color: isUndefinedGroup ? '#92400E' : COLOR.primary, fontSize: FONT.explorer.group }}
                                 >
-                                    <div
-                                        className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
-                                        style={{ borderRadius: '4px', margin: '0 4px' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                        onClick={() => toggleExpand(kindKey)}
-                                        onContextMenu={e => onContextMenu(e, 'kind', kindKey, kind)}
-                                    >
-                                        <ChevronIcon expanded={isKindExpanded} size={12} color={COLOR.muted} />
-                                        <FolderIcon open={isKindExpanded} color={layerColor} />
-                                        <span
-                                            className="font-medium flex-1 truncate"
-                                            style={{ color: COLOR.secondary, fontSize: FONT.explorer.kind }}
-                                        >
-                                            {kind}
-                                        </span>
-                                    </div>
+                                    {group.label}
+                                </span>
+                                <span
+                                    className="px-1.5 py-0.5 rounded-full"
+                                    style={{
+                                        background: group.color + '25',
+                                        color: group.color,
+                                        fontSize: FONT.explorer.count,
+                                        fontWeight: 600,
+                                        minWidth: '20px',
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    {totalCount}
+                                </span>
+                            </div>
 
-                                    {/* ── Recursive Tree Content ── */}
-                                    {isKindExpanded && (
-                                        <RecursiveTree
-                                            nodes={nodes}
-                                            level={0}
-                                            expanded={expanded}
-                                            toggleExpand={toggleExpand}
-                                            selectedElementId={selectedElementId}
-                                            selectElement={selectElement}
-                                            violationCounts={violationCounts}
-                                            baseColor={layerColor}
-                                            onContextMenu={(e, type, id) => onContextMenu(e, type, id, kind)}
-                                            onDragStart={e => handleDragStart(e, nodes[0], kind)}
-                                            onDrop={e => handleDrop(e, '', kind)}
-                                        />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                );
-            })}
-            {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
+                            {/* ── Kind sub-groups ── */}
+                            {isExpanded && Array.from(kinds.entries()).map(([kind, nodes]) => {
+                                const kindKey = `k:${group.id}:${kind}`;
+                                const isKindExpanded = expanded.has(kindKey);
+
+                                // Find layer color for this kind from the first element found
+                                const findLayer = (ns: TreeNode[]): string | undefined => {
+                                    for (const n of ns) {
+                                        if (n.type === 'element') return n.element?.layer;
+                                        const l = findLayer(n.children);
+                                        if (l) return l;
+                                    }
+                                };
+                                const kindLayer = findLayer(nodes);
+                                const layerColor = isUndefinedGroup ? '#F59E0B' : (kindLayer ? (LAYER_COLORS[kindLayer] || group.color) : group.color);
+
+                                // Flat list of all element IDs in this kind (for select-all)
+                                const collectIds = (ns: TreeNode[]): string[] =>
+                                    ns.flatMap(n => n.type === 'element' && n.element ? [n.element.id] : collectIds(n.children));
+                                const kindElementIds = collectIds(nodes);
+
+                                return (
+                                    <div
+                                        key={kind}
+                                        style={{ marginLeft: '16px' }}
+                                        onDragOver={e => handleDragOver(e, kind)}
+                                        onDrop={e => handleDrop(e, '', kind)}
+                                    >
+                                        <div
+                                            className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                                            style={{ borderRadius: '4px', margin: '0 4px' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            onClick={() => toggleExpand(kindKey)}
+                                            onContextMenu={e => onContextMenu(e, 'kind', kindKey, kind)}
+                                        >
+                                            <ChevronIcon expanded={isKindExpanded} size={12} color={COLOR.muted} />
+                                            <FolderIcon open={isKindExpanded} color={layerColor} />
+                                            <span
+                                                className="font-medium flex-1 truncate"
+                                                style={{ color: isUndefinedGroup ? '#B45309' : COLOR.secondary, fontSize: FONT.explorer.kind }}
+                                            >
+                                                {kind}
+                                                {isUndefinedGroup && <span style={{ color: '#F59E0B', marginLeft: '4px' }}>·</span>}
+                                            </span>
+                                            {/* Select all in kind */}
+                                            <button
+                                                onClick={e => { e.stopPropagation(); selectAllElements(kindElementIds); }}
+                                                title="Select all in this category"
+                                                className="px-1 rounded"
+                                                style={{ color: COLOR.faint, fontSize: '10px', opacity: 0.6 }}
+                                                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                                                onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                                            >☑</button>
+                                        </div>
+
+                                        {/* ── Recursive Tree Content ── */}
+                                        {isKindExpanded && (
+                                            <RecursiveTree
+                                                nodes={nodes}
+                                                level={0}
+                                                expanded={expanded}
+                                                toggleExpand={toggleExpand}
+                                                selectedElementId={selectedElementId}
+                                                selectElement={selectElement}
+                                                selectedElementIds={selectedElementIds}
+                                                toggleElementSelection={toggleElementSelection}
+                                                violationCounts={violationCounts}
+                                                baseColor={layerColor}
+                                                onContextMenu={(e, type, id) => onContextMenu(e, type, id, kind)}
+                                                onDragStart={e => handleDragStart(e, nodes[0], kind)}
+                                                onDrop={e => handleDrop(e, '', kind)}
+                                                isUndefined={isUndefinedGroup}
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+                {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
+            </div>
         </div>
     );
 }
