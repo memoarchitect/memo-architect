@@ -65,6 +65,7 @@ function UnifiedCanvas() {
             case 'statistics':
                 return <StatisticsDashboard />;
             case 'dhf-dashboard':
+            case 'dhf-document':
                 return <DhfWorkbench />;
             case 'dhf-dashboard-legacy':
                 return <DhfDashboard />;
@@ -385,9 +386,9 @@ export function App() {
                     </Routes>
                 </div>
 
-                {/* Right: Properties Panel — hidden in element-detail and catalog modes */}
+                {/* Right: Properties Panel — hidden in element-detail, catalog, and DHF modes */}
                 {/* Switches to BulkEditPanel when 2+ elements selected */}
-                {activeView.type !== 'element-detail' && !isCatalogRoute && (
+                {activeView.type !== 'element-detail' && !isCatalogRoute && activeMode !== 'dhf' && (
                     selectedElementIds.size >= 2
                         ? <BulkEditPanel />
                         : <UnifiedPropertiesPanel />

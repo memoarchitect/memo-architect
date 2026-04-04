@@ -32,7 +32,18 @@ export type ActiveView =
     | { type: 'compliance-wizard' }
     | { type: 'statistics' }
     | { type: 'dhf-dashboard' }
+    | { type: 'dhf-document'; docId: string }
     | { type: 'welcome' };
+
+/** A DHF document created by the user in the DHF Workbench */
+export interface DhfDoc {
+    id: string;         // e.g. "RMP-001"
+    title: string;
+    group: string;      // e.g. "Risk Management"
+    templateId: string; // e.g. "iso-14971/rmp"
+    content: string;
+    createdAt: number;
+}
 
 /** Which explorer tab is active in the left panel */
 export type ExplorerTab = 'model' | 'views' | 'worksets';
@@ -158,6 +169,12 @@ export interface ModelState {
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
+
+    // ─── DHF document actions ─────────────────────────────────────────
+    dhfDocuments: DhfDoc[];
+    addDhfDocument: (doc: DhfDoc) => void;
+    updateDhfDocumentContent: (docId: string, content: string) => void;
+    removeDhfDocument: (docId: string) => void;
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -196,6 +213,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Diagram parse errors
     diagramParseErrors: {},
+
+    // DHF documents
+    dhfDocuments: [],
 
     // Editing
     analysisIssues: [],
@@ -487,6 +507,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
             set((s) => ({ diagramParseErrors: { ...s.diagramParseErrors, [diagramId]: errors } }));
         }
     },
+    addDhfDocument: (doc) => set((s) => ({ dhfDocuments: [...s.dhfDocuments, doc] })),
+    updateDhfDocumentContent: (docId, content) => set((s) => ({
+        dhfDocuments: s.dhfDocuments.map(d => d.id === docId ? { ...d, content } : d),
+    })),
+    removeDhfDocument: (docId) => set((s) => ({
+        dhfDocuments: s.dhfDocuments.filter(d => d.id !== docId),
+        activeView: s.activeView.type === 'dhf-document' && s.activeView.docId === docId
+            ? { type: 'dhf-dashboard' }
+            : s.activeView,
+    })),
     cancelEdit: (elementId) => set((s) => {
         const newEdits = new Map(s.pendingEdits);
         newEdits.delete(elementId);
