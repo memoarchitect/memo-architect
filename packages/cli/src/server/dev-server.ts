@@ -7,7 +7,8 @@
 
 import { createServer as createHttpServer, type Server } from 'node:http';
 import { resolve } from 'node:path';
-import type { ServerMessage } from '@memo/core';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import type { ServerMessage, ModelUpdateMessage, DiagramDTO } from '@memo/core';
 
 export interface DevServerOptions {
     port: number;
@@ -19,6 +20,24 @@ export interface DevServerOptions {
 export interface DevServer {
     broadcast(messages: ServerMessage[]): void;
     close(): void;
+}
+
+// ─── User-diagram persistence helpers ──────────────────────────────────────
+
+function userDiagramsPath(projectRoot: string): string {
+    return resolve(projectRoot, '.memo', 'user-diagrams.json');
+}
+
+function loadUserDiagrams(projectRoot: string): DiagramDTO[] {
+    const p = userDiagramsPath(projectRoot);
+    if (!existsSync(p)) return [];
+    try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return []; }
+}
+
+function saveUserDiagrams(projectRoot: string, diagrams: DiagramDTO[]): void {
+    const dir = resolve(projectRoot, '.memo');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(userDiagramsPath(projectRoot), JSON.stringify(diagrams, null, 2), 'utf8');
 }
 
 export async function createDevServer(options: DevServerOptions): Promise<DevServer> {
@@ -78,6 +97,39 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
     const wss = new WebSocketServer({ server });
     const clients = new Set<any>();
 
+    /** Push an updated model:update message (with modified diagrams) to all clients */
+    function broadcastDiagramChange(changedDiagram: DiagramDTO, op: 'create' | 'update' | 'delete'): void {
+        const modelMsgIdx = initialMessages.findIndex(m => m.type === 'model:update');
+        if (modelMsgIdx < 0) return;
+        const prev = initialMessages[modelMsgIdx] as ModelUpdateMessage;
+        let diagrams: DiagramDTO[] = prev.payload.diagrams ?? [];
+        if (op === 'create') {
+            diagrams = [...diagrams, changedDiagram];
+        } else if (op === 'update') {
+            diagrams = diagrams.map(d => d.id === changedDiagram.id ? { ...d, ...changedDiagram } : d);
+        } else {
+            diagrams = diagrams.filter(d => d.id !== changedDiagram.id);
+        }
+        const updatedMsg: ModelUpdateMessage = { type: 'model:update', payload: { ...prev.payload, diagrams } };
+        initialMessages[modelMsgIdx] = updatedMsg;
+        for (const client of clients) {
+            if (client.readyState === 1) client.send(JSON.stringify(updatedMsg));
+        }
+    }
+
+    /** Extract element IDs from a SysML text snippet by matching names against the model */
+    function extractElementIdsFromText(text: string, elements: Record<string, any>): string[] {
+        // Match `part|requirement|action|port|item|attribute <name> :` patterns
+        const regex = /\b(?:part|requirement|action|port|item|attribute|connection)\s+(\w+)\s*:/g;
+        const ids: string[] = [];
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(text)) !== null) {
+            const name = m[1];
+            if (elements[name]) ids.push(name);
+        }
+        return ids;
+    }
+
     wss.on('connection', (ws: any) => {
         clients.add(ws);
 
@@ -99,13 +151,45 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                 } else if (msg.type === 'element:update' || msg.type === 'element:create') {
                     // 1. Persist to FS
                     const { saveElementToFile } = await import('./persistor.js');
-                    const { projectRoot } = options; 
-                    
+                    const { projectRoot } = options;
+
                     const result = saveElementToFile(projectRoot, msg.payload);
                     if (result.success) {
                         // The file watcher will catch this change and broadcast to all clients
                         console.log(`[Persisted] ${msg.type} to ${result.filePath}`);
                     }
+                } else if (msg.type === 'diagram:create') {
+                    const { projectRoot } = options;
+                    const diagram: DiagramDTO = { ...msg.payload, auto: false };
+                    const userDiagrams = loadUserDiagrams(projectRoot);
+                    userDiagrams.push(diagram);
+                    saveUserDiagrams(projectRoot, userDiagrams);
+                    broadcastDiagramChange(diagram, 'create');
+                    console.log(`[Diagram] Created: ${diagram.name} (${diagram.id})`);
+                } else if (msg.type === 'diagram:update') {
+                    const { projectRoot } = options;
+                    const userDiagrams = loadUserDiagrams(projectRoot);
+                    const idx = userDiagrams.findIndex(d => d.id === msg.payload.id);
+                    if (idx >= 0) {
+                        userDiagrams[idx] = { ...userDiagrams[idx], ...msg.payload };
+                        saveUserDiagrams(projectRoot, userDiagrams);
+                        broadcastDiagramChange(userDiagrams[idx], 'update');
+                    }
+                } else if (msg.type === 'diagram:delete') {
+                    const { projectRoot } = options;
+                    const userDiagrams = loadUserDiagrams(projectRoot);
+                    const filtered = userDiagrams.filter(d => d.id !== msg.payload.id);
+                    saveUserDiagrams(projectRoot, filtered);
+                    broadcastDiagramChange({ id: msg.payload.id } as DiagramDTO, 'delete');
+                    console.log(`[Diagram] Deleted: ${msg.payload.id}`);
+                } else if (msg.type === 'diagram:parse') {
+                    // Extract element IDs from SysML text by name-matching against current model
+                    const modelMsg = initialMessages.find(m => m.type === 'model:update') as ModelUpdateMessage | undefined;
+                    const elementIds = extractElementIdsFromText(msg.payload.text, modelMsg?.payload?.elements ?? {});
+                    ws.send(JSON.stringify({
+                        type: 'diagram:parse:result',
+                        payload: { diagramId: msg.payload.diagramId, elementIds, errors: [] },
+                    }));
                 }
             } catch (e) {
                 console.error('WebSocket Error:', e);

@@ -15,6 +15,7 @@ import { CatalogHomePage } from './views/CatalogHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
 
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
+const DiagramEditor = lazy(() => import('./views/DiagramEditor').then(m => ({ default: m.DiagramEditor })));
 const DiagramCanvas = lazy(() => import('./views/DiagramCanvas').then(m => ({ default: m.DiagramCanvas })));
 const ActionFlowDiagram = lazy(() => import('./views/ActionFlowDiagram').then(m => ({ default: m.ActionFlowDiagram })));
 const DSMView = lazy(() => import('./views/DSMView').then(m => ({ default: m.DSMView })));
@@ -45,7 +46,7 @@ function UnifiedCanvas() {
     const renderView = () => {
         switch (activeView.type) {
             case 'diagram':
-                return <DiagramCanvas />;
+                return <DiagramEditor diagramId={activeView.diagramId} />;
             case 'actionflow':
                 return <ActionFlowDiagram />;
             case 'dsm':

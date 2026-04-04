@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve } from 'node:path';
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries } from '@memo/core';
@@ -172,6 +172,17 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             version: `${baseVersion}-dev.${buildCount}`,
             ...gitInfo,
         };
+
+        // Load user-created diagrams from .memo/user-diagrams.json (persist across rebuilds)
+        const userDiagramsPath = resolve(cwd, '.memo', 'user-diagrams.json');
+        if (existsSync(userDiagramsPath)) {
+            try {
+                const userDiagrams = JSON.parse(readFileSync(userDiagramsPath, 'utf8')) as DiagramDTO[];
+                diagrams.push(...userDiagrams);
+            } catch {
+                // ignore corrupt file
+            }
+        }
 
         const dto = modelToDTO(model, { viewpoints, architectureLayers, diagrams });
         dto.metadata = metadata;

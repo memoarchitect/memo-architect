@@ -12,7 +12,7 @@ import type {
     DiagramDTO,
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
-import { sendElementUpdate, sendElementCreate } from './ws-client';
+import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
 
 export const FOLDER_ATTR = '_folder';
 
@@ -94,6 +94,9 @@ export interface ModelState {
     labelFilter: string | null;
     tagFilters: string[];  // active tag filters (AND logic)
 
+    // ─── Diagram parse errors (per diagramId) ─────────────────────────
+    diagramParseErrors: Record<string, string[]>;
+
     // ─── Analysis issues (from tools: DSM, traceability, etc.) ───────────
     analysisIssues: AnalysisIssue[];
     setAnalysisIssues: (issues: AnalysisIssue[]) => void;
@@ -149,6 +152,12 @@ export interface ModelState {
     deleteFolder: (kind: string, folderPath: string) => void;
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
+
+    // ─── Diagram actions ──────────────────────────────────────────────
+    createDiagram: (opts: { name: string; diagramType: string; viewpointId: string }) => void;
+    updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
+    deleteDiagram: (diagramId: string) => void;
+    applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -184,6 +193,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
     attributeFilter: null,
     labelFilter: null,
     tagFilters: [],
+
+    // Diagram parse errors
+    diagramParseErrors: {},
 
     // Editing
     analysisIssues: [],
@@ -425,6 +437,54 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         for (const id of changedIds) {
             sendElementUpdate(newElements[id]);
+        }
+    },
+    createDiagram: ({ name, diagramType, viewpointId }) => {
+        const id = `diag_${Math.random().toString(36).substr(2, 9)}`;
+        const diagram: DiagramDTO = { id, name, diagramType, viewpointId, auto: false, elementIds: [] };
+        set((s) => ({
+            model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
+            selectedDiagramId: id,
+            activeView: { type: 'diagram', diagramId: id },
+        }));
+        sendDiagramCreate({ id, name, diagramType, viewpointId, elementIds: [] });
+    },
+    updateDiagramElementIds: (diagramId, elementIds) => {
+        const { model } = get();
+        if (!model?.diagrams) return;
+        const idx = model.diagrams.findIndex(d => d.id === diagramId);
+        if (idx < 0) return;
+        const updated = { ...model.diagrams[idx], elementIds };
+        const diagrams = [...model.diagrams];
+        diagrams[idx] = updated;
+        set((s) => ({ model: s.model ? { ...s.model, diagrams } : null }));
+        sendDiagramUpdate({ id: diagramId, elementIds });
+    },
+    deleteDiagram: (diagramId) => {
+        set((s) => ({
+            model: s.model ? { ...s.model, diagrams: (s.model.diagrams ?? []).filter(d => d.id !== diagramId) } : null,
+            selectedDiagramId: s.selectedDiagramId === diagramId ? null : s.selectedDiagramId,
+            activeView: (s.activeView.type === 'diagram' && s.activeView.diagramId === diagramId)
+                ? { type: 'welcome' }
+                : s.activeView,
+        }));
+        sendDiagramDelete(diagramId);
+    },
+    applyDiagramParseResult: (diagramId, elementIds, errors) => {
+        const { model } = get();
+        if (!model?.diagrams) return;
+        const idx = model.diagrams.findIndex(d => d.id === diagramId);
+        if (idx >= 0) {
+            const updated = { ...model.diagrams[idx], elementIds };
+            const diagrams = [...model.diagrams];
+            diagrams[idx] = updated;
+            set((s) => ({
+                model: s.model ? { ...s.model, diagrams } : null,
+                diagramParseErrors: { ...s.diagramParseErrors, [diagramId]: errors },
+            }));
+            sendDiagramUpdate({ id: diagramId, elementIds });
+        } else {
+            set((s) => ({ diagramParseErrors: { ...s.diagramParseErrors, [diagramId]: errors } }));
         }
     },
     cancelEdit: (elementId) => set((s) => {
