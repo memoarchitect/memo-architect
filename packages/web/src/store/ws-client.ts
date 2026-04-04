@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
-import type { ServerMessage } from '@memo/core';
+import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage } from '@memo/core';
 
 /** Embedded data injected by `memo build` */
 interface EmbeddedData {
@@ -104,6 +104,9 @@ function handleMessage(msg: ServerMessage): void {
         case 'error':
             console.error('[MEMO] Server error:', msg.payload.message);
             break;
+        case 'diagram:parse:result':
+            store.applyDiagramParseResult(msg.payload.diagramId, msg.payload.elementIds, msg.payload.errors);
+            break;
     }
 }
 
@@ -140,5 +143,35 @@ export function sendAddRelationship(sourceId: string, targetId: string, relType:
             type: 'relationship:add',
             payload: { sourceId, targetId, type: relType },
         }));
+    }
+}
+
+/** Send a new user diagram creation to the CLI server */
+export function sendDiagramCreate(payload: DiagramCreateMessage['payload']): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'diagram:create', payload }));
+    }
+}
+
+/** Send a diagram update (elementIds, name, etc.) to the CLI server */
+export function sendDiagramUpdate(payload: DiagramUpdateMessage['payload']): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'diagram:update', payload }));
+    }
+}
+
+/** Send a diagram deletion to the CLI server */
+export function sendDiagramDelete(id: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const payload: DiagramDeleteMessage['payload'] = { id };
+        ws.send(JSON.stringify({ type: 'diagram:delete', payload }));
+    }
+}
+
+/** Send a SysML snippet to the CLI server for element-ID extraction */
+export function sendDiagramParse(diagramId: string, text: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const payload: DiagramParseMessage['payload'] = { diagramId, text };
+        ws.send(JSON.stringify({ type: 'diagram:parse', payload }));
     }
 }

@@ -13,7 +13,8 @@ export type ServerMessage =
     | ValidationUpdateMessage
     | CompletenessUpdateMessage
     | ErrorMessage
-    | ImportResultMessage;
+    | ImportResultMessage
+    | DiagramParseResultMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -45,7 +46,8 @@ export type ClientMessage =
     | CsvImportMessage
     | DiagramCreateMessage
     | DiagramUpdateMessage
-    | DiagramDeleteMessage;
+    | DiagramDeleteMessage
+    | DiagramParseMessage;
 
 export interface RequestRefreshMessage {
     type: 'request:refresh';
@@ -129,6 +131,25 @@ export interface DiagramUpdateMessage {
 export interface DiagramDeleteMessage {
     type: 'diagram:delete';
     payload: { id: string };
+}
+
+/** Client requests server-side SysML parse to extract element IDs */
+export interface DiagramParseMessage {
+    type: 'diagram:parse';
+    payload: {
+        diagramId: string;
+        text: string;
+    };
+}
+
+/** Server responds with parsed element IDs (or errors) */
+export interface DiagramParseResultMessage {
+    type: 'diagram:parse:result';
+    payload: {
+        diagramId: string;
+        elementIds: string[];
+        errors: string[];
+    };
 }
 
 /** Server responds with CSV import results */

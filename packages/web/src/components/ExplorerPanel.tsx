@@ -896,13 +896,100 @@ function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
     );
 }
 
+// ─── New Diagram Modal ───────────────────────────────────────────────────────
+
+function NewDiagramModal({ viewpointId, onClose }: { viewpointId: string; onClose: () => void }) {
+    const createDiagram = useModelStore(s => s.createDiagram);
+    const [name, setName] = useState('Untitled');
+    const [diagramType, setDiagramType] = useState('bdd');
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+
+    const handleCreate = () => {
+        if (!name.trim()) return;
+        createDiagram({ name: name.trim(), diagramType, viewpointId });
+        onClose();
+    };
+
+    return (
+        <div
+            ref={ref}
+            className="fixed z-50 rounded-lg overflow-hidden py-3 px-4"
+            style={{
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: '#FFFFFF', border: '1px solid #E5E7EB',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.16)', minWidth: '300px',
+            }}
+        >
+            <div className="font-semibold mb-3" style={{ color: COLOR.primary, fontSize: '13px' }}>New Diagram</div>
+            <label className="block mb-1" style={{ fontSize: FONT.xs, color: COLOR.secondary }}>Name</label>
+            <input
+                autoFocus
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') onClose(); }}
+                className="w-full px-3 py-2 rounded-lg mb-3 focus:outline-none"
+                style={{ background: '#F9F9F8', border: '1px solid #E5E7EB', color: COLOR.primary, fontSize: '13px' }}
+            />
+            <label className="block mb-1" style={{ fontSize: FONT.xs, color: COLOR.secondary }}>Type</label>
+            <select
+                value={diagramType}
+                onChange={e => setDiagramType(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg mb-4 focus:outline-none"
+                style={{ background: '#F9F9F8', border: '1px solid #E5E7EB', color: COLOR.primary, fontSize: '13px' }}
+            >
+                {Object.entries(DIAGRAM_TYPE_META).map(([key, meta]) => (
+                    <option key={key} value={key}>{meta.fullName} ({meta.code})</option>
+                ))}
+            </select>
+            <div className="flex gap-2 justify-end">
+                <button onClick={onClose} className="px-3 py-1.5 rounded" style={{ fontSize: '12px', color: COLOR.secondary, background: '#F0F0ED' }}>Cancel</button>
+                <button onClick={handleCreate} className="px-3 py-1.5 rounded font-medium" style={{ fontSize: '12px', color: '#FFFFFF', background: COLOR.accent }}>Create</button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Collapsible sub-section inside a viewpoint ──────────────────────────────
+
+function CollapsibleSection({ label, count, defaultOpen, children }: {
+    label: string; count: number; defaultOpen: boolean; children: React.ReactNode;
+}) {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div>
+            <div
+                className="flex items-center gap-1 px-2 py-1 cursor-pointer select-none"
+                style={{ borderRadius: '4px', margin: '0 4px' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onClick={() => setOpen(v => !v)}
+            >
+                <ChevronIcon expanded={open} size={12} color={COLOR.faint} />
+                <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>{label}</span>
+                <span className="ml-1 px-1 rounded" style={{ background: '#F0F0ED', color: COLOR.faint, fontSize: FONT.badge, fontWeight: 600 }}>{count}</span>
+            </div>
+            {open && children}
+        </div>
+    );
+}
+
 function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
+    const deleteDiagram = useModelStore(s => s.deleteDiagram);
 
     const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set(['__model']));
+    const [newDiagramVp, setNewDiagramVp] = useState<string | null>(null);
 
     const toggleExpand = (id: string) => {
         setExpandedVps(prev => {
@@ -926,6 +1013,23 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
+    const autoModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto));
+    const userModelDiags = filterDiagrams(modelDiagrams.filter(d => !d.auto));
+
+    const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
+        diagrams.map(diag => (
+            <DiagramRow
+                key={diag.id}
+                diag={diag}
+                isSelected={selectedDiagramId === diag.id}
+                onSelect={() => {
+                    setActiveView({ type: 'diagram', diagramId: diag.id });
+                    selectViewpoint(vpId === '__model' ? null : vpId);
+                }}
+                onDelete={!diag.auto ? () => deleteDiagram(diag.id) : undefined}
+            />
+        ))
+    );
 
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
@@ -945,17 +1049,26 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
                 {expandedVps.has('__model') && (
                     <div style={{ marginLeft: '16px' }}>
-                        {filterDiagrams(modelDiagrams).map(diag => (
-                            <DiagramRow
-                                key={diag.id}
-                                diag={diag}
-                                isSelected={selectedDiagramId === diag.id}
-                                onSelect={() => {
-                                    setActiveView({ type: 'diagram', diagramId: diag.id });
-                                    selectViewpoint(diag.viewpointId === '__model' ? null : diag.viewpointId);
-                                }}
-                            />
-                        ))}
+                        {/* Auto-generated diagrams — collapsed by default */}
+                        {autoModelDiags.length > 0 && (
+                            <CollapsibleSection label="Generated" count={autoModelDiags.length} defaultOpen={false}>
+                                <div style={{ marginLeft: '12px' }}>
+                                    {renderDiagramList(autoModelDiags, '__model')}
+                                </div>
+                            </CollapsibleSection>
+                        )}
+                        {/* User diagrams */}
+                        {renderDiagramList(userModelDiags, '__model')}
+                        {/* + New Diagram */}
+                        <button
+                            className="flex items-center gap-1 px-2 py-1 w-full text-left"
+                            style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
+                            onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            onClick={() => setNewDiagramVp('__model')}
+                        >
+                            <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Diagram
+                        </button>
                     </div>
                 )}
             </div>
@@ -964,7 +1077,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             {viewpoints.map(vp => {
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
-                const diagrams = getDiagramsForViewpoint(model, vp.id);
+                const allDiagrams = getDiagramsForViewpoint(model, vp.id);
+                const autoDiags = filterDiagrams(allDiagrams.filter(d => d.auto));
+                const userDiags = filterDiagrams(allDiagrams.filter(d => !d.auto));
 
                 return (
                     <div key={vp.id} className="mb-0.5">
@@ -978,21 +1093,27 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                             <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
                             <FolderIcon open={isExpanded} color={vpColor} />
                             <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{vp.label}</span>
-                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{diagrams.length}</span>
+                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{allDiagrams.length}</span>
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
-                                {filterDiagrams(diagrams).map(diag => (
-                                    <DiagramRow
-                                        key={diag.id}
-                                        diag={diag}
-                                        isSelected={selectedDiagramId === diag.id}
-                                        onSelect={() => {
-                                            setActiveView({ type: 'diagram', diagramId: diag.id });
-                                            selectViewpoint(vp.id);
-                                        }}
-                                    />
-                                ))}
+                                {autoDiags.length > 0 && (
+                                    <CollapsibleSection label="Generated" count={autoDiags.length} defaultOpen={false}>
+                                        <div style={{ marginLeft: '12px' }}>
+                                            {renderDiagramList(autoDiags, vp.id)}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                                {renderDiagramList(userDiags, vp.id)}
+                                <button
+                                    className="flex items-center gap-1 px-2 py-1 w-full text-left"
+                                    style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    onClick={() => setNewDiagramVp(vp.id)}
+                                >
+                                    <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Diagram
+                                </button>
                             </div>
                         )}
                     </div>
@@ -1009,28 +1130,35 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     ))}
                 </div>
             </div>
+
+            {/* New Diagram modal */}
+            {newDiagramVp !== null && (
+                <NewDiagramModal viewpointId={newDiagramVp} onClose={() => setNewDiagramVp(null)} />
+            )}
         </div>
     );
 }
 
-function DiagramRow({ diag, isSelected, onSelect }: {
+function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
     diag: DiagramDTO;
     isSelected: boolean;
     onSelect: () => void;
+    onDelete?: () => void;
 }) {
+    const [hovered, setHovered] = useState(false);
     const meta = DIAGRAM_TYPE_META[diag.diagramType];
     const elCount = diag.elementIds?.length ?? 0;
 
     return (
         <div
-            className="flex items-center gap-2 px-2 py-1 cursor-pointer"
+            className="flex items-center gap-2 px-2 py-1 cursor-pointer group"
             style={{
                 borderRadius: '4px', margin: '0 4px',
-                background: isSelected ? COLOR.accent + '18' : 'transparent',
+                background: isSelected ? COLOR.accent + '18' : hovered ? '#F0F0ED' : 'transparent',
                 fontSize: FONT.explorer.item,
             }}
-            onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
-            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? COLOR.accent + '18' : 'transparent'; }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
             onClick={onSelect}
             title={[meta?.fullName, diag.description].filter(Boolean).join(' \u2014 ')}
         >
@@ -1051,6 +1179,18 @@ function DiagramRow({ diag, isSelected, onSelect }: {
                     }}>
                     {elCount}
                 </span>
+            )}
+            {onDelete && hovered && (
+                <button
+                    onClick={e => { e.stopPropagation(); onDelete(); }}
+                    title="Delete diagram"
+                    style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: '#DC2626', fontSize: '12px', padding: '0 2px', lineHeight: 1,
+                    }}
+                >
+                    ×
+                </button>
             )}
         </div>
     );
