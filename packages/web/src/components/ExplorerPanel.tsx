@@ -1243,16 +1243,26 @@ const DHF_GROUPS: { id: string; label: string; color: string; templates: DhfTemp
         ],
     },
     {
-        id: 'design', label: 'Design Controls', color: '#0891b2',
+        id: 'requirements', label: 'Requirements', color: '#0891b2',
         templates: [
             { id: '21cfr820/user-needs', title: 'User Needs', prefix: 'UN' },
-            { id: '21cfr820/design-input', title: 'Design Input Plan', prefix: 'DIP' },
-            { id: '21cfr820/design-output', title: 'Design Output Plan', prefix: 'DOP' },
-            { id: '21cfr820/design-review', title: 'Design Review Record', prefix: 'DRR' },
+            { id: '21cfr820/design-input', title: 'Design Input Specification', prefix: 'DIS' },
+            { id: '21cfr820/design-output', title: 'Design Output Specification', prefix: 'DOS' },
+        ],
+    },
+    {
+        id: 'vv', label: 'Verification & Validation', color: '#0d9488',
+        templates: [
             { id: '21cfr820/vv-plan', title: 'V&V Plan', prefix: 'VVP' },
             { id: '21cfr820/vv-report', title: 'V&V Report', prefix: 'VVR' },
-            { id: '21cfr820/design-verification', title: 'Design Verification', prefix: 'DV' },
-            { id: '21cfr820/design-validation', title: 'Design Validation', prefix: 'DVA' },
+            { id: '21cfr820/design-verification', title: 'Design Verification Report', prefix: 'DVR' },
+            { id: '21cfr820/design-validation', title: 'Design Validation Report', prefix: 'DVAR' },
+            { id: '21cfr820/design-review', title: 'Design Review Record', prefix: 'DRR' },
+        ],
+    },
+    {
+        id: 'release', label: 'Release & Change', color: '#4f46e5',
+        templates: [
             { id: '21cfr820/transfer-plan', title: 'Design Transfer Plan', prefix: 'DTP' },
             { id: '21cfr820/change-record', title: 'Design Change Record', prefix: 'DCR' },
             { id: '21cfr820/dhf-index', title: 'DHF Index', prefix: 'DHF' },
