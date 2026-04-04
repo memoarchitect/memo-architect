@@ -26,6 +26,12 @@ import {
 } from './layout';
 import { DecompositionNode } from './DecompositionNode';
 
+// Stable constant objects — prevents ReactFlow internal getSnapshot from seeing new references each render
+const RF_STYLE = { background: '#F7F7F5' } as const;
+const RF_FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 2 } as const;
+const MINIMAP_STYLE = { background: '#FFFFFF' } as const;
+const RF_PRO_OPTIONS = { hideAttribution: true } as const;
+
 function DiagramCanvasInner() {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -56,6 +62,9 @@ function DiagramCanvasInner() {
 
     // Register custom node types
     const nodeTypes = useMemo(() => ({ decompositionNode: DecompositionNode }), []);
+
+    // Stable nodeColor for MiniMap — inline arrow functions cause infinite loops
+    const miniMapNodeColor = useCallback((node: any) => node.data?.color || node.data?.layerColor || '#ccc', []);
 
     // Interactive callbacks
     const toggleExpand = useCallback((nodeId: string) => {
@@ -370,20 +379,20 @@ function DiagramCanvasInner() {
                 onPaneClick={onPaneClick}
                 onNodeDragStop={onNodeDragStop}
                 fitView
-                fitViewOptions={{ padding: 0.08, maxZoom: 2 }}
+                fitViewOptions={RF_FIT_VIEW_OPTIONS}
                 minZoom={0.2}
                 maxZoom={3}
                 zoomOnScroll
                 panOnScroll
                 panOnScrollMode={"free" as any}
-                proOptions={{ hideAttribution: true }}
-                style={{ background: '#F7F7F5' }}
+                proOptions={RF_PRO_OPTIONS}
+                style={RF_STYLE}
             >
                 <Background color="#EAEAE6" gap={20} size={1} />
                 <Controls />
                 <MiniMap
-                    style={{ background: '#FFFFFF' }}
-                    nodeColor={(node) => (node.data as any)?.color || (node.data as any)?.layerColor || '#ccc'}
+                    style={MINIMAP_STYLE}
+                    nodeColor={miniMapNodeColor}
                     maskColor="rgba(247, 247, 245, 0.7)"
                 />
             </ReactFlow>
