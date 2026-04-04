@@ -234,10 +234,21 @@ export function App() {
     const { pathname } = useLocation();
     const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
     const activeMode = useModelStore(s => s.activeMode);
-    // Scenario and Ontology have their own internal explorer in the center panel.
-    // Check both activeMode and activeView.type to avoid dual sidebars if they diverge.
-    const showExplorer = activeMode !== 'scenario' && activeMode !== 'ontology'
-        && activeView.type !== 'ontology' && activeView.type !== 'scenario-editor';
+    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
+
+    // Only hide the explorer for views with their own full-page internal explorer.
+    const showExplorer = activeView.type !== 'ontology' && activeView.type !== 'scenario-editor';
+
+    // Auto-open the sidebar whenever we switch to a view that needs it but it's
+    // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).
+    useEffect(() => {
+        if (showExplorer && sidebarCollapsed) {
+            toggleSidebar();
+        }
+    // Only run when the view type changes — not on every sidebarCollapsed toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView.type]);
 
     useEffect(() => {
         if (!loadEmbeddedData()) {

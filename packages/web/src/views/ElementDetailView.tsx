@@ -4,6 +4,135 @@ import { LAYER_COLORS, KIND_TO_GROUP } from '../constants';
 import { FONT, COLOR, SHADOW } from '../styles/tokens';
 import type { MemoElement, MemoRelationship } from '@memo/core';
 
+// ─── Scenario kinds ───────────────────────────────────────────────────────────
+const SCENARIO_KINDS = new Set(['Scenario', 'UseCase', 'UserActivity']);
+
+interface ScenarioStep { index: number; text: string; }
+
+function parseSteps(doc: string): ScenarioStep[] {
+    if (!doc) return [];
+    return doc.split('\n')
+        .filter(l => l.trim())
+        .map((line, i) => {
+            const match = line.match(/^\d+\.\s*(.*)/);
+            return { index: i, text: match ? match[1].trim() : line.trim() };
+        });
+}
+
+// ─── Scenario Flowchart ───────────────────────────────────────────────────────
+function ScenarioFlowchart({ element, layerColor }: { element: MemoElement; layerColor: string }) {
+    const steps = useMemo(() => parseSteps(element.doc || ''), [element.doc]);
+    const [editingDoc, setEditingDoc] = useState(false);
+    const updateElementField = useModelStore(s => s.updateElementField);
+    const applyEdit = useModelStore(s => s.applyEdit);
+    const pendingEdits = useModelStore(s => s.pendingEdits);
+    const pendingEdit = pendingEdits.get(element.id);
+    const currentDoc = pendingEdit?.doc ?? element.doc ?? '';
+
+    if (steps.length === 0 && !editingDoc) {
+        return (
+            <div
+                className="rounded-lg p-4 cursor-pointer text-center"
+                style={{ background: layerColor + '08', border: `1px dashed ${layerColor}40`, color: COLOR.faint, fontSize: FONT.sm }}
+                onClick={() => setEditingDoc(true)}
+            >
+                No steps defined. Click to add scenario steps (one per line, numbered).
+            </div>
+        );
+    }
+
+    if (editingDoc) {
+        const handleSave = () => {
+            applyEdit(element.id);
+            setEditingDoc(false);
+        };
+        return (
+            <div>
+                <p style={{ fontSize: FONT.xs, color: COLOR.faint, marginBottom: '6px' }}>
+                    Enter numbered steps, one per line: <code>1. User does something</code>
+                </p>
+                <textarea
+                    value={currentDoc}
+                    onChange={e => updateElementField(element.id, 'doc', e.target.value)}
+                    className="w-full rounded-lg p-3 focus:outline-none"
+                    style={{ border: `1px solid ${COLOR.accent}`, background: COLOR.surface, color: COLOR.primary, fontSize: FONT.sm, minHeight: '120px', resize: 'vertical', fontFamily: 'monospace', lineHeight: 1.7 }}
+                    autoFocus
+                />
+                <div className="flex gap-2 mt-2">
+                    <button onClick={handleSave} className="px-3 py-1.5 rounded-md font-medium" style={{ background: COLOR.accent, color: COLOR.accentDark, fontSize: FONT.xs }}>Save</button>
+                    <button onClick={() => setEditingDoc(false)} className="px-3 py-1.5 rounded-md" style={{ color: COLOR.muted, fontSize: FONT.xs, border: `1px solid ${COLOR.border}` }}>Cancel</button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ position: 'relative' }}>
+            {/* Edit button */}
+            <button
+                onClick={() => setEditingDoc(true)}
+                style={{ position: 'absolute', top: 0, right: 0, fontSize: FONT.xs, color: COLOR.faint, padding: '2px 8px', border: `1px solid ${COLOR.border}`, borderRadius: '6px', background: COLOR.surface, cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = COLOR.accent}
+                onMouseLeave={e => e.currentTarget.style.borderColor = COLOR.border}
+            >
+                Edit steps
+            </button>
+
+            {/* Flowchart */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, paddingTop: '4px' }}>
+                {/* Start node */}
+                <div style={{
+                    padding: '6px 20px', borderRadius: '999px', fontSize: FONT.xs, fontWeight: 700,
+                    background: layerColor, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase',
+                }}>
+                    Start
+                </div>
+
+                {steps.map((step, idx) => (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                        {/* Arrow */}
+                        <div style={{ width: '2px', height: '20px', background: layerColor + '50', position: 'relative' }}>
+                            <div style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: `6px solid ${layerColor}80` }} />
+                        </div>
+
+                        {/* Step box */}
+                        <div style={{
+                            width: '100%', maxWidth: '560px',
+                            display: 'flex', alignItems: 'flex-start', gap: '12px',
+                            background: COLOR.surface, border: `1px solid ${layerColor}30`,
+                            borderRadius: '8px', padding: '10px 14px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                        }}>
+                            <span style={{
+                                flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: layerColor + '18', color: layerColor, fontSize: FONT.xs, fontWeight: 700,
+                            }}>
+                                {idx + 1}
+                            </span>
+                            <span style={{ fontSize: FONT.sm, color: COLOR.primary, lineHeight: 1.5, paddingTop: '3px' }}>
+                                {step.text}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+
+                {/* End arrow + node */}
+                <div style={{ width: '2px', height: '20px', background: layerColor + '50', position: 'relative' }}>
+                    <div style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: `6px solid ${layerColor}80` }} />
+                </div>
+                <div style={{
+                    padding: '6px 20px', borderRadius: '999px', fontSize: FONT.xs, fontWeight: 700,
+                    background: layerColor + '20', color: layerColor, letterSpacing: '0.06em', textTransform: 'uppercase',
+                    border: `1px solid ${layerColor}40`,
+                }}>
+                    End
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Element Detail View ─────────────────────────────────────────────────────
 // Full-page element detail displayed in the main canvas area.
 // Shows editable description, attributes, and relationships.
@@ -169,8 +298,15 @@ export function ElementDetailView() {
                     </div>
                 )}
 
-                {/* ── Description (editable) ── */}
-                <Section title="Description">
+                {/* ── Scenario Flowchart (for Scenario/UseCase/UserActivity kinds) ── */}
+                {SCENARIO_KINDS.has(element.kind) && (
+                    <Section title="Flow">
+                        <ScenarioFlowchart element={element} layerColor={layerColor} />
+                    </Section>
+                )}
+
+                {/* ── Description (editable) — hidden for scenarios since steps ARE the description ── */}
+                {!SCENARIO_KINDS.has(element.kind) && <Section title="Description">
                     {editingDoc ? (
                         <div>
                             <textarea
@@ -227,7 +363,7 @@ export function ElementDetailView() {
                             {currentDoc || 'Click to add a description...'}
                         </div>
                     )}
-                </Section>
+                </Section>}
 
                 {/* ── Attributes ── */}
                 <Section title="Attributes">
