@@ -5,6 +5,7 @@ import {
     getDiagramsForViewpoint,
     getRelationshipsForElement,
     type ExplorerTab,
+    type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
@@ -1198,107 +1199,398 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
 
 // ─── DHF Explorer ────────────────────────────────────────────────────────────
 
-const DHF_GROUPS = [
-    {
-        id: 'risk', label: 'Risk Management', color: '#E74C3C',
-        docs: [
-            { id: 'rmp', title: 'Risk Management Plan' },
-            { id: 'har', title: 'Hazard Analysis Report' },
-            { id: 'fmea', title: 'Failure Mode & Effects Analysis' },
-        ],
-    },
-    {
-        id: 'design', label: 'Design & Architecture', color: '#4A90D9',
-        docs: [
-            { id: 'rtm', title: 'Requirements Traceability Matrix' },
-            { id: 'sad', title: 'System Architecture Description' },
-            { id: 'sds', title: 'Software Design Specification' },
-            { id: 'soup', title: 'SOUP List' },
-            { id: 'dip', title: 'Design Input Plan' },
-            { id: 'dop', title: 'Design Output Plan' },
-        ],
-    },
-    {
-        id: 'verification', label: 'Verification & Validation', color: '#2ECC71',
-        docs: [
-            { id: 'vvp', title: 'V&V Plan' },
-            { id: 'vvr', title: 'V&V Report' },
-        ],
-    },
-    {
-        id: 'compliance', label: 'Compliance & Standards', color: '#8E44AD',
-        docs: [
-            { id: 'sdp', title: 'Software Development Plan' },
-            { id: 'csr', title: 'Clinical Safety Report' },
-            { id: 'uer', title: 'Usability Engineering Report' },
-            { id: 'cybersecurity', title: 'Cybersecurity Documentation' },
-            { id: 'labeling', title: 'Labeling Specification' },
-        ],
-    },
-    {
-        id: 'all', label: 'General', color: '#6B7280',
-        docs: [
-            { id: 'dhf-index', title: 'Design History File Index' },
-            { id: 'change-log', title: 'Design Change Log' },
-        ],
-    },
-] as const;
+// ─── DHF template registry ───────────────────────────────────────────────────
 
-function DhfExplorerContent() {
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['risk', 'design']));
+interface DhfTemplate { id: string; title: string; prefix: string; }
 
-    function toggleGroup(id: string) {
-        setExpandedGroups(prev => {
+const DHF_GROUPS: { id: string; label: string; color: string; templates: DhfTemplate[] }[] = [
+    {
+        id: 'risk', label: 'Risk Management', color: '#dc2626',
+        templates: [
+            { id: 'iso-14971/rmp', title: 'Risk Management Plan', prefix: 'RMP' },
+            { id: 'iso-14971/har', title: 'Hazard Analysis Report', prefix: 'HAR' },
+            { id: 'iso-14971/fmea', title: 'FMEA', prefix: 'FMEA' },
+            { id: 'iso-14971/fta', title: 'Fault Tree Analysis', prefix: 'FTA' },
+            { id: 'iso-14971/risk-benefit', title: 'Risk-Benefit Analysis', prefix: 'RBA' },
+            { id: 'iso-14971/rmr', title: 'Risk Management Report', prefix: 'RMR' },
+        ],
+    },
+    {
+        id: 'software', label: 'Software', color: '#2563eb',
+        templates: [
+            { id: 'iec-62304/sdp', title: 'Software Development Plan', prefix: 'SDP' },
+            { id: 'iec-62304/srs', title: 'Software Requirements Spec', prefix: 'SRS' },
+            { id: 'iec-62304/sad', title: 'Software Architecture Description', prefix: 'SAD' },
+            { id: 'iec-62304/detailed-design', title: 'Software Detailed Design', prefix: 'DDS' },
+            { id: 'iec-62304/integration-test', title: 'Integration Test Plan', prefix: 'ITP' },
+            { id: 'iec-62304/system-test', title: 'System Test Plan', prefix: 'STP' },
+            { id: 'iec-62304/soup', title: 'SOUP List', prefix: 'SOUP' },
+            { id: 'iec-62304/sbom', title: 'Software Bill of Materials', prefix: 'SBOM' },
+            { id: 'iec-62304/sw-traceability', title: 'SW Traceability Matrix', prefix: 'STM' },
+            { id: 'iec-62304/change-control', title: 'Change Control Log', prefix: 'CCL' },
+        ],
+    },
+    {
+        id: 'usability', label: 'Usability', color: '#7c3aed',
+        templates: [
+            { id: 'iec-62366/ue-plan', title: 'Usability Engineering Plan', prefix: 'UEP' },
+            { id: 'iec-62366/use-spec', title: 'Intended Use Specification', prefix: 'USE' },
+            { id: 'iec-62366/ui-spec', title: 'User Interface Specification', prefix: 'UIS' },
+            { id: 'iec-62366/task-analysis', title: 'Task Analysis', prefix: 'TA' },
+            { id: 'iec-62366/urra', title: 'Use-Related Risk Analysis', prefix: 'URRA' },
+            { id: 'iec-62366/formative-eval', title: 'Formative Evaluation', prefix: 'FE' },
+            { id: 'iec-62366/summative-eval', title: 'Summative Evaluation', prefix: 'SE' },
+        ],
+    },
+    {
+        id: 'design', label: 'Design Controls', color: '#0891b2',
+        templates: [
+            { id: '21cfr820/user-needs', title: 'User Needs', prefix: 'UN' },
+            { id: '21cfr820/design-input', title: 'Design Input Plan', prefix: 'DIP' },
+            { id: '21cfr820/design-output', title: 'Design Output Plan', prefix: 'DOP' },
+            { id: '21cfr820/design-review', title: 'Design Review Record', prefix: 'DRR' },
+            { id: '21cfr820/vv-plan', title: 'V&V Plan', prefix: 'VVP' },
+            { id: '21cfr820/vv-report', title: 'V&V Report', prefix: 'VVR' },
+            { id: '21cfr820/design-verification', title: 'Design Verification', prefix: 'DV' },
+            { id: '21cfr820/design-validation', title: 'Design Validation', prefix: 'DVA' },
+            { id: '21cfr820/transfer-plan', title: 'Design Transfer Plan', prefix: 'DTP' },
+            { id: '21cfr820/change-record', title: 'Design Change Record', prefix: 'DCR' },
+            { id: '21cfr820/dhf-index', title: 'DHF Index', prefix: 'DHF' },
+        ],
+    },
+    {
+        id: 'cybersecurity', label: 'Cybersecurity', color: '#d97706',
+        templates: [
+            { id: 'fda-cybersecurity/threat-model', title: 'Threat Model', prefix: 'TM' },
+            { id: 'fda-cybersecurity/security-arch', title: 'Security Architecture', prefix: 'SA' },
+            { id: 'fda-cybersecurity/vuln-assessment', title: 'Vulnerability Assessment', prefix: 'VA' },
+            { id: 'fda-cybersecurity/postmarket-surveillance', title: 'Post-Market Surveillance', prefix: 'PMS' },
+            { id: 'fda-cybersecurity/incident-response', title: 'Incident Response Plan', prefix: 'IRP' },
+        ],
+    },
+];
+
+// ─── Template Picker Modal ────────────────────────────────────────────────────
+
+function TemplatePicker({ group, existingDocs, onConfirm, onClose }: {
+    group: typeof DHF_GROUPS[0];
+    existingDocs: DhfDoc[];
+    onConfirm: (selected: DhfTemplate[]) => void;
+    onClose: () => void;
+}) {
+    const [selected, setSelected] = useState<Set<string>>(new Set());
+    const existingTemplateIds = new Set(existingDocs.map(d => d.templateId));
+
+    function toggle(templateId: string) {
+        setSelected(prev => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            if (next.has(templateId)) next.delete(templateId);
+            else next.add(templateId);
             return next;
         });
     }
 
-    return (
-        <div className="flex-1 overflow-y-auto py-2">
-            {DHF_GROUPS.map(group => {
-                const expanded = expandedGroups.has(group.id);
-                return (
-                    <div key={group.id}>
-                        {/* Group header */}
-                        <button
-                            onClick={() => toggleGroup(group.id)}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-left"
-                            style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}
-                            onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                            <span style={{
-                                display: 'inline-block', width: '8px', height: '8px',
-                                borderRadius: '50%', background: group.color, flexShrink: 0,
-                            }} />
-                            <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{group.label}</span>
-                            <ChevronIcon expanded={expanded} size={12} />
-                        </button>
+    function handleConfirm() {
+        const picks = group.templates.filter(t => selected.has(t.id));
+        onConfirm(picks);
+    }
 
-                        {/* Doc items */}
-                        {expanded && group.docs.map(doc => (
+    return (
+        <div
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.4)',
+            }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div style={{
+                background: '#fff', borderRadius: '12px', padding: '20px',
+                width: '400px', maxHeight: '480px', display: 'flex', flexDirection: 'column',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <span style={{
+                        width: '10px', height: '10px', borderRadius: '50%',
+                        background: group.color, display: 'inline-block', flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1B3A4B', flex: 1 }}>
+                        {group.label}
+                    </span>
+                    <button
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '18px', lineHeight: 1 }}
+                    >×</button>
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
+                    Select documents to create:
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                    {group.templates.map(t => {
+                        const alreadyExists = existingTemplateIds.has(t.id);
+                        const isChecked = selected.has(t.id);
+                        return (
+                            <label
+                                key={t.id}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '8px 10px', borderRadius: '6px', cursor: alreadyExists ? 'not-allowed' : 'pointer',
+                                    background: isChecked ? `${group.color}12` : 'transparent',
+                                    opacity: alreadyExists ? 0.45 : 1,
+                                    transition: 'background 0.1s',
+                                }}
+                                onMouseEnter={e => { if (!alreadyExists) e.currentTarget.style.background = `${group.color}10`; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = isChecked ? `${group.color}12` : 'transparent'; }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    disabled={alreadyExists}
+                                    onChange={() => !alreadyExists && toggle(t.id)}
+                                    style={{ accentColor: group.color }}
+                                />
+                                <span style={{ flex: 1, fontSize: '13px', color: '#1B3A4B' }}>{t.title}</span>
+                                {alreadyExists && (
+                                    <span style={{ fontSize: '10px', color: '#9CA3AF' }}>exists</span>
+                                )}
+                            </label>
+                        );
+                    })}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button
+                        onClick={onClose}
+                        style={{ padding: '7px 14px', borderRadius: '6px', border: '1px solid #E5E7EB', background: '#fff', fontSize: '13px', cursor: 'pointer', color: '#374151' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleConfirm}
+                        disabled={selected.size === 0}
+                        style={{
+                            padding: '7px 16px', borderRadius: '6px', border: 'none',
+                            background: selected.size > 0 ? group.color : '#E5E7EB',
+                            color: selected.size > 0 ? '#fff' : '#9CA3AF',
+                            fontSize: '13px', fontWeight: 600, cursor: selected.size > 0 ? 'pointer' : 'default',
+                        }}
+                    >
+                        Create {selected.size > 0 ? `(${selected.size})` : ''}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── DHF Explorer Content ─────────────────────────────────────────────────────
+
+function DhfExplorerContent() {
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const activeView = useModelStore(s => s.activeView);
+    const dhfDocuments = useModelStore(s => s.dhfDocuments);
+    const addDhfDocument = useModelStore(s => s.addDhfDocument);
+    const removeDhfDocument = useModelStore(s => s.removeDhfDocument);
+
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+        new Set(DHF_GROUPS.map(g => g.id))
+    );
+    const [pickerGroup, setPickerGroup] = useState<typeof DHF_GROUPS[0] | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; groupId: string } | null>(null);
+
+    const activeDocId = activeView.type === 'dhf-document' ? activeView.docId : null;
+
+    function toggleGroup(id: string) {
+        setExpandedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+
+    function openContextMenu(e: React.MouseEvent, groupId: string) {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({ x: e.clientX, y: e.clientY, groupId });
+    }
+
+    function openPicker(groupId: string) {
+        const g = DHF_GROUPS.find(g => g.id === groupId);
+        if (g) setPickerGroup(g);
+        setContextMenu(null);
+    }
+
+    function createDocuments(templates: DhfTemplate[]) {
+        for (const t of templates) {
+            // Compute next sequential ID for this prefix
+            const existing = dhfDocuments.filter(d => d.id.startsWith(t.prefix + '-'));
+            const next = existing.length + 1;
+            const docId = `${t.prefix}-${String(next).padStart(3, '0')}`;
+            const group = DHF_GROUPS.find(g => g.templates.some(tmpl => tmpl.id === t.id))!;
+            const doc: DhfDoc = {
+                id: docId,
+                title: t.title,
+                group: group.label,
+                templateId: t.id,
+                content: `---\nid: ${docId}\ntitle: ${t.title}\ntemplate: ${t.id}\n---\n\n# ${t.title}\n\n`,
+                createdAt: Date.now(),
+            };
+            addDhfDocument(doc);
+            // Open the first created doc
+            if (templates.indexOf(t) === 0) {
+                setActiveView({ type: 'dhf-document', docId: doc.id });
+            }
+        }
+        setPickerGroup(null);
+    }
+
+    // Close context menu on outside click
+    useEffect(() => {
+        if (!contextMenu) return;
+        function handler() { setContextMenu(null); }
+        window.addEventListener('click', handler);
+        return () => window.removeEventListener('click', handler);
+    }, [contextMenu]);
+
+    return (
+        <>
+            <div className="flex-1 overflow-y-auto py-1">
+                {DHF_GROUPS.map(group => {
+                    const expanded = expandedGroups.has(group.id);
+                    const groupDocs = dhfDocuments.filter(d => d.group === group.label);
+                    return (
+                        <div key={group.id}>
+                            {/* Group header */}
                             <button
-                                key={doc.id}
-                                onClick={() => setActiveView({ type: 'dhf-dashboard' })}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-left"
-                                style={{ paddingLeft: '32px', fontSize: FONT.explorer.element, color: COLOR.primary }}
+                                onClick={() => toggleGroup(group.id)}
+                                onContextMenu={e => openContextMenu(e, group.id)}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-left"
+                                style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary, borderRadius: '4px' }}
                                 onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                title="Right-click to add documents"
                             >
-                                <ItemIcon color={group.color} />
-                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {doc.title}
-                                </span>
+                                <span style={{
+                                    display: 'inline-block', width: '7px', height: '7px',
+                                    borderRadius: '50%', background: group.color, flexShrink: 0,
+                                }} />
+                                <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{group.label}</span>
+                                {groupDocs.length > 0 && (
+                                    <span style={{ fontSize: '10px', color: group.color, fontWeight: 700 }}>
+                                        {groupDocs.length}
+                                    </span>
+                                )}
+                                <ChevronIcon expanded={expanded} size={11} />
                             </button>
-                        ))}
+
+                            {/* Doc items */}
+                            {expanded && (
+                                groupDocs.length === 0 ? (
+                                    <div
+                                        style={{
+                                            paddingLeft: '28px', paddingRight: '8px', paddingTop: '4px', paddingBottom: '4px',
+                                            fontSize: '11px', color: '#9CA3AF', fontStyle: 'italic',
+                                        }}
+                                    >
+                                        Right-click to add
+                                    </div>
+                                ) : (
+                                    groupDocs.map(doc => {
+                                        const isActive = activeDocId === doc.id;
+                                        return (
+                                            <div
+                                                key={doc.id}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center',
+                                                    paddingLeft: '28px', paddingRight: '4px',
+                                                    background: isActive ? `${group.color}18` : 'transparent',
+                                                    borderLeft: isActive ? `2px solid ${group.color}` : '2px solid transparent',
+                                                    cursor: 'pointer',
+                                                }}
+                                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = COLOR.surfaceAlt; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = isActive ? `${group.color}18` : 'transparent'; }}
+                                            >
+                                                <button
+                                                    onClick={() => setActiveView({ type: 'dhf-document', docId: doc.id })}
+                                                    style={{
+                                                        flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
+                                                        background: 'none', border: 'none', padding: '5px 0',
+                                                        fontSize: FONT.explorer.element, color: isActive ? group.color : COLOR.primary,
+                                                        fontWeight: isActive ? 600 : 400, cursor: 'pointer', textAlign: 'left',
+                                                    }}
+                                                >
+                                                    <ItemIcon color={group.color} />
+                                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {doc.id}
+                                                    </span>
+                                                </button>
+                                                {/* Delete button */}
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); removeDhfDocument(doc.id); }}
+                                                    title="Remove document"
+                                                    style={{
+                                                        background: 'none', border: 'none', cursor: 'pointer',
+                                                        color: '#9CA3AF', padding: '2px 4px', borderRadius: '3px', fontSize: '12px',
+                                                        opacity: 0, transition: 'opacity 0.1s',
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = '#9CA3AF'; }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Hint */}
+                {dhfDocuments.length === 0 && (
+                    <div style={{ padding: '16px 14px', fontSize: '11px', color: '#9CA3AF', lineHeight: '1.6' }}>
+                        Right-click any group to create documents from templates.
                     </div>
-                );
-            })}
-        </div>
+                )}
+            </div>
+
+            {/* Context menu */}
+            {contextMenu && (
+                <div
+                    style={{
+                        position: 'fixed', zIndex: 9998,
+                        left: contextMenu.x, top: contextMenu.y,
+                        background: '#fff', borderRadius: '8px', border: '1px solid #E5E7EB',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        padding: '4px 0', minWidth: '160px',
+                    }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <button
+                        onClick={() => openPicker(contextMenu.groupId)}
+                        style={{
+                            display: 'block', width: '100%', padding: '8px 14px',
+                            background: 'none', border: 'none', textAlign: 'left',
+                            fontSize: '13px', color: '#1B3A4B', cursor: 'pointer',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                        Add document…
+                    </button>
+                </div>
+            )}
+
+            {/* Template picker modal */}
+            {pickerGroup && (
+                <TemplatePicker
+                    group={pickerGroup}
+                    existingDocs={dhfDocuments}
+                    onConfirm={createDocuments}
+                    onClose={() => setPickerGroup(null)}
+                />
+            )}
+        </>
     );
 }
 
