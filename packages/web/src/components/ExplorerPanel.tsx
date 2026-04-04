@@ -1422,9 +1422,9 @@ function DhfExplorerContent() {
     function createDocuments(templates: DhfTemplate[]) {
         for (const t of templates) {
             // Compute next sequential ID for this prefix
-            const existing = dhfDocuments.filter(d => d.id.startsWith(t.prefix + '-'));
+            const existing = dhfDocuments.filter(d => d.id.startsWith(`DOC-${t.prefix}-`));
             const next = existing.length + 1;
-            const docId = `${t.prefix}-${String(next).padStart(3, '0')}`;
+            const docId = `DOC-${t.prefix}-${String(next).padStart(3, '0')}`;
             const group = DHF_GROUPS.find(g => g.templates.some(tmpl => tmpl.id === t.id))!;
             const doc: DhfDoc = {
                 id: docId,
