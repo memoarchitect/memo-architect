@@ -26,6 +26,7 @@ const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m
 const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m => ({ default: m.ComplianceWizard })));
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
+const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ default: m.DhfWorkbench })));
 const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
 
 function UnifiedCanvas() {
@@ -64,6 +65,8 @@ function UnifiedCanvas() {
             case 'statistics':
                 return <StatisticsDashboard />;
             case 'dhf-dashboard':
+                return <DhfWorkbench />;
+            case 'dhf-dashboard-legacy':
                 return <DhfDashboard />;
             case 'element-detail':
                 return <ElementDetailView />;
