@@ -15,6 +15,9 @@ import {
     getPlugin, getAvailableFormats,
     createSnapshot, saveSnapshot, loadSnapshots, loadLatestSnapshot,
     diffSnapshots, generateRedlineDocument,
+    createQueryContext,
+    loadDhfConfigV2, isDhfConfigV2, resolveManifestDocuments,
+    compileMarkdownDocument,
 } from '@memo/core';
 import type { BuilderRegistries, DhfExportFormat, DhfDocument, MemoModel, MEMOConfig, DhfConfig } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
@@ -45,6 +48,7 @@ interface LoadedModel {
     validation: ValidationResult;
     completeness: CompletenessReport;
     dhfConfig: DhfConfig | undefined;
+    queryCtx: ReturnType<typeof createQueryContext>;
 }
 
 async function loadModel(): Promise<LoadedModel> {
@@ -68,8 +72,9 @@ async function loadModel(): Promise<LoadedModel> {
     const validation = validateModel(model, config);
     const completeness = computeCompleteness(model, validation, config);
     const dhfConfig = loadDhfConfig(cwd);
+    const queryCtx = createQueryContext(model, validation, completeness, config);
 
-    return { model, config, validation, completeness, dhfConfig };
+    return { model, config, validation, completeness, dhfConfig, queryCtx };
 }
 
 // ─── Resolve target documents ────────────────────────────────────────────────
@@ -105,7 +110,49 @@ export async function exportDhfCommand(options: {
     const cwd = process.cwd();
     console.log(chalk.bold('\nMEMO DHF Export\n'));
 
-    const { model, config, validation, completeness, dhfConfig } = await loadModel();
+    const { model, config, validation, completeness, dhfConfig, queryCtx } = await loadModel();
+
+    // ── V2: markdown-first pipeline ──────────────────────────────────────────
+    const dhfConfigV2 = loadDhfConfigV2(cwd);
+    if (dhfConfigV2 && isDhfConfigV2(dhfConfigV2) && dhfConfigV2.manifest) {
+        const format = (options.format || dhfConfigV2.export?.format || 'md') as string;
+        const docs = resolveManifestDocuments(dhfConfigV2, options.group);
+        const targets = options.target
+            ? docs.filter(d => d.id === options.target || d.template === options.target)
+            : docs;
+
+        const outputDir = resolve(cwd, options.output || dhfConfigV2.export?.output_dir || 'dhf-output');
+        if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
+
+        console.log(chalk.gray(`Format: ${format} | Documents: ${targets.length} (V2 markdown pipeline)\n`));
+
+        let exported = 0;
+        for (const doc of targets) {
+            const result = await compileMarkdownDocument({
+                templateId: doc.template,
+                ctx: queryCtx,
+                config: dhfConfigV2,
+            });
+
+            const filename = `${doc.id}.md`;
+            const filepath = resolve(outputDir, doc.group, filename);
+            if (!existsSync(resolve(outputDir, doc.group))) {
+                mkdirSync(resolve(outputDir, doc.group), { recursive: true });
+            }
+            writeFileSync(filepath, result.markdown, 'utf-8');
+            exported++;
+
+            const warnSuffix = result.warnings.length > 0
+                ? chalk.yellow(` (${result.warnings.length} warnings)`)
+                : '';
+            console.log(chalk.cyan(`  ${result.title} → ${doc.group}/${filename}${warnSuffix}`));
+        }
+
+        console.log(chalk.green(`\nExported ${exported} documents to ${outputDir}\n`));
+        return;
+    }
+
+    // ── V1: Document IR pipeline (backward compat) ───────────────────────────
     const format = (options.format || dhfConfig?.defaultFormat || 'html') as DhfExportFormat;
     const targets = resolveTargets(options.target, options.group, dhfConfig);
 

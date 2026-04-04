@@ -41,6 +41,8 @@ import { createPackageCommand } from '../commands/create-package.js';
 import { askCommand } from '../commands/ask.js';
 import { generateCommand } from '../commands/generate.js';
 import { dhfDraftCommand } from '../commands/dhf-draft.js';
+import { dhfInitCommand } from '../commands/dhf-init.js';
+import { dhfPreviewCommand } from '../commands/dhf-preview.js';
 import { pluginListCommand, pluginCreateCommand, pluginRunCommand } from '../commands/plugin.js';
 
 const program = new Command();
@@ -341,6 +343,22 @@ pluginCmd
 const dhfCmd = program
     .command('dhf')
     .description('Design History File workbench');
+
+dhfCmd
+    .command('init')
+    .description('Scaffold DHF document set for your medical device project (interactive wizard)')
+    .option('-d, --dir <path>', 'Project directory', '.')
+    .action(async (options: { dir?: string }) => {
+        await dhfInitCommand({ projectDir: options.dir });
+    });
+
+dhfCmd
+    .command('preview')
+    .description('Start local DHF preview server with live reload')
+    .option('-p, --port <port>', 'Server port', '3001')
+    .action(async (options: { port: string }) => {
+        await dhfPreviewCommand({ port: parseInt(options.port, 10) });
+    });
 
 dhfCmd
     .command('status')

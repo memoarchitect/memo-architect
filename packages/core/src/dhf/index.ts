@@ -11,3 +11,11 @@ export * from './template-engine.js';
 export * from './dhf-config.js';
 export * from './export-plugin.js';
 export * from './snapshot.js';
+
+// ─── V2: Markdown-first DHF pipeline ─────────────────────────────────────────
+export * from './directive-parser.js';
+export * from './query-executor.js';
+export * from './script-runner.js';
+export * from './template-resolver.js';
+export * from './document-compiler.js';
+export * from './dhf-config-v2.js';
