@@ -1259,6 +1259,28 @@ const DHF_GROUPS: { id: string; label: string; color: string; templates: DhfTemp
         ],
     },
     {
+        id: 'system', label: 'System', color: '#059669',
+        templates: [
+            { id: 'system/srs', title: 'System Requirements Specification', prefix: 'SRS' },
+            { id: 'system/sad', title: 'System Architecture Description', prefix: 'SyAD' },
+            { id: 'system/sds', title: 'System Design Specification', prefix: 'SDS' },
+            { id: 'system/icd', title: 'Interface Control Document', prefix: 'ICD' },
+            { id: 'system/svvp', title: 'System V&V Plan', prefix: 'SVVP' },
+            { id: 'system/svvr', title: 'System V&V Report', prefix: 'SVVR' },
+        ],
+    },
+    {
+        id: 'hardware', label: 'Hardware', color: '#b45309',
+        templates: [
+            { id: 'hardware/hdp', title: 'Hardware Development Plan', prefix: 'HDP' },
+            { id: 'hardware/hds', title: 'Hardware Design Specification', prefix: 'HDS' },
+            { id: 'hardware/hvp', title: 'Hardware Verification Plan', prefix: 'HVP' },
+            { id: 'hardware/hvr', title: 'Hardware Verification Report', prefix: 'HVR' },
+            { id: 'hardware/hbom', title: 'Hardware Bill of Materials', prefix: 'HBOM' },
+            { id: 'hardware/haz', title: 'Hardware Hazard Analysis', prefix: 'HHA' },
+        ],
+    },
+    {
         id: 'cybersecurity', label: 'Cybersecurity', color: '#d97706',
         templates: [
             { id: 'fda-cybersecurity/threat-model', title: 'Threat Model', prefix: 'TM' },
