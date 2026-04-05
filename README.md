@@ -1,10 +1,10 @@
-# MEMO — Model-Based Systems Engineering for Medical Devices
+# MEMO — Medical Engineering Modelling Ontology
 
 MEMO is an open-source, SysML v2-native platform for medical device architecture, analysis, traceability, and documentation. It enables teams to model systems as code, connect architecture to risk and requirements, and generate review-ready engineering artifacts from a single living model.
 
 ## Why MEMO?
 
-MBSE tools are either too complex (Cameo, Enterprise Architect — months of training) or too generic (no regulatory compliance). MEMO bridges the gap:
+Existing MBSE tools are either too complex (Cameo, Enterprise Architect — months of training) or too generic (no regulatory compliance). MEMO bridges the gap:
 
 - **SysML v2 as the single format** — no proprietary DSL, standard tooling interop
 - **GUI-first, text-friendly** — web app for guided workflows, VS Code + LSP for power users
