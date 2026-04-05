@@ -43,14 +43,72 @@ node packages/cli/lib/bin/memo.js dev --port 3000
 
 ## CLI Commands
 
+### Core
+
 | Command | Description |
 |---------|-------------|
 | `memo init <name>` | Scaffold a new MEMO device project |
 | `memo dev` | Start web app with hot-reload (Vite + WebSocket) |
 | `memo validate` | Run closure rules, show completeness % |
 | `memo build` | Build static HTML site with embedded model |
+| `memo create-package` | Scaffold a new ontology, profile, or library package |
+| `memo install <pkg>` | Install an ontology package (git, npm, or local path) |
+| `memo lock` | Regenerate `memo.lock.yaml` from current ontology |
+
+### LLM-Powered (requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`)
+
+| Command | Description |
+|---------|-------------|
+| `memo ask "<question>"` | Ask a question about the model using LLM |
+| `memo generate "<description>"` | Generate SysML from natural language |
+| `memo dhf draft --target <doc>` | Draft DHF content for gap sections using LLM |
+
+### Export
+
+| Command | Description |
+|---------|-------------|
 | `memo export json` | Export full model as JSON |
 | `memo export dot` | Export model as Graphviz DOT |
+| `memo export dhf` | Export DHF documents (HTML, Markdown, DOCX) |
+
+### Import
+
+| Command | Description |
+|---------|-------------|
+| `memo import csv <file>` | Import elements from CSV (generates .sysml) |
+| `memo import csv-rel <file>` | Import relationships from CSV |
+| `memo import template` | Generate ontology-aware template CSV |
+| `memo import ea <file>` | Import from Sparx EA JSON export |
+| `memo import cameo <file>` | Import from MagicDraw/Cameo XMI or JSON |
+| `memo import sysand <dir>` | Import a SysAnd project directory |
+| `memo import owl <file>` | Import OWL/Turtle or JSON-LD ontology |
+
+### DHF (Design History File)
+
+| Command | Description |
+|---------|-------------|
+| `memo dhf status` | Show DHF document readiness |
+| `memo dhf snapshot` | Snapshot current DHF state |
+| `memo dhf diff` | Compare current state against last snapshot |
+| `memo dhf redline` | Generate redline showing changes |
+| `memo dhf review-packet` | Generate complete review packet |
+
+### Ontology
+
+| Command | Description |
+|---------|-------------|
+| `memo ontology show` | Show resolved ontology summary |
+| `memo ontology export owl` | Export ontology as OWL/RDF Turtle |
+| `memo ontology export xml` | Export ontology as OWL/RDF XML |
+| `memo ontology export sysand` | Export ontology as SysAnd project |
+
+### Plugin
+
+| Command | Description |
+|---------|-------------|
+| `memo plugin list` | List configured plugins |
+| `memo plugin create` | Scaffold a new plugin |
+| `memo plugin run <name>` | Run a generator or analysis plugin |
 
 ## Web App Features
 
@@ -121,6 +179,24 @@ cd ../irrigation-pump
 node ../../packages/cli/lib/bin/memo.js validate
 ```
 
+## Roadmap & Project Management
+
+GitLab is the single source of truth for planning. Local roadmap files are auto-generated from open GitLab issues — closed issues never appear.
+
+```bash
+# Sync GitLab → local docs/roadmap/ (run at session start)
+pnpm run sync:roadmap
+
+# Browse the roadmap
+pnpm run roadmap                   # Phase summary table
+pnpm run roadmap -- --open         # Open issues grouped by phase
+pnpm run roadmap -- --done         # Closed issues grouped by phase
+pnpm run roadmap -- --bugs         # Open bugs only
+pnpm run roadmap -- --phase c      # Single phase detail
+```
+
+To add or modify work: create/update GitLab issues, then re-run `pnpm run sync:roadmap`.
+
 ## Documentation
 
 ```bash
@@ -128,6 +204,10 @@ node ../../packages/cli/lib/bin/memo.js validate
 pdm install
 pnpm run docs:serve
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture constraints, execution protocol, and development workflow. This guide works for any contributor — human or AI assistant.
 
 ## License
 
