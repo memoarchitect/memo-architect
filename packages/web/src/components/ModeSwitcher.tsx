@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
 
 const DOCS_URL = '/help/';
-const DOCS_FALLBACK_URL = 'https://somesh_sandbox.gitlab.io/memo/';
 
 // ─── Primary navigation modes ────────────────────────────────────────────────
 
@@ -218,7 +217,7 @@ export function ModeSwitcher() {
 
             <div className="flex-1" />
 
-            {/* Help — opens bundled docs at /help/ if available, falls back to hosted docs */}
+            {/* Help */}
             <a
                 href={DOCS_URL}
                 target="_blank"
@@ -227,15 +226,6 @@ export function ModeSwitcher() {
                 style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-                onClick={async e => {
-                    e.preventDefault();
-                    try {
-                        const r = await fetch(DOCS_URL, { method: 'HEAD' });
-                        window.open(r.ok ? DOCS_URL : DOCS_FALLBACK_URL, '_blank');
-                    } catch {
-                        window.open(DOCS_FALLBACK_URL, '_blank');
-                    }
-                }}
             >
                 ? Help
             </a>
