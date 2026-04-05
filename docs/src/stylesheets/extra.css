@@ -110,26 +110,50 @@
   color: inherit;
 }
 
-/* ── Code blocks (dark background in both modes for readability) ─────────── */
-.highlight pre,
-.md-typeset pre {
+/* ── Code blocks — light mode (VS Code light style) ─────────────────────── */
+[data-md-color-scheme="default"] .highlight pre,
+[data-md-color-scheme="default"] .md-typeset pre {
+  background: #EEF2F5 !important;
+  border: 1px solid rgba(27, 58, 75, 0.12);
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="default"] .highlight code,
+[data-md-color-scheme="default"] .md-typeset pre code {
+  background: transparent !important;
+  color: #0B1E2D !important;
+  font-size: 0.85em;
+  padding: 0;
+}
+
+/* Inline code — light mode */
+[data-md-color-scheme="default"] .md-typeset :not(pre) > code {
+  background: rgba(27, 58, 75, 0.08) !important;
+  color: #1B3A4B !important;
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+}
+
+/* ── Code blocks — dark mode ────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .highlight pre,
+[data-md-color-scheme="slate"] .md-typeset pre {
   background: #0f1f2e !important;
   border: 1px solid rgba(45, 212, 168, 0.15);
   border-radius: 6px;
 }
 
-/* Ensure syntax-highlighted text is readable on dark background */
-.highlight code,
-.md-typeset pre code {
+[data-md-color-scheme="slate"] .highlight code,
+[data-md-color-scheme="slate"] .md-typeset pre code {
   background: transparent !important;
   color: #e2e8f0 !important;
   font-size: 0.85em;
   padding: 0;
 }
 
-/* Inline code (light background variant — readable on white) */
-.md-typeset :not(pre) > code {
-  background: #1B3A4B !important;
+/* Inline code — dark mode */
+[data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
+  background: rgba(45, 212, 168, 0.12) !important;
   color: #2DD4A8 !important;
   border-radius: 3px;
   padding: 0.1em 0.4em;
