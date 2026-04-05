@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve, dirname, basename } from 'node:path';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, createWriteStream, statSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, createWriteStream, statSync, existsSync } from 'node:fs';
 import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
@@ -126,6 +126,14 @@ export async function buildCommand(options: {
         } catch {
             // ok
         }
+    }
+
+    // 6. Copy bundled docs (MkDocs static output) into dist/help/ if available
+    const docsDistPath = resolve(cwd, '../../docs/dist');
+    const helpDestPath = resolve(outputDir, 'help');
+    if (existsSync(resolve(docsDistPath, 'index.html'))) {
+        cpSync(docsDistPath, helpDestPath, { recursive: true });
+        console.log(chalk.gray(`   Bundled docs → help/`));
     }
 
     console.log(chalk.green(`\n✅ Built to ${outputDir}`));
