@@ -62,19 +62,19 @@ fi
 echo "  Phase │ Pri  │ Focus"
 echo "  ──────┼──────┼──────────────────────────────────────────"
 echo "    1   │ P0 ★ │ Ontology cleanup (extract, collapse, simplify)"
-echo "    2   │ P0 ★ │ GPCA reference model (single strong example)"
 echo "    A   │ P0   │ Critical bug fixes"
 echo "    B   │ P1   │ UX foundation"
 echo "    C   │ P1   │ Visual ontology viewer"
 echo "    D   │ P2   │ Diagrams & views"
 echo "    E   │ P2   │ DHF improvements"
 echo "    F   │ P2   │ Model & scenarios"
-echo "    G   │ P3   │ Examples, docs & manuals"
+echo "    G   │ P3   │ Examples (GPCA reference + starter templates)"
 echo "    H   │ --   │ Cloud & collaboration (deferred)"
 echo "    I   │ --   │ Domain packages (deferred)"
-echo "    J   │ P2   │ Import/export formats"
+echo "    J   │ P2   │ Import — CLI formats + UI element/relationship creation"
+echo "    K   │ P3   │ Docs & manuals"
 echo ""
-echo "  Order: 1 → 2 → A → B → C → D/E/F/J (parallel) → G → H/I"
+echo "  Order: 1 → A → B → C → D/E/F/J (parallel) → G/K → H/I"
 echo ""
 
 if [ "$MODE" = "summary" ]; then
@@ -91,32 +91,32 @@ fi
 
 PHASE_NAMES=(
   "Phase 1 — Ontology Cleanup (P0)"
-  "Phase 2 — GPCA Reference Model (P0)"
   "Phase A — Critical Bug Fixes (P0)"
   "Phase B — UX Foundation (P1)"
   "Phase C — Visual Ontology Viewer (P1)"
   "Phase D — Diagrams & Views (P2)"
   "Phase E — DHF Improvements (P2)"
   "Phase F — Model & Scenarios (P2)"
-  "Phase G — Examples, Docs & Manuals (P3)"
+  "Phase G — Examples (P3)"
   "Phase H — Cloud & Collaboration (deferred)"
   "Phase I — Domain Packages (deferred)"
-  "Phase J — Import/Export Formats (P2)"
+  "Phase J — Import (P2)"
+  "Phase K — Docs & Manuals (P3)"
 )
 
 PHASE_IDS=(
   "#97 #98 #99 #100 #101 #102 #103 #104 #105 #91 #93 #111"
-  "#106 #107 #87 #108 #110 #109 #111"
   "#81 #82 #83 #84 #85 #86 #91 #93"
   "#62 #66 #69 #70 #74 #75"
   "#7 #80 #89 #92"
   "#71 #72"
   "#76 #77 #78 #121"
   "#73 #79"
-  "#87 #90 #94 #95 #96"
+  "#106 #107 #87 #108 #110 #109"
   "#58 #59 #60"
   "#56 #57"
-  "#88"
+  "#88 #122 #123 #124"
+  "#90 #94 #95 #96"
 )
 
 # ── Fetch issues ──────────────────────────────────────────────────────

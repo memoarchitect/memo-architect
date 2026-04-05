@@ -63,17 +63,17 @@ cat > "$ROADMAP_DIR/index.md" << EOF
 | Phase | File | Priority | Focus |
 |-------|------|----------|-------|
 | 1 | [phase-1.md](phase-1.md) | **P0** | Ontology cleanup (extract ROS/RabbitMQ, collapse types, simplify) |
-| 2 | [phase-2.md](phase-2.md) | **P0** | GPCA reference model (single strong example) |
 | A | [phase-a.md](phase-a.md) | P0 | Critical bug fixes |
 | B | [phase-b.md](phase-b.md) | P1 | UX foundation |
 | C | [phase-c.md](phase-c.md) | P1 | Visual ontology viewer |
 | D | [phase-d.md](phase-d.md) | P2 | Diagrams & views |
 | E | [phase-e.md](phase-e.md) | P2 | DHF improvements |
 | F | [phase-f.md](phase-f.md) | P2 | Model & scenarios |
-| G | [phase-g.md](phase-g.md) | P3 | Examples, docs & manuals |
+| G | [phase-g.md](phase-g.md) | P3 | Examples (GPCA reference model, starter templates) |
 | H | [phase-h.md](phase-h.md) | Nice-to-have | Cloud & collaboration |
 | I | [phase-i.md](phase-i.md) | Nice-to-have | Domain packages |
-| J | [phase-j.md](phase-j.md) | P2 | Import/export formats |
+| J | [phase-j.md](phase-j.md) | P2 | Import — CLI formats + UI element/relationship creation |
+| K | [phase-k.md](phase-k.md) | P3 | Docs & manuals |
 
 Also: [bugs.md](bugs.md) — all open bugs
 
@@ -83,7 +83,7 @@ $ML_ACTIVE
 
 ## Execution Order
 
-1 → 2 → A → B → C → D/E/F/J (parallel) → G → H/I (deferred)
+1 → A → B → C → D/E/F/J (parallel) → G/K → H/I (deferred)
 EOF
 
 # ── bugs.md ───────────────────────────────────────────────────────────
@@ -126,23 +126,6 @@ EOF
   open_issue "#93"  "Simplify granular relationships and redundant elements. Scope: M"
   open_issue "#111" "Validate GPCA model against simplified ontology. Scope: M"
 } > "$ROADMAP_DIR/phase-1.md"
-
-# ── Phase 2 — GPCA Reference Model ───────────────────────────────────
-{
-  echo "# Phase 2 — GPCA Reference Model (P0)"
-  echo ""
-  echo "Make GPCA the single strong example. Remove noise, complete the model, add CriSys source references."
-  echo ""
-  echo "## Open Issues"
-  echo ""
-  open_issue "#106" "Remove irrigation-pump example (industrial domain noise). Scope: S"
-  open_issue "#107" "Trim infusion-pump to minimal starter template (~100 lines). Scope: S"
-  open_issue "#87"  "Make GPCA the default in \`memo init\`. Scope: M"
-  open_issue "#108" "Add CriSys source references to GPCA model elements. Scope: M"
-  open_issue "#110" "Complete GPCA clinical/usability model (75% → 90%). Scope: M"
-  open_issue "#109" "Complete GPCA cybersecurity model (70% → 90%). Scope: M"
-  open_issue "#111" "Validate GPCA against simplified ontology (shared with Phase 1). Scope: M"
-} > "$ROADMAP_DIR/phase-2.md"
 
 # ── Phase A — Critical Bug Fixes ─────────────────────────────────────
 {
@@ -230,19 +213,20 @@ EOF
   open_issue "#79" "Define and document how model diff works. Scope: L"
 } > "$ROADMAP_DIR/phase-f.md"
 
-# ── Phase G — Examples, Docs & Manuals ───────────────────────────────
+# ── Phase G — Examples ───────────────────────────────────────────────
 {
-  echo "# Phase G — Examples, Docs & Manuals (P3)"
+  echo "# Phase G — Examples (P3)"
   echo ""
-  echo "Clean up examples, write user and developer manuals, document hidden features."
+  echo "GPCA as the single strong reference model. Infusion-pump trimmed to minimal starter template."
   echo ""
   echo "## Open Issues"
   echo ""
-  open_issue "#87" "Make GPCA Pump the default example, remove legacy pumps. Scope: M"
-  open_issue "#90" "Restructure documentation (users vs developers). Scope: M"
-  open_issue "#94" "User manual: document all CLI commands, config options, and workflows. Scope: L"
-  open_issue "#95" "Developer manual: architecture, contributing, extension development. Scope: L"
-  open_issue "#96" "Document hidden features: LLM commands, env vars, import formats, config options. Scope: S"
+  open_issue "#106" "Remove irrigation-pump example (industrial domain noise). Scope: S"
+  open_issue "#107" "Trim infusion-pump to minimal starter template (~100 lines). Scope: S"
+  open_issue "#87"  "Make GPCA the default in \`memo init\`. Scope: M"
+  open_issue "#108" "Add CriSys source references to GPCA model elements. Scope: M"
+  open_issue "#110" "Complete GPCA clinical/usability model (75% → 90%). Scope: M"
+  open_issue "#109" "Complete GPCA cybersecurity model (70% → 90%). Scope: M"
 } > "$ROADMAP_DIR/phase-g.md"
 
 # ── Phase H — Cloud & Collaboration ──────────────────────────────────
@@ -270,16 +254,36 @@ EOF
   open_issue "#57" "Create @memo/aerospace package (DO-178C). Scope: L"
 } > "$ROADMAP_DIR/phase-i.md"
 
-# ── Phase J — Import/Export Formats ──────────────────────────────────
+# ── Phase J — Import ─────────────────────────────────────────────────
 {
-  echo "# Phase J — Import/Export Formats (P2)"
+  echo "# Phase J — Import (P2)"
   echo ""
-  echo "Format-specific import/export. Can run independently."
+  echo "Import elements and relationships into MEMO — both from the CLI (AADL, CSV, EA, Cameo) and directly from the web UI."
   echo ""
   echo "## Open Issues"
   echo ""
-  open_issue "#88" "SysML v2 to AADL (and vice-versa) import/export. Scope: L"
+  echo "### CLI Import Formats"
+  open_issue "#88"  "SysML v2 to AADL (and vice-versa) import/export. Scope: L"
+  echo ""
+  echo "### UI-Based Importing"
+  open_issue "#122" "Create and edit elements from the UI (kind picker, attributes, doc field). Scope: M"
+  open_issue "#123" "Create and edit relationships between elements from the UI. Scope: M"
+  open_issue "#124" "Bulk import elements from CSV or paste table in UI. Scope: M"
 } > "$ROADMAP_DIR/phase-j.md"
+
+# ── Phase K — Docs & Manuals ──────────────────────────────────────────
+{
+  echo "# Phase K — Docs & Manuals (P3)"
+  echo ""
+  echo "User manual, developer manual, hidden feature docs, documentation site restructure."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#90" "Restructure documentation site (users vs developers). Scope: M"
+  open_issue "#94" "User manual: all CLI commands, config options, and workflows. Scope: L"
+  open_issue "#95" "Developer manual: architecture, contributing, extension development. Scope: L"
+  open_issue "#96" "Document hidden features: LLM commands, env vars, import formats, config options. Scope: S"
+} > "$ROADMAP_DIR/phase-k.md"
 
 echo "✅ Roadmap synced to $ROADMAP_DIR/"
 echo "   $TOTAL_OPEN open issues — closed issues excluded from all phase files"
