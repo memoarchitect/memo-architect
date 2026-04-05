@@ -188,11 +188,11 @@ GitLab is the single source of truth for planning. Local roadmap files are auto-
 pnpm run sync:roadmap
 
 # Browse the roadmap
-pnpm run roadmap                   # Phase summary table
-pnpm run roadmap -- --open         # Open issues grouped by phase
-pnpm run roadmap -- --done         # Closed issues grouped by phase
-pnpm run roadmap -- --bugs         # Open bugs only
-pnpm run roadmap -- --phase c      # Single phase detail
+pnpm run roadmap           # Phase summary table
+pnpm run roadmap:open      # Open issues grouped by phase
+pnpm run roadmap:done      # Closed issues grouped by phase
+pnpm run roadmap:bugs      # Open bugs only
+pnpm run roadmap -- --phase c   # Single phase detail
 ```
 
 To add or modify work: create/update GitLab issues, then re-run `pnpm run sync:roadmap`.

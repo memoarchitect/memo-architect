@@ -54,7 +54,7 @@ if [ "$MODE" = "bugs" ]; then
         [ -n "$labels" ] && printf "           %s\n" "$labels"
       done
   echo ""
-  echo "  pnpm run roadmap -- --open   # all open issues by phase"
+  echo "  pnpm run roadmap:open   # all open issues by phase"
   exit 0
 fi
 
@@ -78,10 +78,11 @@ echo "  Order: 1 → 2 → A → B → C → D/E/F/J (parallel) → G → H/I"
 echo ""
 
 if [ "$MODE" = "summary" ]; then
-  echo "  pnpm run roadmap -- --open        # open issues by phase"
-  echo "  pnpm run roadmap -- --done        # closed issues by phase"
-  echo "  pnpm run roadmap -- --bugs        # open bugs only"
-  echo "  pnpm run roadmap -- --phase c     # single phase detail"
+  echo "  pnpm run roadmap            # phase summary"
+  echo "  pnpm run roadmap:open       # open issues by phase"
+  echo "  pnpm run roadmap:done       # closed issues by phase"
+  echo "  pnpm run roadmap:bugs       # open bugs only"
+  echo "  pnpm run roadmap -- --phase c  # single phase detail"
   exit 0
 fi
 
