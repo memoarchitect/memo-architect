@@ -1,36 +1,52 @@
-/* MEMO Architect — custom MkDocs theme overrides
-   Palette: dark teal #0B1E2D bg, #1B3A4B nav, #2DD4A8 accent
+/* MEMO Architect — MkDocs theme overrides
+   Matches the MEMO web app chrome exactly:
+     Title bar:  #0B1E2D
+     Mode tabs:  #1B3A4B
+     Accent:     #2DD4A8
 */
 
-:root {
+/* ── CSS variable overrides (both schemes) ──────────────────────────────── */
+:root,
+[data-md-color-scheme="slate"],
+[data-md-color-scheme="default"] {
   --md-primary-fg-color:        #1B3A4B;
   --md-primary-fg-color--light: #2D5A70;
   --md-primary-fg-color--dark:  #0B1E2D;
   --md-accent-fg-color:         #2DD4A8;
   --md-accent-fg-color--transparent: rgba(45, 212, 168, 0.12);
+  --memo-accent: #2DD4A8;
+  --memo-header: #0B1E2D;
+  --memo-tabs:   #1B3A4B;
 }
 
-/* Header */
+/* ── Header (matches app title bar) ────────────────────────────────────── */
 .md-header {
-  background: #0B1E2D;
-  box-shadow: 0 1px 0 rgba(45, 212, 168, 0.15);
+  background: #0B1E2D !important;
+  box-shadow: 0 1px 0 rgba(45, 212, 168, 0.2);
 }
 
 .md-header__title {
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
-/* Nav tabs */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 28px;
+  width: auto;
+}
+
+/* ── Nav tabs (matches app mode-switcher bar) ───────────────────────────── */
 .md-tabs {
-  background: #1B3A4B;
+  background: #1B3A4B !important;
   border-bottom: 1px solid rgba(45, 212, 168, 0.2);
 }
 
 .md-tabs__link {
-  color: rgba(255, 255, 255, 0.6) !important;
-  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 0.82rem;
   font-weight: 500;
+  opacity: 1 !important;
 }
 
 .md-tabs__link--active,
@@ -38,16 +54,23 @@
   color: #2DD4A8 !important;
 }
 
-/* Sidebar */
+/* Active tab underline */
+.md-tabs__link--active::after {
+  background: #2DD4A8;
+  height: 2px;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
 .md-nav__title {
-  color: #2DD4A8;
+  color: #2DD4A8 !important;
   font-weight: 700;
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.md-nav__link--active {
+.md-nav__link--active,
+.md-nav__item--active > .md-nav__link {
   color: #2DD4A8 !important;
   font-weight: 600;
 }
@@ -56,26 +79,44 @@
   color: #2DD4A8 !important;
 }
 
-/* Code blocks */
-.highlight pre {
-  background: #0B1E2D !important;
-  border: 1px solid rgba(45, 212, 168, 0.15);
+/* ── Search ─────────────────────────────────────────────────────────────── */
+.md-search__form {
+  border: 1px solid rgba(45, 212, 168, 0.2);
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.md-search-result__terms mark,
+.md-typeset mark {
+  background: rgba(45, 212, 168, 0.25);
+  color: inherit;
+}
+
+/* ── Code blocks ────────────────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .highlight pre,
+[data-md-color-scheme="slate"] .md-typeset pre {
+  background: #060f18 !important;
+  border: 1px solid rgba(45, 212, 168, 0.12);
   border-radius: 6px;
 }
 
 /* Inline code */
-code {
-  background: rgba(45, 212, 168, 0.08);
+.md-typeset code {
+  background: rgba(45, 212, 168, 0.1);
   color: #2DD4A8;
   border-radius: 3px;
   padding: 0.1em 0.35em;
   font-size: 0.85em;
 }
 
-/* Admonitions */
+/* ── Admonitions ────────────────────────────────────────────────────────── */
 .md-typeset .admonition,
 .md-typeset details {
   border-left-color: #2DD4A8;
+  border-radius: 0 6px 6px 0;
 }
 
 .md-typeset .admonition-title,
@@ -83,18 +124,45 @@ code {
   background-color: rgba(45, 212, 168, 0.08);
 }
 
-/* Search highlight */
-.md-search-result__terms mark,
-.md-typeset mark {
-  background: rgba(45, 212, 168, 0.25);
-  color: inherit;
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  color: #2DD4A8 !important;
 }
 
-/* Footer */
+/* ── Buttons & links ────────────────────────────────────────────────────── */
+.md-typeset a {
+  color: #2DD4A8;
+}
+
+.md-typeset a:hover {
+  color: #50e8c0;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: #1B3A4B;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover {
+  background: rgba(45, 212, 168, 0.05);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
 .md-footer {
-  background: #0B1E2D;
+  background: #0B1E2D !important;
 }
 
 .md-footer-meta {
-  background: #060f18;
+  background: #060f18 !important;
+}
+
+/* ── Scrollbar (subtle teal tint in dark mode) ──────────────────────────── */
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 168, 0.2);
+  border-radius: 3px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 168, 0.35);
 }
