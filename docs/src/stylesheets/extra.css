@@ -19,21 +19,36 @@
   --memo-tabs:   #1B3A4B;
 }
 
-/* ── Header (matches app title bar) ────────────────────────────────────── */
+/* ── Header (matches app title bar exactly) ─────────────────────────────── */
 .md-header {
   background: #0B1E2D !important;
   box-shadow: 0 1px 0 rgba(45, 212, 168, 0.2);
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
 .md-header__title {
+  font-family: ui-sans-serif, system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Site name portion — teal accent like app nav active item */
+.md-header__topic:first-child .md-ellipsis {
+  color: #2DD4A8;
+  font-weight: 700;
+}
+
+.md-header__button.md-logo {
+  padding: 0.3rem;
 }
 
 .md-header__button.md-logo img,
 .md-header__button.md-logo svg {
-  height: 28px;
+  height: 26px;
   width: auto;
+  filter: brightness(0) invert(1) opacity(0.85);
 }
 
 /* ── Nav tabs (matches app mode-switcher bar) ───────────────────────────── */
@@ -95,20 +110,29 @@
   color: inherit;
 }
 
-/* ── Code blocks ────────────────────────────────────────────────────────── */
-[data-md-color-scheme="slate"] .highlight pre,
-[data-md-color-scheme="slate"] .md-typeset pre {
-  background: #060f18 !important;
-  border: 1px solid rgba(45, 212, 168, 0.12);
+/* ── Code blocks (dark background in both modes for readability) ─────────── */
+.highlight pre,
+.md-typeset pre {
+  background: #0f1f2e !important;
+  border: 1px solid rgba(45, 212, 168, 0.15);
   border-radius: 6px;
 }
 
-/* Inline code */
-.md-typeset code {
-  background: rgba(45, 212, 168, 0.1);
-  color: #2DD4A8;
+/* Ensure syntax-highlighted text is readable on dark background */
+.highlight code,
+.md-typeset pre code {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  font-size: 0.85em;
+  padding: 0;
+}
+
+/* Inline code (light background variant — readable on white) */
+.md-typeset :not(pre) > code {
+  background: #1B3A4B !important;
+  color: #2DD4A8 !important;
   border-radius: 3px;
-  padding: 0.1em 0.35em;
+  padding: 0.1em 0.4em;
   font-size: 0.85em;
 }
 
