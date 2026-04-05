@@ -7,7 +7,8 @@
 
 import { createServer as createHttpServer, type Server } from 'node:http';
 import { resolve } from 'node:path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, createReadStream, statSync } from 'node:fs';
+import { extname } from 'node:path';
 import type { ServerMessage, ModelUpdateMessage, DiagramDTO } from '@memo/core';
 
 export interface DevServerOptions {
@@ -56,6 +57,53 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
     let server: Server;
     let viteServer: any;
 
+    // Resolve docs/dist relative to the repo root (two levels up from cli package)
+    const docsDistPath = resolve(webPackagePath, '../../docs/dist');
+    const hasLocalDocs = existsSync(resolve(docsDistPath, 'index.html'));
+
+    /** Serve a static file from docsDistPath. Returns true if handled. */
+    function serveHelp(req: any, res: any): boolean {
+        if (!hasLocalDocs) return false;
+        const url: string = req.url ?? '/';
+        if (!url.startsWith('/help')) return false;
+
+        // Strip /help prefix, default to index.html
+        let filePath = url.slice('/help'.length) || '/';
+        if (filePath.endsWith('/')) filePath += 'index.html';
+        const fullPath = resolve(docsDistPath, filePath.replace(/^\//, ''));
+
+        if (!existsSync(fullPath)) {
+            // MkDocs 404 page
+            const notFound = resolve(docsDistPath, '404.html');
+            if (existsSync(notFound)) {
+                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+                createReadStream(notFound).pipe(res);
+            } else {
+                res.writeHead(404); res.end('Not found');
+            }
+            return true;
+        }
+
+        const MIME: Record<string, string> = {
+            '.html': 'text/html; charset=utf-8',
+            '.css':  'text/css',
+            '.js':   'application/javascript',
+            '.json': 'application/json',
+            '.svg':  'image/svg+xml',
+            '.png':  'image/png',
+            '.ico':  'image/x-icon',
+            '.woff2': 'font/woff2',
+            '.woff':  'font/woff',
+            '.xml':  'application/xml',
+            '.gz':   'application/gzip',
+        };
+        const mime = MIME[extname(fullPath)] ?? 'application/octet-stream';
+        const size = statSync(fullPath).size;
+        res.writeHead(200, { 'Content-Type': mime, 'Content-Length': size });
+        createReadStream(fullPath).pipe(res);
+        return true;
+    }
+
     if (vite) {
         // Create Vite dev server in middleware mode
         viteServer = await vite.createServer({
@@ -65,6 +113,7 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
         });
 
         server = createHttpServer((req, res) => {
+            if (serveHelp(req, res)) return;
             viteServer.middlewares(req, res);
         });
     } else {
