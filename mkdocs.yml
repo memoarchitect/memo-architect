@@ -1,5 +1,5 @@
-site_name: MEMO — Model-Based Systems Engineering
-site_description: SysML v2 powered MBSE tool for medical device development
+site_name: MEMO — Medical Engineering Modelling Ontology
+site_description: SysML v2 platform for medical device architecture, analysis, and documentation
 site_author: Somesh Kashyap
 repo_url: https://gitlab.com/somesh_sandbox/memo
 repo_name: somesh_sandbox/memo
@@ -7,18 +7,18 @@ repo_name: somesh_sandbox/memo
 theme:
   name: material
   palette:
-    - scheme: slate
-      primary: custom
-      accent: custom
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
     - scheme: default
       primary: custom
       accent: custom
       toggle:
-        icon: material/brightness-7
+        icon: material/brightness-4
         name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
   features:
     - navigation.tabs
     - navigation.sections
