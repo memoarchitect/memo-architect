@@ -80,8 +80,9 @@ program
     .argument('[name]', 'Project name')
     .option('-t, --template <template>', 'Template to use', 'medical')
     .option('--ontology <package>', 'Ontology package to use', '@memo/medical-modeling-profile')
-    .option('--list-ontologies', 'List available ontology packages')
-    .action(async (name: string | undefined, options: { template: string; ontology: string; listOntologies?: boolean }) => {
+    .option('--profile <name>', 'Profile preset (minimal, standard, full)')
+    .option('--list-ontologies', 'List available ontology packages and profiles')
+    .action(async (name: string | undefined, options: { template: string; ontology: string; profile?: string; listOntologies?: boolean }) => {
         await initCommand(name, options);
     });
 

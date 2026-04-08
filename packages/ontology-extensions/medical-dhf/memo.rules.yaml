@@ -1,0 +1,46 @@
+closureRules:
+  - id: CR-MED-032
+    description: "Every DesignHistoryRecord should document at least one regulated lifecycle or usability artifact"
+    entity: DesignHistoryRecord
+    rule:
+      type: requireRelationship
+      relationship: documents
+      direction: outgoing
+      relatedKinds:
+        - SoftwareDevelopmentPlan
+        - SoftwareWorkProduct
+        - UseSpecification
+        - UseErrorAnalysis
+        - FormativeEvaluation
+        - SummativeEvaluation
+        - CollateralStandardRequirement
+        - ParticularStandardRequirement
+        - SOUPItem
+        - SoftwareAnomaly
+        - SoftwareProblemReport
+        - ChangeImpactAssessment
+        - ReleaseBaseline
+      min: 1
+    severity: warning
+
+  - id: CR-MED-033
+    description: "Every ComplianceEvidence record should evidence at least one regulated subject"
+    entity: ComplianceEvidence
+    rule:
+      type: requireRelationship
+      relationship: evidences
+      direction: outgoing
+      relatedKinds: [FormativeEvaluation, SummativeEvaluation, UserInterfaceRequirement, UseErrorAnalysis]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-034
+    description: "Every ReleaseBaseline should document at least one software realization or evaluation artifact"
+    entity: ReleaseBaseline
+    rule:
+      type: requireRelationship
+      relationship: documents
+      direction: outgoing
+      relatedKinds: [SoftwareSystem, SoftwareItem, SOUPEvaluation]
+      min: 1
+    severity: warning

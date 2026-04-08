@@ -1,0 +1,8 @@
+{
+  "name": "@memo/ontology-ext-medical-risk",
+  "version": "0.1.0",
+  "description": "ISO 14971 risk management — hazards, FMEA, FTA, risk controls, benefit-risk assessment",
+  "private": true,
+  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
+  "license": "Apache-2.0"
+}

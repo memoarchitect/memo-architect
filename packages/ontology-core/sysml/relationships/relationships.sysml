@@ -15,11 +15,6 @@ package MEMO_Ontology_Core_Relationships {
         end target[1];
     }
 
-    connection def Trace {
-        end source[1];
-        end target[1];
-    }
-
     connection def Refines {
         end refined[1];
         end refiner[1];
@@ -55,94 +50,9 @@ package MEMO_Ontology_Core_Relationships {
         end supplier[1];
     }
 
-    connection def ParticipatesInSystemOfSystems {
-        end system[1];
-        end systemOfSystems : SystemOfSystems [1];
-    }
-
     connection def ExposesInterface {
         end provider[1];
         end dataInterface : DataInterface [1];
-    }
-
-    connection def HasEndpoint {
-        end dataInterface : DataInterface [1];
-        end endpoint : DataEndpoint [1];
-    }
-
-    connection def ImplementsProtocol {
-        end subject[1];
-        end protocol : CommunicationProtocol [1];
-    }
-
-    connection def ConformsToProfile {
-        end subject[1];
-        end profile : InteroperabilityProfile [1];
-    }
-
-    connection def CarriesExchangeItem {
-        end dataInterface : DataInterface [1];
-        end exchangeItem : ExchangeItem [1];
-    }
-
-    connection def PublishesTo {
-        end publisher[1];
-        end channel : PublishSubscribeChannel [1];
-    }
-
-    connection def SubscribesTo {
-        end subscriber[1];
-        end channel : PublishSubscribeChannel [1];
-    }
-
-    connection def PublishesMessage {
-        end publisher[1];
-        end message : Message [1];
-    }
-
-    connection def ConsumesMessage {
-        end subscriber[1];
-        end message : Message [1];
-    }
-
-    connection def ServesInterface {
-        end provider[1];
-        end service : RequestResponseInterface [1];
-    }
-
-    connection def InvokesInterface {
-        end consumer[1];
-        end service : RequestResponseInterface [1];
-    }
-
-    connection def CarriesRequestMessage {
-        end service : RequestResponseInterface [1];
-        end request : RequestMessage [1];
-    }
-
-    connection def CarriesResponseMessage {
-        end service : RequestResponseInterface [1];
-        end response : ResponseMessage [1];
-    }
-
-    connection def BrokersChannel {
-        end broker : MessageBroker [1];
-        end channel : PublishSubscribeChannel [1];
-    }
-
-    connection def RoutesToChannel {
-        end sourceChannel : PublishSubscribeChannel [1];
-        end targetChannel : PublishSubscribeChannel [1];
-    }
-
-    connection def DefinesMessageSchema {
-        end schema : MessageSchema [1];
-        end message : Message [1];
-    }
-
-    connection def HasMessageField {
-        end schema : MessageSchema [1];
-        end field : MessageField [0..*];
     }
 
     connection def Realization {
@@ -163,46 +73,6 @@ package MEMO_Ontology_Core_Relationships {
     connection def Flow {
         end source[1];
         end target[1];
-    }
-
-    connection def HasSubProcedure {
-        end procedure : Procedure [1];
-        end subProcedure : Procedure [0..*];
-    }
-
-    connection def PerformedBy {
-        end procedure : Procedure [1];
-        end performer : OperationalActor [1];
-    }
-
-    connection def PerformedOn {
-        end procedure : Procedure [1];
-        end subject : OperationalEntity [1];
-    }
-
-    connection def OccursIn {
-        end procedure : Procedure [1];
-        end environment : OperationalEnvironment [1];
-    }
-
-    connection def UsesResource {
-        end procedure : Procedure [1];
-        end resource[1];
-    }
-
-    connection def HasEquipment {
-        end environment : OperationalEnvironment [1];
-        end equipment[0..*];
-    }
-
-    connection def HasPersonnel {
-        end environment : OperationalEnvironment [1];
-        end personnel : OperationalActor [0..*];
-    }
-
-    connection def ContainsSubstance {
-        end environment : OperationalEnvironment [1];
-        end substance : Substance [0..*];
     }
 
     connection def Succession {

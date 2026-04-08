@@ -1,0 +1,4 @@
+name: "@memo/ontology-ext-medical-sw"
+version: "0.1.0"
+type: ontology
+description: "IEC 62304 software lifecycle — software items, SOUP, anomalies, lifecycle processes"

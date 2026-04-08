@@ -1,15 +1,19 @@
 // ─── memo init ───────────────────────────────────────────────────────────────
 //
 // Scaffolds a new MEMO project with:
-//   - memo.package.yaml (new format — identity + extends)
+//   - memo.package.yaml (new format — identity + extends + ontologies)
 //   - model/ directory with a starter .sysml file
 //   - memo.lock.yaml (ontology lock)
 //
 // Supports --ontology flag for ontology selection:
 //   memo init my-device --ontology @memo/medical-modeling-profile  (default)
-//   memo init my-device --ontology @memo/ontology-medical
 //   memo init my-device --ontology @memo/ontology-core
 //   memo init --list-ontologies                                    (list available)
+//
+// Supports --profile flag for profile-based selection:
+//   memo init my-device --profile minimal   (~53 kinds, core only)
+//   memo init my-device --profile standard  (~120 kinds, core + risk + sw + dhf)
+//   memo init my-device --profile full      (~200+ kinds, all extensions)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve, join, dirname } from 'node:path';
@@ -33,8 +37,8 @@ export interface AvailableOntology {
 
 /**
  * Discover ontology packages available in the workspace.
- * Scans packages/ directories upward for memo.package.yaml files
- * whose type is "ontology" or "profile".
+ * Scans packages/ and packages/ontology-extensions/ directories
+ * upward for memo.package.yaml files whose type is "ontology" or "profile".
  */
 export function discoverOntologies(fromDir: string): AvailableOntology[] {
     const results: AvailableOntology[] = [];
@@ -44,34 +48,15 @@ export function discoverOntologies(fromDir: string): AvailableOntology[] {
     while (true) {
         const packagesDir = resolve(dir, 'packages');
         if (existsSync(packagesDir)) {
-            try {
-                const entries = readdirSync(packagesDir, { withFileTypes: true });
-                for (const entry of entries) {
-                    if (!entry.isDirectory()) continue;
-                    const pkgYaml = resolve(packagesDir, entry.name, 'memo.package.yaml');
-                    if (!existsSync(pkgYaml)) continue;
+            // Scan packages/ (top-level ontology packages)
+            scanOntologyDir(packagesDir, results);
 
-                    try {
-                        const raw = readFileSync(pkgYaml, 'utf-8');
-                        const parsed = parseYaml(raw);
-                        const type = parsed?.type ?? '';
-                        if (type === 'ontology' || type === 'profile') {
-                            results.push({
-                                name: parsed.name ?? entry.name,
-                                version: parsed.version ?? '0.0.0',
-                                type,
-                                description: parsed.description ?? '',
-                                extends: parsed.extends,
-                                path: pkgYaml,
-                            });
-                        }
-                    } catch {
-                        // skip malformed files
-                    }
-                }
-            } catch {
-                // skip if packages dir is unreadable
+            // Scan packages/ontology-extensions/ (modular extensions)
+            const extDir = resolve(packagesDir, 'ontology-extensions');
+            if (existsSync(extDir)) {
+                scanOntologyDir(extDir, results);
             }
+
             if (results.length > 0) break;
         }
 
@@ -81,6 +66,42 @@ export function discoverOntologies(fromDir: string): AvailableOntology[] {
     }
 
     return results;
+}
+
+/** Scan a directory for ontology/profile packages with memo.package.yaml */
+function scanOntologyDir(dir: string, results: AvailableOntology[]): void {
+    try {
+        const entries = readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            const pkgYaml = resolve(dir, entry.name, 'memo.package.yaml');
+            if (!existsSync(pkgYaml)) continue;
+
+            try {
+                const raw = readFileSync(pkgYaml, 'utf-8');
+                const parsed = parseYaml(raw);
+                const type = parsed?.type ?? '';
+                if (type === 'ontology' || type === 'profile') {
+                    // Don't add duplicates
+                    const name = parsed.name ?? entry.name;
+                    if (!results.find(r => r.name === name)) {
+                        results.push({
+                            name,
+                            version: parsed.version ?? '0.0.0',
+                            type,
+                            description: parsed.description ?? '',
+                            extends: parsed.extends,
+                            path: pkgYaml,
+                        });
+                    }
+                }
+            } catch {
+                // skip malformed files
+            }
+        }
+    } catch {
+        // skip if dir is unreadable
+    }
 }
 
 /**
@@ -111,9 +132,67 @@ export function listOntologiesCommand(): void {
     console.log(chalk.gray(`  Usage: memo init <name> --ontology <package-name>\n`));
 }
 
+/** A profile preset (minimal/standard/full) from medical-modeling-profile/profiles/ */
+export interface ProfilePreset {
+    name: string;
+    description: string;
+    extends: string;
+    ontologies: string[];
+}
+
+/** Load a profile preset YAML from the profiles directory */
+export function loadProfile(profileName: string, fromDir: string): ProfilePreset | undefined {
+    let dir = resolve(fromDir);
+    while (true) {
+        const profilePath = resolve(dir, 'packages', 'medical-modeling-profile', 'profiles', `${profileName}.yaml`);
+        if (existsSync(profilePath)) {
+            try {
+                const raw = readFileSync(profilePath, 'utf-8');
+                const parsed = parseYaml(raw);
+                return {
+                    name: parsed.name ?? profileName,
+                    description: parsed.description ?? '',
+                    extends: parsed.extends ?? '@memo/ontology-core',
+                    ontologies: parsed.ontologies ?? [],
+                };
+            } catch {
+                return undefined;
+            }
+        }
+        const parent = dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return undefined;
+}
+
+/** List available profiles */
+export function listProfiles(fromDir: string): ProfilePreset[] {
+    let dir = resolve(fromDir);
+    while (true) {
+        const profilesDir = resolve(dir, 'packages', 'medical-modeling-profile', 'profiles');
+        if (existsSync(profilesDir)) {
+            try {
+                const files = readdirSync(profilesDir).filter(f => f.endsWith('.yaml'));
+                return files.map(f => {
+                    const name = f.replace('.yaml', '');
+                    return loadProfile(name, fromDir)!;
+                }).filter(Boolean);
+            } catch {
+                return [];
+            }
+        }
+        const parent = dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+    }
+    return [];
+}
+
 export interface InitOptions {
     template: string;
     ontology: string;
+    profile?: string;
     listOntologies?: boolean;
 }
 
@@ -124,6 +203,21 @@ export async function initCommand(
     // Handle --list-ontologies
     if (options.listOntologies) {
         listOntologiesCommand();
+
+        // Also show available profiles
+        const profiles = listProfiles(process.cwd());
+        if (profiles.length > 0) {
+            console.log(chalk.bold('\nAvailable profiles:\n'));
+            for (const p of profiles) {
+                console.log(`  ${chalk.cyan(p.name)}`);
+                console.log(`    ${chalk.gray(p.description)}`);
+                if (p.ontologies.length > 0) {
+                    console.log(`    ${chalk.gray(`Extensions: ${p.ontologies.length}`)}`);
+                }
+                console.log();
+            }
+            console.log(chalk.gray(`  Usage: memo init <name> --profile minimal|standard|full\n`));
+        }
         return;
     }
 
@@ -136,11 +230,31 @@ export async function initCommand(
     const projectDir = resolve(process.cwd(), name);
     // Use basename for project identity (handles absolute paths from tests)
     const projectName = projectDir.split('/').pop() ?? name;
-    const ontology = options.ontology;
 
     if (existsSync(projectDir)) {
         console.error(chalk.red(`❌ Directory "${name}" already exists.`));
         process.exit(1);
+    }
+
+    // Resolve profile or ontology
+    let ontology = options.ontology;
+    let extensionOntologies: string[] = [];
+
+    if (options.profile) {
+        const profile = loadProfile(options.profile, process.cwd());
+        if (!profile) {
+            console.error(chalk.red(`❌ Profile "${options.profile}" not found.`));
+            const available = listProfiles(process.cwd());
+            if (available.length > 0) {
+                console.log(chalk.gray('\nAvailable profiles:'));
+                for (const p of available) {
+                    console.log(chalk.gray(`  - ${p.name.toLowerCase().replace(/[^a-z]/g, '').replace('medicaldevice', '')}`));
+                }
+            }
+            process.exit(1);
+        }
+        ontology = profile.extends;
+        extensionOntologies = profile.ontologies;
     }
 
     // Validate that the selected ontology is available (if discoverable)
@@ -157,7 +271,13 @@ export async function initCommand(
     }
 
     console.log(chalk.bold(`\n📦 Creating MEMO project: ${projectName}\n`));
-    if (ontology !== DEFAULT_ONTOLOGY) {
+    if (options.profile) {
+        console.log(chalk.gray(`  Profile: ${options.profile}`));
+        if (extensionOntologies.length > 0) {
+            console.log(chalk.gray(`  Extensions: ${extensionOntologies.length}`));
+        }
+        console.log();
+    } else if (ontology !== DEFAULT_ONTOLOGY) {
         console.log(chalk.gray(`  Ontology: ${ontology}\n`));
     }
 
@@ -165,14 +285,21 @@ export async function initCommand(
     mkdirSync(projectDir, { recursive: true });
     mkdirSync(resolve(projectDir, 'model'), { recursive: true });
 
-    // Write memo.package.yaml (new format)
-    const packageContent = `# ${projectName} — MEMO device model
+    // Write memo.package.yaml (new format with optional ontologies array)
+    let packageContent = `# ${projectName} — MEMO device model
 name: "${projectName}"
 version: "0.1.0"
 type: device
 extends: "${ontology}"
 description: "MEMO device model project"
 `;
+
+    if (extensionOntologies.length > 0) {
+        packageContent += `ontologies:\n`;
+        for (const ext of extensionOntologies) {
+            packageContent += `  - "${ext}"\n`;
+        }
+    }
 
     writeFileSync(resolve(projectDir, 'memo.package.yaml'), packageContent);
     console.log(chalk.gray(`  Created memo.package.yaml (extends ${ontology})`));

@@ -1,0 +1,8 @@
+{
+  "name": "@memo/ontology-ext-medical-ops",
+  "version": "0.1.0",
+  "description": "Manufacturing & service — procedures, installation qualification, calibration, service reports",
+  "private": true,
+  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
+  "license": "Apache-2.0"
+}

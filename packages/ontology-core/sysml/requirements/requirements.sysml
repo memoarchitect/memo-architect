@@ -19,8 +19,6 @@ package MEMO_Ontology_Core_Requirements {
 
     requirement def StakeholderNeed :> Requirement { }
 
-    requirement def MissionRequirement :> Requirement { }
-
     requirement def SystemRequirement :> Requirement { }
 
     requirement def FunctionalRequirement :> Requirement { }
@@ -30,16 +28,4 @@ package MEMO_Ontology_Core_Requirements {
     requirement def InterfaceRequirement :> Requirement { }
 
     requirement def Specification :> Requirement { }
-
-    requirement def MissionSpecification :> Specification { }
-
-    requirement def FunctionSpecification :> Specification { }
-
-    requirement def SystemSpecification :> Specification { }
-
-    requirement def DesignSpecification :> Specification { }
-
-    part def RequirementSet {
-        attribute name : String;
-    }
 }

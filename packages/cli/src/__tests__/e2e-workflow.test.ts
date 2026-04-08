@@ -138,7 +138,7 @@ describe('E2E: memo init → validate → export', () => {
         const exampleDir = join(REPO_ROOT, 'examples/infusion-pump');
         const { stdout } = runMayFail('validate', exampleDir);
 
-        expect(stdout).toContain('Warnings (3)');
+        expect(stdout).toContain('Warnings (6)');
         expect(stdout).toContain('BV-001');
         expect(stdout).toContain('performInfusion');
     });

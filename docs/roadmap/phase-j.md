@@ -1,4 +1,4 @@
-# Phase J — Import (P2)
+# Phase J — Import (P1, promoted from P2)
 
 Import elements and relationships into MEMO — both from the CLI (AADL, CSV, EA, Cameo) and directly from the web UI.
 

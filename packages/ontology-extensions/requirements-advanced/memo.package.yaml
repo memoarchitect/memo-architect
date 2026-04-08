@@ -1,0 +1,6 @@
+name: "@memo/ontology-requirements-advanced"
+version: "0.1.0"
+type: ontology
+description: "Advanced requirement types — mission requirements, specification subtypes, requirement sets"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "requirements"]

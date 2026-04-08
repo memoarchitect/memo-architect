@@ -1,4 +1,4 @@
-# Phase F — Model & Scenarios (P2)
+# Phase F — Model & Scenarios (P1, promoted from P2)
 
 Scenarios editor and model diff.
 

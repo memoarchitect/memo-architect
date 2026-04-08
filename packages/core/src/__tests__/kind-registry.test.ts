@@ -129,10 +129,10 @@ describe('KindRegistry integration with ontology-core', () => {
     });
 
     it('discovers kinds from ontology-core SysML files', () => {
-        // Should find at least 100 entity kinds (config has 133)
+        // Slim core has ~53 kinds (down from 114 after ontology simplification)
         // SysML files may define slightly different counts due to
         // enum defs, attribute defs, etc. that config may not list
-        expect(registry.size).toBeGreaterThan(100);
+        expect(registry.size).toBeGreaterThan(40);
     });
 
     it('resolves purpose-layer kinds correctly', () => {
@@ -154,10 +154,10 @@ describe('KindRegistry integration with ontology-core', () => {
     });
 
     it('resolves analysis-layer kinds correctly', () => {
-        const analysisCase = registry.getKind('AnalysisCase');
-        expect(analysisCase).toBeDefined();
-        expect(analysisCase!.layer).toBe('analysis');
-        expect(analysisCase!.sysmlConstruct).toBe('part def');
+        const constraint = registry.getKind('Constraint');
+        expect(constraint).toBeDefined();
+        expect(constraint!.layer).toBe('analysis');
+        expect(constraint!.sysmlConstruct).toBe('part def');
     });
 
     it('resolves software-layer kinds correctly', () => {

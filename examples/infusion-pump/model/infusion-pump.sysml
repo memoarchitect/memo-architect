@@ -38,10 +38,17 @@ package InfusionPump {
 
     // Use Cases
     action ucProgramInfusion : UseCase {
-        attribute redefines name = "Program Infusion";
-        attribute redefines lifecycleStage = "Operation";
-        attribute redefines level = "User Goal";
-    }
+    doc /* 1. Clinician selects patient profile
+2. System loads prescription parameters
+3. Clinician sets flow rate and volume
+4. System validates parameters against safety limits
+5. Clinician confirms and starts infusion
+6. System initiates pump motor sequence */
+    attribute redefines name = "Program Infusion";
+    attribute redefines lifecycleStage = "Operation";
+    attribute redefines level = "User Goal";
+    attribute redefines actionType = "UseCase";
+}
 
     action ucMonitorInfusion : UseCase {
         attribute redefines name = "Monitor Infusion";

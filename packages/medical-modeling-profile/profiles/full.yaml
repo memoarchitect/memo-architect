@@ -1,0 +1,17 @@
+# Medical Device — Full Profile
+# All extensions (~200+ kinds) — equivalent to @memo/ontology-medical
+# For: Class III devices, combination products, complex regulated systems
+
+name: "Medical Device - Full"
+description: "All medical extensions — risk, software, DHF, safety, usability, cyber, privacy, clinical, ops"
+extends: "@memo/ontology-core"
+ontologies:
+  - "@memo/ontology-ext-medical-risk"
+  - "@memo/ontology-ext-medical-sw"
+  - "@memo/ontology-ext-medical-dhf"
+  - "@memo/ontology-ext-medical-usability"
+  - "@memo/ontology-ext-medical-safety"
+  - "@memo/ontology-ext-medical-ops"
+  - "@memo/ontology-ext-medical-cyber"
+  - "@memo/ontology-ext-medical-privacy"
+  - "@memo/ontology-ext-medical-clinical"

@@ -1,0 +1,4 @@
+name: "@memo/ontology-ext-medical-privacy"
+version: "0.1.0"
+type: ontology
+description: "HIPAA/GDPR privacy — personal data categories, processing activities, privacy impact assessments"

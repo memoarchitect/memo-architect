@@ -1,0 +1,11 @@
+{
+  "name": "@memo/ontology-platform-core",
+  "version": "0.1.0",
+  "description": "Platform, messaging, and advanced interface definitions",
+  "private": true,
+  "files": [
+    "sysml/",
+    "memo.package.yaml"
+  ],
+  "license": "Apache-2.0"
+}

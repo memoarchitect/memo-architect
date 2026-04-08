@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "memo-dev",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/usr/local/bin/node",
       "runtimeArgs": ["../../packages/cli/lib/bin/memo.js", "dev", "--no-open", "-p", "3000"],
       "port": 3000,
       "cwd": "examples/infusion-pump"

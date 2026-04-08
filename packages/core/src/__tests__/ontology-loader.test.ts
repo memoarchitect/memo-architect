@@ -31,7 +31,7 @@ describe('loadOntologyRegistries', () => {
 
         // RelationshipRegistry should have relationships from both
         const rr = result.registries.relationshipRegistry!;
-        expect(rr.size).toBeGreaterThan(80); // core ~42 + medical ~60+
+        expect(rr.size).toBeGreaterThan(60); // slim core ~16 + medical ~58
 
         // Core relationships
         expect(rr.has('aggregation')).toBe(true);

@@ -11,24 +11,4 @@ package MEMO_Ontology_Core_Physical {
     }
 
     part def MechanicalComponent :> PhysicalComponent { }
-
-    part def PhysicalModule {
-        attribute name : String;
-    }
-
-    part def HardwareNode :> PhysicalComponent {
-        attribute ip : String;
-    }
-
-    part def ComputingDevice :> HardwareNode {
-        attribute numberOfCores : Integer;
-        attribute ram : Integer;
-        attribute storage : Integer;
-    }
-
-    part def FPGA :> ComputingDevice { }
-
-    part def Microcontroller :> ComputingDevice { }
-
-    part def SingleBoardComputer :> ComputingDevice { }
 }
