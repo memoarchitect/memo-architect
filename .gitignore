@@ -44,3 +44,7 @@ packages/core/syntaxes/
 __pypackages__/
 site/
 *.egg-info/
+
+# Roadmap (generated files — GitLab is source of truth)
+docs/roadmap/
+!docs/roadmap/north-star.md

@@ -5,6 +5,7 @@
 
 import type { MemoModelDTO } from '../model/semantic.js';
 import type { ValidationResult, CompletenessReport } from '../validator/types.js';
+import type { OntologyPackageInfo } from '../model/ontology-loader.js';
 
 // ─── Server → Client ────────────────────────────────────────────────────────
 
@@ -14,7 +15,8 @@ export type ServerMessage =
     | CompletenessUpdateMessage
     | ErrorMessage
     | ImportResultMessage
-    | DiagramParseResultMessage;
+    | DiagramParseResultMessage
+    | OntologyPackagesMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -36,6 +38,12 @@ export interface ErrorMessage {
     payload: { message: string };
 }
 
+/** Server sends ontology package metadata when client connects or memo.package.yaml changes */
+export interface OntologyPackagesMessage {
+    type: 'ontology:packages';
+    payload: { packages: OntologyPackageInfo[] };
+}
+
 // ─── Client → Server ────────────────────────────────────────────────────────
 
 export type ClientMessage =
@@ -47,10 +55,17 @@ export type ClientMessage =
     | DiagramCreateMessage
     | DiagramUpdateMessage
     | DiagramDeleteMessage
-    | DiagramParseMessage;
+    | DiagramParseMessage
+    | OntologySaveSelectionMessage;
 
 export interface RequestRefreshMessage {
     type: 'request:refresh';
+}
+
+/** Client requests the server to persist ontology selection to memo.package.yaml */
+export interface OntologySaveSelectionMessage {
+    type: 'ontology:save-selection';
+    payload: { selected: string[] };
 }
 
 /** Client requests an element field update (2-way sync) */

@@ -181,21 +181,17 @@ node ../../packages/cli/lib/bin/memo.js validate
 
 ## Roadmap & Project Management
 
-GitLab is the single source of truth for planning. Local roadmap files are auto-generated from open GitLab issues — closed issues never appear.
+GitLab is the single source of truth for planning. The roadmap queries GitLab live — no local cache files.
 
 ```bash
-# Sync GitLab → local docs/roadmap/ (run at session start)
-pnpm run sync:roadmap
-
-# Browse the roadmap
-pnpm run roadmap           # Phase summary table
-pnpm run roadmap:open      # Open issues grouped by phase
-pnpm run roadmap:done      # Closed issues grouped by phase
-pnpm run roadmap:bugs      # Open bugs only
-pnpm run roadmap -- --phase c   # Single phase detail
+pnpm run roadmap              # Phase summary (live from GitLab)
+pnpm run roadmap:open         # Open issues grouped by phase
+pnpm run roadmap:done         # Closed issues grouped by phase
+pnpm run roadmap:bugs         # Open bugs only
+pnpm run roadmap -- -p c2     # Single phase detail
 ```
 
-To add or modify work: create/update GitLab issues, then re-run `pnpm run sync:roadmap`.
+To add or modify work: create/update GitLab issues and milestones directly.
 
 ## Documentation
 

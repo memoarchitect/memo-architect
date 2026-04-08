@@ -19,7 +19,7 @@ const DiagramEditor = lazy(() => import('./views/DiagramEditor').then(m => ({ de
 const DiagramCanvas = lazy(() => import('./views/DiagramCanvas').then(m => ({ default: m.DiagramCanvas })));
 const ActionFlowDiagram = lazy(() => import('./views/ActionFlowDiagram').then(m => ({ default: m.ActionFlowDiagram })));
 const DSMView = lazy(() => import('./views/DSMView').then(m => ({ default: m.DSMView })));
-const OntologyViewer = lazy(() => import('./views/OntologyViewer').then(m => ({ default: m.OntologyViewer })));
+const OntologyViewer = lazy(() => import('./views/ontology/OntologyViewer').then(m => ({ default: m.OntologyViewer })));
 const TraceabilityMatrix = lazy(() => import('./views/TraceabilityMatrix').then(m => ({ default: m.TraceabilityMatrix })));
 const ScenarioEditor = lazy(() => import('./views/ScenarioEditor').then(m => ({ default: m.ScenarioEditor })));
 const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m.ModelDiff })));

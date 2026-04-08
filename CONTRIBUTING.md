@@ -23,17 +23,15 @@ pnpm run test          # all tests must pass before starting work
 Always run before starting any work:
 
 ```bash
-pnpm run sync:roadmap                 # pull GitLab → local roadmap files
-pnpm run roadmap                      # see phases + active milestones
-pnpm run roadmap -- --phase a         # see detail for a specific phase
+pnpm run roadmap                      # see phases + active milestones (live from GitLab)
+pnpm run roadmap -- -p a              # see detail for a specific phase
 ```
 
 ## Execution Protocol
 
 When working on a phase or issue:
 
-1. **Sync:** `pnpm run sync:roadmap`
-2. **Read the phase file:** `docs/roadmap/phase-<letter>.md` — lists issues and scope
+1. **Check roadmap:** `pnpm run roadmap` then `pnpm run roadmap -- -p <slug>` for the phase you're working on
 3. **Verify baseline:** `pnpm run build && pnpm run test` — must pass before changes
 4. **Read before writing:** Always read affected files before modifying them
 5. **Test after each change:** `pnpm run test` after each logical change
@@ -132,11 +130,8 @@ GitLab is the single source of truth for all planning.
 ```bash
 # View roadmap
 pnpm run roadmap                          # summary
-pnpm run roadmap -- --phase a             # phase detail
-pnpm run roadmap -- --issues              # all open issues
-
-# Sync
-pnpm run sync:roadmap                     # pull GitLab → local files
+pnpm run roadmap -- -p a                  # phase detail
+pnpm run roadmap:open                     # all open issues by phase
 
 # Issues
 glab issue list -R somesh_sandbox/memo --per-page 100
@@ -144,7 +139,7 @@ glab issue create -R somesh_sandbox/memo --title "..." --label "bug"
 glab issue close -R somesh_sandbox/memo <number>
 ```
 
-Do not maintain plans in local files. Do not edit `docs/roadmap/*.md` manually — they are auto-generated.
+Do not maintain plans in local files. GitLab is the single source of truth — the roadmap queries it live.
 
 ## Architecture Reference Documents
 

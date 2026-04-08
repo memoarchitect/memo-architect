@@ -16,7 +16,6 @@
     "memo": "node packages/cli/lib/bin/memo.js",
     "example:dev": "cd examples/infusion-pump && node ../../packages/cli/lib/bin/memo.js dev --port 3000",
     "setup": "pnpm install && pnpm run build && pdm install",
-    "sync:roadmap": "bash scripts/sync-roadmap.sh",
     "roadmap": "bash scripts/show-roadmap.sh",
     "roadmap:open": "bash scripts/show-roadmap.sh --open",
     "roadmap:done": "bash scripts/show-roadmap.sh --done",

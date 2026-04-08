@@ -9,12 +9,230 @@
 //   const model = buildMemoModel(documents, config, errors, registries);
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve, dirname, join, basename } from 'node:path';
 import { KindRegistry } from './kind-registry.js';
 import { RelationshipRegistry } from './relationship-registry.js';
 import { parseFiles } from './parser-utils.js';
 import type { BuilderRegistries } from './builder.js';
+
+// ─── Ontology Package Metadata (Phase C2) ────────────────────────────────────
+
+export interface OntologyPackageInfo {
+    name: string;
+    version: string;
+    type: 'ontology' | 'profile' | 'extension';
+    description: string;
+    extends?: string;
+    layers: OntologyLayerInfo[];
+    kindCount: number;
+    relationshipCount: number;
+    selected: boolean;
+}
+
+export interface OntologyLayerInfo {
+    id: string;
+    label: string;
+    color: string;
+    kindCount: number;
+    kinds: OntologyKindInfo[];
+}
+
+export interface OntologyKindInfo {
+    name: string;
+    label: string;
+    construct: string;
+    layer: string;
+    instanceCount: number;
+    viewpoints: string[];
+}
+
+/** Layer color palette (mirrors web constants) */
+const LAYER_COLORS: Record<string, string> = {
+    purpose: '#6366F1', operational: '#8B5CF6', requirements: '#EC4899',
+    functional: '#F59E0B', logical: '#06B6D4', physical: '#10B981',
+    software: '#3B82F6', interfaces: '#14B8A6', analysis: '#F97316',
+    verification: '#84CC16', risk: '#EF4444', safety: '#F97316',
+    'design-control': '#8B5CF6', 'software-lifecycle': '#3B82F6',
+    qms: '#6B7280', ui: '#EC4899', cybersecurity: '#EF4444',
+    privacy: '#6366F1', operations: '#10B981', clinical: '#06B6D4',
+};
+
+/**
+ * Count SysML constructs (part def, requirement def, action def, connection def)
+ * in a single SysML file, grouped by construct type.
+ */
+function countConstructsInFile(filePath: string): { kinds: string[]; relationships: string[] } {
+    const kinds: string[] = [];
+    const relationships: string[] = [];
+    try {
+        const content = readFileSync(filePath, 'utf-8');
+        // Match kind definitions: part def Foo, requirement def Foo, action def Foo, etc.
+        const kindMatches = content.matchAll(/^\s*(?:part|requirement|action|attribute|item|abstract part)\s+def\s+(\w+)/gm);
+        for (const m of kindMatches) kinds.push(m[1]);
+        // Match connection defs as relationship types
+        const relMatches = content.matchAll(/^\s*(?:connection|binding|allocation)\s+def\s+(\w+)/gm);
+        for (const m of relMatches) relationships.push(m[1]);
+    } catch { /* skip */ }
+    return { kinds, relationships };
+}
+
+/**
+ * Build layer info by scanning the sysml/ directory tree.
+ * Apollo-11 convention: sysml/<layer>/<file>.sysml
+ */
+function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
+    const layers: OntologyLayerInfo[] = [];
+    if (!existsSync(sysmlDir)) return layers;
+
+    try {
+        for (const entry of readdirSync(sysmlDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue;
+            const layerId = entry.name;
+            const layerDir = join(sysmlDir, layerId);
+            const allKinds: OntologyKindInfo[] = [];
+            const allRelationships: string[] = [];
+
+            for (const file of readdirSync(layerDir)) {
+                if (!file.endsWith('.sysml') || file === 'index.sysml') continue;
+                const { kinds, relationships } = countConstructsInFile(join(layerDir, file));
+                for (const k of kinds) {
+                    allKinds.push({
+                        name: k,
+                        label: k.replace(/([A-Z])/g, ' $1').trim(),
+                        construct: 'part def',
+                        layer: layerId,
+                        instanceCount: 0,
+                        viewpoints: [],
+                    });
+                }
+                allRelationships.push(...relationships);
+            }
+
+            layers.push({
+                id: layerId,
+                label: layerId.charAt(0).toUpperCase() + layerId.slice(1).replace(/-/g, ' '),
+                color: LAYER_COLORS[layerId] ?? '#6B7280',
+                kindCount: allKinds.length,
+                kinds: allKinds,
+            });
+        }
+    } catch { /* skip */ }
+
+    return layers;
+}
+
+/**
+ * Read a YAML file and extract a simple string field.
+ */
+function readYamlField(content: string, field: string): string {
+    const m = content.match(new RegExp(`^${field}:\\s*["']?([^"'\\n]+)["']?`, 'm'));
+    return m ? m[1].trim() : '';
+}
+
+/**
+ * Get the list of selected ontology package names from a project config file.
+ */
+function readSelectedOntologies(configPath: string): Set<string> {
+    const selected = new Set<string>();
+    try {
+        const content = readFileSync(configPath, 'utf-8');
+        const section = content.split(/^ontologies:/m)[1];
+        if (section) {
+            const matches = section.matchAll(/^\s*-\s*name:\s*["']?([\w@\/-]+)["']?/gm);
+            for (const m of matches) selected.add(m[1]);
+        }
+    } catch { /* skip */ }
+    return selected;
+}
+
+/**
+ * Build OntologyPackageInfo for a single package directory.
+ */
+function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInfo | null {
+    const configCandidates = ['memo.package.yaml', 'memo.package.yml', 'memo.config.yaml', 'memo.config.yml'];
+    let configContent = '';
+    for (const name of configCandidates) {
+        const p = join(pkgDir, name);
+        if (existsSync(p)) { configContent = readFileSync(p, 'utf-8'); break; }
+    }
+    if (!configContent) return null;
+
+    const name = readYamlField(configContent, 'name') || basename(pkgDir);
+    const version = readYamlField(configContent, 'version') || '0.0.0';
+    const rawType = readYamlField(configContent, 'type') || 'ontology';
+    const type = (['ontology', 'profile', 'extension'].includes(rawType) ? rawType : 'ontology') as OntologyPackageInfo['type'];
+    const description = readYamlField(configContent, 'description') || '';
+    const extendsField = readYamlField(configContent, 'extends') || undefined;
+
+    const sysmlDir = join(pkgDir, 'sysml');
+    const layers = buildLayers(sysmlDir);
+    const kindCount = layers.reduce((s, l) => s + l.kindCount, 0);
+
+    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: 0, selected };
+}
+
+/**
+ * Get ontology package metadata for all packages in the project's extends chain
+ * plus any available-but-unselected packages under packages/ or node_modules/@memo/.
+ *
+ * @param projectRoot - Absolute path to the project root (where memo.package.yaml lives)
+ */
+export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
+    const configCandidates = ['memo.package.yaml', 'memo.package.yml', 'memo.config.yaml', 'memo.config.yml'];
+    let primaryConfig = '';
+    for (const name of configCandidates) {
+        const p = join(projectRoot, name);
+        if (existsSync(p)) { primaryConfig = p; break; }
+    }
+    if (!primaryConfig) return [];
+
+    const selectedNames = readSelectedOntologies(primaryConfig);
+    const result: OntologyPackageInfo[] = [];
+    const seen = new Set<string>();
+
+    // Gather all package directories from monorepo packages/
+    const pkgsDir = join(projectRoot, 'packages');
+    const candidates: string[] = [];
+    if (existsSync(pkgsDir)) {
+        try {
+            for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
+                if (entry.isDirectory()) candidates.push(join(pkgsDir, entry.name));
+            }
+        } catch { /* skip */ }
+    }
+
+    // Also scan node_modules/@memo/ for installed packages
+    const nmMemo = join(projectRoot, 'node_modules', '@memo');
+    if (existsSync(nmMemo)) {
+        try {
+            for (const entry of readdirSync(nmMemo, { withFileTypes: true })) {
+                if (entry.isDirectory()) candidates.push(join(nmMemo, entry.name));
+            }
+        } catch { /* skip */ }
+    }
+
+    for (const pkgDir of candidates) {
+        const hasSysml = existsSync(join(pkgDir, 'sysml'));
+        if (!hasSysml) continue;
+        if (seen.has(pkgDir)) continue;
+        seen.add(pkgDir);
+
+        const info = buildPackageInfo(pkgDir, false);
+        if (!info) continue;
+        // Mark as selected if name is in project's ontologies list, or inferred heuristic
+        info.selected = selectedNames.has(info.name) || selectedNames.has(info.name.replace('@memo/', ''));
+        result.push(info);
+    }
+
+    // Sort: selected first, then by name
+    result.sort((a, b) => {
+        if (a.selected !== b.selected) return a.selected ? -1 : 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    return result;
+}
 
 /**
  * Result of loading ontology registries, including diagnostic info.

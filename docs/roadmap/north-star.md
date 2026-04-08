@@ -4,7 +4,7 @@
 
 This document defines the product, adoption, and execution strategy for making MEMO the default free tool for medical device MBSE, architecture modeling, traceability, and DHF generation.
 
-It is intentionally separate from the auto-generated phase files in `docs/roadmap/`. Those files track GitLab issues. This document defines the long-range product direction and the standard for evaluating roadmap choices.
+It is intentionally separate from the roadmap tool (`pnpm run roadmap`) which queries GitLab live. This document defines the long-range product direction and the standard for evaluating roadmap choices.
 
 ## North Star
 

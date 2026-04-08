@@ -11,6 +11,7 @@ import {
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
+import { OntologyBrowserTab } from './OntologyBrowserTab';
 import type { MemoElement, DiagramDTO } from '@memo/core';
 
 // ─── SVG Chevron Icons ───────────────────────────────────────────────────────
@@ -284,6 +285,7 @@ function TabBar({ active, onChange }: { active: ExplorerTab; onChange: (tab: Exp
         { id: 'model', label: 'Model' },
         { id: 'views', label: 'Views' },
         { id: 'worksets', label: 'Sets' },
+        { id: 'ontologies', label: 'Onto' },
     ];
     return (
         <div className="flex" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
@@ -1666,17 +1668,38 @@ export function ExplorerPanel() {
                     <ModelExplorerContent searchTerm={searchTerm} />
                 </>
             ) : (
-                <>
-                    {/* catalog / default mode: model element tree */}
-                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                        <input type="text" placeholder="Search elements..."
-                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                    </div>
-                    <ModelExplorerContent searchTerm={searchTerm} />
-                </>
-            )}
+            <>
+                {/* catalog / default mode: tabbed explorer */}
+                <TabBar active={explorerTab} onChange={setExplorerTab} />
+
+                {explorerTab === 'ontologies' ? (
+                    <OntologyBrowserTab />
+                ) : explorerTab === 'worksets' ? (
+                    <WorkingSetsContent />
+                ) : explorerTab === 'views' ? (
+                    <>
+                        <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                            <input type="text" placeholder="Search diagrams..." value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                        </div>
+                        <ViewExplorerContent searchTerm={searchTerm} />
+                    </>
+                ) : (
+                    <>
+                        <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                            <input type="text" placeholder="Search elements..."
+                                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                        </div>
+                        <ModelExplorerContent searchTerm={searchTerm} />
+                    </>
+                )}
+            </>
+        )}
         </div>
     );
 }
+
