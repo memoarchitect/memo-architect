@@ -36,11 +36,16 @@ export async function computeLayout(
 
     // Choose direction based on element count — vertical for smaller sets,
     // horizontal for very large models to avoid extreme height
-    const direction = visibleElements.length > 60 ? 'RIGHT' : 'DOWN';
+    const n = visibleElements.length;
+    const direction = n > 60 ? 'RIGHT' : 'DOWN';
 
-    // Tighter spacing for compact layout
-    const nodeSpacing = visibleElements.length > 40 ? '20' : '30';
-    const layerSpacing = visibleElements.length > 40 ? '50' : '60';
+    // Progressive spacing: larger models get tighter layout
+    const nodeSpacing = n > 40 ? '24' : n > 20 ? '32' : '40';
+    const layerSpacing = n > 40 ? '60' : n > 20 ? '80' : '100';
+
+    // Estimate node width from name length for better layout
+    const nodeWidth = (el: MemoElement) => Math.max(el.name.length * 7.5 + 48, 130);
+    const nodeHeight = 52;
 
     // Build ELK graph — flat layout with relationship-driven layering
     const elkGraph = {
@@ -50,17 +55,20 @@ export async function computeLayout(
             'elk.direction': direction,
             'elk.spacing.nodeNode': nodeSpacing,
             'elk.layered.spacing.nodeNodeBetweenLayers': layerSpacing,
+            'elk.layered.spacing.edgeNodeBetweenLayers': '24',
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
             'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+            'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH',
             // Wrap long chains to prevent extreme width/height
             'elk.layered.wrapping.strategy': 'MULTI_EDGE',
-            'elk.layered.wrapping.additionalEdgeSpacing': '20',
+            'elk.layered.wrapping.additionalEdgeSpacing': '16',
+            'elk.padding': '[top=20, left=20, bottom=20, right=20]',
         },
         children: visibleElements.map(el => ({
             id: el.id,
-            width: Math.max(el.name.length * 8 + 40, 120),
-            height: 44,
+            width: nodeWidth(el),
+            height: nodeHeight,
         })),
         edges: visibleRelationships.map((rel, i) => ({
             id: `e-${i}`,
@@ -72,64 +80,58 @@ export async function computeLayout(
     // Run ELK layout
     const layouted = await elk.layout(elkGraph);
 
-    // Convert to ReactFlow nodes — polished cards with layer-color left border
+    // Convert to ReactFlow nodes — use 'diagramNode' type for interactive features
     const nodes: Node[] = (layouted.children || []).map(child => {
         const el = model.elements[child.id];
         const color = LAYER_COLORS[el?.layer] || '#666';
         return {
             id: child.id,
+            type: 'diagramNode',
             position: { x: child.x || 0, y: child.y || 0 },
             data: {
                 label: el?.name || child.id,
-                kind: el?.kind,
-                layer: el?.layer,
+                kind: el?.kind ?? '',
+                layer: el?.layer ?? '',
                 construct: el?.construct,
                 color,
-            },
-            style: {
-                background: '#FFFFFF',
-                borderLeft: `3px solid ${color}`,
-                borderTop: '1px solid #E5E5E0',
-                borderRight: '1px solid #E5E5E0',
-                borderBottom: '1px solid #E5E5E0',
-                borderRadius: RADIUS.md,
-                color: '#1a1a1a',
-                fontSize: '13px',
-                fontWeight: 500,
-                padding: '8px 14px',
-                minWidth: '100px',
-                boxShadow: SHADOW.md,
             },
         };
     });
 
-    // Convert to ReactFlow edges — bezier curves with polished label backgrounds
-    const edges: Edge[] = visibleRelationships.map((rel, i) => ({
-        id: `e-${i}`,
-        source: rel.sourceId,
-        target: rel.targetId,
-        label: rel.type,
-        type: 'default',
-        animated: rel.type === 'flow',
-        style: {
-            stroke: REL_COLORS[rel.type] || '#9CA3AF',
-            strokeWidth: EDGE.defaultWidth,
-        },
-        labelStyle: {
-            fontSize: '10px',
-            fill: '#6B7280',
-            fontWeight: 500,
-        },
-        labelBgPadding: EDGE.labelBgPadding,
-        labelBgBorderRadius: EDGE.labelBgRadius,
-        labelBgStyle: EDGE.labelBgStyle,
-        markerEnd: {
-            type: 'arrowclosed' as any,
-            color: REL_COLORS[rel.type] || '#9CA3AF',
-            width: EDGE.arrowSize,
-            height: EDGE.arrowSize,
-        },
-    }));
+    // Convert to ReactFlow edges — styled by relationship type
+    const edges: Edge[] = visibleRelationships.map((rel, i) => {
+        const relColor = REL_COLORS[rel.type] || '#9CA3AF';
+        const isFlow = rel.type === 'flow';
+        const isSuccession = rel.type === 'succession';
+        const isDecomp = rel.type === 'composedOf' || rel.type === 'decomposedBy' || rel.type === 'aggregation';
+        return {
+            id: `e-${i}`,
+            source: rel.sourceId,
+            target: rel.targetId,
+            label: rel.type,
+            type: isSuccession ? 'smoothstep' : 'default',
+            animated: isFlow,
+            style: {
+                stroke: relColor,
+                strokeWidth: isDecomp ? 2.5 : isFlow ? 2 : EDGE.defaultWidth,
+                strokeDasharray: isDecomp ? undefined : isFlow ? undefined : rel.type === 'traceTo' ? '5 3' : undefined,
+            },
+            labelStyle: {
+                fontSize: '10px',
+                fill: '#6B7280',
+                fontWeight: 500,
+            },
+            labelBgPadding: EDGE.labelBgPadding,
+            labelBgBorderRadius: EDGE.labelBgRadius,
+            labelBgStyle: EDGE.labelBgStyle,
+            markerEnd: {
+                type: isDecomp ? 'arrow' as any : 'arrowclosed' as any,
+                color: relColor,
+                width: EDGE.arrowSize,
+                height: EDGE.arrowSize,
+            },
+        };
+    });
 
     return { nodes, edges };
 }

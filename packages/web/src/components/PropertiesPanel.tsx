@@ -1,6 +1,7 @@
 import { useModelStore, getRelationshipsForElement, getDiagram } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
+import { TraceabilityPanel } from './TraceabilityPanel';
 
 function DiagramProperties() {
     const model = useModelStore(s => s.model);
@@ -348,6 +349,9 @@ export function PropertiesPanel() {
                         </div>
                     </div>
                 )}
+
+                {/* Traceability */}
+                <TraceabilityPanel elementId={selectedElementId} />
 
                 {/* Source file */}
                 <div className="p-4 text-xs" style={{ color: '#D1D5DB' }}>
