@@ -303,6 +303,32 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                         type: 'diagram:parse:result',
                         payload: { diagramId: msg.payload.diagramId, elementIds, errors: [] },
                     }));
+                } else if (msg.type === 'ontology:save-selection') {
+                    // Persist ontology selection to the project config file
+                    const { projectRoot } = options;
+                    const configCandidates = ['memo.package.yaml', 'memo.package.yml', 'memo.config.yaml', 'memo.config.yml'];
+                    let configPath = '';
+                    for (const name of configCandidates) {
+                        const p = resolve(projectRoot, name);
+                        if (existsSync(p)) { configPath = p; break; }
+                    }
+                    if (configPath) {
+                        try {
+                            const { parse, stringify } = require('yaml');
+                            const content = readFileSync(configPath, 'utf8');
+                            const doc = parse(content) as Record<string, any>;
+                            const selected: string[] = msg.payload?.selected ?? [];
+                            // Preserve existing entries (keep version etc.); add new ones as name-only
+                            const existingMap = new Map<string, any>(
+                                (doc.ontologies ?? []).map((e: any) => [e.name, e])
+                            );
+                            doc.ontologies = selected.map(name => existingMap.get(name) ?? { name });
+                            writeFileSync(configPath, stringify(doc), 'utf8');
+                            console.log(`[Ontology] Saved selection (${selected.length} packages) to ${configPath}`);
+                        } catch (e) {
+                            console.error('[Ontology] Failed to save selection:', e);
+                        }
+                    }
                 }
             } catch (e) {
                 console.error('WebSocket Error:', e);
