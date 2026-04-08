@@ -177,7 +177,7 @@ function DiagramCanvasInner() {
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutVersion, setLayoutVersion] = useState(0);
-    const [paletteCollapsed, setPaletteCollapsed] = useState(false);
+    const [paletteCollapsed, setPaletteCollapsed] = useState(true);
     const [snapEnabled, setSnapEnabled] = useState(true);
 
     // Quick create popup state
