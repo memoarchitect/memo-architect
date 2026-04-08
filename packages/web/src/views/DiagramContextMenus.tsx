@@ -85,6 +85,13 @@ interface NodeContextMenuProps {
     onDeleteFromModel: () => void;
     onLinkRisk?: () => void;
     onLinkRequirement?: () => void;
+    // #12 additions
+    onShowProperties?: () => void;
+    onFocusElement?: () => void;
+    onShowInCatalog?: () => void;
+    onShowRelMatrix?: () => void;
+    // #38 addition
+    onOpenSource?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -101,6 +108,7 @@ export function NodeContextMenu({
     x, y, nodeId, nodeKind, onClose,
     onEditName, onChangeColor, onRemoveFromDiagram, onDeleteFromModel,
     onLinkRisk, onLinkRequirement,
+    onShowProperties, onFocusElement, onShowInCatalog, onShowRelMatrix, onOpenSource,
 }: NodeContextMenuProps) {
     const [showColors, setShowColors] = useState(false);
 
@@ -111,6 +119,24 @@ export function NodeContextMenu({
                 <div style={{ fontSize: '9px', color: '#D1D5DB', fontFamily: 'monospace' }}>{nodeId}</div>
             </div>
 
+            {onShowProperties && (
+                <MenuItem label="Show Properties" icon="ℹ" onClick={() => { onClose(); onShowProperties(); }} />
+            )}
+            {onShowInCatalog && (
+                <MenuItem label="Show in Catalog" icon="☰" onClick={() => { onClose(); onShowInCatalog(); }} />
+            )}
+            {onFocusElement && (
+                <MenuItem label="Focus on Element" icon="◎" onClick={() => { onClose(); onFocusElement(); }} />
+            )}
+            {onShowRelMatrix && (
+                <MenuItem label="Show Relationship Matrix" icon="☷" onClick={() => { onClose(); onShowRelMatrix(); }} />
+            )}
+            {onOpenSource && (
+                <MenuItem label="Open Source File" icon="⟨/⟩" onClick={() => { onClose(); onOpenSource(); }} />
+            )}
+            {(onShowProperties || onShowInCatalog || onFocusElement || onShowRelMatrix || onOpenSource) && (
+                <MenuDivider />
+            )}
             <MenuItem label="Edit name" icon="✏️" onClick={() => { onClose(); onEditName(); }} />
 
             {/* Color submenu */}

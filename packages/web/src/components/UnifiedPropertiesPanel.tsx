@@ -1,17 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModelStore, getRelationshipsForElement, getDiagram } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 
 // ─── Inline Editable Field ──────────────────────────────────────────────────
 
-function EditableField({ value, onSave, multiline }: {
+function EditableField({ value, onSave, multiline, forceEdit }: {
     value: string;
     onSave: (newValue: string) => void;
     multiline?: boolean;
+    forceEdit?: boolean;
 }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
+
+    // Sync draft when value changes externally
+    useEffect(() => { setDraft(value); }, [value]);
 
     const handleSave = useCallback(() => {
         setEditing(false);
@@ -23,7 +27,7 @@ function EditableField({ value, onSave, multiline }: {
         if (e.key === 'Escape') { setDraft(value); setEditing(false); }
     }, [handleSave, multiline, value]);
 
-    if (!editing) {
+    if (!editing && !forceEdit) {
         return (
             <span
                 className="cursor-pointer rounded px-1 py-0.5 transition-colors"
@@ -183,6 +187,25 @@ function ElementProperties() {
     const updateElementAttribute = useModelStore(s => s.updateElementAttribute);
     const applyEdit = useModelStore(s => s.applyEdit);
 
+    const [attrEditMode, setAttrEditMode] = useState(false);
+
+    // Reset edit mode when element selection changes
+    useEffect(() => { setAttrEditMode(false); }, [selectedElementId]);
+
+    // Ctrl+S / Cmd+S saves pending edits
+    useEffect(() => {
+        if (!selectedElementId) return;
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                applyEdit(selectedElementId);
+                setAttrEditMode(false);
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [selectedElementId, applyEdit]);
+
     if (!selectedElementId || !model) return null;
 
     const element = model.elements[selectedElementId];
@@ -284,10 +307,27 @@ function ElementProperties() {
                     </div>
                 )}
 
-                {/* Attributes — with inline editing */}
+                {/* Attributes — with inline editing (#19) */}
                 {attrs.length > 0 && (
                     <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Attributes</div>
+                        <div className="flex items-center mb-2">
+                            <span className="text-xs font-medium flex-1" style={{ color: '#6B7280' }}>Attributes</span>
+                            <button
+                                onClick={() => {
+                                    if (attrEditMode && selectedElementId) applyEdit(selectedElementId);
+                                    setAttrEditMode(m => !m);
+                                }}
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{
+                                    background: attrEditMode ? '#2DD4A8' : '#F0F0ED',
+                                    color: attrEditMode ? '#FFFFFF' : '#6B7280',
+                                    border: 'none', cursor: 'pointer',
+                                }}
+                                title={attrEditMode ? 'Save (Ctrl+S)' : 'Edit attributes'}
+                            >
+                                {attrEditMode ? '✓ Save' : '✏ Edit'}
+                            </button>
+                        </div>
                         <div className="space-y-1.5">
                             {attrs.map(([key, value]) => (
                                 <div key={key} className="flex text-xs items-start">
@@ -295,6 +335,7 @@ function ElementProperties() {
                                     <EditableField
                                         value={value}
                                         onSave={(newVal) => handleAttrSave(key, newVal)}
+                                        forceEdit={attrEditMode}
                                     />
                                 </div>
                             ))}
@@ -407,10 +448,29 @@ function ElementProperties() {
                     </div>
                 )}
 
-                {/* Source file */}
-                <div className="p-4 text-xs" style={{ color: '#D1D5DB' }}>
-                    {element.file}
-                </div>
+                {/* Source file (#38) */}
+                {element.file && (
+                    <div className="p-4" style={sectionStyle}>
+                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Source</div>
+                        <button
+                            className="flex items-center gap-1.5 text-xs w-full text-left rounded px-1 py-0.5 transition-colors"
+                            style={{ color: '#2563EB', background: 'transparent', border: 'none', cursor: 'pointer', wordBreak: 'break-all' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                            onClick={() => {
+                                const text = element.line ? `${element.file}:${element.line}` : element.file!;
+                                navigator.clipboard.writeText(text).catch(() => {});
+                            }}
+                            title="Click to copy path"
+                        >
+                            <span style={{ flexShrink: 0 }}>⟨/⟩</span>
+                            <span className="font-mono truncate">
+                                {element.file}{element.line ? `:${element.line}` : ''}
+                            </span>
+                            <span style={{ flexShrink: 0, color: '#9CA3AF', fontSize: '9px' }}>copy</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </>
     );

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
+import { WorkspaceManager } from './WorkspaceManager';
 
 const DOCS_URL = '/help/';
 
@@ -216,6 +217,9 @@ export function ModeSwitcher() {
             <ToolsDropdown activeViewType={activeView.type} />
 
             <div className="flex-1" />
+
+            {/* Workspace Manager (#42) */}
+            <WorkspaceManager />
 
             {/* Help */}
             <a
