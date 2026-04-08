@@ -30,10 +30,11 @@ import '@xyflow/react/dist/style.css';
 type RFAny = any;
 
 import type { MemoElement, DiagramLayout } from '@memo/core';
+import { computeImpact } from '@memo/core/lib/analysis/impact.js';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { sendElementCreate, sendAddRelationship, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
-import { FONT } from '../styles/tokens';
+import { FONT, COLOR } from '../styles/tokens';
 import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
     computeFBSLayout, buildDecompositionTree, buildFunctionalTree,
@@ -46,6 +47,15 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+// Inject ELK progress bar keyframe once (#44)
+const LAYOUT_PROGRESS_STYLE_ID = 'memo-layout-progress';
+if (typeof document !== 'undefined' && !document.getElementById(LAYOUT_PROGRESS_STYLE_ID)) {
+    const s = document.createElement('style');
+    s.id = LAYOUT_PROGRESS_STYLE_ID;
+    s.textContent = `@keyframes memo-layout-progress { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`;
+    document.head.appendChild(s);
+}
 
 const RF_STYLE = { background: '#F7F7F5' } as const;
 const RF_FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 2 } as const;
@@ -155,6 +165,8 @@ function DiagramCanvasInner() {
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const selectElement = useModelStore(s => s.selectElement);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const setActiveView = useModelStore(s => s.setActiveView);
     const diagramLayouts = useModelStore(s => s.diagramLayouts);
     const setNodeLayout = useModelStore(s => s.setNodeLayout);
     const mergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
@@ -189,6 +201,13 @@ function DiagramCanvasInner() {
     const [edgeCtx, setEdgeCtx] = useState<{
         x: number; y: number; edgeId: string; relType: string;
     } | null>(null);
+
+    // Focus mode state (#22)
+    const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+    const [focusDepth, setFocusDepth] = useState(2);
+
+    // Source file toast (#38)
+    const [sourceToast, setSourceToast] = useState<string | null>(null);
 
     // Undo/redo stack
     const undoStack = useRef<UndoCommand[]>([]);
@@ -443,6 +462,36 @@ function DiagramCanvasInner() {
             },
         })));
     }, [selectedElementId, setNodes]);
+
+    // Focus Mode (#22): filter graph to N-hop neighbors using computeImpact
+    useEffect(() => {
+        if (!focusNodeId || !model) return;
+        const impact = computeImpact(model, focusNodeId, 'both', focusDepth);
+        const visibleIds = new Set(impact.nodes.map((n: { id: string }) => n.id));
+        visibleIds.add(focusNodeId);
+        setNodes(prev => prev.map(n => ({
+            ...n,
+            style: {
+                ...n.style,
+                opacity: visibleIds.has(n.id) ? 1 : 0.08,
+                pointerEvents: visibleIds.has(n.id) ? 'all' : ('none' as any),
+            },
+        })));
+        setEdges(prev => prev.map(e => ({
+            ...e,
+            style: {
+                ...e.style,
+                opacity: visibleIds.has(e.source) && visibleIds.has(e.target) ? 1 : 0.05,
+            },
+        })));
+    }, [focusNodeId, focusDepth, model, setNodes, setEdges]);
+
+    // Source file toast auto-dismiss (#38)
+    useEffect(() => {
+        if (!sourceToast) return;
+        const t = setTimeout(() => setSourceToast(null), 2500);
+        return () => clearTimeout(t);
+    }, [sourceToast]);
 
     // ─── Keyboard shortcuts ────────────────────────────────────────────────────
 
@@ -884,6 +933,51 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {/* Focus Mode toolbar (#22) */}
+                {focusNodeId && (
+                    <div
+                        className="absolute top-3 right-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+                        style={{ background: '#1B3A4B', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}
+                    >
+                        <span style={{ color: '#2DD4A8', fontWeight: 700 }}>◎ Focus</span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Depth</span>
+                        {[1, 2, 3].map(d => (
+                            <button
+                                key={d}
+                                onClick={() => setFocusDepth(d)}
+                                style={{
+                                    width: 20, height: 20, borderRadius: 4, cursor: 'pointer',
+                                    background: focusDepth === d ? '#2DD4A8' : 'rgba(255,255,255,0.15)',
+                                    color: focusDepth === d ? '#1B3A4B' : '#FFFFFF',
+                                    fontWeight: 700, fontSize: '11px', border: 'none',
+                                }}
+                            >
+                                {d}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => {
+                                setFocusNodeId(null);
+                                setNodes(prev => prev.map(n => ({ ...n, style: { ...n.style, opacity: 1, pointerEvents: 'all' as any } })));
+                                setEdges(prev => prev.map(e => ({ ...e, style: { ...e.style, opacity: 1 } })));
+                            }}
+                            style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', fontSize: '11px', border: 'none' }}
+                        >
+                            Exit Focus
+                        </button>
+                    </div>
+                )}
+
+                {/* Source file toast (#38) */}
+                {sourceToast && (
+                    <div
+                        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-xs font-mono"
+                        style={{ background: '#1B3A4B', color: '#2DD4A8', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', whiteSpace: 'nowrap' }}
+                    >
+                        Copied: {sourceToast}
+                    </div>
+                )}
+
                 {isLayouting && (
                     <div
                         className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 rounded-full text-xs font-medium"
@@ -906,6 +1000,18 @@ function DiagramCanvasInner() {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* ELK layout progress bar (#44) */}
+                {isLayouting && (
+                    <div
+                        style={{
+                            position: 'absolute', top: 0, left: 0, right: 0, height: '2px', zIndex: 20,
+                            background: `linear-gradient(90deg, ${COLOR.accent} 0%, ${COLOR.accent}80 50%, transparent 100%)`,
+                            backgroundSize: '200% 100%',
+                            animation: 'memo-layout-progress 1.2s linear infinite',
+                        }}
+                    />
                 )}
 
                 <ReactFlow
@@ -985,6 +1091,26 @@ function DiagramCanvasInner() {
                     onDeleteFromModel={() => {
                         // For now: remove from diagram only. Full model delete requires server support.
                         handleRemoveFromDiagram(nodeCtx.nodeId);
+                    }}
+                    onShowProperties={() => {
+                        selectElement(nodeCtx.nodeId);
+                    }}
+                    onShowInCatalog={() => {
+                        selectElement(nodeCtx.nodeId);
+                        setActiveMode('catalog');
+                    }}
+                    onFocusElement={() => {
+                        setFocusNodeId(nodeCtx.nodeId);
+                    }}
+                    onShowRelMatrix={() => {
+                        setActiveView({ type: 'traceability' });
+                    }}
+                    onOpenSource={() => {
+                        const el = model?.elements[nodeCtx.nodeId];
+                        if (!el?.file) return;
+                        const text = el.line ? `${el.file}:${el.line}` : el.file;
+                        navigator.clipboard.writeText(text).catch(() => {});
+                        setSourceToast(text);
                     }}
                 />
             )}

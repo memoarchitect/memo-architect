@@ -1,7 +1,21 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_LABELS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
+
+// Inject keyframes for pulse animation once
+const PULSE_STYLE_ID = 'memo-gapbar-pulse';
+if (typeof document !== 'undefined' && !document.getElementById(PULSE_STYLE_ID)) {
+    const s = document.createElement('style');
+    s.id = PULSE_STYLE_ID;
+    s.textContent = `
+        @keyframes memo-pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+    `;
+    document.head.appendChild(s);
+}
 
 const SEVERITY_STYLES: Record<string, { color: string; bg: string; icon: string }> = {
     error: { color: '#DC2626', bg: '#FEF2F2', icon: '✖' },
@@ -128,7 +142,7 @@ export function GapBar() {
                     <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Waiting for validation…</span>
                 )}
 
-                {/* Completeness inline summary */}
+                {/* Completeness inline summary (#20) */}
                 {hasCompleteness && (
                     <>
                         <div style={{ width: '1px', height: '14px', background: COLOR.border, flexShrink: 0 }} />
@@ -136,17 +150,25 @@ export function GapBar() {
                         <span style={{ color: completeness!.overall >= 80 ? '#10B981' : completeness!.overall >= 50 ? '#D97706' : '#DC2626', fontSize: FONT.xs, fontWeight: 600 }}>
                             {completeness!.overall}%
                         </span>
-                        {/* Mini progress bar */}
-                        <div className="flex items-center gap-px" style={{ maxWidth: '80px', height: '4px' }}>
+                        {/* Layer dots — 8px squares, opacity = completeness% */}
+                        <div className="flex items-center gap-0.5">
                             {visibleLayers.map(layer => {
-                                const w = Math.max((layer.totalElements / completeness!.totalElements) * 100, 3);
+                                const isLow = layer.percentage < 40;
                                 return (
                                     <div
                                         key={layer.layerId}
-                                        style={{ width: `${w}%`, height: '100%', background: layer.layerColor + '30', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}
-                                    >
-                                        <div style={{ width: `${layer.percentage}%`, height: '100%', background: layer.layerColor, borderRadius: '2px' }} />
-                                    </div>
+                                        title={`${LAYER_LABELS[layer.layerId] || layer.layerLabel}: ${layer.percentage}%`}
+                                        style={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '2px',
+                                            background: layer.layerColor,
+                                            opacity: Math.max(layer.percentage / 100, 0.12),
+                                            flexShrink: 0,
+                                            animation: isLow ? 'memo-pulse-red 1.4s ease-in-out infinite' : 'none',
+                                            cursor: 'default',
+                                        }}
+                                    />
                                 );
                             })}
                         </div>

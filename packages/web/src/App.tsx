@@ -241,6 +241,19 @@ export function App() {
     const activeMode = useModelStore(s => s.activeMode);
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
+    const toggleGapBar = useModelStore(s => s.toggleGapBar);
+
+    // Cmd+Shift+P toggles the GapBar (Problems/Completeness panel) (#20)
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                toggleGapBar();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [toggleGapBar]);
 
     // Only hide the explorer for views with their own full-page internal explorer.
     const showExplorer = activeView.type !== 'ontology' && activeView.type !== 'scenario-editor';

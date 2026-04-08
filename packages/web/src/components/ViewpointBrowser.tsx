@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useModelStore, getDiagramsForViewpoint } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
@@ -26,10 +26,74 @@ function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
     );
 }
 
-function DiagramRow({ diag, isSelected, onSelect }: {
+// ─── Diagram Row Context Menu ────────────────────────────────────────────────
+
+interface DiagramRowMenuProps {
+    x: number;
+    y: number;
+    diag: DiagramDTO;
+    onClose: () => void;
+    onOpenDiagram: () => void;
+    onShowTabular: () => void;
+    onDiagramProperties: () => void;
+}
+
+function DiagramRowContextMenu({ x, y, diag, onClose, onOpenDiagram, onShowTabular, onDiagramProperties }: DiagramRowMenuProps) {
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+        };
+        const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('keydown', esc);
+        return () => {
+            document.removeEventListener('mousedown', handler);
+            document.removeEventListener('keydown', esc);
+        };
+    }, [onClose]);
+
+    const left = Math.min(x, window.innerWidth - 220);
+    const top = Math.min(y, window.innerHeight - 160);
+
+    const Item = ({ label, icon, onClick, stub }: { label: string; icon: string; onClick: () => void; stub?: boolean }) => (
+        <button
+            onClick={() => { onClick(); onClose(); }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: FONT.xs }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F7F7F5'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+        >
+            <span style={{ fontSize: '12px', width: 16, textAlign: 'center' }}>{icon}</span>
+            <span style={{ color: '#1a1a1a' }}>{label}</span>
+            {stub && <span style={{ marginLeft: 'auto', fontSize: '9px', color: '#D1D5DB' }}>soon</span>}
+        </button>
+    );
+
+    return (
+        <div
+            ref={ref}
+            className="fixed z-50 rounded-xl overflow-hidden py-1"
+            style={{ left, top, minWidth: 200, background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 8px 32px rgba(0,0,0,0.14)' }}
+        >
+            <div className="px-3 py-1.5" style={{ borderBottom: '1px solid #E5E5E0' }}>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF' }}>{diag.diagramType}</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151' }} className="truncate">{diag.name}</div>
+            </div>
+            <Item label="Open Diagram" icon="⊟" onClick={onOpenDiagram} />
+            <Item label="Show in Tabular View" icon="☷" onClick={onShowTabular} stub />
+            <div style={{ height: 1, background: '#E5E5E0', margin: '2px 0' }} />
+            <Item label="Diagram Properties" icon="ℹ" onClick={onDiagramProperties} />
+        </div>
+    );
+}
+
+function DiagramRow({ diag, isSelected, onSelect, onContextMenu }: {
     diag: DiagramDTO;
     isSelected: boolean;
     onSelect: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
 }) {
     const meta = DIAGRAM_TYPE_META[diag.diagramType];
     const typeName = meta?.fullName ?? diag.diagramType;
@@ -46,6 +110,7 @@ function DiagramRow({ diag, isSelected, onSelect }: {
             onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
             onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
             onClick={onSelect}
+            onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e); } : undefined}
             title={tooltip}
         >
             <DiagramTypeBadge diagramType={diag.diagramType} />
@@ -78,6 +143,9 @@ export function ViewpointBrowser() {
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
 
     const [expandedViewpoints, setExpandedViewpoints] = useState<Set<string>>(new Set(['__model']));
+    const [diagCtx, setDiagCtx] = useState<{ x: number; y: number; diag: DiagramDTO } | null>(null);
+
+    const setActiveView = useModelStore(s => s.setActiveView);
 
     // Merge config viewpoints with extra viewpoints
     const viewpoints = useMemo(() => {
@@ -195,6 +263,7 @@ export function ViewpointBrowser() {
                                     diag={diag}
                                     isSelected={selectedDiagramId === diag.id}
                                     onSelect={() => selectDiagram(diag.id)}
+                                    onContextMenu={(e) => setDiagCtx({ x: e.clientX, y: e.clientY, diag })}
                                 />
                             ))}
                         </div>
@@ -237,6 +306,7 @@ export function ViewpointBrowser() {
                                             diag={diag}
                                             isSelected={selectedDiagramId === diag.id}
                                             onSelect={() => selectDiagram(diag.id)}
+                                            onContextMenu={(e) => setDiagCtx({ x: e.clientX, y: e.clientY, diag })}
                                         />
                                     ))}
                                 </div>
@@ -256,6 +326,19 @@ export function ViewpointBrowser() {
                     ))}
                 </div>
             </div>
+
+            {/* Diagram row context menu (#13) */}
+            {diagCtx && (
+                <DiagramRowContextMenu
+                    x={diagCtx.x}
+                    y={diagCtx.y}
+                    diag={diagCtx.diag}
+                    onClose={() => setDiagCtx(null)}
+                    onOpenDiagram={() => selectDiagram(diagCtx.diag.id)}
+                    onShowTabular={() => setActiveView({ type: 'traceability' })}
+                    onDiagramProperties={() => selectDiagram(diagCtx.diag.id)}
+                />
+            )}
         </div>
     );
 }

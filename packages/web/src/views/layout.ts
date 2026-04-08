@@ -12,7 +12,11 @@ import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import type { ActionFlowNodeData } from './ActionFlowNode';
 
-const elk = new ELK();
+const elk = new ELK({
+    workerFactory: (_url: string) => new Worker(
+        new URL('elkjs/lib/elk-worker.min.js', import.meta.url)
+    ),
+} as any);
 
 export interface LayoutResult {
     nodes: Node[];
