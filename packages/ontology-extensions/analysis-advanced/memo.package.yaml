@@ -1,0 +1,6 @@
+name: "@memo/ontology-analysis-advanced"
+version: "0.1.0"
+type: ontology
+description: "Advanced analysis kinds — trade studies, calculations, analysis cases"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "analysis"]

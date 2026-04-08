@@ -15,8 +15,19 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 echo "🔄 Syncing roadmap from GitLab ($PROJECT)..."
 
+# Preserve manually-maintained files before clearing
+NORTH_STAR_BACKUP=""
+if [ -f "$ROADMAP_DIR/north-star.md" ]; then
+  NORTH_STAR_BACKUP=$(cat "$ROADMAP_DIR/north-star.md")
+fi
+
 rm -rf "$ROADMAP_DIR"
 mkdir -p "$ROADMAP_DIR"
+
+# Restore manually-maintained files
+if [ -n "$NORTH_STAR_BACKUP" ]; then
+  echo "$NORTH_STAR_BACKUP" > "$ROADMAP_DIR/north-star.md"
+fi
 
 # ── Fetch all open issues ─────────────────────────────────────────────
 echo "   Fetching open issues..."
@@ -62,20 +73,26 @@ cat > "$ROADMAP_DIR/index.md" << EOF
 
 | Phase | File | Priority | Focus |
 |-------|------|----------|-------|
-| 1 | [phase-1.md](phase-1.md) | **P0** | Ontology cleanup (extract ROS/RabbitMQ, collapse types, simplify) |
-| A | [phase-a.md](phase-a.md) | P0 | Critical bug fixes |
+| A | [phase-a.md](phase-a.md) | **P0** | Critical bug fixes |
+| N0 | [phase-n0.md](phase-n0.md) | **P0** | Product contract stabilization |
+| N1 | [phase-n1.md](phase-n1.md) | **P0** | Golden path — first-time user experience |
 | B | [phase-b.md](phase-b.md) | P1 | UX foundation |
-| C | [phase-c.md](phase-c.md) | P1 | Visual ontology viewer |
-| D | [phase-d.md](phase-d.md) | P2 | Diagrams & views |
+| D | [phase-d.md](phase-d.md) | P1 | Diagrams & views (promoted) |
+| F | [phase-f.md](phase-f.md) | P1 | Model & scenarios (promoted) |
+| N3 | [phase-n3.md](phase-n3.md) | P1 | Review outputs & shareable exports |
+| N2 | [phase-n2.md](phase-n2.md) | P1 | Import & migration backbone |
+| J | [phase-j.md](phase-j.md) | P1 | Import — CLI formats + UI creation (promoted) |
+| 1 | [phase-1.md](phase-1.md) | P1 | Ontology cleanup (demoted) |
+| C | [phase-c.md](phase-c.md) | P2 | Visual ontology viewer (demoted) |
 | E | [phase-e.md](phase-e.md) | P2 | DHF improvements |
-| F | [phase-f.md](phase-f.md) | P2 | Model & scenarios |
+| N4 | [phase-n4.md](phase-n4.md) | P2 | Medical workbenches |
 | G | [phase-g.md](phase-g.md) | P3 | Examples (GPCA reference model, starter templates) |
-| H | [phase-h.md](phase-h.md) | Nice-to-have | Cloud & collaboration |
-| I | [phase-i.md](phase-i.md) | Nice-to-have | Domain packages |
-| J | [phase-j.md](phase-j.md) | P2 | Import — CLI formats + UI element/relationship creation |
+| N5 | [phase-n5.md](phase-n5.md) | P3 | Viral distribution & community |
 | K | [phase-k.md](phase-k.md) | P3 | Docs & manuals |
+| H | [phase-h.md](phase-h.md) | -- | Cloud & collaboration (deferred) |
+| I | [phase-i.md](phase-i.md) | -- | Domain packages (deferred) |
 
-Also: [bugs.md](bugs.md) — all open bugs
+Also: [bugs.md](bugs.md) — all open bugs | [north-star.md](north-star.md) — product strategy
 
 ## Active GitLab Milestones
 
@@ -83,7 +100,7 @@ $ML_ACTIVE
 
 ## Execution Order
 
-1 → A → B → C → D/E/F/J (parallel) → G/K → H/I (deferred)
+A → N0 → N1+B → D/F/N3 (parallel) → N2/J → C/E → N4 → G/N5/K → H/I (deferred)
 EOF
 
 # ── bugs.md ───────────────────────────────────────────────────────────
@@ -106,7 +123,7 @@ EOF
 
 # ── Phase 1 — Ontology Cleanup ────────────────────────────────────────
 {
-  echo "# Phase 1 — Ontology Cleanup (P0)"
+  echo "# Phase 1 — Ontology Cleanup (P1, demoted from P0)"
   echo ""
   echo "Simplify the monolithic ontology. Extract technology-specific defs, collapse over-split types, move niche concepts to extensions."
   echo "Target: ~140 core + ~150 medical = ~290 total (down from 375)."
@@ -163,7 +180,7 @@ EOF
 
 # ── Phase C — Visual Ontology Viewer ─────────────────────────────────
 {
-  echo "# Phase C — Visual Ontology Viewer (P1)"
+  echo "# Phase C — Visual Ontology Viewer (P2, demoted from P1)"
   echo ""
   echo "Replace the flat list ontology viewer with a visual graph grouped by architecture layer/domain."
   echo ""
@@ -177,7 +194,7 @@ EOF
 
 # ── Phase D — Diagrams & Views ────────────────────────────────────────
 {
-  echo "# Phase D — Diagrams & Views (P2)"
+  echo "# Phase D — Diagrams & Views (P1, promoted from P2)"
   echo ""
   echo "Auto-view organization and user-created diagrams with SysML editing."
   echo ""
@@ -203,7 +220,7 @@ EOF
 
 # ── Phase F — Model & Scenarios ──────────────────────────────────────
 {
-  echo "# Phase F — Model & Scenarios (P2)"
+  echo "# Phase F — Model & Scenarios (P1, promoted from P2)"
   echo ""
   echo "Scenarios editor and model diff."
   echo ""
@@ -256,7 +273,7 @@ EOF
 
 # ── Phase J — Import ─────────────────────────────────────────────────
 {
-  echo "# Phase J — Import (P2)"
+  echo "# Phase J — Import (P1, promoted from P2)"
   echo ""
   echo "Import elements and relationships into MEMO — both from the CLI (AADL, CSV, EA, Cameo) and directly from the web UI."
   echo ""
@@ -284,6 +301,127 @@ EOF
   open_issue "#95" "Developer manual: architecture, contributing, extension development. Scope: L"
   open_issue "#96" "Document hidden features: LLM commands, env vars, import formats, config options. Scope: S"
 } > "$ROADMAP_DIR/phase-k.md"
+
+# ══════════════════════════════════════════════════════════════════════
+# N-series phases — adoption-outcome phases from North Star
+# ══════════════════════════════════════════════════════════════════════
+
+# ── Phase N0 — Product Contract Stabilization ────────────────────────
+{
+  echo "# Phase N0 — Product Contract Stabilization (P0)"
+  echo ""
+  echo "Canonical project format, terminology alignment, stable quickstart path."
+  echo "Trust is prerequisite to adoption."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#125" "Canonical project format ADR — resolve memo.config.yaml vs decomposed config. Scope: M"
+  open_issue "#126" "Terminology consistency sweep — align product naming across repo. Scope: M"
+  open_issue "#127" "Single canonical quickstart path — README to first output. Scope: M"
+  open_issue "#128" "Stabilize roadmap references — north-star as strategic anchor. Scope: S"
+} > "$ROADMAP_DIR/phase-n0.md"
+
+# ── Phase N1 — Golden Path ───────────────────────────────────────────
+{
+  echo "# Phase N1 — Golden Path: First-Time User Experience (P0)"
+  echo ""
+  echo "Startup wizard, archetype starter kits, first-review dashboard, next-step guidance."
+  echo "Success: new user reaches useful model + review view in under 15 minutes."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#129" "Startup wizard — device archetype and regulatory posture selection at memo init. Scope: L"
+  open_issue "#130" "Starter model packs by device archetype. Scope: L"
+  open_issue "#131" "What-to-do-next panel in web UI. Scope: M"
+  open_issue "#132" "First-review dashboard — architecture + risk + requirements in one view. Scope: M"
+  echo ""
+  echo "### Absorbed from earlier phases"
+  echo ""
+  open_issue "#45"  "Enhanced memo init with interactive template selection. Scope: M"
+  open_issue "#43"  "Add first-launch onboarding tour. Scope: M"
+  open_issue "#36"  "Build Dashboard home view with statistics cards. Scope: M"
+  open_issue "#40"  "Build WorkflowWizard multi-step guide component. Scope: M"
+} > "$ROADMAP_DIR/phase-n1.md"
+
+# ── Phase N2 — Import & Migration Backbone ───────────────────────────
+{
+  echo "# Phase N2 — Import & Migration Backbone (P1)"
+  echo ""
+  echo "Import provenance, column-mapping assistant, re-import with diff, named import recipes."
+  echo "Expands Phase J scope. Success: team migrates core Excel assets in one day."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#133" "Import provenance model — track source artifact to model element. Scope: L"
+  open_issue "#134" "Column-mapping assistant for CSV/Excel imports. Scope: L"
+  open_issue "#135" "Re-import with diff — update model without full replacement. Scope: L"
+  open_issue "#136" "Named import recipes for common artifact types. Scope: M"
+  echo ""
+  echo "### Absorbed from Phase J"
+  echo ""
+  open_issue "#124" "Bulk import elements from CSV or paste table in UI. Scope: M"
+} > "$ROADMAP_DIR/phase-n2.md"
+
+# ── Phase N3 — Review Outputs & Shareable Exports ────────────────────
+{
+  echo "# Phase N3 — Review Outputs & Shareable Exports (P1)"
+  echo ""
+  echo "One-command static architecture site, review packet builder, professional diagram quality."
+  echo "The viral loop — this is how MEMO spreads."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#137" "One-command static architecture site — memo export site. Scope: L"
+  open_issue "#138" "Review packet builder — design review, risk review, architecture review. Scope: L"
+  open_issue "#139" "Professional diagram quality — visually competitive with Lucidchart/Miro. Scope: L"
+  open_issue "#140" "Export theme overhaul — professional shareable quality. Scope: M"
+  echo ""
+  echo "### Absorbed from earlier phases"
+  echo ""
+  open_issue "#34"  "Implement memo build command for static HTML report. Scope: L"
+  open_issue "#10"  "Build N×N RelationshipMatrix component. Scope: L"
+  open_issue "#11"  "Add matrix presets and configuration panel. Scope: M"
+  open_issue "#16"  "Build FMEA table view for ISO 14971 risk chains. Scope: L"
+  open_issue "#17"  "Add FMEA mode to ModeSwitcher with sort/filter/export. Scope: M"
+} > "$ROADMAP_DIR/phase-n3.md"
+
+# ── Phase N4 — Medical Workbenches ───────────────────────────────────
+{
+  echo "# Phase N4 — Medical Workbenches (P2)"
+  echo ""
+  echo "Usability cockpit, risk workbench, software lifecycle workbench."
+  echo "SMEs work without thinking in SysML."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#141" "Usability engineering cockpit — IEC 62366 workflow. Scope: L"
+  open_issue "#142" "Risk workbench — full ISO 14971 chain visualization. Scope: L"
+  open_issue "#143" "Software lifecycle workbench — IEC 62304. Scope: L"
+  open_issue "#144" "Evidence linking and baseline freeze. Scope: L"
+  echo ""
+  echo "### Absorbed from earlier phases"
+  echo ""
+  open_issue "#41"  "Add workflow definitions to medical config. Scope: M"
+} > "$ROADMAP_DIR/phase-n4.md"
+
+# ── Phase N5 — Viral Distribution & Community ────────────────────────
+{
+  echo "# Phase N5 — Viral Distribution & Community (P3)"
+  echo ""
+  echo "Public starter gallery, template registry, MEMO Cookbook."
+  echo "Shared outputs become the main acquisition channel."
+  echo ""
+  echo "## Open Issues"
+  echo ""
+  open_issue "#145" "Public starter gallery — browsable example projects. Scope: L"
+  open_issue "#146" "MEMO Cookbook — patterns for common device programs. Scope: L"
+} > "$ROADMAP_DIR/phase-n5.md"
+
+# ── Preserve north-star.md (not auto-generated) ─────────────────────
+# north-star.md is manually maintained — copy it back if it was deleted by rm -rf
+if [ -f "$REPO_DIR/docs/roadmap/north-star.md" ]; then
+  : # already exists, sync didn't delete it because we rm'd the dir
+fi
 
 echo "✅ Roadmap synced to $ROADMAP_DIR/"
 echo "   $TOTAL_OPEN open issues — closed issues excluded from all phase files"

@@ -1,0 +1,8 @@
+{
+  "name": "@memo/ontology-ext-medical-clinical",
+  "version": "0.1.0",
+  "description": "Clinical evaluation & post-market — clinical claims, evidence, evaluation plans/reports, treatment pathways",
+  "private": true,
+  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
+  "license": "Apache-2.0"
+}

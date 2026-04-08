@@ -29,7 +29,7 @@ if [ -n "$PHASE" ]; then
   if [ -f "$FILE" ]; then
     cat "$FILE"
   else
-    echo "Phase '$PHASE' not found. Available: 1 2 a b c d e f g h i j"
+    echo "Phase '$PHASE' not found. Available: 1 a b c d e f g h i j k n0 n1 n2 n3 n4 n5"
     exit 1
   fi
   exit 0
@@ -61,20 +61,26 @@ fi
 # ── Phase summary table (always shown) ───────────────────────────────
 echo "  Phase │ Pri  │ Focus"
 echo "  ──────┼──────┼──────────────────────────────────────────"
-echo "    1   │ P0 ★ │ Ontology cleanup (extract, collapse, simplify)"
 echo "    A   │ P0   │ Critical bug fixes"
+echo "   N0   │ P0 ★ │ Product contract stabilization"
+echo "   N1   │ P0   │ Golden path — first-time user experience"
 echo "    B   │ P1   │ UX foundation"
-echo "    C   │ P1   │ Visual ontology viewer"
-echo "    D   │ P2   │ Diagrams & views"
+echo "    D   │ P1   │ Diagrams & views (promoted)"
+echo "    F   │ P1   │ Model & scenarios (promoted)"
+echo "   N3   │ P1   │ Review outputs & shareable exports"
+echo "   N2   │ P1   │ Import & migration backbone"
+echo "    J   │ P1   │ Import — CLI formats + UI creation (promoted)"
+echo "    1   │ P1   │ Ontology cleanup (demoted)"
+echo "    C   │ P2   │ Visual ontology viewer (demoted)"
 echo "    E   │ P2   │ DHF improvements"
-echo "    F   │ P2   │ Model & scenarios"
+echo "   N4   │ P2   │ Medical workbenches"
 echo "    G   │ P3   │ Examples (GPCA reference + starter templates)"
+echo "   N5   │ P3   │ Viral distribution & community"
+echo "    K   │ P3   │ Docs & manuals"
 echo "    H   │ --   │ Cloud & collaboration (deferred)"
 echo "    I   │ --   │ Domain packages (deferred)"
-echo "    J   │ P2   │ Import — CLI formats + UI element/relationship creation"
-echo "    K   │ P3   │ Docs & manuals"
 echo ""
-echo "  Order: 1 → A → B → C → D/E/F/J (parallel) → G/K → H/I"
+echo "  Order: A → N0 → N1+B → D/F/N3 → N2/J → C/E → N4 → G/N5/K → H/I"
 echo ""
 
 if [ "$MODE" = "summary" ]; then
@@ -90,33 +96,45 @@ fi
 # Associative arrays not reliable in bash 3 (macOS default), use parallel arrays
 
 PHASE_NAMES=(
-  "Phase 1 — Ontology Cleanup (P0)"
   "Phase A — Critical Bug Fixes (P0)"
+  "Phase N0 — Product Contract Stabilization (P0)"
+  "Phase N1 — Golden Path: First-Time UX (P0)"
   "Phase B — UX Foundation (P1)"
-  "Phase C — Visual Ontology Viewer (P1)"
-  "Phase D — Diagrams & Views (P2)"
+  "Phase D — Diagrams & Views (P1)"
+  "Phase F — Model & Scenarios (P1)"
+  "Phase N3 — Review Outputs & Shareable Exports (P1)"
+  "Phase N2 — Import & Migration Backbone (P1)"
+  "Phase J — Import (P1)"
+  "Phase 1 — Ontology Cleanup (P1)"
+  "Phase C — Visual Ontology Viewer (P2)"
   "Phase E — DHF Improvements (P2)"
-  "Phase F — Model & Scenarios (P2)"
+  "Phase N4 — Medical Workbenches (P2)"
   "Phase G — Examples (P3)"
+  "Phase N5 — Viral Distribution & Community (P3)"
+  "Phase K — Docs & Manuals (P3)"
   "Phase H — Cloud & Collaboration (deferred)"
   "Phase I — Domain Packages (deferred)"
-  "Phase J — Import (P2)"
-  "Phase K — Docs & Manuals (P3)"
 )
 
 PHASE_IDS=(
-  "#97 #98 #99 #100 #101 #102 #103 #104 #105 #91 #93 #111"
   "#81 #82 #83 #84 #85 #86 #91 #93"
+  "#125 #126 #127 #128"
+  "#129 #130 #131 #132 #45 #43 #36 #40"
   "#62 #66 #69 #70 #74 #75"
-  "#7 #80 #89 #92"
-  "#71 #72"
-  "#76 #77 #78 #121"
+  "#71 #72 #15 #22"
   "#73 #79"
+  "#137 #138 #139 #140 #34 #10 #11 #16 #17"
+  "#133 #134 #135 #136 #124"
+  "#88 #122 #123 #124"
+  "#97 #98 #99 #100 #101 #102 #103 #104 #105 #91 #93 #111"
+  "#7 #80 #89 #92"
+  "#76 #77 #78 #121"
+  "#141 #142 #143 #144 #41"
   "#106 #107 #87 #108 #110 #109"
+  "#145 #146"
+  "#90 #94 #95 #96"
   "#58 #59 #60"
   "#56 #57"
-  "#88 #122 #123 #124"
-  "#90 #94 #95 #96"
 )
 
 # ── Fetch issues ──────────────────────────────────────────────────────

@@ -128,8 +128,8 @@ describe('RelationshipRegistry integration with ontology-core', () => {
     });
 
     it('discovers relationship types from ontology-core SysML files', () => {
-        // The relationships.sysml file has 42 connection defs
-        expect(registry.size).toBeGreaterThanOrEqual(40);
+        // Slim core has 16 connection defs (down from 42 after ontology simplification)
+        expect(registry.size).toBeGreaterThanOrEqual(14);
     });
 
     it('normalizes PascalCase SysML names to camelCase', () => {
@@ -155,9 +155,9 @@ describe('RelationshipRegistry integration with ontology-core', () => {
         expect(traceTo).toBeDefined();
         expect(traceTo!.label).toBe('Trace To');
 
-        const hasSubProcedure = registry.getRelType('hasSubProcedure');
-        expect(hasSubProcedure).toBeDefined();
-        expect(hasSubProcedure!.label).toBe('Has Sub Procedure');
+        const exposesInterface = registry.getRelType('exposesInterface');
+        expect(exposesInterface).toBeDefined();
+        expect(exposesInterface!.label).toBe('Exposes Interface');
     });
 
     it('extracts end declarations', () => {

@@ -1,0 +1,4 @@
+name: "@memo/ontology-ext-medical-safety"
+version: "0.1.0"
+type: ontology
+description: "IEC 60601 safety & essential performance — safety goals, basic safety, protective measures"

@@ -1,0 +1,88 @@
+closureRules:
+  - id: CR-MED-017
+    description: "Every UserInterfaceRequirement should address at least one UseError"
+    entity: UserInterfaceRequirement
+    rule:
+      type: requireRelationship
+      relationship: addressesUseError
+      direction: outgoing
+      relatedKinds: [UseError]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-018
+    description: "Every UserInterfaceRequirement should be verified by at least one Test"
+    entity: UserInterfaceRequirement
+    rule:
+      type: requireRelationship
+      relationship: verify
+      direction: incoming
+      relatedKinds: [Test]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-022
+    description: "Every UseSpecification should specify at least one OperationalScenario"
+    entity: UseSpecification
+    rule:
+      type: requireRelationship
+      relationship: specifiesScenario
+      direction: outgoing
+      relatedKinds: [OperationalScenario]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-023
+    description: "Every UseErrorAnalysis should analyze at least one UseError"
+    entity: UseErrorAnalysis
+    rule:
+      type: requireRelationship
+      relationship: analyzesUseError
+      direction: outgoing
+      relatedKinds: [UseError]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-024
+    description: "Every UseError should contribute to at least one Hazard"
+    entity: UseError
+    rule:
+      type: requireRelationship
+      relationship: contributesToHazard
+      direction: outgoing
+      relatedKinds: [Hazard]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-025
+    description: "Every FormativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    entity: FormativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evaluatesRequirement
+      direction: outgoing
+      relatedKinds: [UserInterfaceRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-026
+    description: "Every SummativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    entity: SummativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evaluatesRequirement
+      direction: outgoing
+      relatedKinds: [UserInterfaceRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-027
+    description: "Every SummativeEvaluation should be evidenced by at least one ComplianceEvidence record"
+    entity: SummativeEvaluation
+    rule:
+      type: requireRelationship
+      relationship: evidences
+      direction: incoming
+      relatedKinds: [ComplianceEvidence]
+      min: 1
+    severity: warning

@@ -9,9 +9,5 @@ package MEMO_Ontology_Core_Software {
 
     part def SoftwareComponent :> Software { }
 
-    part def SoftwareModule :> Software { }
-
     part def Firmware :> Software { }
-
-    part def OperatingSystem :> Software { }
 }

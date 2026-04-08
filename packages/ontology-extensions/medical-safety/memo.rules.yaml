@@ -1,0 +1,55 @@
+closureRules:
+  - id: CR-MED-016
+    description: "Every EssentialPerformance claim should be preserved by at least one SafetyFunction"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: preserves
+      direction: incoming
+      relatedKinds: [SafetyFunction]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-028
+    description: "Every EssentialPerformance claim should support at least one PrimaryOperatingFunction"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: supportsOperatingFunction
+      direction: outgoing
+      relatedKinds: [PrimaryOperatingFunction]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-029
+    description: "Every EssentialPerformance claim should define at least one EssentialPerformanceLossCondition"
+    entity: EssentialPerformance
+    rule:
+      type: requireRelationship
+      relationship: definesLossCondition
+      direction: outgoing
+      relatedKinds: [EssentialPerformanceLossCondition]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-030
+    description: "Every CollateralStandardRequirement should apply to at least one regulated subject"
+    entity: CollateralStandardRequirement
+    rule:
+      type: requireRelationship
+      relationship: appliesStandardRequirement
+      direction: outgoing
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      min: 1
+    severity: warning
+
+  - id: CR-MED-031
+    description: "Every ParticularStandardRequirement should apply to at least one regulated subject"
+    entity: ParticularStandardRequirement
+    rule:
+      type: requireRelationship
+      relationship: appliesStandardRequirement
+      direction: outgoing
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      min: 1
+    severity: warning

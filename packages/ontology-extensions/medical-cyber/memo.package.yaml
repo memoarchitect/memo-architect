@@ -1,0 +1,4 @@
+name: "@memo/ontology-ext-medical-cyber"
+version: "0.1.0"
+type: ontology
+description: "Cybersecurity — threat models, vulnerabilities, security controls, SBOM, secure updates"

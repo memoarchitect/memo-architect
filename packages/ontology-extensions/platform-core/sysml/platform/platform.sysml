@@ -1,4 +1,4 @@
-package MEMO_Ontology_Core_Platform {
+package MEMO_Extension_Platform {
 
     part def Docker :> Software { }
 
@@ -19,5 +19,4 @@ package MEMO_Ontology_Core_Platform {
     interface def BrokerExchange :> TopicChannel { }
 
     interface def BrokerQueue :> QueueChannel { }
-
 }

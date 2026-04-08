@@ -1,0 +1,4 @@
+name: "@memo/ontology-ext-medical-clinical"
+version: "0.1.0"
+type: ontology
+description: "Clinical evaluation & post-market — clinical claims, evidence, evaluation plans/reports, treatment pathways"

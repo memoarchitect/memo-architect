@@ -33,16 +33,54 @@ package MEMO_Ontology_Medical_Risk {
         attribute severity : SeverityLevel;
     }
 
+    enum def RiskAcceptability {
+        enum Acceptable;
+        enum ALARP;
+        enum Unacceptable;
+    }
+
     requirement def Risk {
         attribute riskId : String;
         attribute title : String;
-        attribute severityPost : SeverityLevel;
-        attribute probabilityPost : ProbabilityLevel;
+        attribute initialSeverity : SeverityLevel;
+        attribute initialProbability : ProbabilityLevel;
+        attribute residualSeverity : SeverityLevel;
+        attribute residualProbability : ProbabilityLevel;
+        attribute acceptability : RiskAcceptability;
     }
 
     requirement def RiskControl {
         attribute rcId : String;
         attribute title : String;
+    }
+
+    part def SequenceOfEvents {
+        attribute seqId : String;
+        attribute title : String;
+    }
+
+    part def InitialRiskAssessment {
+        attribute severity : SeverityLevel;
+        attribute probability : ProbabilityLevel;
+        attribute acceptability : RiskAcceptability;
+    }
+
+    part def ResidualRiskAssessment {
+        attribute severity : SeverityLevel;
+        attribute probability : ProbabilityLevel;
+        attribute acceptability : RiskAcceptability;
+    }
+
+    part def RiskMatrix {
+        attribute name : String;
+        attribute severityLevels : Integer;
+        attribute probabilityLevels : Integer;
+    }
+
+    part def RiskMatrixCell {
+        attribute severity : SeverityLevel;
+        attribute probability : ProbabilityLevel;
+        attribute acceptability : RiskAcceptability;
     }
 
     part def ClinicalBenefit {

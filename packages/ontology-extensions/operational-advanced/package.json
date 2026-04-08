@@ -1,0 +1,11 @@
+{
+  "name": "@memo/ontology-operational-advanced",
+  "version": "0.1.0",
+  "description": "Advanced operational concepts — missions, contexts, substances, procedural relationships",
+  "private": true,
+  "files": [
+    "sysml/",
+    "memo.package.yaml"
+  ],
+  "license": "Apache-2.0"
+}

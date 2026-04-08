@@ -222,6 +222,35 @@ export function buildMemoModel(
         }
     }
 
+    // Phase 4: Validate relationship end types (warnings only)
+    if (registries?.relationshipRegistry) {
+        for (const rel of relationships) {
+            const regEntry = registries.relationshipRegistry.getRelType(rel.type);
+            if (!regEntry || regEntry.ends.length === 0) continue;
+
+            const sourceEl = elements.get(rel.sourceId);
+            const targetEl = elements.get(rel.targetId);
+
+            // Check if the source/target kinds match the typed ends
+            for (const end of regEntry.ends) {
+                if (!end.type) continue; // untyped ends allow any kind
+
+                // Match end to source or target by position (first end = source, second = target)
+                const endIndex = regEntry.ends.indexOf(end);
+                const el = endIndex === 0 ? sourceEl : targetEl;
+                if (!el) continue;
+
+                // Check if element kind matches the expected type
+                if (el.kind !== end.type && !el.kind.endsWith(end.type)) {
+                    errors.push({
+                        message: `[well-formedness] Relationship "${rel.type}" expects ${end.name} to be ${end.type}, but found ${el.kind}`,
+                        file: rel.file ?? '',
+                    });
+                }
+            }
+        }
+    }
+
     const relationshipsByType = new Map<string, MemoRelationship[]>();
     const outgoing = new Map<string, MemoRelationship[]>();
     const incoming = new Map<string, MemoRelationship[]>();

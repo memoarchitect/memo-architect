@@ -1,0 +1,50 @@
+closureRules:
+  - id: CR-MED-080
+    description: "Every ManufacturingProcedure should manufacture at least one subject"
+    entity: ManufacturingProcedure
+    rule:
+      type: requireRelationship
+      relationship: manufacturesSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-081
+    description: "Every InstallationProcedure should install at least one subject"
+    entity: InstallationProcedure
+    rule:
+      type: requireRelationship
+      relationship: installsSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-082
+    description: "Every PreventiveMaintenanceProcedure should maintain at least one subject"
+    entity: PreventiveMaintenanceProcedure
+    rule:
+      type: requireRelationship
+      relationship: maintainsSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-083
+    description: "Every CalibrationProcedure should calibrate at least one subject"
+    entity: CalibrationProcedure
+    rule:
+      type: requireRelationship
+      relationship: calibratesSubject
+      direction: outgoing
+      min: 1
+    severity: warning
+
+  - id: CR-MED-084
+    description: "Every InstallationQualification should qualify at least one installed subject"
+    entity: InstallationQualification
+    rule:
+      type: requireRelationship
+      relationship: qualifiesInstallation
+      direction: outgoing
+      min: 1
+    severity: warning

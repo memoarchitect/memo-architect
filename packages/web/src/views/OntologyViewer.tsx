@@ -1,6 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useModelStore, type GroupBy } from '../store/model-store';
 import { LAYER_COLORS, LAYER_ORDER } from '../constants';
+
+const CompletenessHints = lazy(() => import('./CompletenessHints').then(m => ({ default: m.CompletenessHints })));
+const ExtensionBrowser = lazy(() => import('./ExtensionBrowser').then(m => ({ default: m.ExtensionBrowser })));
 
 interface KindInfo {
     name: string;
@@ -36,7 +39,7 @@ export function OntologyViewer() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedKind, setSelectedKind] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'graph' | 'tree'>('tree');
+    const [activeTab, setActiveTab] = useState<'graph' | 'tree' | 'completeness' | 'extensions'>('tree');
 
     // Extract kinds from model DTO config data
     const kinds = useMemo((): KindInfo[] => {
@@ -247,6 +250,24 @@ export function OntologyViewer() {
                     >
                         Graph View
                     </button>
+                    <button
+                        onClick={() => setActiveTab('completeness')}
+                        className="px-3 py-1 text-xs rounded-md"
+                        style={activeTab === 'completeness'
+                            ? { background: '#1B3A4B', color: '#2DD4A8' }
+                            : { background: '#F0F0ED', color: '#6B7280' }}
+                    >
+                        Completeness
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('extensions')}
+                        className="px-3 py-1 text-xs rounded-md"
+                        style={activeTab === 'extensions'
+                            ? { background: '#1B3A4B', color: '#2DD4A8' }
+                            : { background: '#F0F0ED', color: '#6B7280' }}
+                    >
+                        Extensions
+                    </button>
                 </div>
 
                 {activeTab === 'tree' && (
@@ -399,6 +420,18 @@ export function OntologyViewer() {
                             </div>
                         )}
                     </div>
+                )}
+
+                {activeTab === 'completeness' && (
+                    <Suspense fallback={<div className="p-6 text-sm" style={{ color: '#9CA3AF' }}>Loading...</div>}>
+                        <CompletenessHints />
+                    </Suspense>
+                )}
+
+                {activeTab === 'extensions' && (
+                    <Suspense fallback={<div className="p-6 text-sm" style={{ color: '#9CA3AF' }}>Loading...</div>}>
+                        <ExtensionBrowser />
+                    </Suspense>
                 )}
             </div>
         </div>

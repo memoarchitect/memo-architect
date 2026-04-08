@@ -1,4 +1,4 @@
-# Phase C — Visual Ontology Viewer (P1)
+# Phase C — Visual Ontology Viewer (P2, demoted from P1)
 
 Replace the flat list ontology viewer with a visual graph grouped by architecture layer/domain.
 
