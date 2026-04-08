@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata } from '@memo/core';
 import type { BuilderRegistries } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
@@ -187,11 +187,15 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         const dto = modelToDTO(model, { viewpoints, architectureLayers, diagrams });
         dto.metadata = metadata;
 
+        // Build ontology package metadata for UI
+        const ontologyPackages = getPackageMetadata(cwd);
+
         return {
             messages: [
                 { type: 'model:update', payload: dto },
                 { type: 'validation:update', payload: validation },
                 { type: 'completeness:update', payload: completeness },
+                { type: 'ontology:packages', payload: { packages: ontologyPackages } },
             ],
         };
     }

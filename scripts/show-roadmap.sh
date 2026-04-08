@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
-# show-roadmap.sh — Show phases and issues from GitLab
-# Usage:
-#   pnpm run roadmap                   # phase summary only
-#   pnpm run roadmap -- --open         # open issues grouped by phase
-#   pnpm run roadmap -- --done         # closed issues grouped by phase
-#   pnpm run roadmap -- --bugs         # open bugs only
-#   pnpm run roadmap -- --phase c      # single phase detail (from local file)
+# show-roadmap.sh — Query GitLab live and display roadmap
+# Usage: pnpm run roadmap [--open|--done|--bugs|--phase <slug>]
+# Requires: glab CLI authenticated to gitlab.com
+#
+# GitLab is the single source of truth. No local cache files.
 set -euo pipefail
 
-PROJECT="somesh_sandbox/memo"
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PROJECT_ENCODED="somesh_sandbox%2Fmemo"
 PHASE=""
-MODE="summary"   # summary | open | done | bugs
+MODE="summary"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --phase|-p)  PHASE="${2,,}"; shift 2 ;;
+    --phase|-p)  PHASE="$(echo "$2" | tr '[:upper:]' '[:lower:]')"; shift 2 ;;
     --open)      MODE="open";    shift ;;
     --done)      MODE="done";    shift ;;
     --bugs)      MODE="bugs";    shift ;;
@@ -23,156 +20,171 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ── Single phase: cat the local synced file ───────────────────────────
-if [ -n "$PHASE" ]; then
-  FILE="$REPO_DIR/docs/roadmap/phase-${PHASE}.md"
-  if [ -f "$FILE" ]; then
-    cat "$FILE"
-  else
-    echo "Phase '$PHASE' not found. Available: 1 a b c d e f g h i j k n0 n1 n2 n3 n4 n5"
-    exit 1
-  fi
-  exit 0
-fi
-
-# ── Print header ──────────────────────────────────────────────────────
-echo "═══════════════════════════════════════════════════"
-echo "  MEMO Roadmap"
-echo "═══════════════════════════════════════════════════"
-echo ""
-
-# ── BUGS mode ─────────────────────────────────────────────────────────
-if [ "$MODE" = "bugs" ]; then
-  echo "  Open Bugs"
-  echo "  ─────────────────────────────────────────────────"
-  echo ""
-  glab issue list -R "$PROJECT" --per-page 200 2>/dev/null | tail -n +3 \
-    | grep -iE "bug|type::fix" \
-    | while IFS=$'\t' read -r id title labels created rest; do
-        [ -z "$id" ] && continue
-        printf "  %-8s %s\n" "$id" "$title"
-        [ -n "$labels" ] && printf "           %s\n" "$labels"
-      done
-  echo ""
-  echo "  pnpm run roadmap:open   # all open issues by phase"
-  exit 0
-fi
-
-# ── Phase summary table (always shown) ───────────────────────────────
-echo "  Phase │ Pri  │ Focus"
-echo "  ──────┼──────┼──────────────────────────────────────────"
-echo "    A   │ P0   │ Critical bug fixes"
-echo "   N0   │ P0 ★ │ Product contract stabilization"
-echo "   N1   │ P0   │ Golden path — first-time user experience"
-echo "    B   │ P1   │ UX foundation"
-echo "    D   │ P1   │ Diagrams & views (promoted)"
-echo "    F   │ P1   │ Model & scenarios (promoted)"
-echo "   N3   │ P1   │ Review outputs & shareable exports"
-echo "   N2   │ P1   │ Import & migration backbone"
-echo "    J   │ P1   │ Import — CLI formats + UI creation (promoted)"
-echo "    1   │ P1   │ Ontology cleanup (demoted)"
-echo "    C   │ P2   │ Visual ontology viewer (demoted)"
-echo "    E   │ P2   │ DHF improvements"
-echo "   N4   │ P2   │ Medical workbenches"
-echo "    G   │ P3   │ Examples (GPCA reference + starter templates)"
-echo "   N5   │ P3   │ Viral distribution & community"
-echo "    K   │ P3   │ Docs & manuals"
-echo "    H   │ --   │ Cloud & collaboration (deferred)"
-echo "    I   │ --   │ Domain packages (deferred)"
-echo ""
-echo "  Order: A → N0 → N1+B → D/F/N3 → N2/J → C/E → N4 → G/N5/K → H/I"
-echo ""
-
-if [ "$MODE" = "summary" ]; then
-  echo "  pnpm run roadmap            # phase summary"
-  echo "  pnpm run roadmap:open       # open issues by phase"
-  echo "  pnpm run roadmap:done       # closed issues by phase"
-  echo "  pnpm run roadmap:bugs       # open bugs only"
-  echo "  pnpm run roadmap -- --phase c  # single phase detail"
-  exit 0
-fi
-
-# ── Phase definitions — all known issue IDs per phase ─────────────────
-# Associative arrays not reliable in bash 3 (macOS default), use parallel arrays
-
-PHASE_NAMES=(
-  "Phase A — Critical Bug Fixes (P0)"
-  "Phase N0 — Product Contract Stabilization (P0)"
-  "Phase N1 — Golden Path: First-Time UX (P0)"
-  "Phase B — UX Foundation (P1)"
-  "Phase D — Diagrams & Views (P1)"
-  "Phase F — Model & Scenarios (P1)"
-  "Phase N3 — Review Outputs & Shareable Exports (P1)"
-  "Phase N2 — Import & Migration Backbone (P1)"
-  "Phase J — Import (P1)"
-  "Phase 1 — Ontology Cleanup (P1)"
-  "Phase C — Visual Ontology Viewer (P2)"
-  "Phase E — DHF Improvements (P2)"
-  "Phase N4 — Medical Workbenches (P2)"
-  "Phase G — Examples (P3)"
-  "Phase N5 — Viral Distribution & Community (P3)"
-  "Phase K — Docs & Manuals (P3)"
-  "Phase H — Cloud & Collaboration (deferred)"
-  "Phase I — Domain Packages (deferred)"
-)
-
-PHASE_IDS=(
-  "#81 #82 #83 #84 #85 #86 #91 #93"
-  "#125 #126 #127 #128"
-  "#129 #130 #131 #132 #45 #43 #36 #40"
-  "#62 #66 #69 #70 #74 #75"
-  "#71 #72 #15 #22"
-  "#73 #79"
-  "#137 #138 #139 #140 #34 #10 #11 #16 #17"
-  "#133 #134 #135 #136 #124"
-  "#88 #122 #123 #124"
-  "#97 #98 #99 #100 #101 #102 #103 #104 #105 #91 #93 #111"
-  "#7 #80 #89 #92"
-  "#76 #77 #78 #121"
-  "#141 #142 #143 #144 #41"
-  "#106 #107 #87 #108 #110 #109"
-  "#145 #146"
-  "#90 #94 #95 #96"
-  "#58 #59 #60"
-  "#56 #57"
-)
-
-# ── Fetch issues ──────────────────────────────────────────────────────
-if [ "$MODE" = "open" ]; then
-  echo "  Open Issues by Phase"
-  echo ""
-  RAW=$(glab issue list -R "$PROJECT" --per-page 200 2>/dev/null || echo "")
-  MATCH_IDS=$(echo "$RAW" | tail -n +3 | awk '{print $1}' | grep "^#" || echo "")
-  LABEL="open"
-elif [ "$MODE" = "done" ]; then
-  echo "  Closed Issues by Phase"
-  echo ""
-  RAW=$(glab issue list -R "$PROJECT" --per-page 200 --closed 2>/dev/null || echo "")
-  MATCH_IDS=$(echo "$RAW" | tail -n +3 | awk '{print $1}' | grep "^#" || echo "")
-  LABEL="closed"
-fi
-
-total=0
-for i in "${!PHASE_NAMES[@]}"; do
-  phase="${PHASE_NAMES[$i]}"
-  ids="${PHASE_IDS[$i]}"
-  lines=""
-  for id in $ids; do
-    if echo "$MATCH_IDS" | grep -qx "$id"; then
-      title=$(echo "$RAW" | tail -n +3 | grep "^${id}	" | cut -f2 | head -1)
-      lines+="$(printf '    %-8s %s\n' "$id" "$title")\n"
-      total=$((total + 1))
-    fi
+# ── Fetch from GitLab API ────────────────────────────────────────────
+fetch_issues() {
+  local state="${1:-opened}"
+  local all="[]"
+  local page=1
+  while true; do
+    local page_json
+    page_json=$(glab api "projects/$PROJECT_ENCODED/issues?state=$state&per_page=100&page=$page" 2>/dev/null || echo "[]")
+    local count
+    count=$(echo "$page_json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+    [ "$count" -eq 0 ] && break
+    all=$(python3 -c "import sys,json; print(json.dumps(json.loads(sys.argv[1])+json.loads(sys.argv[2])))" "$all" "$page_json")
+    [ "$count" -lt 100 ] && break
+    page=$((page + 1))
   done
-  [ -z "$lines" ] && continue
-  echo "  ─── $phase"
-  printf '%b' "$lines"
-  echo ""
-done
+  echo "$all"
+}
 
-echo "  Total $LABEL: $total"
-echo ""
-echo "  pnpm run roadmap -- --open        # open issues by phase"
-echo "  pnpm run roadmap -- --done        # closed issues by phase"
-echo "  pnpm run roadmap -- --bugs        # open bugs only"
-echo "  pnpm run roadmap -- --phase c     # single phase detail"
+MILESTONES_JSON=$(glab api "projects/$PROJECT_ENCODED/milestones?state=active&per_page=100" 2>/dev/null || echo "[]")
+
+if [ "$MODE" = "done" ]; then
+  ISSUES_JSON=$(fetch_issues "closed")
+else
+  ISSUES_JSON=$(fetch_issues "opened")
+fi
+
+# ── Render via Python ────────────────────────────────────────────────
+python3 - "$MODE" "$PHASE" "$MILESTONES_JSON" "$ISSUES_JSON" << 'PYEOF'
+import sys, json, re
+
+mode = sys.argv[1]
+phase_filter = sys.argv[2]
+milestones = json.loads(sys.argv[3])
+issues = json.loads(sys.argv[4])
+
+ms_by_id = {m["id"]: m for m in milestones}
+issues_by_ms = {}
+issues_no_ms = []
+for iss in issues:
+    ms = iss.get("milestone")
+    if ms and ms["id"] in ms_by_id:
+        issues_by_ms.setdefault(ms["id"], []).append(iss)
+    else:
+        issues_no_ms.append(iss)
+for ms_id in issues_by_ms:
+    issues_by_ms[ms_id].sort(key=lambda i: i["iid"])
+
+def phase_slug(title):
+    m = re.match(r"Phase\s+([A-Za-z0-9]+)", title)
+    if m: return m.group(1).lower()
+    m = re.match(r"(M\d+):", title)
+    if m: return m.group(1).lower()
+    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:30]
+
+def priority_key(desc):
+    if not desc: return 99
+    m = re.search(r"\**(P\d)\**", desc)
+    if m: return int(m.group(1)[1])
+    if "CRITICAL" in (desc or "").upper(): return 0
+    return 99
+
+def short_desc(desc):
+    if not desc: return ""
+    for line in desc.split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"): continue
+        line = re.sub(r"\*+", "", line)
+        return line[:100] + ("..." if len(line) > 100 else "")
+    return ""
+
+phase_ms = [(phase_slug(m["title"]), m) for m in milestones if m["title"].startswith("Phase ")]
+legacy_ms = [(phase_slug(m["title"]), m) for m in milestones if not m["title"].startswith("Phase ")]
+phase_ms.sort(key=lambda x: (priority_key(x[1].get("description", "")), x[0]))
+legacy_ms.sort(key=lambda x: x[0])
+
+# ── Single phase detail ─────────────────────────────────────────────
+if phase_filter:
+    found = None
+    for slug, m in phase_ms + legacy_ms:
+        if slug == phase_filter:
+            found = m; break
+    if not found:
+        slugs = [s for s, _ in phase_ms + legacy_ms]
+        print(f"  Phase '{phase_filter}' not found. Available: {' '.join(slugs)}")
+        sys.exit(1)
+
+    ms_issues = issues_by_ms.get(found["id"], [])
+    print(f"\n  {found['title']}")
+    print(f"  {'─' * len(found['title'])}")
+    desc = short_desc(found.get("description", ""))
+    if desc: print(f"  {desc}")
+    print(f"\n  Issues: {len(ms_issues)}\n")
+    for iss in ms_issues:
+        labels = ", ".join(l for l in iss.get("labels", []) if not l.startswith("priority::"))
+        print(f"    #{iss['iid']:<6} {iss['title']}")
+        if labels: print(f"           {labels}")
+    if not ms_issues: print("    (no open issues)")
+    print()
+    sys.exit(0)
+
+# ── Bugs mode ────────────────────────────────────────────────────────
+if mode == "bugs":
+    bug_issues = [i for i in issues if "bug" in i.get("labels", []) or "type::fix" in i.get("labels", [])]
+    bug_issues.sort(key=lambda i: i["iid"])
+    print("\n  Open Bugs\n  " + "─" * 50 + "\n")
+    for iss in bug_issues:
+        ms_title = iss["milestone"]["title"] if iss.get("milestone") else "—"
+        print(f"    #{iss['iid']:<6} {iss['title']}")
+        print(f"           {ms_title}")
+    if not bug_issues: print("    (no open bugs)")
+    print(f"\n  Total: {len(bug_issues)}\n")
+    sys.exit(0)
+
+# ── Summary mode ─────────────────────────────────────────────────────
+if mode == "summary":
+    print()
+    print("  ═══════════════════════════════════════════════════")
+    print("  MEMO Roadmap (live from GitLab)")
+    print("  ═══════════════════════════════════════════════════")
+    print()
+    print(f"  {'Phase':<8} {'Issues':>6}   Focus")
+    print(f"  {'──────':<8} {'──────':>6}   {'─' * 42}")
+    for slug, m in phase_ms:
+        count = len(issues_by_ms.get(m["id"], []))
+        focus = m["title"].split(":", 1)[1].strip() if ":" in m["title"] else m["title"]
+        if len(focus) > 50: focus = focus[:47] + "..."
+        print(f"  {slug.upper():<8} {count:>6}   {focus}")
+
+    if legacy_ms:
+        print()
+        print("  Other milestones:")
+        for slug, m in legacy_ms:
+            count = len(issues_by_ms.get(m["id"], []))
+            print(f"    {m['title']:<50} ({count} issues)")
+
+    total = len(issues)
+    unassigned = len(issues_no_ms)
+    print(f"\n  Total open: {total} | Unassigned: {unassigned}")
+    print()
+    print("  pnpm run roadmap:open          # issues by phase")
+    print("  pnpm run roadmap:bugs          # open bugs")
+    print("  pnpm run roadmap -- -p c2      # single phase")
+    print()
+    sys.exit(0)
+
+# ── Open / Done mode ────────────────────────────────────────────────
+label = "Open" if mode == "open" else "Closed"
+print(f"\n  {label} Issues by Phase\n")
+
+total = 0
+for slug, m in phase_ms + legacy_ms:
+    ms_issues = issues_by_ms.get(m["id"], [])
+    if not ms_issues: continue
+    print(f"  ─── {m['title']}")
+    for iss in ms_issues:
+        print(f"    #{iss['iid']:<6} {iss['title']}")
+        total += 1
+    print()
+
+if issues_no_ms:
+    print(f"  ─── (no milestone)")
+    for iss in sorted(issues_no_ms, key=lambda i: i["iid"]):
+        print(f"    #{iss['iid']:<6} {iss['title']}")
+        total += 1
+    print()
+
+print(f"  Total {label.lower()}: {total}\n")
+PYEOF

@@ -13,6 +13,7 @@ import type {
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
+import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
 
 export const FOLDER_ATTR = '_folder';
 
@@ -46,7 +47,7 @@ export interface DhfDoc {
 }
 
 /** Which explorer tab is active in the left panel */
-export type ExplorerTab = 'model' | 'views' | 'worksets';
+export type ExplorerTab = 'model' | 'views' | 'worksets' | 'ontologies';
 
 /** Generic analysis issue surfaced by tools (DSM, traceability, etc.) */
 export interface AnalysisIssue {
@@ -93,6 +94,15 @@ export interface ModelState {
     ontologyGroupBy: GroupBy;
     collapsedGroups: Set<string>;
 
+    // ─── Ontology selection state (Phase C2) ──────────────────────────────────
+    availableOntologies: OntologyPackageInfo[];
+    selectedOntologies: Set<string>;        // package names currently selected
+    focusedOntologyId: string | null;       // package name shown in detail panel
+    selectedOntologyKind: string | null;    // bidirectional selection sync (issues 4+8)
+    ontologyViewMode: 'visual' | 'table';   // LayerGrid vs LayerTable
+    showOntologyRelationships: boolean;     // collapsible relationships section
+    highlightedRelationshipType: string | null; // highlighted rel type in detail
+
     // Gap bar
     gapBarExpanded: boolean;
     gapBarHeight: number;
@@ -138,6 +148,16 @@ export interface ModelState {
     toggleLayerVisibility: (layer: string) => void;
     setOntologyGroupBy: (groupBy: GroupBy) => void;
     toggleGroupCollapsed: (groupId: string) => void;
+
+    // ─── Ontology selection actions (Phase C2) ────────────────────────────────
+    setAvailableOntologies: (ontologies: OntologyPackageInfo[]) => void;
+    toggleOntologySelection: (packageName: string) => void;
+    setFocusedOntology: (packageName: string | null) => void;
+    setSelectedOntologyKind: (kind: string | null) => void;
+    setOntologyViewMode: (mode: 'visual' | 'table') => void;
+    toggleOntologyRelationships: () => void;
+    setHighlightedRelationshipType: (type: string | null) => void;
+    saveOntologySelection: () => OntologySaveResult;
 
     // Gap bar actions
     toggleGapBar: () => void;
@@ -198,6 +218,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
     hiddenLayers: new Set<string>(),
     ontologyGroupBy: 'layer' as GroupBy,
     collapsedGroups: new Set<string>(),
+
+    // Ontology selection (Phase C2)
+    availableOntologies: [],
+    selectedOntologies: new Set<string>(),
+    focusedOntologyId: null,
+    selectedOntologyKind: null,
+    ontologyViewMode: 'visual' as const,
+    showOntologyRelationships: false,
+    highlightedRelationshipType: null,
 
     // Gap bar
     gapBarExpanded: false,
@@ -309,6 +338,63 @@ export const useModelStore = create<ModelState>((set, get) => ({
         else next.add(groupId);
         return { collapsedGroups: next };
     }),
+
+    // Ontology selection actions (Phase C2)
+    setAvailableOntologies: (ontologies) => set((s) => {
+        // Auto-populate selectedOntologies from packages marked selected: true
+        const selected = new Set<string>(ontologies.filter(o => o.selected).map(o => o.name));
+        // Default focus to first selected package
+        const focused = s.focusedOntologyId ?? (selected.size > 0 ? [...selected][0] : null);
+        return { availableOntologies: ontologies, selectedOntologies: selected, focusedOntologyId: focused };
+    }),
+    toggleOntologySelection: (packageName) => set((s) => {
+        const next = new Set(s.selectedOntologies);
+        if (next.has(packageName)) next.delete(packageName);
+        else next.add(packageName);
+        return { selectedOntologies: next };
+    }),
+    setFocusedOntology: (packageName) => set({ focusedOntologyId: packageName }),
+    setSelectedOntologyKind: (kind) => set({ selectedOntologyKind: kind }),
+    setOntologyViewMode: (mode) => set({ ontologyViewMode: mode }),
+    toggleOntologyRelationships: () => set((s) => ({ showOntologyRelationships: !s.showOntologyRelationships })),
+    setHighlightedRelationshipType: (type) => set((s) => ({
+        highlightedRelationshipType: s.highlightedRelationshipType === type ? null : type,
+    })),
+    saveOntologySelection: () => {
+        const { model, availableOntologies, selectedOntologies } = get();
+        if (!model) return { success: true };
+
+        // Find kinds belonging to deselected ontologies
+        const deselectedPackages = availableOntologies.filter(o => !selectedOntologies.has(o.name));
+        const deselectedKinds = new Set<string>();
+        for (const pkg of deselectedPackages) {
+            for (const layer of pkg.layers) {
+                for (const kind of layer.kinds) {
+                    deselectedKinds.add(kind.name);
+                }
+            }
+        }
+
+        // Collect orphaned elements
+        const orphanedElements: OrphanedElement[] = [];
+        if (deselectedKinds.size > 0) {
+            for (const el of Object.values(model.elements)) {
+                if (deselectedKinds.has(el.kind)) {
+                    const fromPkg = deselectedPackages.find(p =>
+                        p.layers.some(l => l.kinds.some(k => k.name === el.kind))
+                    );
+                    orphanedElements.push({
+                        elementId: el.id,
+                        elementName: el.name,
+                        kind: el.kind,
+                        fromOntology: fromPkg?.name ?? 'unknown',
+                    });
+                }
+            }
+        }
+
+        return { success: true, orphanedElements };
+    },
 
     // Gap bar actions
     toggleGapBar: () => set((s) => ({ gapBarExpanded: !s.gapBarExpanded })),

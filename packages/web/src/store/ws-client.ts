@@ -107,6 +107,9 @@ function handleMessage(msg: ServerMessage): void {
         case 'diagram:parse:result':
             store.applyDiagramParseResult(msg.payload.diagramId, msg.payload.elementIds, msg.payload.errors);
             break;
+        case 'ontology:packages':
+            store.setAvailableOntologies(msg.payload.packages);
+            break;
     }
 }
 
@@ -173,5 +176,12 @@ export function sendDiagramParse(diagramId: string, text: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         const payload: DiagramParseMessage['payload'] = { diagramId, text };
         ws.send(JSON.stringify({ type: 'diagram:parse', payload }));
+    }
+}
+
+/** Send selected ontology package names to server for persistence to memo.package.yaml */
+export function sendOntologySelection(selected: string[]): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ontology:save-selection', payload: { selected } }));
     }
 }
