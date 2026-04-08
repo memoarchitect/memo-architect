@@ -10,6 +10,7 @@ import type {
     MemoElement,
     MemoRelationship,
     DiagramDTO,
+    DiagramLayout,
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
@@ -114,6 +115,11 @@ export interface ModelState {
     attributeFilter: { key: string; value: string } | null;
     labelFilter: string | null;
     tagFilters: string[];  // active tag filters (AND logic)
+
+    // ─── Sidecar layouts (per diagramId) ─────────────────────────────
+    diagramLayouts: Record<string, DiagramLayout>;
+    mergeDiagramLayouts: (layouts: Record<string, DiagramLayout>) => void;
+    setNodeLayout: (diagramId: string, nodeId: string, pos: { x: number; y: number; width?: number; height?: number; color?: string }) => void;
 
     // ─── Diagram parse errors (per diagramId) ─────────────────────────
     diagramParseErrors: Record<string, string[]>;
@@ -239,6 +245,24 @@ export const useModelStore = create<ModelState>((set, get) => ({
     attributeFilter: null,
     labelFilter: null,
     tagFilters: [],
+
+    // Sidecar layouts
+    diagramLayouts: {},
+    mergeDiagramLayouts: (layouts) => set((s) => ({
+        diagramLayouts: { ...s.diagramLayouts, ...layouts },
+    })),
+    setNodeLayout: (diagramId, nodeId, pos) => set((s) => {
+        const prev = s.diagramLayouts[diagramId] ?? { nodes: {}, edges: {} };
+        return {
+            diagramLayouts: {
+                ...s.diagramLayouts,
+                [diagramId]: {
+                    ...prev,
+                    nodes: { ...prev.nodes, [nodeId]: { ...(prev.nodes[nodeId] ?? {}), ...pos } },
+                },
+            },
+        };
+    }),
 
     // Diagram parse errors
     diagramParseErrors: {},

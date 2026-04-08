@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
-import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage } from '@memo/core';
+import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout } from '@memo/core';
 
 /** Embedded data injected by `memo build` */
 interface EmbeddedData {
@@ -110,6 +110,9 @@ function handleMessage(msg: ServerMessage): void {
         case 'ontology:packages':
             store.setAvailableOntologies(msg.payload.packages);
             break;
+        case 'diagram:layout':
+            store.mergeDiagramLayouts(msg.payload.layouts);
+            break;
     }
 }
 
@@ -183,5 +186,12 @@ export function sendDiagramParse(diagramId: string, text: string): void {
 export function sendOntologySelection(selected: string[]): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'ontology:save-selection', payload: { selected } }));
+    }
+}
+
+/** Send diagram layout update (debounced node positions/edge styles) to server for sidecar persistence */
+export function sendDiagramLayoutUpdate(diagramId: string, layout: DiagramLayout): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'diagram:layout:update', payload: { diagramId, layout } }));
     }
 }

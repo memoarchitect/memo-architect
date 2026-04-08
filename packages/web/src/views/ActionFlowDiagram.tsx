@@ -16,7 +16,7 @@ import {
     useNodesState,
     useEdgesState,
     useReactFlow,
-    type Node,
+    type Node as RFNode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useModelStore } from '../store/model-store';
@@ -31,8 +31,10 @@ function ActionFlowDiagramInner() {
     const selectElement = useModelStore(s => s.selectElement);
     const { fitView } = useReactFlow();
 
-    const [nodes, setNodes, onNodesChange] = useNodesState([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [nodes, setNodes, onNodesChange] = useNodesState<RFNode<any>>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
     const [layoutVersion, setLayoutVersion] = useState(0);
     const [isLayouting, setIsLayouting] = useState(false);
 
@@ -79,7 +81,7 @@ function ActionFlowDiagramInner() {
         })));
     }, [selectedElementId]);
 
-    const onNodeClick = useCallback((_: any, node: Node) => {
+    const onNodeClick = useCallback((_: any, node: RFNode<any>) => {
         selectElement(node.id);
     }, [selectElement]);
 

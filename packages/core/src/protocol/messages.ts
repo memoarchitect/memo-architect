@@ -16,7 +16,8 @@ export type ServerMessage =
     | ErrorMessage
     | ImportResultMessage
     | DiagramParseResultMessage
-    | OntologyPackagesMessage;
+    | OntologyPackagesMessage
+    | DiagramLayoutMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -56,7 +57,8 @@ export type ClientMessage =
     | DiagramUpdateMessage
     | DiagramDeleteMessage
     | DiagramParseMessage
-    | OntologySaveSelectionMessage;
+    | OntologySaveSelectionMessage
+    | DiagramLayoutUpdateMessage;
 
 export interface RequestRefreshMessage {
     type: 'request:refresh';
@@ -167,7 +169,48 @@ export interface DiagramParseResultMessage {
     };
 }
 
-/** Server responds with CSV import results */
+// ─── Sidecar Layout ─────────────────────────────────────────────────────────
+
+/** Per-node visual override stored in .memo/layouts/<diagramId>.yaml */
+export interface DiagramNodeLayout {
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    color?: string;
+}
+
+/** Per-edge visual override */
+export interface DiagramEdgeLayout {
+    color?: string;
+    strokeWidth?: number;
+    labelVisible?: boolean;
+    style?: 'solid' | 'dashed' | 'dotted';
+}
+
+/** Full layout for one diagram, deserialized from the YAML sidecar */
+export interface DiagramLayout {
+    nodes: Record<string, DiagramNodeLayout>;
+    edges: Record<string, DiagramEdgeLayout>;
+    canvas?: { zoom?: number; pan?: { x: number; y: number }; grid?: number; snap?: boolean };
+}
+
+/** Server → Client: initial layout data for all diagrams that have sidecars */
+export interface DiagramLayoutMessage {
+    type: 'diagram:layout';
+    payload: { layouts: Record<string, DiagramLayout> };
+}
+
+/** Client → Server: save updated positions after user drags nodes */
+export interface DiagramLayoutUpdateMessage {
+    type: 'diagram:layout:update';
+    payload: {
+        diagramId: string;
+        layout: DiagramLayout;
+    };
+}
+
+/** Server → Client: CSV import results */
 export interface ImportResultMessage {
     type: 'import:result';
     payload: {
