@@ -1,7 +1,8 @@
 # Starting a New Project
 
-This guide walks you through creating a new medical device project with MEMO,
-understanding the folder layout, and launching the interactive viewer.
+**Detailed walkthrough.** If you haven't done the 5-minute quickstart yet, start there → [Quick Start](running.md).
+
+This guide covers the full project structure, CoSMA layers, SysML syntax patterns, and how to organize larger models.
 
 ## Prerequisites
 
@@ -13,7 +14,7 @@ understanding the folder layout, and launching the interactive viewer.
 Make sure MEMO is built first:
 
 ```bash
-git clone https://github.com/someshkashyap/memo.git
+git clone https://gitlab.com/somesh_sandbox/memo.git
 cd memo
 pnpm install
 pnpm build

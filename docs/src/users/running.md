@@ -1,6 +1,6 @@
 # Quick Start
 
-This guide walks you through creating a new MEMO project and running the dev server.
+**Canonical 5-minute path:** install → scaffold → first output. Once it works, see [Starting a New Project](new-project.md) for the full walkthrough.
 
 ## 1. Create a New Project
 
@@ -118,6 +118,7 @@ The parser recursively finds all `.sysml` files — organize however suits your 
 
 ## Next Steps
 
-- Read the [CLI Usage](cli-usage.md) for all commands and options
-- Explore the [Configuration Reference](../developers/config/reference.md) to customize kinds, rules, and viewpoints
-- See the [Architecture Overview](../developers/architecture/overview.md) to understand the tool internals
+- **Detailed walkthrough** → [Starting a New Project](new-project.md) — CoSMA layers, SysML syntax, multi-file models
+- **All CLI commands** → [CLI Usage](cli-usage.md)
+- **Customize your model** → [Configuration Reference](../developers/config/reference.md)
+- **Understand the internals** → [Architecture Overview](../developers/architecture/overview.md)

@@ -34,8 +34,15 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 **Current UI (6-mode tabs — to be replaced in Phase 10):**
 - catalog, diagram, actionflow, dsm, scenario, ontology
 
-**Reference documents for architecture vision:**
-- `docs/architecture/platform-strategy.md` — Finalized platform architecture
+## Architecture Reference Documents
+
+- `docs/roadmap/north-star.md` — **Product strategy and north star** — read this before making roadmap decisions
+- `docs/src/developers/architecture/overview.md` — package architecture diagram
+- `docs/src/developers/architecture/platform-strategy.md` — two-repo split, package format
+- `docs/src/developers/architecture/data-flow.md` — data flow through the system
+- `docs/src/developers/architecture/websocket-protocol.md` — CLI ↔ web app protocol
+- `docs/src/developers/adr/ADR-1-6-ontology-core-medical-split.md` — three-tier ontology rationale
+- `docs/src/developers/adr/ADR-1-8-project-format-contract.md` — canonical project config format (memo.config.yaml vs memo.package.yaml)
 - `/Users/someshkashyap/Downloads/System Architecture Document-wip.pdf`
 - `/Users/someshkashyap/Downloads/System Architecture Overview.pdf`
 - `/Users/someshkashyap/EA/NewMDG/AfferaMDG.qea` (SQLite, 78 stereotypes)
@@ -166,7 +173,7 @@ Phases 1-18 complete (Foundation through GPCA Reference Model). 352+ tests passi
 - **Three-tier ontology** — `ontology-core` (domain-agnostic) → `ontology-medical` (regulated medical) → `medical-modeling-profile` (rules/viewpoints/templates). See ADR-1-6
 - **SysML v2 is single source of truth** — Kinds/relationships derived from SysML AST, not YAML catalogs (Phase 7)
 - **Directory = Layer (Apollo-11 pattern)** — `sysml/<layer>/<file>.sysml` determines architecture layer (Phase 7)
-- **Config decomposes into purpose-specific files** — `memo.package.yaml` + `memo.rendering.yaml` + `memo.rules.yaml` replace monolithic `memo.config.yaml` (Phase 8)
+- **Two-format config contract** — device projects use `memo.config.yaml`; ontology/profile packages use `memo.package.yaml` + `memo.rendering.yaml` + `memo.rules.yaml`. See ADR-1-8
 - **Ontology locked per project** — Selected at `memo init`, changing shows validation errors, no auto-migration (Phase 9)
 - **Standalone ontology viewer** — Read-only tool at `tools/ontology-viewer/`, not a mode in MEMO Architect (Phase 12)
 - **Two-repo split** — `memo-base` (ontology, Layer 2) and `memo-architect` (tool, Layer 3) are separate git repos; git subtree for local dev

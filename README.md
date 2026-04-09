@@ -193,6 +193,8 @@ pnpm run roadmap -- -p c2     # Single phase detail
 
 To add or modify work: create/update GitLab issues and milestones directly.
 
+**Product strategy:** [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md) — the strategic anchor for prioritization decisions.
+
 ## Documentation
 
 ```bash
