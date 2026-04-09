@@ -255,8 +255,11 @@ export function App() {
         return () => window.removeEventListener('keydown', handler);
     }, [toggleGapBar]);
 
-    // Only hide the explorer for views with their own full-page internal explorer.
-    const showExplorer = activeView.type !== 'ontology' && activeView.type !== 'scenario-editor';
+    // Only hide the explorer for views with their own full-page internal explorer,
+    // or tool views that are self-contained (DSM has its own filter toolbar).
+    const showExplorer = activeView.type !== 'ontology'
+        && activeView.type !== 'scenario-editor'
+        && activeView.type !== 'dsm';
 
     // Auto-open the sidebar whenever we switch to a view that needs it but it's
     // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).
@@ -399,9 +402,12 @@ export function App() {
                     </Routes>
                 </div>
 
-                {/* Right: Properties Panel — hidden in element-detail, catalog, and DHF modes */}
+                {/* Right: Properties Panel — hidden in element-detail, catalog, DHF, and scenario modes */}
                 {/* Switches to BulkEditPanel when 2+ elements selected */}
-                {activeView.type !== 'element-detail' && !isCatalogRoute && activeMode !== 'dhf' && (
+                {activeView.type !== 'element-detail'
+                    && activeView.type !== 'scenario-editor'
+                    && !isCatalogRoute
+                    && activeMode !== 'dhf' && (
                     selectedElementIds.size >= 2
                         ? <BulkEditPanel />
                         : <UnifiedPropertiesPanel />
