@@ -9,8 +9,11 @@
 
 import { useEffect } from 'react';
 import { useModelStore } from '../../store/model-store';
+import { LAYER_ORDER } from '../../constants';
 import { OntologySelectionPanel } from './OntologySelectionPanel';
 import { OntologyDetailPanel } from './OntologyDetailPanel';
+
+const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 
 export function OntologyViewer() {
     const availableOntologies = useModelStore(s => s.availableOntologies);
@@ -42,7 +45,9 @@ export function OntologyViewer() {
                 layerMap.get(el.layer)!.push(el.kind);
             }
         }
-        const layers = [...layerMap.entries()].map(([layer, kinds]) => ({
+        const layers = [...layerMap.entries()]
+        .sort(([a], [b]) => (LAYER_RANK[a] ?? 99) - (LAYER_RANK[b] ?? 99))
+        .map(([layer, kinds]) => ({
             id: layer,
             label: layer.charAt(0).toUpperCase() + layer.slice(1),
             color: '#6B7280',
