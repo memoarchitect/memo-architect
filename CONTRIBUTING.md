@@ -13,6 +13,7 @@ glab --version   # >= 1.89.0 (for GitLab issue management)
 ## Setup
 
 ```bash
+git clone https://gitlab.com/somesh_sandbox/memo.git
 pnpm install
 pnpm run build
 pnpm run test          # all tests must pass before starting work

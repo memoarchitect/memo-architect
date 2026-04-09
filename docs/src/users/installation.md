@@ -8,7 +8,7 @@
 ## Clone and Install
 
 ```bash
-git clone https://github.com/someshkashyap/memo.git
+git clone https://gitlab.com/somesh_sandbox/memo.git
 cd memo
 pnpm install
 ```

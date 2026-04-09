@@ -41,7 +41,7 @@ By the end of this tutorial you will have:
 ### Clone and Build
 
 ```bash
-git clone https://github.com/someshkashyap/memo.git
+git clone https://gitlab.com/somesh_sandbox/memo.git
 cd memo
 pnpm install
 pnpm build
