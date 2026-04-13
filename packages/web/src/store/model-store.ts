@@ -28,6 +28,7 @@ export type ActiveView =
     | { type: 'actionflow' }
     | { type: 'dsm' }
     | { type: 'ontology' }
+    | { type: 'ontology-detail'; packageName: string; layerId?: string }
     | { type: 'traceability' }
     | { type: 'scenario-editor' }
     | { type: 'model-diff' }
@@ -35,6 +36,9 @@ export type ActiveView =
     | { type: 'statistics' }
     | { type: 'dhf-dashboard' }
     | { type: 'dhf-document'; docId: string }
+    | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
+    | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
+    | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
     | { type: 'welcome' };
 
 /** A DHF document created by the user in the DHF Workbench */
@@ -103,6 +107,7 @@ export interface ModelState {
     ontologyViewMode: 'visual' | 'table';   // LayerGrid vs LayerTable
     showOntologyRelationships: boolean;     // collapsible relationships section
     highlightedRelationshipType: string | null; // highlighted rel type in detail
+    ontologyInstallStatus: { installing: boolean; lastInstalled?: string; error?: string };
 
     // Gap bar
     gapBarExpanded: boolean;
@@ -164,6 +169,7 @@ export interface ModelState {
     toggleOntologyRelationships: () => void;
     setHighlightedRelationshipType: (type: string | null) => void;
     saveOntologySelection: () => OntologySaveResult;
+    setOntologyInstallStatus: (status: { installing: boolean; lastInstalled?: string; error?: string }) => void;
 
     // Gap bar actions
     toggleGapBar: () => void;
@@ -233,6 +239,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     ontologyViewMode: 'visual' as const,
     showOntologyRelationships: false,
     highlightedRelationshipType: null,
+    ontologyInstallStatus: { installing: false },
 
     // Gap bar
     gapBarExpanded: false,
@@ -276,7 +283,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
     pendingEdits: new Map(),
 
     // Actions
-    setModel: (model) => set({ model }),
+    setModel: (model) => set((s) => ({
+        model,
+        // Navigate to dashboard on first model load if we're on welcome/dashboard
+        activeView: (s.activeView.type === 'welcome' || s.activeView.type === 'dashboard')
+            && Object.keys(model.elements).length > 0
+            ? { type: 'dashboard' }
+            : s.activeView,
+    })),
     setValidation: (validation) => set({ validation }),
     setCompleteness: (completeness) => set({ completeness }),
     setConnected: (connected) => set({ connected }),
@@ -419,6 +433,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         return { success: true, orphanedElements };
     },
+
+    setOntologyInstallStatus: (status) => set({ ontologyInstallStatus: status }),
 
     // Gap bar actions
     toggleGapBar: () => set((s) => ({ gapBarExpanded: !s.gapBarExpanded })),

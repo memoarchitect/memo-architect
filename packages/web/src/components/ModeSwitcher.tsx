@@ -8,6 +8,7 @@ const DOCS_URL = '/help/';
 // ─── Primary navigation modes ────────────────────────────────────────────────
 
 const NAV_MODES = [
+    { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
     { id: 'catalog', label: 'Model Explorer', icon: '☰' },
     { id: 'diagram', label: 'Diagrams', icon: '⊟' },
     { id: 'dhf', label: 'DHF', icon: '⊞' },
@@ -18,7 +19,7 @@ const NAV_MODES = [
 type NavModeId = typeof NAV_MODES[number]['id'];
 
 // Tool view types — when one of these is active, no nav mode is highlighted
-const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff']);
+const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff', 'review-dashboard', 'workflow-wizard']);
 
 // ─── Tools dropdown items ────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ const TOOLS: ToolItem[] = [
     { id: 'statistics', label: 'Statistics Dashboard', icon: '⊠', view: { type: 'statistics' } },
     { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', view: { type: 'compliance-wizard' } },
     { id: 'model-diff', label: 'Model Diff', icon: '↔', view: { type: 'model-diff' } },
+    { id: 'review-dashboard', label: 'Design Review Dashboard', icon: '📋', view: { type: 'review-dashboard' } },
+    { id: 'workflow-wizard', label: 'Workflow Wizard', icon: '🧙', view: { type: 'workflow-wizard' } },
 ];
 
 // ─── Tools dropdown ──────────────────────────────────────────────────────────
@@ -140,8 +143,9 @@ export function ModeSwitcher() {
         if (TOOL_VIEW_TYPES.has(activeView.type)) return '';
         if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
         if (activeView.type === 'scenario-editor') return 'scenario';
-        if (activeView.type === 'ontology') return 'ontology';
+        if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') return 'ontology';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
+        if (activeView.type === 'dashboard') return 'dashboard';
         return activeMode;
     })();
 
@@ -158,6 +162,10 @@ export function ModeSwitcher() {
         }
         setActiveMode(modeId);
         switch (modeId) {
+            case 'dashboard':
+                setActiveView({ type: 'dashboard' });
+                navigate('/');
+                break;
             case 'catalog':
                 navigate('/catalog');
                 break;

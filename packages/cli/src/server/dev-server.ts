@@ -329,6 +329,92 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                             console.error('[Ontology] Failed to save selection:', e);
                         }
                     }
+                } else if (msg.type === 'ontology:install') {
+                    // Install an ontology from git URL, npm package, or local path
+                    const { projectRoot } = options;
+                    const source = msg.payload?.source;
+                    if (!source) {
+                        ws.send(JSON.stringify({ type: 'ontology:install:result', payload: { success: false, error: 'No source provided' } }));
+                    } else {
+                        try {
+                            const { execSync } = await import('node:child_process');
+                            const { detectInstallMode } = await import('../commands/install.js');
+                            const mode = detectInstallMode(source);
+                            const memoPkgsDir = resolve(projectRoot, 'memo_packages');
+                            if (!existsSync(memoPkgsDir)) mkdirSync(memoPkgsDir, { recursive: true });
+
+                            if (mode === 'git') {
+                                // Clone into memo_packages/<repo-name>
+                                const repoName = source.split('/').pop()?.replace('.git', '') ?? 'ontology';
+                                const destDir = resolve(memoPkgsDir, repoName);
+                                if (!existsSync(destDir)) {
+                                    execSync(`git clone --depth 1 ${source} ${destDir}`, { stdio: 'pipe' });
+                                }
+                            } else if (mode === 'local') {
+                                // Symlink local path
+                                const { basename: bn } = await import('node:path');
+                                const { symlinkSync } = await import('node:fs');
+                                const resolvedSource = resolve(projectRoot, source);
+                                const destDir = resolve(memoPkgsDir, bn(resolvedSource));
+                                if (!existsSync(destDir)) {
+                                    symlinkSync(resolvedSource, destDir);
+                                }
+                            }
+
+                            // Refresh packages and broadcast
+                            const { getPackageMetadata } = await import('@memo/core');
+                            const packages = getPackageMetadata(projectRoot);
+                            const pkgMsg = { type: 'ontology:packages' as const, payload: { packages } };
+                            for (const client of clients) {
+                                if (client.readyState === 1) client.send(JSON.stringify(pkgMsg));
+                            }
+                            ws.send(JSON.stringify({
+                                type: 'ontology:install:result',
+                                payload: { success: true, packageName: source },
+                            }));
+                            console.log(`[Ontology] Installed package from ${source}`);
+                        } catch (e: any) {
+                            ws.send(JSON.stringify({
+                                type: 'ontology:install:result',
+                                payload: { success: false, error: e?.message ?? String(e) },
+                            }));
+                            console.error('[Ontology] Install failed:', e);
+                        }
+                    }
+                } else if (msg.type === 'ontology:remove') {
+                    // Remove an installed ontology package
+                    const { projectRoot } = options;
+                    const pkgName = msg.payload?.packageName;
+                    if (!pkgName) {
+                        ws.send(JSON.stringify({ type: 'ontology:remove:result', payload: { success: false, packageName: '', error: 'No package name' } }));
+                    } else {
+                        try {
+                            const shortName = pkgName.replace('@memo/', '');
+                            const memoPkgsPath = resolve(projectRoot, 'memo_packages', shortName);
+                            if (existsSync(memoPkgsPath)) {
+                                const { rmSync } = await import('node:fs');
+                                rmSync(memoPkgsPath, { recursive: true, force: true });
+                            }
+                            // Refresh and broadcast
+                            const { getPackageMetadata } = await import('@memo/core');
+                            const packages = getPackageMetadata(projectRoot);
+                            const pkgMsg = { type: 'ontology:packages' as const, payload: { packages } };
+                            for (const client of clients) {
+                                if (client.readyState === 1) client.send(JSON.stringify(pkgMsg));
+                            }
+                            ws.send(JSON.stringify({
+                                type: 'ontology:remove:result',
+                                payload: { success: true, packageName: pkgName },
+                            }));
+                            console.log(`[Ontology] Removed package ${pkgName}`);
+                        } catch (e: any) {
+                            ws.send(JSON.stringify({
+                                type: 'ontology:remove:result',
+                                payload: { success: false, packageName: pkgName, error: e?.message ?? String(e) },
+                            }));
+                            console.error('[Ontology] Remove failed:', e);
+                        }
+                    }
                 }
             } catch (e) {
                 console.error('WebSocket Error:', e);

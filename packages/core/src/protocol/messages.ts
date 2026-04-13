@@ -17,7 +17,9 @@ export type ServerMessage =
     | ImportResultMessage
     | DiagramParseResultMessage
     | OntologyPackagesMessage
-    | DiagramLayoutMessage;
+    | DiagramLayoutMessage
+    | OntologyInstallResultMessage
+    | OntologyRemoveResultMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -58,6 +60,8 @@ export type ClientMessage =
     | DiagramDeleteMessage
     | DiagramParseMessage
     | OntologySaveSelectionMessage
+    | OntologyInstallMessage
+    | OntologyRemoveMessage
     | DiagramLayoutUpdateMessage;
 
 export interface RequestRefreshMessage {
@@ -68,6 +72,30 @@ export interface RequestRefreshMessage {
 export interface OntologySaveSelectionMessage {
     type: 'ontology:save-selection';
     payload: { selected: string[] };
+}
+
+/** Client requests installing an ontology from git URL, npm package, or local path */
+export interface OntologyInstallMessage {
+    type: 'ontology:install';
+    payload: { source: string };
+}
+
+/** Server responds to ontology:install with success/failure */
+export interface OntologyInstallResultMessage {
+    type: 'ontology:install:result';
+    payload: { success: boolean; packageName?: string; error?: string };
+}
+
+/** Client requests removing an installed ontology package */
+export interface OntologyRemoveMessage {
+    type: 'ontology:remove';
+    payload: { packageName: string };
+}
+
+/** Server responds to ontology:remove with success/failure */
+export interface OntologyRemoveResultMessage {
+    type: 'ontology:remove:result';
+    payload: { success: boolean; packageName: string; error?: string };
 }
 
 /** Client requests an element field update (2-way sync) */

@@ -9,9 +9,10 @@
 // implemented. Until then this panel renders the home card and a layer list.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useModelStore } from '../../store/model-store';
 import { OntologyHome } from './OntologyHome';
+import { KindPropertiesPanel } from './KindPropertiesPanel';
 import type { OntologyPackageInfo } from '../../types/ontology';
 import { LAYER_COLORS } from '../../constants';
 
@@ -21,17 +22,20 @@ const RelationshipsSection = lazy(() => import('./RelationshipsSection').then(m 
 
 interface OntologyDetailPanelProps {
     ontology: OntologyPackageInfo;
+    onBack?: () => void;
 }
 
-export function OntologyDetailPanel({ ontology }: OntologyDetailPanelProps) {
+export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelProps) {
     const viewMode = useModelStore(s => s.ontologyViewMode);
     const setOntologyViewMode = useModelStore(s => s.setOntologyViewMode);
     const selectedKind = useModelStore(s => s.selectedOntologyKind);
     const setSelectedKind = useModelStore(s => s.setSelectedOntologyKind);
+    const showRelationships = useModelStore(s => s.showOntologyRelationships);
+    const toggleRelationships = useModelStore(s => s.toggleOntologyRelationships);
     const model = useModelStore(s => s.model);
 
     // Enrich kind instanceCounts from model
-    const enrichedOntology: OntologyPackageInfo = {
+    const enrichedOntology: OntologyPackageInfo = useMemo(() => ({
         ...ontology,
         layers: ontology.layers.map(layer => ({
             ...layer,
@@ -45,47 +49,90 @@ export function OntologyDetailPanel({ ontology }: OntologyDetailPanelProps) {
                     .map(vp => vp.id) ?? [],
             })),
         })),
-    };
+    }), [ontology, model]);
+
+    // Find the selected kind info for properties panel
+    const selectedKindInfo = useMemo(() => {
+        if (!selectedKind) return null;
+        for (const layer of enrichedOntology.layers) {
+            const found = layer.kinds.find(k => k.name === selectedKind);
+            if (found) return found;
+        }
+        return null;
+    }, [selectedKind, enrichedOntology.layers]);
 
     const activeStyle: React.CSSProperties = { background: '#1B3A4B', color: '#2DD4A8', border: '1px solid transparent' };
     const inactiveStyle: React.CSSProperties = { background: '#F0F0ED', color: '#6B7280', border: '1px solid transparent' };
 
     return (
-        <div className="flex-1 overflow-y-auto p-6" style={{ background: '#F7F7F5' }}>
-            {/* Ontology summary home card */}
-            <OntologyHome ontology={enrichedOntology} />
+        <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6" style={{ background: '#F7F7F5' }}>
+                {/* Breadcrumb with back navigation */}
+                {onBack && (
+                    <div className="flex items-center gap-1.5 mb-4 text-xs" style={{ color: '#9CA3AF' }}>
+                        <button onClick={onBack} className="hover:underline" style={{ color: '#2563EB' }}>
+                            Ontology Library
+                        </button>
+                        <span>/</span>
+                        <span style={{ color: '#374151' }}>{ontology.name}</span>
+                    </div>
+                )}
 
-            {/* Visual / Table toggle */}
-            <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs" style={{ color: '#9CA3AF' }}>Layers:</span>
-                <button
-                    onClick={() => setOntologyViewMode('visual')}
-                    className="px-2.5 py-1 text-xs rounded-md font-medium"
-                    style={viewMode === 'visual' ? activeStyle : inactiveStyle}
-                >
-                    ⊞ Visual
-                </button>
-                <button
-                    onClick={() => setOntologyViewMode('table')}
-                    className="px-2.5 py-1 text-xs rounded-md font-medium"
-                    style={viewMode === 'table' ? activeStyle : inactiveStyle}
-                >
-                    ≡ Table
-                </button>
+                {/* Ontology summary home card */}
+                <OntologyHome ontology={enrichedOntology} />
+
+                {/* Toolbar: Visual/Table toggle + Relationships toggle */}
+                <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs" style={{ color: '#9CA3AF' }}>Layers:</span>
+                    <button
+                        onClick={() => setOntologyViewMode('visual')}
+                        className="px-2.5 py-1 text-xs rounded-md font-medium"
+                        style={viewMode === 'visual' ? activeStyle : inactiveStyle}
+                    >
+                        Visual
+                    </button>
+                    <button
+                        onClick={() => setOntologyViewMode('table')}
+                        className="px-2.5 py-1 text-xs rounded-md font-medium"
+                        style={viewMode === 'table' ? activeStyle : inactiveStyle}
+                    >
+                        Table
+                    </button>
+                    <span className="mx-1" style={{ width: '1px', height: '16px', background: '#E5E5E0' }} />
+                    <button
+                        onClick={toggleRelationships}
+                        className="px-2.5 py-1 text-xs rounded-md font-medium"
+                        style={showRelationships ? activeStyle : inactiveStyle}
+                    >
+                        {showRelationships ? 'Hide' : 'Show'} Relationships
+                    </button>
+                </div>
+
+                {/* Layer view */}
+                <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
+                    {viewMode === 'visual'
+                        ? <LayerGrid layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
+                        : <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
+                    }
+                </Suspense>
+
+                {/* Relationships section (hidden by default, toggled via toolbar) */}
+                {showRelationships && (
+                    <Suspense fallback={null}>
+                        <RelationshipsSection ontology={enrichedOntology} />
+                    </Suspense>
+                )}
             </div>
 
-            {/* Layer view */}
-            <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
-                {viewMode === 'visual'
-                    ? <LayerGrid layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
-                    : <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
-                }
-            </Suspense>
-
-            {/* Relationships section */}
-            <Suspense fallback={null}>
-                <RelationshipsSection ontology={enrichedOntology} />
-            </Suspense>
+            {/* Kind properties slide-in panel */}
+            {selectedKindInfo && (
+                <KindPropertiesPanel
+                    kind={selectedKindInfo}
+                    layers={enrichedOntology.layers}
+                    onKindClick={setSelectedKind}
+                    onClose={() => setSelectedKind(null)}
+                />
+            )}
         </div>
     );
 }

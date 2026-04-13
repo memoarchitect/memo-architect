@@ -110,6 +110,16 @@ function handleMessage(msg: ServerMessage): void {
         case 'ontology:packages':
             store.setAvailableOntologies(msg.payload.packages);
             break;
+        case 'ontology:install:result':
+            store.setOntologyInstallStatus({
+                installing: false,
+                lastInstalled: msg.payload.success ? msg.payload.packageName : undefined,
+                error: msg.payload.error,
+            });
+            break;
+        case 'ontology:remove:result':
+            store.setOntologyInstallStatus({ installing: false });
+            break;
         case 'diagram:layout':
             store.mergeDiagramLayouts(msg.payload.layouts);
             break;
@@ -186,6 +196,20 @@ export function sendDiagramParse(diagramId: string, text: string): void {
 export function sendOntologySelection(selected: string[]): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'ontology:save-selection', payload: { selected } }));
+    }
+}
+
+/** Send ontology install request to server */
+export function sendOntologyInstall(source: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ontology:install', payload: { source } }));
+    }
+}
+
+/** Send ontology remove request to server */
+export function sendOntologyRemove(packageName: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ontology:remove', payload: { packageName } }));
     }
 }
 
