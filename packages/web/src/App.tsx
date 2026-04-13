@@ -28,6 +28,9 @@ const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').the
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
 const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ default: m.DhfWorkbench })));
 const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
+const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
+const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
+const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -55,6 +58,7 @@ function UnifiedCanvas() {
             case 'traceability':
                 return <TraceabilityMatrix />;
             case 'ontology':
+            case 'ontology-detail':
                 return <OntologyViewer />;
             case 'scenario-editor':
                 return <ScenarioEditor />;
@@ -71,14 +75,21 @@ function UnifiedCanvas() {
                 return <DhfDashboard />;
             case 'element-detail':
                 return <ElementDetailView />;
+            case 'dashboard':
+                return <Dashboard />;
+            case 'review-dashboard':
+                return <ReviewDashboard />;
+            case 'workflow-wizard':
+                return <WorkflowWizard />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;
         }
     };
 
-    if (activeView.type === 'welcome') {
-        return <WelcomeCanvas />;
+    if (activeView.type === 'welcome' || activeView.type === 'dashboard') {
+        // Dashboard and Welcome render without Suspense (they're fast)
+        if (activeView.type === 'welcome') return <WelcomeCanvas />;
     }
 
     return (
@@ -257,8 +268,7 @@ export function App() {
 
     // Only hide the explorer for views with their own full-page internal explorer,
     // or tool views that are self-contained (DSM has its own filter toolbar).
-    const showExplorer = activeView.type !== 'ontology'
-        && activeView.type !== 'scenario-editor'
+    const showExplorer = activeView.type !== 'scenario-editor'
         && activeView.type !== 'dsm';
 
     // Auto-open the sidebar whenever we switch to a view that needs it but it's

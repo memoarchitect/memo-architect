@@ -18,7 +18,7 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
     {
         title: 'Welcome to MEMO Architect',
-        description: 'MEMO is a model-based systems engineering tool for medical device architecture. Let\'s take a quick tour.',
+        description: 'MEMO is a model-based systems engineering tool for medical devices. You\'ll land on the Dashboard — it shows your model health and suggests the next action. Let\'s take a quick tour.',
         target: 'center',
         position: 'center',
     },
@@ -60,7 +60,7 @@ const TOUR_STEPS: TourStep[] = [
     },
     {
         title: 'You\'re all set!',
-        description: 'Start by selecting a diagram from the Views tab, or use the Tools menu to explore your model.',
+        description: 'Start from the Dashboard — it shows your model status and suggests the next step. Use the Workflow Wizard (Tools menu) for a guided path through requirements, risk, and verification.',
         target: 'center',
         position: 'center',
     },

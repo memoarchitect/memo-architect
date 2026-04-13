@@ -39,6 +39,10 @@ export interface KindRegistryEntry {
     sysmlConstruct: SysMLConstruct;
     /** Supertype name if the definition specializes another */
     superType?: string;
+    /** Description extracted from SysML doc comment */
+    description?: string;
+    /** Kinds that specialize this kind (reverse of superType) */
+    derivedBy?: string[];
 }
 
 /** AST $type → SysMLConstruct mapping */
@@ -120,6 +124,27 @@ export class KindRegistry {
     /** Register a kind manually (for testing or config fallback) */
     register(entry: KindRegistryEntry): void {
         this.kinds.set(entry.name, entry);
+    }
+
+    /**
+     * Compute the derivedBy reverse-lookup for all kinds.
+     * Must be called after populateFromDocuments() is complete.
+     */
+    computeDerivedBy(): void {
+        // Clear existing
+        for (const entry of this.kinds.values()) {
+            entry.derivedBy = [];
+        }
+        // Build reverse map
+        for (const entry of this.kinds.values()) {
+            if (entry.superType) {
+                const parent = this.kinds.get(entry.superType);
+                if (parent) {
+                    if (!parent.derivedBy) parent.derivedBy = [];
+                    parent.derivedBy.push(entry.name);
+                }
+            }
+        }
     }
 
     /**

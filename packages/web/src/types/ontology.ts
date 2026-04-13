@@ -32,6 +32,10 @@ export interface OntologyKindInfo {
     layer: string;             // parent layer id
     instanceCount: number;     // how many model elements use this kind
     viewpoints: string[];      // viewpoint ids that include this kind
+    description?: string;      // from SysML doc comment
+    derivesFrom?: string;      // supertype kind name
+    derivedBy?: string[];      // kinds that specialize this one
+    relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
 }
 
 export interface OntologySaveResult {

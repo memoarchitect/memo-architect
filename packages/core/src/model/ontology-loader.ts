@@ -45,6 +45,10 @@ export interface OntologyKindInfo {
     layer: string;
     instanceCount: number;
     viewpoints: string[];
+    description?: string;
+    derivesFrom?: string;
+    derivedBy?: string[];
+    relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
 }
 
 /** Layer color palette (mirrors web constants) */
@@ -58,18 +62,37 @@ const LAYER_COLORS: Record<string, string> = {
     privacy: '#6366F1', operations: '#10B981', clinical: '#06B6D4',
 };
 
+/** Parsed kind info from a SysML file */
+interface ParsedKindInfo {
+    name: string;
+    construct: string;
+    derivesFrom?: string;
+    description?: string;
+}
+
 /**
- * Count SysML constructs (part def, requirement def, action def, connection def)
- * in a single SysML file, grouped by construct type.
+ * Parse SysML constructs (part def, requirement def, action def, connection def)
+ * from a single SysML file, extracting specialization and doc comments.
  */
-function countConstructsInFile(filePath: string): { kinds: string[]; relationships: string[] } {
-    const kinds: string[] = [];
+function parseConstructsInFile(filePath: string): { kinds: ParsedKindInfo[]; relationships: string[] } {
+    const kinds: ParsedKindInfo[] = [];
     const relationships: string[] = [];
     try {
         const content = readFileSync(filePath, 'utf-8');
-        // Match kind definitions: part def Foo, requirement def Foo, action def Foo, etc.
-        const kindMatches = content.matchAll(/^\s*(?:part|requirement|action|attribute|item|abstract part)\s+def\s+(\w+)/gm);
-        for (const m of kindMatches) kinds.push(m[1]);
+
+        // Match kind definitions with optional :> (specializes) and preceding doc comments
+        // Pattern: [doc /* ... */] <construct> def Name [:> SuperType] { ... }
+        const kindRegex = /(?:doc\s+\/\*\s*([\s\S]*?)\s*\*\/\s*)?^\s*(?:part|requirement|action|attribute|item|abstract part)\s+def\s+(\w+)(?:\s*:>\s*(\w+))?/gm;
+        for (const m of content.matchAll(kindRegex)) {
+            const construct = m[0].match(/(?:abstract\s+)?(part|requirement|action|attribute|item)\s+def/)?.[0]?.trim() ?? 'part def';
+            kinds.push({
+                name: m[2],
+                construct,
+                derivesFrom: m[3] || undefined,
+                description: m[1]?.replace(/\s+/g, ' ').trim() || undefined,
+            });
+        }
+
         // Match connection defs as relationship types
         const relMatches = content.matchAll(/^\s*(?:connection|binding|allocation)\s+def\s+(\w+)/gm);
         for (const m of relMatches) relationships.push(m[1]);
@@ -85,39 +108,57 @@ function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
     const layers: OntologyLayerInfo[] = [];
     if (!existsSync(sysmlDir)) return layers;
 
+    // First pass: collect all kinds across all layers
+    const allParsedKinds: Array<ParsedKindInfo & { layer: string }> = [];
+
     try {
         for (const entry of readdirSync(sysmlDir, { withFileTypes: true })) {
             if (!entry.isDirectory()) continue;
             const layerId = entry.name;
             const layerDir = join(sysmlDir, layerId);
-            const allKinds: OntologyKindInfo[] = [];
-            const allRelationships: string[] = [];
+            const layerKinds: OntologyKindInfo[] = [];
 
             for (const file of readdirSync(layerDir)) {
                 if (!file.endsWith('.sysml') || file === 'index.sysml') continue;
-                const { kinds, relationships } = countConstructsInFile(join(layerDir, file));
+                const { kinds } = parseConstructsInFile(join(layerDir, file));
                 for (const k of kinds) {
-                    allKinds.push({
-                        name: k,
-                        label: k.replace(/([A-Z])/g, ' $1').trim(),
-                        construct: 'part def',
+                    allParsedKinds.push({ ...k, layer: layerId });
+                    layerKinds.push({
+                        name: k.name,
+                        label: k.name.replace(/([A-Z])/g, ' $1').trim(),
+                        construct: k.construct,
                         layer: layerId,
                         instanceCount: 0,
                         viewpoints: [],
+                        description: k.description,
+                        derivesFrom: k.derivesFrom,
                     });
                 }
-                allRelationships.push(...relationships);
             }
 
             layers.push({
                 id: layerId,
                 label: layerId.charAt(0).toUpperCase() + layerId.slice(1).replace(/-/g, ' '),
                 color: LAYER_COLORS[layerId] ?? '#6B7280',
-                kindCount: allKinds.length,
-                kinds: allKinds,
+                kindCount: layerKinds.length,
+                kinds: layerKinds,
             });
         }
     } catch { /* skip */ }
+
+    // Second pass: compute derivedBy (reverse lookup of derivesFrom)
+    const derivedByMap = new Map<string, string[]>();
+    for (const k of allParsedKinds) {
+        if (k.derivesFrom) {
+            if (!derivedByMap.has(k.derivesFrom)) derivedByMap.set(k.derivesFrom, []);
+            derivedByMap.get(k.derivesFrom)!.push(k.name);
+        }
+    }
+    for (const layer of layers) {
+        for (const kind of layer.kinds) {
+            kind.derivedBy = derivedByMap.get(kind.name);
+        }
+    }
 
     return layers;
 }
@@ -191,13 +232,30 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
     const result: OntologyPackageInfo[] = [];
     const seen = new Set<string>();
 
-    // Gather all package directories from monorepo packages/
-    const pkgsDir = join(projectRoot, 'packages');
+    // Gather all package directories from monorepo packages/ (walk upward like resolvePackageConfig)
     const candidates: string[] = [];
-    if (existsSync(pkgsDir)) {
+    let searchDir = resolve(projectRoot);
+    while (true) {
+        const pkgsDir = join(searchDir, 'packages');
+        if (existsSync(pkgsDir)) {
+            try {
+                for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
+                    if (entry.isDirectory()) candidates.push(join(pkgsDir, entry.name));
+                }
+            } catch { /* skip */ }
+            break; // Found a packages/ dir, stop walking up
+        }
+        const parent = dirname(searchDir);
+        if (parent === searchDir) break;
+        searchDir = parent;
+    }
+
+    // Scan memo_packages/ for locally installed packages
+    const memoPkgsDir = join(projectRoot, 'memo_packages');
+    if (existsSync(memoPkgsDir)) {
         try {
-            for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
-                if (entry.isDirectory()) candidates.push(join(pkgsDir, entry.name));
+            for (const entry of readdirSync(memoPkgsDir, { withFileTypes: true })) {
+                if (entry.isDirectory()) candidates.push(join(memoPkgsDir, entry.name));
             }
         } catch { /* skip */ }
     }
@@ -463,6 +521,7 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
 
     // Populate registries from parsed documents
     kindRegistry.populateFromDocuments(parseResult.documents);
+    kindRegistry.computeDerivedBy();
     relationshipRegistry.populateFromDocuments(parseResult.documents);
 
     return {

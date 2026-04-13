@@ -1,26 +1,72 @@
 // ─── LayerGrid ────────────────────────────────────────────────────────────────
 //
-// Visual card grid for ontology layers, sorted by V-cycle lifecycle order.
-// Layers are split into two groups: System Definition and Implementation &
-// Verification, mirroring the V-cycle shape used in medical device engineering.
+// Swimlane-based visual grid for ontology layers, grouped into 6 domain
+// categories matching the draw.io ontology reference:
+//   1. Purpose & Operational
+//   2. Requirements & Constraints
+//   3. Architecture (functional, logical, physical)
+//   4. Risk
+//   5. V&V & Evidence
+//   6. DHF Outputs
+// Layers not in any group appear in "Other".
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
 import type { OntologyLayerInfo } from '../../types/ontology';
 import { LAYER_COLORS, LAYER_ORDER } from '../../constants';
 
-// V-cycle split: definition (left arm) vs implementation+verification (right arm)
-const DEFINITION_LAYERS = new Set(['business', 'requirements', 'risk', 'functional', 'behavior', 'logical']);
-const VERIFICATION_LAYERS = new Set(['physical', 'software', 'interfaces', 'verification', 'ui']);
+// ─── Swimlane group definitions ──────────────────────────────────────────────
+
+interface LayerGroup {
+    id: string;
+    label: string;
+    color: string;
+    layerIds: string[];
+}
+
+const LAYER_GROUPS: LayerGroup[] = [
+    {
+        id: 'purpose-operational',
+        label: 'Purpose & Operational',
+        color: '#6366F1',
+        layerIds: ['purpose', 'business', 'operational'],
+    },
+    {
+        id: 'requirements',
+        label: 'Requirements & Constraints',
+        color: '#EC4899',
+        layerIds: ['requirements'],
+    },
+    {
+        id: 'architecture',
+        label: 'Architecture',
+        color: '#06B6D4',
+        layerIds: ['functional', 'behavior', 'logical', 'physical', 'software', 'interfaces', 'ui'],
+    },
+    {
+        id: 'risk',
+        label: 'Risk',
+        color: '#EF4444',
+        layerIds: ['risk', 'safety', 'cybersecurity'],
+    },
+    {
+        id: 'vv-evidence',
+        label: 'V&V & Evidence',
+        color: '#84CC16',
+        layerIds: ['verification', 'analysis'],
+    },
+    {
+        id: 'dhf-outputs',
+        label: 'DHF Outputs',
+        color: '#F59E0B',
+        layerIds: ['design-control', 'qms', 'software-lifecycle', 'operations', 'clinical', 'privacy'],
+    },
+];
 
 const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 
 function sortByLifecycle(layers: OntologyLayerInfo[]): OntologyLayerInfo[] {
-    return [...layers].sort((a, b) => {
-        const ra = LAYER_RANK[a.id] ?? 99;
-        const rb = LAYER_RANK[b.id] ?? 99;
-        return ra - rb;
-    });
+    return [...layers].sort((a, b) => (LAYER_RANK[a.id] ?? 99) - (LAYER_RANK[b.id] ?? 99));
 }
 
 interface LayerGridProps {
@@ -44,78 +90,63 @@ export function LayerGrid({ layers, selectedKind, onKindClick }: LayerGridProps)
         return (
             <div className="flex items-center justify-center py-12" style={{ color: '#9CA3AF' }}>
                 <div className="text-center">
-                    <div className="text-2xl mb-2">⊟</div>
+                    <div className="text-2xl mb-2">&#8863;</div>
                     <div className="text-xs">No layers found in this ontology</div>
                 </div>
             </div>
         );
     }
 
-    const sorted = sortByLifecycle(layers);
-    const definitionLayers = sorted.filter(l => DEFINITION_LAYERS.has(l.id) || (!VERIFICATION_LAYERS.has(l.id) && LAYER_RANK[l.id] < 6));
-    const verificationLayers = sorted.filter(l => VERIFICATION_LAYERS.has(l.id));
-    // Any layers not in either set (e.g. unknown custom layers) go at the end
-    const otherLayers = sorted.filter(l => !DEFINITION_LAYERS.has(l.id) && !VERIFICATION_LAYERS.has(l.id));
+    // Classify layers into groups
+    const groupedLayerIds = new Set(LAYER_GROUPS.flatMap(g => g.layerIds));
+    const otherLayers = sortByLifecycle(layers.filter(l => !groupedLayerIds.has(l.id)));
 
-    const renderCard = (layer: OntologyLayerInfo) => {
+    const renderKindPill = (kind: { name: string; instanceCount: number }, layerColor: string) => {
+        const isSelected = selectedKind === kind.name;
+        return (
+            <button
+                key={kind.name}
+                onClick={() => onKindClick(isSelected ? null : kind.name)}
+                className="px-2 py-0.5 text-xs rounded-full transition-all"
+                style={{
+                    background: isSelected ? `${layerColor}20` : '#F0F0ED',
+                    color: isSelected ? layerColor : '#374151',
+                    border: isSelected ? `1px solid ${layerColor}40` : '1px solid transparent',
+                    fontWeight: isSelected ? 600 : 400,
+                }}
+                title={`${kind.instanceCount} instances`}
+            >
+                {kind.name}
+                {kind.instanceCount > 0 && (
+                    <span className="ml-1 opacity-60">({kind.instanceCount})</span>
+                )}
+            </button>
+        );
+    };
+
+    const renderLayerCard = (layer: OntologyLayerInfo) => {
         const color = (LAYER_COLORS as Record<string, string>)[layer.id] ?? layer.color ?? '#6B7280';
         const isExpanded = expandedLayers.has(layer.id);
 
         return (
-            <div
-                key={layer.id}
-                className="rounded-xl overflow-hidden"
-                style={{ background: '#FFFFFF', border: `2px solid ${color}30` }}
-            >
-                {/* Layer header */}
+            <div key={layer.id} className="rounded-lg overflow-hidden" style={{ background: '#FFFFFF', border: `1px solid ${color}25` }}>
                 <div
-                    className="flex items-center gap-2 px-4 py-2.5 cursor-pointer"
-                    style={{ background: `${color}10`, borderBottom: `1px solid ${color}20` }}
+                    className="flex items-center gap-2 px-3 py-2 cursor-pointer"
+                    style={{ background: `${color}08`, borderBottom: isExpanded ? `1px solid ${color}15` : 'none' }}
                     onClick={() => toggleLayer(layer.id)}
                 >
-                    <span className="w-3 h-3 rounded flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-medium flex-1" style={{ color: '#1a1a1a' }}>
-                        {layer.label}
-                    </span>
-                    <span className="text-xs" style={{ color: '#9CA3AF' }}>
-                        {layer.kindCount}
-                    </span>
-                    <span style={{ color: '#D1D5DB', fontSize: '11px' }}>
-                        {isExpanded ? '▾' : '▸'}
-                    </span>
+                    <span className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="text-xs font-medium flex-1" style={{ color: '#1a1a1a' }}>{layer.label}</span>
+                    <span className="text-xs" style={{ color: '#9CA3AF' }}>{layer.kindCount}</span>
+                    <span style={{ color: '#D1D5DB', fontSize: '10px' }}>{isExpanded ? '\u25BE' : '\u25B8'}</span>
                 </div>
-
-                {/* Kind pills */}
                 {isExpanded && (
-                    <div className="p-3 flex flex-wrap gap-1.5">
-                        {layer.kinds.map(kind => {
-                            const isSelected = selectedKind === kind.name;
-                            return (
-                                <button
-                                    key={kind.name}
-                                    onClick={() => onKindClick(isSelected ? null : kind.name)}
-                                    className="px-2 py-0.5 text-xs rounded-full transition-all"
-                                    style={{
-                                        background: isSelected ? `${color}20` : '#F0F0ED',
-                                        color: isSelected ? color : '#374151',
-                                        border: isSelected ? `1px solid ${color}40` : '1px solid transparent',
-                                        fontWeight: isSelected ? 600 : 400,
-                                    }}
-                                    title={`${kind.instanceCount} instances`}
-                                >
-                                    {kind.name}
-                                    {kind.instanceCount > 0 && (
-                                        <span className="ml-1 opacity-60">({kind.instanceCount})</span>
-                                    )}
-                                </button>
-                            );
-                        })}
+                    <div className="p-2.5 flex flex-wrap gap-1.5">
+                        {layer.kinds.map(kind => renderKindPill(kind, color))}
                     </div>
                 )}
-
-                {/* Collapsed: just show kind count hint */}
                 {!isExpanded && layer.kindCount > 0 && (
-                    <div className="px-4 py-2 text-xs" style={{ color: '#9CA3AF' }}>
+                    <div className="px-3 py-1.5 text-xs" style={{ color: '#9CA3AF' }}>
                         {layer.kinds.slice(0, 3).map(k => k.name).join(', ')}
                         {layer.kindCount > 3 && ` +${layer.kindCount - 3} more`}
                     </div>
@@ -125,51 +156,55 @@ export function LayerGrid({ layers, selectedKind, onKindClick }: LayerGridProps)
     };
 
     return (
-        <div className="mb-6">
-            {/* V-cycle two-column layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
-                {/* Left arm: System Definition */}
-                <div>
-                    <div
-                        className="flex items-center gap-2 mb-3"
-                        style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-                    >
-                        <span style={{ flex: 1, height: '1px', background: '#E5E5E0' }} />
-                        System Definition ↓
-                    </div>
-                    <div className="flex flex-col gap-3">
-                        {definitionLayers.map(renderCard)}
-                    </div>
-                </div>
+        <div className="mb-6 space-y-5">
+            {LAYER_GROUPS.map(group => {
+                const groupLayers = sortByLifecycle(layers.filter(l => group.layerIds.includes(l.id)));
+                if (groupLayers.length === 0) return null;
 
-                {/* Right arm: Implementation & Verification */}
-                <div>
-                    <div
-                        className="flex items-center gap-2 mb-3"
-                        style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-                    >
-                        Implementation & Verification ↑
-                        <span style={{ flex: 1, height: '1px', background: '#E5E5E0' }} />
-                    </div>
-                    <div className="flex flex-col gap-3">
-                        {verificationLayers.map(renderCard)}
-                    </div>
-                </div>
-            </div>
+                return (
+                    <div key={group.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${group.color}20`, background: `${group.color}04` }}>
+                        {/* Swimlane header */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2.5"
+                            style={{ borderBottom: `1px solid ${group.color}15`, background: `${group.color}08` }}
+                        >
+                            <span className="w-1 h-4 rounded-full" style={{ backgroundColor: group.color }} />
+                            <span
+                                className="text-xs font-semibold"
+                                style={{ color: group.color, letterSpacing: '0.03em', textTransform: 'uppercase' }}
+                            >
+                                {group.label}
+                            </span>
+                            <span className="text-xs ml-auto" style={{ color: '#9CA3AF' }}>
+                                {groupLayers.reduce((s, l) => s + l.kindCount, 0)} kinds
+                            </span>
+                        </div>
 
-            {/* Unknown/custom layers below */}
+                        {/* Layer cards inside swimlane */}
+                        <div className="p-3 space-y-2">
+                            {groupLayers.map(renderLayerCard)}
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* Other/custom layers */}
             {otherLayers.length > 0 && (
-                <div className="mt-6">
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E5E5E020', background: '#F9FAFB' }}>
                     <div
-                        className="flex items-center gap-2 mb-3"
-                        style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+                        className="flex items-center gap-2 px-4 py-2.5"
+                        style={{ borderBottom: '1px solid #E5E5E0', background: '#F3F4F6' }}
                     >
-                        <span style={{ flex: 1, height: '1px', background: '#E5E5E0' }} />
-                        Other
-                        <span style={{ flex: 1, height: '1px', background: '#E5E5E0' }} />
+                        <span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#6B7280' }} />
+                        <span className="text-xs font-semibold" style={{ color: '#6B7280', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                            Other
+                        </span>
+                        <span className="text-xs ml-auto" style={{ color: '#9CA3AF' }}>
+                            {otherLayers.reduce((s, l) => s + l.kindCount, 0)} kinds
+                        </span>
                     </div>
-                    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-                        {otherLayers.map(renderCard)}
+                    <div className="p-3 space-y-2">
+                        {otherLayers.map(renderLayerCard)}
                     </div>
                 </div>
             )}

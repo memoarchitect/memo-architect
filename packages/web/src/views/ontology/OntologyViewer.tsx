@@ -1,43 +1,42 @@
-// ─── OntologyViewer (new two-panel shell) ─────────────────────────────────────
+// ─── OntologyViewer ───────────────────────────────────────────────────────────
 //
-// Replaces the old OntologyViewer flat layout.
-// Left panel:  OntologySelectionPanel (package checkboxes)
-// Right panel: OntologyDetailPanel (home card, layers, relationships)
+// Routes between two sub-views:
+//   1. Landing page (OntologyDecompositionDiagram) — shows ontology hierarchy
+//   2. Detail page (OntologyDetailPanel) — shows focused ontology layers & kinds
 //
-// When no ontology is focused yet, auto-focuses the first selected package.
+// The landing page is shown for { type: 'ontology' }.
+// The detail page is shown for { type: 'ontology-detail', packageName }.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useModelStore } from '../../store/model-store';
 import { LAYER_ORDER } from '../../constants';
-import { OntologySelectionPanel } from './OntologySelectionPanel';
 import { OntologyDetailPanel } from './OntologyDetailPanel';
+
+const OntologyDecompositionDiagram = lazy(() => import('./OntologyDecompositionDiagram'));
 
 const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 
 export function OntologyViewer() {
+    const activeView = useModelStore(s => s.activeView);
     const availableOntologies = useModelStore(s => s.availableOntologies);
-    const selectedOntologies = useModelStore(s => s.selectedOntologies);
-    const focusedOntologyId = useModelStore(s => s.focusedOntologyId);
-    const setFocusedOntology = useModelStore(s => s.setFocusedOntology);
+    const setActiveView = useModelStore(s => s.setActiveView);
     const model = useModelStore(s => s.model);
 
-    // Auto-focus first selected ontology if none is focused
-    useEffect(() => {
-        if (!focusedOntologyId && availableOntologies.length > 0) {
-            const firstSelected = availableOntologies.find(o => selectedOntologies.has(o.name));
-            if (firstSelected) setFocusedOntology(firstSelected.name);
-            else setFocusedOntology(availableOntologies[0].name);
-        }
-    }, [availableOntologies, focusedOntologyId, selectedOntologies, setFocusedOntology]);
+    // Determine if we're in detail mode
+    const isDetailView = activeView.type === 'ontology-detail';
+    const detailPackageName = isDetailView ? (activeView as { packageName: string }).packageName : null;
 
-    const focusedOntology = availableOntologies.find(o => o.name === focusedOntologyId);
+    // Find the focused ontology for detail view
+    const focusedOntology = detailPackageName
+        ? availableOntologies.find(o => o.name === detailPackageName)
+        : null;
 
-    // Derive a synthetic ontology from model elements when no packages loaded
-    const derivedOntology = (() => {
+    // Derive a synthetic ontology from model elements when package not found
+    const derivedOntology = useMemo(() => {
         if (focusedOntology) return null;
+        if (!isDetailView) return null;
         if (!model) return null;
-        // Build a synthetic package from model element kinds
         const layerMap = new Map<string, string[]>();
         for (const el of Object.values(model.elements)) {
             if (!layerMap.has(el.layer)) layerMap.set(el.layer, []);
@@ -46,57 +45,54 @@ export function OntologyViewer() {
             }
         }
         const layers = [...layerMap.entries()]
-        .sort(([a], [b]) => (LAYER_RANK[a] ?? 99) - (LAYER_RANK[b] ?? 99))
-        .map(([layer, kinds]) => ({
-            id: layer,
-            label: layer.charAt(0).toUpperCase() + layer.slice(1),
-            color: '#6B7280',
-            kindCount: kinds.length,
-            kinds: kinds.map(k => ({
-                name: k,
-                label: k.replace(/([A-Z])/g, ' $1').trim(),
-                construct: 'part def',
-                layer,
-                instanceCount: 0,
-                viewpoints: [],
-            })),
-        }));
+            .sort(([a], [b]) => (LAYER_RANK[a] ?? 99) - (LAYER_RANK[b] ?? 99))
+            .map(([layer, kinds]) => ({
+                id: layer,
+                label: layer.charAt(0).toUpperCase() + layer.slice(1),
+                color: '#6B7280',
+                kindCount: kinds.length,
+                kinds: kinds.map(k => ({
+                    name: k,
+                    label: k.replace(/([A-Z])/g, ' $1').trim(),
+                    construct: 'part def',
+                    layer,
+                    instanceCount: 0,
+                    viewpoints: [],
+                })),
+            }));
         return {
             name: '@memo/model (inferred)',
-            version: '–',
+            version: '\u2013',
             type: 'ontology' as const,
-            description: 'Ontology inferred from loaded model elements. Connect to a dev server to see package metadata.',
+            description: 'Ontology inferred from loaded model elements.',
             layers,
             kindCount: layers.reduce((s, l) => s + l.kindCount, 0),
             relationshipCount: 0,
             selected: true,
         };
-    })();
+    }, [focusedOntology, isDetailView, model]);
 
     const displayOntology = focusedOntology ?? derivedOntology;
 
-    if (!displayOntology) {
+    // Detail view
+    if (isDetailView && displayOntology) {
         return (
-            <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
-                <div className="text-center" style={{ color: '#9CA3AF' }}>
-                    <div className="text-3xl mb-3">◉</div>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#374151' }}>
-                        No model loaded
-                    </div>
-                    <div className="text-xs">Start the dev server to load ontology packages</div>
-                </div>
-            </div>
+            <OntologyDetailPanel
+                ontology={displayOntology}
+                onBack={() => setActiveView({ type: 'ontology' })}
+            />
         );
     }
 
+    // Landing page: decomposition diagram
     return (
-        <div className="flex flex-1 overflow-hidden">
-            {/* Left: ontology package selection panel */}
-            <OntologySelectionPanel />
-
-            {/* Right: detail panel for focused ontology */}
-            <OntologyDetailPanel ontology={displayOntology} />
-        </div>
+        <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
+                <span className="text-sm" style={{ color: '#9CA3AF' }}>Loading ontology library...</span>
+            </div>
+        }>
+            <OntologyDecompositionDiagram />
+        </Suspense>
     );
 }
 

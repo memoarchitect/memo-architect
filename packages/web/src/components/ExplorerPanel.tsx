@@ -1638,6 +1638,15 @@ export function ExplorerPanel() {
     const setSearchTerm = useModelStore(s => s.setSearchTerm);
     const model = useModelStore(s => s.model);
     const activeMode = useModelStore(s => s.activeMode);
+    const activeView = useModelStore(s => s.activeView);
+
+    // Auto-switch to Onto tab when entering ontology mode
+    useEffect(() => {
+        if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') {
+            setExplorerTab('ontologies');
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView.type]);
 
     if (sidebarCollapsed) return null;
 
@@ -1657,7 +1666,7 @@ export function ExplorerPanel() {
                     </div>
                     <ViewExplorerContent searchTerm={searchTerm} />
                 </>
-            ) : activeMode === 'scenario' || activeMode === 'ontology' ? (
+            ) : activeMode === 'scenario' ? (
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
                         <input type="text" placeholder="Search elements..." value={searchTerm}
