@@ -434,17 +434,17 @@ export async function initCommand(
             process.exit(1);
         }
         archetype = found.id;
-    } else if (!options.profile && options.ontology === DEFAULT_ONTOLOGY) {
-        // No explicit flags — run the wizard
+    } else if (!options.profile && options.ontology === DEFAULT_ONTOLOGY && process.stdin.isTTY) {
+        // Interactive terminal — run the startup wizard
         try {
             const wizResult = await runWizard();
             archetype = wizResult.archetype;
             regulatoryClass = wizResult.regulatoryClass;
         } catch {
-            // Non-TTY environment (CI, test) — fall back to blank
             archetype = 'blank';
         }
     }
+    // Non-TTY (CI, test, pipe) — skip wizard, use blank archetype silently
 
     // Resolve profile or ontology
     let ontology = options.ontology;

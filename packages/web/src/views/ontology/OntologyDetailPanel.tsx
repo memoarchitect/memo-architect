@@ -33,6 +33,7 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
     const showRelationships = useModelStore(s => s.showOntologyRelationships);
     const toggleRelationships = useModelStore(s => s.toggleOntologyRelationships);
     const model = useModelStore(s => s.model);
+    const activeView = useModelStore(s => s.activeView);
 
     // Enrich kind instanceCounts from model
     const enrichedOntology: OntologyPackageInfo = useMemo(() => ({
@@ -111,7 +112,12 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                 {/* Layer view */}
                 <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
                     {viewMode === 'visual'
-                        ? <LayerGrid layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
+                        ? <LayerGrid
+                            layers={enrichedOntology.layers}
+                            selectedKind={selectedKind}
+                            onKindClick={setSelectedKind}
+                            activeLayerId={(activeView as { layerId?: string }).layerId ?? null}
+                          />
                         : <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
                     }
                 </Suspense>
