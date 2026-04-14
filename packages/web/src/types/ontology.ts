@@ -5,6 +5,12 @@
 // the CLI dev server (Issue #154).
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface OntologyRelationshipInfo {
+    name: string;
+    sourceKind?: string;    // first typed `end` in the connection def
+    targetKind?: string;    // second typed `end` in the connection def
+}
+
 export interface OntologyPackageInfo {
     name: string;              // e.g. "@memo/ontology-core"
     version: string;           // e.g. "0.1.0"
@@ -14,6 +20,7 @@ export interface OntologyPackageInfo {
     layers: OntologyLayerInfo[];
     kindCount: number;
     relationshipCount: number;
+    relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;         // true if in project's memo.package.yaml ontologies list
 }
 
