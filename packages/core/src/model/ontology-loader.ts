@@ -18,6 +18,12 @@ import type { BuilderRegistries } from './builder.js';
 
 // ─── Ontology Package Metadata (Phase C2) ────────────────────────────────────
 
+export interface OntologyRelationshipInfo {
+    name: string;
+    sourceKind?: string;    // from first typed `end` in connection def
+    targetKind?: string;    // from second typed `end` in connection def
+}
+
 export interface OntologyPackageInfo {
     name: string;
     version: string;
@@ -27,6 +33,7 @@ export interface OntologyPackageInfo {
     layers: OntologyLayerInfo[];
     kindCount: number;
     relationshipCount: number;
+    relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;
 }
 
@@ -70,13 +77,20 @@ interface ParsedKindInfo {
     description?: string;
 }
 
+/** Parsed relationship info from a connection def */
+interface ParsedRelationshipInfo {
+    name: string;
+    sourceKind?: string;
+    targetKind?: string;
+}
+
 /**
  * Parse SysML constructs (part def, requirement def, action def, connection def)
  * from a single SysML file, extracting specialization and doc comments.
  */
-function parseConstructsInFile(filePath: string): { kinds: ParsedKindInfo[]; relationships: string[] } {
+function parseConstructsInFile(filePath: string): { kinds: ParsedKindInfo[]; relationships: ParsedRelationshipInfo[] } {
     const kinds: ParsedKindInfo[] = [];
-    const relationships: string[] = [];
+    const relationships: ParsedRelationshipInfo[] = [];
     try {
         const content = readFileSync(filePath, 'utf-8');
 
@@ -93,9 +107,22 @@ function parseConstructsInFile(filePath: string): { kinds: ParsedKindInfo[]; rel
             });
         }
 
-        // Match connection defs as relationship types
-        const relMatches = content.matchAll(/^\s*(?:connection|binding|allocation)\s+def\s+(\w+)/gm);
-        for (const m of relMatches) relationships.push(m[1]);
+        // Match connection defs with endpoint type annotations
+        // Pattern: connection def Name { end name : TypeName [mult]; end name : TypeName [mult]; }
+        const connBlockRegex = /(?:connection|binding|allocation)\s+def\s+(\w+)\s*\{([^}]*)\}/g;
+        for (const m of content.matchAll(connBlockRegex)) {
+            const name = m[1];
+            const body = m[2];
+            // Extract typed ends: `end <name> : <TypeName> [` — ignore untyped ends like `end subject[1]`
+            const endRegex = /end\s+\w+\s*:\s*(\w+)\s*\[/g;
+            const typedEnds: string[] = [];
+            for (const em of body.matchAll(endRegex)) typedEnds.push(em[1]);
+            relationships.push({
+                name,
+                sourceKind: typedEnds[0],
+                targetKind: typedEnds[1],
+            });
+        }
     } catch { /* skip */ }
     return { kinds, relationships };
 }
@@ -164,6 +191,27 @@ function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
 }
 
 /**
+ * Collect all connection def relationship types from a sysml/ directory tree.
+ * Scans all layers (subdirectories) and collects connection def endpoint info.
+ */
+function buildRelationshipTypes(sysmlDir: string): OntologyRelationshipInfo[] {
+    const result: OntologyRelationshipInfo[] = [];
+    if (!existsSync(sysmlDir)) return result;
+    try {
+        for (const entry of readdirSync(sysmlDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue;
+            const layerDir = join(sysmlDir, entry.name);
+            for (const file of readdirSync(layerDir)) {
+                if (!file.endsWith('.sysml') || file === 'index.sysml') continue;
+                const { relationships } = parseConstructsInFile(join(layerDir, file));
+                for (const r of relationships) result.push(r);
+            }
+        }
+    } catch { /* skip */ }
+    return result;
+}
+
+/**
  * Read a YAML file and extract a simple string field.
  */
 function readYamlField(content: string, field: string): string {
@@ -209,8 +257,9 @@ function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInf
     const sysmlDir = join(pkgDir, 'sysml');
     const layers = buildLayers(sysmlDir);
     const kindCount = layers.reduce((s, l) => s + l.kindCount, 0);
+    const relationshipTypes = buildRelationshipTypes(sysmlDir);
 
-    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: 0, selected };
+    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: relationshipTypes.length, relationshipTypes, selected };
 }
 
 /**

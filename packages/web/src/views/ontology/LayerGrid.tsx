@@ -1,8 +1,11 @@
 // ─── LayerGrid ────────────────────────────────────────────────────────────────
 //
 // Swimlane-based visual grid matching the draw.io ontology reference layout.
-// All elements visible without accordion expansion — cards float in colored
-// swimlane rows, one row per domain group (6 total).
+// Each swimlane is collapsible (click header row to toggle). Collapsed state
+// persists in local component state across re-renders.
+//
+// Card ordering: root kinds (no derivesFrom) render before specializations,
+// then alphabetically within each tier.
 //
 // Architecture swimlane has sub-layer headers: Functional, Logical, Physical,
 // Software, Interfaces.
@@ -12,7 +15,7 @@
 //   - construct badge (top-left) + instance count (top-right)
 //   - Kind name (bold, centered)
 //   - Hover: slight layer-color tint; Selected: full border + tint
-//   - data-kind="KindName" for C2.3 edge positioning
+//   - data-kind="KindName" for edge positioning
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from 'react';
@@ -91,6 +94,16 @@ const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 
 function sortByLifecycle(layers: OntologyLayerInfo[]): OntologyLayerInfo[] {
     return [...layers].sort((a, b) => (LAYER_RANK[a.id] ?? 99) - (LAYER_RANK[b.id] ?? 99));
+}
+
+/** Sort kinds: root kinds (no derivesFrom) first, then specializations, then alpha within each tier. */
+function sortKindsParentFirst(kinds: OntologyKindInfo[]): OntologyKindInfo[] {
+    return [...kinds].sort((a, b) => {
+        const aIsRoot = !a.derivesFrom ? 0 : 1;
+        const bIsRoot = !b.derivesFrom ? 0 : 1;
+        if (aIsRoot !== bIsRoot) return aIsRoot - bIsRoot;
+        return a.name.localeCompare(b.name);
+    });
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -182,7 +195,7 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
             <div
                 style={{
                     fontSize: '11px',
-                    fontWeight: 600,
+                    fontWeight: kind.derivesFrom ? 400 : 600,
                     color: selected ? layerColor : '#1F2937',
                     lineHeight: 1.3,
                     wordBreak: 'break-word',
@@ -190,6 +203,13 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
             >
                 {kind.name}
             </div>
+
+            {/* Supertype hint for child kinds */}
+            {kind.derivesFrom && (
+                <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: '2px', lineHeight: 1 }}>
+                    ↳ {kind.derivesFrom}
+                </div>
+            )}
         </button>
     );
 }
@@ -199,6 +219,10 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
 export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: LayerGridProps) {
     const swimlaneRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const [flashLayerId, setFlashLayerId] = useState<string | null>(null);
+    // Collapsed swimlane state persists per render; start all collapsed (header-only view)
+    const [collapsedSwimlanes, setCollapsedSwimlanes] = useState<Set<string>>(
+        () => new Set(LAYER_GROUPS.map(g => g.id).concat(['other']))
+    );
 
     // Scroll-to-layer when activeLayerId changes
     useEffect(() => {
@@ -227,14 +251,20 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
     const otherLayers = sortByLifecycle(layers.filter(l => !groupedLayerIds.has(l.id)));
 
     function handleContextMenu(e: React.MouseEvent, _kindName: string) {
-        // Bubble up — parent OntologyDetailPanel may attach a context menu handler
-        // For now suppress the native context menu; C2.1 provides the real one via
-        // the browser tab. Cards inside the detail panel pass right-click up.
         e.preventDefault();
     }
 
-    const renderCards = (kindList: OntologyKindInfo[], layerColor: string, domainBg: string) =>
-        kindList.map(kind => (
+    function toggleSwimlane(groupId: string) {
+        setCollapsedSwimlanes(prev => {
+            const next = new Set(prev);
+            if (next.has(groupId)) next.delete(groupId); else next.add(groupId);
+            return next;
+        });
+    }
+
+    const renderCards = (kindList: OntologyKindInfo[], layerColor: string, domainBg: string) => {
+        const sorted = sortKindsParentFirst(kindList);
+        return sorted.map(kind => (
             <KindCard
                 key={kind.name}
                 kind={kind}
@@ -245,6 +275,7 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
                 onContextMenu={e => handleContextMenu(e, kind.name)}
             />
         ));
+    };
 
     const renderSwimlane = (
         group: LayerGroup | { id: string; label: string; abbr: string; layerIds: string[]; subGroups?: never },
@@ -253,6 +284,7 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
         const palette = DOMAIN_COLORS[group.id] ?? DOMAIN_COLORS.other;
         const totalKinds = groupLayers.reduce((s, l) => s + l.kindCount, 0);
         const isEmpty = totalKinds === 0;
+        const isCollapsed = collapsedSwimlanes.has(group.id);
 
         // Determine which layers belong to this group in sorted order
         const sortedGroupLayers = sortByLifecycle(groupLayers);
@@ -269,11 +301,27 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
                     outlineOffset: '2px',
                 }}
             >
-                {/* Swimlane header */}
+                {/* Swimlane header — click to collapse/expand */}
                 <div
-                    className="flex items-center gap-3 px-4 py-2"
-                    style={{ background: palette.header, borderBottom: `1px solid ${palette.border}` }}
+                    className="flex items-center gap-3 px-4 py-2 cursor-pointer select-none"
+                    style={{ background: palette.header, borderBottom: isCollapsed ? 'none' : `1px solid ${palette.border}` }}
+                    onClick={() => toggleSwimlane(group.id)}
+                    title={isCollapsed ? 'Expand' : 'Collapse'}
                 >
+                    {/* Collapse chevron */}
+                    <svg
+                        width="10" height="10"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        style={{
+                            transition: 'transform 150ms ease',
+                            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <path d="M4 6L8 10L12 6" stroke={palette.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+
                     {/* Abbreviated vertical-style label */}
                     <span
                         style={{
@@ -303,61 +351,60 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
                     </span>
                 </div>
 
-                {isEmpty ? (
-                    /* Thin bar for empty swimlanes */
-                    <div
-                        className="px-4 py-1.5 text-xs italic"
-                        style={{ color: palette.text, opacity: 0.4 }}
-                    >
-                        (no elements)
-                    </div>
-                ) : (
-                    <div className="p-3 space-y-3">
-                        {/* Architecture swimlane: sub-group by layer type */}
-                        {(group as LayerGroup).subGroups
-                            ? (group as LayerGroup).subGroups!.map(sub => {
-                                const subLayers = sortedGroupLayers.filter(l => sub.layerIds.includes(l.id));
-                                if (subLayers.length === 0) return null;
-                                const allKinds = subLayers.flatMap(l => l.kinds);
-                                if (allKinds.length === 0) return null;
-                                // Layer color = first layer's color
-                                const layerColor = subLayers[0].color ?? palette.text;
-                                return (
-                                    <div key={sub.label}>
-                                        {/* Sub-group header */}
-                                        <div
-                                            className="text-xs font-medium mb-1.5 flex items-center gap-1.5"
-                                            style={{ color: palette.text, opacity: 0.75 }}
-                                            ref={el => {
-                                                subLayers.forEach(l => { swimlaneRefs.current[l.id] = el as HTMLDivElement | null; });
-                                            }}
-                                        >
-                                            <span
-                                                className="inline-block w-2 h-2 rounded-sm flex-shrink-0"
-                                                style={{ background: layerColor }}
-                                            />
-                                            {sub.label}
+                {/* Body — hidden when collapsed */}
+                {!isCollapsed && (
+                    isEmpty ? (
+                        <div
+                            className="px-4 py-1.5 text-xs italic"
+                            style={{ color: palette.text, opacity: 0.4 }}
+                        >
+                            (no elements)
+                        </div>
+                    ) : (
+                        <div className="p-3 space-y-3">
+                            {/* Architecture swimlane: sub-group by layer type */}
+                            {(group as LayerGroup).subGroups
+                                ? (group as LayerGroup).subGroups!.map(sub => {
+                                    const subLayers = sortedGroupLayers.filter(l => sub.layerIds.includes(l.id));
+                                    if (subLayers.length === 0) return null;
+                                    const allKinds = subLayers.flatMap(l => l.kinds);
+                                    if (allKinds.length === 0) return null;
+                                    const layerColor = subLayers[0].color ?? palette.text;
+                                    return (
+                                        <div key={sub.label}>
+                                            {/* Sub-group header */}
+                                            <div
+                                                className="text-xs font-medium mb-1.5 flex items-center gap-1.5"
+                                                style={{ color: palette.text, opacity: 0.75 }}
+                                                ref={el => {
+                                                    subLayers.forEach(l => { swimlaneRefs.current[l.id] = el as HTMLDivElement | null; });
+                                                }}
+                                            >
+                                                <span
+                                                    className="inline-block w-2 h-2 rounded-sm flex-shrink-0"
+                                                    style={{ background: layerColor }}
+                                                />
+                                                {sub.label}
+                                            </div>
+                                            {/* Cards */}
+                                            <div className="flex flex-wrap gap-2">
+                                                {renderCards(allKinds, layerColor, palette.bg)}
+                                            </div>
                                         </div>
-                                        {/* Cards */}
+                                    );
+                                })
+                                : (() => {
+                                    const allKinds = sortedGroupLayers.flatMap(l => l.kinds);
+                                    const layerColor = sortedGroupLayers[0]?.color ?? palette.text;
+                                    return (
                                         <div className="flex flex-wrap gap-2">
                                             {renderCards(allKinds, layerColor, palette.bg)}
                                         </div>
-                                    </div>
-                                );
-                            })
-                            : (() => {
-                                // Flat layout: all layers in this group together
-                                const allKinds = sortedGroupLayers.flatMap(l => l.kinds);
-                                // Use first layer color as representative
-                                const layerColor = sortedGroupLayers[0]?.color ?? palette.text;
-                                return (
-                                    <div className="flex flex-wrap gap-2">
-                                        {renderCards(allKinds, layerColor, palette.bg)}
-                                    </div>
-                                );
-                            })()
-                        }
-                    </div>
+                                    );
+                                })()
+                            }
+                        </div>
+                    )
                 )}
             </div>
         );
