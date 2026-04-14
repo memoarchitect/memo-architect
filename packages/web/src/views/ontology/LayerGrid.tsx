@@ -114,6 +114,10 @@ interface LayerGridProps {
     onKindClick: (kind: string | null) => void;
     /** Layer id to scroll to (from browser click or external navigation) */
     activeLayerId?: string | null;
+    /** Kind name to flash (highlight animation) when navigating via properties links */
+    flashKindName?: string | null;
+    /** Increments each navigation so the same kind can be re-flashed */
+    flashTick?: number;
 }
 
 // ─── Element card ─────────────────────────────────────────────────────────────
@@ -125,10 +129,21 @@ interface KindCardProps {
     selected: boolean;
     onClick: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
+    isFlashing?: boolean;
+    flashTick?: number;
 }
 
-function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu }: KindCardProps) {
+function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu, isFlashing, flashTick }: KindCardProps) {
     const [hovered, setHovered] = useState(false);
+    const [glowing, setGlowing] = useState(false);
+
+    useEffect(() => {
+        if (!isFlashing) return;
+        setGlowing(true);
+        const t = setTimeout(() => setGlowing(false), 700);
+        return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFlashing, flashTick]);
 
     const bg = selected
         ? `${layerColor}18`
@@ -156,7 +171,10 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
                 borderRadius: '6px',
                 padding: '6px 8px',
                 cursor: 'pointer',
-                boxShadow: selected ? `0 0 0 1px ${layerColor}40` : hovered ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transform: glowing ? 'scale(1.04)' : 'scale(1)',
+                boxShadow: glowing
+                    ? `0 0 0 2px ${layerColor}, 0 0 12px ${layerColor}60`
+                    : selected ? `0 0 0 1px ${layerColor}40` : hovered ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 flexShrink: 0,
             }}
         >
@@ -216,7 +234,7 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
 
 // ─── LayerGrid ────────────────────────────────────────────────────────────────
 
-export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: LayerGridProps) {
+export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId, flashKindName, flashTick }: LayerGridProps) {
     const swimlaneRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const [flashLayerId, setFlashLayerId] = useState<string | null>(null);
     // Collapsed swimlane state persists per render; start all collapsed (header-only view)
@@ -273,6 +291,8 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId }: 
                 selected={selectedKind === kind.name}
                 onClick={() => onKindClick(selectedKind === kind.name ? null : kind.name)}
                 onContextMenu={e => handleContextMenu(e, kind.name)}
+                isFlashing={flashKindName === kind.name}
+                flashTick={flashTick}
             />
         ));
     };

@@ -3,22 +3,81 @@
 // File browser tab for the left ExplorerPanel — shows ontology packages as a
 // flat list with layer folders containing kinds. Includes a search filter,
 // selection checkboxes, Save button, and right-click context menu.
+//
+// Kinds within each layer are sorted parent-first (no derivesFrom comes first),
+// then alphabetically within each tier.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
-import { sendOntologySelection } from '../store/ws-client';
+import { sendOntologySelection, sendKindRemap } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
+import { COLOR, FONT } from '../styles/tokens';
 import { OntologyContextMenu } from './OntologyContextMenu';
 import type { ContextMenuTarget } from './OntologyContextMenu';
 import { OrphanWarningDialog } from '../views/ontology/OrphanWarningDialog';
-import type { OrphanedElement } from '../types/ontology';
+import type { OrphanedElement, OntologyKindInfo } from '../types/ontology';
 
 const TYPE_ICONS: Record<string, string> = {
     ontology: '\u{1F4E6}',  // 📦
     profile: '\u{1F527}',   // 🔧
     extension: '\u{1F9E9}', // 🧩
 };
+
+/** Sort kinds so root kinds (no supertype) appear before specializations, then alpha within each tier. */
+function sortKindsParentFirst(kinds: OntologyKindInfo[]): OntologyKindInfo[] {
+    return [...kinds].sort((a, b) => {
+        const aIsRoot = !a.derivesFrom ? 0 : 1;
+        const bIsRoot = !b.derivesFrom ? 0 : 1;
+        if (aIsRoot !== bIsRoot) return aIsRoot - bIsRoot;
+        return a.name.localeCompare(b.name);
+    });
+}
+
+// ─── Deselect confirmation dialog ────────────────────────────────────────────
+
+function DeselectedConfirmDialog({ pkgName, onCancel, onConfirm }: {
+    pkgName: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const shortName = pkgName.replace('@memo/', '');
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.45)' }}
+            onMouseDown={e => { if (e.target === e.currentTarget) onCancel(); }}
+        >
+            <div className="rounded-xl p-5 shadow-2xl" style={{ background: '#FFFFFF', maxWidth: '340px', width: '90vw' }}>
+                <div className="font-semibold mb-1.5" style={{ fontSize: FONT.sm, color: COLOR.primary }}>
+                    Remove ontology?
+                </div>
+                <div className="mb-4" style={{ fontSize: FONT.xs, color: COLOR.secondary, lineHeight: 1.5 }}>
+                    Removing <strong>{shortName}</strong> will affect all model elements that depend on its kinds.
+                    Those elements will become orphaned until you add a compatible ontology.
+                </div>
+                <div className="flex gap-2 justify-end">
+                    <button
+                        onClick={onCancel}
+                        className="px-3 py-1.5 rounded-md font-medium"
+                        style={{ fontSize: FONT.xs, background: COLOR.surfaceAlt, color: COLOR.secondary, border: `1px solid ${COLOR.border}`, cursor: 'pointer' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="px-3 py-1.5 rounded-md font-medium"
+                        style={{ fontSize: FONT.xs, background: '#DC2626', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
+                    >
+                        Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function OntologyBrowserTab() {
     const availableOntologies = useModelStore(s => s.availableOntologies);
@@ -50,6 +109,7 @@ export function OntologyBrowserTab() {
     }, [selectedOntologies, savedSelection]);
 
     const [orphanDialog, setOrphanDialog] = useState<OrphanedElement[] | null>(null);
+    const [pendingDeselect, setPendingDeselect] = useState<string | null>(null);
 
     // Context menu state
     const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; target: ContextMenuTarget } | null>(null);
@@ -134,6 +194,16 @@ export function OntologyBrowserTab() {
         });
     }
 
+    function handleCheckboxChange(e: React.ChangeEvent<HTMLInputElement>, pkgName: string, isCurrentlySelected: boolean) {
+        e.stopPropagation();
+        if (isCurrentlySelected) {
+            // Guard: require confirmation before deselecting
+            setPendingDeselect(pkgName);
+        } else {
+            toggleOntologySelection(pkgName);
+        }
+    }
+
     function handleSave() {
         const result = saveOntologySelection();
         if (result.orphanedElements && result.orphanedElements.length > 0) {
@@ -150,7 +220,8 @@ export function OntologyBrowserTab() {
         setOrphanDialog(null);
     }
 
-    function handleOrphanRemap(_mappings: Record<string, string>) {
+    function handleOrphanRemap(mappings: Record<string, string>) {
+        sendKindRemap(mappings);
         sendOntologySelection([...selectedOntologies]);
         setSavedSelection(new Set(selectedOntologies));
         setOrphanDialog(null);
@@ -175,7 +246,12 @@ export function OntologyBrowserTab() {
     }
 
     function handleCtxToggleSelection(pkgName: string) {
-        toggleOntologySelection(pkgName);
+        const isSelected = selectedOntologies.has(pkgName);
+        if (isSelected) {
+            setPendingDeselect(pkgName);
+        } else {
+            toggleOntologySelection(pkgName);
+        }
         setCtxMenu(null);
     }
 
@@ -191,6 +267,7 @@ export function OntologyBrowserTab() {
             if (e.key === 'Escape') {
                 setSelectedKind(null);
                 setCtxMenu(null);
+                setPendingDeselect(null);
             }
         }
         document.addEventListener('keydown', onKey);
@@ -208,10 +285,10 @@ export function OntologyBrowserTab() {
     if (availableOntologies.length === 0) {
         return (
             <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center" style={{ color: '#9CA3AF' }}>
+                <div className="text-center" style={{ color: COLOR.faint }}>
                     <div className="text-xl mb-2">&#9673;</div>
-                    <div className="text-xs">No ontology packages</div>
-                    <div className="text-xs opacity-70 mt-1">Start memo dev to load</div>
+                    <div style={{ fontSize: FONT.xs }}>No ontology packages</div>
+                    <div style={{ fontSize: FONT.xs, opacity: 0.7, marginTop: '4px' }}>Start memo dev to load</div>
                 </div>
             </div>
         );
@@ -223,23 +300,23 @@ export function OntologyBrowserTab() {
         : null;
 
     return (
-        <div className="flex flex-col flex-1 overflow-hidden text-xs">
-            {/* Search input */}
-            <div className="px-3 py-2 sticky top-0 z-10" style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E5E0' }}>
+        <div className="flex flex-col flex-1 overflow-hidden" style={{ fontSize: FONT.explorer.item }}>
+            {/* Search input — same token style as ExplorerPanel's search */}
+            <div className="px-3 py-2 sticky top-0 z-10" style={{ background: COLOR.surface, borderBottom: `1px solid ${COLOR.border}` }}>
                 <input
                     type="text"
                     placeholder="Search kinds..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs rounded-md"
+                    className="w-full px-2.5 py-1.5 rounded-lg focus:outline-none"
                     style={{
-                        border: '1px solid #E5E7EB',
-                        background: '#F9FAFB',
-                        color: '#374151',
-                        outline: 'none',
+                        fontSize: FONT.explorer.search,
+                        border: `1px solid ${COLOR.border}`,
+                        background: COLOR.surfaceAlt,
+                        color: COLOR.primary,
                     }}
                     onFocus={e => e.currentTarget.style.borderColor = '#2563EB'}
-                    onBlur={e => e.currentTarget.style.borderColor = '#E5E7EB'}
+                    onBlur={e => e.currentTarget.style.borderColor = COLOR.border}
                 />
             </div>
 
@@ -260,60 +337,59 @@ export function OntologyBrowserTab() {
                                 style={{
                                     borderRadius: '6px',
                                     margin: '0 4px',
-                                    background: isFocused ? '#EFF6FF' : 'transparent',
-                                    borderLeft: isFocused ? '3px solid #2563EB' : '3px solid transparent',
+                                    background: isFocused ? `${COLOR.accent}18` : 'transparent',
+                                    borderLeft: isFocused ? `3px solid ${COLOR.accentDark}` : '3px solid transparent',
                                     opacity: isSelected ? 1 : 0.55,
                                 }}
                                 onMouseEnter={e => { if (!isFocused) e.currentTarget.style.background = '#F0F0ED'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = isFocused ? '#EFF6FF' : 'transparent'; }}
-                                onClick={e => {
-                                    e.stopPropagation();
-                                    togglePkg(pkg.name);
-                                }}
+                                onMouseLeave={e => { e.currentTarget.style.background = isFocused ? `${COLOR.accent}18` : 'transparent'; }}
+                                onClick={e => { e.stopPropagation(); togglePkg(pkg.name); }}
                                 onDoubleClick={() => handlePackageClick(pkg.name)}
                                 onContextMenu={e => handleContextMenu(e, { type: 'package', pkgName: pkg.name, isSelected })}
                             >
-                                {/* Selection checkbox */}
+                                {/* Selection checkbox — deselect triggers confirmation */}
                                 <input
                                     type="checkbox"
                                     checked={isSelected}
-                                    onChange={e => { e.stopPropagation(); toggleOntologySelection(pkg.name); }}
+                                    onChange={e => handleCheckboxChange(e, pkg.name, isSelected)}
                                     onClick={e => e.stopPropagation()}
                                     style={{ cursor: 'pointer', accentColor: '#2563EB', flexShrink: 0 }}
                                     title={isSelected ? 'Deselect for project' : 'Select for project'}
                                 />
-                                <span style={{ color: '#6B7280', fontSize: '10px' }}>{isPkgExpanded ? '\u25BE' : '\u25B8'}</span>
+                                <span style={{ color: COLOR.muted, fontSize: '10px' }}>{isPkgExpanded ? '\u25BE' : '\u25B8'}</span>
                                 <span>{typeIcon}</span>
-                                <span className="font-medium truncate flex-1" style={{ color: '#374151' }}>{shortName}</span>
-                                <span style={{ color: '#D1D5DB' }}>{pkg.kindCount}</span>
+                                <span className="font-semibold truncate flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{shortName}</span>
+                                <span style={{ color: COLOR.faint }}>{pkg.kindCount}</span>
                             </div>
 
                             {/* Layer folders */}
                             {isPkgExpanded && pkg.layers.map(layer => {
-                                const color = (LAYER_COLORS as Record<string, string>)[layer.id] ?? layer.color ?? '#6B7280';
+                                const color = (LAYER_COLORS as Record<string, string>)[layer.id] ?? layer.color ?? COLOR.muted;
                                 const layerKey = `${pkg.name}:${layer.id}`;
                                 const isLayerExpanded = expandedLayers.has(layerKey);
+                                const sortedKinds = sortKindsParentFirst(layer.kinds);
 
                                 return (
                                     <div key={layerKey}>
                                         <div
                                             className="flex items-center gap-2 px-3 py-1 cursor-pointer"
                                             style={{ borderRadius: '4px', margin: '0 4px 0 20px' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#F7F7F5'}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                             onClick={e => { e.stopPropagation(); toggleLayer(layerKey); }}
                                             onDoubleClick={() => handleLayerClick(pkg.name, layer.id)}
                                             onContextMenu={e => handleContextMenu(e, { type: 'layer', pkgName: pkg.name, layerId: layer.id, layerLabel: layer.label })}
                                         >
-                                            <span style={{ color: '#D1D5DB', fontSize: '9px' }}>{isLayerExpanded ? '\u25BE' : '\u25B8'}</span>
+                                            <span style={{ color: COLOR.faint, fontSize: '9px' }}>{isLayerExpanded ? '\u25BE' : '\u25B8'}</span>
                                             <span className="w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: color }} />
-                                            <span className="flex-1 truncate capitalize" style={{ color: '#6B7280' }}>{layer.label}</span>
-                                            <span style={{ color: '#D1D5DB' }}>{layer.kindCount}</span>
+                                            <span className="flex-1 truncate capitalize" style={{ color: COLOR.muted, fontSize: FONT.explorer.kind }}>{layer.label}</span>
+                                            <span style={{ color: COLOR.faint }}>{layer.kindCount}</span>
                                         </div>
 
-                                        {/* Kind items */}
-                                        {isLayerExpanded && layer.kinds.map(kind => {
+                                        {/* Kind items — sorted parent-first */}
+                                        {isLayerExpanded && sortedKinds.map(kind => {
                                             const isKindSelected = selectedKind === kind.name;
+                                            const isParent = !kind.derivesFrom;
                                             return (
                                                 <div
                                                     key={kind.name}
@@ -322,20 +398,31 @@ export function OntologyBrowserTab() {
                                                     style={{
                                                         borderRadius: '4px',
                                                         margin: '0 4px 0 36px',
-                                                        background: isKindSelected ? '#EFF6FF' : 'transparent',
+                                                        background: isKindSelected ? `${COLOR.accent}18` : 'transparent',
                                                         borderLeft: isKindSelected ? `3px solid ${color}` : '3px solid transparent',
                                                         transition: 'background 150ms ease',
                                                     }}
-                                                    onMouseEnter={e => { if (!isKindSelected) e.currentTarget.style.background = '#F7F7F5'; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background = isKindSelected ? '#EFF6FF' : 'transparent'; }}
+                                                    onMouseEnter={e => { if (!isKindSelected) e.currentTarget.style.background = '#F0F0ED'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = isKindSelected ? `${COLOR.accent}18` : 'transparent'; }}
                                                     onClick={() => handleKindClick(kind.name, pkg.name)}
                                                     onContextMenu={e => handleContextMenu(e, { type: 'kind', kindName: kind.name, pkgName: pkg.name, layerId: layer.id })}
                                                 >
-                                                    <span className="truncate" style={{ color: isKindSelected ? '#1B3A4B' : '#374151', fontWeight: isKindSelected ? 600 : 400 }}>
+                                                    {/* Indent child kinds with a subtle connector */}
+                                                    {!isParent && (
+                                                        <span style={{ color: COLOR.faint, fontSize: '9px', flexShrink: 0 }}>↳</span>
+                                                    )}
+                                                    <span
+                                                        className="truncate"
+                                                        style={{
+                                                            color: isKindSelected ? COLOR.accentDark : COLOR.primary,
+                                                            fontWeight: isParent ? 500 : 400,
+                                                            fontSize: FONT.explorer.item,
+                                                        }}
+                                                    >
                                                         {kind.name}
                                                     </span>
                                                     {kind.instanceCount > 0 && (
-                                                        <span style={{ color: '#9CA3AF', fontSize: '10px' }}>{'\u00B7'}{kind.instanceCount}</span>
+                                                        <span style={{ color: COLOR.faint, fontSize: '10px' }}>{'\u00B7'}{kind.instanceCount}</span>
                                                     )}
                                                 </div>
                                             );
@@ -350,15 +437,27 @@ export function OntologyBrowserTab() {
 
             {/* Save Selection button — only shown when dirty */}
             {isDirty && (
-                <div className="px-3 py-2 flex-shrink-0" style={{ borderTop: '1px solid #E5E5E0', background: '#FAFAF8' }}>
+                <div className="px-3 py-2 flex-shrink-0" style={{ borderTop: `1px solid ${COLOR.border}`, background: COLOR.surfaceAlt }}>
                     <button
                         onClick={handleSave}
-                        className="w-full py-1.5 text-xs font-medium rounded-md"
-                        style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
+                        className="w-full py-1.5 rounded-md font-medium"
+                        style={{ fontSize: FONT.xs, background: '#2563EB', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
                     >
                         Save Selection
                     </button>
                 </div>
+            )}
+
+            {/* Deselect confirmation dialog */}
+            {pendingDeselect && (
+                <DeselectedConfirmDialog
+                    pkgName={pendingDeselect}
+                    onCancel={() => setPendingDeselect(null)}
+                    onConfirm={() => {
+                        toggleOntologySelection(pendingDeselect);
+                        setPendingDeselect(null);
+                    }}
+                />
             )}
 
             {/* Orphan warning dialog */}

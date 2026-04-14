@@ -1,15 +1,4 @@
-// ─── KindPropertiesPanel ──────────────────────────────────────────────────────
-//
-// Slide-in side panel showing properties for a selected ontology kind:
-//   - Name, construct badge, layer color dot
-//   - Description (from SysML doc comment)
-//   - Derives-from (clickable to navigate to parent kind)
-//   - Derived-by list (clickable to navigate to child kinds)
-//   - Relationships (grouped by type)
-//   - Instance count and viewpoints
-// ─────────────────────────────────────────────────────────────────────────────
-
-import type { OntologyKindInfo, OntologyLayerInfo } from '../../types/ontology';
+import type { OntologyKindInfo, OntologyLayerInfo, OntologyPackageInfo } from '../../types/ontology';
 import { LAYER_COLORS } from '../../constants';
 
 interface KindPropertiesPanelProps {
@@ -17,21 +6,41 @@ interface KindPropertiesPanelProps {
     layers: OntologyLayerInfo[];
     onKindClick: (kindName: string | null) => void;
     onClose: () => void;
+    /** All available ontologies — enables cross-ontology navigation for derives-from links */
+    allOntologies?: OntologyPackageInfo[];
+    /** Called when a kind link resolves to a different ontology package */
+    onNavigate?: (packageName: string, kindName: string) => void;
 }
 
-export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: KindPropertiesPanelProps) {
+export function KindPropertiesPanel({ kind, layers, onKindClick, onClose, allOntologies, onNavigate }: KindPropertiesPanelProps) {
     const layerColor = (LAYER_COLORS as Record<string, string>)[kind.layer] ?? '#6B7280';
 
-    // Find all kinds across layers for clickable navigation
     const allKinds = layers.flatMap(l => l.kinds);
     const parentKind = kind.derivesFrom ? allKinds.find(k => k.name === kind.derivesFrom) : null;
+
+    /** Find which package a kind name belongs to — returns null if it's in the current layers */
+    function resolveKindPackage(name: string): string | null {
+        if (layers.some(l => l.kinds.some(k => k.name === name))) return null;
+        for (const o of allOntologies ?? []) {
+            if (o.layers.some(l => l.kinds.some(k => k.name === name))) return o.name;
+        }
+        return null;
+    }
+
+    function handleKindLinkClick(name: string) {
+        const pkg = resolveKindPackage(name);
+        if (pkg && onNavigate) {
+            onNavigate(pkg, name);
+        } else {
+            onKindClick(name);
+        }
+    }
 
     return (
         <div
             className="flex flex-col border-l overflow-y-auto"
             style={{ width: 320, minWidth: 320, background: '#FFFFFF', borderColor: '#E5E5E0' }}
         >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: '#E5E5E0' }}>
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="w-3 h-3 rounded flex-shrink-0" style={{ backgroundColor: layerColor }} />
@@ -44,12 +53,11 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                     className="text-sm px-1.5 rounded hover:bg-gray-100"
                     style={{ color: '#9CA3AF' }}
                 >
-                    x
+                    ✕
                 </button>
             </div>
 
             <div className="p-4 space-y-4">
-                {/* Construct + Layer badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <span
                         className="px-2 py-0.5 text-xs rounded font-mono"
@@ -65,7 +73,6 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                     </span>
                 </div>
 
-                {/* Description */}
                 {kind.description && (
                     <Section title="Description">
                         <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>
@@ -74,18 +81,17 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                     </Section>
                 )}
 
-                {/* Derives From */}
                 {kind.derivesFrom && (
                     <Section title="Derives From">
                         <KindLink
                             name={kind.derivesFrom}
                             layer={parentKind?.layer}
-                            onClick={() => onKindClick(kind.derivesFrom!)}
+                            crossOntology={resolveKindPackage(kind.derivesFrom) !== null}
+                            onClick={() => handleKindLinkClick(kind.derivesFrom!)}
                         />
                     </Section>
                 )}
 
-                {/* Derived By */}
                 {kind.derivedBy && kind.derivedBy.length > 0 && (
                     <Section title={`Derived By (${kind.derivedBy.length})`}>
                         <div className="flex flex-wrap gap-1.5">
@@ -96,7 +102,8 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                                         key={name}
                                         name={name}
                                         layer={child?.layer}
-                                        onClick={() => onKindClick(name)}
+                                        crossOntology={resolveKindPackage(name) !== null}
+                                        onClick={() => handleKindLinkClick(name)}
                                     />
                                 );
                             })}
@@ -104,20 +111,19 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                     </Section>
                 )}
 
-                {/* Relationships */}
                 {kind.relationships && kind.relationships.length > 0 && (
                     <Section title={`Relationships (${kind.relationships.length})`}>
                         <div className="space-y-1">
                             {kind.relationships.map((rel, i) => (
                                 <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color: '#6B7280' }}>
                                     <span style={{ color: rel.direction === 'outgoing' ? '#10B981' : '#8B5CF6' }}>
-                                        {rel.direction === 'outgoing' ? '\u2192' : '\u2190'}
+                                        {rel.direction === 'outgoing' ? '→' : '←'}
                                     </span>
                                     <span className="font-medium" style={{ color: '#374151' }}>{rel.type}</span>
                                     <button
                                         className="hover:underline"
                                         style={{ color: '#2563EB' }}
-                                        onClick={() => onKindClick(rel.targetKind)}
+                                        onClick={() => handleKindLinkClick(rel.targetKind)}
                                     >
                                         {rel.targetKind}
                                     </button>
@@ -127,7 +133,6 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose }: Kind
                     </Section>
                 )}
 
-                {/* Stats */}
                 <Section title="Usage">
                     <div className="grid grid-cols-2 gap-2">
                         <StatCard label="Instances" value={kind.instanceCount} />
@@ -163,16 +168,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     );
 }
 
-function KindLink({ name, layer, onClick }: { name: string; layer?: string; onClick: () => void }) {
+function KindLink({ name, layer, crossOntology, onClick }: { name: string; layer?: string; crossOntology?: boolean; onClick: () => void }) {
     const color = layer ? (LAYER_COLORS as Record<string, string>)[layer] ?? '#6B7280' : '#6B7280';
     return (
         <button
             onClick={onClick}
             className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md hover:bg-gray-50"
             style={{ border: '1px solid #E5E7EB', color: '#374151' }}
+            title={crossOntology ? 'Navigate to this kind in another ontology package' : undefined}
         >
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
             {name.replace(/([A-Z])/g, ' $1').trim()}
+            {crossOntology && (
+                <span style={{ color: '#9CA3AF', fontSize: '9px' }}>↗</span>
+            )}
         </button>
     );
 }
