@@ -1,9 +1,10 @@
 import { lazy, Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useModelStore } from '../../store/model-store';
 import { OntologyHome } from './OntologyHome';
-import type { OntologyPackageInfo } from '../../types/ontology';
+import type { OntologyPackageInfo, OntologyLayerInfo } from '../../types/ontology';
 import { LAYER_COLORS } from '../../constants';
 import { KindPropertiesPanel } from './KindPropertiesPanel';
+import { SysMLMappingTable } from './SysMLMappingTable';
 
 const LayerGrid = lazy(() => import('./LayerGrid').then(m => ({ default: m.LayerGrid })));
 const LayerTable = lazy(() => import('./LayerTable').then(m => ({ default: m.LayerTable })));
@@ -14,6 +15,60 @@ interface OntologyDetailPanelProps {
     ontology: OntologyPackageInfo;
     onBack?: () => void;
 }
+
+// ─── Viewpoint tab configuration ─────────────────────────────────────────────
+// Each tab filters the layer swimlanes to a domain-specific slice.
+// `layerIds: null` means show all layers (no filter).
+// `type: 'sysml-mapping'` renders the construct reference table instead of LayerGrid.
+
+interface ViewpointTab {
+    id: string;
+    label: string;
+    layerIds: string[] | null;
+    type?: 'sysml-mapping';
+    description: string;
+}
+
+const VIEWPOINT_TABS: ViewpointTab[] = [
+    {
+        id: 'all',
+        label: 'All Layers',
+        layerIds: null,
+        description: 'All architecture layers in swimlane view',
+    },
+    {
+        id: 'software',
+        label: 'Software Views',
+        layerIds: ['functional', 'behavior', 'logical', 'software', 'interfaces', 'ui'],
+        description: 'Software architecture: Logical/Service, Runtime, Module/Code, Deployment',
+    },
+    {
+        id: 'hardware',
+        label: 'Hardware Views',
+        layerIds: ['logical', 'physical', 'interfaces'],
+        description: 'Hardware architecture: Logical, Physical/Embodiment, Compute/Electronics, Cross-domain',
+    },
+    {
+        id: 'risk',
+        label: 'Risk Chain',
+        layerIds: ['requirements', 'risk', 'safety', 'cybersecurity', 'verification', 'analysis'],
+        description: 'Risk trace chain: Hazard → HazardousSituation → Harm → RiskControl → verification',
+    },
+    {
+        id: 'traceability',
+        label: 'Traceability',
+        layerIds: ['purpose', 'business', 'operational', 'requirements', 'risk', 'safety',
+                   'functional', 'software', 'software-lifecycle', 'verification', 'analysis'],
+        description: 'Full trace: clinical, risk, software, and hardware chains',
+    },
+    {
+        id: 'sysml-mapping',
+        label: 'SysML Mapping',
+        layerIds: null,
+        type: 'sysml-mapping',
+        description: 'SysML v2 construct → MEMO kind reference table',
+    },
+];
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2.5;
@@ -161,6 +216,7 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
 
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const [activeRelTypes, setActiveRelTypes] = useState<Set<string>>(new Set());
+    const [activeViewpointTab, setActiveViewpointTab] = useState<string>('all');
 
     // Properties panel open state — auto-opens when a kind is selected
     const [propertiesOpen, setPropertiesOpen] = useState(false);
@@ -193,6 +249,14 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
             })),
         })),
     }), [ontology, model]);
+
+    // Filter layers to the selected viewpoint tab
+    const activeTab = VIEWPOINT_TABS.find(t => t.id === activeViewpointTab) ?? VIEWPOINT_TABS[0];
+    const filteredLayers: OntologyLayerInfo[] = useMemo(() => {
+        if (!activeTab.layerIds) return enrichedOntology.layers;
+        const allowed = new Set(activeTab.layerIds);
+        return enrichedOntology.layers.filter(l => allowed.has(l.id));
+    }, [enrichedOntology.layers, activeTab.layerIds]);
 
     // Resolve selected kind's layer — used for breadcrumb
     const selectedKindData = useMemo(() => {
@@ -268,16 +332,49 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                             {showRelationships ? 'Hide' : 'Show'} Relationships
                         </button>
                     </div>
+
+                    {/* Viewpoint tab strip */}
+                    <div
+                        className="flex items-center gap-0 mt-3 -mx-6 px-6"
+                        style={{ borderTop: '1px solid #E5E5E0', paddingTop: '10px' }}
+                    >
+                        <span className="text-xs mr-2" style={{ color: '#9CA3AF', whiteSpace: 'nowrap' }}>View:</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {VIEWPOINT_TABS.map(tab => {
+                                const isActive = activeViewpointTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveViewpointTab(tab.id)}
+                                        title={tab.description}
+                                        className="px-2.5 py-1 text-xs rounded-md font-medium transition-all"
+                                        style={isActive ? activeStyle : inactiveStyle}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {filteredLayers.length !== enrichedOntology.layers.length && activeTab.type !== 'sysml-mapping' && (
+                            <span className="ml-auto text-xs" style={{ color: '#9CA3AF', whiteSpace: 'nowrap' }}>
+                                {filteredLayers.length} of {enrichedOntology.layers.length} layers
+                            </span>
+                        )}
+                    </div>
                 </div>
 
-                {viewMode === 'visual' ? (
+                {activeTab.type === 'sysml-mapping' ? (
+                    <div className="px-6 py-4">
+                        <SysMLMappingTable layers={enrichedOntology.layers} />
+                    </div>
+                ) : viewMode === 'visual' ? (
                     <>
                         <div style={{ height: '280px', position: 'relative', borderBottom: '1px solid #E5E5E0' }}>
                             <ZoomPanCanvas>
                                 <div ref={gridContainerRef} style={{ position: 'relative' }}>
-                                    <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
+                                    <Suspense fallback={<LayerFallback layers={filteredLayers} />}>
                                         <LayerGrid
-                                            layers={enrichedOntology.layers}
+                                            layers={filteredLayers}
                                             selectedKind={selectedKind}
                                             onKindClick={setSelectedKind}
                                             activeLayerId={(activeView as { layerId?: string }).layerId ?? null}
@@ -289,7 +386,7 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                                         <Suspense fallback={null}>
                                             <RelationshipOverlay
                                                 containerRef={gridContainerRef}
-                                                ontology={enrichedOntology}
+                                                ontology={{ ...enrichedOntology, layers: filteredLayers }}
                                                 activeTypes={activeRelTypes}
                                             />
                                         </Suspense>
@@ -302,7 +399,7 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                             <div className="px-6 py-4">
                                 <Suspense fallback={null}>
                                     <RelationshipsSection
-                                        ontology={enrichedOntology}
+                                        ontology={{ ...enrichedOntology, layers: filteredLayers }}
                                         activeTypes={activeRelTypes}
                                         onActiveTypesChange={setActiveRelTypes}
                                     />
@@ -312,13 +409,13 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                     </>
                 ) : (
                     <div className="px-6 py-4">
-                        <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
-                            <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
+                        <Suspense fallback={<LayerFallback layers={filteredLayers} />}>
+                            <LayerTable layers={filteredLayers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
                         </Suspense>
                         {showRelationships && (
                             <Suspense fallback={null}>
                                 <RelationshipsSection
-                                    ontology={enrichedOntology}
+                                    ontology={{ ...enrichedOntology, layers: filteredLayers }}
                                     activeTypes={activeRelTypes}
                                     onActiveTypesChange={setActiveRelTypes}
                                 />
