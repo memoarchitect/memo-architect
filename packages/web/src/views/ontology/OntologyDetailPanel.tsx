@@ -1,20 +1,9 @@
-// ─── OntologyDetailPanel ──────────────────────────────────────────────────────
-//
-// Right panel of the Ontology Viewer. Shows:
-//   1. OntologyHome card (name, desc, counts)
-//   2. Visual/Table toggle + LayerGrid or LayerTable inside a zoomable canvas
-//   3. RelationshipsSection (collapsible)
-//
-// The visual LayerGrid is wrapped in a zoom/pan canvas (scroll-to-zoom,
-// drag-to-pan, fit-to-view button). The properties slide-in is removed from
-// this panel — kind selection is surfaced via the explorer sidebar.
-// ─────────────────────────────────────────────────────────────────────────────
-
-import { lazy, Suspense, useMemo, useRef, useState, useCallback } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useModelStore } from '../../store/model-store';
 import { OntologyHome } from './OntologyHome';
 import type { OntologyPackageInfo } from '../../types/ontology';
 import { LAYER_COLORS } from '../../constants';
+import { KindPropertiesPanel } from './KindPropertiesPanel';
 
 const LayerGrid = lazy(() => import('./LayerGrid').then(m => ({ default: m.LayerGrid })));
 const LayerTable = lazy(() => import('./LayerTable').then(m => ({ default: m.LayerTable })));
@@ -25,8 +14,6 @@ interface OntologyDetailPanelProps {
     ontology: OntologyPackageInfo;
     onBack?: () => void;
 }
-
-// ─── Zoom/Pan canvas wrapper ──────────────────────────────────────────────────
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2.5;
@@ -48,7 +35,6 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
     }, []);
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        // Only pan on the background (not on cards/buttons inside)
         if ((e.target as HTMLElement).closest('button, input, a')) return;
         isPanning.current = true;
         lastMouse.current = { x: e.clientX, y: e.clientY };
@@ -80,7 +66,6 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            {/* Toolbar */}
             <div
                 style={{
                     position: 'absolute',
@@ -105,7 +90,6 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
                 <CanvasToolbarBtn title="Fit to view" onClick={fitToView}>⊡</CanvasToolbarBtn>
             </div>
 
-            {/* Pan/zoom container */}
             <div
                 ref={containerRef}
                 onWheel={handleWheel}
@@ -163,8 +147,6 @@ function CanvasToolbarBtn({ onClick, title, children }: { onClick: () => void; t
     );
 }
 
-// ─── Main panel ───────────────────────────────────────────────────────────────
-
 export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelProps) {
     const viewMode = useModelStore(s => s.ontologyViewMode);
     const setOntologyViewMode = useModelStore(s => s.setOntologyViewMode);
@@ -174,13 +156,28 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
     const toggleRelationships = useModelStore(s => s.toggleOntologyRelationships);
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
 
-    // Container ref for the RelationshipOverlay positioning
     const gridContainerRef = useRef<HTMLDivElement>(null);
-    // Highlighted types from the RelationshipsSection filter panel
     const [activeRelTypes, setActiveRelTypes] = useState<Set<string>>(new Set());
 
-    // Enrich kind instanceCounts from model
+    // Properties panel open state — auto-opens when a kind is selected
+    const [propertiesOpen, setPropertiesOpen] = useState(false);
+
+    // Flash state — triggers kind-card highlight animation on navigation
+    const [flashKindName, setFlashKindName] = useState<string | null>(null);
+    const [flashTick, setFlashTick] = useState(0);
+
+    // Auto-open properties and flash target card when selected kind changes
+    useEffect(() => {
+        if (selectedKind) {
+            setPropertiesOpen(true);
+            setFlashKindName(selectedKind);
+            setFlashTick(t => t + 1);
+        }
+    }, [selectedKind]);
+
     const enrichedOntology: OntologyPackageInfo = useMemo(() => ({
         ...ontology,
         layers: ontology.layers.map(layer => ({
@@ -197,66 +194,128 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
         })),
     }), [ontology, model]);
 
+    // Resolve selected kind's layer — used for breadcrumb
+    const selectedKindData = useMemo(() => {
+        if (!selectedKind) return null;
+        for (const layer of enrichedOntology.layers) {
+            const k = layer.kinds.find(k => k.name === selectedKind);
+            if (k) return { kind: k, layerInfo: layer };
+        }
+        return null;
+    }, [selectedKind, enrichedOntology]);
+
+    // Cross-ontology navigation — navigate to the target package and select the kind there
+    function handleCrossOntologyNavigate(packageName: string, kindName: string) {
+        setSelectedKind(kindName);
+        setActiveView({ type: 'ontology-detail', packageName });
+        // The new OntologyDetailPanel mounts with selectedKind set → auto-opens and flashes
+    }
+
+    // Breadcrumb layer click — scroll grid to that layer
+    function handleLayerBreadcrumbClick(layerId: string) {
+        setActiveView({ type: 'ontology-detail', packageName: ontology.name, layerId });
+    }
+
     const activeStyle: React.CSSProperties = { background: '#1B3A4B', color: '#2DD4A8', border: '1px solid transparent' };
     const inactiveStyle: React.CSSProperties = { background: '#F0F0ED', color: '#6B7280', border: '1px solid transparent' };
 
     return (
-        <div className="flex-1 overflow-y-auto" style={{ background: '#F7F7F5' }}>
-            {/* Header: breadcrumb + home card + toolbar */}
-            <div className="px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #E5E5E0' }}>
-                {onBack && (
-                    <div className="flex items-center gap-1.5 mb-3 text-xs" style={{ color: '#9CA3AF' }}>
-                        <button onClick={onBack} className="hover:underline" style={{ color: '#2563EB' }}>
-                            Ontology Library
+        <div className="flex flex-1 overflow-hidden" style={{ background: '#F7F7F5' }}>
+            {/* Main content column */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #E5E5E0' }}>
+                    {/* Breadcrumb: Ontology Library / package / layer / kind */}
+                    <div className="flex items-center gap-1.5 mb-3 text-xs flex-wrap" style={{ color: '#9CA3AF' }}>
+                        {onBack && (
+                            <>
+                                <button onClick={onBack} className="hover:underline" style={{ color: '#2563EB' }}>
+                                    Ontology Library
+                                </button>
+                                <span>/</span>
+                            </>
+                        )}
+                        <button
+                            onClick={() => setSelectedKind(null)}
+                            className="hover:underline"
+                            style={{ color: selectedKindData ? '#2563EB' : '#374151', fontWeight: selectedKindData ? 400 : 500 }}
+                        >
+                            {ontology.name}
                         </button>
-                        <span>/</span>
-                        <span style={{ color: '#374151' }}>{ontology.name}</span>
+                        {selectedKindData && (
+                            <>
+                                <span>/</span>
+                                <button
+                                    onClick={() => handleLayerBreadcrumbClick(selectedKindData.layerInfo.id)}
+                                    className="hover:underline"
+                                    style={{ color: '#2563EB' }}
+                                >
+                                    {selectedKindData.layerInfo.label}
+                                </button>
+                                <span>/</span>
+                                <span style={{ color: '#1a1a1a', fontWeight: 600 }}>
+                                    {selectedKind}
+                                </span>
+                            </>
+                        )}
                     </div>
-                )}
-                <OntologyHome ontology={enrichedOntology} />
-                <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs" style={{ color: '#9CA3AF' }}>Layers:</span>
-                    <button onClick={() => setOntologyViewMode('visual')} className="px-2.5 py-1 text-xs rounded-md font-medium" style={viewMode === 'visual' ? activeStyle : inactiveStyle}>Visual</button>
-                    <button onClick={() => setOntologyViewMode('table')} className="px-2.5 py-1 text-xs rounded-md font-medium" style={viewMode === 'table' ? activeStyle : inactiveStyle}>Table</button>
-                    <span style={{ width: '1px', height: '16px', background: '#E5E5E0', margin: '0 4px' }} />
-                    <button onClick={toggleRelationships} className="px-2.5 py-1 text-xs rounded-md font-medium" style={showRelationships ? activeStyle : inactiveStyle}>
-                        {showRelationships ? 'Hide' : 'Show'} Relationships
-                    </button>
+                    <OntologyHome ontology={enrichedOntology} />
+                    <div className="flex items-center gap-2 mt-3">
+                        <span className="text-xs" style={{ color: '#9CA3AF' }}>Layers:</span>
+                        <button onClick={() => setOntologyViewMode('visual')} className="px-2.5 py-1 text-xs rounded-md font-medium" style={viewMode === 'visual' ? activeStyle : inactiveStyle}>Visual</button>
+                        <button onClick={() => setOntologyViewMode('table')} className="px-2.5 py-1 text-xs rounded-md font-medium" style={viewMode === 'table' ? activeStyle : inactiveStyle}>Table</button>
+                        <span style={{ width: '1px', height: '16px', background: '#E5E5E0', margin: '0 4px' }} />
+                        <button onClick={toggleRelationships} className="px-2.5 py-1 text-xs rounded-md font-medium" style={showRelationships ? activeStyle : inactiveStyle}>
+                            {showRelationships ? 'Hide' : 'Show'} Relationships
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Layer view — fixed-height zoomable/pannable canvas for visual; plain scroll for table */}
-            {viewMode === 'visual' ? (
-                <>
-                    {/* Canvas: fixed height so it's always visible without pushing content off-screen */}
-                    <div style={{ height: '280px', position: 'relative', borderBottom: '1px solid #E5E5E0' }}>
-                        <ZoomPanCanvas>
-                            {/* Positioned wrapper shared by LayerGrid and SVG overlay */}
-                            <div ref={gridContainerRef} style={{ position: 'relative' }}>
-                                <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
-                                    <LayerGrid
-                                        layers={enrichedOntology.layers}
-                                        selectedKind={selectedKind}
-                                        onKindClick={setSelectedKind}
-                                        activeLayerId={(activeView as { layerId?: string }).layerId ?? null}
-                                    />
-                                </Suspense>
-                                {showRelationships && (
-                                    <Suspense fallback={null}>
-                                        <RelationshipOverlay
-                                            containerRef={gridContainerRef}
-                                            ontology={enrichedOntology}
-                                            activeTypes={activeRelTypes}
+                {viewMode === 'visual' ? (
+                    <>
+                        <div style={{ height: '280px', position: 'relative', borderBottom: '1px solid #E5E5E0' }}>
+                            <ZoomPanCanvas>
+                                <div ref={gridContainerRef} style={{ position: 'relative' }}>
+                                    <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
+                                        <LayerGrid
+                                            layers={enrichedOntology.layers}
+                                            selectedKind={selectedKind}
+                                            onKindClick={setSelectedKind}
+                                            activeLayerId={(activeView as { layerId?: string }).layerId ?? null}
+                                            flashKindName={flashKindName}
+                                            flashTick={flashTick}
                                         />
                                     </Suspense>
-                                )}
-                            </div>
-                        </ZoomPanCanvas>
-                    </div>
+                                    {showRelationships && (
+                                        <Suspense fallback={null}>
+                                            <RelationshipOverlay
+                                                containerRef={gridContainerRef}
+                                                ontology={enrichedOntology}
+                                                activeTypes={activeRelTypes}
+                                            />
+                                        </Suspense>
+                                    )}
+                                </div>
+                            </ZoomPanCanvas>
+                        </div>
 
-                    {/* Relationships filter panel — directly below canvas */}
-                    {showRelationships && (
-                        <div className="px-6 py-4">
+                        {showRelationships && (
+                            <div className="px-6 py-4">
+                                <Suspense fallback={null}>
+                                    <RelationshipsSection
+                                        ontology={enrichedOntology}
+                                        activeTypes={activeRelTypes}
+                                        onActiveTypesChange={setActiveRelTypes}
+                                    />
+                                </Suspense>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="px-6 py-4">
+                        <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
+                            <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
+                        </Suspense>
+                        {showRelationships && (
                             <Suspense fallback={null}>
                                 <RelationshipsSection
                                     ontology={enrichedOntology}
@@ -264,24 +323,21 @@ export function OntologyDetailPanel({ ontology, onBack }: OntologyDetailPanelPro
                                     onActiveTypesChange={setActiveRelTypes}
                                 />
                             </Suspense>
-                        </div>
-                    )}
-                </>
-            ) : (
-                <div className="px-6 py-4">
-                    <Suspense fallback={<LayerFallback layers={enrichedOntology.layers} />}>
-                        <LayerTable layers={enrichedOntology.layers} selectedKind={selectedKind} onKindClick={setSelectedKind} />
-                    </Suspense>
-                    {showRelationships && (
-                        <Suspense fallback={null}>
-                            <RelationshipsSection
-                                ontology={enrichedOntology}
-                                activeTypes={activeRelTypes}
-                                onActiveTypesChange={setActiveRelTypes}
-                            />
-                        </Suspense>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Right: Properties panel — auto-opens when a kind is selected */}
+            {propertiesOpen && selectedKindData && (
+                <KindPropertiesPanel
+                    kind={selectedKindData.kind}
+                    layers={enrichedOntology.layers}
+                    allOntologies={availableOntologies}
+                    onKindClick={setSelectedKind}
+                    onNavigate={handleCrossOntologyNavigate}
+                    onClose={() => { setSelectedKind(null); setPropertiesOpen(false); }}
+                />
             )}
         </div>
     );

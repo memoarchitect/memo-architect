@@ -192,6 +192,13 @@ export function sendDiagramParse(diagramId: string, text: string): void {
     }
 }
 
+/** Send kind remapping to server — replaces orphaned kind references in SysML files */
+export function sendKindRemap(mappings: Record<string, string>): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'element:remap-kinds', payload: { mappings } }));
+    }
+}
+
 /** Send selected ontology package names to server for persistence to memo.package.yaml */
 export function sendOntologySelection(selected: string[]): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
