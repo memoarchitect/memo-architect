@@ -19,7 +19,12 @@ export type ServerMessage =
     | OntologyPackagesMessage
     | DiagramLayoutMessage
     | OntologyInstallResultMessage
-    | OntologyRemoveResultMessage;
+    | OntologyRemoveResultMessage
+    | LlmStatusMessage
+    | LlmAskResultMessage
+    | LlmGenerateResultMessage
+    | LlmDraftResultMessage
+    | LlmSuggestResultMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -62,7 +67,11 @@ export type ClientMessage =
     | OntologySaveSelectionMessage
     | OntologyInstallMessage
     | OntologyRemoveMessage
-    | DiagramLayoutUpdateMessage;
+    | DiagramLayoutUpdateMessage
+    | LlmAskMessage
+    | LlmGenerateMessage
+    | LlmDraftMessage
+    | LlmSuggestMessage;
 
 export interface RequestRefreshMessage {
     type: 'request:refresh';
@@ -236,6 +245,62 @@ export interface DiagramLayoutUpdateMessage {
         diagramId: string;
         layout: DiagramLayout;
     };
+}
+
+// ─── LLM Messages ────────────────────────────────────────────────────────────
+
+/** Server → Client: whether an LLM provider is configured and available */
+export interface LlmStatusMessage {
+    type: 'llm:status';
+    payload: { available: boolean; provider?: string; model?: string };
+}
+
+/** Client → Server: ask a natural language question about the model */
+export interface LlmAskMessage {
+    type: 'llm:ask';
+    payload: { requestId: string; question: string };
+}
+
+/** Server → Client: answer to a model Q&A question */
+export interface LlmAskResultMessage {
+    type: 'llm:ask:result';
+    payload: { requestId: string; answer?: string; error?: string };
+}
+
+/** Client → Server: generate SysML v2 from a natural language description */
+export interface LlmGenerateMessage {
+    type: 'llm:generate';
+    payload: { requestId: string; description: string };
+}
+
+/** Server → Client: generated SysML v2 code */
+export interface LlmGenerateResultMessage {
+    type: 'llm:generate:result';
+    payload: { requestId: string; sysml?: string; explanation?: string; suggestedFile?: string; error?: string };
+}
+
+/** Client → Server: draft one or all sections of a DHF document type */
+export interface LlmDraftMessage {
+    type: 'llm:draft';
+    payload: { requestId: string; documentTypeId: string; targetSections?: string[] };
+}
+
+/** Server → Client: drafted DHF markdown content */
+export interface LlmDraftResultMessage {
+    type: 'llm:draft:result';
+    payload: { requestId: string; markdown?: string; summary?: string; error?: string };
+}
+
+/** Client → Server: ask for AI-driven completeness suggestions */
+export interface LlmSuggestMessage {
+    type: 'llm:suggest';
+    payload: { requestId: string };
+}
+
+/** Server → Client: list of suggested next modeling steps */
+export interface LlmSuggestResultMessage {
+    type: 'llm:suggest:result';
+    payload: { requestId: string; suggestions?: string[]; error?: string };
 }
 
 /** Server → Client: CSV import results */

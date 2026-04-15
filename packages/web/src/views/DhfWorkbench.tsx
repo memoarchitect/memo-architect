@@ -4,8 +4,9 @@
 // The left panel (document tree) lives in ExplorerPanel's DhfExplorerContent.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
+import { sendLlmDraft } from '../store/ws-client';
 import type { MemoModelDTO } from '@memo/core';
 
 type EditMode = 'edit' | 'preview' | 'split';
@@ -15,9 +16,33 @@ export function DhfWorkbench() {
     const activeView = useModelStore(s => s.activeView);
     const dhfDocuments = useModelStore(s => s.dhfDocuments);
     const updateDhfDocumentContent = useModelStore(s => s.updateDhfDocumentContent);
+    const llmAvailable = useModelStore(s => s.llmAvailable);
+    const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
 
     const [editMode, setEditMode] = useState<EditMode>('split');
     const editorRef = useRef<HTMLTextAreaElement>(null);
+    const [draftLoading, setDraftLoading] = useState(false);
+    const [draftError, setDraftError] = useState<string | null>(null);
+
+    const draftWithAI = useCallback(async (docId: string, templateId: string) => {
+        setDraftLoading(true);
+        setDraftError(null);
+        const requestId = `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        // Extract the document type ID from the templateId (e.g. "iso-14971/rmp" → "rmp")
+        const docTypeId = templateId.split('/').pop() ?? templateId;
+        try {
+            const result = await new Promise<{ markdown: string; summary: string }>((resolve, reject) => {
+                registerLlmRequest(requestId, resolve, reject);
+                sendLlmDraft(requestId, docTypeId);
+                setTimeout(() => reject(new Error('Request timed out after 120 seconds.')), 120000);
+            });
+            updateDhfDocumentContent(docId, result.markdown);
+        } catch (e: any) {
+            setDraftError(e?.message ?? 'Unknown error');
+        } finally {
+            setDraftLoading(false);
+        }
+    }, [registerLlmRequest, updateDhfDocumentContent]);
 
     // Resolve active doc from view state
     const docId = activeView.type === 'dhf-document' ? activeView.docId : null;
@@ -67,6 +92,25 @@ export function DhfWorkbench() {
                     </span>
                 </div>
 
+                {/* Draft with AI */}
+                <button
+                    onClick={() => draftWithAI(doc.id, doc.templateId)}
+                    disabled={!llmAvailable || draftLoading}
+                    title={llmAvailable ? 'Use AI to draft empty sections from model data' : 'Set ANTHROPIC_API_KEY or OPENAI_API_KEY to enable AI drafting'}
+                    style={{
+                        padding: '3px 10px', borderRadius: '6px', border: 'none',
+                        background: llmAvailable ? '#2DD4A815' : '#f3f4f6',
+                        color: llmAvailable ? '#065F46' : '#9CA3AF',
+                        fontSize: '11px', fontWeight: 600,
+                        cursor: llmAvailable && !draftLoading ? 'pointer' : 'not-allowed',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        opacity: draftLoading ? 0.6 : 1,
+                    }}
+                >
+                    <span>✦</span>
+                    {draftLoading ? 'Drafting…' : 'Draft with AI'}
+                </button>
+
                 {/* Edit/Split/Preview toggle */}
                 <div style={{ display: 'flex', gap: '2px', background: '#f3f4f6', borderRadius: '6px', padding: '2px' }}>
                     {(['edit', 'split', 'preview'] as EditMode[]).map(mode => (
@@ -86,6 +130,18 @@ export function DhfWorkbench() {
                     ))}
                 </div>
             </div>
+
+            {/* Draft error banner */}
+            {draftError && (
+                <div style={{
+                    padding: '6px 16px', background: '#fef2f2', borderBottom: '1px solid #fecaca',
+                    fontSize: '12px', color: '#dc2626', display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', flexShrink: 0,
+                }}>
+                    <span>AI draft failed: {draftError}</span>
+                    <button onClick={() => setDraftError(null)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+                </div>
+            )}
 
             {/* Content panes */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

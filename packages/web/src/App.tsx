@@ -28,6 +28,8 @@ const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m =>
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
 const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ default: m.DhfWorkbench })));
+const AskPanel = lazy(() => import('./views/AskPanel').then(m => ({ default: m.AskPanel })));
+const SysmlGenerator = lazy(() => import('./views/SysmlGenerator').then(m => ({ default: m.SysmlGenerator })));
 const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
@@ -77,6 +79,10 @@ function UnifiedCanvas() {
                 return <DhfWorkbench />;
             case 'dhf-dashboard-legacy':
                 return <DhfDashboard />;
+            case 'ask':
+                return <AskPanel />;
+            case 'sysml-generator':
+                return <SysmlGenerator />;
             case 'element-detail':
                 return <ElementDetailView />;
             case 'dashboard':
@@ -422,6 +428,8 @@ export function App() {
                     && activeView.type !== 'scenario-editor'
                     && activeView.type !== 'ontology'
                     && activeView.type !== 'ontology-detail'
+                    && activeView.type !== 'ask'
+                    && activeView.type !== 'sysml-generator'
                     && !isCatalogRoute
                     && activeMode !== 'dhf'
                     && activeMode !== 'ontology' && (

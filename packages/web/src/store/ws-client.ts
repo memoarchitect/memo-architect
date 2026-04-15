@@ -126,6 +126,44 @@ function handleMessage(msg: ServerMessage): void {
         case 'import:result':
             store.setImportResult(msg.payload);
             break;
+        case 'llm:status':
+            store.setLlmStatus(msg.payload.available, msg.payload.provider, msg.payload.model);
+            break;
+        case 'llm:ask:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, msg.payload.answer);
+            }
+            break;
+        case 'llm:generate:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, {
+                    sysml: msg.payload.sysml,
+                    explanation: msg.payload.explanation,
+                    suggestedFile: msg.payload.suggestedFile,
+                });
+            }
+            break;
+        case 'llm:draft:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, {
+                    markdown: msg.payload.markdown,
+                    summary: msg.payload.summary,
+                });
+            }
+            break;
+        case 'llm:suggest:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, msg.payload.suggestions);
+            }
+            break;
     }
 }
 
@@ -234,5 +272,33 @@ export function sendDiagramLayoutUpdate(diagramId: string, layout: DiagramLayout
 export function sendCsvImport(payload: CsvImportMessage['payload']): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'csv:import', payload }));
+    }
+}
+
+/** Send a model Q&A question to the LLM via the CLI server */
+export function sendLlmAsk(requestId: string, question: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:ask', payload: { requestId, question } }));
+    }
+}
+
+/** Send a SysML generation request to the LLM via the CLI server */
+export function sendLlmGenerate(requestId: string, description: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:generate', payload: { requestId, description } }));
+    }
+}
+
+/** Send a DHF section draft request to the LLM via the CLI server */
+export function sendLlmDraft(requestId: string, documentTypeId: string, targetSections?: string[]): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:draft', payload: { requestId, documentTypeId, targetSections } }));
+    }
+}
+
+/** Send a completeness suggestion request to the LLM via the CLI server */
+export function sendLlmSuggest(requestId: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:suggest', payload: { requestId } }));
     }
 }

@@ -207,6 +207,23 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
         }
     }
 
+    /** Convert a DhfBlock (from document IR) to a markdown string */
+    function blockToMarkdown(block: any): string {
+        switch (block.type) {
+            case 'heading': return `${'#'.repeat(block.level)} ${block.text}\n`;
+            case 'paragraph': return block.inlines.map((i: any) => i.text ?? '').join('') + '\n';
+            case 'list': return block.items.map((item: any[]) => `- ${item.map((i: any) => i.text ?? '').join('')}`).join('\n') + '\n';
+            case 'table': {
+                const header = `| ${block.headers.join(' | ')} |`;
+                const sep = `| ${block.headers.map(() => '---').join(' | ')} |`;
+                const rows = block.rows.map((r: any[][]) => `| ${r.map(cell => cell.map((i: any) => i.text ?? '').join('')).join(' | ')} |`);
+                return [header, sep, ...rows].join('\n') + '\n';
+            }
+            case 'divider': return '---\n';
+            default: return '';
+        }
+    }
+
     /** Extract element IDs from a SysML text snippet by matching names against the model */
     function extractElementIdsFromText(text: string, elements: Record<string, any>): string[] {
         // Match `part|requirement|action|port|item|attribute <name> :` patterns
@@ -232,6 +249,17 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
         const layouts = loadAllLayouts(options.projectRoot);
         if (Object.keys(layouts).length > 0) {
             ws.send(JSON.stringify({ type: 'diagram:layout', payload: { layouts } }));
+        }
+
+        // Announce LLM availability on connect
+        {
+            const hasAnthropic = !!(process.env.ANTHROPIC_API_KEY);
+            const hasOpenAI = !!(process.env.OPENAI_API_KEY);
+            const available = hasAnthropic || hasOpenAI;
+            const provider = hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : undefined;
+            const model = process.env.MEMO_LLM_MODEL
+                || (hasAnthropic ? 'claude-sonnet-4-20250514' : hasOpenAI ? 'gpt-4o' : undefined);
+            ws.send(JSON.stringify({ type: 'llm:status', payload: { available, provider, model } }));
         }
 
         ws.on('close', () => clients.delete(ws));
@@ -536,6 +564,141 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                             type: 'import:result',
                             payload: { success: false, elementsImported: 0, relationshipsImported: 0, errors: [e?.message ?? String(e)], warnings: [] },
                         }));
+                    }
+                } else if (msg.type === 'llm:ask') {
+                    // Q&A about the model via LLM (#52)
+                    const { requestId, question } = msg.payload ?? {};
+                    try {
+                        const { resolveLLMConfig, createProvider } = await import('@memo/core');
+                        const { createQueryContext, findConfigFile } = await import('@memo/core');
+                        const { askModel } = await import('@memo/core');
+                        const { loadAndResolveConfig } = await import('./config-resolver.js');
+
+                        const llmConfig = resolveLLMConfig();
+                        if (!llmConfig) {
+                            ws.send(JSON.stringify({ type: 'llm:ask:result', payload: { requestId, error: 'No LLM provider configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.' } }));
+                        } else {
+                            const modelMsg = initialMessages.find((m: any) => m.type === 'model:update') as any;
+                            const validMsg = initialMessages.find((m: any) => m.type === 'validation:update') as any;
+                            const compMsg = initialMessages.find((m: any) => m.type === 'completeness:update') as any;
+                            const configPath = findConfigFile(options.projectRoot);
+                            const config = configPath ? await loadAndResolveConfig(configPath) : {} as any;
+                            const ctx = createQueryContext(modelMsg?.payload ?? {}, validMsg?.payload ?? { violations: [] }, compMsg?.payload ?? { overall: 0, layers: [] }, config);
+                            const provider = createProvider(llmConfig);
+                            const result = await askModel(question, ctx, provider);
+                            ws.send(JSON.stringify({ type: 'llm:ask:result', payload: { requestId, answer: result.answer } }));
+                        }
+                    } catch (e: any) {
+                        console.error('[LLM] ask failed:', e);
+                        ws.send(JSON.stringify({ type: 'llm:ask:result', payload: { requestId, error: e?.message ?? String(e) } }));
+                    }
+                } else if (msg.type === 'llm:generate') {
+                    // Generate SysML v2 from natural language (#54)
+                    const { requestId, description } = msg.payload ?? {};
+                    try {
+                        const { resolveLLMConfig, createProvider, generateSysml, findConfigFile } = await import('@memo/core');
+                        const { loadAndResolveConfig } = await import('./config-resolver.js');
+
+                        const llmConfig = resolveLLMConfig();
+                        if (!llmConfig) {
+                            ws.send(JSON.stringify({ type: 'llm:generate:result', payload: { requestId, error: 'No LLM provider configured.' } }));
+                        } else {
+                            const configPath = findConfigFile(options.projectRoot);
+                            const config = configPath ? await loadAndResolveConfig(configPath) : {} as any;
+                            const provider = createProvider(llmConfig);
+                            const result = await generateSysml(description, config, provider);
+                            ws.send(JSON.stringify({ type: 'llm:generate:result', payload: { requestId, sysml: result.sysml, explanation: result.explanation, suggestedFile: result.suggestedFile } }));
+                        }
+                    } catch (e: any) {
+                        console.error('[LLM] generate failed:', e);
+                        ws.send(JSON.stringify({ type: 'llm:generate:result', payload: { requestId, error: e?.message ?? String(e) } }));
+                    }
+                } else if (msg.type === 'llm:draft') {
+                    // Draft DHF document sections via LLM (#55)
+                    const { requestId, documentTypeId, targetSections } = msg.payload ?? {};
+                    try {
+                        const { resolveLLMConfig, createProvider, createQueryContext, findConfigFile, getDocumentType } = await import('@memo/core');
+                        const { draftDocument } = await import('@memo/core');
+                        const { loadAndResolveConfig } = await import('./config-resolver.js');
+
+                        const llmConfig = resolveLLMConfig();
+                        if (!llmConfig) {
+                            ws.send(JSON.stringify({ type: 'llm:draft:result', payload: { requestId, error: 'No LLM provider configured.' } }));
+                        } else {
+                            const modelMsg = initialMessages.find((m: any) => m.type === 'model:update') as any;
+                            const validMsg = initialMessages.find((m: any) => m.type === 'validation:update') as any;
+                            const compMsg = initialMessages.find((m: any) => m.type === 'completeness:update') as any;
+                            const configPath = findConfigFile(options.projectRoot);
+                            const config = configPath ? await loadAndResolveConfig(configPath) : {} as any;
+                            const ctx = createQueryContext(modelMsg?.payload ?? {}, validMsg?.payload ?? { violations: [] }, compMsg?.payload ?? { overall: 0, layers: [] }, config);
+                            const docType = getDocumentType(documentTypeId);
+                            if (!docType) {
+                                ws.send(JSON.stringify({ type: 'llm:draft:result', payload: { requestId, error: `Unknown document type: ${documentTypeId}` } }));
+                            } else {
+                                const provider = createProvider(llmConfig);
+                                const result = await draftDocument(ctx, provider, { documentType: docType, targetSections });
+                                // Serialize sections as Markdown for the web UI
+                                const lines: string[] = [`# ${docType.title}\n`];
+                                for (const sec of result.document.sections) {
+                                    lines.push(`## ${sec.title}\n`);
+                                    for (const block of sec.blocks) {
+                                        lines.push(blockToMarkdown(block));
+                                    }
+                                    lines.push('');
+                                }
+                                ws.send(JSON.stringify({ type: 'llm:draft:result', payload: { requestId, markdown: lines.join('\n'), summary: result.summary } }));
+                            }
+                        }
+                    } catch (e: any) {
+                        console.error('[LLM] draft failed:', e);
+                        ws.send(JSON.stringify({ type: 'llm:draft:result', payload: { requestId, error: e?.message ?? String(e) } }));
+                    }
+                } else if (msg.type === 'llm:suggest') {
+                    // Completeness suggestions via LLM (#53)
+                    const { requestId } = msg.payload ?? {};
+                    try {
+                        const { resolveLLMConfig, createProvider, createQueryContext, findConfigFile, serializeModelContext } = await import('@memo/core');
+                        const { loadAndResolveConfig } = await import('./config-resolver.js');
+
+                        const llmConfig = resolveLLMConfig();
+                        if (!llmConfig) {
+                            ws.send(JSON.stringify({ type: 'llm:suggest:result', payload: { requestId, error: 'No LLM provider configured.' } }));
+                        } else {
+                            const modelMsg = initialMessages.find((m: any) => m.type === 'model:update') as any;
+                            const validMsg = initialMessages.find((m: any) => m.type === 'validation:update') as any;
+                            const compMsg = initialMessages.find((m: any) => m.type === 'completeness:update') as any;
+                            const configPath = findConfigFile(options.projectRoot);
+                            const config = configPath ? await loadAndResolveConfig(configPath) : {} as any;
+                            const ctx = createQueryContext(modelMsg?.payload ?? {}, validMsg?.payload ?? { violations: [] }, compMsg?.payload ?? { overall: 0, layers: [] }, config);
+                            const modelContext = serializeModelContext(ctx, { includeGaps: true, maxElements: 200 });
+                            const provider = createProvider(llmConfig);
+                            const result = await provider.complete({
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: `You are MEMO Completeness Assistant, an expert in medical device systems engineering and SysML v2 modeling. Analyze the provided model and suggest the top 5-8 most impactful next modeling steps to improve completeness and regulatory compliance (ISO 14971, IEC 62304, ISO 13485).
+
+Return ONLY a JSON array of strings. Each string is a concise, actionable suggestion (one sentence). Example format:
+["Add RiskControl elements for 3 unmitigated Hazard elements", "Define VerificationActivity for each TestCase requirement"]`,
+                                    },
+                                    {
+                                        role: 'user',
+                                        content: `Model context:\n\n${modelContext}\n\nSuggest the top modeling improvements as a JSON array of strings.`,
+                                    },
+                                ],
+                                temperature: 0.3,
+                                maxTokens: 1024,
+                            });
+                            let suggestions: string[] = [];
+                            try {
+                                const arrMatch = result.content.match(/\[[\s\S]*\]/);
+                                if (arrMatch) suggestions = JSON.parse(arrMatch[0]);
+                            } catch { suggestions = [result.content]; }
+                            ws.send(JSON.stringify({ type: 'llm:suggest:result', payload: { requestId, suggestions } }));
+                        }
+                    } catch (e: any) {
+                        console.error('[LLM] suggest failed:', e);
+                        ws.send(JSON.stringify({ type: 'llm:suggest:result', payload: { requestId, error: e?.message ?? String(e) } }));
                     }
                 } else if (msg.type === 'ontology:remove') {
                     // Remove an installed ontology package

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
+import { sendLlmSuggest } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
 
 interface KindCompleteness {
@@ -19,6 +20,29 @@ interface LayerCompleteness {
 
 export function CompletenessHints() {
     const model = useModelStore(s => s.model);
+    const llmAvailable = useModelStore(s => s.llmAvailable);
+    const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
+    const [aiSuggestions, setAiSuggestions] = useState<string[] | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+
+    const fetchAiSuggestions = useCallback(async () => {
+        setAiLoading(true);
+        setAiError(null);
+        const requestId = `suggest-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        try {
+            const suggestions = await new Promise<string[]>((resolve, reject) => {
+                registerLlmRequest(requestId, resolve, reject);
+                sendLlmSuggest(requestId);
+                setTimeout(() => reject(new Error('Request timed out.')), 60000);
+            });
+            setAiSuggestions(suggestions);
+        } catch (e: any) {
+            setAiError(e?.message ?? 'Unknown error');
+        } finally {
+            setAiLoading(false);
+        }
+    }, [registerLlmRequest]);
 
     const layerCompleteness = useMemo((): LayerCompleteness[] => {
         if (!model) return [];
@@ -108,7 +132,7 @@ export function CompletenessHints() {
     return (
         <div className="flex-1 overflow-y-auto p-6">
             {/* Summary */}
-            <div className="mb-6 p-4 rounded-xl" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
+            <div className="mb-4 p-4 rounded-xl" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
                 <h2 className="text-sm font-semibold mb-2" style={{ color: '#1a1a1a' }}>What should I model next?</h2>
                 <p className="text-xs mb-3" style={{ color: '#6B7280' }}>
                     {missingKinds.length === 0
@@ -132,6 +156,50 @@ export function CompletenessHints() {
                             </span>
                         )}
                     </div>
+                )}
+            </div>
+
+            {/* AI Completeness Assistant */}
+            <div className="mb-6 p-4 rounded-xl" style={{ background: '#F0FDF9', border: '1px solid #A7F3D0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px' }}>✦</span>
+                        <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#065F46', margin: 0 }}>
+                            AI Completeness Assistant
+                        </h3>
+                    </div>
+                    <button
+                        onClick={fetchAiSuggestions}
+                        disabled={!llmAvailable || aiLoading}
+                        style={{
+                            padding: '3px 10px', borderRadius: '6px', border: 'none',
+                            background: '#059669', color: '#fff', fontSize: '11px',
+                            fontWeight: 600, cursor: 'pointer',
+                            opacity: !llmAvailable || aiLoading ? 0.5 : 1,
+                        }}
+                    >
+                        {aiLoading ? 'Thinking…' : aiSuggestions ? 'Refresh' : 'Suggest'}
+                    </button>
+                </div>
+                {!llmAvailable && (
+                    <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>
+                        Set <code style={{ background: '#D1FAE5', padding: '0 3px', borderRadius: '3px' }}>ANTHROPIC_API_KEY</code> or <code style={{ background: '#D1FAE5', padding: '0 3px', borderRadius: '3px' }}>OPENAI_API_KEY</code> to enable AI suggestions.
+                    </p>
+                )}
+                {aiError && (
+                    <p style={{ fontSize: '11px', color: '#dc2626', margin: 0 }}>{aiError}</p>
+                )}
+                {aiSuggestions && !aiLoading && (
+                    <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {aiSuggestions.map((s, i) => (
+                            <li key={i} style={{ fontSize: '12px', color: '#065F46', lineHeight: '1.5' }}>{s}</li>
+                        ))}
+                    </ul>
+                )}
+                {llmAvailable && !aiSuggestions && !aiLoading && !aiError && (
+                    <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>
+                        Click <strong>Suggest</strong> to get AI-powered recommendations for your next modeling steps.
+                    </p>
                 )}
             </div>
 
