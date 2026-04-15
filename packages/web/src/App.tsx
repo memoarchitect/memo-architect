@@ -31,6 +31,7 @@ const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m 
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
 const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
+const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -57,6 +58,8 @@ function UnifiedCanvas() {
                 return <DSMView />;
             case 'traceability':
                 return <TraceabilityMatrix />;
+            case 'tabular':
+                return <TabularView />;
             case 'ontology':
             case 'ontology-detail':
                 return <OntologyViewer />;
@@ -412,12 +415,15 @@ export function App() {
                     </Routes>
                 </div>
 
-                {/* Right: Properties Panel — hidden in element-detail, catalog, DHF, and scenario modes */}
+                {/* Right: Properties Panel — hidden in element-detail, catalog, DHF, scenario, and ontology modes */}
                 {/* Switches to BulkEditPanel when 2+ elements selected */}
                 {activeView.type !== 'element-detail'
                     && activeView.type !== 'scenario-editor'
+                    && activeView.type !== 'ontology'
+                    && activeView.type !== 'ontology-detail'
                     && !isCatalogRoute
-                    && activeMode !== 'dhf' && (
+                    && activeMode !== 'dhf'
+                    && activeMode !== 'ontology' && (
                     selectedElementIds.size >= 2
                         ? <BulkEditPanel />
                         : <UnifiedPropertiesPanel />

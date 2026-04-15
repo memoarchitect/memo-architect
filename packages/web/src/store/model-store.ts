@@ -15,6 +15,26 @@ import type {
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
+import type { ViewpointDTO } from '@memo/core';
+
+const USER_VPS_KEY = 'memo:userViewpoints';
+
+function loadUserViewpoints(): ViewpointDTO[] {
+    try {
+        const raw = localStorage.getItem(USER_VPS_KEY);
+        return raw ? (JSON.parse(raw) as ViewpointDTO[]) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveUserViewpoints(viewpoints: ViewpointDTO[]): void {
+    try {
+        localStorage.setItem(USER_VPS_KEY, JSON.stringify(viewpoints));
+    } catch {
+        // storage full or unavailable
+    }
+}
 
 export const FOLDER_ATTR = '_folder';
 
@@ -30,6 +50,7 @@ export type ActiveView =
     | { type: 'ontology' }
     | { type: 'ontology-detail'; packageName: string; layerId?: string }
     | { type: 'traceability' }
+    | { type: 'tabular'; viewpointId?: string; diagramId?: string }  // #14: element spreadsheet
     | { type: 'scenario-editor' }
     | { type: 'model-diff' }
     | { type: 'compliance-wizard' }
@@ -196,6 +217,12 @@ export interface ModelState {
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
 
+    // ─── User-created viewpoints (#8, #9) ─────────────────────────────
+    userViewpoints: ViewpointDTO[];
+    addUserViewpoint: (vp: ViewpointDTO) => void;
+    updateUserViewpoint: (vp: ViewpointDTO) => void;
+    deleteUserViewpoint: (id: string) => void;
+
     // ─── Diagram actions ──────────────────────────────────────────────
     createDiagram: (opts: { name: string; diagramType: string; viewpointId: string }) => void;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
@@ -252,6 +279,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
     attributeFilter: null,
     labelFilter: null,
     tagFilters: [],
+
+    // User-created viewpoints (persisted to localStorage)
+    userViewpoints: loadUserViewpoints(),
 
     // Sidecar layouts
     diagramLayouts: {},
@@ -380,7 +410,20 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Ontology selection actions (Phase C2)
     setAvailableOntologies: (ontologies) => set((s) => {
         // Auto-populate selectedOntologies from packages marked selected: true
-        const selected = new Set<string>(ontologies.filter(o => o.selected).map(o => o.name));
+        let selected = new Set<string>(ontologies.filter(o => o.selected).map(o => o.name));
+
+        // Canonical foundation packages that must always be selected when available.
+        // These are the base ontologies every project depends on.
+        const FOUNDATION_PACKAGES = ['@memo/ontology-core', '@memo/ontology-medical'];
+        for (const o of ontologies) {
+            if (FOUNDATION_PACKAGES.includes(o.name)) selected.add(o.name);
+        }
+
+        // If still nothing selected (no config, no foundation), select all
+        if (selected.size === 0 && ontologies.length > 0) {
+            selected = new Set(ontologies.map(o => o.name));
+        }
+
         // Default focus to first selected package
         const focused = s.focusedOntologyId ?? (selected.size > 0 ? [...selected][0] : null);
         return { availableOntologies: ontologies, selectedOntologies: selected, focusedOntologyId: focused };
@@ -585,6 +628,24 @@ export const useModelStore = create<ModelState>((set, get) => ({
             sendElementUpdate(newElements[id]);
         }
     },
+    addUserViewpoint: (vp) => set((s) => {
+        const next = [...s.userViewpoints, vp];
+        saveUserViewpoints(next);
+        return { userViewpoints: next };
+    }),
+    updateUserViewpoint: (vp) => set((s) => {
+        const next = s.userViewpoints.map(v => v.id === vp.id ? vp : v);
+        saveUserViewpoints(next);
+        return { userViewpoints: next };
+    }),
+    deleteUserViewpoint: (id) => set((s) => {
+        const next = s.userViewpoints.filter(v => v.id !== id);
+        saveUserViewpoints(next);
+        return {
+            userViewpoints: next,
+            selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
+        };
+    }),
     createDiagram: ({ name, diagramType, viewpointId }) => {
         const id = `diag_${Math.random().toString(36).substr(2, 9)}`;
         const diagram: DiagramDTO = { id, name, diagramType, viewpointId, auto: false, elementIds: [] };
