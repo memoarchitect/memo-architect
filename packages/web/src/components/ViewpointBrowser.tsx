@@ -2,7 +2,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useModelStore, getDiagramsForViewpoint } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
-import type { DiagramDTO } from '@memo/core';
+import type { DiagramDTO, ViewpointDTO } from '@memo/core';
+import { ViewpointEditor } from './ViewpointEditor';
 
 /** Additional viewpoints that should always appear even if not defined in config.
  *  Note: interface-view and context-view are now in the base ontology config.
@@ -141,19 +142,50 @@ export function ViewpointBrowser() {
     const setSearchTerm = useModelStore(s => s.setSearchTerm);
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
+    const userViewpoints = useModelStore(s => s.userViewpoints);
+    const addUserViewpoint = useModelStore(s => s.addUserViewpoint);
+    const updateUserViewpoint = useModelStore(s => s.updateUserViewpoint);
+    const deleteUserViewpoint = useModelStore(s => s.deleteUserViewpoint);
 
     const [expandedViewpoints, setExpandedViewpoints] = useState<Set<string>>(new Set(['__model']));
     const [diagCtx, setDiagCtx] = useState<{ x: number; y: number; diag: DiagramDTO } | null>(null);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [editingVp, setEditingVp] = useState<ViewpointDTO | null>(null);
 
     const setActiveView = useModelStore(s => s.setActiveView);
 
-    // Merge config viewpoints with extra viewpoints
+    // Merge config viewpoints with user-created viewpoints
     const viewpoints = useMemo(() => {
         const configVps = model?.viewpoints ?? [];
-        const existingIds = new Set(configVps.map(v => v.id));
-        const extras = EXTRA_VIEWPOINTS.filter(v => !existingIds.has(v.id));
-        return [...configVps, ...extras];
-    }, [model?.viewpoints]);
+        const configIds = new Set(configVps.map(v => v.id));
+        const extras = EXTRA_VIEWPOINTS.filter(v => !configIds.has(v.id));
+        const userVps = userViewpoints.filter(v => !configIds.has(v.id));
+        return [...configVps, ...extras, ...userVps];
+    }, [model?.viewpoints, userViewpoints]);
+
+    function openNewViewpoint() {
+        setEditingVp(null);
+        setEditorOpen(true);
+    }
+
+    function openEditViewpoint(vp: ViewpointDTO) {
+        setEditingVp(vp);
+        setEditorOpen(true);
+    }
+
+    function handleEditorSave(vp: ViewpointDTO) {
+        if (editingVp) {
+            updateUserViewpoint(vp);
+        } else {
+            addUserViewpoint(vp);
+            setExpandedViewpoints(prev => new Set([...prev, vp.id]));
+        }
+        setEditorOpen(false);
+    }
+
+    function isUserCreated(vpId: string): boolean {
+        return userViewpoints.some(v => v.id === vpId);
+    }
 
     const toggleExpand = (id: string) => {
         setExpandedViewpoints(prev => {
@@ -276,9 +308,10 @@ export function ViewpointBrowser() {
                     const isExpanded = expandedViewpoints.has(vp.id);
                     const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || '#6B7280') : '#6B7280';
                     const diagrams = getDiagramsForViewpoint(model, vp.id);
+                    const userCreated = isUserCreated(vp.id);
 
                     return (
-                        <div key={vp.id} className="mb-0.5">
+                        <div key={vp.id} className="mb-0.5 group/vp">
                             <div
                                 className="flex items-center gap-2 px-3 py-2 cursor-pointer"
                                 style={{
@@ -293,8 +326,44 @@ export function ViewpointBrowser() {
                                 <span className="font-medium flex-1 truncate" style={{ color: isSelected ? '#1B3A4B' : '#374151' }}>
                                     {vp.label}
                                 </span>
-                                <span style={{ color: '#9CA3AF' }}>{diagrams.length}</span>
+                                {userCreated && (
+                                    <span style={{ fontSize: '9px', fontWeight: 600, color: '#9CA3AF', background: '#F0F0ED', borderRadius: 4, padding: '1px 4px' }}>
+                                        custom
+                                    </span>
+                                )}
+                                {/* Edit / delete — only for user-created viewpoints, shown on hover */}
+                                {userCreated && (
+                                    <>
+                                        <button
+                                            title="Edit viewpoint"
+                                            onClick={e => { e.stopPropagation(); openEditViewpoint(vp); }}
+                                            className="opacity-0 group-hover/vp:opacity-100 flex items-center justify-center"
+                                            style={{
+                                                width: 18, height: 18, borderRadius: 4, border: 'none', cursor: 'pointer',
+                                                background: 'transparent', color: '#6B7280', fontSize: '11px', transition: 'opacity 0.15s',
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = '#E5E5E0'; e.currentTarget.style.color = '#1B3A4B'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
+                                        >
+                                            ✎
+                                        </button>
+                                        <button
+                                            title="Delete viewpoint"
+                                            onClick={e => { e.stopPropagation(); deleteUserViewpoint(vp.id); }}
+                                            className="opacity-0 group-hover/vp:opacity-100 flex items-center justify-center"
+                                            style={{
+                                                width: 18, height: 18, borderRadius: 4, border: 'none', cursor: 'pointer',
+                                                background: 'transparent', color: '#6B7280', fontSize: '11px', transition: 'opacity 0.15s',
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#E74C3C'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </>
+                                )}
                                 <span style={{ color: '#D1D5DB' }}>{isExpanded ? '\u25BE' : '\u25B8'}</span>
+                                {!userCreated && <span style={{ color: '#9CA3AF' }}>{diagrams.length}</span>}
                             </div>
 
                             {/* Expanded: show diagrams */}
@@ -309,11 +378,32 @@ export function ViewpointBrowser() {
                                             onContextMenu={(e) => setDiagCtx({ x: e.clientX, y: e.clientY, diag })}
                                         />
                                     ))}
+                                    {diagrams.length === 0 && (
+                                        <div className="px-2 py-1.5" style={{ fontSize: '10px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                                            No diagrams
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Add viewpoint button */}
+            <div className="px-3 py-2" style={{ borderTop: '1px solid #E5E5E0' }}>
+                <button
+                    onClick={openNewViewpoint}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium"
+                    style={{
+                        border: '1px dashed #CBD5DB', background: 'transparent', color: '#6B7280', cursor: 'pointer',
+                        transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#F0F0ED'; e.currentTarget.style.color = '#1B3A4B'; e.currentTarget.style.borderColor = '#9CA3AF'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; e.currentTarget.style.borderColor = '#CBD5DB'; }}
+                >
+                    <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Viewpoint
+                </button>
             </div>
 
             {/* Legend — diagram type badges */}
@@ -335,8 +425,17 @@ export function ViewpointBrowser() {
                     diag={diagCtx.diag}
                     onClose={() => setDiagCtx(null)}
                     onOpenDiagram={() => selectDiagram(diagCtx.diag.id)}
-                    onShowTabular={() => setActiveView({ type: 'traceability' })}
+                    onShowTabular={() => setActiveView({ type: 'tabular', diagramId: diagCtx.diag.id })}
                     onDiagramProperties={() => selectDiagram(diagCtx.diag.id)}
+                />
+            )}
+
+            {/* ViewpointEditor modal (#8) */}
+            {editorOpen && (
+                <ViewpointEditor
+                    viewpoint={editingVp}
+                    onSave={handleEditorSave}
+                    onClose={() => setEditorOpen(false)}
                 />
             )}
         </div>
