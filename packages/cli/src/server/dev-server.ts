@@ -452,6 +452,91 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                             console.error('[Ontology] Install failed:', e);
                         }
                     }
+                } else if (msg.type === 'csv:import') {
+                    // Bulk import elements and/or relationships from CSV text.
+                    // Generates a .sysml file; the file watcher broadcasts a model update.
+                    const { projectRoot } = options;
+                    const { elementsCsv, relationshipsCsv, packageName, targetFile } = msg.payload ?? {};
+                    try {
+                        const {
+                            parseElementsCsv,
+                            parseRelationshipsCsv,
+                            generateFile,
+                            attachProvenance,
+                            findConfigFile,
+                        } = await import('@memo/core');
+                        const { loadAndResolveConfig } = await import('./config-resolver.js');
+
+                        const configPath = findConfigFile(projectRoot);
+                        if (!configPath) {
+                            ws.send(JSON.stringify({
+                                type: 'import:result',
+                                payload: { success: false, elementsImported: 0, relationshipsImported: 0, errors: ['No memo config found'], warnings: [] },
+                            }));
+                            return;
+                        }
+                        const config = await loadAndResolveConfig(configPath);
+
+                        const errors: string[] = [];
+                        const warnings: string[] = [];
+                        let elementsImported = 0;
+                        let relationshipsImported = 0;
+
+                        let elements: any[] = [];
+                        let relationships: any[] = [];
+
+                        if (elementsCsv) {
+                            const result = parseElementsCsv(elementsCsv, config);
+                            errors.push(...result.errors);
+                            warnings.push(...result.warnings);
+                            // Attach provenance
+                            const sessionId = `ws-${Date.now().toString(36)}`;
+                            elements = attachProvenance(result.items, {
+                                sourceFile: targetFile ?? 'web-import',
+                                importTimestamp: new Date().toISOString(),
+                                importSessionId: sessionId,
+                            });
+                            elementsImported = elements.length;
+                        }
+
+                        if (relationshipsCsv) {
+                            const knownIds = elementsImported > 0
+                                ? new Set(elements.map((e: any) => e.id))
+                                : undefined;
+                            const result = parseRelationshipsCsv(relationshipsCsv, config, knownIds);
+                            errors.push(...result.errors);
+                            warnings.push(...result.warnings);
+                            relationships = result.items;
+                            relationshipsImported = relationships.length;
+                        }
+
+                        if (errors.length > 0 && elements.length === 0 && relationships.length === 0) {
+                            ws.send(JSON.stringify({
+                                type: 'import:result',
+                                payload: { success: false, elementsImported: 0, relationshipsImported: 0, errors, warnings },
+                            }));
+                            return;
+                        }
+
+                        const pkgName = (packageName || 'imported').replace(/[^a-zA-Z0-9_]/g, '_');
+                        const sysml = generateFile(elements, relationships, pkgName);
+
+                        const outFile = targetFile || `${pkgName}.sysml`;
+                        const outPath = resolve(projectRoot, outFile);
+                        writeFileSync(outPath, sysml, 'utf-8');
+                        console.log(`[Import] Wrote ${elementsImported} element(s) + ${relationshipsImported} rel(s) → ${outFile}`);
+
+                        ws.send(JSON.stringify({
+                            type: 'import:result',
+                            payload: { success: true, elementsImported, relationshipsImported, errors, warnings, generatedFile: outFile },
+                        }));
+                    } catch (e: any) {
+                        console.error('[Import] csv:import failed:', e);
+                        ws.send(JSON.stringify({
+                            type: 'import:result',
+                            payload: { success: false, elementsImported: 0, relationshipsImported: 0, errors: [e?.message ?? String(e)], warnings: [] },
+                        }));
+                    }
                 } else if (msg.type === 'ontology:remove') {
                     // Remove an installed ontology package
                     const { projectRoot } = options;

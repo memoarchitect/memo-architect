@@ -234,6 +234,13 @@ export interface ModelState {
     addDhfDocument: (doc: DhfDoc) => void;
     updateDhfDocumentContent: (docId: string, content: string) => void;
     removeDhfDocument: (docId: string) => void;
+
+    // ─── Bulk import state ────────────────────────────────────────────
+    bulkImportOpen: boolean;
+    importResult: { success: boolean; elementsImported: number; relationshipsImported: number; errors: string[]; warnings: string[]; generatedFile?: string } | null;
+    setBulkImportOpen: (open: boolean) => void;
+    setImportResult: (result: ModelState['importResult']) => void;
+    clearImportResult: () => void;
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -306,6 +313,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // DHF documents
     dhfDocuments: [],
+
+    // Bulk import
+    bulkImportOpen: false,
+    importResult: null,
 
     // Editing
     analysisIssues: [],
@@ -704,6 +715,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
             ? { type: 'dhf-dashboard' }
             : s.activeView,
     })),
+    setBulkImportOpen: (open) => set({ bulkImportOpen: open }),
+    setImportResult: (result) => set({ importResult: result }),
+    clearImportResult: () => set({ importResult: null }),
     cancelEdit: (elementId) => set((s) => {
         const newEdits = new Map(s.pendingEdits);
         newEdits.delete(elementId);

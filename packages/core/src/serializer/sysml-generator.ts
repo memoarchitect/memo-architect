@@ -31,6 +31,15 @@ export function generateUsage(element: CsvElement): string {
         lines.push(`${indent}attribute redefines ${key} = "${escapeString(value)}";`);
     }
 
+    // Provenance attributes (written as _import_* so they don't conflict with model attrs)
+    if (element.provenance) {
+        const p = element.provenance;
+        lines.push(`${indent}attribute redefines _import_source = "${escapeString(p.sourceFile)}";`);
+        lines.push(`${indent}attribute redefines _import_row = "${p.sourceRow}";`);
+        lines.push(`${indent}attribute redefines _import_timestamp = "${escapeString(p.importTimestamp)}";`);
+        lines.push(`${indent}attribute redefines _import_session = "${escapeString(p.importSessionId)}";`);
+    }
+
     lines.push('}');
     return lines.join('\n');
 }

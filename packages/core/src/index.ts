@@ -50,6 +50,11 @@ export * from './analysis/dsm.js';
 export * from './serializer/csv-io.js';
 export * from './serializer/sysml-generator.js';
 
+// ─── Import (recipes, column-mapper, diff) ───────────────────────────────────
+export * from './import/recipes.js';
+export * from './import/column-mapper.js';
+export * from './import/import-diff.js';
+
 // ─── Importers (EA, Cameo, SysAnd, OWL/JSON-LD) ────────────────────────────
 export * from './importer/index.js';
 

@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
-import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout } from '@memo/core';
+import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage } from '@memo/core';
 
 /** Embedded data injected by `memo build` */
 interface EmbeddedData {
@@ -123,6 +123,9 @@ function handleMessage(msg: ServerMessage): void {
         case 'diagram:layout':
             store.mergeDiagramLayouts(msg.payload.layouts);
             break;
+        case 'import:result':
+            store.setImportResult(msg.payload);
+            break;
     }
 }
 
@@ -224,5 +227,12 @@ export function sendOntologyRemove(packageName: string): void {
 export function sendDiagramLayoutUpdate(diagramId: string, layout: DiagramLayout): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'diagram:layout:update', payload: { diagramId, layout } }));
+    }
+}
+
+/** Send a bulk CSV import request to the CLI server */
+export function sendCsvImport(payload: CsvImportMessage['payload']): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'csv:import', payload }));
     }
 }
