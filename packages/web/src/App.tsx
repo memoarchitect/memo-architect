@@ -9,6 +9,7 @@ import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
 import { BulkEditPanel } from './components/BulkEditPanel';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
+import { BulkImportModal } from './components/BulkImportModal';
 import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
 import { CatalogHomePage } from './views/CatalogHomePage';
@@ -435,6 +436,9 @@ export function App() {
 
             {/* Command palette (Cmd+K) */}
             <CommandPalette />
+
+            {/* Bulk import modal (↓ Import CSV in toolbar) */}
+            <BulkImportModal />
 
             {/* First-run onboarding tour */}
             <OnboardingTour />

@@ -22,6 +22,8 @@ import {
     generateFile,
     generateElementTemplate,
     generateRelationshipTemplate,
+    computeImportDiff,
+    formatDiffSummary,
 } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 
@@ -209,4 +211,96 @@ export async function importTemplateCommand(
     const outputPath = resolve(cwd, outputFile);
     writeFileSync(outputPath, csv, 'utf-8');
     console.log(chalk.green(`Template written → ${outputFile}`));
+}
+
+/**
+ * Show a diff of what a CSV import would change without modifying the model.
+ * Useful for reviewing updates before committing.
+ */
+export async function importDiffCommand(
+    csvFile: string,
+    options: { detectRemovals?: boolean }
+): Promise<void> {
+    const cwd = process.cwd();
+
+    const configPath = findConfigFile(cwd);
+    if (!configPath) {
+        console.error(chalk.red('No memo config found. Run `memo init` first.'));
+        process.exit(1);
+    }
+    const config = await loadAndResolveConfig(configPath);
+
+    const csvPath = resolve(cwd, csvFile);
+    let csvText: string;
+    try {
+        csvText = readFileSync(csvPath, 'utf-8');
+    } catch {
+        console.error(chalk.red(`Cannot read file: ${csvPath}`));
+        process.exit(1);
+    }
+
+    console.log(chalk.blue(`Parsing elements CSV: ${csvFile}`));
+    const parseResult = parseElementsCsv(csvText, config);
+
+    for (const warn of parseResult.warnings) {
+        console.log(chalk.yellow(`  Warning: ${warn}`));
+    }
+    if (parseResult.errors.length > 0) {
+        for (const err of parseResult.errors) {
+            console.error(chalk.red(`  Error: ${err}`));
+        }
+        if (parseResult.items.length === 0) {
+            process.exit(1);
+        }
+    }
+
+    // Build current model for comparison
+    const sysmlFiles = findSysmlFiles(cwd);
+    let model: any = { elements: new Map(), relationships: [] };
+    if (sysmlFiles.length > 0) {
+        const parsed = await parseFiles(sysmlFiles);
+        model = buildMemoModel(parsed.documents, config);
+    }
+
+    const diff = computeImportDiff(model, parseResult.items, options.detectRemovals ?? false);
+
+    console.log(chalk.bold(`\nImport diff: ${formatDiffSummary(diff)}`));
+    console.log(chalk.dim(`  Incoming: ${diff.incomingCount} row(s)   Current model: ${diff.currentCount} element(s)\n`));
+
+    if (diff.added.length > 0) {
+        console.log(chalk.green(`  + ${diff.added.length} new element(s):`));
+        for (const el of diff.added) {
+            console.log(chalk.green(`      ${el.id}  [${el.kind}]  "${el.name}"`));
+        }
+        console.log('');
+    }
+
+    if (diff.modified.length > 0) {
+        console.log(chalk.yellow(`  ~ ${diff.modified.length} modified element(s):`));
+        for (const { current, incoming, changes } of diff.modified) {
+            console.log(chalk.yellow(`      ${current.id}  [${current.kind}]  "${current.name}"`));
+            for (const ch of changes) {
+                console.log(chalk.dim(`          ${ch.field}: "${ch.currentValue}" → "${ch.incomingValue}"`));
+            }
+        }
+        console.log('');
+    }
+
+    if (diff.unchanged.length > 0) {
+        console.log(chalk.dim(`  = ${diff.unchanged.length} unchanged element(s)`));
+        console.log('');
+    }
+
+    if (diff.removed.length > 0) {
+        console.log(chalk.red(`  - ${diff.removed.length} element(s) in model but missing from CSV:`));
+        for (const id of diff.removed) {
+            const el = model.elements.get(id);
+            console.log(chalk.red(`      ${id}  [${el?.kind ?? '?'}]  "${el?.name ?? '?'}"`));
+        }
+        console.log('');
+    }
+
+    if (diff.added.length === 0 && diff.modified.length === 0 && diff.removed.length === 0) {
+        console.log(chalk.dim('  No changes — CSV matches current model state.\n'));
+    }
 }

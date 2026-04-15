@@ -31,7 +31,7 @@ import {
     ontologyExportOwlCommand,
     ontologyExportSysandCommand,
 } from '../commands/ontology.js';
-import { importCsvCommand, importRelCsvCommand, importTemplateCommand } from '../commands/import.js';
+import { importCsvCommand, importRelCsvCommand, importTemplateCommand, importDiffCommand } from '../commands/import.js';
 import { importEaCommand, importCameoCommand } from '../commands/import-ea.js';
 import { importSysandCommand } from '../commands/import-sysand.js';
 import { importOwlCommand } from '../commands/import-owl.js';
@@ -237,6 +237,15 @@ importCmd
     .option('-o, --output <file>', 'Output CSV file path')
     .action(async (type: string, options: { output?: string }) => {
         await importTemplateCommand(type, options);
+    });
+
+importCmd
+    .command('diff')
+    .description('Preview what a CSV import would change without modifying the model')
+    .argument('<file>', 'CSV file path')
+    .option('--detect-removals', 'Also report elements in the model missing from the CSV')
+    .action(async (file: string, options: { detectRemovals?: boolean }) => {
+        await importDiffCommand(file, options);
     });
 
 importCmd

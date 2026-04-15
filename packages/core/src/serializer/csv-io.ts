@@ -10,6 +10,22 @@ import type { MEMOConfig, KindDefinition } from '../model/config.js';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+/**
+ * Import provenance — tracks where an element came from.
+ * Stored as _import_* attributes in the generated SysML so the trace is
+ * visible in the model and survives round-trips through the CLI.
+ */
+export interface ImportProvenance {
+    /** Source file name (e.g. "requirements-v3.xlsx") */
+    sourceFile: string;
+    /** 1-based row number in the source artifact */
+    sourceRow: number;
+    /** ISO-8601 timestamp of the import (e.g. "2026-04-14T18:00:00Z") */
+    importTimestamp: string;
+    /** Stable session ID grouping all elements from a single import run */
+    importSessionId: string;
+}
+
 /** Parsed element from CSV (before SysML generation) */
 export interface CsvElement {
     id: string;
@@ -19,6 +35,31 @@ export interface CsvElement {
     layer?: string;
     doc: string;
     attributes: Record<string, string>;
+    /** Optional provenance metadata written as _import_* attributes in SysML */
+    provenance?: ImportProvenance;
+}
+
+/**
+ * Attach provenance to a batch of CsvElements.
+ * `sourceRow` is auto-assigned (1-based index into the `elements` array).
+ * Call this after `parseElementsCsv()` when you want full traceability.
+ *
+ * @example
+ * const result = parseElementsCsv(csv, config);
+ * const withProvenance = attachProvenance(result.items, {
+ *   sourceFile: 'requirements-v3.xlsx',
+ *   importTimestamp: new Date().toISOString(),
+ *   importSessionId: crypto.randomUUID(),
+ * });
+ */
+export function attachProvenance(
+    elements: CsvElement[],
+    meta: Omit<ImportProvenance, 'sourceRow'>
+): CsvElement[] {
+    return elements.map((el, idx) => ({
+        ...el,
+        provenance: { ...meta, sourceRow: idx + 1 },
+    }));
 }
 
 /** Parsed relationship from CSV */
