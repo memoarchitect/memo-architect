@@ -57,6 +57,9 @@ export type ActiveView =
     | { type: 'statistics' }
     | { type: 'dhf-dashboard' }
     | { type: 'dhf-document'; docId: string }
+    | { type: 'dhf-dashboard-legacy' }   // legacy grid view
+    | { type: 'ask' }                    // E: model Q&A (#52)
+    | { type: 'sysml-generator' }        // E: NL → SysML (#54)
     | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
@@ -241,6 +244,17 @@ export interface ModelState {
     setBulkImportOpen: (open: boolean) => void;
     setImportResult: (result: ModelState['importResult']) => void;
     clearImportResult: () => void;
+
+    // ─── LLM state ────────────────────────────────────────────────────
+    llmAvailable: boolean;
+    llmProvider: string | undefined;
+    llmModel: string | undefined;
+    /** Pending LLM request IDs and their resolve/reject functions */
+    llmPending: Map<string, { resolve: (value: any) => void; reject: (err: Error) => void }>;
+    setLlmStatus: (available: boolean, provider?: string, model?: string) => void;
+    registerLlmRequest: (requestId: string, resolve: (v: any) => void, reject: (e: Error) => void) => void;
+    resolveLlmRequest: (requestId: string, value: any) => void;
+    rejectLlmRequest: (requestId: string, error: string) => void;
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -317,6 +331,38 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Bulk import
     bulkImportOpen: false,
     importResult: null,
+
+    // LLM
+    llmAvailable: false,
+    llmProvider: undefined,
+    llmModel: undefined,
+    llmPending: new Map(),
+    setLlmStatus: (available, provider, model) => set({ llmAvailable: available, llmProvider: provider, llmModel: model }),
+    registerLlmRequest: (requestId, resolve, reject) => set((s) => {
+        const next = new Map(s.llmPending);
+        next.set(requestId, { resolve, reject });
+        return { llmPending: next };
+    }),
+    resolveLlmRequest: (requestId, value) => set((s) => {
+        const entry = s.llmPending.get(requestId);
+        if (entry) {
+            entry.resolve(value);
+            const next = new Map(s.llmPending);
+            next.delete(requestId);
+            return { llmPending: next };
+        }
+        return {};
+    }),
+    rejectLlmRequest: (requestId, error) => set((s) => {
+        const entry = s.llmPending.get(requestId);
+        if (entry) {
+            entry.reject(new Error(error));
+            const next = new Map(s.llmPending);
+            next.delete(requestId);
+            return { llmPending: next };
+        }
+        return {};
+    }),
 
     // Editing
     analysisIssues: [],

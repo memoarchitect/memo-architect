@@ -8,11 +8,12 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, SEMANTIC_GROUPS, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import type { MemoElement, DiagramDTO } from '@memo/core';
+import type { OntologyPackageInfo } from '../types/ontology';
 
 // ─── SVG Chevron Icons ───────────────────────────────────────────────────────
 
@@ -547,6 +548,69 @@ function RecursiveTree({
 
 // ─── Model Explorer ──────────────────────────────────────────────────────────
 
+// ─── Ontology-layer group helpers ────────────────────────────────────────────
+
+interface LayerGroup {
+    id: string;
+    label: string;
+    color: string;
+    kinds: string[];
+}
+
+const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
+
+/** Build ordered layer groups from the currently selected ontology packages. */
+function buildLayerGroupsFromOntologies(
+    availableOntologies: OntologyPackageInfo[],
+    selectedOntologies: Set<string>,
+): LayerGroup[] {
+    const layerMap = new Map<string, LayerGroup>();
+    for (const pkg of availableOntologies) {
+        if (!selectedOntologies.has(pkg.name)) continue;
+        for (const layer of pkg.layers) {
+            if (!layerMap.has(layer.id)) {
+                layerMap.set(layer.id, {
+                    id: layer.id,
+                    label: layer.label,
+                    color: layer.color ?? (LAYER_COLORS as Record<string, string>)[layer.id] ?? '#6B7280',
+                    kinds: layer.kinds.map(k => k.name),
+                });
+            } else {
+                // Merge kinds from duplicate layer ids across packages
+                const existing = layerMap.get(layer.id)!;
+                for (const k of layer.kinds) {
+                    if (!existing.kinds.includes(k.name)) existing.kinds.push(k.name);
+                }
+            }
+        }
+    }
+    // Sort by LAYER_ORDER, then alphabetically for unknown layers
+    return [...layerMap.values()].sort((a, b) => {
+        const ra = LAYER_RANK[a.id] ?? 999;
+        const rb = LAYER_RANK[b.id] ?? 999;
+        return ra !== rb ? ra - rb : a.label.localeCompare(b.label);
+    });
+}
+
+/** Build kind-name → layer-id map from selected ontology packages. */
+function buildKindToLayerIdMap(
+    availableOntologies: OntologyPackageInfo[],
+    selectedOntologies: Set<string>,
+): Record<string, string> {
+    const map: Record<string, string> = {};
+    for (const pkg of availableOntologies) {
+        if (!selectedOntologies.has(pkg.name)) continue;
+        for (const layer of pkg.layers) {
+            for (const kind of layer.kinds) {
+                map[kind.name] = layer.id;
+            }
+        }
+    }
+    return map;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -559,6 +623,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
     const moveFolder = useModelStore(s => s.moveFolder);
     const validation = useModelStore(s => s.validation);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const selectedOntologies = useModelStore(s => s.selectedOntologies);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
 
     const selectElementAndNavigate = useCallback((id: string) => {
         selectElement(id);
@@ -591,47 +660,48 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, []);
 
-    // Build semantic group tree
+    // Build group tree from selected ontology layers (dynamic — not hardcoded SEMANTIC_GROUPS)
     const groupTree = useMemo(() => {
         if (!model) return [];
         const elements = Object.values(model.elements);
         const lower = searchTerm.toLowerCase();
 
-        const groups: { group: typeof SEMANTIC_GROUPS[number]; kinds: Map<string, TreeNode[]> }[] = [];
+        // Derive groups and kind→layer map from the currently selected ontology packages
+        const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies);
+        const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
+        const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
-        for (const sg of SEMANTIC_GROUPS) {
+        const groups: { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] = [];
+
+        for (const lg of layerGroups) {
             const kindMap = new Map<string, MemoElement[]>();
             for (const el of elements) {
-                const g = KIND_TO_GROUP[el.kind];
-                if (g?.id !== sg.id) continue;
+                // Prefer ontology-defined layer; fall back to element's own layer field
+                const layerId = kindToLayerId[el.kind] ?? el.layer;
+                if (layerId !== lg.id) continue;
                 if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
                 if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
                 kindMap.get(el.kind)!.push(el);
             }
-
             if (kindMap.size > 0) {
                 const treeMap = new Map<string, TreeNode[]>();
-                for (const [kind, els] of kindMap.entries()) {
-                    treeMap.set(kind, buildTree(els));
-                }
-                groups.push({ group: sg, kinds: treeMap });
+                for (const [kind, els] of kindMap.entries()) treeMap.set(kind, buildTree(els));
+                groups.push({ group: lg, kinds: treeMap });
             }
         }
 
-        // Uncategorized elements
+        // Elements whose layer isn't in any selected ontology → "Not in Ontology"
         const uncategorizedMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
-            if (KIND_TO_GROUP[el.kind]) continue;
+            const layerId = kindToLayerId[el.kind] ?? el.layer;
+            if (knownLayerIds.has(layerId)) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
             if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
             uncategorizedMap.get(el.kind)!.push(el);
         }
-
         if (uncategorizedMap.size > 0) {
             const treeMap = new Map<string, TreeNode[]>();
-            for (const [kind, els] of uncategorizedMap.entries()) {
-                treeMap.set(kind, buildTree(els));
-            }
+            for (const [kind, els] of uncategorizedMap.entries()) treeMap.set(kind, buildTree(els));
             groups.push({
                 group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: '#F59E0B', kinds: [] },
                 kinds: treeMap,
@@ -639,7 +709,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         }
 
         return groups;
-    }, [model, searchTerm]);
+    }, [model, searchTerm, availableOntologies, selectedOntologies]);
 
     // ─── DnD Handlers ───
 
@@ -851,6 +921,30 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                                                 onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
                                             >☑</button>
+                                            {/* View kind in ontology */}
+                                            {!isUndefinedGroup && (
+                                                <button
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        for (const pkg of availableOntologies) {
+                                                            for (const layer of pkg.layers) {
+                                                                if (layer.kinds.some(k => k.name === kind)) {
+                                                                    setSelectedOntologyKind(kind);
+                                                                    setExplorerTab('ontologies');
+                                                                    setActiveMode('ontology');
+                                                                    setActiveView({ type: 'ontology-detail', packageName: pkg.name, layerId: layer.id });
+                                                                    return;
+                                                                }
+                                                            }
+                                                        }
+                                                    }}
+                                                    title="View kind in Ontology"
+                                                    className="px-1 rounded"
+                                                    style={{ color: COLOR.faint, fontSize: '10px', opacity: 0.6 }}
+                                                    onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                                                    onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                                                >⬡</button>
+                                            )}
                                         </div>
 
                                         {/* ── Recursive Tree Content ── */}
@@ -1586,6 +1680,27 @@ function DhfExplorerContent() {
                         Right-click any group to create documents from templates.
                     </div>
                 )}
+
+                {/* AI Tools section */}
+                <div style={{ margin: '8px 10px 6px', padding: '8px', background: '#F0FDF9', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>✦</span> AI Tools
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <AiToolButton
+                            label="Model Q&A"
+                            description="Ask questions about your model"
+                            active={activeView.type === 'ask'}
+                            onClick={() => setActiveView({ type: 'ask' })}
+                        />
+                        <AiToolButton
+                            label="SysML Generator"
+                            description="Natural language → SysML v2"
+                            active={activeView.type === 'sysml-generator'}
+                            onClick={() => setActiveView({ type: 'sysml-generator' })}
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Context menu */}
@@ -1625,6 +1740,29 @@ function DhfExplorerContent() {
                 />
             )}
         </>
+    );
+}
+
+// ─── AI Tool Button ───────────────────────────────────────────────────────────
+
+function AiToolButton({ label, description, active, onClick }: {
+    label: string; description: string; active: boolean; onClick: () => void;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                display: 'flex', flexDirection: 'column', width: '100%', padding: '5px 8px',
+                borderRadius: '5px', border: 'none', textAlign: 'left', cursor: 'pointer',
+                background: active ? '#D1FAE5' : 'rgba(255,255,255,0.7)',
+                transition: 'background 0.1s',
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.95)'; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
+        >
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#065F46' }}>{label}</span>
+            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '1px' }}>{description}</span>
+        </button>
     );
 }
 
