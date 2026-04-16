@@ -14,6 +14,7 @@ import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import type { MemoElement, DiagramDTO } from '@memo/core';
 import type { OntologyPackageInfo } from '../types/ontology';
+import { getBuiltInTemplate } from '../dhf/built-in-templates';
 
 // ─── SVG Chevron Icons ───────────────────────────────────────────────────────
 
@@ -1518,6 +1519,7 @@ function DhfExplorerContent() {
     const dhfDocuments = useModelStore(s => s.dhfDocuments);
     const addDhfDocument = useModelStore(s => s.addDhfDocument);
     const removeDhfDocument = useModelStore(s => s.removeDhfDocument);
+    const dhfSettings = useModelStore(s => s.dhfSettings);
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
         new Set(DHF_GROUPS.map(g => g.id))
@@ -1548,19 +1550,30 @@ function DhfExplorerContent() {
     }
 
     function createDocuments(templates: DhfTemplate[]) {
+        const prefix = dhfSettings.documentNumberingPrefix || 'DOC';
         for (const t of templates) {
             // Compute next sequential ID for this prefix
-            const existing = dhfDocuments.filter(d => d.id.startsWith(`DOC-${t.prefix}-`));
+            const idPrefix = `${prefix}-${t.prefix}-`;
+            const existing = dhfDocuments.filter(d => d.id.startsWith(idPrefix));
             const next = existing.length + 1;
-            const docId = `DOC-${t.prefix}-${String(next).padStart(3, '0')}`;
+            const docId = `${idPrefix}${String(next).padStart(3, '0')}`;
             const group = DHF_GROUPS.find(g => g.templates.some(tmpl => tmpl.id === t.id))!;
+
+            // Load prefilled template content; fall back to minimal stub if not found
+            const templateContent = getBuiltInTemplate(t.id);
+            const content = templateContent
+                ? `---\nid: ${docId}\ntitle: ${t.title}\ntemplate: ${t.id}\n---\n\n${templateContent.replace(/^---[\s\S]*?---\n?/, '')}`
+                : `---\nid: ${docId}\ntitle: ${t.title}\ntemplate: ${t.id}\n---\n\n# ${t.title}\n\n_[TODO: Add content]_\n`;
+
             const doc: DhfDoc = {
                 id: docId,
                 title: t.title,
                 group: group.label,
                 templateId: t.id,
-                content: `---\nid: ${docId}\ntitle: ${t.title}\ntemplate: ${t.id}\n---\n\n# ${t.title}\n\n`,
+                content,
                 createdAt: Date.now(),
+                authors: '',
+                approvers: '',
             };
             addDhfDocument(doc);
             // Open the first created doc
@@ -1778,7 +1791,7 @@ export function ExplorerPanel() {
     const activeMode = useModelStore(s => s.activeMode);
     const activeView = useModelStore(s => s.activeView);
 
-    // Auto-switch to Onto tab when entering ontology mode
+    // Keep explorerTab store in sync for components that read it (CommandPalette, WorkspaceManager, etc.)
     useEffect(() => {
         if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') {
             setExplorerTab('ontologies');
@@ -1791,7 +1804,7 @@ export function ExplorerPanel() {
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
 
-            {/* Content — mode-aware, no redundant tabs when top nav provides context */}
+            {/* Content driven entirely by top-nav mode — no redundant tab strip */}
             {activeMode === 'dhf' ? (
                 <DhfExplorerContent />
             ) : activeMode === 'diagram' ? (
@@ -1804,6 +1817,8 @@ export function ExplorerPanel() {
                     </div>
                     <ViewExplorerContent searchTerm={searchTerm} />
                 </>
+            ) : activeMode === 'ontology' ? (
+                <OntologyBrowserTab />
             ) : activeMode === 'scenario' ? (
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
@@ -1815,37 +1830,17 @@ export function ExplorerPanel() {
                     <ModelExplorerContent searchTerm={searchTerm} />
                 </>
             ) : (
-            <>
-                {/* catalog / default mode: tabbed explorer */}
-                <TabBar active={explorerTab} onChange={setExplorerTab} />
-
-                {explorerTab === 'ontologies' ? (
-                    <OntologyBrowserTab />
-                ) : explorerTab === 'worksets' ? (
-                    <WorkingSetsContent />
-                ) : explorerTab === 'views' ? (
-                    <>
-                        <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                            <input type="text" placeholder="Search diagrams..." value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                        </div>
-                        <ViewExplorerContent searchTerm={searchTerm} />
-                    </>
-                ) : (
-                    <>
-                        <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                            <input type="text" placeholder="Search elements..."
-                                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                        </div>
-                        <ModelExplorerContent searchTerm={searchTerm} />
-                    </>
-                )}
-            </>
-        )}
+                /* catalog / dashboard / default */
+                <>
+                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <input type="text" placeholder="Search elements..."
+                            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                    </div>
+                    <ModelExplorerContent searchTerm={searchTerm} />
+                </>
+            )}
         </div>
     );
 }
