@@ -1,6 +1,6 @@
 {
   "type": "ontology-package",
-  "name": "@memo/ontology-platform-robotics",
+  "name": "@memo/ontology-clinical-procedure",
   "version": "0.1.0",
   "usage": ["kinds"]
 }

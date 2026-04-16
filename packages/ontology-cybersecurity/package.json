@@ -1,0 +1,19 @@
+{
+  "name": "@memo/ontology-cybersecurity",
+  "version": "0.1.0",
+  "description": "Domain-agnostic cybersecurity ontology — threat models, vulnerabilities, security controls, SBOM, and secure update patterns",
+  "private": true,
+  "files": [
+    "sysml/",
+    "memo.package.yaml",
+    ".project.json"
+  ],
+  "keywords": [
+    "sysml",
+    "cybersecurity",
+    "threat-modeling",
+    "sbom",
+    "ontology"
+  ],
+  "license": "Apache-2.0"
+}

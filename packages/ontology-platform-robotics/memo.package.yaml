@@ -1,6 +1,0 @@
-name: "@memo/ontology-platform-robotics"
-version: "0.1.0"
-type: ontology
-description: "ROS (Robot Operating System) platform definitions — optional extension for robotic medical devices"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "ros", "robotics", "platform"]

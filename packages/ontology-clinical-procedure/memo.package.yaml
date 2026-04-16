@@ -1,0 +1,7 @@
+name: "@memo/ontology-clinical-procedure"
+version: "0.1.0"
+type: ontology
+extends: "@memo/ontology-core"
+description: "Operative procedure modeling — surgical steps, instruments, phases, and time constraints for procedure-based device models"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "clinical-procedure", "surgical", "operative"]
