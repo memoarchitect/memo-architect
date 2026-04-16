@@ -84,9 +84,9 @@ function layoutPackages(packages: OntologyPackageInfo[]): { nodes: Node[]; edges
         byLevel.get(level)!.push(pkg);
     }
 
-    const NODE_WIDTH = 280;
-    const NODE_GAP_X = 40;
-    const NODE_GAP_Y = 120;
+    const NODE_WIDTH = 260;
+    const NODE_GAP_X = 60;
+    const NODE_GAP_Y = 80;
 
     // Position nodes
     const maxLevel = Math.max(...byLevel.keys(), 0);
@@ -119,21 +119,31 @@ function layoutPackages(packages: OntologyPackageInfo[]): { nodes: Node[]; edges
         }
     }
 
+    // Edge color by child package type
+    const TYPE_EDGE_COLOR: Record<string, string> = {
+        ontology:  '#3B82F6', // blue  — core ontology extension
+        profile:   '#10B981', // green — modeling profile
+        extension: '#F59E0B', // amber — optional extension
+    };
+
     // Create edges from extends relationships
     for (const pkg of packages) {
         if (pkg.extends && pkgByName.has(pkg.extends)) {
+            const edgeColor = TYPE_EDGE_COLOR[pkg.type] ?? '#94A3B8';
             edges.push({
                 id: `${pkg.extends}->${pkg.name}`,
                 source: pkg.extends,
                 target: pkg.name,
                 sourceHandle: 'bottom',
                 targetHandle: 'top',
-                style: { stroke: '#94A3B8', strokeWidth: 2 },
+                type: 'smoothstep',
+                style: { stroke: edgeColor, strokeWidth: 2 },
                 animated: false,
                 label: 'extends',
-                labelStyle: { fontSize: 10, fill: '#9CA3AF' },
+                labelStyle: { fontSize: 9, fill: edgeColor, fontWeight: 500 },
                 labelBgStyle: { fill: '#F7F7F5', fillOpacity: 0.9 },
                 labelBgPadding: [4, 2] as [number, number],
+                markerEnd: { type: 'arrowclosed' as const, color: edgeColor, width: 14, height: 14 },
             });
         }
     }

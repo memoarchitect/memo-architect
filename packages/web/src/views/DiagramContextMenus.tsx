@@ -92,6 +92,7 @@ interface NodeContextMenuProps {
     onShowRelMatrix?: () => void;
     // #38 addition
     onOpenSource?: () => void;
+    onViewKindInOntology?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -109,6 +110,7 @@ export function NodeContextMenu({
     onEditName, onChangeColor, onRemoveFromDiagram, onDeleteFromModel,
     onLinkRisk, onLinkRequirement,
     onShowProperties, onFocusElement, onShowInCatalog, onShowRelMatrix, onOpenSource,
+    onViewKindInOntology,
 }: NodeContextMenuProps) {
     const [showColors, setShowColors] = useState(false);
 
@@ -131,10 +133,13 @@ export function NodeContextMenu({
             {onShowRelMatrix && (
                 <MenuItem label="Show Relationship Matrix" icon="☷" onClick={() => { onClose(); onShowRelMatrix(); }} />
             )}
+            {onViewKindInOntology && (
+                <MenuItem label="View Kind in Ontology" icon="⬡" onClick={() => { onClose(); onViewKindInOntology(); }} />
+            )}
             {onOpenSource && (
                 <MenuItem label="Open Source File" icon="⟨/⟩" onClick={() => { onClose(); onOpenSource(); }} />
             )}
-            {(onShowProperties || onShowInCatalog || onFocusElement || onShowRelMatrix || onOpenSource) && (
+            {(onShowProperties || onShowInCatalog || onFocusElement || onShowRelMatrix || onViewKindInOntology || onOpenSource) && (
                 <MenuDivider />
             )}
             <MenuItem label="Edit name" icon="✏️" onClick={() => { onClose(); onEditName(); }} />
