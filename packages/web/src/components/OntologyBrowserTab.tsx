@@ -34,6 +34,25 @@ function sortKindsParentFirst(kinds: OntologyKindInfo[]): OntologyKindInfo[] {
     });
 }
 
+/** Topological sort of packages: parents (no `extends`) appear before children. */
+function sortPackagesParentFirst<T extends { name: string; extends?: string }>(pkgs: T[]): T[] {
+    const byName = new Map(pkgs.map(p => [p.name, p]));
+    const order: T[] = [];
+    const visited = new Set<string>();
+
+    function visit(pkg: T) {
+        if (visited.has(pkg.name)) return;
+        visited.add(pkg.name);
+        const parent = pkg.extends ? byName.get(pkg.extends) : undefined;
+        if (parent) visit(parent);
+        order.push(pkg);
+    }
+
+    // Stable input order so unrelated packages keep alphabetical position
+    [...pkgs].sort((a, b) => a.name.localeCompare(b.name)).forEach(p => visit(p));
+    return order;
+}
+
 // ─── Deselect confirmation dialog ────────────────────────────────────────────
 
 function DeselectedConfirmDialog({ pkgName, onCancel, onConfirm }: {
@@ -116,25 +135,26 @@ export function OntologyBrowserTab() {
 
     const kindRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-    // Filter packages/layers/kinds by search term
+    // Filter packages/layers/kinds by search term, then sort parent → child
     const filteredOntologies = useMemo(() => {
-        if (!searchTerm.trim()) return availableOntologies;
-        const term = searchTerm.toLowerCase();
-        return availableOntologies
-            .map(pkg => ({
-                ...pkg,
-                layers: pkg.layers
-                    .map(layer => ({
-                        ...layer,
-                        kinds: layer.kinds.filter(k =>
-                            k.name.toLowerCase().includes(term) ||
-                            k.label.toLowerCase().includes(term) ||
-                            k.layer.toLowerCase().includes(term)
-                        ),
-                    }))
-                    .filter(l => l.kinds.length > 0),
-            }))
-            .filter(pkg => pkg.layers.length > 0 || pkg.name.toLowerCase().includes(term));
+        const filtered = !searchTerm.trim()
+            ? availableOntologies
+            : availableOntologies
+                .map(pkg => ({
+                    ...pkg,
+                    layers: pkg.layers
+                        .map(layer => ({
+                            ...layer,
+                            kinds: layer.kinds.filter(k =>
+                                k.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                k.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                k.layer.toLowerCase().includes(searchTerm.toLowerCase())
+                            ),
+                        }))
+                        .filter(l => l.kinds.length > 0),
+                }))
+                .filter(pkg => pkg.layers.length > 0 || pkg.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        return sortPackagesParentFirst(filtered);
     }, [availableOntologies, searchTerm]);
 
     // Auto-expand all when searching
@@ -382,7 +402,7 @@ export function OntologyBrowserTab() {
                                         >
                                             <span style={{ color: COLOR.faint, fontSize: '9px' }}>{isLayerExpanded ? '\u25BE' : '\u25B8'}</span>
                                             <span className="w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: color }} />
-                                            <span className="flex-1 truncate capitalize" style={{ color: COLOR.muted, fontSize: FONT.explorer.kind }}>{layer.label}</span>
+                                            <span className="flex-1 truncate capitalize" style={{ color: COLOR.muted, fontSize: FONT.explorer.item }}>{layer.label}</span>
                                             <span style={{ color: COLOR.faint }}>{layer.kindCount}</span>
                                         </div>
 
