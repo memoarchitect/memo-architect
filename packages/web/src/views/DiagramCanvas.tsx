@@ -167,6 +167,9 @@ function DiagramCanvasInner() {
     const selectElement = useModelStore(s => s.selectElement);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
     const diagramLayouts = useModelStore(s => s.diagramLayouts);
     const setNodeLayout = useModelStore(s => s.setNodeLayout);
     const mergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
@@ -1111,6 +1114,27 @@ function DiagramCanvasInner() {
                         const text = el.line ? `${el.file}:${el.line}` : el.file;
                         navigator.clipboard.writeText(text).catch(() => {});
                         setSourceToast(text);
+                    }}
+                    onViewKindInOntology={() => {
+                        const kind = nodeCtx.nodeKind;
+                        // Find which ontology package owns this kind
+                        let pkgName: string | null = null;
+                        let layerId: string | null = null;
+                        for (const pkg of availableOntologies) {
+                            for (const layer of pkg.layers) {
+                                if (layer.kinds.some(k => k.name === kind)) {
+                                    pkgName = pkg.name;
+                                    layerId = layer.id;
+                                    break;
+                                }
+                            }
+                            if (pkgName) break;
+                        }
+                        if (!pkgName) return;
+                        setSelectedOntologyKind(kind);
+                        setExplorerTab('ontologies');
+                        setActiveMode('ontology');
+                        setActiveView({ type: 'ontology-detail', packageName: pkgName, layerId: layerId ?? undefined });
                     }}
                 />
             )}

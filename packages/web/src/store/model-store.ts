@@ -73,6 +73,32 @@ export interface DhfDoc {
     templateId: string; // e.g. "iso-14971/rmp"
     content: string;
     createdAt: number;
+    // Per-document authors / approvers (one "Name | Role" entry per line)
+    authors: string;
+    approvers: string;
+}
+
+/**
+ * Global DHF settings — project metadata, look & feel, and export config.
+ * Values resolve {{project.*}} directives in templates.
+ */
+export interface DhfSettings {
+    // Project identity
+    company: string;
+    product: string;
+    deviceType: string;
+    version: string;
+    phase: 'concept' | 'design' | 'verification' | 'production' | '';
+    // Branding
+    logoUrl: string;          // URL or data URI for full logo
+    compactLogoUrl: string;   // URL or data URI for compact/icon logo
+    primaryColor: string;     // Hex color used in headers/badges
+    // Document layout
+    compactMode: boolean;     // Tighter line spacing & smaller headings
+    headerTemplate: string;   // Markdown template for page header ({{title}}, {{id}}, etc.)
+    footerTemplate: string;   // Markdown template for page footer
+    // Numbering
+    documentNumberingPrefix: string; // e.g. "DOC" → "DOC-RMP-001"
 }
 
 /** Which explorer tab is active in the left panel */
@@ -238,6 +264,11 @@ export interface ModelState {
     updateDhfDocumentContent: (docId: string, content: string) => void;
     removeDhfDocument: (docId: string) => void;
 
+    // ─── DHF global settings ──────────────────────────────────────────
+    dhfSettings: DhfSettings;
+    updateDhfSettings: (patch: Partial<DhfSettings>) => void;
+    updateDhfDocumentMeta: (docId: string, patch: Partial<Pick<DhfDoc, 'authors' | 'approvers' | 'title'>>) => void;
+
     // ─── Bulk import state ────────────────────────────────────────────
     bulkImportOpen: boolean;
     importResult: { success: boolean; elementsImported: number; relationshipsImported: number; errors: string[]; warnings: string[]; generatedFile?: string } | null;
@@ -327,6 +358,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // DHF documents
     dhfDocuments: [],
+
+    // DHF global settings
+    dhfSettings: {
+        company: '',
+        product: '',
+        deviceType: '',
+        version: '0.1',
+        phase: '',
+        logoUrl: '',
+        compactLogoUrl: '',
+        primaryColor: '#1B3A4B',
+        compactMode: false,
+        headerTemplate: '**{{project.product}}** | {{id}} | Rev {{project.version}}',
+        footerTemplate: 'Confidential — {{project.company}} | Page {{page}}',
+        documentNumberingPrefix: 'DOC',
+    },
 
     // Bulk import
     bulkImportOpen: false,
@@ -752,6 +799,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }
     },
     addDhfDocument: (doc) => set((s) => ({ dhfDocuments: [...s.dhfDocuments, doc] })),
+    updateDhfSettings: (patch) => set((s) => ({ dhfSettings: { ...s.dhfSettings, ...patch } })),
+    updateDhfDocumentMeta: (docId, patch) => set((s) => ({
+        dhfDocuments: s.dhfDocuments.map(d => d.id === docId ? { ...d, ...patch } : d),
+    })),
     updateDhfDocumentContent: (docId, content) => set((s) => ({
         dhfDocuments: s.dhfDocuments.map(d => d.id === docId ? { ...d, content } : d),
     })),
