@@ -1,7 +1,7 @@
 {
-  "name": "@memo/ontology-platform-robotics",
+  "name": "@memo/ontology-middleware-ros",
   "version": "0.1.0",
-  "description": "ROS platform definitions — optional extension for robotic medical devices",
+  "description": "ROS 2 middleware definitions — optional extension for robotic medical devices",
   "private": true,
   "files": [
     "sysml/",

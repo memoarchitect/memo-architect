@@ -1,7 +1,7 @@
 {
-  "name": "@memo/ontology-clinical",
+  "name": "@memo/ontology-clinical-procedure",
   "version": "0.1.0",
-  "description": "Niche clinical/pharma concepts — optional extension for surgical, drug-delivery, and anatomy-specific device models",
+  "description": "Operative procedure modeling — surgical steps, instruments, phases, and time constraints for procedure-based device models",
   "private": true,
   "files": [
     "sysml/",
