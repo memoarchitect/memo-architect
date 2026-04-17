@@ -1,0 +1,7 @@
+name: "@memo/ontology-qms"
+version: "0.1.0"
+type: ontology
+extends: "@memo/ontology-core"
+description: "ISO 13485 Quality Management System ontology — QMS records, design control, compliance evidence, regulatory submissions, and DHF artefacts"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "iso13485", "qms", "design-control", "dhf", "medical-device"]

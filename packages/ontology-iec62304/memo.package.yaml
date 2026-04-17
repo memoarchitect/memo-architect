@@ -1,0 +1,7 @@
+name: "@memo/ontology-iec62304"
+version: "0.1.0"
+type: ontology
+extends: "@memo/ontology-core"
+description: "IEC 62304 software lifecycle process ontology — software items, units, SOUP, lifecycle processes, work products, and problem reports"
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "iec62304", "software-lifecycle", "medical-device", "soup"]

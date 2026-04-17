@@ -60,13 +60,22 @@ export interface OntologyKindInfo {
 
 /** Layer color palette (mirrors web constants) */
 const LAYER_COLORS: Record<string, string> = {
+    // ontology-core layers
     purpose: '#6366F1', operational: '#8B5CF6', requirements: '#EC4899',
     functional: '#F59E0B', logical: '#06B6D4', physical: '#10B981',
     software: '#3B82F6', interfaces: '#14B8A6', analysis: '#F97316',
-    verification: '#84CC16', risk: '#EF4444', safety: '#F97316',
-    'design-control': '#8B5CF6', 'software-lifecycle': '#3B82F6',
-    qms: '#6B7280', ui: '#EC4899', cybersecurity: '#EF4444',
-    privacy: '#6366F1', operations: '#10B981', clinical: '#06B6D4',
+    verification: '#84CC16', relationships: '#9CA3AF',
+    // ontology-medical layers
+    risk: '#EF4444', safety: '#F97316', 'design-control': '#8B5CF6',
+    operations: '#10B981', ui: '#EC4899', clinical: '#06B6D4',
+    // ontology-qms layers
+    qms: '#6B7280', 'design-control-qms': '#8B5CF6',
+    // ontology-iec62304 layers
+    'software-lifecycle': '#3B82F6',
+    // ontology-cybersecurity layers
+    cybersecurity: '#EF4444', privacy: '#6366F1',
+    // ontology-middleware-ros layers
+    middleware: '#0EA5E9',
 };
 
 /** Parsed kind info from a SysML file */

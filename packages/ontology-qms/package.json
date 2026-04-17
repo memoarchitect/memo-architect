@@ -1,0 +1,7 @@
+{
+  "name": "@memo/ontology-qms",
+  "version": "0.1.0",
+  "description": "ISO 13485 QMS ontology",
+  "main": "lib/index.js",
+  "license": "Apache-2.0"
+}

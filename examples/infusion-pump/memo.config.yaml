@@ -1,13 +1,13 @@
-# Infusion Pump Project — example device model using @memo/medical-modeling-profile config
+# Infusion Pump Project — example device model
 projectName: infusion-pump
 projectType: device
 
 extends: "@memo/medical-modeling-profile"
 
+# Default: only core + medical are selected.
+# Enable specialized ontologies as your project needs them.
 ontologies:
-  - name: memo-ontology-medical
+  - name: "@memo/ontology-core"
     version: "^0.1.0"
-  - name: "@memo/ontology-middleware-ros"
-    version: "^0.1.0"
-  - name: "@memo/ontology-clinical-procedure"
+  - name: "@memo/ontology-medical"
     version: "^0.1.0"

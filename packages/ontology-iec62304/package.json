@@ -1,0 +1,7 @@
+{
+  "name": "@memo/ontology-iec62304",
+  "version": "0.1.0",
+  "description": "IEC 62304 software lifecycle ontology",
+  "main": "lib/index.js",
+  "license": "Apache-2.0"
+}

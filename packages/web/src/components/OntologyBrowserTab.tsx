@@ -24,33 +24,93 @@ const TYPE_ICONS: Record<string, string> = {
     extension: '\u{1F9E9}', // 🧩
 };
 
-/** Sort kinds so root kinds (no supertype) appear before specializations, then alpha within each tier. */
+/**
+ * Level-order (BFS) sort of kinds:
+ *   Level 0  — root kinds (no derivesFrom), sorted A–Z
+ *   Level 1  — direct children of any root, sorted A–Z
+ *   Level 2  — grandchildren, sorted A–Z
+ *   …        — continues for any depth without hardcoding
+ *
+ * Kinds whose derivesFrom target is not in this layer are treated as roots.
+ * Any unreachable kinds (broken refs) are appended at the end.
+ */
 function sortKindsParentFirst(kinds: OntologyKindInfo[]): OntologyKindInfo[] {
-    return [...kinds].sort((a, b) => {
-        const aIsRoot = !a.derivesFrom ? 0 : 1;
-        const bIsRoot = !b.derivesFrom ? 0 : 1;
-        if (aIsRoot !== bIsRoot) return aIsRoot - bIsRoot;
-        return a.name.localeCompare(b.name);
-    });
-}
+    const byName = new Map(kinds.map(k => [k.name, k]));
 
-/** Topological sort of packages: parents (no `extends`) appear before children. */
-function sortPackagesParentFirst<T extends { name: string; extends?: string }>(pkgs: T[]): T[] {
-    const byName = new Map(pkgs.map(p => [p.name, p]));
-    const order: T[] = [];
-    const visited = new Set<string>();
+    // Assign each kind its depth level
+    const depthOf = new Map<string, number>();
+    function getDepth(name: string): number {
+        if (depthOf.has(name)) return depthOf.get(name)!;
+        const kind = byName.get(name);
+        if (!kind || !kind.derivesFrom || !byName.has(kind.derivesFrom)) {
+            depthOf.set(name, 0);
+            return 0;
+        }
+        const d = getDepth(kind.derivesFrom) + 1;
+        depthOf.set(name, d);
+        return d;
+    }
+    for (const k of kinds) getDepth(k.name);
 
-    function visit(pkg: T) {
-        if (visited.has(pkg.name)) return;
-        visited.add(pkg.name);
-        const parent = pkg.extends ? byName.get(pkg.extends) : undefined;
-        if (parent) visit(parent);
-        order.push(pkg);
+    // Group by depth level
+    const byLevel = new Map<number, OntologyKindInfo[]>();
+    for (const k of kinds) {
+        const d = depthOf.get(k.name) ?? 0;
+        const arr = byLevel.get(d) ?? [];
+        arr.push(k);
+        byLevel.set(d, arr);
     }
 
-    // Stable input order so unrelated packages keep alphabetical position
-    [...pkgs].sort((a, b) => a.name.localeCompare(b.name)).forEach(p => visit(p));
-    return order;
+    // Sort each level alphabetically, then concatenate in level order
+    const maxDepth = Math.max(...byLevel.keys());
+    const result: OntologyKindInfo[] = [];
+    for (let d = 0; d <= maxDepth; d++) {
+        const level = byLevel.get(d) ?? [];
+        result.push(...level.sort((a, b) => a.name.localeCompare(b.name)));
+    }
+    return result;
+}
+
+/** Level-order (BFS) sort of packages — same logic as sortKindsParentFirst.
+ *  Level 0 = roots (no `extends` or parent not in list), Level 1 = direct children, etc.
+ *  Within each level packages are sorted A–Z.
+ *  Result: deeper packages always appear after shallower ones regardless of name.
+ */
+function sortPackagesParentFirst<T extends { name: string; extends?: string }>(pkgs: T[]): T[] {
+    const byName = new Map(pkgs.map(p => [p.name, p]));
+
+    // Memoised depth resolver
+    const depthOf = new Map<string, number>();
+    function getDepth(name: string): number {
+        if (depthOf.has(name)) return depthOf.get(name)!;
+        const pkg = byName.get(name);
+        if (!pkg || !pkg.extends || !byName.has(pkg.extends)) {
+            depthOf.set(name, 0);
+            return 0;
+        }
+        const d = getDepth(pkg.extends) + 1;
+        depthOf.set(name, d);
+        return d;
+    }
+    for (const p of pkgs) getDepth(p.name);
+
+    // Group by level
+    const byLevel = new Map<number, T[]>();
+    for (const p of pkgs) {
+        const d = depthOf.get(p.name) ?? 0;
+        const arr = byLevel.get(d) ?? [];
+        arr.push(p);
+        byLevel.set(d, arr);
+    }
+
+    // Concatenate levels in order, each level sorted A–Z
+    const maxDepth = byLevel.size > 0 ? Math.max(...byLevel.keys()) : 0;
+    const result: T[] = [];
+    for (let d = 0; d <= maxDepth; d++) {
+        const level = byLevel.get(d) ?? [];
+        result.push(...level.sort((a, b) => a.name.localeCompare(b.name)));
+    }
+    return result;
 }
 
 // ─── Deselect confirmation dialog ────────────────────────────────────────────
@@ -402,14 +462,23 @@ export function OntologyBrowserTab() {
                                         >
                                             <span style={{ color: COLOR.faint, fontSize: '9px' }}>{isLayerExpanded ? '\u25BE' : '\u25B8'}</span>
                                             <span className="w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: color }} />
-                                            <span className="flex-1 truncate capitalize" style={{ color: COLOR.muted, fontSize: FONT.explorer.item }}>{layer.label}</span>
+                                            <span className="flex-1 truncate capitalize" style={{ color: COLOR.muted, fontSize: FONT.explorer.kind }}>{layer.label}</span>
                                             <span style={{ color: COLOR.faint }}>{layer.kindCount}</span>
                                         </div>
 
-                                        {/* Kind items — sorted parent-first */}
-                                        {isLayerExpanded && sortedKinds.map(kind => {
+                                        {/* Kind items — topological tree order: parent first, children indented */}
+                                        {isLayerExpanded && (() => {
+                                            // Compute depth: root=0, child = parentDepth+1
+                                            const depthMap = new Map<string, number>();
+                                            for (const k of sortedKinds) {
+                                                const pd = k.derivesFrom ? (depthMap.get(k.derivesFrom) ?? 0) : 0;
+                                                depthMap.set(k.name, k.derivesFrom ? pd + 1 : 0);
+                                            }
+                                            return sortedKinds.map(kind => {
                                             const isKindSelected = selectedKind === kind.name;
-                                            const isParent = !kind.derivesFrom;
+                                            const depth = depthMap.get(kind.name) ?? 0;
+                                            const isRoot = depth === 0;
+                                            const marginLeft = 36 + depth * 12;
                                             return (
                                                 <div
                                                     key={kind.name}
@@ -417,9 +486,9 @@ export function OntologyBrowserTab() {
                                                     className="flex items-center gap-1.5 px-3 py-0.5 cursor-pointer"
                                                     style={{
                                                         borderRadius: '4px',
-                                                        margin: '0 4px 0 36px',
+                                                        margin: `0 4px 0 ${marginLeft}px`,
                                                         background: isKindSelected ? `${COLOR.accent}18` : 'transparent',
-                                                        borderLeft: isKindSelected ? `3px solid ${color}` : '3px solid transparent',
+                                                        borderLeft: isKindSelected ? `2px solid ${color}` : '2px solid transparent',
                                                         transition: 'background 150ms ease',
                                                     }}
                                                     onMouseEnter={e => { if (!isKindSelected) e.currentTarget.style.background = '#F0F0ED'; }}
@@ -427,15 +496,14 @@ export function OntologyBrowserTab() {
                                                     onClick={() => handleKindClick(kind.name, pkg.name)}
                                                     onContextMenu={e => handleContextMenu(e, { type: 'kind', kindName: kind.name, pkgName: pkg.name, layerId: layer.id })}
                                                 >
-                                                    {/* Indent child kinds with a subtle connector */}
-                                                    {!isParent && (
+                                                    {!isRoot && (
                                                         <span style={{ color: COLOR.faint, fontSize: '9px', flexShrink: 0 }}>↳</span>
                                                     )}
                                                     <span
                                                         className="truncate"
                                                         style={{
                                                             color: isKindSelected ? COLOR.accentDark : COLOR.primary,
-                                                            fontWeight: isParent ? 500 : 400,
+                                                            fontWeight: isRoot ? 500 : 400,
                                                             fontSize: FONT.explorer.item,
                                                         }}
                                                     >
@@ -446,7 +514,8 @@ export function OntologyBrowserTab() {
                                                     )}
                                                 </div>
                                             );
-                                        })}
+                                        });
+                                        })()}
                                     </div>
                                 );
                             })}
