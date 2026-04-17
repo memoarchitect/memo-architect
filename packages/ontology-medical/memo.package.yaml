@@ -1,7 +1,7 @@
 name: "@memo/ontology-medical"
 version: "0.1.0"
 type: ontology
-extends: "@memo/ontology-core"
-description: "All-inclusive medical device bundle (ISO 14971, IEC 62304, IEC 62366) — use individual extensions for smaller footprint"
+extends: "@memo/ontology-qms"
+description: "Medical device domain ontology (ISO 14971 risk, IEC 60601 safety, IEC 62366 usability) — extends ontology-qms which extends ontology-core"
 license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "medical-device", "14971", "62304", "60601", "13485"]
+tags: ["mbse", "sysml-v2", "medical-device", "14971", "60601", "62366"]
