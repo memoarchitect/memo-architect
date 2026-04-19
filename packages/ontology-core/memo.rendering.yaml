@@ -2,13 +2,13 @@
 # Architecture layer colors for visualization (ISO 42010 layers)
 
 layers:
-  - id: purpose
-    label: Purpose & Stakeholders
-    color: "#8E44AD"
-
   - id: operational
     label: Operational Analysis
     color: "#C0392B"
+
+  - id: system
+    label: System Analysis
+    color: "#8E44AD"
 
   - id: requirements
     label: Requirements
@@ -22,8 +22,8 @@ layers:
     label: Logical Architecture
     color: "#7B68EE"
 
-  - id: physical
-    label: Physical Architecture
+  - id: hardware
+    label: Hardware Architecture
     color: "#95A5A6"
 
   - id: software

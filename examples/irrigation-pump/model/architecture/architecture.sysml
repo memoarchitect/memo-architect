@@ -47,11 +47,11 @@ package IrrigationPump_Architecture {
         attribute redefines name = "Pressure Sensor Board";
     }
 
-    part reservoirScale : PhysicalComponent {
+    part reservoirScale : HardwareComponent {
         attribute redefines name = "Reservoir Hook Scale";
     }
 
-    part footswitchPedal : PhysicalComponent {
+    part footswitchPedal : HardwareComponent {
         attribute redefines name = "Footswitch Pedal";
     }
 

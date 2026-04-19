@@ -147,6 +147,15 @@ A file at `packages/<pkg>/sysml/<layer>[/<sub>]*/<name>.sysml` is classified int
 
 The `KindRegistry` (per CLAUDE.md Phase 7-8) must be updated to use this rule. Existing flat-directory assumptions in the registry are replaced with a "first-segment" extraction.
 
+### 3.2 Session 1 audit decision: `analysis/` and `functional/`
+
+Session 1 keeps `sysml/analysis/` and `sysml/functional/` as top-level directories with explicit rationale:
+
+- `analysis/` captures cross-layer artefacts (`Constraint`, `Assumption`, `Measure`) used by OA/SA/LA/HA/SW and not owned by one Arcadia layer.
+- `functional/` is retained as a transitional decomposition workspace for `Function`/`Scenario` kinds that are consumed by both system and logical structures.
+
+Both directories remain subject to the universal OWL collapse in Session 2 (§4.5), where empty subclasses and layer placement are reassessed category-by-category.
+
 ---
 
 ## 4. Element Ontology Audit — Requirements as Worked Example, Applied Universally

@@ -1,40 +1,58 @@
 package MEMO_Ontology_Core_Software {
 
-    // ─── Root abstract ────────────────────────────────────────────────────────
-    // Every software artefact has identity, version, and a supplier.
-    // safetyClassification is a free string so non-medical projects can use
-    // domain-specific schemes (e.g. SIL, DAL, ASIL) without coupling.
-    part def Software {
+    // Every software element shares identity/version metadata.
+    part def SoftwareElement {
         attribute name : String;
         attribute version : String;
         attribute supplier : String;
         attribute safetyClassification : String;
     }
 
-    // ─── Structural software kinds (SEI Software Architecture vocabulary) ─────
+    // Compatibility alias during Session 1 migration.
+    part def Software :> SoftwareElement { }
 
-    // A deployable runtime unit — a process, OS service, container, or embedded
-    // task that executes independently.  In ROS this maps directly to a RosNode.
-    // In IEC 62304 this is the boundary for software safety class assignment.
-    part def SoftwareComponent :> Software {
+    // SEI ADD/SAM: deployable implementation element.
+    // AADL analogue: thread group/process implementation boundary.
+    part def SoftwareComponent :> SoftwareElement {
         attribute componentType : String;   // e.g. "process", "container", "task"
     }
 
-    // A cohesive collection of SoftwareComponents and/or sub-modules that are
-    // developed, tested, and released together — the SysML v2 analog of an SEI
-    // "software module" (CBAM / SAM).  IEC 62304 SoftwareItem specialises here.
-    part def SoftwareModule :> Software {
+    // SEI SAM/CBAM: module-level decomposition unit.
+    // AADL analogue: package/subprogram grouping.
+    part def SoftwareModule :> SoftwareElement {
         attribute moduleType : String;      // e.g. "library", "package", "subsystem"
     }
 
-    // An architectural tier grouping modules by responsibility — used in SEI ADD
-    // views (presentation, business-logic, data-access, infrastructure).
-    part def SoftwareLayer :> Software {
+    // SEI ADD: architectural layer/tier.
+    part def SoftwareLayer :> SoftwareElement {
         attribute layerRole : String;       // e.g. "presentation", "domain", "infrastructure"
     }
 
-    // Firmware is software tightly coupled to hardware; it is a SoftwareComponent
-    // with a direct dependency on specific hardware resources.
+    // SEI SAM: top-level assembled software product.
+    // AADL analogue: complete software system package.
+    part def SoftwareSystem :> SoftwareElement {
+        attribute runtimeTarget : String;
+    }
+
+    // AADL analogue: thread/subprogram execution context.
+    part def SoftwareThread :> SoftwareElement {
+        attribute schedulingPolicy : String;
+        attribute period : String;
+    }
+
+    // AADL analogue: data component/storage resource.
+    part def SoftwareDataStore :> SoftwareElement {
+        attribute storageType : String;
+        attribute consistencyModel : String;
+    }
+
+    // SEI/AADL: explicit connector/channel between elements.
+    part def SoftwareConnector :> SoftwareElement {
+        attribute connectorType : String;
+        attribute protocol : String;
+    }
+
+    // Firmware remains a software component coupled to hardware resources.
     part def Firmware :> SoftwareComponent {
         attribute targetHardware : String;
     }

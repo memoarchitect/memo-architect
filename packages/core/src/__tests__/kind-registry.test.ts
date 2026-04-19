@@ -23,7 +23,7 @@ describe('resolveLayerFromPath', () => {
     it('resolves layer from subdirectory name', () => {
         expect(resolveLayerFromPath('sysml/risk/risk-management.sysml')).toBe('risk');
         expect(resolveLayerFromPath('sysml/operational/operational.sysml')).toBe('operational');
-        expect(resolveLayerFromPath('sysml/purpose/business.sysml')).toBe('purpose');
+        expect(resolveLayerFromPath('sysml/operational/purpose/business.sysml')).toBe('operational');
     });
 
     it('maps relationships/ to crosscutting', () => {
@@ -135,15 +135,15 @@ describe('KindRegistry integration with ontology-core', () => {
         expect(registry.size).toBeGreaterThan(40);
     });
 
-    it('resolves purpose-layer kinds correctly', () => {
+    it('resolves nested operational purpose kinds as operational layer', () => {
         const program = registry.getKind('Program');
         expect(program).toBeDefined();
-        expect(program!.layer).toBe('purpose');
+        expect(program!.layer).toBe('operational');
         expect(program!.sysmlConstruct).toBe('part def');
 
         const actor = registry.getKind('Actor');
         expect(actor).toBeDefined();
-        expect(actor!.layer).toBe('purpose');
+        expect(actor!.layer).toBe('operational');
     });
 
     it('resolves requirements-layer kinds correctly', () => {
@@ -166,10 +166,10 @@ describe('KindRegistry integration with ontology-core', () => {
         expect(sw!.layer).toBe('software');
     });
 
-    it('resolves logical-layer kinds correctly', () => {
-        const logical = registry.getKind('Subsystem');
-        expect(logical).toBeDefined();
-        expect(logical!.layer).toBe('logical');
+    it('resolves system-layer kinds correctly', () => {
+        const system = registry.getKind('Subsystem');
+        expect(system).toBeDefined();
+        expect(system!.layer).toBe('system');
     });
 
     it('tracks specialization (superType)', () => {
