@@ -35,6 +35,9 @@ export interface OntologyPackageInfo {
     relationshipCount: number;
     relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;
+    // Absolute path to the package directory. Set by the dev server so the web
+    // client can emit `open-file` WS events (N-ONTO §6.5 source-file deep-links).
+    rootDir?: string;
 }
 
 export interface OntologyLayerInfo {
@@ -267,7 +270,7 @@ function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInf
     const kindCount = layers.reduce((s, l) => s + l.kindCount, 0);
     const relationshipTypes = buildRelationshipTypes(sysmlDir);
 
-    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: relationshipTypes.length, relationshipTypes, selected };
+    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: relationshipTypes.length, relationshipTypes, selected, rootDir: pkgDir };
 }
 
 /**

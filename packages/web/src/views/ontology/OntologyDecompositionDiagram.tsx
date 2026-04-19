@@ -1,22 +1,33 @@
 // ─── OntologyDecompositionDiagram ─────────────────────────────────────────────
 //
-// Landing page for ontology mode. Shows a ReactFlow-based hierarchy diagram
-// of all available ontology packages connected by their `extends` chain.
-// Clicking a package node navigates to its detail page.
+// Landing page for ontology mode. Shows a ReactFlow-based swimlane diagram of
+// all available ontology packages connected by their `extends` chain.
+//
+// Enhancements in N-ONTO Session 4 (issue #184):
+//   - ELK layered layout (RIGHT direction, BRANDES_KOEPF node placement)
+//   - Click a package node  → fitView to that node and its descendants
+//   - Double-click          → navigate to detail panel
+//   - "Show Tracing" button → toggles `extends` edges via Zustand hiddenEdgeTypes
+//   - Right-click a package → "Open source" context menu (vscode:// + WS fallback)
+//   - Escape                → full fitView reset
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import {
     ReactFlow,
+    ReactFlowProvider,
     Background,
     Controls,
-    type Node,
+    useReactFlow,
+    type Node as FlowNode,
     type Edge,
     type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import ELK from 'elkjs/lib/elk.bundled.js';
 
 import { useModelStore } from '../../store/model-store';
+import { sendOpenFile } from '../../store/ws-client';
 import { OntologyPackageNode, type OntologyPackageNodeData } from './OntologyPackageNode';
 import { OntologyLibraryPanel } from './OntologyLibraryPanel';
 import type { OntologyPackageInfo } from '../../types/ontology';
@@ -25,125 +36,98 @@ const nodeTypes: NodeTypes = {
     ontologyPackage: OntologyPackageNode,
 };
 
+const NODE_WIDTH = 260;
+const NODE_HEIGHT = 180;
+
+// Single ELK worker instance reused across re-layouts — same pattern as views/layout.ts
+const elk = new ELK({
+    workerFactory: (_url: string) => new Worker(
+        new URL('elkjs/lib/elk-worker.min.js', import.meta.url)
+    ),
+} as any);
+
 /**
- * Simple tree layout: organize packages in a top-down hierarchy.
- * Root packages (no extends) at the top, children below.
+ * Run ELK on the package hierarchy. Uses the "ontology-swimlane" preset
+ * (RIGHT direction, BRANDES_KOEPF node placement) called out in N-ONTO §6.4.
  */
-function layoutPackages(packages: OntologyPackageInfo[]): { nodes: Node[]; edges: Edge[] } {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
+async function layoutWithElk(packages: OntologyPackageInfo[]): Promise<{
+    nodes: FlowNode[];
+    edges: Edge[];
+}> {
+    const pkgByName = new Map(packages.map(p => [p.name, p]));
 
-    // Build adjacency: parent -> children
-    const childrenMap = new Map<string, string[]>();
-    const parentMap = new Map<string, string>();
-    const pkgByName = new Map<string, OntologyPackageInfo>();
+    const graph = {
+        id: 'root',
+        layoutOptions: {
+            'elk.algorithm': 'layered',
+            'elk.direction': 'RIGHT',
+            'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+            'elk.spacing.nodeNode': '32',
+            'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+            'elk.padding': '[top=24, left=24, bottom=24, right=24]',
+        },
+        children: packages.map(p => ({
+            id: p.name,
+            width: NODE_WIDTH,
+            height: NODE_HEIGHT,
+        })),
+        edges: packages
+            .filter(p => p.extends && pkgByName.has(p.extends))
+            .map((p, i) => ({
+                id: `e-${i}`,
+                sources: [p.extends!],
+                targets: [p.name],
+            })),
+    } as any;
 
-    for (const pkg of packages) {
-        pkgByName.set(pkg.name, pkg);
-        if (pkg.extends) {
-            parentMap.set(pkg.name, pkg.extends);
-            if (!childrenMap.has(pkg.extends)) childrenMap.set(pkg.extends, []);
-            childrenMap.get(pkg.extends)!.push(pkg.name);
-        }
+    const result = await elk.layout(graph);
+    const positions = new Map<string, { x: number; y: number }>();
+    for (const child of (result.children ?? [])) {
+        positions.set(child.id, { x: child.x ?? 0, y: child.y ?? 0 });
     }
 
-    // Find roots (no parent or parent not in available packages)
-    const roots = packages.filter(p => !p.extends || !pkgByName.has(p.extends));
-
-    // BFS to assign levels and positions
-    const levels = new Map<string, number>();
-    const queue: string[] = [];
-
-    for (const r of roots) {
-        levels.set(r.name, 0);
-        queue.push(r.name);
-    }
-
-    while (queue.length > 0) {
-        const name = queue.shift()!;
-        const level = levels.get(name)!;
-        const children = childrenMap.get(name) ?? [];
-        for (const child of children) {
-            if (!levels.has(child)) {
-                levels.set(child, level + 1);
-                queue.push(child);
-            }
-        }
-    }
-
-    // Assign any orphans not yet leveled
-    for (const pkg of packages) {
-        if (!levels.has(pkg.name)) levels.set(pkg.name, 0);
-    }
-
-    // Group by level
-    const byLevel = new Map<number, OntologyPackageInfo[]>();
-    for (const pkg of packages) {
-        const level = levels.get(pkg.name) ?? 0;
-        if (!byLevel.has(level)) byLevel.set(level, []);
-        byLevel.get(level)!.push(pkg);
-    }
-
-    const NODE_WIDTH = 260;
-    const NODE_GAP_X = 60;
-    const NODE_GAP_Y = 80;
-
-    // Position nodes
-    const maxLevel = Math.max(...byLevel.keys(), 0);
-    for (let level = 0; level <= maxLevel; level++) {
-        const pkgs = byLevel.get(level) ?? [];
-        const totalWidth = pkgs.length * NODE_WIDTH + (pkgs.length - 1) * NODE_GAP_X;
-        const startX = -totalWidth / 2;
-
-        for (let i = 0; i < pkgs.length; i++) {
-            const pkg = pkgs[i];
-            nodes.push({
-                id: pkg.name,
-                type: 'ontologyPackage',
-                position: {
-                    x: startX + i * (NODE_WIDTH + NODE_GAP_X),
-                    y: level * (180 + NODE_GAP_Y),
-                },
-                data: {
-                    name: pkg.name,
-                    type: pkg.type,
-                    version: pkg.version,
-                    description: pkg.description,
-                    kindCount: pkg.kindCount,
-                    layerCount: pkg.layers.length,
-                    layers: pkg.layers.map(l => ({ id: l.id, label: l.label, color: l.color, kindCount: l.kindCount })),
-                    selected: pkg.selected,
-                    onClick: () => {},  // Will be overridden
-                } satisfies OntologyPackageNodeData,
-            });
-        }
-    }
-
-    // Edge color by child package type
     const TYPE_EDGE_COLOR: Record<string, string> = {
-        ontology:  '#3B82F6', // blue  — core ontology extension
-        profile:   '#10B981', // green — modeling profile
-        extension: '#F59E0B', // amber — optional extension
+        ontology: '#3B82F6',
+        profile: '#10B981',
+        extension: '#F59E0B',
     };
 
-    // Create edges from extends relationships
+    const nodes: FlowNode[] = packages.map(pkg => ({
+        id: pkg.name,
+        type: 'ontologyPackage',
+        position: positions.get(pkg.name) ?? { x: 0, y: 0 },
+        data: {
+            name: pkg.name,
+            type: pkg.type,
+            version: pkg.version,
+            description: pkg.description,
+            kindCount: pkg.kindCount,
+            layerCount: pkg.layers.length,
+            layers: pkg.layers.map(l => ({ id: l.id, label: l.label, color: l.color, kindCount: l.kindCount })),
+            selected: pkg.selected,
+            onClick: () => {},
+        } satisfies OntologyPackageNodeData,
+    }));
+
+    const edges: Edge[] = [];
     for (const pkg of packages) {
         if (pkg.extends && pkgByName.has(pkg.extends)) {
-            const edgeColor = TYPE_EDGE_COLOR[pkg.type] ?? '#94A3B8';
+            const color = TYPE_EDGE_COLOR[pkg.type] ?? '#94A3B8';
             edges.push({
                 id: `${pkg.extends}->${pkg.name}`,
                 source: pkg.extends,
                 target: pkg.name,
-                sourceHandle: 'bottom',
-                targetHandle: 'top',
                 type: 'smoothstep',
-                style: { stroke: edgeColor, strokeWidth: 2 },
+                // Tag the edge with its semantic type so `hiddenEdgeTypes` can filter it.
+                data: { edgeType: 'extends' },
+                style: { stroke: color, strokeWidth: 2, strokeDasharray: '6 3' },
                 animated: false,
                 label: 'extends',
-                labelStyle: { fontSize: 9, fill: edgeColor, fontWeight: 500 },
+                labelStyle: { fontSize: 9, fill: color, fontWeight: 500 },
                 labelBgStyle: { fill: '#F7F7F5', fillOpacity: 0.9 },
                 labelBgPadding: [4, 2] as [number, number],
-                markerEnd: { type: 'arrowclosed' as const, color: edgeColor, width: 14, height: 14 },
+                markerEnd: { type: 'arrowclosed' as const, color, width: 14, height: 14 },
             });
         }
     }
@@ -151,24 +135,119 @@ function layoutPackages(packages: OntologyPackageInfo[]): { nodes: Node[]; edges
     return { nodes, edges };
 }
 
-export function OntologyDecompositionDiagram() {
+/** All descendants of `root` (inclusive) via extends edges. */
+function subtreeOf(rootName: string, packages: OntologyPackageInfo[]): Set<string> {
+    const children = new Map<string, string[]>();
+    for (const p of packages) {
+        if (p.extends) {
+            if (!children.has(p.extends)) children.set(p.extends, []);
+            children.get(p.extends)!.push(p.name);
+        }
+    }
+    const out = new Set<string>([rootName]);
+    const queue = [rootName];
+    while (queue.length) {
+        const n = queue.shift()!;
+        for (const c of children.get(n) ?? []) {
+            if (!out.has(c)) {
+                out.add(c);
+                queue.push(c);
+            }
+        }
+    }
+    return out;
+}
+
+interface ContextMenuState {
+    x: number;
+    y: number;
+    packageName: string;
+}
+
+function OntologyDecompositionDiagramInner() {
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const setActiveView = useModelStore(s => s.setActiveView);
-    const [showLibraryPanel, setShowLibraryPanel] = useState(false);
+    const hiddenEdgeTypes = useModelStore(s => s.hiddenEdgeTypes);
+    const toggleHiddenEdgeType = useModelStore(s => s.toggleHiddenEdgeType);
 
-    const handlePackageClick = useCallback((packageName: string) => {
+    const [showLibraryPanel, setShowLibraryPanel] = useState(false);
+    const [laidOut, setLaidOut] = useState<{ nodes: FlowNode[]; edges: Edge[] }>({ nodes: [], edges: [] });
+    const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+    const { fitView } = useReactFlow();
+
+    // Re-run ELK whenever the package set changes
+    useEffect(() => {
+        let cancelled = false;
+        layoutWithElk(availableOntologies).then(result => {
+            if (!cancelled) setLaidOut(result);
+        }).catch(err => {
+            console.error('[OntologyDiagram] ELK layout failed:', err);
+        });
+        return () => { cancelled = true; };
+    }, [availableOntologies]);
+
+    // Double-click → navigate to detail
+    const handleDoubleClick = useCallback((packageName: string) => {
         setActiveView({ type: 'ontology-detail', packageName });
     }, [setActiveView]);
 
+    // Single click → zoom to package + descendants
+    const handlePackageClick = useCallback((packageName: string) => {
+        const subtree = subtreeOf(packageName, availableOntologies);
+        const targetNodes = laidOut.nodes.filter(n => subtree.has(n.id));
+        if (targetNodes.length === 0) return;
+        fitView({ nodes: targetNodes.map(n => ({ id: n.id })), duration: 400, padding: 0.2 });
+    }, [availableOntologies, laidOut.nodes, fitView]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent, packageName: string) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, packageName });
+    }, []);
+
+    // Escape → full fitView reset (and dismiss context menu)
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            if (contextMenu) { setContextMenu(null); return; }
+            fitView({ padding: 0.1, duration: 300 });
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [contextMenu, fitView]);
+
+    // Wire click / double-click / contextmenu handlers into node data (data identity → memoized)
     const { nodes, edges } = useMemo(() => {
-        const layout = layoutPackages(availableOntologies);
-        // Wire up onClick handlers
-        for (const node of layout.nodes) {
-            const data = node.data as OntologyPackageNodeData;
-            data.onClick = () => handlePackageClick(node.id);
-        }
-        return layout;
-    }, [availableOntologies, handlePackageClick]);
+        const wired = laidOut.nodes.map(n => ({
+            ...n,
+            data: {
+                ...(n.data as unknown as OntologyPackageNodeData),
+                onClick: () => handlePackageClick(n.id),
+                onDoubleClick: () => handleDoubleClick(n.id),
+                onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, n.id),
+            } satisfies OntologyPackageNodeData,
+        }));
+        const visibleEdges = laidOut.edges.filter(e => {
+            const t = (e.data as { edgeType?: string } | undefined)?.edgeType;
+            return !t || !hiddenEdgeTypes.has(t);
+        });
+        return { nodes: wired, edges: visibleEdges };
+    }, [laidOut, handlePackageClick, handleDoubleClick, handleContextMenu, hiddenEdgeTypes]);
+
+    // Dismiss context menu when clicking outside
+    const menuRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!contextMenu) return;
+        const onDown = (ev: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(ev.target as globalThis.Node)) {
+                setContextMenu(null);
+            }
+        };
+        window.addEventListener('mousedown', onDown);
+        return () => window.removeEventListener('mousedown', onDown);
+    }, [contextMenu]);
+
+    const tracingHidden = hiddenEdgeTypes.has('extends');
 
     if (availableOntologies.length === 0) {
         return (
@@ -186,7 +265,7 @@ export function OntologyDecompositionDiagram() {
 
     return (
         <div className="flex-1" style={{ background: '#F7F7F5' }}>
-            {/* Header */}
+            {/* Header / toolbar */}
             <div className="flex items-start justify-between px-6 pt-5 pb-3">
                 <div>
                     <h2 className="text-base font-semibold" style={{ color: '#1a1a1a' }}>
@@ -194,43 +273,143 @@ export function OntologyDecompositionDiagram() {
                     </h2>
                     <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
                         {availableOntologies.length} package{availableOntologies.length !== 1 ? 's' : ''} available.
-                        Click a package to view its layers and kinds.
+                        Click to zoom, double-click to open, right-click for source.
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowLibraryPanel(true)}
-                    className="px-3 py-1.5 text-xs rounded-lg font-medium"
-                    style={{ background: '#1B3A4B', color: '#2DD4A8' }}
-                >
-                    + Add Ontology
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        data-testid="toggle-tracing"
+                        onClick={() => toggleHiddenEdgeType('extends')}
+                        title={tracingHidden ? 'Show extends tracing edges' : 'Hide extends tracing edges'}
+                        className="px-3 py-1.5 text-xs rounded-lg font-medium"
+                        style={tracingHidden
+                            ? { background: '#F0F0ED', color: '#6B7280', border: '1px solid #E5E5E0' }
+                            : { background: '#1B3A4B', color: '#2DD4A8', border: '1px solid transparent' }}
+                    >
+                        {tracingHidden ? 'Show Tracing' : 'Hide Tracing'}
+                    </button>
+                    <button
+                        onClick={() => setShowLibraryPanel(true)}
+                        className="px-3 py-1.5 text-xs rounded-lg font-medium"
+                        style={{ background: '#1B3A4B', color: '#2DD4A8' }}
+                    >
+                        + Add Ontology
+                    </button>
+                </div>
             </div>
 
-            {/* Library management panel */}
             {showLibraryPanel && <OntologyLibraryPanel onClose={() => setShowLibraryPanel(false)} />}
 
-            {/* ReactFlow diagram */}
             <div style={{ flex: 1, height: 'calc(100% - 72px)' }}>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
                     fitView
-                    fitViewOptions={{ padding: 0.3 }}
+                    fitViewOptions={{ padding: 0.1 }}
                     nodesDraggable={false}
                     nodesConnectable={false}
                     elementsSelectable={false}
                     panOnScroll
                     zoomOnDoubleClick={false}
-                    minZoom={0.3}
-                    maxZoom={2}
+                    minZoom={0.2}
+                    maxZoom={2.5}
                     proOptions={{ hideAttribution: true }}
                 >
                     <Background color="#E5E5E0" gap={24} size={1} />
                     <Controls showInteractive={false} />
                 </ReactFlow>
             </div>
+
+            {contextMenu && (
+                <ContextMenu
+                    menuRef={menuRef}
+                    state={contextMenu}
+                    onClose={() => setContextMenu(null)}
+                    packages={availableOntologies}
+                />
+            )}
         </div>
+    );
+}
+
+// ─── Context menu ─────────────────────────────────────────────────────────────
+
+interface ContextMenuProps {
+    state: ContextMenuState;
+    onClose: () => void;
+    packages: OntologyPackageInfo[];
+    menuRef: React.MutableRefObject<HTMLDivElement | null>;
+}
+
+const ContextMenu = ({ state, onClose, packages, menuRef }: ContextMenuProps) => {
+    const pkg = packages.find(p => p.name === state.packageName);
+
+    function openSource() {
+        if (!pkg) return;
+        // Prefer the dev-server round-trip (works for any editor / platform).
+        // The server opens the file with the system default; in dev with VS Code
+        // installed this is equivalent to vscode://file/<abs path>.
+        const manifestRel = pkg.rootDir
+            ? `${pkg.rootDir}/memo.package.yaml`
+            : '';
+        if (manifestRel) {
+            sendOpenFile(manifestRel);
+        } else {
+            // Fallback: try vscode:// with package name as a hint (rarely works but cheap)
+            window.open(`vscode://file/${encodeURIComponent(pkg.name)}`);
+        }
+        onClose();
+    }
+
+    return (
+        <div
+            ref={menuRef}
+            style={{
+                position: 'fixed',
+                top: state.y,
+                left: state.x,
+                zIndex: 1000,
+                background: '#FFFFFF',
+                border: '1px solid #E5E5E0',
+                borderRadius: '8px',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+                padding: '4px',
+                minWidth: '180px',
+                fontSize: '12px',
+            }}
+        >
+            <div style={{ padding: '6px 10px', color: '#9CA3AF', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                {state.packageName}
+            </div>
+            <button
+                onClick={openSource}
+                disabled={!pkg?.rootDir}
+                style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '6px 10px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: pkg?.rootDir ? 'pointer' : 'not-allowed',
+                    color: pkg?.rootDir ? '#1a1a1a' : '#9CA3AF',
+                    borderRadius: '4px',
+                }}
+                onMouseEnter={e => { if (pkg?.rootDir) e.currentTarget.style.background = '#F0F0ED'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+                Open source
+            </button>
+        </div>
+    );
+};
+
+export function OntologyDecompositionDiagram() {
+    return (
+        <ReactFlowProvider>
+            <OntologyDecompositionDiagramInner />
+        </ReactFlowProvider>
     );
 }
 

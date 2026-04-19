@@ -86,6 +86,7 @@ export const EDGE_STYLES: Record<string, SysmlEdgeStyle> = {
     ExposesInterface: e('core', 'behavioral',  'solid',  'none',           'circle',        C.grey),
 
     // ── Core SysML dependency / trace ─────────────────────────────────────────
+    Extends:          e('core', 'dependency',  'dashed', 'none',           'triangle-open', C.grey,          'extends'),
     Realization:      e('core', 'dependency',  'dashed', 'none',           'triangle-open', C.grey),
     Dependency:       e('core', 'dependency',  'dashed', 'none',           'arrow',         C.grey),
     TraceTo:          e('core', 'dependency',  'dashed', 'none',           'arrow',         C.grey,          'trace'),
@@ -203,7 +204,7 @@ export const DOMAIN_GROUPS: DomainGroup[] = [
         types: [
             'Aggregation', 'ComposedOf', 'DecomposedBy', 'Association',
             'Flow', 'Succession', 'ExposesInterface',
-            'Realization', 'Dependency', 'TraceTo', 'Refines', 'Derives',
+            'Extends', 'Realization', 'Dependency', 'TraceTo', 'Refines', 'Derives',
             'Satisfy', 'Verify', 'AllocateTo', 'Constrains',
         ],
     },
