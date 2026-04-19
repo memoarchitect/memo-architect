@@ -1,8 +1,0 @@
-{
-  "name": "@memo/ontology-ext-medical-safety",
-  "version": "0.1.0",
-  "description": "IEC 60601 safety & essential performance — safety goals, basic safety, protective measures",
-  "private": true,
-  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
-  "license": "Apache-2.0"
-}

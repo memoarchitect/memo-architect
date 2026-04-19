@@ -1,8 +1,0 @@
-{
-  "name": "@memo/ontology-ext-medical-sw",
-  "version": "0.1.0",
-  "description": "IEC 62304 software lifecycle — software items, SOUP, anomalies, lifecycle processes",
-  "private": true,
-  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
-  "license": "Apache-2.0"
-}

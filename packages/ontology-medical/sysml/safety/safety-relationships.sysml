@@ -1,4 +1,4 @@
-package MEMO_Extension_Medical_Safety_Relationships {
+package MEMO_Ontology_Medical_Safety_Relationships {
 
     connection def Preserves {
         end function : SafetyFunction [1];

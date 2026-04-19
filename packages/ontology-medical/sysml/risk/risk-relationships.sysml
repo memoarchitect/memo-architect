@@ -1,4 +1,4 @@
-package MEMO_Extension_Medical_Risk_Relationships {
+package MEMO_Ontology_Medical_Risk_Relationships {
 
     connection def Mitigates {
         end control : RiskControl [1];
@@ -22,12 +22,12 @@ package MEMO_Extension_Medical_Risk_Relationships {
 
     connection def PlansRiskManagement {
         end plan : RiskManagementPlan [1];
-        end subject[1];
+        end subject [1];
     }
 
     connection def AssessesResidualRisk {
         end evaluation : ResidualRiskEvaluation [1];
-        end subject[1];
+        end subject [1];
     }
 
     connection def WeighsAgainstBenefit {
@@ -37,7 +37,7 @@ package MEMO_Extension_Medical_Risk_Relationships {
 
     connection def ConcludesBenefitRisk {
         end assessment : BenefitRiskAssessment [1];
-        end subject[1];
+        end subject [1];
     }
 
     connection def ConcludesOverallResidualRisk {
@@ -47,11 +47,11 @@ package MEMO_Extension_Medical_Risk_Relationships {
 
     connection def MonitorsRiskSubject {
         end signal : ProductionPostProductionSignal [1];
-        end subject[1];
+        end subject [1];
     }
 
     connection def ImplementsRiskControl {
-        end implementer[1];
+        end implementer [1];
         end control : RiskControl [1];
     }
 
@@ -72,7 +72,7 @@ package MEMO_Extension_Medical_Risk_Relationships {
 
     connection def EscalatesToRisk {
         end effect : FailureEffect [1];
-        end subject[1];
+        end subject [1];
     }
 
     connection def DetectsFailureMode {
@@ -86,17 +86,17 @@ package MEMO_Extension_Medical_Risk_Relationships {
     }
 
     connection def UsesGate {
-        end event[1];
+        end event [1];
         end gate : FaultTreeGate [1];
     }
 
     connection def ContributesToEvent {
-        end contributor[1];
-        end event[1];
+        end contributor [1];
+        end event [1];
     }
 
     connection def TriggersHazardousSituation {
-        end event[1];
+        end event [1];
         end situation : HazardousSituation [1];
     }
 

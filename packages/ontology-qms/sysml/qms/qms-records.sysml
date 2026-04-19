@@ -21,6 +21,12 @@ package MEMO_Ontology_QMS_Records {
         attribute appliesTo : String;
     }
 
+    // Referenced quality or regulatory standard.
+    part def Standard {
+        attribute name : String;
+        attribute version : String;
+    }
+
     // ─── §4.2.5 — Compliance Evidence ────────────────────────────────────────
     // Any artefact that demonstrates conformance to a requirement or standard.
     part def ComplianceEvidence :> QMSRecord {
@@ -43,6 +49,17 @@ package MEMO_Ontology_QMS_Records {
     part def FDAClearance :> ComplianceEvidence {
         attribute submissionNumber : String;
         attribute decisionType : String;    // "510(k)" | "De Novo" | "PMA"
+    }
+
+    // Design history record index (FDA 21 CFR 820.30(j)).
+    part def DesignHistoryRecord :> QMSRecord { }
+
+    // Controlled change record linked to released baselines.
+    part def ChangeRecord :> QMSRecord { }
+
+    // Named release baseline for controlled configuration snapshots.
+    part def ReleaseBaseline :> QMSRecord {
+        attribute baselineVersion : String;
     }
 
     // ─── QMS Relationships ────────────────────────────────────────────────────

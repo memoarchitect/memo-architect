@@ -75,6 +75,11 @@ package MEMO_Ontology_Medical_DesignControl {
         end scenario : OperationalScenario [1];
     }
 
+    connection def EvaluatesRequirement {
+        end evaluation : ValidationCase [1];
+        end uiRequirement : UserInterfaceRequirement [1];
+    }
+
     connection def ContributesToHazard {
         end useError : UseError [1];
         end hazard : Hazard [1];

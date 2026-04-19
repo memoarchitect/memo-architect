@@ -3,12 +3,8 @@
 # For: most Class II devices and regulated software
 
 name: "Medical Device - Standard"
-description: "Core + ISO 14971 risk + IEC 62304 software + DHF + usability — covers 80% of projects"
+description: "Core + consolidated medical + IEC 62304 ontologies — covers most Class II projects"
 extends: "@memo/ontology-core"
 ontologies:
-  - "@memo/ontology-ext-medical-risk"
-  - "@memo/ontology-ext-medical-sw"
-  - "@memo/ontology-ext-medical-dhf"
-  - "@memo/ontology-ext-medical-usability"
-  - "@memo/ontology-ext-medical-safety"
-  - "@memo/ontology-ext-medical-ops"
+  - "@memo/ontology-medical"
+  - "@memo/ontology-iec62304"

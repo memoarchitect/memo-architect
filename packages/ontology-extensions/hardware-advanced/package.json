@@ -1,5 +1,5 @@
 {
-  "name": "@memo/ontology-physical-advanced",
+  "name": "@memo/ontology-hardware-advanced",
   "version": "0.1.0",
   "description": "Advanced hardware node definitions — computing devices, FPGAs, microcontrollers",
   "private": true,
