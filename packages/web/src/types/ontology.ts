@@ -22,6 +22,7 @@ export interface OntologyPackageInfo {
     relationshipCount: number;
     relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;         // true if in project's memo.package.yaml ontologies list
+    rootDir?: string;          // absolute path to the package directory (set by dev server for Open-source deep-link)
 }
 
 export interface OntologyLayerInfo {

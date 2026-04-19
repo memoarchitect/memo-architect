@@ -17,7 +17,12 @@ export interface OntologyPackageNodeData {
     layerCount: number;
     layers: Array<{ id: string; label: string; color: string; kindCount: number }>;
     selected: boolean;
+    /** Single click — zooms to this package's subtree (N-ONTO §6.2). */
     onClick: () => void;
+    /** Double click — navigates to the detail panel. Optional; the inner node only invokes it if set. */
+    onDoubleClick?: () => void;
+    /** Right click — opens the context menu for "Open source". */
+    onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const TYPE_STYLES: Record<string, { bg: string; fg: string; border: string }> = {
@@ -32,7 +37,10 @@ function OntologyPackageNodeInner({ data }: NodeProps) {
 
     return (
         <div
+            data-testid={`ontology-package-node-${d.name}`}
             onClick={d.onClick}
+            onDoubleClick={d.onDoubleClick}
+            onContextMenu={d.onContextMenu}
             style={{
                 background: '#FFFFFF',
                 border: d.selected ? '2px solid #2563EB' : '1px solid #E5E5E0',

@@ -157,6 +157,7 @@ export interface ModelState {
     ontologyViewMode: 'visual' | 'table';   // LayerGrid vs LayerTable
     showOntologyRelationships: boolean;     // collapsible relationships section
     highlightedRelationshipType: string | null; // highlighted rel type in detail
+    hiddenEdgeTypes: Set<string>;           // edge type ids hidden in the ontology decomposition diagram
     ontologyInstallStatus: { installing: boolean; lastInstalled?: string; error?: string };
 
     // Gap bar
@@ -218,6 +219,7 @@ export interface ModelState {
     setOntologyViewMode: (mode: 'visual' | 'table') => void;
     toggleOntologyRelationships: () => void;
     setHighlightedRelationshipType: (type: string | null) => void;
+    toggleHiddenEdgeType: (type: string) => void;
     saveOntologySelection: () => OntologySaveResult;
     setOntologyInstallStatus: (status: { installing: boolean; lastInstalled?: string; error?: string }) => void;
 
@@ -318,6 +320,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
     ontologyViewMode: 'visual' as const,
     showOntologyRelationships: false,
     highlightedRelationshipType: null,
+    // Tracing edges hidden by default in the ontology decomposition diagram (N-ONTO §6.3).
+    // `extends` is the only type hidden by default — toolbar toggle reveals it.
+    hiddenEdgeTypes: new Set<string>(['extends']),
     ontologyInstallStatus: { installing: false },
 
     // Gap bar
@@ -545,6 +550,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setHighlightedRelationshipType: (type) => set((s) => ({
         highlightedRelationshipType: s.highlightedRelationshipType === type ? null : type,
     })),
+    toggleHiddenEdgeType: (type) => set((s) => {
+        const next = new Set(s.hiddenEdgeTypes);
+        if (next.has(type)) next.delete(type);
+        else next.add(type);
+        return { hiddenEdgeTypes: next };
+    }),
     saveOntologySelection: () => {
         const { model, availableOntologies, selectedOntologies } = get();
         if (!model) return { success: true };

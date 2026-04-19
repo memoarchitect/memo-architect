@@ -254,6 +254,17 @@ export function sendOntologyInstall(source: string): void {
     }
 }
 
+/**
+ * Ask the CLI dev server to open a source file in the user's editor (N-ONTO §6.5).
+ * Server-side handler resolves the path relative to the project root and invokes
+ * the system-default opener. No-op if the WebSocket is not connected.
+ */
+export function sendOpenFile(path: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'open-file', payload: { path } }));
+    }
+}
+
 /** Send ontology remove request to server */
 export function sendOntologyRemove(packageName: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {

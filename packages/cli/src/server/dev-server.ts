@@ -344,6 +344,37 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                         console.log(`[Remap] Remapped ${remappedCount} elements across ${Object.keys(mappings).length} kind(s)`);
                         ws.send(JSON.stringify({ type: 'remap:result', payload: { success: true, count: remappedCount } }));
                     }
+                } else if (msg.type === 'open-file') {
+                    // N-ONTO §6.5 — right-click "Open source" from the ontology viewer.
+                    // Resolve the path against projectRoot, confirm it's within the tree,
+                    // then hand off to the system-default opener.
+                    const { projectRoot } = options;
+                    const requested = String(msg.payload?.path ?? '');
+                    if (!requested) return;
+                    try {
+                        const absPath = resolve(projectRoot, requested);
+                        const relRoot = resolve(projectRoot);
+                        // Guardrail: only open files inside the project tree
+                        if (!absPath.startsWith(relRoot)) {
+                            console.warn(`[OpenFile] Refused path outside project: ${absPath}`);
+                            return;
+                        }
+                        if (!existsSync(absPath)) {
+                            console.warn(`[OpenFile] Path does not exist: ${absPath}`);
+                            return;
+                        }
+                        const { execFile } = await import('node:child_process');
+                        const platform = process.platform;
+                        const cmd = platform === 'darwin' ? 'open'
+                            : platform === 'win32' ? 'explorer'
+                            : 'xdg-open';
+                        execFile(cmd, [absPath], (err) => {
+                            if (err) console.warn(`[OpenFile] ${cmd} failed for ${absPath}:`, err.message);
+                            else console.log(`[OpenFile] Opened ${absPath}`);
+                        });
+                    } catch (e: any) {
+                        console.warn('[OpenFile] Failed:', e?.message ?? e);
+                    }
                 } else if (msg.type === 'diagram:parse') {
                     // Extract element IDs from SysML text by name-matching against current model
                     const modelMsg = initialMessages.find(m => m.type === 'model:update') as ModelUpdateMessage | undefined;
