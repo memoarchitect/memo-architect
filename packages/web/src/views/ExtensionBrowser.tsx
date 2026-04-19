@@ -29,7 +29,7 @@ export function ExtensionBrowser() {
         const exts: ExtensionInfo[] = [];
 
         // Core extensions (always active)
-        const coreLayers = ['purpose', 'operational', 'requirements', 'functional', 'logical', 'physical', 'software', 'interfaces', 'analysis', 'verification'];
+        const coreLayers = ['operational', 'system', 'requirements', 'functional', 'logical', 'hardware', 'software', 'interfaces', 'analysis', 'verification'];
         const medicalLayers = ['risk', 'safety', 'design-control', 'software-lifecycle', 'qms', 'ui', 'cybersecurity', 'privacy', 'operations', 'clinical'];
 
         for (const layer of coreLayers) {
@@ -57,15 +57,11 @@ export function ExtensionBrowser() {
 
     // Available extensions catalog (static for now)
     const availableExtensions = [
-        { name: '@memo/ontology-ext-medical-risk', desc: 'ISO 14971 risk management', kinds: 23 },
-        { name: '@memo/ontology-ext-medical-sw', desc: 'IEC 62304 software lifecycle', kinds: 13 },
-        { name: '@memo/ontology-ext-medical-dhf', desc: 'QMS & Design History File', kinds: 7 },
-        { name: '@memo/ontology-ext-medical-usability', desc: 'IEC 62366 usability', kinds: 15 },
-        { name: '@memo/ontology-ext-medical-safety', desc: 'IEC 60601 safety', kinds: 9 },
-        { name: '@memo/ontology-ext-medical-ops', desc: 'Manufacturing & service', kinds: 16 },
-        { name: '@memo/ontology-ext-medical-cyber', desc: 'Cybersecurity', kinds: 11 },
-        { name: '@memo/ontology-ext-medical-privacy', desc: 'HIPAA/GDPR privacy', kinds: 6 },
-        { name: '@memo/ontology-ext-medical-clinical', desc: 'Clinical evaluation', kinds: 10 },
+        { name: '@memo/ontology-medical', desc: 'Medical domain core (risk, safety, operations, usability)', kinds: 80 },
+        { name: '@memo/ontology-qms', desc: 'Quality management and design control', kinds: 25 },
+        { name: '@memo/ontology-iec62304', desc: 'IEC 62304 software lifecycle', kinds: 20 },
+        { name: '@memo/ontology-cybersecurity', desc: 'Cybersecurity and privacy', kinds: 30 },
+        { name: '@memo/ontology-medical-clinical-trial', desc: 'Clinical evaluation and evidence', kinds: 20 },
     ];
 
     if (!model) {

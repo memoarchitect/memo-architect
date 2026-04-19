@@ -11,8 +11,10 @@ package MEMO_Ontology_Privacy {
         attribute gdprCategory : String;    // e.g. "health data (Art.9)"
     }
 
+    part def ProtectedHealthInformation :> PersonalDataCategory { }
+
     // A specific processing operation on personal data (GDPR Art. 30 record).
-    action def DataProcessingActivity {
+    action def DataProcessingActivity :> OperationalActivity {
         attribute activityName : String;
         attribute purpose : String;
         attribute legalBasis : String;      // Consent | Contract | LegitimateInterest | LegalObligation

@@ -1,8 +1,0 @@
-{
-  "name": "@memo/ontology-ext-medical-cyber",
-  "version": "0.1.0",
-  "description": "Cybersecurity — threat models, vulnerabilities, security controls, SBOM, secure updates",
-  "private": true,
-  "files": ["sysml/", "memo.package.yaml", "memo.rules.yaml"],
-  "license": "Apache-2.0"
-}

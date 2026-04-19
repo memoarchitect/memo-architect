@@ -1,10 +1,10 @@
-package MEMO_Extension_Physical_Advanced {
+package MEMO_Extension_Hardware_Advanced {
 
-    part def PhysicalModule {
+    part def HardwareModule {
         attribute name : String;
     }
 
-    part def HardwareNode :> PhysicalComponent {
+    part def HardwareNode :> HardwareComponent {
         attribute ip : String;
     }
 
