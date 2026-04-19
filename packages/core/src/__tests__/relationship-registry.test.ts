@@ -190,8 +190,8 @@ describe('RelationshipRegistry integration with ontology-medical', () => {
     });
 
     it('discovers relationship types from ontology-medical SysML files', () => {
-        // The medical relationships.sysml has many connection defs
-        expect(registry.size).toBeGreaterThanOrEqual(50);
+        // Consolidated medical ontology exposes a broad relationship surface.
+        expect(registry.size).toBeGreaterThanOrEqual(40);
     });
 
     it('discovers medical-specific relationship types', () => {

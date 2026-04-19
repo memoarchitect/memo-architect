@@ -61,8 +61,9 @@ export interface OntologyKindInfo {
 /** Layer color palette (mirrors web constants) */
 const LAYER_COLORS: Record<string, string> = {
     // ontology-core layers
-    purpose: '#6366F1', operational: '#8B5CF6', requirements: '#EC4899',
-    functional: '#F59E0B', logical: '#06B6D4', physical: '#10B981',
+    purpose: '#6366F1', operational: '#8B5CF6', system: '#7C3AED',
+    requirements: '#EC4899', functional: '#F59E0B', logical: '#06B6D4',
+    hardware: '#10B981', physical: '#10B981',
     software: '#3B82F6', interfaces: '#14B8A6', analysis: '#F97316',
     verification: '#84CC16', relationships: '#9CA3AF',
     // ontology-medical layers
@@ -154,9 +155,8 @@ function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
             const layerDir = join(sysmlDir, layerId);
             const layerKinds: OntologyKindInfo[] = [];
 
-            for (const file of readdirSync(layerDir)) {
-                if (!file.endsWith('.sysml') || file === 'index.sysml') continue;
-                const { kinds } = parseConstructsInFile(join(layerDir, file));
+            for (const filePath of collectSysmlFiles(layerDir)) {
+                const { kinds } = parseConstructsInFile(filePath);
                 for (const k of kinds) {
                     allParsedKinds.push({ ...k, layer: layerId });
                     layerKinds.push({
@@ -210,9 +210,8 @@ function buildRelationshipTypes(sysmlDir: string): OntologyRelationshipInfo[] {
         for (const entry of readdirSync(sysmlDir, { withFileTypes: true })) {
             if (!entry.isDirectory()) continue;
             const layerDir = join(sysmlDir, entry.name);
-            for (const file of readdirSync(layerDir)) {
-                if (!file.endsWith('.sysml') || file === 'index.sysml') continue;
-                const { relationships } = parseConstructsInFile(join(layerDir, file));
+            for (const filePath of collectSysmlFiles(layerDir)) {
+                const { relationships } = parseConstructsInFile(filePath);
                 for (const r of relationships) result.push(r);
             }
         }
@@ -298,7 +297,15 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
         if (existsSync(pkgsDir)) {
             try {
                 for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
-                    if (entry.isDirectory()) candidates.push(join(pkgsDir, entry.name));
+                    if (!entry.isDirectory()) continue;
+                    if (entry.name === 'ontology-extensions') {
+                        const extRoot = join(pkgsDir, entry.name);
+                        for (const ext of readdirSync(extRoot, { withFileTypes: true })) {
+                            if (ext.isDirectory()) candidates.push(join(extRoot, ext.name));
+                        }
+                    } else {
+                        candidates.push(join(pkgsDir, entry.name));
+                    }
                 }
             } catch { /* skip */ }
             break; // Found a packages/ dir, stop walking up
@@ -506,6 +513,7 @@ const CONFIG_SEARCH_ORDER = [
  */
 function resolvePackageConfig(packageName: string, fromDir: string): string | undefined {
     const shortName = packageName.replace(/^@memo\//, '');
+    const extensionStem = shortName.replace(/^ontology-ext-/, '').replace(/^ontology-/, '');
 
     let dir = resolve(fromDir);
     while (true) {
@@ -513,6 +521,10 @@ function resolvePackageConfig(packageName: string, fromDir: string): string | un
         for (const configName of CONFIG_SEARCH_ORDER) {
             const candidate = resolve(dir, 'packages', shortName, configName);
             if (existsSync(candidate)) return candidate;
+        }
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const extCandidate = resolve(dir, 'packages', 'ontology-extensions', extensionStem, configName);
+            if (existsSync(extCandidate)) return extCandidate;
         }
 
         // Try node_modules
