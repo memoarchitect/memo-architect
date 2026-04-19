@@ -16,7 +16,7 @@
  * resolveLayerFromPath("sysml/risk/risk-management.sysml")     → "risk"
  * resolveLayerFromPath("sysml/operational/operational.sysml")   → "operational"
  * resolveLayerFromPath("sysml/relationships/relationships.sysml") → "crosscutting"
- * resolveLayerFromPath("sysml/purpose/business.sysml")          → "purpose"
+ * resolveLayerFromPath("sysml/operational/purpose/business.sysml") → "operational"
  */
 export function resolveLayerFromPath(filePath: string): string {
     // Normalize to forward slashes

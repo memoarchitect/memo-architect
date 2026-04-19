@@ -1,4 +1,4 @@
-package MEMO_Ontology_Core_Purpose {
+package MEMO_Ontology_Core_Operational_Purpose {
 
     part def Program {
         attribute name : String;
