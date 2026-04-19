@@ -305,7 +305,8 @@ describe('loadConfig with real ontology package files', () => {
 
         // Verify specific layers are present
         const layerIds = config.architectureLayers!.map(l => l.id);
-        expect(layerIds).toContain('purpose');
+        expect(layerIds).toContain('operational');
+        expect(layerIds).toContain('system');
         expect(layerIds).toContain('requirements');
         expect(layerIds).toContain('software');
         expect(layerIds).toContain('verification');
@@ -326,7 +327,7 @@ describe('loadConfig with real ontology package files', () => {
         expect(layerIds).toContain('safety');
 
         // Verify extends chain
-        expect(config.extends).toBe('@memo/ontology-core');
+        expect(config.extends).toBe('@memo/ontology-qms');
     });
 
     it('medical-modeling-profile loads closure rules from memo.package.yaml + memo.rules.yaml', () => {
