@@ -24,23 +24,37 @@ The current codebase partially satisfies these principles but has three signific
 2. **Requirement class proliferation**: 50+ `requirement def` across 20+ files, many are redundant subclasses of `Requirement` that add nothing beyond a name. OWL-style would collapse most of these to attribute values on a single `Requirement`.
 3. **Layer naming and mixing**: `Physical` should be `Hardware` (DHF / IEC 60601 terminology). `System` and `Subsystem` currently live in `logical.sysml` but are system-analysis concepts, not logical. `Purpose` should nest under `operational/` as a sub-layer rather than being a peer top-level layer.
 
+> **Note on scope of the OWL audit:** violation #2 above is about Requirements *as a worked example*. The same empty-subclass / attribute-better-than-subclass anti-pattern exists for **Functions**, **Procedures**, **Ports**, **UI elements**, **Hardware specializations**, **Work products**, **QMS records**, **Claims**, and **Clinical evidence artifacts**. Section §4 covers the universal audit; Session 2 collapses all of them, not just Requirements.
+
 ---
 
 ## 2. Architectural Principles (binding)
 
 These principles hold across every session. When a session-level decision conflicts with a principle, the principle wins.
 
-### P1 — OWL-style minimal-class ontology
+### P1 — OWL-style minimal-class ontology (applies universally, to every kind)
+
+P1 governs **every** `part def`, `requirement def`, `action def`, `port def`, and `connection def` in every package. Requirements are the worked example in §4 but the principle is not Requirement-specific — apply it to Functions, Procedures, Ports, UI elements, Work products, QMS records, Claims, Hardware kinds, and anything else.
 
 A new class is justified only if **at least one** of the following is true:
 
 1. It introduces distinct structural attributes (more than a label).
-2. It is referenced by a regulatory standard by name (e.g., IEC 62304 `SOUPItem`, ISO 14971 `Hazard`) and must surface with that exact name in compliance output.
+2. It is referenced by a regulatory standard by name (e.g., IEC 62304 `SOUPItem`, ISO 14971 `Hazard`, IEC 62366 `UseError`) and must surface with that exact name in compliance output.
 3. It participates in a distinct relationship class in the ontology (it is the domain or range of relations not applicable to the parent).
 
-Otherwise: use an attribute on the parent class. `FunctionalRequirement`, `TechnicalRequirement`, `SystemRequirement` — where they differ only in intent/category — become `Requirement { category: Functional | Technical | System }`, not subclasses.
+Otherwise: use an attribute on the parent class.
 
-> "Think OWL" — classes encode essence, attributes encode variation. A proliferation of near-identical subclasses is a smell.
+**Hard test — the OWL anti-pattern:** any definition of the form `part|requirement|action|port|connection def X :> Y { }` — empty body, no new attributes — is an anti-pattern unless justified by rules 2 or 3 above. Collapse `X` into `Y` with a `kind`/`type`/`category`/`scope` attribute carrying the value that `X` previously named.
+
+Examples of the same principle applied across kinds:
+
+- `MissionFunction :> Function { }` → `Function { scope: Mission }`
+- `PortEthernet :> Port { }` → `Port { protocol: "Ethernet" }`
+- `ManufacturingProcedure :> Procedure { }` → `Procedure { procedureType: Manufacturing }`
+- `UIScreen :> UIElement { }` → `UIElement { uiKind: Screen }`
+- `FunctionalRequirement :> Requirement { }` → `Requirement { category: Functional }`
+
+> "Think OWL" — classes encode essence, attributes encode variation. A proliferation of near-identical subclasses is a smell regardless of which element type it afflicts.
 
 ### P2 — Extend-don't-duplicate (no parallel hierarchies)
 
@@ -135,9 +149,11 @@ The `KindRegistry` (per CLAUDE.md Phase 7-8) must be updated to use this rule. E
 
 ---
 
-## 4. Requirement Ontology (target shape)
+## 4. Element Ontology Audit — Requirements as Worked Example, Applied Universally
 
-### 4.1 One base class
+Section 4 specifies the target shape for **every** element category in the ontology, not just Requirements. Requirements are worked out in the most detail in §4.1–§4.4 as the canonical example; the same pattern — one base class with a category/type attribute — applies to the other categories enumerated in §4.5.
+
+### 4.1 Requirements — one base class
 
 ```sysml
 package MEMO_Ontology_Core_Requirements {
@@ -242,6 +258,55 @@ Session 2 delivers:
 - **CLI command**: `memo req new --template event` produces a stub
 - **Lint rule** (warning only, not error): `pnpm run ontology:lint` flags `Requirement` entries whose `text` does not match any EARS template regex AND whose `syntaxStyle ≠ FreeForm`
 
+### 4.5 Apply the same audit to every other element category
+
+The OWL-style "one base + category attribute" pattern applies to the categories below. Each row lists the empty-subclass offenders found in the current codebase and the proposed collapse. P1 exceptions (standard-named artifacts, distinct structural attributes, distinct relations) are noted where they apply. For each collapse, the authoritative package and file are given; the collapse happens **there**, and every other package's references are updated.
+
+| # | Category | Base class (authoritative location) | Offenders (empty `:> Y { }`) | Target shape | P1 exception? |
+|---|---|---|---|---|---|
+| 4.5.1 | **Functions** | `Function` in `ontology-core/sysml/functional/functional.sysml` | `MissionFunction`, `SystemFunction`, `ComponentFunction` | `Function { scope : FunctionScope }` enum `{ Mission, System, Component }` | None — collapse all |
+| 4.5.2 | **Procedures** (actions) | `Procedure` in `ontology-core/sysml/operational/` (introduce if missing) | `ManufacturingProcedure`, `InstallationProcedure`, `ServiceProcedure`, `PreventiveMaintenanceProcedure`, `CalibrationProcedure`, `ClinicalStep`, `TreatmentPathway` | `Procedure { procedureType : ProcedureType }` enum covering all 7 | None — collapse all |
+| 4.5.3 | **Ports** | `Port` in `ontology-core/sysml/interfaces/interfaces.sysml` | `PortEthernet`, `PortUSB`, `PortSerial`, `PortPower`, `DataEndpoint` | `Port { protocol : String, direction : PortDirection }` — protocol is free-string (new protocols don't need ontology changes) | None — collapse all |
+| 4.5.4 | **UI elements** | `UIElement` in `ontology-medical/sysml/ui/ui.sysml` | `UIScreen`, `UIPanel`, `UIFunction` | `UIElement { uiKind : UIKind }` enum `{ Screen, Panel, Widget, Function, Dialog }` | None — collapse all |
+| 4.5.5 | **Computing devices** | `ComputingDevice` in `ontology-extensions/hardware-advanced/` (post-rename) | `FPGA`, `Microcontroller`, `SingleBoardComputer` | `ComputingDevice { deviceType : ComputingDeviceType }` enum `{ MCU, FPGA, SoC, SBC, Server, Edge }` | None — collapse all |
+| 4.5.6 | **Work products** | `WorkProduct` (introduce in `ontology-qms` or `ontology-iec62304`) | `SoftwareDevelopmentPlan`, `SOUPEvaluation`, `SBOMArtifact`, `ChangeImpactAssessment`, `SoftwareProblemReport` (these last two currently have structural attributes, audit case-by-case) | `WorkProduct { workProductType : WorkProductType }`; **keep `SBOMArtifact` as P1 exception** (named by EU CRA, NTIA, FDA guidance) | `SBOMArtifact` keep |
+| 4.5.7 | **QMS records / compliance evidence** | `QMSRecord`, `ComplianceEvidence` in `ontology-qms/sysml/qms/qms-records.sysml` | `ManufacturingRecord`, `ServiceReport`, `DesignHistoryRecord`, `ChangeRecord`, `ConfigurationBaseline`, `InstallationQualification`, `CalibrationRecord` | `QMSRecord { recordType : QMSRecordType }`, `ComplianceEvidence { evidenceKind : EvidenceKind }` | `DesignHistoryRecord` may keep — FDA 21 CFR 820.30(j) names it |
+| 4.5.8 | **Claims** | `Claim` (introduce as base) in `ontology-medical-clinical-trial/` | `ClinicalClaim`, `ClinicalPerformanceClaim`, `ClinicalSafetyClaim` | `Claim { claimType : ClaimType }` enum `{ Performance, Safety, Equivalence, Benefit-Risk }` | None — collapse all |
+| 4.5.9 | **Clinical evidence artifacts** | `ClinicalEvidenceArtifact` | `ClinicalInvestigationReference`, `ClinicalLiteratureReference`, `ClinicalExperienceEvidence` | `ClinicalEvidenceArtifact { evidenceSource : EvidenceSource }` enum | None — collapse all |
+| 4.5.10 | **Regulatory requirement specializations** | `RegulatoryRequirement` | `CollateralStandardRequirement`, `ParticularStandardRequirement`, `PrimaryOperatingFunction` | Use `RegulatoryRequirement { standardType : StandardType }` enum `{ General, Collateral, Particular }`; `PrimaryOperatingFunction` collapses into `EssentialPerformance { performanceKind }` | — |
+| 4.5.11 | **System variants** | `System` in `sysml/system/` (post-Session-1) | `SystemOfSystems`, `SystemExternal` | `SystemExternal` → `ExternalSystem` already exists in Session-1 spec; `SystemOfSystems` — **audit**: if distinct structural attributes (hierarchical part composition), keep as P1; else collapse into `System { systemKind : SystemKind }` | Case-by-case |
+| 4.5.12 | **Operational base types** | `OperationalEntity`, `OperationalActivity` | `Resource`, `Operation`, `Context`, `UserActivity` | Audit individually — these likely participate in distinct relations (P1 rule 3); keep if so, collapse if not | Likely keep |
+| 4.5.13 | **Platform components** | `SoftwareComponent` (post-Session-1) | `Docker`, `EventDrivenService`, `MessageBroker` | `SoftwareComponent { componentType }` — `Docker` is arguably a `Container` runtime (distinct attributes); audit | `Docker` maybe |
+
+Each collapse in §4.5 requires:
+
+1. **Add** the category attribute (enum or String) to the base class
+2. **Migrate** every model instance of the offender to the base class with the attribute set
+3. **Delete** the offender definition
+4. **Update** any relationship / closure rule that referenced the offender by name — rewrite to target the base class with a guard on the new attribute
+5. **Update** templates under `medical-modeling-profile/templates/` and examples under `examples/`
+
+### 4.6 Collapse process template
+
+For any category `C` with base `B` and offenders `X1…Xn`:
+
+```
+Before:
+  part def B { attribute a: String; }
+  part def X1 :> B { }
+  part def X2 :> B { }
+
+After:
+  enum def BKind { enum K1; enum K2; }
+  part def B {
+      attribute a: String;
+      attribute kind: BKind;
+  }
+  // X1 usage: B { kind = BKind::K1 }
+```
+
+Downstream references update from `X1` to `B` with `kind = BKind::K1` as a filter in closure rules or queries.
+
 ---
 
 ## 5. Duplications to Resolve
@@ -312,29 +377,48 @@ Each session is scoped to land on `main` as a single logical PR / commit group. 
 
 ---
 
-### Session 2 — Requirements Ontology (OWL + EARS + SOPHIST)
+### Session 2 — Element Ontology Audit (Requirements + universal OWL collapse + EARS)
 
-**GitLab issue:** `#S2-onto-requirements`
+**GitLab issue:** `#S2-onto-elements-audit`
+
+**Scope is the FULL audit of §4, not just Requirements.** Requirements are the worked example but every category in §4.5 is collapsed in this session.
 
 **Scope:**
 
-1. **Core `requirements.sysml`** updated to the target shape in §4.1 (new `RequirementCategory` enum with 12 values, new `EARSTemplate` enum, new `RequirementModality` enum, consolidated `Requirement` with `text`, `syntaxStyle`, `modality`, `source` attributes).
-2. **Delete collapsed subclasses** per §4.2 across every package.
-3. **Keep exceptions** per §4.3 with inline standard-clause comments.
-4. **Migrate example projects** (`examples/infusion-pump`, `examples/irrigation-pump`, any template under `medical-modeling-profile/templates/`) to instantiate `Requirement` with the correct `category` attribute instead of using a dedicated subclass.
-5. **VS Code snippet pack** at `tools/vscode-ears-snippets/` with 5 EARS templates.
-6. **CLI**: `memo req new --template <ubi|event|state|opt|unwanted>` prompt-based scaffolder (in `packages/cli`).
-7. **Optional lint** (`pnpm run ontology:lint` — may be implemented here or deferred to Session 3): warn when a `Requirement` entry's `text` doesn't match any EARS template regex and `syntaxStyle ≠ FreeForm`.
+1. **Core `requirements.sysml`** updated per §4.1 (12-value `RequirementCategory`, `EARSTemplate`, `RequirementModality` enums; consolidated `Requirement` with `text`, `syntaxStyle`, `modality`, `source`).
+2. **Delete collapsed Requirement subclasses** per §4.2 across every package; migrate usages.
+3. **Keep P1 exceptions** per §4.3 with inline standard-clause comments.
+4. **Apply §4.5 collapses** — each row of the table in §4.5 is a sub-task:
+   - 4.5.1 Functions → `Function { scope }` — collapse `MissionFunction`, `SystemFunction`, `ComponentFunction`
+   - 4.5.2 Procedures → `Procedure { procedureType }` — collapse 7 procedure subclasses
+   - 4.5.3 Ports → `Port { protocol, direction }` — collapse 5 port subclasses
+   - 4.5.4 UI → `UIElement { uiKind }` — collapse `UIScreen`, `UIPanel`, `UIFunction`
+   - 4.5.5 Computing devices → `ComputingDevice { deviceType }` — collapse `FPGA`, `Microcontroller`, `SingleBoardComputer`
+   - 4.5.6 Work products → `WorkProduct { workProductType }`; keep `SBOMArtifact` as P1 exception
+   - 4.5.7 QMS records → `QMSRecord { recordType }`, `ComplianceEvidence { evidenceKind }`
+   - 4.5.8 Claims → `Claim { claimType }` — collapse clinical claim subclasses
+   - 4.5.9 Clinical evidence artifacts → `ClinicalEvidenceArtifact { evidenceSource }`
+   - 4.5.10 Regulatory specializations → `RegulatoryRequirement { standardType }`
+   - 4.5.11 System variants → audit-then-collapse (`SystemOfSystems` case-by-case)
+   - 4.5.12 Operational base types → audit (likely keep per P1 rule 3)
+   - 4.5.13 Platform components → audit `Docker`
+5. **Migrate examples and templates** (`examples/infusion-pump`, `examples/irrigation-pump`, `medical-modeling-profile/templates/*`) to instantiate base classes with attribute values, not subclasses.
+6. **VS Code snippet pack** at `tools/vscode-ears-snippets/` with 5 EARS templates.
+7. **CLI**: `memo req new --template <ubi|event|state|opt|unwanted>` in `packages/cli`.
+8. **Update closure rules** that referenced old subclass names — rewrite to target the base class with an attribute guard (e.g., a rule that matched `MissionFunction` now matches `Function where scope = Mission`).
 
 **Acceptance criteria:**
 
-- [ ] Only one `requirement def Requirement` exists in all core + domain packages (grep check)
-- [ ] 12 requirement-category values cover all previously-named-subclass use cases
-- [ ] Exceptions in §4.3 are preserved with standard-clause comments
-- [ ] Example projects instantiate `Requirement` (not `FunctionalRequirement` etc.) with correct category
+- [ ] `pnpm run ontology:lint` (§Session 3) reports zero empty-subclass anti-patterns except those explicitly whitelisted as P1 exceptions
+- [ ] Only one `requirement def Requirement` exists; 12-value `RequirementCategory` enum covers prior subclass use-cases
+- [ ] All §4.5 offenders collapsed; exceptions from the table are preserved with standard-clause comments
+- [ ] Example projects and templates instantiate base classes with attributes, not subclasses
 - [ ] VS Code snippet pack installed and documented
 - [ ] `memo req new` CLI command produces a compliant stub
+- [ ] Closure rules updated to attribute-guard form
 - [ ] `pnpm run build && pnpm run test` pass
+
+**If scope is too large for one session:** split §4.5 into phases — e.g., Session 2a (Requirements + Functions + Ports) and Session 2b (rest). Decide at the start of Session 2 based on an estimate of file churn. Each phase lands as its own commit group on `main`.
 
 ---
 
@@ -357,10 +441,11 @@ Each session is scoped to land on `main` as a single logical PR / commit group. 
    - Orthogonal edge routing, 3px parallel offset, no crossings within a swim-lane
 6. **Overlap check**: after generation, bounding-box intersection test; fail the build if any two nodes' rectangles intersect.
 7. **Legend note** in the generated drawio: "View → Layers → Tracing to show inheritance."
-8. **Ontology lint** (if not done in Session 2): `pnpm run ontology:lint`
-   - Fails on P2 violation (duplicate names across packages without `:>` link)
-   - Warns on P4 violation (non-EARS requirement text)
-   - Warns on OWL anti-pattern (a `part def X :> Y { }` with no new attributes — likely should fold into `Y` with a category attribute)
+8. **Ontology lint**: `pnpm run ontology:lint` — enforces P1 and P2 universally
+   - **Fails** on P2 violation: duplicate simple name across packages without `:>` link
+   - **Fails** on **P1 violation**: any `part|requirement|action|port|connection def X :> Y { }` with empty body unless `X` is on a P1-exception whitelist (maintained at `packages/ontology-core/.p1-exceptions.yaml` listing standard-named artifacts per §4.3 and §4.5 table). This is the universal OWL anti-pattern check — applies to every element kind, not just Requirements.
+   - **Warns** on P4 violation: `Requirement.text` doesn't match any EARS regex and `syntaxStyle != FreeForm`
+   - **Warns** on "labels-only" pattern: subclass adds only `attribute name : String` — that attribute is inherited; the subclass is probably redundant
 9. **Replace the hand-maintained** `docs/likec4/memo-ontology-architecture.drawio` with the generated file (preserve historical file as `.drawio.bkp` then delete).
 
 **Acceptance criteria:**
