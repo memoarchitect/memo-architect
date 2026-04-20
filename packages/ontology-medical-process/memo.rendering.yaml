@@ -1,5 +1,5 @@
 # @memo/ontology-medical-process rendering configuration
-# Process-layer colors (risk, design control, QMS, safety, operations)
+# Process-layer colors (risk, design control, safety, operations)
 
 layers:
   - id: design-control
@@ -13,10 +13,6 @@ layers:
   - id: safety
     label: Safety & Essential Performance
     color: "#C0392B"
-
-  - id: qms
-    label: QMS & Records
-    color: "#2C3E50"
 
   - id: operations
     label: Manufacturing & Service
