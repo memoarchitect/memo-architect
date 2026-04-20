@@ -7,7 +7,7 @@
 
 import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memo/core';
 
-const FUNCTIONAL_KINDS = new Set(['SystemFunction', 'ComponentFunction', 'UserActivity']);
+const FUNCTIONAL_KINDS = new Set(['Function', 'Function', 'UserActivity']);
 const STRUCTURAL_KINDS = new Set([
     'System', 'Subsystem', 'Component', 'LogicalComponent',
     'SoftwareComponent', 'SoftwareModule', 'Software',

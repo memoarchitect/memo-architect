@@ -1,4 +1,4 @@
-package MEMO_Ontology_Medical_Clinical_Relationships {
+package MEMO_Ontology_MedicalProcess_Clinical_Relationships {
 
     connection def PlansClinicalEvaluation {
         end plan : ClinicalEvaluationPlan [1];

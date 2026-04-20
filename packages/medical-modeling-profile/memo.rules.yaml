@@ -66,32 +66,44 @@ closureRules:
     severity: warning
 
   - id: CR-MED-007
-    description: "Every SoftwareRequirement must derive from a SystemRequirement"
-    entity: SoftwareRequirement
+    description: "Every software-scoped Requirement must derive from another Requirement"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: source
+        operator: eq
+        values: [Software]
       relationship: derives
       direction: incoming
-      relatedKinds: [SystemRequirement]
+      relatedKinds: [Requirement]
       min: 1
     severity: error
 
   - id: CR-MED-008
-    description: "Every SystemRequirement should derive from a UserNeed"
-    entity: SystemRequirement
+    description: "Every system-category Requirement should derive from another Requirement"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: category
+        operator: eq
+        values: [RequirementCategory::System]
       relationship: derives
       direction: incoming
-      relatedKinds: [UserNeed]
+      relatedKinds: [Requirement]
       min: 1
     severity: warning
 
   - id: CR-MED-009
-    description: "Every SystemRequirement should be satisfied by a LogicalComponent"
-    entity: SystemRequirement
+    description: "Every system-category Requirement should be satisfied by a LogicalComponent"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: category
+        operator: eq
+        values: [RequirementCategory::System]
       relationship: satisfy
       direction: incoming
       relatedKinds:
@@ -104,8 +116,8 @@ closureRules:
     severity: warning
 
   - id: CR-MED-010
-    description: "Every SystemFunction must be allocated to a LogicalComponent or Software"
-    entity: SystemFunction
+    description: "Every Function must be allocated to a LogicalComponent or Software"
+    entity: Function
     rule:
       type: requireRelationship
       relationship: allocateTo
@@ -117,7 +129,7 @@ closureRules:
         - SoftwareComponent
         - SoftwareItem
       min: 1
-    severity: error
+    severity: warning
 
   - id: CR-MED-011
     description: "Every Software must have a safetyClassification attribute"
@@ -139,10 +151,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-013
-    description: "Every SystemRequirement must be verified by at least one Test"
-    entity: SystemRequirement
+    description: "Every system-category Requirement must be verified by at least one Test"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: category
+        operator: eq
+        values: [RequirementCategory::System]
       relationship: verify
       direction: incoming
       relatedKinds: [Test]
@@ -150,10 +166,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-014
-    description: "Every SoftwareRequirement must be verified by at least one Test"
-    entity: SoftwareRequirement
+    description: "Every software-scoped Requirement must be verified by at least one Test"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: source
+        operator: eq
+        values: [Software]
       relationship: verify
       direction: incoming
       relatedKinds: [Test]
@@ -161,13 +181,17 @@ closureRules:
     severity: warning
 
   - id: CR-MED-015
-    description: "Every UserNeed should derive at least one SystemRequirement"
-    entity: UserNeed
+    description: "Every user-sourced Requirement should derive at least one Requirement"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: source
+        operator: eq
+        values: [User]
       relationship: derives
       direction: outgoing
-      relatedKinds: [SystemRequirement]
+      relatedKinds: [Requirement]
       min: 1
     severity: warning
 
@@ -183,10 +207,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-017
-    description: "Every UserInterfaceRequirement should address at least one UseError"
-    entity: UserInterfaceRequirement
+    description: "Every UI-domain Requirement should address at least one UseError"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: domain
+        operator: eq
+        values: [UI]
       relationship: addressesUseError
       direction: outgoing
       relatedKinds: [UseError]
@@ -194,10 +222,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-018
-    description: "Every UserInterfaceRequirement should be verified by at least one Test"
-    entity: UserInterfaceRequirement
+    description: "Every UI-domain Requirement should be verified by at least one Test"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: domain
+        operator: eq
+        values: [UI]
       relationship: verify
       direction: incoming
       relatedKinds: [Test]
@@ -268,24 +300,24 @@ closureRules:
     severity: warning
 
   - id: CR-MED-025
-    description: "Every FormativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    description: "Every FormativeEvaluation should evaluate at least one Requirement"
     entity: FormativeEvaluation
     rule:
       type: requireRelationship
       relationship: evaluatesRequirement
       direction: outgoing
-      relatedKinds: [UserInterfaceRequirement]
+      relatedKinds: [Requirement]
       min: 1
     severity: warning
 
   - id: CR-MED-026
-    description: "Every SummativeEvaluation should evaluate at least one UserInterfaceRequirement"
+    description: "Every SummativeEvaluation should evaluate at least one Requirement"
     entity: SummativeEvaluation
     rule:
       type: requireRelationship
       relationship: evaluatesRequirement
       direction: outgoing
-      relatedKinds: [UserInterfaceRequirement]
+      relatedKinds: [Requirement]
       min: 1
     severity: warning
 
@@ -329,7 +361,7 @@ closureRules:
       type: requireRelationship
       relationship: appliesStandardRequirement
       direction: outgoing
-      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, Requirement]
       min: 1
     severity: warning
 
@@ -340,7 +372,7 @@ closureRules:
       type: requireRelationship
       relationship: appliesStandardRequirement
       direction: outgoing
-      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, UserInterfaceRequirement, SystemRequirement]
+      relatedKinds: [EssentialPerformance, BasicSafety, PrimaryOperatingFunction, Requirement]
       min: 1
     severity: warning
 
@@ -375,7 +407,7 @@ closureRules:
       type: requireRelationship
       relationship: evidences
       direction: outgoing
-      relatedKinds: [FormativeEvaluation, SummativeEvaluation, UserInterfaceRequirement, UseErrorAnalysis]
+      relatedKinds: [FormativeEvaluation, SummativeEvaluation, Requirement, UseErrorAnalysis]
       min: 1
     severity: warning
 
@@ -616,10 +648,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-062
-    description: "Every CybersecurityRequirement should be satisfied by at least one software, structure, or interface element"
-    entity: CybersecurityRequirement
+    description: "Every security-category Requirement should be satisfied by at least one software, structure, or interface element"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: category
+        operator: eq
+        values: [RequirementCategory::Security]
       relationship: satisfy
       direction: incoming
       relatedKinds:
@@ -911,10 +947,14 @@ closureRules:
     severity: warning
 
   - id: CR-MED-089
-    description: "Every VariantConstraint should constrain at least one product variant"
-    entity: VariantConstraint
+    description: "Every variant-scoped Requirement should constrain at least one product variant"
+    entity: Requirement
     rule:
-      type: requireRelationship
+      type: conditionalRequireRelationship
+      condition:
+        attribute: scope
+        operator: eq
+        values: [Variant]
       relationship: constrainsVariant
       direction: outgoing
       relatedKinds: [ProductVariant]
@@ -1132,4 +1172,3 @@ closureRules:
       relatedKinds: [DataProcessingActivity]
       min: 1
     severity: warning
-

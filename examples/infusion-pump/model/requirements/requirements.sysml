@@ -4,33 +4,42 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Requirements {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import InfusionPump_Risk::*;
 
     // User Needs
-    requirement unAccurateDelivery : UserNeed {
+    requirement unAccurateDelivery : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Accurate Medication Delivery";
     }
 
-    requirement unAlarmAudibility : UserNeed {
+    requirement unAlarmAudibility : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Alarm Audibility In Clinical Use";
     }
 
     // System Requirements
-    requirement srFlowAccuracy : SystemRequirement {
+    requirement srFlowAccuracy : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Flow Rate Accuracy";
         attribute redefines priority = "Critical";
         attribute redefines rationale = "Ensure medication is delivered within ±5% of programmed rate";
     }
 
-    requirement srAlarmAudibility : SystemRequirement {
+    requirement srAlarmAudibility : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Alarm Audibility";
         attribute redefines priority = "High";
         attribute redefines rationale = "Clinical environment noise levels require 70dB minimum";
     }
 
     // Software Requirements
-    requirement swrAlarmManagement : SoftwareRequirement {
+    requirement swrAlarmManagement : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines title = "Alarm Management";
         attribute redefines priority = "Critical";
         attribute redefines safetyClassification = "C";

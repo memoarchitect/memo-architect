@@ -1,0 +1,14 @@
+# MEMO trace element: TST-EXT-001
+id: "TST-EXT-001"
+type: "verification_test"
+domain: "EXT"
+title: "Extensibility & Plugin Platform verification"
+description: "Verify the extensibility & plugin platform flow end-to-end via CLI and/or web runtime surface. This document captures the externally visible runtime/control surfaces derived from code and runtime observation."
+status: "draft"
+tags:
+  - "verification"
+  - "fallback-generated"
+links:
+  - "SR-EXT-001"
+source: "docs/src/developers/requirements/runtime-surfaces.md"
+updated_at: "2026-04-18T14:09:41.620Z"

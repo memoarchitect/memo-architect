@@ -7,7 +7,7 @@
 //
 // Supports --ontology flag for ontology selection:
 //   memo init my-device --ontology @memo/medical-modeling-profile  (default)
-//   memo init my-device --ontology @memo/ontology-core
+//   memo init my-device --ontology @memo/ontology-medical-arch
 //   memo init --list-ontologies                                    (list available)
 //
 // Supports --profile flag for profile-based selection:
@@ -329,7 +329,7 @@ export function loadProfile(profileName: string, fromDir: string): ProfilePreset
                 return {
                     name: parsed.name ?? profileName,
                     description: parsed.description ?? '',
-                    extends: parsed.extends ?? '@memo/ontology-core',
+                    extends: parsed.extends ?? '@memo/ontology-medical-arch',
                     ontologies: parsed.ontologies ?? [],
                 };
             } catch {
@@ -563,7 +563,7 @@ package ${toIdentifier(projectName)} {
 
     // ─── Example Requirement ────────────────────────────────────────
 
-    requirement mainRequirement : SystemRequirement {
+    requirement mainRequirement : Requirement {
         attribute redefines title = "Main system requirement";
         doc /* TODO: define your first system requirement */
     }
@@ -604,13 +604,13 @@ package ${toIdentifier(projectName)} {
 function extractElementSummary(content: string): string[] {
     const kinds = new Set<string>();
     const patterns = [
-        /:\s*UserNeed\b/, /:\s*SystemRequirement\b/, /:\s*Hazard\b/,
+        /:\s*Requirement\b/, /:\s*Hazard\b/,
         /:\s*HazardousSituation\b/, /:\s*Harm\b/, /:\s*RiskControl\b/,
         /:\s*Actor\b/, /:\s*Stakeholder\b/, /:\s*UseCase\b/,
         /:\s*System\b/, /:\s*SoftwareComponent\b/, /:\s*Test\b/,
     ];
     const labels: Record<string, string> = {
-        UserNeed: 'user needs', SystemRequirement: 'requirements', Hazard: 'hazards',
+        Requirement: 'requirements',
         HazardousSituation: 'hazardous situations', Harm: 'harms', RiskControl: 'risk controls',
         Actor: 'actors', Stakeholder: 'stakeholders', UseCase: 'use cases',
         System: 'system architecture', SoftwareComponent: 'software components', Test: 'tests',
@@ -643,10 +643,10 @@ function resolveImportPackage(ontology: string, available: AvailableOntology[]):
     let current: AvailableOntology | undefined = ont;
     while (current && !visited.has(current.name)) {
         visited.add(current.name);
-        if (current.name === '@memo/ontology-medical' || current.extends === '@memo/ontology-medical') {
+        if (current.name === '@memo/ontology-medical-process' || current.extends === '@memo/ontology-medical-process') {
             return 'MEMO_Ontology_Medical';
         }
-        if (current.name === '@memo/ontology-core' && !current.extends) {
+        if (current.name === '@memo/ontology-medical-arch' && !current.extends) {
             return 'MEMO_Ontology_Core';
         }
         current = current.extends ? available.find(o => o.name === current!.extends) : undefined;

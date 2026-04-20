@@ -296,8 +296,8 @@ closureRules:
 // ─── Integration: real ontology packages ────────────────────────────────────
 
 describe('loadConfig with real ontology package files', () => {
-    it('ontology-core loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-core/memo.package.yaml');
+    it('ontology-medical-arch loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
+        const configPath = resolve(__dirname, '../../../ontology-medical-arch/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have layers from memo.rendering.yaml
@@ -312,12 +312,12 @@ describe('loadConfig with real ontology package files', () => {
         expect(layerIds).toContain('verification');
 
         // Verify identity from memo.package.yaml
-        expect(config.projectName).toBe('@memo/ontology-core');
+        expect(config.projectName).toBe('@memo/ontology-medical-arch');
         expect(config.projectType).toBe('ontology');
     });
 
-    it('ontology-medical loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-medical/memo.package.yaml');
+    it('ontology-medical-process loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
+        const configPath = resolve(__dirname, '../../../ontology-medical-process/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have medical layers
@@ -327,7 +327,7 @@ describe('loadConfig with real ontology package files', () => {
         expect(layerIds).toContain('safety');
 
         // Verify extends chain
-        expect(config.extends).toBe('@memo/ontology-qms');
+        expect(config.extends).toBe('@memo/ontology-medical-arch');
     });
 
     it('medical-modeling-profile loads closure rules from memo.package.yaml + memo.rules.yaml', () => {

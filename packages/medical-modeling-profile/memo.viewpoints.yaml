@@ -131,7 +131,7 @@ viewpoints:
       - EssentialPerformanceLossCondition
       - RiskControl
       - Hazard
-      - UserInterfaceRequirement
+      - Requirement
       - UseError
       - CollateralStandardRequirement
       - ParticularStandardRequirement
@@ -145,8 +145,8 @@ viewpoints:
       - UIElement
       - ComplianceEvidence
       - DesignHistoryRecord
-      - SystemFunction
-      - ComponentFunction
+      - Function
+      - Function
       - Test
     visibleRelationships:
       - mitigates
@@ -203,8 +203,8 @@ viewpoints:
       - DesignHistoryRecord
       - ReleaseBaseline
       - ComplianceEvidence
-      - SystemRequirement
-      - SoftwareRequirement
+      - Requirement
+      - Requirement
       - RiskControl
       - SoftwareComponent
       - EventDrivenService
@@ -253,14 +253,14 @@ viewpoints:
       - SystemOfSystems
       - SystemExternal
       - DataInterface
-      - DataEndpoint
+      - Port
       - CommunicationProtocol
       - InteroperabilityProfile
       - ExchangeItem
-      - CybersecurityRequirement
-      - AuthenticationRequirement
-      - AuthorizationRequirement
-      - AuditLogRequirement
+      - Requirement
+      - Requirement
+      - Requirement
+      - Requirement
       - CyberAsset
       - ThreatModel
       - ThreatScenario
@@ -440,7 +440,7 @@ viewpoints:
       - FeatureOption
       - Accessory
       - ConfigurationBaseline
-      - VariantConstraint
+      - Requirement
       - OperationalActor
       - OperationalEnvironment
       - Resource
@@ -562,7 +562,7 @@ viewpoints:
     label: Usability Engineering (IEC 62366 / IEC 60601-1-6)
     supportedDiagramTypes: [req, act, bdd, pkg]
     visibleKinds:
-      - UserNeed
+      - Requirement
       - UserProfile
       - Patient
       - AnatomicalSite
@@ -579,7 +579,7 @@ viewpoints:
       - Observable
       - ClinicalObservation
       - MorphologyState
-      - UserInterfaceRequirement
+      - Requirement
       - UseError
       - UseSpecification
       - UseErrorAnalysis

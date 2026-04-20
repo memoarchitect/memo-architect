@@ -6,7 +6,7 @@
 // ============================================================================
 
 package GPCA_Architecture {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;
 
@@ -141,11 +141,15 @@ package GPCA_Architecture {
         attribute redefines name = "Reservoir Level Sensor (Optical)";
     }
 
-    part ethernetPort : PortEthernet {
+    part ethernetPort : Port {
+        attribute redefines protocol = "Ethernet";
+        attribute redefines direction = PortDirection::Bidirectional;
         attribute redefines name = "Ethernet Port (Hospital Network)";
     }
 
-    part usbPort : PortUSB {
+    part usbPort : Port {
+        attribute redefines protocol = "USB";
+        attribute redefines direction = PortDirection::Bidirectional;
         attribute redefines name = "USB Port (Log Export/Service)";
     }
 

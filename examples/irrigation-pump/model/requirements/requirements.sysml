@@ -1,63 +1,82 @@
 package IrrigationPump_Requirements {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import IrrigationPump_Risk::*;
 
-    requirement unStableFieldPressure : UserNeed {
+    requirement unStableFieldPressure : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-IRR-001";
         attribute redefines title = "Stable Surgical Field Distension";
     }
 
-    requirement unReservoirAlert : UserNeed {
+    requirement unReservoirAlert : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-IRR-002";
         attribute redefines title = "Reservoir Depletion Alert";
     }
 
-    requirement unSterileSetup : UserNeed {
+    requirement unSterileSetup : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-IRR-003";
         attribute redefines title = "Sterile Priming Guidance";
     }
 
-    requirement srPressureRegulation : SystemRequirement {
+    requirement srPressureRegulation : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-IRR-001";
         attribute redefines title = "Irrigation Pressure Regulation";
         attribute redefines priority = "Critical";
         attribute redefines rationale = "Maintain target distension pressure throughout arthroscopic irrigation";
     }
 
-    requirement srReservoirLowAlarm : SystemRequirement {
+    requirement srReservoirLowAlarm : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-IRR-002";
         attribute redefines title = "Reservoir Low Alarm";
         attribute redefines priority = "High";
         attribute redefines rationale = "Warn the clinician before reservoir depletion interrupts irrigation";
     }
 
-    requirement srPrimeInterlock : SystemRequirement {
+    requirement srPrimeInterlock : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-IRR-003";
         attribute redefines title = "Prime Completion Interlock";
         attribute redefines priority = "Critical";
         attribute redefines rationale = "Prevent irrigation delivery until the disposable cassette and tubing are fully primed";
     }
 
-    requirement srAlarmAudibility : SystemRequirement {
+    requirement srAlarmAudibility : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-IRR-004";
         attribute redefines title = "Alarm Audibility";
         attribute redefines priority = "High";
         attribute redefines rationale = "Ensure depletion and pressure alarms are perceivable in the operating room";
     }
 
-    requirement swrPressureControlLoop : SoftwareRequirement {
+    requirement swrPressureControlLoop : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-001";
         attribute redefines title = "Pressure Control Loop";
         attribute redefines safetyClassification = "C";
     }
 
-    requirement swrReservoirEstimation : SoftwareRequirement {
+    requirement swrReservoirEstimation : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-002";
         attribute redefines title = "Reservoir Estimation";
         attribute redefines safetyClassification = "B";
     }
 
-    requirement swrAlarmCoordinator : SoftwareRequirement {
+    requirement swrAlarmCoordinator : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-003";
         attribute redefines title = "Alarm Coordination";
         attribute redefines safetyClassification = "B";

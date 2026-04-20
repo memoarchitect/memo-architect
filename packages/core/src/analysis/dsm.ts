@@ -41,7 +41,7 @@ export interface DSMOptions {
     cluster?: boolean;
 }
 
-const DEFAULT_KINDS = ['SystemFunction', 'ComponentFunction', 'ActionDefinition', 'ActionUsage'];
+const DEFAULT_KINDS = ['Function', 'Function', 'ActionDefinition', 'ActionUsage'];
 const DEFAULT_REL_TYPES = ['flow', 'decomposedBy', 'composedOf', 'allocateTo', 'succession'];
 
 /**

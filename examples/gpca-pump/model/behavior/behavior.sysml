@@ -6,7 +6,7 @@
 // ============================================================================
 
 package GPCA_Behavior {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Architecture::*;
 
@@ -14,64 +14,76 @@ package GPCA_Behavior {
     // SYSTEM FUNCTIONS
     // ═══════════════════════════════════════════════════════════════════════
 
-    action def sfRegulateFlow :> SystemFunction {
+    action def sfRegulateFlow :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Regulate Drug Flow";
         doc /* Top-level system function: deliver drug at prescribed rate
              * under all operating conditions. */
     }
 
-    action def sfDetectSafetyCondition :> SystemFunction {
+    action def sfDetectSafetyCondition :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Detect Safety Condition";
         doc /* Continuously monitor for air, occlusion, over/under-infusion,
              * reverse flow, and other safety conditions. */
     }
 
-    action def sfManageAlarms :> SystemFunction {
+    action def sfManageAlarms :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Manage Alarms and Notifications";
         doc /* Prioritize, display, escalate, and resolve alarm conditions
              * per GPCA notification action table. */
     }
 
-    action def sfManagePrescription :> SystemFunction {
+    action def sfManagePrescription :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Manage Prescription Configuration";
         doc /* Accept, validate, store, and apply prescription parameters
              * from clinician input or pharmacy database. */
     }
 
-    action def sfManageAccess :> SystemFunction {
+    action def sfManageAccess :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Manage Access Control";
         doc /* Authenticate users, manage sessions, enforce role-based
              * access to device functions. */
     }
 
-    action def sfLogEvents :> SystemFunction {
+    action def sfLogEvents :> Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Log Events";
         doc /* Record all state changes, alarms, deliveries, and
              * configuration changes with timestamps. */
     }
 
     // Component functions
-    action def cfCalculateFlowRate :> ComponentFunction {
+    action def cfCalculateFlowRate :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Calculate Flow Rate Command";
     }
 
-    action def cfDriveMotor :> ComponentFunction {
+    action def cfDriveMotor :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Drive Pump Motor";
     }
 
-    action def cfReadSensors :> ComponentFunction {
+    action def cfReadSensors :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Read and Fuse Sensor Data";
     }
 
-    action def cfResolveAlarmPriority :> ComponentFunction {
+    action def cfResolveAlarmPriority :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Resolve Alarm Priority";
     }
 
-    action def cfValidatePrescription :> ComponentFunction {
+    action def cfValidatePrescription :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Validate Prescription Against Drug Library";
     }
 
-    action def cfManageLockout :> ComponentFunction {
+    action def cfManageLockout :> Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Manage Bolus Lockout Timer";
     }
 

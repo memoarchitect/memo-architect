@@ -6,7 +6,13 @@ projectType: device
 extends: "@memo/medical-modeling-profile"
 
 ontologies:
-  - name: memo-ontology-medical
-    version: "^0.1.0"
-  - name: "@memo/ontology-clinical"
-    version: "^0.1.0"
+  - name: "@memo/ontology-medical-arch"
+    version: "^0.2.0"
+  - name: "@memo/ontology-medical-process"
+    version: "^0.2.0"
+
+modules:
+  - "@memo/ontology-iec62304"
+  - "@memo/ontology-cybersecurity"
+  - "@memo/ontology-medical-clinical-trial"
+  - "@memo/ontology-clinical-procedure"

@@ -1,7 +1,7 @@
 name: "@memo/ontology-medical-clinical-trial"
 version: "0.1.0"
 type: ontology
-extends: "@memo/ontology-medical"
+extends: "@memo/ontology-medical-process"
 description: "Clinical trial subdomain — clinical context, evaluation claims, evidence artifacts, and treatment pathways for regulated medical devices"
 license: "Apache-2.0"
 tags: ["mbse", "sysml-v2", "clinical-trial", "clinical-evaluation", "post-market"]

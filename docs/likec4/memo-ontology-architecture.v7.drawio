@@ -1,0 +1,587 @@
+<mxfile host="Electron" agent="memo-architect" pages="5">
+  <diagram id="tab-elements" name="Elements Catalog">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1800" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="e-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="MEMO Ontology: Elements Catalog (Classes Only)" vertex="1"><mxGeometry x="40" y="20" width="1700" height="40" as="geometry" /></mxCell>
+        <mxCell id="e-note1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="Design rule: do not create new classes when a typed attribute is sufficient (for example scenarioKind, requirementKind, softwareSafetyClass)." vertex="1"><mxGeometry x="40" y="66" width="1700" height="34" as="geometry" /></mxCell>
+        <mxCell id="e-note2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#F8CECC;strokeColor=#B85450;" value="Core is intentionally generic for electro-mechanical software systems. Medical-specific semantics are only in ontology-medical-architecture and ontology-medical-processes." vertex="1"><mxGeometry x="40" y="104" width="1700" height="34" as="geometry" /></mxCell>
+
+        <mxCell id="eh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="ID" vertex="1"><mxGeometry x="40" y="148" width="90" height="28" as="geometry" /></mxCell>
+        <mxCell id="eh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Package" vertex="1"><mxGeometry x="130" y="148" width="270" height="28" as="geometry" /></mxCell>
+        <mxCell id="eh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Viewpoint Layer" vertex="1"><mxGeometry x="400" y="148" width="170" height="28" as="geometry" /></mxCell>
+        <mxCell id="eh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Class" vertex="1"><mxGeometry x="570" y="148" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="eh5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Definition" vertex="1"><mxGeometry x="870" y="148" width="520" height="28" as="geometry" /></mxCell>
+        <mxCell id="eh6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Rationale" vertex="1"><mxGeometry x="1390" y="148" width="350" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="e1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-001" vertex="1"><mxGeometry x="40" y="176" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="176" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Operational" vertex="1"><mxGeometry x="400" y="176" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="System" vertex="1"><mxGeometry x="570" y="176" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Top-level engineered system boundary." vertex="1"><mxGeometry x="870" y="176" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Foundation for all decomposition and allocations." vertex="1"><mxGeometry x="1390" y="176" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-002" vertex="1"><mxGeometry x="40" y="202" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="202" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Operational" vertex="1"><mxGeometry x="400" y="202" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Actor" vertex="1"><mxGeometry x="570" y="202" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Human or external system interacting with System." vertex="1"><mxGeometry x="870" y="202" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Needed for use context, workflow, and misuse paths." vertex="1"><mxGeometry x="1390" y="202" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-003" vertex="1"><mxGeometry x="40" y="228" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="228" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Behavioral" vertex="1"><mxGeometry x="400" y="228" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Scenario" vertex="1"><mxGeometry x="570" y="228" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Interaction narrative container." vertex="1"><mxGeometry x="870" y="228" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="One class, scenario types handled by attribute." vertex="1"><mxGeometry x="1390" y="228" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-004" vertex="1"><mxGeometry x="40" y="254" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="254" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Behavioral" vertex="1"><mxGeometry x="400" y="254" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Action" vertex="1"><mxGeometry x="570" y="254" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Discrete behavior unit executed by actor or component." vertex="1"><mxGeometry x="870" y="254" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Covers user action and system action uniformly." vertex="1"><mxGeometry x="1390" y="254" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-005" vertex="1"><mxGeometry x="40" y="280" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="280" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Functional" vertex="1"><mxGeometry x="400" y="280" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function" vertex="1"><mxGeometry x="570" y="280" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Capability the system shall provide independent of implementation." vertex="1"><mxGeometry x="870" y="280" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Replaces ambiguous chain/exchange classes." vertex="1"><mxGeometry x="1390" y="280" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-006" vertex="1"><mxGeometry x="40" y="306" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="306" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Functional" vertex="1"><mxGeometry x="400" y="306" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="DataObject" vertex="1"><mxGeometry x="570" y="306" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Information object consumed/produced by functions." vertex="1"><mxGeometry x="870" y="306" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Flow semantics are relation-level, not class-level." vertex="1"><mxGeometry x="1390" y="306" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e37" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-007" vertex="1"><mxGeometry x="40" y="332" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e38" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="332" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e39" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Logical" vertex="1"><mxGeometry x="400" y="332" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent" vertex="1"><mxGeometry x="570" y="332" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Technology-agnostic architecture element." vertex="1"><mxGeometry x="870" y="332" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Bridge between function and implementation." vertex="1"><mxGeometry x="1390" y="332" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-008" vertex="1"><mxGeometry x="40" y="358" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e44" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="358" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Logical" vertex="1"><mxGeometry x="400" y="358" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e46" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Interface" vertex="1"><mxGeometry x="570" y="358" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Contract between components." vertex="1"><mxGeometry x="870" y="358" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Supports clean substitution and conformance checks." vertex="1"><mxGeometry x="1390" y="358" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-009" vertex="1"><mxGeometry x="40" y="384" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="384" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Software" vertex="1"><mxGeometry x="400" y="384" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e52" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent" vertex="1"><mxGeometry x="570" y="384" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e53" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Deployable software architecture component." vertex="1"><mxGeometry x="870" y="384" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e54" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Core, not medical-specific." vertex="1"><mxGeometry x="1390" y="384" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e55" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-010" vertex="1"><mxGeometry x="40" y="410" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e56" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="410" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e57" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Software" vertex="1"><mxGeometry x="400" y="410" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ExecutionThread" vertex="1"><mxGeometry x="570" y="410" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e59" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Schedulable execution entity (AADL-inspired)." vertex="1"><mxGeometry x="870" y="410" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e60" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Required for timing and safety evidence." vertex="1"><mxGeometry x="1390" y="410" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e61" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-011" vertex="1"><mxGeometry x="40" y="436" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e62" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="436" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e63" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Software" vertex="1"><mxGeometry x="400" y="436" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e64" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareInterface" vertex="1"><mxGeometry x="570" y="436" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Typed software boundary contract." vertex="1"><mxGeometry x="870" y="436" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e66" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Supports integration and verification closure." vertex="1"><mxGeometry x="1390" y="436" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e67" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-012" vertex="1"><mxGeometry x="40" y="462" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e68" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="462" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e69" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hardware" vertex="1"><mxGeometry x="400" y="462" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e70" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HardwareComponent" vertex="1"><mxGeometry x="570" y="462" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e71" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Physical component in architecture." vertex="1"><mxGeometry x="870" y="462" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e72" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Core electromechanical support." vertex="1"><mxGeometry x="1390" y="462" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e73" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-013" vertex="1"><mxGeometry x="40" y="488" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e74" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="488" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e75" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Cross-cutting" vertex="1"><mxGeometry x="400" y="488" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e76" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="570" y="488" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e77" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Obligation statement over structure/behavior." vertex="1"><mxGeometry x="870" y="488" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e78" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Single class, requirement types via attribute." vertex="1"><mxGeometry x="1390" y="488" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e79" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-014" vertex="1"><mxGeometry x="40" y="514" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e80" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="514" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e81" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Verification" vertex="1"><mxGeometry x="400" y="514" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e82" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationCase" vertex="1"><mxGeometry x="570" y="514" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e83" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Planned verification procedure." vertex="1"><mxGeometry x="870" y="514" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e84" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Mandatory trace anchor for compliance." vertex="1"><mxGeometry x="1390" y="514" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e85" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-015" vertex="1"><mxGeometry x="40" y="540" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e86" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-core" vertex="1"><mxGeometry x="130" y="540" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e87" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Verification" vertex="1"><mxGeometry x="400" y="540" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e88" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Evidence" vertex="1"><mxGeometry x="570" y="540" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e89" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Objective artifact proving verification result." vertex="1"><mxGeometry x="870" y="540" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e90" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Horizontal trace closure target." vertex="1"><mxGeometry x="1390" y="540" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e91" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-016" vertex="1"><mxGeometry x="40" y="566" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e92" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="566" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e93" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Operational" vertex="1"><mxGeometry x="400" y="566" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e94" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="UserNeed" vertex="1"><mxGeometry x="570" y="566" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e95" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Intended user/stakeholder need in medical context." vertex="1"><mxGeometry x="870" y="566" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e96" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Non-negotiable input for design controls." vertex="1"><mxGeometry x="1390" y="566" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e97" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-017" vertex="1"><mxGeometry x="40" y="592" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e98" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="592" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e99" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Operational" vertex="1"><mxGeometry x="400" y="592" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e100" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="IntendedUse" vertex="1"><mxGeometry x="570" y="592" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e101" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Formal claim of clinical purpose and target population." vertex="1"><mxGeometry x="870" y="592" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e102" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Drives risk scope and verification acceptance." vertex="1"><mxGeometry x="1390" y="592" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e103" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-018" vertex="1"><mxGeometry x="40" y="618" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e104" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="618" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e105" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Behavioral" vertex="1"><mxGeometry x="400" y="618" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e106" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ClinicalAction" vertex="1"><mxGeometry x="570" y="618" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e107" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Clinician/patient behavior action." vertex="1"><mxGeometry x="870" y="618" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e108" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Required to model use error and misuse." vertex="1"><mxGeometry x="1390" y="618" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e109" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-019" vertex="1"><mxGeometry x="40" y="644" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e110" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="644" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e111" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Safety" vertex="1"><mxGeometry x="400" y="644" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e112" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard" vertex="1"><mxGeometry x="570" y="644" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e113" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Potential source of harm." vertex="1"><mxGeometry x="870" y="644" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e114" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ISO 14971 risk chain anchor." vertex="1"><mxGeometry x="1390" y="644" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e115" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-020" vertex="1"><mxGeometry x="40" y="670" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e116" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="670" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e117" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Safety" vertex="1"><mxGeometry x="400" y="670" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e118" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HazardousSituation" vertex="1"><mxGeometry x="570" y="670" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e119" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Circumstance in which exposure to hazard occurs." vertex="1"><mxGeometry x="870" y="670" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e120" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Critical missing concept in prior versions." vertex="1"><mxGeometry x="1390" y="670" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e121" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-021" vertex="1"><mxGeometry x="40" y="696" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e122" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="696" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e123" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Safety" vertex="1"><mxGeometry x="400" y="696" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e124" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Harm" vertex="1"><mxGeometry x="570" y="696" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e125" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Injury or damage to health/property/environment." vertex="1"><mxGeometry x="870" y="696" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e126" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Required for medical safety claims." vertex="1"><mxGeometry x="1390" y="696" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e127" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-022" vertex="1"><mxGeometry x="40" y="722" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e128" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="722" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e129" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Safety" vertex="1"><mxGeometry x="400" y="722" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e130" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="570" y="722" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e131" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Quantified risk state with before/after mitigation values." vertex="1"><mxGeometry x="870" y="722" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e132" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Explicit P1/P2 + residual risk support." vertex="1"><mxGeometry x="1390" y="722" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e133" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-023" vertex="1"><mxGeometry x="40" y="748" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e134" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="130" y="748" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e135" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Safety" vertex="1"><mxGeometry x="400" y="748" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e136" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Mitigation" vertex="1"><mxGeometry x="570" y="748" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e137" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk control measure applied to reduce risk." vertex="1"><mxGeometry x="870" y="748" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e138" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must be tied to verification evidence." vertex="1"><mxGeometry x="1390" y="748" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e139" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-024" vertex="1"><mxGeometry x="40" y="774" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e140" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-processes" vertex="1"><mxGeometry x="130" y="774" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e141" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Process" vertex="1"><mxGeometry x="400" y="774" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e142" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ProcessActivity" vertex="1"><mxGeometry x="570" y="774" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e143" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Lifecycle activity with standard clause context." vertex="1"><mxGeometry x="870" y="774" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e144" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Unifies IEC/ISO process semantics." vertex="1"><mxGeometry x="1390" y="774" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e145" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-025" vertex="1"><mxGeometry x="40" y="800" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e146" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-medical-processes" vertex="1"><mxGeometry x="130" y="800" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e147" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Process" vertex="1"><mxGeometry x="400" y="800" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e148" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="WorkProduct" vertex="1"><mxGeometry x="570" y="800" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e149" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Generated artifact (spec, report, record, file)." vertex="1"><mxGeometry x="870" y="800" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e150" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Needed for auditable process traces." vertex="1"><mxGeometry x="1390" y="800" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e151" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-026" vertex="1"><mxGeometry x="40" y="826" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e152" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-ros" vertex="1"><mxGeometry x="130" y="826" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e153" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Software Extension" vertex="1"><mxGeometry x="400" y="826" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e154" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode" vertex="1"><mxGeometry x="570" y="826" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e155" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROS runtime software component specialization." vertex="1"><mxGeometry x="870" y="826" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e156" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Platform add-on; no core pollution." vertex="1"><mxGeometry x="1390" y="826" width="350" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="e157" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="E-027" vertex="1"><mxGeometry x="40" y="852" width="90" height="26" as="geometry" /></mxCell>
+        <mxCell id="e158" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ontology-ros" vertex="1"><mxGeometry x="130" y="852" width="270" height="26" as="geometry" /></mxCell>
+        <mxCell id="e159" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Software Extension" vertex="1"><mxGeometry x="400" y="852" width="170" height="26" as="geometry" /></mxCell>
+        <mxCell id="e160" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSTopic" vertex="1"><mxGeometry x="570" y="852" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="e161" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROS publish/subscribe data channel abstraction." vertex="1"><mxGeometry x="870" y="852" width="520" height="26" as="geometry" /></mxCell>
+        <mxCell id="e162" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Used only when ROS middleware is selected." vertex="1"><mxGeometry x="1390" y="852" width="350" height="26" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-relations" name="Relation Types">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1800" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="r-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="Relation Types (Object Properties Only)" vertex="1"><mxGeometry x="40" y="20" width="1700" height="40" as="geometry" /></mxCell>
+        <mxCell id="r-note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="No attributes in this tab. This tab lists only relations between classes." vertex="1"><mxGeometry x="40" y="66" width="1700" height="34" as="geometry" /></mxCell>
+
+        <mxCell id="rh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Relation" vertex="1"><mxGeometry x="40" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Source" vertex="1"><mxGeometry x="300" y="110" width="360" height="28" as="geometry" /></mxCell>
+        <mxCell id="rh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Target" vertex="1"><mxGeometry x="660" y="110" width="360" height="28" as="geometry" /></mxCell>
+        <mxCell id="rh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Meaning" vertex="1"><mxGeometry x="1020" y="110" width="720" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="r1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="refines" vertex="1"><mxGeometry x="40" y="138" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="UserNeed or Requirement" vertex="1"><mxGeometry x="300" y="138" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="660" y="138" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Progressive requirement decomposition." vertex="1"><mxGeometry x="1020" y="138" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="satisfies" vertex="1"><mxGeometry x="40" y="164" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function or Component" vertex="1"><mxGeometry x="300" y="164" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="660" y="164" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Design realization relation to obligations." vertex="1"><mxGeometry x="1020" y="164" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="allocatedTo" vertex="1"><mxGeometry x="40" y="190" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function" vertex="1"><mxGeometry x="300" y="190" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent" vertex="1"><mxGeometry x="660" y="190" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Functional-to-logical architecture allocation." vertex="1"><mxGeometry x="1020" y="190" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="realizedBy" vertex="1"><mxGeometry x="40" y="216" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent" vertex="1"><mxGeometry x="300" y="216" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent or HardwareComponent" vertex="1"><mxGeometry x="660" y="216" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Logical-to-implementation realization." vertex="1"><mxGeometry x="1020" y="216" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="interactsWith" vertex="1"><mxGeometry x="40" y="242" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Actor" vertex="1"><mxGeometry x="300" y="242" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="System or Function" vertex="1"><mxGeometry x="660" y="242" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Operational interaction semantics." vertex="1"><mxGeometry x="1020" y="242" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="performs" vertex="1"><mxGeometry x="40" y="268" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Actor" vertex="1"><mxGeometry x="300" y="268" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Action or ClinicalAction" vertex="1"><mxGeometry x="660" y="268" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Who executes the behavior step." vertex="1"><mxGeometry x="1020" y="268" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="consumes" vertex="1"><mxGeometry x="40" y="294" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function or Component" vertex="1"><mxGeometry x="300" y="294" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="DataObject" vertex="1"><mxGeometry x="660" y="294" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Input data dependency." vertex="1"><mxGeometry x="1020" y="294" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="produces" vertex="1"><mxGeometry x="40" y="320" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function or Component" vertex="1"><mxGeometry x="300" y="320" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="DataObject" vertex="1"><mxGeometry x="660" y="320" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Output data dependency." vertex="1"><mxGeometry x="1020" y="320" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="exposesTo" vertex="1"><mxGeometry x="40" y="346" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard" vertex="1"><mxGeometry x="300" y="346" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HazardousSituation" vertex="1"><mxGeometry x="660" y="346" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk chain step 1." vertex="1"><mxGeometry x="1020" y="346" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r37" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="resultsIn" vertex="1"><mxGeometry x="40" y="372" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r38" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HazardousSituation" vertex="1"><mxGeometry x="300" y="372" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r39" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Harm" vertex="1"><mxGeometry x="660" y="372" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk chain step 2." vertex="1"><mxGeometry x="1020" y="372" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="quantifies" vertex="1"><mxGeometry x="40" y="398" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="300" y="398" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Harm" vertex="1"><mxGeometry x="660" y="398" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r44" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Associates risk values to specific harm." vertex="1"><mxGeometry x="1020" y="398" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="mitigatedBy" vertex="1"><mxGeometry x="40" y="424" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r46" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="300" y="424" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Mitigation" vertex="1"><mxGeometry x="660" y="424" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk control assignment." vertex="1"><mxGeometry x="1020" y="424" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="verifiedBy" vertex="1"><mxGeometry x="40" y="450" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement or Mitigation or Risk" vertex="1"><mxGeometry x="300" y="450" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationCase" vertex="1"><mxGeometry x="660" y="450" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r52" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Links obligations and risk controls to validation/verification." vertex="1"><mxGeometry x="1020" y="450" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r53" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="producesEvidence" vertex="1"><mxGeometry x="40" y="476" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r54" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationCase or ProcessActivity" vertex="1"><mxGeometry x="300" y="476" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r55" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Evidence or WorkProduct" vertex="1"><mxGeometry x="660" y="476" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r56" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Artifact generation trace." vertex="1"><mxGeometry x="1020" y="476" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r57" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="tracedTo" vertex="1"><mxGeometry x="40" y="502" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Any governed element" vertex="1"><mxGeometry x="300" y="502" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r59" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Evidence or WorkProduct" vertex="1"><mxGeometry x="660" y="502" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r60" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Horizontal trace closure for audits." vertex="1"><mxGeometry x="1020" y="502" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r61" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="implementedBy" vertex="1"><mxGeometry x="40" y="528" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r62" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareInterface" vertex="1"><mxGeometry x="300" y="528" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r63" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode or SoftwareComponent" vertex="1"><mxGeometry x="660" y="528" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r64" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Extension hook from core software model to platform/runtime." vertex="1"><mxGeometry x="1020" y="528" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="publishes" vertex="1"><mxGeometry x="40" y="554" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r66" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode" vertex="1"><mxGeometry x="300" y="554" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r67" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSTopic" vertex="1"><mxGeometry x="660" y="554" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r68" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROS pub/sub producer relation." vertex="1"><mxGeometry x="1020" y="554" width="720" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="r69" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="subscribesTo" vertex="1"><mxGeometry x="40" y="580" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="r70" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode" vertex="1"><mxGeometry x="300" y="580" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r71" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSTopic" vertex="1"><mxGeometry x="660" y="580" width="360" height="26" as="geometry" /></mxCell>
+        <mxCell id="r72" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROS pub/sub consumer relation." vertex="1"><mxGeometry x="1020" y="580" width="720" height="26" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-element-rel" name="Elements and Relative Relations">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1800" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="m-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="Elements and Their Relative Relations (Rules Matrix)" vertex="1"><mxGeometry x="40" y="20" width="1700" height="40" as="geometry" /></mxCell>
+        <mxCell id="m-note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="This tab defines allowed outgoing/incoming relations per class plus hard conformance rules." vertex="1"><mxGeometry x="40" y="66" width="1700" height="34" as="geometry" /></mxCell>
+
+        <mxCell id="mh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Class" vertex="1"><mxGeometry x="40" y="110" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="mh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Allowed Outgoing" vertex="1"><mxGeometry x="320" y="110" width="480" height="28" as="geometry" /></mxCell>
+        <mxCell id="mh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Allowed Incoming" vertex="1"><mxGeometry x="800" y="110" width="430" height="28" as="geometry" /></mxCell>
+        <mxCell id="mh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Hard Rule" vertex="1"><mxGeometry x="1230" y="110" width="510" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="m1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="UserNeed" vertex="1"><mxGeometry x="40" y="138" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="refines, tracedTo" vertex="1"><mxGeometry x="320" y="138" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="(none mandatory)" vertex="1"><mxGeometry x="800" y="138" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must refine to at least one Requirement." vertex="1"><mxGeometry x="1230" y="138" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="40" y="164" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="refines, satisfiedBy, verifiedBy, tracedTo" vertex="1"><mxGeometry x="320" y="164" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="refines (from UserNeed/Requirement)" vertex="1"><mxGeometry x="800" y="164" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="status=released requires tracedTo Evidence and verifiedBy VerificationCase." vertex="1"><mxGeometry x="1230" y="164" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function" vertex="1"><mxGeometry x="40" y="190" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="allocatedTo, satisfies, consumes, produces" vertex="1"><mxGeometry x="320" y="190" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="satisfies (from Requirement), interactsWith" vertex="1"><mxGeometry x="800" y="190" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Every safety-critical Function must allocate to at least one LogicalComponent." vertex="1"><mxGeometry x="1230" y="190" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent" vertex="1"><mxGeometry x="40" y="216" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="realizedBy, satisfies" vertex="1"><mxGeometry x="320" y="216" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="allocatedTo (from Function)" vertex="1"><mxGeometry x="800" y="216" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must realize into >=1 SoftwareComponent or HardwareComponent." vertex="1"><mxGeometry x="1230" y="216" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent" vertex="1"><mxGeometry x="40" y="242" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="satisfies, implementedBy, consumes, produces" vertex="1"><mxGeometry x="320" y="242" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="realizedBy (from LogicalComponent)" vertex="1"><mxGeometry x="800" y="242" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="softwareSafetyClass=C requires explicit verifiedBy + tracedTo links." vertex="1"><mxGeometry x="1230" y="242" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard" vertex="1"><mxGeometry x="40" y="268" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="exposesTo, tracedTo" vertex="1"><mxGeometry x="320" y="268" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="(none mandatory)" vertex="1"><mxGeometry x="800" y="268" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must connect to at least one HazardousSituation." vertex="1"><mxGeometry x="1230" y="268" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HazardousSituation" vertex="1"><mxGeometry x="40" y="294" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="resultsIn, tracedTo" vertex="1"><mxGeometry x="320" y="294" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="exposesTo (from Hazard)" vertex="1"><mxGeometry x="800" y="294" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must connect to at least one Harm." vertex="1"><mxGeometry x="1230" y="294" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Harm" vertex="1"><mxGeometry x="40" y="320" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="(none mandatory)" vertex="1"><mxGeometry x="320" y="320" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="resultsIn (from HazardousSituation), quantifies (from Risk)" vertex="1"><mxGeometry x="800" y="320" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Each Harm must be quantified by at least one Risk object." vertex="1"><mxGeometry x="1230" y="320" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="346" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="quantifies, mitigatedBy, verifiedBy, tracedTo" vertex="1"><mxGeometry x="320" y="346" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="(none mandatory)" vertex="1"><mxGeometry x="800" y="346" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="status=closed requires risk_after &lt;= acceptabilityThreshold." vertex="1"><mxGeometry x="1230" y="346" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m37" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Mitigation" vertex="1"><mxGeometry x="40" y="372" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m38" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="verifiedBy, tracedTo" vertex="1"><mxGeometry x="320" y="372" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m39" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="mitigatedBy (from Risk)" vertex="1"><mxGeometry x="800" y="372" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must link to at least one VerificationCase." vertex="1"><mxGeometry x="1230" y="372" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationCase" vertex="1"><mxGeometry x="40" y="398" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="producesEvidence" vertex="1"><mxGeometry x="320" y="398" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="verifiedBy (from Requirement/Mitigation/Risk)" vertex="1"><mxGeometry x="800" y="398" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m44" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Must produce at least one Evidence." vertex="1"><mxGeometry x="1230" y="398" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Evidence" vertex="1"><mxGeometry x="40" y="424" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m46" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="(none mandatory)" vertex="1"><mxGeometry x="320" y="424" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="tracedTo, producesEvidence" vertex="1"><mxGeometry x="800" y="424" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Evidence must carry sourceStandard and regulatoryClause attributes." vertex="1"><mxGeometry x="1230" y="424" width="510" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="m49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode" vertex="1"><mxGeometry x="40" y="450" width="280" height="26" as="geometry" /></mxCell>
+        <mxCell id="m50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="publishes, subscribesTo, satisfies" vertex="1"><mxGeometry x="320" y="450" width="480" height="26" as="geometry" /></mxCell>
+        <mxCell id="m51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="implementedBy (from SoftwareInterface)" vertex="1"><mxGeometry x="800" y="450" width="430" height="26" as="geometry" /></mxCell>
+        <mxCell id="m52" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="safetyRelevant=true requires verifiedBy and tracedTo Evidence." vertex="1"><mxGeometry x="1230" y="450" width="510" height="26" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-sysmlv2" name="SysMLv2 Modeling Guide">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1800" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="s-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="SysML v2 Modeling Rules for MEMO Ontology" vertex="1"><mxGeometry x="40" y="20" width="1700" height="40" as="geometry" /></mxCell>
+        <mxCell id="s-note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#D5E8D4;strokeColor=#82B366;" value="This tab defines how ontology classes are encoded using SysML v2 constructs. Example included: user action modeled as action." vertex="1"><mxGeometry x="40" y="66" width="1700" height="34" as="geometry" /></mxCell>
+
+        <mxCell id="sh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Ontology Class" vertex="1"><mxGeometry x="40" y="110" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="SysML v2 Construct" vertex="1"><mxGeometry x="360" y="110" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Modeling Rule" vertex="1"><mxGeometry x="660" y="110" width="500" height="28" as="geometry" /></mxCell>
+        <mxCell id="sh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Representative SysML v2 Pattern" vertex="1"><mxGeometry x="1160" y="110" width="580" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="s1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="System / LogicalComponent / SoftwareComponent / HardwareComponent" vertex="1"><mxGeometry x="40" y="138" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def, part usage" vertex="1"><mxGeometry x="360" y="138" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Use typed structural decomposition. Keep technology-specific specializations in extension packages." vertex="1"><mxGeometry x="660" y="138" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def InfusionPump; part usage controlSw: SoftwareComponent;" vertex="1"><mxGeometry x="1160" y="138" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function / ClinicalAction / Action" vertex="1"><mxGeometry x="40" y="164" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="action def, action usage" vertex="1"><mxGeometry x="360" y="164" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="User actions are first-class actions; do not model as free-text notes." vertex="1"><mxGeometry x="660" y="164" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="action def NurseAdjustDose(in requestedDose, out confirmedDose);" vertex="1"><mxGeometry x="1160" y="164" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Scenario" vertex="1"><mxGeometry x="40" y="190" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="interaction, behavior composition" vertex="1"><mxGeometry x="360" y="190" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Keep one Scenario class; distinguish variants using scenarioKind attribute only." vertex="1"><mxGeometry x="660" y="190" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="scenarioKind = normal_use | hazard | misuse" vertex="1"><mxGeometry x="1160" y="190" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement / UserNeed" vertex="1"><mxGeometry x="40" y="216" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="requirement def" vertex="1"><mxGeometry x="360" y="216" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="No class explosion: requirementKind attribute captures user/system/software/safety type." vertex="1"><mxGeometry x="660" y="216" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="requirement def R_101 { attribute requirementKind: RequirementKind; }" vertex="1"><mxGeometry x="1160" y="216" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Interface / SoftwareInterface" vertex="1"><mxGeometry x="40" y="242" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="interface def, port" vertex="1"><mxGeometry x="360" y="242" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Express contracts with typed features; avoid creating classes for each protocol variant." vertex="1"><mxGeometry x="660" y="242" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="interface def DoseCmdIF { in doseCmd: DoseCommand; }" vertex="1"><mxGeometry x="1160" y="242" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ExecutionThread" vertex="1"><mxGeometry x="40" y="268" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def + attributes + constraints" vertex="1"><mxGeometry x="360" y="268" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="AADL-aligned thread timing by attributes; no separate classes per scheduling policy." vertex="1"><mxGeometry x="660" y="268" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="attribute periodMs: Real; attribute wcetMs: Real; constraint wcetMs &lt;= periodMs;" vertex="1"><mxGeometry x="1160" y="268" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard / HazardousSituation / Harm / Risk / Mitigation" vertex="1"><mxGeometry x="40" y="294" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part defs + explicit relations" vertex="1"><mxGeometry x="360" y="294" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Keep causal chain explicit; quantify risk with attributes (P1/P2 before/after)." vertex="1"><mxGeometry x="660" y="294" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard exposesTo HazardousSituation resultsIn Harm; Risk.quantifies(Harm);" vertex="1"><mxGeometry x="1160" y="294" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ProcessActivity / WorkProduct" vertex="1"><mxGeometry x="40" y="320" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="activity def + artifact part def" vertex="1"><mxGeometry x="360" y="320" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Process and standard semantics are attribute-driven, not one-class-per-standard." vertex="1"><mxGeometry x="660" y="320" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="sourceStandard='IEC 62304'; regulatoryClause='5.3';" vertex="1"><mxGeometry x="1160" y="320" width="580" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="s33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode / ROSTopic" vertex="1"><mxGeometry x="40" y="346" width="320" height="26" as="geometry" /></mxCell>
+        <mxCell id="s34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="specialized part defs" vertex="1"><mxGeometry x="360" y="346" width="300" height="26" as="geometry" /></mxCell>
+        <mxCell id="s35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Treat as extension over core software classes with inherited verification links." vertex="1"><mxGeometry x="660" y="346" width="500" height="26" as="geometry" /></mxCell>
+        <mxCell id="s36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def ROSNode specializes SoftwareComponent;" vertex="1"><mxGeometry x="1160" y="346" width="580" height="26" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-attributes" name="Element Attributes">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1800" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="a-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="Element Attributes (Data Properties, Constraints, and Formulas)" vertex="1"><mxGeometry x="40" y="20" width="1700" height="40" as="geometry" /></mxCell>
+        <mxCell id="a-note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="Attributes intentionally absorb variant typing to avoid ontology bloat." vertex="1"><mxGeometry x="40" y="66" width="1700" height="34" as="geometry" /></mxCell>
+
+        <mxCell id="ah1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Class" vertex="1"><mxGeometry x="40" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="ah2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Attribute" vertex="1"><mxGeometry x="300" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="ah3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Type" vertex="1"><mxGeometry x="560" y="110" width="180" height="28" as="geometry" /></mxCell>
+        <mxCell id="ah4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Cardinality" vertex="1"><mxGeometry x="740" y="110" width="180" height="28" as="geometry" /></mxCell>
+        <mxCell id="ah5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Allowed Values / Formula / Constraint" vertex="1"><mxGeometry x="920" y="110" width="820" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="a1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Scenario" vertex="1"><mxGeometry x="40" y="138" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="scenarioKind" vertex="1"><mxGeometry x="300" y="138" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum" vertex="1"><mxGeometry x="560" y="138" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="138" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{normal_use, abnormal_use, misuse, hazard, maintenance, service}" vertex="1"><mxGeometry x="920" y="138" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="40" y="164" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="requirementKind" vertex="1"><mxGeometry x="300" y="164" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum" vertex="1"><mxGeometry x="560" y="164" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="164" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{user_need, system, software, safety, cybersecurity, usability, regulatory}" vertex="1"><mxGeometry x="920" y="164" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement" vertex="1"><mxGeometry x="40" y="190" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="status" vertex="1"><mxGeometry x="300" y="190" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum" vertex="1"><mxGeometry x="560" y="190" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="190" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{draft, approved, implemented, verified, released, obsolete}" vertex="1"><mxGeometry x="920" y="190" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="216" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="p1_before" vertex="1"><mxGeometry x="300" y="216" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="216" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="216" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Probability of occurrence before mitigation, 0.0..1.0." vertex="1"><mxGeometry x="920" y="216" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="242" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="p2_before" vertex="1"><mxGeometry x="300" y="242" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="242" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="242" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Severity before mitigation, ordinal scale 1..5." vertex="1"><mxGeometry x="920" y="242" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="268" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="risk_before" vertex="1"><mxGeometry x="300" y="268" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="268" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="268" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Formula: risk_before = p1_before * p2_before." vertex="1"><mxGeometry x="920" y="268" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="294" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="p1_after" vertex="1"><mxGeometry x="300" y="294" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="294" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="294" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Probability after mitigation, 0.0..1.0." vertex="1"><mxGeometry x="920" y="294" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="320" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a37" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="p2_after" vertex="1"><mxGeometry x="300" y="320" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a38" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="320" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a39" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="320" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a40" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Severity after mitigation, ordinal scale 1..5." vertex="1"><mxGeometry x="920" y="320" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a41" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="346" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a42" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="risk_after" vertex="1"><mxGeometry x="300" y="346" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a43" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="346" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a44" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="346" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a45" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Formula: risk_after = p1_after * p2_after." vertex="1"><mxGeometry x="920" y="346" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a46" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="372" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a47" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="acceptabilityThreshold" vertex="1"><mxGeometry x="300" y="372" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a48" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="372" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a49" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="372" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Closure rule: risk_after &lt;= acceptabilityThreshold." vertex="1"><mxGeometry x="920" y="372" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a51" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk" vertex="1"><mxGeometry x="40" y="398" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a52" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="benefitScore" vertex="1"><mxGeometry x="300" y="398" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a53" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="398" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a54" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="0..1" vertex="1"><mxGeometry x="740" y="398" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a55" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Used for residual risk-benefit evaluation." vertex="1"><mxGeometry x="920" y="398" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a56" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent" vertex="1"><mxGeometry x="40" y="424" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a57" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="softwareSafetyClass" vertex="1"><mxGeometry x="300" y="424" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a58" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum" vertex="1"><mxGeometry x="560" y="424" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a59" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="424" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a60" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{A, B, C} per IEC 62304; attribute only, not subclass hierarchy." vertex="1"><mxGeometry x="920" y="424" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a61" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ExecutionThread" vertex="1"><mxGeometry x="40" y="450" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a62" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="periodMs" vertex="1"><mxGeometry x="300" y="450" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a63" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="450" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a64" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="450" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="periodMs &gt; 0." vertex="1"><mxGeometry x="920" y="450" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a66" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ExecutionThread" vertex="1"><mxGeometry x="40" y="476" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a67" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="wcetMs" vertex="1"><mxGeometry x="300" y="476" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a68" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decimal" vertex="1"><mxGeometry x="560" y="476" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a69" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="476" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a70" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="wcetMs &lt;= periodMs." vertex="1"><mxGeometry x="920" y="476" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a71" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard / Risk / Mitigation / Evidence / ProcessActivity" vertex="1"><mxGeometry x="40" y="502" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a72" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="sourceStandard" vertex="1"><mxGeometry x="300" y="502" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a73" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum/string" vertex="1"><mxGeometry x="560" y="502" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a74" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="502" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a75" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{ISO 14971, IEC 62304, IEC 60601, ISO 13485, internal}." vertex="1"><mxGeometry x="920" y="502" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a76" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Hazard / Risk / Mitigation / Evidence / ProcessActivity" vertex="1"><mxGeometry x="40" y="528" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a77" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="regulatoryClause" vertex="1"><mxGeometry x="300" y="528" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a78" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="string" vertex="1"><mxGeometry x="560" y="528" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a79" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="0..1" vertex="1"><mxGeometry x="740" y="528" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a80" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Clause identifier, example: 'ISO 14971:2019 7.4'." vertex="1"><mxGeometry x="920" y="528" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a81" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Function / SoftwareComponent / HardwareComponent" vertex="1"><mxGeometry x="40" y="554" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a82" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="criticality" vertex="1"><mxGeometry x="300" y="554" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a83" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum" vertex="1"><mxGeometry x="560" y="554" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a84" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="0..1" vertex="1"><mxGeometry x="740" y="554" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a85" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{low, medium, high, life_critical}." vertex="1"><mxGeometry x="920" y="554" width="820" height="26" as="geometry" /></mxCell>
+
+        <mxCell id="a86" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ROSNode / ROSTopic" vertex="1"><mxGeometry x="40" y="580" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a87" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="qosProfile" vertex="1"><mxGeometry x="300" y="580" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="a88" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="enum/string" vertex="1"><mxGeometry x="560" y="580" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a89" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..1" vertex="1"><mxGeometry x="740" y="580" width="180" height="26" as="geometry" /></mxCell>
+        <mxCell id="a90" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="{reliable, best_effort} with history/depth fields." vertex="1"><mxGeometry x="920" y="580" width="820" height="26" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,17 @@
+name: "@memo/ontology-medical-arch"
+version: "0.2.0"
+type: ontology
+description: "Medical-device architecture ontology — MBSE backbone (Arcadia/42010) plus medical-specific architecture kinds (UI panels, physiological sensors/actuators, embedded hardware, usability-facing user activities)."
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "arcadia", "42010", "medical-device", "architecture"]
+# Optional modules — domain extensions a project can load on top of this base
+# ontology. Each module is a separate @memo/* package with its own sysml/ tree,
+# following OWL import semantics: declared but not loaded until project opts in.
+optionalModules:
+  - "@memo/ontology-medical-process"        # ISO 14971 risk, IEC 62366 usability, ISO 13485 QMS, IEC 60601 safety
+  - "@memo/ontology-iec62304"               # IEC 62304 software lifecycle classes (A/B/C), SOUP
+  - "@memo/ontology-cybersecurity"          # IEC 81001-5-1 / FDA cybersecurity (threats, controls, vulnerabilities)
+  - "@memo/ontology-middleware-ros"         # ROS 2 nodes/topics/services for robotic medical devices
+  - "@memo/ontology-medical-clinical-trial" # Clinical trial study ontology
+  - "@memo/ontology-clinical-procedure"     # Clinical procedure / workflow kinds
+  - "@memo/ontology-clinical-interop"       # HL7 FHIR / DICOM interoperability kinds

@@ -1,10 +1,24 @@
 package MEMO_Extension_Platform {
 
-    part def Docker :> Software { }
+    // §4.5.13 — Docker is kept as a distinct container-runtime with its own
+    // image/tag metadata (P1 rule 1 — distinct structural attributes).
+    part def Docker :> Software {
+        attribute image : String;
+        attribute tag : String;
+        attribute runtimeSocket : String;
+    }
 
-    part def EventDrivenService :> SoftwareComponent { }
+    // §4.5.13 — event-driven service carries the event contract it subscribes to.
+    part def EventDrivenService :> SoftwareComponent {
+        attribute consumedEvent : String;
+        attribute deliverySemantic : String; // "at-least-once" | "exactly-once"
+    }
 
-    part def MessageBroker :> SoftwareComponent { }
+    // §4.5.13 — message broker carries its transport + clustering metadata.
+    part def MessageBroker :> SoftwareComponent {
+        attribute brokerProtocol : String;  // "AMQP" | "MQTT" | "Kafka"
+        attribute clusterSize : Integer;
+    }
 
     interface def EventBus :> PublishSubscribeChannel { }
 

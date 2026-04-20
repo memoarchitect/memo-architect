@@ -1,6 +1,0 @@
-name: "@memo/ontology-core"
-version: "0.1.0"
-type: ontology
-description: "Slim MBSE backbone (~40 kinds, ~16 relationships) — what every system needs"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "arcadia", "42010"]

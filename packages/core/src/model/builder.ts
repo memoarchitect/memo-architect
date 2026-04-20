@@ -371,7 +371,7 @@ function extractUsage(
     registries?: BuilderRegistries
 ): void {
     const id = usage.name;
-    const typeName = usage.type; // e.g. "Hazard", "SystemRequirement"
+    const typeName = usage.type; // e.g. "Hazard", "Requirement"
 
     // Dual-mode resolution: registry first, then config fallback
     const { kindDef: finalKindDef, resolvedKind } = typeName

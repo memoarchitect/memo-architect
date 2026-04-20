@@ -7,11 +7,11 @@ function makeFunctionalModel(): MemoModelDTO {
     return {
         errors: [],
         elements: {
-            'sf1': { id: 'sf1', name: 'Regulate Flow', kind: 'SystemFunction', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
-            'sf2': { id: 'sf2', name: 'Detect Occlusion', kind: 'SystemFunction', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
-            'sf3': { id: 'sf3', name: 'Manage Alarms', kind: 'SystemFunction', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
-            'cf1': { id: 'cf1', name: 'Calc Step Rate', kind: 'ComponentFunction', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
-            'cf2': { id: 'cf2', name: 'Read Pressure', kind: 'ComponentFunction', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
+            'sf1': { id: 'sf1', name: 'Regulate Flow', kind: 'Function', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
+            'sf2': { id: 'sf2', name: 'Detect Occlusion', kind: 'Function', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
+            'sf3': { id: 'sf3', name: 'Manage Alarms', kind: 'Function', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
+            'cf1': { id: 'cf1', name: 'Calc Step Rate', kind: 'Function', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
+            'cf2': { id: 'cf2', name: 'Read Pressure', kind: 'Function', layer: 'functional', construct: 'action', doc: '', attributes: {}, file: 'a.sysml' },
             // Non-functional element — should be excluded by default
             'sys': { id: 'sys', name: 'System', kind: 'System', layer: 'logical', construct: 'part', doc: '', attributes: {}, file: 'a.sysml' },
         },
@@ -94,12 +94,12 @@ describe('DSM Analysis', () => {
     it('supports custom kind and relationship filters', () => {
         const model = makeFunctionalModel();
         const dsm = computeDSM(model, {
-            kinds: ['SystemFunction'],
+            kinds: ['Function'],
             relationshipTypes: ['flow'],
         });
 
-        // Only SystemFunctions
-        expect(dsm.elementIds).toHaveLength(3);
+        // Filtered to Function kinds (all five functional elements in fixture)
+        expect(dsm.elementIds).toHaveLength(5);
         // Only flow relationship
         expect(dsm.totalDependencies).toBe(1);
     });

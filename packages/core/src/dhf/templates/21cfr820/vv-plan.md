@@ -33,7 +33,7 @@ This plan covers:
 ### 3.1 Requirements to Verify
 
 ```memo-query
-kind: [SystemRequirement, SoftwareRequirement]
+kind: [Requirement, Requirement]
 display: table
 columns: name, layer, doc
 sort: name

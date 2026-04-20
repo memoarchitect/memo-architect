@@ -1,0 +1,14 @@
+# MEMO trace element: TST-ONT-001
+id: "TST-ONT-001"
+type: "verification_test"
+domain: "ONT"
+title: "Ontology Lifecycle Management verification"
+description: "Verify the ontology lifecycle management flow end-to-end via CLI and/or web runtime surface. This document captures the externally visible runtime/control surfaces derived from code and runtime observation."
+status: "draft"
+tags:
+  - "verification"
+  - "fallback-generated"
+links:
+  - "SR-ONT-001"
+source: "docs/src/developers/requirements/runtime-surfaces.md"
+updated_at: "2026-04-18T14:09:41.618Z"

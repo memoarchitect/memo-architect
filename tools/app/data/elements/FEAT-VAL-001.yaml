@@ -1,0 +1,14 @@
+# MEMO trace element: FEAT-VAL-001
+id: "FEAT-VAL-001"
+type: "feature"
+domain: "VAL"
+title: "Validation & Completeness feature"
+description: "Validation & Completeness capability surface inferred from architecture decomposition and runtime contracts."
+status: "active"
+tags:
+  - "capability"
+  - "fallback-generated"
+links:
+  - "SR-VAL-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.613Z"

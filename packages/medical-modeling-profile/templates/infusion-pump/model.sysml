@@ -14,7 +14,7 @@
 // ============================================================================
 
 package InfusionPump {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // BUSINESS ANALYSIS LAYER — Who uses this and why?
@@ -69,21 +69,27 @@ package InfusionPump {
     // ═══════════════════════════════════════════════════════════════════════
 
     // User Needs
-    requirement unAccurateDelivery : UserNeed {
+    requirement unAccurateDelivery : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-001";
         attribute redefines title = "Accurate Medication Delivery";
         doc /* The clinician needs the pump to deliver medication at the
              * prescribed rate with clinically acceptable accuracy. */
     }
 
-    requirement unOcclusionAlert : UserNeed {
+    requirement unOcclusionAlert : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-002";
         attribute redefines title = "Occlusion Alerting";
         doc /* The clinician needs to be alerted promptly when the
              * infusion line is occluded. */
     }
 
-    requirement unFreeFlowPrevention : UserNeed {
+    requirement unFreeFlowPrevention : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-003";
         attribute redefines title = "Free-Flow Prevention";
         doc /* The patient needs protection from uncontrolled
@@ -91,28 +97,32 @@ package InfusionPump {
     }
 
     // System Requirements
-    requirement sysReqFlowAccuracy : SystemRequirement {
+    requirement sysReqFlowAccuracy : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-REQ-001";
         attribute redefines title = "Flow Rate Accuracy";
         doc /* The pump shall deliver medication at the prescribed flow rate
              * within +/- 5% accuracy across the range 1-999 mL/hr. */
     }
 
-    requirement sysReqOcclusionDetect : SystemRequirement {
+    requirement sysReqOcclusionDetect : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-REQ-002";
         attribute redefines title = "Occlusion Detection";
         doc /* The pump shall detect occlusion within 30 seconds and
              * generate an audible and visual alarm. */
     }
 
-    requirement sysReqAntiFreeFlow : SystemRequirement {
+    requirement sysReqAntiFreeFlow : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-REQ-003";
         attribute redefines title = "Anti-Free-Flow Protection";
         doc /* The pump shall prevent free-flow through a mechanical
              * anti-free-flow mechanism. */
     }
 
-    requirement sysReqAlarmVolume : SystemRequirement {
+    requirement sysReqAlarmVolume : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "SYS-REQ-004";
         attribute redefines title = "Alarm Audibility";
         doc /* All high-priority alarms shall be audible at 1 meter
@@ -120,21 +130,30 @@ package InfusionPump {
     }
 
     // Software Requirements
-    requirement swReqFlowRegulation : SoftwareRequirement {
+    requirement swReqFlowRegulation : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-001";
         attribute redefines title = "Flow Rate Regulation Algorithm";
         doc /* The software shall calculate motor step rate to achieve
              * the prescribed flow rate within +/- 5%. */
     }
 
-    requirement swReqOcclusionMonitor : SoftwareRequirement {
+    requirement swReqOcclusionMonitor : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-002";
         attribute redefines title = "Occlusion Pressure Monitoring";
         doc /* The software shall monitor line pressure at >= 10 Hz and
              * trigger an occlusion alarm when threshold is exceeded. */
     }
 
-    requirement swReqAlarmManager : SoftwareRequirement {
+    requirement swReqAlarmManager : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-003";
         attribute redefines title = "Alarm Management";
         doc /* The software shall manage alarm priority, escalation,
@@ -240,31 +259,37 @@ package InfusionPump {
     // FUNCTIONAL LAYER — What the system does
     // ═══════════════════════════════════════════════════════════════════════
 
-    action sfRegulateFlow : SystemFunction {
+    action sfRegulateFlow : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Regulate Flow Rate";
         doc /* Calculate and control motor speed to deliver prescribed rate. */
     }
 
-    action sfDetectOcclusion : SystemFunction {
+    action sfDetectOcclusion : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Detect Occlusion";
         doc /* Monitor line pressure and detect occlusion condition. */
     }
 
-    action sfManageAlarms : SystemFunction {
+    action sfManageAlarms : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Manage Alarms";
         doc /* Prioritize, escalate, and present alarms to clinician. */
     }
 
-    action sfDisplayStatus : SystemFunction {
+    action sfDisplayStatus : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Display Infusion Status";
         doc /* Show flow rate, volume infused, time remaining. */
     }
 
-    action cfCalculateStepRate : ComponentFunction {
+    action cfCalculateStepRate : Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Calculate Motor Step Rate";
     }
 
-    action cfReadPressureSensor : ComponentFunction {
+    action cfReadPressureSensor : Function {
+        attribute redefines scope = FunctionScope::Component;
         attribute redefines name = "Read Pressure Sensor";
     }
 
@@ -392,7 +417,9 @@ package InfusionPump {
     // MEDICAL DEVELOPMENT BACKBONE — 60601 / 62304 / QMS trace artifacts
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement uiReqAlarmAcknowledgement : UserInterfaceRequirement {
+    requirement uiReqAlarmAcknowledgement : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines title = "Alarm acknowledgement shall require explicit user confirmation";
     }
 
@@ -560,9 +587,18 @@ package InfusionPump {
     port pressureSensorPort : Port { }
     port motorControlPort : Port { }
     port displayPort : Port { }
-    port networkPort : PortEthernet { }
-    port usbServicePort : PortUSB { }
-    port powerInput : PortPower { }
+    port networkPort : Port {
+        attribute redefines protocol = "Ethernet";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
+    port usbServicePort : Port {
+        attribute redefines protocol = "USB";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
+    port powerInput : Port {
+        attribute redefines protocol = "Power";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
 
     interface def PressureDataInterface :> SoftwareInterface { }
     interface def MotorCommandInterface :> SoftwareInterface { }

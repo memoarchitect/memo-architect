@@ -314,7 +314,7 @@ export function BulkImportModal(): React.ReactElement | null {
                                 <textarea
                                     value={rawText}
                                     onChange={(e) => { setRawText(e.target.value); setInputError(''); }}
-                                    placeholder={"Paste CSV or tab-separated data here.\nFirst row must be the header.\n\nExample:\nid,name,kind,doc\nreq_001,System shall be safe,SystemRequirement,Safety requirement"}
+                                    placeholder={"Paste CSV or tab-separated data here.\nFirst row must be the header.\n\nExample:\nid,name,kind,doc\nreq_001,System shall be safe,Requirement,Safety requirement"}
                                     rows={10}
                                     style={{
                                         ...INPUT_STYLE,

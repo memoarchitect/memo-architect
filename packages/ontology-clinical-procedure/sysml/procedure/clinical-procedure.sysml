@@ -68,7 +68,15 @@ package MEMO_Ontology_ClinicalProcedure {
         attribute qualifierType : String;
     }
 
-    part def ClinicalInvestigationReference :> ClinicalEvidenceArtifact { }
+    // §4.5.9 — clinical investigation reference carries the trial identifier.
+    part def ClinicalInvestigationReference :> ClinicalEvidenceArtifact {
+        attribute trialRegistrationId : String;     // e.g. NCT/EUDRA-CT
+        attribute investigatorSite : String;
+    }
 
-    part def ClinicalLiteratureReference :> ClinicalEvidenceArtifact { }
+    // §4.5.9 — literature reference carries bibliographic metadata.
+    part def ClinicalLiteratureReference :> ClinicalEvidenceArtifact {
+        attribute doi : String;
+        attribute publicationYear : Integer;
+    }
 }

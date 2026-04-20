@@ -11,18 +11,18 @@ describe('loadOntologyRegistries', () => {
         const configPath = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
-        // Should find ontology-medical and ontology-core SysML dirs
+        // Should find ontology-medical-process and ontology-medical-arch SysML dirs
         expect(result.ontologyDirs.length).toBeGreaterThanOrEqual(2);
         expect(result.fileCount).toBeGreaterThan(20);
         expect(result.errors).toHaveLength(0);
 
-        // KindRegistry should have kinds from both ontology-core and ontology-medical
+        // KindRegistry should have kinds from both ontology-medical-arch and ontology-medical-process
         const kr = result.registries.kindRegistry!;
-        expect(kr.size).toBeGreaterThan(150); // core has ~130, medical adds more
+        expect(kr.size).toBeGreaterThan(130); // consolidated kinds reduce total count
 
         // Check core kinds
         expect(kr.has('Program')).toBe(true);
-        expect(kr.has('SystemRequirement')).toBe(true);
+        expect(kr.has('Requirement')).toBe(true);
         expect(kr.has('Subsystem')).toBe(true);
 
         // Check medical kinds
@@ -54,20 +54,20 @@ describe('loadOntologyRegistries', () => {
         const kr = result.registries.kindRegistry!;
         expect(kr.has('Hazard')).toBe(true);
         expect(kr.has('Actor')).toBe(true);
-        expect(kr.has('SystemRequirement')).toBe(true);
+        expect(kr.has('Requirement')).toBe(true);
     });
 
-    it('loads registries from ontology-core config directly', async () => {
-        const configPath = resolve(PACKAGES_DIR, 'ontology-core/memo.package.yaml');
+    it('loads registries from ontology-medical-arch config directly', async () => {
+        const configPath = resolve(PACKAGES_DIR, 'ontology-medical-arch/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
-        // Should find just ontology-core sysml dir
+        // Should find just ontology-medical-arch sysml dir
         expect(result.ontologyDirs.length).toBeGreaterThanOrEqual(1);
         expect(result.fileCount).toBeGreaterThan(10);
 
         const kr = result.registries.kindRegistry!;
         expect(kr.has('Program')).toBe(true);
-        expect(kr.has('SystemRequirement')).toBe(true);
+        expect(kr.has('Requirement')).toBe(true);
         // Should NOT have medical-specific kinds
         expect(kr.has('RiskControl')).toBe(false);
     });

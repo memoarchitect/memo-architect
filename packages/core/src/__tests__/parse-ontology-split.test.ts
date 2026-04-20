@@ -10,8 +10,8 @@ const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
 
 const ONTOLOGY_DIRS = [
-    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-core/sysml'),
-    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-medical/sysml'),
+    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-medical-arch/sysml'),
+    resolve('/Users/someshkashyap/sandbox/memo/packages/ontology-medical-process/sysml'),
 ];
 
 function getSysmlFiles(dir: string): string[] {
@@ -35,8 +35,8 @@ describe('Split ontology files', () => {
 
     for (const file of files) {
         const relPath = file
-            .replace(ONTOLOGY_DIRS[0] + '/', 'ontology-core/')
-            .replace(ONTOLOGY_DIRS[1] + '/', 'ontology-medical/');
+            .replace(ONTOLOGY_DIRS[0] + '/', 'ontology-medical-arch/')
+            .replace(ONTOLOGY_DIRS[1] + '/', 'ontology-medical-process/');
         it(`parses ${relPath} without errors`, async () => {
             const source = readFileSync(file, 'utf-8');
             const doc = await parse(source);

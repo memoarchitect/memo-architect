@@ -8,7 +8,7 @@
 // ============================================================================
 
 package SaMD_Device {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // PURPOSE LAYER — Who uses this and why?
@@ -39,32 +39,41 @@ package SaMD_Device {
     // REQUIREMENTS LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement unAccuracy : UserNeed {
+    requirement unAccuracy : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Accurate Clinical Output";
         doc /* The software shall produce clinically accurate outputs within defined tolerance. */
     }
 
-    requirement unUsability : UserNeed {
+    requirement unUsability : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Usable Under Clinical Conditions";
         doc /* The software shall be usable by trained clinicians without dedicated IT support. */
     }
 
-    requirement unDataIntegrity : UserNeed {
+    requirement unDataIntegrity : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Patient Data Integrity";
         doc /* Patient data shall not be altered, lost, or exposed without authorization. */
     }
 
-    requirement srAccuracy : SystemRequirement {
+    requirement srAccuracy : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Output Accuracy Specification";
         doc /* The algorithm shall achieve sensitivity ≥ X% and specificity ≥ Y% on validated dataset. */
     }
 
-    requirement srAuditLog : SystemRequirement {
+    requirement srAuditLog : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Audit Trail";
         doc /* All clinician actions and system events shall be logged with timestamp and user ID. */
     }
 
-    requirement srDataEncryption : SystemRequirement {
+    requirement srDataEncryption : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Data Encryption at Rest and In Transit";
         doc /* All patient data shall be encrypted using AES-256 at rest and TLS 1.3 in transit. */
     }
@@ -116,16 +125,19 @@ package SaMD_Device {
     // FUNCTIONAL LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    action funcIngest : SystemFunction {
+    action funcIngest : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Ingest Clinical Data";
         doc /* Accept patient data from EHR, device, or manual entry. */
     }
 
-    action funcAnalyze : SystemFunction {
+    action funcAnalyze : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Run Clinical Algorithm";
     }
 
-    action funcPresent : SystemFunction {
+    action funcPresent : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Present Output to Clinician";
     }
 

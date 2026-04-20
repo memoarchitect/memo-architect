@@ -5,7 +5,7 @@
 // ============================================================================
 
 package GPCA_Compliance {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;
     import GPCA_Architecture::*;

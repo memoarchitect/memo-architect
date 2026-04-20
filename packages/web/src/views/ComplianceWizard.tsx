@@ -43,7 +43,7 @@ const STANDARDS: ComplianceStandard[] = [
             { id: 'verification', label: 'Verification', description: 'Verify test coverage for software items' },
             { id: 'summary', label: 'Summary', description: 'Review compliance status' },
         ],
-        requiredKinds: ['SoftwareComponent', 'SoftwareModule', 'SoftwareRequirement', 'Test'],
+        requiredKinds: ['SoftwareComponent', 'SoftwareModule', 'Requirement', 'Test'],
         requiredRelationships: ['decomposedBy', 'traceTo', 'verify'],
     },
 ];
@@ -121,7 +121,7 @@ function checkIEC62304(model: ReturnType<typeof useModelStore.getState>['model']
     const checks: ComplianceCheck[] = [];
 
     const swComponents = elements.filter(e => e.kind === 'SoftwareComponent' || e.kind === 'SoftwareModule');
-    const swReqs = elements.filter(e => e.kind === 'SoftwareRequirement');
+    const swReqs = elements.filter(e => e.kind === 'Requirement');
     const tests = elements.filter(e => e.kind === 'Test');
 
     checks.push({
@@ -198,7 +198,7 @@ export function ComplianceWizard() {
                 return elements.filter(e => e.kind === 'SoftwareComponent' || e.kind === 'Subsystem' || e.kind === 'Component');
             case 'control-measures':
                 if (selectedStandard === 'iso-14971') return elements.filter(e => e.kind === 'RiskControl');
-                return elements.filter(e => e.kind === 'SoftwareRequirement' || e.kind === 'SystemRequirement');
+                return elements.filter(e => e.kind === 'Requirement' || e.kind === 'Requirement');
             case 'verification':
                 return elements.filter(e => e.kind === 'Test');
             default:

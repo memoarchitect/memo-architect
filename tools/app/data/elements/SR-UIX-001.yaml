@@ -1,0 +1,15 @@
+# MEMO trace element: SR-UIX-001
+id: "SR-UIX-001"
+type: "software_requirement"
+domain: "UIX"
+title: "Workbench UX & Navigation requirement"
+description: "When a user executes workbench ux & navigation workflows, the system shall provide deterministic behavior, persistence, and feedback for this domain."
+status: "active"
+tags:
+  - "ears"
+  - "pattern:when"
+  - "fallback-generated"
+links:
+  - "UN-UIX-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.614Z"

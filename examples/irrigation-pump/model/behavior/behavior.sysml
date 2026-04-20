@@ -1,5 +1,5 @@
 package IrrigationPump_Behavior {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     action ucPrimeCassette : UseCase {
         attribute redefines name = "Prime Disposable Cassette";
@@ -31,19 +31,23 @@ package IrrigationPump_Behavior {
         attribute redefines scenarioType = "Alarm";
     }
 
-    action sfPrimeFluidPath : SystemFunction {
+    action sfPrimeFluidPath : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Prime Fluid Path";
     }
 
-    action sfRegulatePressure : SystemFunction {
+    action sfRegulatePressure : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Regulate Irrigation Pressure";
     }
 
-    action sfEstimateReservoirVolume : SystemFunction {
+    action sfEstimateReservoirVolume : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Estimate Reservoir Volume";
     }
 
-    action sfManageAlarms : SystemFunction {
+    action sfManageAlarms : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Manage Irrigation Alarms";
     }
 

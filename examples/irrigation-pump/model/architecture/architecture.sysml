@@ -1,5 +1,5 @@
 package IrrigationPump_Architecture {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import IrrigationPump_Requirements::*;
     import IrrigationPump_Behavior::*;
 
@@ -87,11 +87,20 @@ package IrrigationPump_Architecture {
         attribute redefines name = "Prime Confirmation Dialog";
     }
 
-    port consoleIntegrationEndpoint : DataEndpoint { }
+    port consoleIntegrationEndpoint : Port {
+        attribute redefines protocol = "Data";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
 
-    port alarmRouterEndpoint : DataEndpoint { }
+    port alarmRouterEndpoint : Port {
+        attribute redefines protocol = "Data";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
 
-    port documentationEndpoint : DataEndpoint { }
+    port documentationEndpoint : Port {
+        attribute redefines protocol = "Data";
+        attribute redefines direction = PortDirection::Bidirectional;
+    }
 
     interface def AlarmStatusFHIRInterface :> DataInterface { }
 

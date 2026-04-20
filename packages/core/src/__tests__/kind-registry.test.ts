@@ -31,7 +31,7 @@ describe('resolveLayerFromPath', () => {
     });
 
     it('handles full paths with /sysml/ segment', () => {
-        expect(resolveLayerFromPath('/some/project/packages/ontology-core/sysml/software/software.sysml')).toBe('software');
+        expect(resolveLayerFromPath('/some/project/packages/ontology-medical-arch/sysml/software/software.sysml')).toBe('software');
     });
 
     it('returns unknown for files directly under sysml/', () => {
@@ -112,23 +112,23 @@ describe('KindRegistry', () => {
     });
 });
 
-// ─── KindRegistry Integration: ontology-core ─────────────────────────────────
+// ─── KindRegistry Integration: ontology-medical-arch ─────────────────────────────────
 
-describe('KindRegistry integration with ontology-core', () => {
+describe('KindRegistry integration with ontology-medical-arch', () => {
     let registry: KindRegistry;
 
     beforeAll(async () => {
-        const coreDir = resolve(__dirname, '../../../ontology-core/sysml');
+        const coreDir = resolve(__dirname, '../../../ontology-medical-arch/sysml');
         const sysmlFiles = getSysmlFiles(coreDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-core'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-arch'));
         expect(result.errors).toHaveLength(0);
 
         registry = new KindRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers kinds from ontology-core SysML files', () => {
+    it('discovers kinds from ontology-medical-arch SysML files', () => {
         // Slim core has ~53 kinds (down from 114 after ontology simplification)
         // SysML files may define slightly different counts due to
         // enum defs, attribute defs, etc. that config may not list
@@ -147,7 +147,7 @@ describe('KindRegistry integration with ontology-core', () => {
     });
 
     it('resolves requirements-layer kinds correctly', () => {
-        const req = registry.getKind('SystemRequirement');
+        const req = registry.getKind('Requirement');
         expect(req).toBeDefined();
         expect(req!.layer).toBe('requirements');
         expect(req!.sysmlConstruct).toBe('requirement def');
@@ -173,9 +173,9 @@ describe('KindRegistry integration with ontology-core', () => {
     });
 
     it('tracks specialization (superType)', () => {
-        const sysReq = registry.getKind('SystemRequirement');
-        expect(sysReq).toBeDefined();
-        expect(sysReq!.superType).toBe('Requirement');
+        const operationalEnvironment = registry.getKind('OperationalEnvironment');
+        expect(operationalEnvironment).toBeDefined();
+        expect(operationalEnvironment!.superType).toBe('OperationalEntity');
     });
 
     it('connection defs are NOT registered as kinds', () => {

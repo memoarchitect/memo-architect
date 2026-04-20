@@ -1,4 +1,4 @@
-package MEMO_Ontology_Medical_ProductLine {
+package MEMO_Ontology_MedicalProcess_ProductLine {
 
     part def ProductFamily {
         attribute familyId : String;
@@ -21,8 +21,4 @@ package MEMO_Ontology_Medical_ProductLine {
     }
 
     part def ConfigurationBaseline :> ReleaseBaseline { }
-
-    requirement def VariantConstraint :> Requirement {
-        attribute title : String;
-    }
 }

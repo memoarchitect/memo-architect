@@ -149,7 +149,7 @@ function parseCsvText(csvText: string): { headers: string[]; rows: string[][] } 
  *
  * - `id` — unique element identifier (required, valid SysML identifier)
  * - `name` — display name (required)
- * - `kind` — ontology type from config.kinds (required, e.g. "Hazard", "SystemRequirement")
+ * - `kind` — ontology type from config.kinds (required, e.g. "Hazard", "Requirement")
  * - `construct` — SysML construct override (optional, auto-derived from kind if omitted)
  * - `doc` — documentation comment (optional)
  * - Additional columns become `attribute redefines <colName> = "<value>"` in SysML

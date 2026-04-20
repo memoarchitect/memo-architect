@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useModelStore, getRelationshipsForElement, getDiagram } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
@@ -14,7 +14,6 @@ function EditableField({ value, onSave, multiline, forceEdit }: {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
 
-    // Sync draft when value changes externally
     useEffect(() => { setDraft(value); }, [value]);
 
     const handleSave = useCallback(() => {
@@ -69,6 +68,82 @@ function EditableField({ value, onSave, multiline, forceEdit }: {
     );
 }
 
+// ─── Collapsible Section (mirrors ModelExplorer layer header) ──────────────
+
+function Section({ title, count, defaultOpen = true, actions, children }: {
+    title: string;
+    count?: number;
+    defaultOpen?: boolean;
+    actions?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div style={{ borderBottom: '1px solid #EDEDEA' }}>
+            <div
+                className="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors"
+                style={{ borderRadius: '6px', margin: '2px 4px' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => setOpen(o => !o)}
+            >
+                <span className="font-medium flex-1 text-xs" style={{ color: '#374151' }}>{title}</span>
+                {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
+                {typeof count === 'number' && <span className="text-xs" style={{ color: '#9CA3AF' }}>{count}</span>}
+                <span style={{ color: '#D1D5DB' }}>{open ? '▾' : '▸'}</span>
+            </div>
+            {open && <div className="px-4 pb-3">{children}</div>}
+        </div>
+    );
+}
+
+// ─── Tree row (mirrors ModelExplorer element row) ──────────────────────────
+
+function TreeRow({ label, kind, kindColor, onClick, arrow, typeBadge, typeColor, selected }: {
+    label: string;
+    kind?: string;
+    kindColor?: string;
+    onClick?: () => void;
+    arrow?: '→' | '←';
+    typeBadge?: string;
+    typeColor?: string;
+    selected?: boolean;
+}) {
+    return (
+        <div
+            className="flex items-center gap-1.5 cursor-pointer transition-colors ml-2"
+            style={{
+                borderRadius: '6px',
+                padding: '4px 8px',
+                background: selected ? '#2DD4A818' : 'transparent',
+                color: selected ? '#1B3A4B' : '#374151',
+                fontWeight: selected ? 500 : 400,
+                fontSize: FONT.xs,
+            }}
+            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#F0F0ED'; }}
+            onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
+            onClick={onClick}
+        >
+            {arrow && <span style={{ color: '#9CA3AF' }}>{arrow}</span>}
+            {typeBadge && (
+                <span className="px-1 py-0.5 rounded" style={{
+                    background: (typeColor || '#2563EB') + '18',
+                    color: typeColor || '#2563EB',
+                    fontSize: FONT.xs,
+                }}>{typeBadge}</span>
+            )}
+            <span className="truncate">{label}</span>
+            {kind && (
+                <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded" style={{
+                    background: (kindColor || '#666') + '15',
+                    color: kindColor || '#666',
+                    fontSize: FONT.badge,
+                }}>{kind}</span>
+            )}
+        </div>
+    );
+}
+
 // ─── Diagram Properties ─────────────────────────────────────────────────────
 
 function DiagramProperties() {
@@ -84,11 +159,8 @@ function DiagramProperties() {
 
     return (
         <>
-            {/* Header */}
             <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${meta?.color || '#6B7280'}` }}>
-                <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
-                    {diagram.name}
-                </div>
+                <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>{diagram.name}</div>
                 <div className="flex items-center gap-2 text-xs mt-1.5">
                     {meta && (
                         <span className="px-2 py-0.5 rounded-md font-medium"
@@ -98,23 +170,17 @@ function DiagramProperties() {
                     )}
                     <span style={{ color: '#6B7280' }}>{meta?.fullName || diagram.diagramType}</span>
                 </div>
-                {diagram.auto && (
-                    <div className="text-xs mt-1" style={{ color: '#6B7280' }}>Auto-generated</div>
-                )}
+                {diagram.auto && <div className="text-xs mt-1" style={{ color: '#6B7280' }}>Auto-generated</div>}
             </div>
 
             <div className="flex-1 overflow-y-auto">
                 {diagram.description && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Description</div>
-                        <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>
-                            {diagram.description}
-                        </div>
-                    </div>
+                    <Section title="Description" defaultOpen>
+                        <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>{diagram.description}</div>
+                    </Section>
                 )}
 
-                <div className="p-4" style={sectionStyle}>
-                    <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Details</div>
+                <Section title="Details" defaultOpen>
                     <div className="space-y-1.5">
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>ID</span>
@@ -129,11 +195,10 @@ function DiagramProperties() {
                             <span style={{ color: '#1a1a1a' }}>{diagram.diagramType}</span>
                         </div>
                     </div>
-                </div>
+                </Section>
 
                 {diagram.properties && Object.keys(diagram.properties).length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Properties</div>
+                    <Section title="Properties" count={Object.keys(diagram.properties).length}>
                         <div className="space-y-1.5">
                             {Object.entries(diagram.properties).map(([key, value]) => (
                                 <div key={key} className="flex text-xs">
@@ -142,25 +207,17 @@ function DiagramProperties() {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 )}
 
                 {diagram.elementIds && diagram.elementIds.length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>
-                            Scoped Elements ({diagram.elementIds.length})
-                        </div>
-                        <div className="text-xs" style={{ color: '#6B7280' }}>
-                            {diagram.elementIds.join(', ')}
-                        </div>
-                    </div>
+                    <Section title="Scoped Elements" count={diagram.elementIds.length} defaultOpen={false}>
+                        <div className="text-xs" style={{ color: '#6B7280' }}>{diagram.elementIds.join(', ')}</div>
+                    </Section>
                 )}
 
                 {diagram.relationshipTypes && diagram.relationshipTypes.length > 0 && (
-                    <div className="p-4">
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>
-                            Relationship Types
-                        </div>
+                    <Section title="Relationship Types" count={diagram.relationshipTypes.length}>
                         <div className="flex flex-wrap gap-1">
                             {diagram.relationshipTypes.map(rt => (
                                 <span key={rt} className="px-1.5 py-0.5 rounded text-xs"
@@ -169,7 +226,7 @@ function DiagramProperties() {
                                 </span>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 )}
             </div>
         </>
@@ -189,10 +246,8 @@ function ElementProperties() {
 
     const [attrEditMode, setAttrEditMode] = useState(false);
 
-    // Reset edit mode when element selection changes
     useEffect(() => { setAttrEditMode(false); }, [selectedElementId]);
 
-    // Ctrl+S / Cmd+S saves pending edits
     useEffect(() => {
         if (!selectedElementId) return;
         const handler = (e: KeyboardEvent) => {
@@ -206,22 +261,22 @@ function ElementProperties() {
         return () => window.removeEventListener('keydown', handler);
     }, [selectedElementId, applyEdit]);
 
+    const relationships = useMemo(
+        () => selectedElementId && model ? getRelationshipsForElement(model, selectedElementId) : [],
+        [model, selectedElementId],
+    );
+
     if (!selectedElementId || !model) return null;
 
     const element = model.elements[selectedElementId];
     if (!element) return null;
 
-    const relationships = getRelationshipsForElement(model, selectedElementId);
     const outgoing = relationships.filter(r => r.sourceId === selectedElementId);
     const incoming = relationships.filter(r => r.targetId === selectedElementId);
     const layerColor = LAYER_COLORS[element.layer] || '#666';
 
-    const violations = validation?.violations.filter(
-        v => v.elementId === selectedElementId
-    ) || [];
-
+    const violations = validation?.violations.filter(v => v.elementId === selectedElementId) || [];
     const attrs = Object.entries(element.attributes).filter(([k]) => k !== 'name');
-    const sectionStyle = { borderBottom: '1px solid #EDEDEA' };
 
     const handleDocSave = (newDoc: string) => {
         updateElementField(selectedElementId, 'doc', newDoc);
@@ -235,12 +290,11 @@ function ElementProperties() {
 
     return (
         <>
-            {/* Header with layer color accent */}
-            <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${layerColor}` }}>
+            {/* Header mirrors ModelExplorer layer header (color chip + name + kind badge) */}
+            <div className="p-4" style={{ borderBottom: '1px solid #EDEDEA', borderLeft: `3px solid ${layerColor}` }}>
                 <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>
-                        {element.name}
-                    </span>
+                    <span className="w-2.5 h-2.5 flex-shrink-0" style={{ background: layerColor, borderRadius: '3px' }} />
+                    <span className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>{element.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                     <span className="px-2 py-0.5 rounded-md font-medium" style={{ background: layerColor + '18', color: layerColor }}>
@@ -248,70 +302,53 @@ function ElementProperties() {
                     </span>
                     <span style={{ color: '#6B7280' }}>{element.construct}</span>
                 </div>
-                <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>
-                    {element.layer} layer
-                </div>
+                <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>{element.layer} layer</div>
             </div>
 
-            {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
-                {/* Doc — editable */}
-                <div className="p-4" style={sectionStyle}>
-                    <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Description</div>
+                <Section title="Description" defaultOpen>
                     <div className="text-xs leading-relaxed">
-                        <EditableField
-                            value={element.doc || ''}
-                            onSave={handleDocSave}
-                            multiline
-                        />
+                        <EditableField value={element.doc || ''} onSave={handleDocSave} multiline />
                     </div>
-                </div>
+                </Section>
 
-                {/* Action Parameters */}
                 {element.parameters && element.parameters.length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Parameters</div>
+                    <Section title="Parameters" count={element.parameters.length}>
                         <div className="space-y-1.5">
                             {element.parameters.map((param: any) => (
                                 <div key={param.name} className="flex items-center gap-2 text-xs">
-                                    <span className="px-1.5 py-0.5 rounded font-mono"
-                                        style={{
-                                            fontSize: '10px',
-                                            background: param.direction === 'in' ? '#EFF6FF' : param.direction === 'out' ? '#FFF7ED' : '#F0FDF4',
-                                            color: param.direction === 'in' ? '#2563EB' : param.direction === 'out' ? '#EA580C' : '#16A34A',
-                                        }}>
-                                        {param.direction}
-                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded font-mono" style={{
+                                        fontSize: '10px',
+                                        background: param.direction === 'in' ? '#EFF6FF' : param.direction === 'out' ? '#FFF7ED' : '#F0FDF4',
+                                        color: param.direction === 'in' ? '#2563EB' : param.direction === 'out' ? '#EA580C' : '#16A34A',
+                                    }}>{param.direction}</span>
                                     <span style={{ color: '#374151', fontWeight: 500 }}>{param.name}</span>
                                     <span style={{ color: '#6B7280' }}>:</span>
                                     <span style={{ color: '#6B7280' }}>{param.type}</span>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 )}
 
-                {/* Allocation target */}
                 {element.allocatedTo && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Allocated To</div>
-                        <div
-                            className="text-xs cursor-pointer px-2 py-1 rounded-md transition-colors"
-                            style={{ color: '#E67E22' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#FFF7ED')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    <Section title="Allocated To" defaultOpen>
+                        <TreeRow
+                            label={model.elements[element.allocatedTo]?.name || element.allocatedTo}
+                            kind={model.elements[element.allocatedTo]?.kind}
+                            kindColor="#E67E22"
+                            arrow="→"
                             onClick={() => selectElement(element.allocatedTo!)}
-                        >
-                            {'\u2192'} {model.elements[element.allocatedTo]?.name || element.allocatedTo}
-                        </div>
-                    </div>
+                        />
+                    </Section>
                 )}
 
-                {/* Attributes — with inline editing (#19) */}
                 {attrs.length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="flex items-center mb-2">
-                            <span className="text-xs font-medium flex-1" style={{ color: '#6B7280' }}>Attributes</span>
+                    <Section
+                        title="Attributes"
+                        count={attrs.length}
+                        defaultOpen
+                        actions={
                             <button
                                 onClick={() => {
                                     if (attrEditMode && selectedElementId) applyEdit(selectedElementId);
@@ -327,7 +364,8 @@ function ElementProperties() {
                             >
                                 {attrEditMode ? '✓ Save' : '✏ Edit'}
                             </button>
-                        </div>
+                        }
+                    >
                         <div className="space-y-1.5">
                             {attrs.map(([key, value]) => (
                                 <div key={key} className="flex text-xs items-start">
@@ -340,106 +378,73 @@ function ElementProperties() {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 )}
 
-                {/* Relationships */}
-                {relationships.length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>
-                            Relationships ({relationships.length})
-                        </div>
-                        <div className="space-y-1">
-                            {outgoing.map(rel => {
-                                const target = model.elements[rel.targetId];
-                                const tColor = target ? (LAYER_COLORS[target.layer] || '#666') : '#666';
-                                return (
-                                    <div
-                                        key={rel.id}
-                                        className="flex items-center gap-1.5 text-xs cursor-pointer rounded-md px-2 py-1 transition-colors"
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                        onClick={() => selectElement(rel.targetId)}
-                                    >
-                                        <span style={{ color: '#6B7280' }}>&rarr;</span>
-                                        <span className="px-1 py-0.5 rounded" style={{ color: '#2563EB', background: '#EFF6FF', fontSize: FONT.xs }}>
-                                            {rel.type}
-                                        </span>
-                                        <span className="truncate" style={{ color: '#374151' }}>
-                                            {target?.name || rel.targetId}
-                                        </span>
-                                        {target && (
-                                            <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
-                                                style={{ background: tColor + '15', color: tColor, fontSize: FONT.badge }}>
-                                                {target.kind}
-                                            </span>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                            {incoming.map(rel => {
-                                const source = model.elements[rel.sourceId];
-                                const sColor = source ? (LAYER_COLORS[source.layer] || '#666') : '#666';
-                                return (
-                                    <div
-                                        key={rel.id}
-                                        className="flex items-center gap-1.5 text-xs cursor-pointer rounded-md px-2 py-1 transition-colors"
-                                        onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                        onClick={() => selectElement(rel.sourceId)}
-                                    >
-                                        <span style={{ color: '#6B7280' }}>&larr;</span>
-                                        <span className="px-1 py-0.5 rounded" style={{ color: '#10B981', background: '#ECFDF5', fontSize: FONT.xs }}>
-                                            {rel.type}
-                                        </span>
-                                        <span className="truncate" style={{ color: '#374151' }}>
-                                            {source?.name || rel.sourceId}
-                                        </span>
-                                        {source && (
-                                            <span className="ml-auto flex-shrink-0 px-1 py-0.5 rounded"
-                                                style={{ background: sColor + '15', color: sColor, fontSize: FONT.badge }}>
-                                                {source.kind}
-                                            </span>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+                {outgoing.length > 0 && (
+                    <Section title="Outgoing" count={outgoing.length} defaultOpen>
+                        {outgoing.map(rel => {
+                            const target = model.elements[rel.targetId];
+                            const tColor = target ? (LAYER_COLORS[target.layer] || '#666') : '#666';
+                            return (
+                                <TreeRow
+                                    key={rel.id}
+                                    label={target?.name || rel.targetId}
+                                    kind={target?.kind}
+                                    kindColor={tColor}
+                                    arrow="→"
+                                    typeBadge={rel.type}
+                                    typeColor="#2563EB"
+                                    onClick={() => selectElement(rel.targetId)}
+                                />
+                            );
+                        })}
+                    </Section>
                 )}
 
-                {/* Violations / Guidance */}
+                {incoming.length > 0 && (
+                    <Section title="Incoming" count={incoming.length} defaultOpen>
+                        {incoming.map(rel => {
+                            const source = model.elements[rel.sourceId];
+                            const sColor = source ? (LAYER_COLORS[source.layer] || '#666') : '#666';
+                            return (
+                                <TreeRow
+                                    key={rel.id}
+                                    label={source?.name || rel.sourceId}
+                                    kind={source?.kind}
+                                    kindColor={sColor}
+                                    arrow="←"
+                                    typeBadge={rel.type}
+                                    typeColor="#10B981"
+                                    onClick={() => selectElement(rel.sourceId)}
+                                />
+                            );
+                        })}
+                    </Section>
+                )}
+
                 {violations.length > 0 && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-2" style={{ color: '#6B7280' }}>Guidance</div>
+                    <Section title="Guidance" count={violations.length} defaultOpen>
                         <div className="space-y-2">
                             {violations.map((v, i) => (
                                 <div
                                     key={`${v.ruleId}-${i}`}
                                     className="text-xs p-2.5 rounded-lg"
                                     style={{
-                                        background: v.severity === 'error' ? '#FEF2F2'
-                                            : v.severity === 'warning' ? '#FFFBEB' : '#EFF6FF',
-                                        border: `1px solid ${
-                                            v.severity === 'error' ? '#FECACA'
-                                            : v.severity === 'warning' ? '#FDE68A' : '#BFDBFE'
-                                        }`,
+                                        background: v.severity === 'error' ? '#FEF2F2' : v.severity === 'warning' ? '#FFFBEB' : '#EFF6FF',
+                                        border: `1px solid ${v.severity === 'error' ? '#FECACA' : v.severity === 'warning' ? '#FDE68A' : '#BFDBFE'}`,
                                     }}
                                 >
-                                    <div style={{
-                                        color: v.severity === 'error' ? '#DC2626'
-                                            : v.severity === 'warning' ? '#D97706' : '#2563EB',
-                                    }}>
+                                    <div style={{ color: v.severity === 'error' ? '#DC2626' : v.severity === 'warning' ? '#D97706' : '#2563EB' }}>
                                         {v.description}
                                     </div>
                                     <div className="mt-0.5" style={{ color: '#6B7280' }}>[{v.ruleId}]</div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 )}
 
-                {/* Compliant indicator */}
                 {violations.length === 0 && (
                     <div className="p-4">
                         <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -448,10 +453,8 @@ function ElementProperties() {
                     </div>
                 )}
 
-                {/* Source file (#38) */}
                 {element.file && (
-                    <div className="p-4" style={sectionStyle}>
-                        <div className="text-xs font-medium mb-1.5" style={{ color: '#6B7280' }}>Source</div>
+                    <Section title="Source" defaultOpen={false}>
                         <button
                             className="flex items-center gap-1.5 text-xs w-full text-left rounded px-1 py-0.5 transition-colors"
                             style={{ color: '#2563EB', background: 'transparent', border: 'none', cursor: 'pointer', wordBreak: 'break-all' }}
@@ -469,7 +472,7 @@ function ElementProperties() {
                             </span>
                             <span style={{ flexShrink: 0, color: '#9CA3AF', fontSize: '9px' }}>copy</span>
                         </button>
-                    </div>
+                    </Section>
                 )}
             </div>
         </>
@@ -508,7 +511,6 @@ export function UnifiedPropertiesPanel() {
 
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
-            {/* Collapse button */}
             <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid #EDEDEA' }}>
                 <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Properties</span>
                 <button

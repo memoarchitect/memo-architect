@@ -43,9 +43,9 @@ export function DSMView() {
 
     const kindsFilter = useMemo(() => {
         switch (filterKinds) {
-            case 'functional': return ['SystemFunction', 'ComponentFunction'];
+            case 'functional': return ['Function', 'Function'];
             case 'behavior': return ['ActionDefinition', 'ActionUsage'];
-            case 'all': return ['SystemFunction', 'ComponentFunction', 'ActionDefinition', 'ActionUsage'];
+            case 'all': return ['Function', 'Function', 'ActionDefinition', 'ActionUsage'];
         }
     }, [filterKinds]);
 
@@ -102,7 +102,7 @@ export function DSMView() {
                         No Functional Elements
                     </h3>
                     <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.6 }}>
-                        Add SystemFunction or ComponentFunction elements to your model to see the DSM.
+                        Add Function or Function elements to your model to see the DSM.
                     </p>
                 </div>
             </div>

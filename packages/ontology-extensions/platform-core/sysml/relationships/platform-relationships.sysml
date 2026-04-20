@@ -2,7 +2,7 @@ package MEMO_Extension_Platform_Relationships {
 
     connection def HasEndpoint {
         end dataInterface : DataInterface [1];
-        end endpoint : DataEndpoint [1];
+        end endpoint : Port [1];
     }
 
     connection def ImplementsProtocol {

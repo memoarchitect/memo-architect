@@ -23,7 +23,7 @@ Defines design inputs for **{{project.product}}** per 21 CFR 820.30(c). Design i
 ### 2.1 Performance Requirements
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: table
 columns: name, layer, doc
 sort: name

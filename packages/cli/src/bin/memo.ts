@@ -44,6 +44,7 @@ import { dhfDraftCommand } from '../commands/dhf-draft.js';
 import { dhfInitCommand } from '../commands/dhf-init.js';
 import { dhfPreviewCommand } from '../commands/dhf-preview.js';
 import { pluginListCommand, pluginCreateCommand, pluginRunCommand } from '../commands/plugin.js';
+import { reqNewCommand } from '../commands/req.js';
 
 const program = new Command();
 
@@ -313,6 +314,28 @@ program
     .option('--dry-run', 'Preview generated SysML without writing')
     .action(async (description: string, options: { output?: string; dryRun?: boolean }) => {
         await generateCommand(description, options);
+    });
+
+// ─── memo req ────────────────────────────────────────────────────────────────
+
+const reqCmd = program
+    .command('req')
+    .description('Requirement authoring helpers');
+
+reqCmd
+    .command('new')
+    .description('Generate a requirement stub from an EARS template')
+    .requiredOption('-t, --template <template>', 'Template: ubi, event, state, opt, unwanted')
+    .option('-o, --output <file>', 'Write stub to file (stdout if omitted)')
+    .option('--id <reqId>', 'Requirement ID', 'REQ-001')
+    .option('--title <title>', 'Requirement title', 'New Requirement')
+    .action(async (options: { template: 'ubi' | 'event' | 'state' | 'opt' | 'unwanted'; output?: string; id?: string; title?: string }) => {
+        await reqNewCommand({
+            template: options.template,
+            output: options.output,
+            id: options.id,
+            title: options.title,
+        });
     });
 
 // ─── memo plugin ─────────────────────────────────────────────────────────────

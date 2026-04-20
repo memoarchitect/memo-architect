@@ -1,0 +1,14 @@
+# MEMO trace element: TST-UIX-001
+id: "TST-UIX-001"
+type: "verification_test"
+domain: "UIX"
+title: "Workbench UX & Navigation verification"
+description: "Verify the workbench ux & navigation flow end-to-end via CLI and/or web runtime surface. This document captures the externally visible runtime/control surfaces derived from code and runtime observation."
+status: "draft"
+tags:
+  - "verification"
+  - "fallback-generated"
+links:
+  - "SR-UIX-001"
+source: "docs/src/developers/requirements/runtime-surfaces.md"
+updated_at: "2026-04-18T14:09:41.614Z"

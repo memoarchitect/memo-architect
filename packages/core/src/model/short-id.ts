@@ -26,15 +26,13 @@ const KIND_PREFIX_OVERRIDES: Record<string, string> = {
     ResidualRisk: 'RRISK',
     // Requirements
     StakeholderRequirement: 'STK-REQ',
-    SystemRequirement: 'SYS-REQ',
-    SoftwareRequirement: 'SW-REQ',
-    HardwareRequirement: 'HW-REQ',
+    Requirement: 'REQ',
     SoftwareSpecification: 'SW-SPEC',
-    InterfaceRequirement: 'IF-REQ',
+    InterfaceRequirement: 'REQ',
     PerformanceRequirement: 'PERF-REQ',
     SafetyRequirement: 'SAF-REQ',
     RegulatoryRequirement: 'REG-REQ',
-    FunctionalRequirement: 'FUNC-REQ',
+    FunctionalRequirement: 'REQ',
     NonFunctionalRequirement: 'NFR',
     // Architecture
     SystemComponent: 'SYS-COMP',
@@ -66,7 +64,7 @@ const KIND_PREFIX_OVERRIDES: Record<string, string> = {
 
 /**
  * Split a CamelCase string into its constituent words.
- * e.g. "SoftwareRequirement" → ["Software", "Requirement"]
+ * e.g. "SoftwareComponent" → ["Software", "Component"]
  */
 function splitCamelCase(s: string): string[] {
     return s.replace(/([A-Z])/g, ' $1').trim().split(' ').filter(Boolean);
@@ -85,7 +83,7 @@ function abbreviateWord(word: string): string {
 
 /**
  * Derive a kind prefix from a kind name using CamelCase splitting + abbreviation.
- * e.g. "SoftwareRequirement" → "SW-REQ", "Hazard" → "HZD"
+ * e.g. "SoftwareComponent" → "SFT-CMP", "Hazard" → "HZD"
  */
 function derivePrefix(kind: string): string {
     const words = splitCamelCase(kind);

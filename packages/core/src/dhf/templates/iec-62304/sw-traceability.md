@@ -21,13 +21,13 @@ This Software Traceability Matrix demonstrates bidirectional traceability from s
 ## 2. Traceability Summary
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: count
 label: System requirements
 ```
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 display: count
 label: Software requirements
 ```
@@ -43,7 +43,7 @@ label: Test cases
 ## 3. System → Software Requirements
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: table
 columns: name, layer, doc
 sort: name
@@ -55,7 +55,7 @@ empty: "No system requirements defined."
 ## 4. Software Requirements
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 display: table
 columns: name, layer, doc
 sort: name

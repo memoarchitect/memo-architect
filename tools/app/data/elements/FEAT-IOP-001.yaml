@@ -1,0 +1,14 @@
+# MEMO trace element: FEAT-IOP-001
+id: "FEAT-IOP-001"
+type: "feature"
+domain: "IOP"
+title: "Import/Export & Interoperability feature"
+description: "Import/Export & Interoperability capability surface inferred from architecture decomposition and runtime contracts."
+status: "active"
+tags:
+  - "capability"
+  - "fallback-generated"
+links:
+  - "SR-IOP-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.617Z"

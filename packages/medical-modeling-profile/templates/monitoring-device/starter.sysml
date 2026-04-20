@@ -8,7 +8,7 @@
 // ============================================================================
 
 package MonitoringDevice {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // PURPOSE LAYER
@@ -45,32 +45,41 @@ package MonitoringDevice {
     // REQUIREMENTS LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement unAccurateMeasurement : UserNeed {
+    requirement unAccurateMeasurement : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Accurate Physiological Measurement";
         doc /* Values shall be accurate enough for clinical decision-making. */
     }
 
-    requirement unTimelyAlarm : UserNeed {
+    requirement unTimelyAlarm : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Timely Alarm for Critical Values";
         doc /* Clinicians shall be alerted within defined time when parameters are outside safe limits. */
     }
 
-    requirement unContinuousOperation : UserNeed {
+    requirement unContinuousOperation : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Continuous Uninterrupted Operation";
         doc /* The monitor shall operate continuously for the patient's care episode without loss of data. */
     }
 
-    requirement srMeasurementAccuracy : SystemRequirement {
+    requirement srMeasurementAccuracy : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Measurement Accuracy per IEC 60601-2-X";
         doc /* Measurement accuracy shall meet applicable IEC 60601-2-X performance standard. */
     }
 
-    requirement srAlarmResponseTime : SystemRequirement {
+    requirement srAlarmResponseTime : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Alarm Generation within 10 seconds";
         doc /* An audible and visual alarm shall be generated within 10 seconds of parameter exceeding limit. */
     }
 
-    requirement srDataContinuity : SystemRequirement {
+    requirement srDataContinuity : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Data Continuity during Power Interruption";
         doc /* Battery backup shall sustain monitoring for ≥ 30 minutes during power failure. */
     }
@@ -128,19 +137,23 @@ package MonitoringDevice {
     // FUNCTIONAL LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    action funcAcquire : SystemFunction {
+    action funcAcquire : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Acquire Physiological Signal";
     }
 
-    action funcProcess : SystemFunction {
+    action funcProcess : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Process and Filter Signal";
     }
 
-    action funcDisplay : SystemFunction {
+    action funcDisplay : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Display Parameter and Trend";
     }
 
-    action funcAlarm : SystemFunction {
+    action funcAlarm : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Generate Alarm";
     }
 

@@ -1,0 +1,14 @@
+# MEMO trace element: FEAT-EXT-001
+id: "FEAT-EXT-001"
+type: "feature"
+domain: "EXT"
+title: "Extensibility & Plugin Platform feature"
+description: "Extensibility & Plugin Platform capability surface inferred from architecture decomposition and runtime contracts."
+status: "active"
+tags:
+  - "capability"
+  - "fallback-generated"
+links:
+  - "SR-EXT-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.619Z"

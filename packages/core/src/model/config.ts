@@ -194,7 +194,7 @@ export interface FirstRunConfig {
 
 /** Ontology reference in a device project */
 export interface OntologyReference {
-    /** Package name, e.g. "@memo/ontology-medical" or "memo-ontology-medical" on SysAnd */
+    /** Package name, e.g. "@memo/ontology-medical-process" or "memo-ontology-medical" on SysAnd */
     name: string;
     /** Semver version constraint, e.g. "^2.0.0" */
     version: string;
@@ -202,7 +202,7 @@ export interface OntologyReference {
 
 /** Self-describing metadata for an ontology package */
 export interface OntologyMetadata {
-    /** Package identifier, e.g. "@memo/ontology-medical" */
+    /** Package identifier, e.g. "@memo/ontology-medical-process" */
     id: string;
     /** Semver version */
     version: string;
@@ -255,6 +255,18 @@ export interface MEMOConfig {
 
     /** Ontology references (device projects only) */
     ontologies?: OntologyReference[];
+
+    /**
+     * Optional ontology modules to load on top of the base ontology.
+     * Modules are declared as optional in the base ontology's memo.package.yaml
+     * under `optionalModules:`. Following OWL import semantics, only modules a
+     * project explicitly opts into are loaded — disabled modules contribute
+     * no kinds/relationships, no validation rules, and no viewpoints.
+     *
+     * Each entry is a package name like "@memo/ontology-middleware-ros" or a
+     * short alias like "ros" (resolved against the base ontology's optionalModules list).
+     */
+    modules?: string[];
 
     /** Self-describing metadata for ontology packages */
     ontologyMetadata?: OntologyMetadata;

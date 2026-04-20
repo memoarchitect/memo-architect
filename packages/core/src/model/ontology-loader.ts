@@ -35,6 +35,10 @@ export interface OntologyPackageInfo {
     relationshipCount: number;
     relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;
+    /** Optional modules declared by this package (OWL-style — loadable on demand). */
+    optionalModules?: string[];
+    /** True when this package is listed in another package's optionalModules. */
+    isOptionalModule?: boolean;
     // Absolute path to the package directory. Set by the dev server so the web
     // client can emit `open-file` WS events (N-ONTO §6.5 source-file deep-links).
     rootDir?: string;
@@ -269,8 +273,27 @@ function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInf
     const layers = buildLayers(sysmlDir);
     const kindCount = layers.reduce((s, l) => s + l.kindCount, 0);
     const relationshipTypes = buildRelationshipTypes(sysmlDir);
+    const optionalModules = readOptionalModulesList(configContent);
 
-    return { name, version, type, description, extends: extendsField, layers, kindCount, relationshipCount: relationshipTypes.length, relationshipTypes, selected, rootDir: pkgDir };
+    return {
+        name, version, type, description, extends: extendsField, layers, kindCount,
+        relationshipCount: relationshipTypes.length, relationshipTypes, selected,
+        optionalModules,
+        rootDir: pkgDir,
+    };
+}
+
+/** Parse `optionalModules:` list from a manifest file content. */
+function readOptionalModulesList(content: string): string[] {
+    const out: string[] = [];
+    const section = content.split(/^optionalModules:/m)[1];
+    if (!section) return out;
+    for (const m of section.matchAll(/^\s*-\s*"?([@\w/-]+)"?/gm)) {
+        out.push(m[1]);
+        // Guard: stop if we leave the list (no leading `-`)
+        if (!m[0].match(/^\s*-/)) break;
+    }
+    return out;
 }
 
 /**
@@ -338,6 +361,23 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
         } catch { /* skip */ }
     }
 
+    // Collect which packages are declared as optionalModules by any base pkg.
+    const optionalModuleNames = new Set<string>();
+    for (const pkgDir of candidates) {
+        for (const cfg of configCandidates) {
+            const manifestPath = join(pkgDir, cfg);
+            if (!existsSync(manifestPath)) continue;
+            try {
+                const content = readFileSync(manifestPath, 'utf-8');
+                for (const m of readOptionalModulesList(content)) optionalModuleNames.add(m);
+            } catch { /* skip */ }
+            break;
+        }
+    }
+
+    // Also collect project-declared modules so they get selected=true.
+    const projectModules = new Set(readDeclaredModules(primaryConfig));
+
     for (const pkgDir of candidates) {
         const hasSysml = existsSync(join(pkgDir, 'sysml'));
         if (!hasSysml) continue;
@@ -347,7 +387,10 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
         const info = buildPackageInfo(pkgDir, false);
         if (!info) continue;
         // Mark as selected if name is in project's ontologies list, or inferred heuristic
-        info.selected = selectedNames.has(info.name) || selectedNames.has(info.name.replace('@memo/', ''));
+        info.selected = selectedNames.has(info.name)
+            || selectedNames.has(info.name.replace('@memo/', ''))
+            || projectModules.has(info.name);
+        info.isOptionalModule = optionalModuleNames.has(info.name);
         result.push(info);
     }
 
@@ -436,13 +479,96 @@ function findOntologyPackageDirs(configPath: string): string[] {
         // Skip inaccessible configs
     }
 
-    // 3. Ensure @memo/ontology-core is always included as the foundational backbone
-    const coreConfig = resolvePackageConfig('@memo/ontology-core', dirname(configPath));
+    // 3. Resolve optional modules declared under `modules:` in the project config.
+    // Modules follow OWL import semantics — declared in the base ontology's
+    // `optionalModules:` list, loaded only when the project opts in.
+    for (const moduleName of readDeclaredModules(configPath)) {
+        const pkgConfig = resolvePackageConfig(moduleName, dirname(configPath));
+        if (pkgConfig) walkExtendsChain(pkgConfig, dirs, seen);
+    }
+
+    // 4. Ensure @memo/ontology-medical-arch is always included as the foundational backbone
+    const coreConfig = resolvePackageConfig('@memo/ontology-medical-arch', dirname(configPath));
     if (coreConfig) {
         walkExtendsChain(coreConfig, dirs, seen);
     }
 
     return dirs;
+}
+
+/**
+ * Read the `modules:` array from a project config, resolving short aliases
+ * (e.g. "ros") against the base ontology's `optionalModules:` list.
+ * Returns fully-qualified @memo/... package names.
+ */
+function readDeclaredModules(configPath: string): string[] {
+    const out: string[] = [];
+    let rawModules: string[] = [];
+    try {
+        const content = readFileSync(configPath, 'utf-8');
+        // Match `modules:\n  - foo\n  - "@memo/bar"`
+        const section = content.split(/^modules:/m)[1];
+        if (section) {
+            const matches = section.matchAll(/^\s*-\s*"?([@\w/-]+)"?/gm);
+            // Stop at the first non-list YAML key
+            for (const m of matches) {
+                const line = m[0];
+                if (!line.match(/^\s*-/)) break;
+                rawModules.push(m[1]);
+            }
+        }
+    } catch { return out; }
+    if (rawModules.length === 0) return out;
+
+    // Gather optional-module allowlist from the extends chain
+    const allowlist = collectOptionalModules(configPath);
+    const byShort = new Map<string, string>(); // short → full name
+    for (const full of allowlist) {
+        const short = full.replace(/^@memo\/ontology-/, '').replace(/^@memo\//, '');
+        byShort.set(short, full);
+    }
+
+    for (const entry of rawModules) {
+        if (entry.startsWith('@')) {
+            out.push(entry);
+        } else {
+            const resolved = byShort.get(entry) ?? `@memo/ontology-${entry}`;
+            out.push(resolved);
+        }
+    }
+    return out;
+}
+
+/**
+ * Walk the extends chain of a config and collect all `optionalModules:` entries.
+ */
+function collectOptionalModules(configPath: string): string[] {
+    const modules = new Set<string>();
+    const visited = new Set<string>();
+    const stack = [resolve(configPath)];
+    while (stack.length) {
+        const p = stack.pop()!;
+        if (visited.has(p)) continue;
+        visited.add(p);
+        let content = '';
+        try { content = readFileSync(p, 'utf-8'); } catch { continue; }
+
+        const section = content.split(/^optionalModules:/m)[1];
+        if (section) {
+            for (const m of section.matchAll(/^\s*-\s*"?([@\w/-]+)"?/gm)) {
+                const line = m[0];
+                if (!line.match(/^\s*-/)) break;
+                modules.add(m[1]);
+            }
+        }
+
+        const extendsMatch = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
+        if (extendsMatch) {
+            const parent = resolvePackageConfig(extendsMatch[1], dirname(p));
+            if (parent) stack.push(parent);
+        }
+    }
+    return [...modules];
 }
 
 /**
@@ -487,16 +613,15 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
         }
     }
 
-    // If this is an ontology that doesn't extend ontology-core,
-    // check if ontology-core exists as a sibling package
+    // If this is an ontology that doesn't declare extends,
+    // fall back to ontology-medical-arch as the foundational sibling package.
     if (projectType === 'ontology' && !extendsPackage) {
-        const coreDir = resolve(packageDir, '../ontology-core');
-        const coreSysml = resolve(coreDir, 'sysml');
-        // Check for any config file format to mark as seen
-        const coreConfigKey = resolve(coreDir, 'memo.package.yaml');
-        if (existsSync(coreSysml) && !seen.has(coreConfigKey)) {
-            dirs.push(coreDir);
-            seen.add(coreConfigKey);
+        const archDir = resolve(packageDir, '../ontology-medical-arch');
+        const archSysml = resolve(archDir, 'sysml');
+        const archConfigKey = resolve(archDir, 'memo.package.yaml');
+        if (existsSync(archSysml) && !seen.has(archConfigKey)) {
+            dirs.push(archDir);
+            seen.add(archConfigKey);
         }
     }
 }
