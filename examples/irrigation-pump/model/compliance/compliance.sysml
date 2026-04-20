@@ -1,4 +1,5 @@
 package IrrigationPump_Compliance {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
     import IrrigationPump_Requirements::*;
     import IrrigationPump_Risk::*;

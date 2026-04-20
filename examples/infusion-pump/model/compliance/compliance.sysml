@@ -1,4 +1,5 @@
 package InfusionPump_Compliance {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
     import InfusionPump_Requirements::*;
     import InfusionPump_Risk::*;

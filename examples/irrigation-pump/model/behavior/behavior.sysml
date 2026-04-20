@@ -1,4 +1,5 @@
 package IrrigationPump_Behavior {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
 
     action ucPrimeCassette : UseCase {

@@ -9,9 +9,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 package OntologySelection {
-    import MEMO_ONTOLOGY_CLINICAL::*;
-    import MEMO_ONTOLOGY_PLATFORM_MESSAGING::*;
-    import MEMO_ONTOLOGY_PLATFORM_ROBOTICS::*;
     import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
 }
