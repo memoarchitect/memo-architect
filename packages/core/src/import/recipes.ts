@@ -45,7 +45,7 @@ export const RECIPE_REQUIREMENTS_MATRIX: ImportRecipe = {
     id: 'requirements-matrix',
     name: 'Requirements Matrix',
     description: 'Standard requirements spreadsheet with ID, title, description, priority columns. Typical export from DOORS, Jama, or a simple Excel requirements log.',
-    defaultKind: 'SystemRequirement',
+    defaultKind: 'Requirement',
     columnMappings: [
         { sourceColumn: 'req id',           targetAttribute: 'id',          transform: 'sanitize-id', required: true },
         { sourceColumn: 'requirement id',   targetAttribute: 'id',          transform: 'sanitize-id', required: true },

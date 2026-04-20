@@ -12,7 +12,7 @@ import { computeImpact, type ImpactDirection } from '@memo/core/lib/analysis/imp
 // ─── Tree Architecture ──────────────────────────────────────────────────────
 //
 // V-Cycle Group (Stakeholders, Requirements, Risk, ...)    ← semantic group
-//   └─ Kind (Actor, SystemRequirement, Hazard, ...)        ← element kind
+//   └─ Kind (Actor, Requirement, Hazard, ...)        ← element kind
 //       └─ User Group (Clinical, Manufacturing, ...)       ← attribute "group"
 //           └─ Element (Surgeon, Nurse, ...)               ← leaf node
 //       └─ Ungrouped                                       ← elements without group

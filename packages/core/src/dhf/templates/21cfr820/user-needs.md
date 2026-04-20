@@ -27,11 +27,11 @@ _[TODO: Describe all intended user groups with their roles, training levels, and
 ## 3. User Needs
 
 ```memo-query
-kind: [StakeholderNeed, UserNeed]
+kind: [StakeholderNeed, Requirement]
 display: table
 columns: name, layer, doc
 sort: name
-empty: "No user need elements defined. Add StakeholderNeed or UserNeed elements."
+empty: "No user need elements defined. Add StakeholderNeed or Requirement elements."
 ```
 
 ---

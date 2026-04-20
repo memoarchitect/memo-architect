@@ -126,8 +126,8 @@ const EA_STEREOTYPE_MAP: Record<string, string> = {
     'Risk': 'Risk',
     'risk': 'Risk',
     // Design control
-    'UserNeed': 'UserNeed',
-    'userNeed': 'UserNeed',
+    'UserNeed': 'Requirement',
+    'userNeed': 'Requirement',
     'DesignInput': 'DesignInput',
     'designInput': 'DesignInput',
     'DesignOutput': 'DesignOutput',
@@ -137,14 +137,14 @@ const EA_STEREOTYPE_MAP: Record<string, string> = {
     'SoftwareItem': 'SoftwareItem',
     'SoftwareUnit': 'SoftwareUnit',
     'SOUPItem': 'SOUPItem',
-    'SoftwareRequirement': 'SoftwareRequirement',
+    'SoftwareRequirement': 'Requirement',
     // Verification
     'TestCase': 'Test',
     'Test': 'Test',
     'VerificationActivity': 'VerificationActivity',
     // Requirements
-    'SystemRequirement': 'SystemRequirement',
-    'systemRequirement': 'SystemRequirement',
+    'SystemRequirement': 'Requirement',
+    'systemRequirement': 'Requirement',
     'Requirement': 'Requirement',
     'FunctionalRequirement': 'Requirement',
     // Architecture
@@ -419,7 +419,7 @@ function resolveConstruct(
     const entry = kindRegistry?.getKind(memoKind);
     if (entry) return entry.sysmlConstruct;
     // Fallback heuristics
-    if (memoKind.includes('Requirement') || memoKind === 'UserNeed' || memoKind === 'DesignInput' || memoKind === 'DesignOutput') {
+    if (memoKind.includes('Requirement') || memoKind === 'DesignInput' || memoKind === 'DesignOutput') {
         return 'requirement';
     }
     if (memoKind === 'Function' || memoKind.includes('Activity') || memoKind.includes('Action')) {

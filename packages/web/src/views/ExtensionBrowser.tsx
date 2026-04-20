@@ -57,8 +57,8 @@ export function ExtensionBrowser() {
 
     // Available extensions catalog (static for now)
     const availableExtensions = [
-        { name: '@memo/ontology-medical', desc: 'Medical domain core (risk, safety, operations, usability)', kinds: 80 },
-        { name: '@memo/ontology-qms', desc: 'Quality management and design control', kinds: 25 },
+        { name: '@memo/ontology-medical-process', desc: 'Medical domain core (risk, safety, operations, usability)', kinds: 80 },
+        { name: '@memo/ontology-medical-process', desc: 'Quality management and design control', kinds: 25 },
         { name: '@memo/ontology-iec62304', desc: 'IEC 62304 software lifecycle', kinds: 20 },
         { name: '@memo/ontology-cybersecurity', desc: 'Cybersecurity and privacy', kinds: 30 },
         { name: '@memo/ontology-medical-clinical-trial', desc: 'Clinical evaluation and evidence', kinds: 20 },

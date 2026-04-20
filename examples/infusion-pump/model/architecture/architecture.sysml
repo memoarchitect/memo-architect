@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Architecture {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import InfusionPump_Requirements::*;
 
     // Logical Architecture (subsystems)

@@ -1,5 +1,5 @@
 package IrrigationPump_Compliance {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import IrrigationPump_Requirements::*;
     import IrrigationPump_Risk::*;
     import IrrigationPump_Behavior::*;
@@ -108,19 +108,27 @@ package IrrigationPump_Compliance {
         attribute redefines objective = "Restore irrigation before the field collapses";
     }
 
-    requirement uiReqPrimeConfirmation : UserInterfaceRequirement {
+    requirement uiReqPrimeConfirmation : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines title = "Prime confirmation shall require completion acknowledgment before irrigation can start";
     }
 
-    requirement cyberReqAuthenticatedAlarmIntegration : AuthenticationRequirement {
+    requirement cyberReqAuthenticatedAlarmIntegration : Requirement {
+        attribute redefines category = RequirementCategory::Security;
+        attribute redefines topic = "Authentication";
         attribute redefines title = "Remote alarm integration shall require authenticated system-to-system sessions";
     }
 
-    requirement cyberReqAuthorizedStatusExchange : AuthorizationRequirement {
+    requirement cyberReqAuthorizedStatusExchange : Requirement {
+        attribute redefines category = RequirementCategory::Security;
+        attribute redefines topic = "Authorization";
         attribute redefines title = "Procedure-status exchange shall only permit authorized perioperative systems to retrieve data";
     }
 
-    requirement cyberReqAuditRemoteEvents : AuditLogRequirement {
+    requirement cyberReqAuditRemoteEvents : Requirement {
+        attribute redefines category = RequirementCategory::Security;
+        attribute redefines topic = "AuditLog";
         attribute redefines title = "The system shall log remote alarm and procedure-status exchanges for cybersecurity review";
     }
 
@@ -493,7 +501,9 @@ package IrrigationPump_Compliance {
         attribute redefines version = "2.0.0";
     }
 
-    requirement constraintIntegratedVariantConnectivity : VariantConstraint {
+    requirement constraintIntegratedVariantConnectivity : Requirement {
+        attribute redefines category = RequirementCategory::Constraint;
+        attribute redefines scope = "Variant";
         attribute redefines reqId = "VC-IRR-001";
         attribute redefines title = "Integrated OR variants shall include authenticated alarm routing and documented terminology bindings";
     }

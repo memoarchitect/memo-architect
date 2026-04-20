@@ -37,7 +37,7 @@ empty: "No validation activities defined."
 ## 4. User Need Coverage
 
 ```memo-query
-kind: [StakeholderNeed, UserNeed]
+kind: [StakeholderNeed, Requirement]
 display: table
 columns: name, layer, doc
 empty: "No user needs defined."

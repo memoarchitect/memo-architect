@@ -9,7 +9,7 @@
 // ============================================================================
 
 package GPCA_Requirements {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // STAKEHOLDERS & ACTORS
@@ -109,28 +109,36 @@ package GPCA_Requirements {
     // USER NEEDS (≥10)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement unSafeDrugDelivery : UserNeed {
+    requirement unSafeDrugDelivery : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-001";
         attribute redefines title = "Safe Drug Delivery";
         doc /* The clinician needs the pump to deliver analgesic drugs safely
              * without risk of overdose or under-dose. */
     }
 
-    requirement unOverdoseProtection : UserNeed {
+    requirement unOverdoseProtection : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-002";
         attribute redefines title = "Overdose Protection";
         doc /* The patient needs automatic protection against drug overdose
              * including maximum dose limits and lockout periods. */
     }
 
-    requirement unBolusAdministration : UserNeed {
+    requirement unBolusAdministration : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-003";
         attribute redefines title = "Patient Self-Administration of Bolus";
         doc /* The patient needs the ability to self-administer supplemental
              * bolus doses within clinician-defined safety limits. */
     }
 
-    requirement unExceptionalConditionAlert : UserNeed {
+    requirement unExceptionalConditionAlert : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-004";
         attribute redefines title = "Exceptional Condition Alerting";
         doc /* The clinician needs immediate notification of exceptional
@@ -138,7 +146,9 @@ package GPCA_Requirements {
              * and equipment malfunction. */
     }
 
-    requirement unPrescriptionManagement : UserNeed {
+    requirement unPrescriptionManagement : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-005";
         attribute redefines title = "Prescription Management";
         doc /* The clinician needs to configure drug type, concentration,
@@ -146,49 +156,63 @@ package GPCA_Requirements {
              * pharmacy database. */
     }
 
-    requirement unLogging : UserNeed {
+    requirement unLogging : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-006";
         attribute redefines title = "Infusion Logging";
         doc /* The clinician needs a complete log of all infusion events,
              * alarms, and configuration changes for clinical review. */
     }
 
-    requirement unContinuousDelivery : UserNeed {
+    requirement unContinuousDelivery : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-007";
         attribute redefines title = "Continuous Basal Delivery";
         doc /* The patient needs continuous background analgesic delivery
              * at a clinician-prescribed basal rate. */
     }
 
-    requirement unSecureAccess : UserNeed {
+    requirement unSecureAccess : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-008";
         attribute redefines title = "Secure Access Control";
         doc /* The hospital needs the pump to prevent unauthorized changes
              * to prescription parameters and device configuration. */
     }
 
-    requirement unReliableOperation : UserNeed {
+    requirement unReliableOperation : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-009";
         attribute redefines title = "Reliable Unattended Operation";
         doc /* The patient needs the pump to operate reliably when the
              * clinician is not present at bedside. */
     }
 
-    requirement unEasyConfiguration : UserNeed {
+    requirement unEasyConfiguration : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-010";
         attribute redefines title = "Easy and Error-Free Configuration";
         doc /* The clinician needs an intuitive interface that minimizes
              * programming errors during prescription entry. */
     }
 
-    requirement unPowerResilience : UserNeed {
+    requirement unPowerResilience : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-011";
         attribute redefines title = "Power Failure Resilience";
         doc /* The patient needs the pump to maintain safe operation
              * during power interruptions with battery backup. */
     }
 
-    requirement unDrugCompatibility : UserNeed {
+    requirement unDrugCompatibility : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines reqId = "UN-012";
         attribute redefines title = "Drug Compatibility Verification";
         doc /* The pharmacist needs the pump to validate drug/concentration
@@ -199,7 +223,8 @@ package GPCA_Requirements {
     // SYSTEM REQUIREMENTS — Infusion Mode Control (REQ 1–47)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement sysReqPowerOn : SystemRequirement {
+    requirement sysReqPowerOn : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-001";
         attribute redefines title = "System Power On";
         attribute redefines rationale = "GPCA REQ 1: system start initiates self-test";
@@ -207,7 +232,8 @@ package GPCA_Requirements {
              * activation of the power switch, initiating a self-test sequence. */
     }
 
-    requirement sysReqSelfTest : SystemRequirement {
+    requirement sysReqSelfTest : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-002";
         attribute redefines title = "Power-On Self Test";
         attribute redefines rationale = "GPCA REQ 2: self-test verifies hardware integrity";
@@ -216,7 +242,8 @@ package GPCA_Requirements {
              * before entering IDLE state. */
     }
 
-    requirement sysReqIdleState : SystemRequirement {
+    requirement sysReqIdleState : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-003";
         attribute redefines title = "Idle State Entry";
         attribute redefines rationale = "GPCA REQ 3: system awaits configuration in IDLE";
@@ -224,7 +251,8 @@ package GPCA_Requirements {
              * awaiting prescription configuration. */
     }
 
-    requirement sysReqStartInfusion : SystemRequirement {
+    requirement sysReqStartInfusion : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-004";
         attribute redefines title = "Infusion Initiation";
         attribute redefines rationale = "GPCA REQ 4: clinician-initiated transition to THERAPY";
@@ -232,7 +260,8 @@ package GPCA_Requirements {
              * clinician confirmation after valid prescription is loaded. */
     }
 
-    requirement sysReqBasalDelivery : SystemRequirement {
+    requirement sysReqBasalDelivery : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-005";
         attribute redefines title = "Basal Rate Delivery";
         attribute redefines rationale = "GPCA REQ 5: continuous background infusion";
@@ -240,7 +269,8 @@ package GPCA_Requirements {
              * prescribed basal rate continuously within ±5% accuracy. */
     }
 
-    requirement sysReqSquareBolus : SystemRequirement {
+    requirement sysReqSquareBolus : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-006";
         attribute redefines title = "Clinician Square Bolus";
         attribute redefines rationale = "GPCA REQ 6: clinician-initiated bolus at prescribed rate";
@@ -248,7 +278,8 @@ package GPCA_Requirements {
              * at the prescribed bolus rate for the prescribed duration. */
     }
 
-    requirement sysReqPatientBolus : SystemRequirement {
+    requirement sysReqPatientBolus : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-007";
         attribute redefines title = "Patient Bolus Delivery";
         attribute redefines rationale = "GPCA REQ 7: patient self-administration";
@@ -257,7 +288,8 @@ package GPCA_Requirements {
              * and maximum bolus count has not been exceeded. */
     }
 
-    requirement sysReqLockoutPeriod : SystemRequirement {
+    requirement sysReqLockoutPeriod : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-008";
         attribute redefines title = "Bolus Lockout Period";
         attribute redefines rationale = "GPCA REQ 8: prevent bolus overdose via timing";
@@ -265,7 +297,8 @@ package GPCA_Requirements {
              * patient bolus deliveries as prescribed by the clinician. */
     }
 
-    requirement sysReqMaxBolusCount : SystemRequirement {
+    requirement sysReqMaxBolusCount : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-009";
         attribute redefines title = "Maximum Bolus Count";
         attribute redefines rationale = "GPCA REQ 9: cumulative bolus limit per time window";
@@ -273,7 +306,8 @@ package GPCA_Requirements {
              * doses within a configurable time window. */
     }
 
-    requirement sysReqFlowRateTolerance : SystemRequirement {
+    requirement sysReqFlowRateTolerance : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-010";
         attribute redefines title = "Flow Rate Tolerance Monitoring";
         attribute redefines rationale = "GPCA REQ 10: detect deviation from prescribed rate";
@@ -281,7 +315,8 @@ package GPCA_Requirements {
              * generate an alarm if deviation exceeds ±20% of prescribed rate. */
     }
 
-    requirement sysReqAirDetection : SystemRequirement {
+    requirement sysReqAirDetection : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-011";
         attribute redefines title = "Air-in-Line Detection";
         attribute redefines rationale = "GPCA REQ 11: prevent air embolism";
@@ -290,7 +325,8 @@ package GPCA_Requirements {
              * cumulative air volume exceeds 50 µL. */
     }
 
-    requirement sysReqOcclusionDetection : SystemRequirement {
+    requirement sysReqOcclusionDetection : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-012";
         attribute redefines title = "Occlusion Detection";
         attribute redefines rationale = "GPCA REQ 12: detect blocked line";
@@ -298,7 +334,8 @@ package GPCA_Requirements {
              * via pressure monitoring and generate alarm within 30 seconds. */
     }
 
-    requirement sysReqEmptyReservoir : SystemRequirement {
+    requirement sysReqEmptyReservoir : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-013";
         attribute redefines title = "Empty Reservoir Detection";
         attribute redefines rationale = "GPCA REQ 13: prevent air infusion from empty container";
@@ -306,7 +343,8 @@ package GPCA_Requirements {
              * below minimum volume and transition to KVO delivery. */
     }
 
-    requirement sysReqLowReservoir : SystemRequirement {
+    requirement sysReqLowReservoir : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-014";
         attribute redefines title = "Low Reservoir Warning";
         attribute redefines rationale = "GPCA REQ 14: advance warning before empty";
@@ -314,7 +352,8 @@ package GPCA_Requirements {
              * remaining volume drops below configurable threshold. */
     }
 
-    requirement sysReqKVODelivery : SystemRequirement {
+    requirement sysReqKVODelivery : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-015";
         attribute redefines title = "Keep Vein Open Delivery";
         attribute redefines rationale = "GPCA REQ 15: maintain venous access during pause/alarm";
@@ -323,7 +362,8 @@ package GPCA_Requirements {
              * venous access. */
     }
 
-    requirement sysReqInhibitInfusion : SystemRequirement {
+    requirement sysReqInhibitInfusion : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-016";
         attribute redefines title = "Inhibit Infusion on Critical Alarm";
         attribute redefines rationale = "GPCA notification table: Inhibit_Infusion column";
@@ -332,7 +372,8 @@ package GPCA_Requirements {
              * over-infusion, empty reservoir). */
     }
 
-    requirement sysReqInhibitSquareBolus : SystemRequirement {
+    requirement sysReqInhibitSquareBolus : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-017";
         attribute redefines title = "Inhibit Square Bolus on Safety Event";
         attribute redefines rationale = "GPCA notification table: Inhibit_Square_Bolus column";
@@ -340,7 +381,8 @@ package GPCA_Requirements {
              * when safety conditions are active. */
     }
 
-    requirement sysReqInhibitPatientBolus : SystemRequirement {
+    requirement sysReqInhibitPatientBolus : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-018";
         attribute redefines title = "Inhibit Patient Bolus on Safety Event";
         attribute redefines rationale = "GPCA notification table: Inhibit_Patient_Bolus column";
@@ -348,7 +390,8 @@ package GPCA_Requirements {
              * conditions are active or lockout period has not elapsed. */
     }
 
-    requirement sysReqStopBolus : SystemRequirement {
+    requirement sysReqStopBolus : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-019";
         attribute redefines title = "Stop Active Bolus on Critical Alarm";
         attribute redefines rationale = "GPCA notification table: Stop_Bolus column";
@@ -356,7 +399,8 @@ package GPCA_Requirements {
              * upon detection of a critical alarm condition. */
     }
 
-    requirement sysReqPauseInfusion : SystemRequirement {
+    requirement sysReqPauseInfusion : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-020";
         attribute redefines title = "Pause Infusion";
         attribute redefines rationale = "GPCA REQ: clinician-initiated pause";
@@ -364,7 +408,8 @@ package GPCA_Requirements {
              * infusion delivery with automatic transition to KVO rate. */
     }
 
-    requirement sysReqResumeInfusion : SystemRequirement {
+    requirement sysReqResumeInfusion : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-021";
         attribute redefines title = "Resume Infusion After Pause";
         attribute redefines rationale = "GPCA REQ: resume from PAUSED state";
@@ -372,7 +417,8 @@ package GPCA_Requirements {
              * rate upon clinician confirmation after pause condition is cleared. */
     }
 
-    requirement sysReqStopInfusion : SystemRequirement {
+    requirement sysReqStopInfusion : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-022";
         attribute redefines title = "Stop Infusion";
         attribute redefines rationale = "GPCA REQ: return to IDLE";
@@ -380,7 +426,8 @@ package GPCA_Requirements {
              * IDLE state upon clinician stop command. */
     }
 
-    requirement sysReqAlarmEscalation : SystemRequirement {
+    requirement sysReqAlarmEscalation : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-023";
         attribute redefines title = "Alarm Priority Escalation";
         attribute redefines rationale = "GPCA notification priority resolution";
@@ -389,7 +436,8 @@ package GPCA_Requirements {
              * acknowledged within configurable timeout. */
     }
 
-    requirement sysReqVisualAlarm : SystemRequirement {
+    requirement sysReqVisualAlarm : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-024";
         attribute redefines title = "Visual Alarm Indication";
         attribute redefines rationale = "IEC 60601-1-8 alarm signals";
@@ -398,7 +446,8 @@ package GPCA_Requirements {
              * yellow=medium, cyan=low). */
     }
 
-    requirement sysReqAudioAlarm : SystemRequirement {
+    requirement sysReqAudioAlarm : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-025";
         attribute redefines title = "Audio Alarm Signal";
         attribute redefines rationale = "IEC 60601-1-8 alarm signals";
@@ -406,7 +455,8 @@ package GPCA_Requirements {
              * tonal patterns per priority level, audible from 2 meters. */
     }
 
-    requirement sysReqAlarmSilence : SystemRequirement {
+    requirement sysReqAlarmSilence : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-026";
         attribute redefines title = "Temporary Alarm Silence";
         attribute redefines rationale = "GPCA REQ: alarm management";
@@ -414,7 +464,8 @@ package GPCA_Requirements {
              * for a maximum of 120 seconds; visual indication shall persist. */
     }
 
-    requirement sysReqOverInfusionDetection : SystemRequirement {
+    requirement sysReqOverInfusionDetection : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-027";
         attribute redefines title = "Over-Infusion Detection";
         attribute redefines rationale = "GPCA REQ: safety-critical monitoring";
@@ -422,7 +473,8 @@ package GPCA_Requirements {
              * prescribed volume by more than 10% and inhibit infusion. */
     }
 
-    requirement sysReqUnderInfusionDetection : SystemRequirement {
+    requirement sysReqUnderInfusionDetection : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-028";
         attribute redefines title = "Under-Infusion Detection";
         attribute redefines rationale = "GPCA REQ: therapeutic effectiveness";
@@ -430,7 +482,8 @@ package GPCA_Requirements {
              * than 80% of prescribed volume and generate warning alarm. */
     }
 
-    requirement sysReqReverseFlow : SystemRequirement {
+    requirement sysReqReverseFlow : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-029";
         attribute redefines title = "Reverse Flow Detection";
         attribute redefines rationale = "GPCA REQ: prevent backflow";
@@ -438,7 +491,8 @@ package GPCA_Requirements {
              * and inhibit infusion immediately. */
     }
 
-    requirement sysReqAntiFreeFLow : SystemRequirement {
+    requirement sysReqAntiFreeFLow : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-030";
         attribute redefines title = "Anti-Free-Flow Protection";
         attribute redefines rationale = "GPCA REQ: gravity-driven free flow prevention";
@@ -447,7 +501,8 @@ package GPCA_Requirements {
              * when the administration set is removed from the pump. */
     }
 
-    requirement sysReqModeDisplay : SystemRequirement {
+    requirement sysReqModeDisplay : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-031";
         attribute redefines title = "Current Mode Display";
         attribute redefines rationale = "GPCA REQ: operator awareness";
@@ -455,7 +510,8 @@ package GPCA_Requirements {
              * mode (OFF, IDLE, BASAL, BOLUS, PAUSED, KVO) on the primary display. */
     }
 
-    requirement sysReqDeliveredVolumeDisplay : SystemRequirement {
+    requirement sysReqDeliveredVolumeDisplay : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-032";
         attribute redefines title = "Delivered Volume Display";
         attribute redefines rationale = "GPCA REQ: delivery monitoring";
@@ -463,7 +519,8 @@ package GPCA_Requirements {
              * current flow rate, and remaining reservoir volume. */
     }
 
-    requirement sysReqWatchdog : SystemRequirement {
+    requirement sysReqWatchdog : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-033";
         attribute redefines title = "Software Watchdog Timer";
         attribute redefines rationale = "GPCA REQ: detect software malfunction";
@@ -471,7 +528,8 @@ package GPCA_Requirements {
              * triggers safe shutdown if software fails to reset within 100ms. */
     }
 
-    requirement sysReqBatteryBackup : SystemRequirement {
+    requirement sysReqBatteryBackup : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-034";
         attribute redefines title = "Battery Backup Operation";
         attribute redefines rationale = "GPCA REQ: power resilience";
@@ -479,7 +537,8 @@ package GPCA_Requirements {
              * 4 hours at maximum flow rate upon loss of mains power. */
     }
 
-    requirement sysReqBatteryLowAlarm : SystemRequirement {
+    requirement sysReqBatteryLowAlarm : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-035";
         attribute redefines title = "Low Battery Alarm";
         attribute redefines rationale = "GPCA REQ: advance warning of power loss";
@@ -487,7 +546,8 @@ package GPCA_Requirements {
              * battery capacity drops below 30 minutes of operation. */
     }
 
-    requirement sysReqPowerFailSafe : SystemRequirement {
+    requirement sysReqPowerFailSafe : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-036";
         attribute redefines title = "Power Failure Safe State";
         attribute redefines rationale = "GPCA REQ: fail-safe on complete power loss";
@@ -495,7 +555,8 @@ package GPCA_Requirements {
              * control valve and activate anti-free-flow mechanism. */
     }
 
-    requirement sysReqMotorControl : SystemRequirement {
+    requirement sysReqMotorControl : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-037";
         attribute redefines title = "Pump Motor Control";
         attribute redefines rationale = "GPCA REQ: precise delivery mechanism";
@@ -503,7 +564,8 @@ package GPCA_Requirements {
              * closed-loop feedback to achieve flow rate accuracy within ±5%. */
     }
 
-    requirement sysReqFlowSensorRedundancy : SystemRequirement {
+    requirement sysReqFlowSensorRedundancy : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-038";
         attribute redefines title = "Flow Sensor Redundancy";
         attribute redefines rationale = "GPCA REQ: single fault tolerance";
@@ -511,7 +573,8 @@ package GPCA_Requirements {
              * disagreement beyond threshold shall trigger sensor alarm. */
     }
 
-    requirement sysReqPressureMonitoring : SystemRequirement {
+    requirement sysReqPressureMonitoring : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-039";
         attribute redefines title = "Line Pressure Monitoring";
         attribute redefines rationale = "GPCA REQ: occlusion and disconnection detection";
@@ -520,7 +583,8 @@ package GPCA_Requirements {
              * or disconnection (low pressure). */
     }
 
-    requirement sysReqTemperatureMonitoring : SystemRequirement {
+    requirement sysReqTemperatureMonitoring : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-040";
         attribute redefines title = "Environmental Temperature Monitoring";
         attribute redefines rationale = "GPCA REQ: operating condition verification";
@@ -528,7 +592,8 @@ package GPCA_Requirements {
              * alarm if outside operating range (10°C to 40°C). */
     }
 
-    requirement sysReqDoorInterlock : SystemRequirement {
+    requirement sysReqDoorInterlock : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-041";
         attribute redefines title = "Door Open Interlock";
         attribute redefines rationale = "GPCA REQ: prevent operation with open mechanism";
@@ -540,7 +605,8 @@ package GPCA_Requirements {
     // SYSTEM REQUIREMENTS — Data Configuration (REQ 48–58)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement sysReqPrescriptionEntry : SystemRequirement {
+    requirement sysReqPrescriptionEntry : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-048";
         attribute redefines title = "Prescription Data Entry";
         attribute redefines rationale = "GPCA REQ 48: manual prescription entry";
@@ -549,7 +615,8 @@ package GPCA_Requirements {
              * lockout period, maximum bolus count, VTBI. */
     }
 
-    requirement sysReqDrugLibrary : SystemRequirement {
+    requirement sysReqDrugLibrary : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-049";
         attribute redefines title = "Drug Library Integration";
         attribute redefines rationale = "GPCA REQ 49: pharmacy database lookup";
@@ -557,7 +624,8 @@ package GPCA_Requirements {
              * maximum rates, and incompatibility data from the pharmacy database. */
     }
 
-    requirement sysReqSoftLimitCheck : SystemRequirement {
+    requirement sysReqSoftLimitCheck : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-050";
         attribute redefines title = "Soft Limit Warning";
         attribute redefines rationale = "GPCA REQ 50: configurable soft limits";
@@ -566,7 +634,8 @@ package GPCA_Requirements {
              * to override with confirmation. */
     }
 
-    requirement sysReqHardLimitCheck : SystemRequirement {
+    requirement sysReqHardLimitCheck : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-051";
         attribute redefines title = "Hard Limit Enforcement";
         attribute redefines rationale = "GPCA REQ 51: non-overridable safety limits";
@@ -574,7 +643,8 @@ package GPCA_Requirements {
              * hard limits defined in the drug library with no override option. */
     }
 
-    requirement sysReqConcentrationValidation : SystemRequirement {
+    requirement sysReqConcentrationValidation : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-052";
         attribute redefines title = "Drug Concentration Validation";
         attribute redefines rationale = "GPCA REQ 52: verify correct drug loading";
@@ -582,7 +652,8 @@ package GPCA_Requirements {
              * the drug library and alert if mismatch detected. */
     }
 
-    requirement sysReqVTBI : SystemRequirement {
+    requirement sysReqVTBI : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-053";
         attribute redefines title = "Volume To Be Infused";
         attribute redefines rationale = "GPCA REQ 53: total delivery volume";
@@ -590,7 +661,8 @@ package GPCA_Requirements {
              * (VTBI) parameter, stopping infusion when VTBI is reached. */
     }
 
-    requirement sysReqPrescriptionConfirmation : SystemRequirement {
+    requirement sysReqPrescriptionConfirmation : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-054";
         attribute redefines title = "Prescription Confirmation";
         attribute redefines rationale = "GPCA REQ 54: require explicit clinician confirmation";
@@ -598,7 +670,8 @@ package GPCA_Requirements {
              * all prescription parameters before starting infusion. */
     }
 
-    requirement sysReqPrescriptionDisplay : SystemRequirement {
+    requirement sysReqPrescriptionDisplay : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-055";
         attribute redefines title = "Prescription Parameter Display";
         attribute redefines rationale = "GPCA REQ 55: review before confirmation";
@@ -606,7 +679,8 @@ package GPCA_Requirements {
              * summary screen for clinician review before confirmation. */
     }
 
-    requirement sysReqParameterModification : SystemRequirement {
+    requirement sysReqParameterModification : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-056";
         attribute redefines title = "Parameter Modification During Infusion";
         attribute redefines rationale = "GPCA REQ 56: rate titration";
@@ -614,7 +688,8 @@ package GPCA_Requirements {
              * active infusion with soft/hard limit validation applied. */
     }
 
-    requirement sysReqConfigTimeout : SystemRequirement {
+    requirement sysReqConfigTimeout : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-057";
         attribute redefines title = "Configuration Timeout";
         attribute redefines rationale = "GPCA REQ 57: abandoned configuration";
@@ -622,7 +697,8 @@ package GPCA_Requirements {
              * configuration is not completed within 10 minutes. */
     }
 
-    requirement sysReqBarcodeScan : SystemRequirement {
+    requirement sysReqBarcodeScan : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-058";
         attribute redefines title = "Barcode/RFID Scanning";
         attribute redefines rationale = "GPCA REQ 58: automated drug identification";
@@ -634,7 +710,8 @@ package GPCA_Requirements {
     // SYSTEM REQUIREMENTS — Logging & Security (REQ 77–82)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement sysReqEventLog : SystemRequirement {
+    requirement sysReqEventLog : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-077";
         attribute redefines title = "Event Logging";
         attribute redefines rationale = "GPCA REQ 77: audit trail";
@@ -642,7 +719,8 @@ package GPCA_Requirements {
              * configuration changes, and delivery data with timestamps. */
     }
 
-    requirement sysReqLogRetention : SystemRequirement {
+    requirement sysReqLogRetention : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-078";
         attribute redefines title = "Log Data Retention";
         attribute redefines rationale = "GPCA REQ 78: regulatory retention requirements";
@@ -650,7 +728,8 @@ package GPCA_Requirements {
              * 30 days in non-volatile memory. */
     }
 
-    requirement sysReqLogExport : SystemRequirement {
+    requirement sysReqLogExport : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-079";
         attribute redefines title = "Log Data Export";
         attribute redefines rationale = "GPCA REQ 79: clinical review";
@@ -658,7 +737,8 @@ package GPCA_Requirements {
              * USB or network interface in a standard format. */
     }
 
-    requirement sysReqAuthentication : SystemRequirement {
+    requirement sysReqAuthentication : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-080";
         attribute redefines title = "Clinician Authentication";
         attribute redefines rationale = "GPCA REQ 80: access control";
@@ -666,7 +746,8 @@ package GPCA_Requirements {
              * PIN, or biometric) before allowing prescription modification. */
     }
 
-    requirement sysReqAccessLevels : SystemRequirement {
+    requirement sysReqAccessLevels : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-081";
         attribute redefines title = "Role-Based Access Levels";
         attribute redefines rationale = "GPCA REQ 81: privilege separation";
@@ -674,7 +755,8 @@ package GPCA_Requirements {
              * request only), clinician (all operations), biomed (maintenance). */
     }
 
-    requirement sysReqSessionTimeout : SystemRequirement {
+    requirement sysReqSessionTimeout : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-082";
         attribute redefines title = "Session Timeout";
         attribute redefines rationale = "GPCA REQ 82: automatic lock after inactivity";
@@ -686,7 +768,8 @@ package GPCA_Requirements {
     // NON-BEHAVIORAL REQUIREMENTS (REQ 83–86)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement sysReqDropResistance : SystemRequirement {
+    requirement sysReqDropResistance : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-083";
         attribute redefines title = "Drop Resistance";
         attribute redefines rationale = "GPCA REQ 83: IEC 60601-1 mechanical safety";
@@ -694,7 +777,8 @@ package GPCA_Requirements {
              * without loss of safety function per IEC 60601-1. */
     }
 
-    requirement sysReqWaterproofing : SystemRequirement {
+    requirement sysReqWaterproofing : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-084";
         attribute redefines title = "Fluid Ingress Protection";
         attribute redefines rationale = "GPCA REQ 84: IPX4 splash protection";
@@ -702,7 +786,8 @@ package GPCA_Requirements {
              * protection from all directions. */
     }
 
-    requirement sysReqDataPersistence : SystemRequirement {
+    requirement sysReqDataPersistence : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-085";
         attribute redefines title = "Data Persistence on Power Loss";
         attribute redefines rationale = "GPCA REQ 85: non-volatile storage";
@@ -711,7 +796,8 @@ package GPCA_Requirements {
              * across power cycles. */
     }
 
-    requirement sysReqEMCCompliance : SystemRequirement {
+    requirement sysReqEMCCompliance : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines reqId = "REQ-086";
         attribute redefines title = "EMC Compliance";
         attribute redefines rationale = "GPCA REQ 86: IEC 60601-1-2 EMC";
@@ -723,7 +809,10 @@ package GPCA_Requirements {
     // SOFTWARE REQUIREMENTS (≥20) — Derived from System Requirements
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement swReqFlowRateControl : SoftwareRequirement {
+    requirement swReqFlowRateControl : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-001";
         attribute redefines title = "Flow Rate Control Algorithm";
         doc /* The software shall implement a PID control loop for pump
@@ -731,7 +820,10 @@ package GPCA_Requirements {
              * with update rate ≥10 Hz. */
     }
 
-    requirement swReqModeStateMachine : SoftwareRequirement {
+    requirement swReqModeStateMachine : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-002";
         attribute redefines title = "Mode State Machine Implementation";
         doc /* The software shall implement the GPCA hierarchical state
@@ -739,7 +831,10 @@ package GPCA_Requirements {
              * ensuring deterministic state transitions within 10ms. */
     }
 
-    requirement swReqNotificationPriority : SoftwareRequirement {
+    requirement swReqNotificationPriority : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-003";
         attribute redefines title = "Notification Priority Resolution";
         doc /* The software shall resolve concurrent alarm conditions using
@@ -747,14 +842,20 @@ package GPCA_Requirements {
              * the highest-priority active alarm. */
     }
 
-    requirement swReqKVOController : SoftwareRequirement {
+    requirement swReqKVOController : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-004";
         attribute redefines title = "KVO Rate Controller";
         doc /* The software shall maintain KVO delivery rate (1 mL/hr default)
              * when normal infusion is inhibited, paused, or VTBI reached. */
     }
 
-    requirement swReqTimerManagement : SoftwareRequirement {
+    requirement swReqTimerManagement : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-005";
         attribute redefines title = "Timer Management Service";
         doc /* The software shall manage all timing functions: lockout timer,
@@ -762,7 +863,10 @@ package GPCA_Requirements {
              * session timeout, and watchdog reset. */
     }
 
-    requirement swReqAirBubbleAlgorithm : SoftwareRequirement {
+    requirement swReqAirBubbleAlgorithm : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-006";
         attribute redefines title = "Air Bubble Detection Algorithm";
         doc /* The software shall process dual ultrasonic sensor data to
@@ -770,7 +874,10 @@ package GPCA_Requirements {
              * alarm when threshold (50 µL) is exceeded. */
     }
 
-    requirement swReqOcclusionAlgorithm : SoftwareRequirement {
+    requirement swReqOcclusionAlgorithm : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-007";
         attribute redefines title = "Occlusion Detection Algorithm";
         doc /* The software shall analyze pressure sensor data to detect
@@ -778,14 +885,20 @@ package GPCA_Requirements {
              * adaptive threshold based on current flow rate. */
     }
 
-    requirement swReqVolumeTracking : SoftwareRequirement {
+    requirement swReqVolumeTracking : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-008";
         attribute redefines title = "Volume Delivered Tracking";
         doc /* The software shall maintain running total of delivered volume
              * with ±2% accuracy using flow sensor integration. */
     }
 
-    requirement swReqBolusScheduler : SoftwareRequirement {
+    requirement swReqBolusScheduler : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-009";
         attribute redefines title = "Bolus Scheduling and Delivery";
         doc /* The software shall manage bolus request queue, lockout
@@ -793,7 +906,10 @@ package GPCA_Requirements {
              * and bolus delivery modes. */
     }
 
-    requirement swReqPrescriptionValidator : SoftwareRequirement {
+    requirement swReqPrescriptionValidator : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-010";
         attribute redefines title = "Prescription Parameter Validation";
         doc /* The software shall validate all prescription parameters against
@@ -801,7 +917,10 @@ package GPCA_Requirements {
              * library before accepting configuration. */
     }
 
-    requirement swReqAlarmManager : SoftwareRequirement {
+    requirement swReqAlarmManager : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-011";
         attribute redefines title = "Alarm Management Module";
         doc /* The software shall maintain an alarm queue with priority
@@ -809,7 +928,10 @@ package GPCA_Requirements {
              * and silence timer management. */
     }
 
-    requirement swReqEventLogger : SoftwareRequirement {
+    requirement swReqEventLogger : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-012";
         attribute redefines title = "Event Logging Module";
         doc /* The software shall log events to non-volatile storage with
@@ -817,7 +939,10 @@ package GPCA_Requirements {
              * in a circular buffer with 30-day minimum retention. */
     }
 
-    requirement swReqDisplayController : SoftwareRequirement {
+    requirement swReqDisplayController : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-013";
         attribute redefines title = "Display Controller";
         doc /* The software shall update the display at ≥2 Hz with current
@@ -825,7 +950,10 @@ package GPCA_Requirements {
              * alarms, and battery status. */
     }
 
-    requirement swReqPharmacyInterface : SoftwareRequirement {
+    requirement swReqPharmacyInterface : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-014";
         attribute redefines title = "Pharmacy Database Interface";
         doc /* The software shall implement HL7/FHIR interface to query
@@ -833,7 +961,10 @@ package GPCA_Requirements {
              * local cached drug database. */
     }
 
-    requirement swReqMotorDriver : SoftwareRequirement {
+    requirement swReqMotorDriver : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-015";
         attribute redefines title = "Motor Driver Interface";
         doc /* The software shall control the stepper motor via PWM with
@@ -841,7 +972,10 @@ package GPCA_Requirements {
              * capability within 50ms. */
     }
 
-    requirement swReqSensorFusion : SoftwareRequirement {
+    requirement swReqSensorFusion : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-016";
         attribute redefines title = "Sensor Data Fusion";
         doc /* The software shall cross-validate dual flow sensor and dual
@@ -849,7 +983,10 @@ package GPCA_Requirements {
              * within 2 seconds and raising diagnostic alarm. */
     }
 
-    requirement swReqWatchdogService : SoftwareRequirement {
+    requirement swReqWatchdogService : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-017";
         attribute redefines title = "Watchdog Service";
         doc /* The software shall reset the hardware watchdog timer every
@@ -857,7 +994,10 @@ package GPCA_Requirements {
              * trigger hardware safe-shutdown. */
     }
 
-    requirement swReqNVStorage : SoftwareRequirement {
+    requirement swReqNVStorage : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-018";
         attribute redefines title = "Non-Volatile Storage Manager";
         doc /* The software shall implement wear-leveled flash storage
@@ -865,7 +1005,10 @@ package GPCA_Requirements {
              * and configuration parameters. */
     }
 
-    requirement swReqAuthenticationModule : SoftwareRequirement {
+    requirement swReqAuthenticationModule : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-019";
         attribute redefines title = "Authentication Module";
         doc /* The software shall implement multi-factor authentication
@@ -873,7 +1016,10 @@ package GPCA_Requirements {
              * with session management and timeout. */
     }
 
-    requirement swReqSelfTestRoutine : SoftwareRequirement {
+    requirement swReqSelfTestRoutine : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-020";
         attribute redefines title = "Power-On Self Test Routine";
         doc /* The software shall execute POST sequence: RAM check, ROM CRC,
@@ -881,14 +1027,20 @@ package GPCA_Requirements {
              * test — reporting results and blocking on any failure. */
     }
 
-    requirement swReqEncryption : SoftwareRequirement {
+    requirement swReqEncryption : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-021";
         attribute redefines title = "Data Encryption";
         doc /* The software shall encrypt all network communications using
              * TLS 1.3 and encrypt stored patient data using AES-256. */
     }
 
-    requirement swReqOverInfusionMonitor : SoftwareRequirement {
+    requirement swReqOverInfusionMonitor : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-022";
         attribute redefines title = "Over-Infusion Monitor";
         doc /* The software shall compare delivered volume against prescribed
@@ -896,14 +1048,20 @@ package GPCA_Requirements {
              * 10% with ≤1 second detection latency. */
     }
 
-    requirement swReqReverseFlowDetector : SoftwareRequirement {
+    requirement swReqReverseFlowDetector : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-023";
         attribute redefines title = "Reverse Flow Detector";
         doc /* The software shall detect negative flow rate from sensor data
              * and immediately close the valve and raise critical alarm. */
     }
 
-    requirement swReqBarcodeProcessor : SoftwareRequirement {
+    requirement swReqBarcodeProcessor : Requirement {
+        attribute redefines category = RequirementCategory::Technical;
+        attribute redefines source = "Software";
+        attribute redefines domain = "Software";
         attribute redefines reqId = "SW-REQ-024";
         attribute redefines title = "Barcode/RFID Processing";
         doc /* The software shall decode barcode/RFID data to extract drug

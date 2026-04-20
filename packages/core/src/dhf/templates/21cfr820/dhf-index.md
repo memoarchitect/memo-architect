@@ -75,7 +75,7 @@ This Design History File (DHF) Index serves as the master index for all design a
 ## 4. Model Summary
 
 ```memo-query
-kind: [SystemRequirement, SoftwareRequirement]
+kind: [Requirement, Requirement]
 display: count
 label: Total requirements
 ```

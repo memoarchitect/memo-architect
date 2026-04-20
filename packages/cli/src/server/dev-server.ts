@@ -400,8 +400,8 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
 
                         // Map package names to their SysML namespace identifiers
                         const PACKAGE_NAMESPACE: Record<string, string> = {
-                            '@memo/ontology-core': 'MEMO_Ontology_Core',
-                            '@memo/ontology-medical': 'MEMO_Ontology_Medical',
+                            '@memo/ontology-medical-arch': 'MEMO_Ontology_MedicalArch',
+                            '@memo/ontology-medical-process': 'MEMO_Ontology_MedicalProcess',
                             '@memo/medical-modeling-profile': 'MEMO_Medical_Profile',
                         };
                         const importLines = selected

@@ -4,7 +4,7 @@
 
 name: "Medical Device - Standard"
 description: "Core + consolidated medical + IEC 62304 ontologies — covers most Class II projects"
-extends: "@memo/ontology-core"
+extends: "@memo/ontology-medical-arch"
 ontologies:
-  - "@memo/ontology-medical"
+  - "@memo/ontology-medical-process"
   - "@memo/ontology-iec62304"

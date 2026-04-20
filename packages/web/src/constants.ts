@@ -75,8 +75,8 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         id: 'requirements',
         label: 'Requirements',
         color: '#4A90D9',
-        kinds: ['UserNeed', 'SystemRequirement', 'SoftwareRequirement', 'HardwareRequirement',
-            'DesignSpecification', 'OtherRequirement', 'Standard', 'RegulatoryRequirement'],
+        kinds: ['Requirement', 'Requirement', 'Requirement', 'Requirement',
+            'DesignSpecification', 'Requirement', 'Standard', 'RegulatoryRequirement'],
     },
     {
         id: 'use-cases',
@@ -88,7 +88,7 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         id: 'functions',
         label: 'Functions',
         color: '#D35400',
-        kinds: ['SystemFunction', 'ComponentFunction'],
+        kinds: ['Function', 'Function'],
     },
     {
         id: 'behavior',
@@ -128,7 +128,7 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         id: 'interfaces',
         label: 'Interfaces & Ports',
         color: '#1ABC9C',
-        kinds: ['Port', 'PortEthernet', 'PortUSB', 'PortSerial', 'PortPower',
+        kinds: ['Port', 'Port', 'Port', 'Port', 'Port',
             'Interface', 'SoftwareInterface', 'SoftwareProvidedInterface',
             'SoftwareRequiredInterface', 'DataType', 'RosTopic', 'RosService'],
     },

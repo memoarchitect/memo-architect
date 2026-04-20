@@ -21,7 +21,7 @@ This System Test Plan defines the approach for system-level testing of **{{proje
 ## 2. System Requirements Under Test
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: table
 columns: name, layer, doc
 sort: name

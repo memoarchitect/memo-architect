@@ -1,0 +1,51 @@
+# @memo/ontology-medical-arch rendering configuration
+# Architecture layer colors (ISO 42010 + medical-arch additions)
+
+layers:
+  - id: operational
+    label: Operational Analysis
+    color: "#C0392B"
+
+  - id: system
+    label: System Analysis
+    color: "#8E44AD"
+
+  - id: requirements
+    label: Requirements
+    color: "#4A90D9"
+
+  - id: functional
+    label: Functional Analysis
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical Architecture
+    color: "#7B68EE"
+
+  - id: hardware
+    label: Hardware Architecture
+    color: "#95A5A6"
+
+  - id: software
+    label: Software Architecture
+    color: "#F39C12"
+
+  - id: interfaces
+    label: Interfaces & Contracts
+    color: "#1ABC9C"
+
+  - id: analysis
+    label: Analysis & Constraints
+    color: "#16A085"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"
+
+  - id: ui
+    label: UI Realization
+    color: "#3498DB"
+
+  - id: operations
+    label: Operational Activities
+    color: "#10B981"

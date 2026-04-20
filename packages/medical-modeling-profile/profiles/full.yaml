@@ -1,12 +1,12 @@
 # Medical Device — Full Profile
-# All extensions (~200+ kinds) — equivalent to @memo/ontology-medical
+# All extensions (~200+ kinds) — equivalent to @memo/ontology-medical-process
 # For: Class III devices, combination products, complex regulated systems
 
 name: "Medical Device - Full"
 description: "All consolidated medical ontologies including cybersecurity and clinical-trial domains"
-extends: "@memo/ontology-core"
+extends: "@memo/ontology-medical-arch"
 ontologies:
-  - "@memo/ontology-medical"
+  - "@memo/ontology-medical-process"
   - "@memo/ontology-iec62304"
   - "@memo/ontology-cybersecurity"
   - "@memo/ontology-medical-clinical-trial"

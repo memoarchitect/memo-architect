@@ -99,7 +99,7 @@ function computeNextAction(stats: DashboardStats): NextAction {
         return {
             icon: '📋',
             title: 'Define your first requirement',
-            description: 'Your model has elements but no system requirements yet. Add a SystemRequirement in the Model Explorer.',
+            description: 'Your model has elements but no system requirements yet. Add a Requirement in the Model Explorer.',
             urgency: 'high',
         };
     }

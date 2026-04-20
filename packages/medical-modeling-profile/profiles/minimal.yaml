@@ -4,5 +4,5 @@
 
 name: "Medical Device - Minimal"
 description: "Core MBSE backbone only — requirements, architecture, verification, basic risk"
-extends: "@memo/ontology-core"
+extends: "@memo/ontology-medical-arch"
 ontologies: []

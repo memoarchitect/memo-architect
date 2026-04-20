@@ -231,14 +231,14 @@ function harRiskControls(sectionDef: any, _docType: any, ctx: QueryContext): Dhf
 // ─── RTM ─────────────────────────────────────────────────────────────────────
 
 function rtmRequirements(sectionDef: any, _docType: any, ctx: QueryContext): DhfDocumentSection {
-    const reqs = ctx.elementsByKinds(['SystemRequirement', 'SoftwareRequirement', 'DesignInput']);
+    const reqs = ctx.elementsByKinds(['Requirement', 'Requirement', 'DesignInput']);
     const blocks: DhfBlock[] = [heading(3, 'Requirements Inventory', 'requirements-list')];
 
     if (reqs.length > 0) {
         blocks.push(metricGroup(
             metric('Total Requirements', reqs.length),
-            metric('System Requirements', ctx.elementsByKind('SystemRequirement').length),
-            metric('Software Requirements', ctx.elementsByKind('SoftwareRequirement').length),
+            metric('System Requirements', ctx.elementsByKind('Requirement').length),
+            metric('Software Requirements', ctx.elementsByKind('Requirement').length),
         ));
         const rows = reqs.map(r => [
             [xref(r.id, r.name, r.kind)],
@@ -256,7 +256,7 @@ function rtmRequirements(sectionDef: any, _docType: any, ctx: QueryContext): Dhf
 }
 
 function rtmCoverage(sectionDef: any, _docType: any, ctx: QueryContext): DhfDocumentSection {
-    const reqs = ctx.elementsByKinds(['SystemRequirement', 'SoftwareRequirement']);
+    const reqs = ctx.elementsByKinds(['Requirement', 'Requirement']);
     const blocks: DhfBlock[] = [heading(3, 'Coverage Summary', 'coverage-summary')];
 
     let traced = 0;
@@ -288,7 +288,7 @@ function rtmCoverage(sectionDef: any, _docType: any, ctx: QueryContext): DhfDocu
 }
 
 function rtmGaps(sectionDef: any, _docType: any, ctx: QueryContext): DhfDocumentSection {
-    const reqs = ctx.elementsByKinds(['SystemRequirement', 'SoftwareRequirement']);
+    const reqs = ctx.elementsByKinds(['Requirement', 'Requirement']);
     const blocks: DhfBlock[] = [heading(3, 'Traceability Gaps', 'gaps')];
 
     const untraced = reqs.filter(r => {

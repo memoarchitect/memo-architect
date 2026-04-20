@@ -4,7 +4,7 @@
   "private": true,
   "description": "MEMO — Git-native MBSE tool for medical device systems engineering",
   "scripts": {
-    "build": "turbo build",
+    "build": "pnpm run ontology:lint && turbo build",
     "dev": "turbo dev",
     "test": "turbo test",
     "test:coverage": "turbo test:coverage",
@@ -20,6 +20,11 @@
     "roadmap:open": "bash scripts/show-roadmap.sh --open",
     "roadmap:done": "bash scripts/show-roadmap.sh --done",
     "roadmap:bugs": "bash scripts/show-roadmap.sh --bugs",
+    "ontology:lint": "node tools/ontology-tools/lint.mjs",
+    "diagram:ontology": "node tools/ontology-tools/diagram-gen.mjs",
+    "trace-app:dev": "node tools/app/server.mjs",
+    "trace-app:bootstrap": "node tools/app/scripts/bootstrap-from-docs.mjs",
+    "trace-app:sync-docs": "node tools/app/scripts/sync-docs-from-elements.mjs",
     "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {

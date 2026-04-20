@@ -121,8 +121,8 @@ export function createQueryContext(
         },
         untracedRequirements: () => {
             const reqs = [
-                ...(model.elementsByKind.get('SystemRequirement') || []),
-                ...(model.elementsByKind.get('SoftwareRequirement') || []),
+                ...(model.elementsByKind.get('Requirement') || []),
+                ...(model.elementsByKind.get('Requirement') || []),
             ];
             return reqs.filter(r => {
                 const out = model.outgoing.get(r.id) || [];

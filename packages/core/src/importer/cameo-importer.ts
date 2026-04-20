@@ -127,15 +127,15 @@ const CAMEO_STEREOTYPE_MAP: Record<string, string> = {
     'Harm': 'Harm',
     'RiskControl': 'RiskControl',
     'Risk': 'Risk',
-    'UserNeed': 'UserNeed',
+    'UserNeed': 'Requirement',
     'DesignInput': 'DesignInput',
     'DesignOutput': 'DesignOutput',
     'SoftwareSystem': 'SoftwareSystem',
     'SoftwareItem': 'SoftwareItem',
     'SoftwareUnit': 'SoftwareUnit',
     'SOUPItem': 'SOUPItem',
-    'SoftwareRequirement': 'SoftwareRequirement',
-    'SystemRequirement': 'SystemRequirement',
+    'SoftwareRequirement': 'Requirement',
+    'SystemRequirement': 'Requirement',
     'TestCase': 'Test',
     'Test': 'Test',
     'VerificationActivity': 'VerificationActivity',
@@ -499,7 +499,7 @@ function resolveConstruct(
     if (!memoKind) return undefined;
     const entry = kindRegistry?.getKind(memoKind);
     if (entry) return entry.sysmlConstruct;
-    if (memoKind.includes('Requirement') || memoKind === 'UserNeed' || memoKind === 'DesignInput' || memoKind === 'DesignOutput') {
+    if (memoKind.includes('Requirement') || memoKind === 'DesignInput' || memoKind === 'DesignOutput') {
         return 'requirement';
     }
     if (memoKind === 'Function' || memoKind.includes('Activity') || memoKind.includes('Action')) {

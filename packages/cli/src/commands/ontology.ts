@@ -13,7 +13,7 @@ import { basename, dirname, extname, relative, resolve } from 'node:path';
 import chalk from 'chalk';
 import type { MEMOConfig } from '@memo/core';
 import { findConfigFile, loadOntologyRegistries } from '@memo/core';
-import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology-medical';
+import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology-medical-process';
 import { loadAndResolveConfig, loadConfigChain, type ConfigChainEntry } from '../server/config-resolver.js';
 
 export async function ontologyShowCommand(): Promise<void> {

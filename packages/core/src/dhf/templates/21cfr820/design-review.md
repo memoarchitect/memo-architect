@@ -35,7 +35,7 @@ _[TODO: Track all open action items from design reviews]_
 ## 4. Design Status at Review
 
 ```memo-query
-kind: [SystemRequirement, SoftwareRequirement, DesignInput, DesignOutput]
+kind: [Requirement, Requirement, DesignInput, DesignOutput]
 display: count
 label: Total design elements at last review
 ```

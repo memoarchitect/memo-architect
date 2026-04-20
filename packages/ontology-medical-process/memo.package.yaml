@@ -1,0 +1,7 @@
+name: "@memo/ontology-medical-process"
+version: "0.2.0"
+type: ontology
+extends: "@memo/ontology-medical-arch"
+description: "Medical-device process ontology — ISO 14971 risk management, IEC 62366 usability, ISO 13485 QMS, IEC 60601 safety, design controls, manufacturing/service operations. Extends the medical-arch backbone; load this package when a project needs regulated-process artefacts."
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "medical-device", "14971", "60601", "62366", "13485", "risk", "qms"]

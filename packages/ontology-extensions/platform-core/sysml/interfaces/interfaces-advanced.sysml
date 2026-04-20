@@ -1,13 +1,5 @@
 package MEMO_Extension_Interfaces_Advanced {
 
-    port def PortEthernet :> Port { }
-
-    port def PortUSB :> Port { }
-
-    port def PortSerial :> Port { }
-
-    port def PortPower :> Port { }
-
     interface def PublishSubscribeChannel :> DataInterface { }
 
     interface def RequestResponseInterface :> DataInterface { }

@@ -20,9 +20,9 @@ importers:
       '@memo/core':
         specifier: workspace:*
         version: link:../core
-      '@memo/ontology-medical':
+      '@memo/ontology-medical-process':
         specifier: workspace:*
-        version: link:../ontology-medical
+        version: link:../ontology-medical-process
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -94,9 +94,9 @@ importers:
 
   packages/medical-modeling-profile:
     dependencies:
-      '@memo/ontology-medical':
+      '@memo/ontology-medical-process':
         specifier: workspace:*
-        version: link:../ontology-medical
+        version: link:../ontology-medical-process
     devDependencies:
       typescript:
         specifier: ~5.5.0
@@ -107,17 +107,33 @@ importers:
 
   packages/medical-product-line-profile: {}
 
-  packages/ontology-clinical: {}
-
   packages/ontology-clinical-interop: {}
 
-  packages/ontology-core: {}
+  packages/ontology-clinical-procedure: {}
 
-  packages/ontology-medical: {}
+  packages/ontology-cybersecurity: {}
 
-  packages/ontology-platform-messaging: {}
+  packages/ontology-extensions/analysis-advanced: {}
 
-  packages/ontology-platform-robotics: {}
+  packages/ontology-extensions/hardware-advanced: {}
+
+  packages/ontology-extensions/logical-advanced: {}
+
+  packages/ontology-extensions/operational-advanced: {}
+
+  packages/ontology-extensions/platform-core: {}
+
+  packages/ontology-extensions/requirements-advanced: {}
+
+  packages/ontology-iec62304: {}
+
+  packages/ontology-medical-arch: {}
+
+  packages/ontology-medical-clinical-trial: {}
+
+  packages/ontology-medical-process: {}
+
+  packages/ontology-middleware-ros: {}
 
   packages/web:
     dependencies:
@@ -170,6 +186,10 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  tools/app: {}
+
+  tools/ontology-tools: {}
 
   tools/ontology-viewer:
     dependencies:

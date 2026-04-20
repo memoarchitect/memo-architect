@@ -1,10 +1,12 @@
 package InfusionPump_Compliance {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import InfusionPump_Requirements::*;
     import InfusionPump_Risk::*;
     import InfusionPump_Architecture::*;
 
-    requirement uiReqAlarmAcknowledgement : UserInterfaceRequirement {
+    requirement uiReqAlarmAcknowledgement : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines title = "Alarm acknowledgement shall require explicit user confirmation";
     }
 

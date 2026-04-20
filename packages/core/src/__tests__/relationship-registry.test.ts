@@ -111,23 +111,23 @@ describe('RelationshipRegistry', () => {
     });
 });
 
-// ─── RelationshipRegistry Integration: ontology-core ────────────────────────
+// ─── RelationshipRegistry Integration: ontology-medical-arch ────────────────────────
 
-describe('RelationshipRegistry integration with ontology-core', () => {
+describe('RelationshipRegistry integration with ontology-medical-arch', () => {
     let registry: RelationshipRegistry;
 
     beforeAll(async () => {
-        const coreDir = resolve(__dirname, '../../../ontology-core/sysml');
+        const coreDir = resolve(__dirname, '../../../ontology-medical-arch/sysml');
         const sysmlFiles = getSysmlFiles(coreDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-core'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-arch'));
         expect(result.errors).toHaveLength(0);
 
         registry = new RelationshipRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers relationship types from ontology-core SysML files', () => {
+    it('discovers relationship types from ontology-medical-arch SysML files', () => {
         // Slim core has 16 connection defs (down from 42 after ontology simplification)
         expect(registry.size).toBeGreaterThanOrEqual(14);
     });
@@ -173,23 +173,23 @@ describe('RelationshipRegistry integration with ontology-core', () => {
     });
 });
 
-// ─── RelationshipRegistry Integration: ontology-medical ─────────────────────
+// ─── RelationshipRegistry Integration: ontology-medical-process ─────────────────────
 
-describe('RelationshipRegistry integration with ontology-medical', () => {
+describe('RelationshipRegistry integration with ontology-medical-process', () => {
     let registry: RelationshipRegistry;
 
     beforeAll(async () => {
-        const medicalDir = resolve(__dirname, '../../../ontology-medical/sysml');
+        const medicalDir = resolve(__dirname, '../../../ontology-medical-process/sysml');
         const sysmlFiles = getSysmlFiles(medicalDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-process'));
         expect(result.errors).toHaveLength(0);
 
         registry = new RelationshipRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers relationship types from ontology-medical SysML files', () => {
+    it('discovers relationship types from ontology-medical-process SysML files', () => {
         // Consolidated medical ontology exposes a broad relationship surface.
         expect(registry.size).toBeGreaterThanOrEqual(40);
     });

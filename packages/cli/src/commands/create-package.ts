@@ -6,7 +6,7 @@
 //
 // Usage:
 //   memo create-package my-ontology --type ontology
-//   memo create-package my-profile --type profile --extends @memo/ontology-medical
+//   memo create-package my-profile --type profile --extends @memo/ontology-medical-process
 //   memo create-package my-library --type library
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ export async function createPackageCommand(
         process.exit(1);
     }
 
-    const extendsPackage = options.extends || (type === 'profile' ? '@memo/ontology-medical' : undefined);
+    const extendsPackage = options.extends || (type === 'profile' ? '@memo/ontology-medical-process' : undefined);
     const description = options.description || `MEMO ${type} package`;
     const author = options.author || '';
     const license = options.license || 'Apache-2.0';
@@ -264,7 +264,7 @@ function scaffoldLibrary(dir: string, name: string): void {
     const shortName = name.replace(/^@[^/]+\//, '').replace(/-/g, '_');
     const packageName = shortName.charAt(0).toUpperCase() + shortName.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 
-    writeFileSync(join(sysmlDir, 'library.sysml'), `library package ${packageName}_Library {\n    // Add reusable model element instances here\n    // Example: part myComponent : Component { }\n}\n`);
+    writeFileSync(join(sysmlDir, 'library.sysml'), `library package ${packageName}_Library {\n    // Add reusable model element instances here\n    // Example: part myComponent : LogicalComponent { }\n}\n`);
 
     // src/index.ts
     const srcDir = join(dir, 'src');

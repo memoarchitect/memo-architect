@@ -164,7 +164,7 @@ function RequirementsSection({ model }: { model: MemoModelDTO }) {
                 onExpand={() => setActiveView({ type: 'traceability' })}
             />
             {reqs.length === 0 ? (
-                <EmptyHint text="No requirements found. Add SystemRequirement elements to your model." />
+                <EmptyHint text="No requirements found. Add Requirement elements to your model." />
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <CoverageBar label="Verified by tests" percent={testCoverage} count={withTestLink} total={reqs.length} color="#2DD4A8" />

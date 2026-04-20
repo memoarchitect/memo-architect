@@ -105,6 +105,17 @@ nav:
       - Configuration:
           - memo.config.yaml Reference: developers/config/reference.md
           - Medical Domain: developers/config/medical-domain.md
+      - Requirements Baseline:
+          - Overview: developers/requirements/index.md
+          - Functional Decomposition Tree: developers/requirements/functional-decomposition-tree.md
+          - Runtime Surfaces: developers/requirements/runtime-surfaces.md
+          - Capability Statistics: developers/requirements/capability-statistics.md
+          - Function Catalog (Exhaustive): developers/requirements/function-catalog.md
+          - User Needs (SOP-ish): developers/requirements/user-needs.md
+          - Software Requirements (EARS): developers/requirements/software-requirements.md
+          - Feature Catalog: developers/requirements/feature-catalog.md
+          - Verification Tests: developers/requirements/verification-tests.md
+          - Traceability Matrix: developers/requirements/traceability-matrix.md
       - Roadmap: developers/development/roadmap.md
       - Plugin Development: developers/plugin-development.md
       - ADR:
@@ -117,5 +128,3 @@ nav:
           - ADR-1-7 Legacy Compatibility: developers/adr/ADR-1-7-legacy-ontology-compatibility-policy.md
           - ADR-1-8 Project Format Contract: developers/adr/ADR-1-8-project-format-contract.md
       - Contributing: developers/development/contributing.md
-
-

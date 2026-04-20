@@ -8,7 +8,7 @@
 // ============================================================================
 
 package ConnectedDevice {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // PURPOSE LAYER
@@ -42,32 +42,41 @@ package ConnectedDevice {
     // REQUIREMENTS LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement unReliableData : UserNeed {
+    requirement unReliableData : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Reliable Remote Data Transmission";
         doc /* Clinicians need to receive patient data reliably even with intermittent connectivity. */
     }
 
-    requirement unSecure : UserNeed {
+    requirement unSecure : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Secure Communication";
         doc /* Patient data must be protected during wireless transmission. */
     }
 
-    requirement unAlerts : UserNeed {
+    requirement unAlerts : Requirement {
+        attribute redefines category = RequirementCategory::Stakeholder;
+        attribute redefines source = "User";
         attribute redefines title = "Timely Alerts for Abnormal Values";
         doc /* Care team shall receive alerts within defined time when values are out of range. */
     }
 
-    requirement srDataLatency : SystemRequirement {
+    requirement srDataLatency : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Data Transmission Latency ≤ 30 seconds";
         doc /* Sensor readings shall be transmitted and acknowledged within 30 seconds of measurement. */
     }
 
-    requirement srEncryption : SystemRequirement {
+    requirement srEncryption : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "End-to-End Encryption";
         doc /* All data transmitted over wireless shall use TLS 1.3 or equivalent. */
     }
 
-    requirement srAlertDelivery : SystemRequirement {
+    requirement srAlertDelivery : Requirement {
+        attribute redefines category = RequirementCategory::System;
         attribute redefines title = "Alert Delivery within 60 seconds";
     }
 
@@ -120,19 +129,23 @@ package ConnectedDevice {
     // FUNCTIONAL LAYER
     // ═══════════════════════════════════════════════════════════════════════
 
-    action funcSense : SystemFunction {
+    action funcSense : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Sense Patient Parameter";
     }
 
-    action funcTransmit : SystemFunction {
+    action funcTransmit : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Transmit Data to Cloud";
     }
 
-    action funcAlert : SystemFunction {
+    action funcAlert : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Generate and Deliver Alert";
     }
 
-    action funcRemoteConfig : SystemFunction {
+    action funcRemoteConfig : Function {
+        attribute redefines scope = FunctionScope::System;
         attribute redefines name = "Accept Remote Configuration";
         doc /* Clinician sets parameters via cloud portal; device applies after authentication. */
     }

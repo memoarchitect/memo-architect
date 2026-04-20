@@ -26,7 +26,7 @@ export interface MemoElement {
     shortId?: string;
     /** Human-readable name (from 'attribute redefines name = ...' or id) */
     name: string;
-    /** The kind key matching config.kinds, e.g. "Hazard", "SystemRequirement" */
+    /** The kind key matching config.kinds, e.g. "Hazard", "Requirement" */
     kind: string;
     /** SysML v2 construct: 'part', 'requirement', 'action', 'port', 'item' */
     construct: string;

@@ -94,7 +94,7 @@ export const DHF_DOCUMENT_TYPES: DhfDocumentType[] = [
         title: 'Requirements Traceability Matrix',
         standards: ['IEC 62304:2006 §5.1.1', 'ISO 13485:2016 §7.3.3'],
         layers: ['requirements', 'functional', 'verification'],
-        relevantKinds: ['SystemRequirement', 'SoftwareRequirement', 'DesignInput', 'DesignOutput', 'TestCase', 'VerificationActivity'],
+        relevantKinds: ['Requirement', 'Requirement', 'DesignInput', 'DesignOutput', 'TestCase', 'VerificationActivity'],
         relevantRelationships: ['traceTo', 'satisfies', 'verifies', 'derivedFrom'],
         group: 'design',
         sections: [
@@ -160,7 +160,7 @@ export const DHF_DOCUMENT_TYPES: DhfDocumentType[] = [
         title: 'Design Input Plan',
         standards: ['ISO 13485:2016 §7.3.3'],
         layers: ['requirements', 'business'],
-        relevantKinds: ['DesignInput', 'SystemRequirement', 'StakeholderNeed', 'UseCase'],
+        relevantKinds: ['DesignInput', 'Requirement', 'StakeholderNeed', 'UseCase'],
         relevantRelationships: ['traceTo', 'derivedFrom', 'satisfies'],
         group: 'design',
         sections: [
@@ -279,7 +279,7 @@ export const DHF_DOCUMENT_TYPES: DhfDocumentType[] = [
         title: 'Labeling Specification',
         standards: ['21 CFR 801', 'MDR Annex I §23'],
         layers: ['requirements', 'ui'],
-        relevantKinds: ['LabelingRequirement', 'SystemRequirement'],
+        relevantKinds: ['LabelingRequirement', 'Requirement'],
         relevantRelationships: ['traceTo', 'satisfies'],
         group: 'compliance',
         sections: [

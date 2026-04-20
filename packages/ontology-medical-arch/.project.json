@@ -1,0 +1,6 @@
+{
+  "type": "ontology-package",
+  "name": "@memo/ontology-medical-arch",
+  "version": "0.2.0",
+  "usage": ["kinds", "relationships"]
+}

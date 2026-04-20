@@ -1,0 +1,15 @@
+# MEMO trace element: SR-LLM-001
+id: "SR-LLM-001"
+type: "software_requirement"
+domain: "LLM"
+title: "AI-Assisted Flows requirement"
+description: "When a user executes ai-assisted flows workflows, the system shall provide deterministic behavior, persistence, and feedback for this domain."
+status: "active"
+tags:
+  - "ears"
+  - "pattern:when"
+  - "fallback-generated"
+links:
+  - "UN-LLM-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.618Z"

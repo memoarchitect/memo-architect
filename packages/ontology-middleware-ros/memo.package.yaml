@@ -1,7 +1,7 @@
 name: "@memo/ontology-middleware-ros"
 version: "0.1.0"
 type: ontology
-extends: "@memo/ontology-core"
+extends: "@memo/ontology-medical-arch"
 description: "ROS 2 middleware definitions — optional extension for robotic medical devices using ROS node/topic/service/action patterns"
 license: "Apache-2.0"
 tags: ["mbse", "sysml-v2", "ros", "ros2", "middleware", "robotics"]

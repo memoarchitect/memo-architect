@@ -4,7 +4,7 @@
 // ============================================================================
 
 package GPCA_Cybersecurity {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;
     import GPCA_Architecture::*;
@@ -96,7 +96,8 @@ package GPCA_Cybersecurity {
     // CYBERSECURITY REQUIREMENTS
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement csReqEncryptedComm : CybersecurityRequirement {
+    requirement csReqEncryptedComm : Requirement {
+        attribute redefines category = RequirementCategory::Security;
         attribute redefines reqId = "CS-REQ-001";
         attribute redefines title = "Encrypted Network Communication";
         doc /* All network communication shall use TLS 1.3 with mutual
@@ -104,7 +105,9 @@ package GPCA_Cybersecurity {
              * prohibited in production builds. */
     }
 
-    requirement csReqAuthentication : AuthenticationRequirement {
+    requirement csReqAuthentication : Requirement {
+        attribute redefines category = RequirementCategory::Security;
+        attribute redefines topic = "Authentication";
         attribute redefines reqId = "CS-REQ-002";
         attribute redefines title = "Multi-Factor Authentication";
         doc /* Clinical configuration access shall require two-factor
@@ -112,7 +115,9 @@ package GPCA_Cybersecurity {
              * unique per-device credentials changed at deployment. */
     }
 
-    requirement csReqAuditLog : AuditLogRequirement {
+    requirement csReqAuditLog : Requirement {
+        attribute redefines category = RequirementCategory::Security;
+        attribute redefines topic = "AuditLog";
         attribute redefines reqId = "CS-REQ-003";
         attribute redefines title = "Cybersecurity Audit Log";
         doc /* All authentication attempts, configuration changes, network
@@ -120,7 +125,8 @@ package GPCA_Cybersecurity {
              * tamper-evident audit trail with timestamps. */
     }
 
-    requirement csReqSecureBoot : CybersecurityRequirement {
+    requirement csReqSecureBoot : Requirement {
+        attribute redefines category = RequirementCategory::Security;
         attribute redefines reqId = "CS-REQ-004";
         attribute redefines title = "Secure Boot Chain";
         doc /* Firmware shall be cryptographically signed. Boot loader
@@ -128,7 +134,8 @@ package GPCA_Cybersecurity {
              * modified firmware shall be rejected. */
     }
 
-    requirement csReqPatchManagement : CybersecurityRequirement {
+    requirement csReqPatchManagement : Requirement {
+        attribute redefines category = RequirementCategory::Security;
         attribute redefines reqId = "CS-REQ-005";
         attribute redefines title = "SOUP Patch Management";
         doc /* SOUP component vulnerabilities shall be monitored via

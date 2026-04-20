@@ -1,0 +1,318 @@
+<mxfile host="Electron" agent="memo-architect" pages="4">
+  <diagram id="matrix-v4" name="MEMO Ontology Matrix">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="2400" pageHeight="2500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="lg-title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;" value="Legend" vertex="1"><mxGeometry x="60" y="10" width="80" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D9D9D9;strokeColor=#666666;" value="" vertex="1"><mxGeometry x="60" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-1t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-core (generic system + software)" vertex="1"><mxGeometry x="84" y="35" width="220" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" value="" vertex="1"><mxGeometry x="320" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-2t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-medical-architecture (medical specialization only)" vertex="1"><mxGeometry x="344" y="35" width="300" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" value="" vertex="1"><mxGeometry x="660" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-3t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-medical-processes" vertex="1"><mxGeometry x="684" y="35" width="180" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B0E0E6;strokeColor=#008080;" value="" vertex="1"><mxGeometry x="880" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-4t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-operative-process" vertex="1"><mxGeometry x="904" y="35" width="170" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;" value="" vertex="1"><mxGeometry x="1080" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-5t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-medical-sw-design" vertex="1"><mxGeometry x="1104" y="35" width="190" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" value="" vertex="1"><mxGeometry x="1300" y="36" width="18" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg-6t" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" value="ontology-ros" vertex="1"><mxGeometry x="1324" y="35" width="90" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="note-a" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="Tab 1 contains element classes only. No relationship or attribute pseudo-elements." vertex="1"><mxGeometry x="1540" y="14" width="800" height="44" as="geometry" /></mxCell>
+        <mxCell id="note-b" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#F8CECC;strokeColor=#B85450;" value="Critical correction: generic system/software modeling is in ontology-core; medical-specific concepts are only in ontology-medical-architecture." vertex="1"><mxGeometry x="1540" y="64" width="800" height="52" as="geometry" /></mxCell>
+
+        <mxCell id="band-core" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D9D9D9;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="80" y="120" width="300" height="1960" as="geometry" /></mxCell>
+        <mxCell id="band-medarch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="390" y="120" width="300" height="1960" as="geometry" /></mxCell>
+        <mxCell id="band-proc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="700" y="120" width="300" height="1960" as="geometry" /></mxCell>
+        <mxCell id="band-oproc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B0E0E6;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="1010" y="120" width="300" height="1960" as="geometry" /></mxCell>
+        <mxCell id="band-swdes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="1320" y="120" width="300" height="1960" as="geometry" /></mxCell>
+        <mxCell id="band-ros" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=none;opacity=15;" value="" vertex="1"><mxGeometry x="1630" y="120" width="300" height="1960" as="geometry" /></mxCell>
+
+        <mxCell id="hdr-core" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#D9D9D9;strokeColor=#666666;align=center;" value="ontology-core" vertex="1"><mxGeometry x="80" y="92" width="300" height="24" as="geometry" /></mxCell>
+        <mxCell id="hdr-medarch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=center;" value="ontology-medical-architecture" vertex="1"><mxGeometry x="390" y="92" width="300" height="24" as="geometry" /></mxCell>
+        <mxCell id="hdr-proc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#D5E8D4;strokeColor=#82B366;align=center;" value="ontology-medical-processes" vertex="1"><mxGeometry x="700" y="92" width="300" height="24" as="geometry" /></mxCell>
+        <mxCell id="hdr-oproc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#B0E0E6;strokeColor=#008080;align=center;" value="ontology-operative-process" vertex="1"><mxGeometry x="1010" y="92" width="300" height="24" as="geometry" /></mxCell>
+        <mxCell id="hdr-swdes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=center;" value="ontology-medical-sw-design" vertex="1"><mxGeometry x="1320" y="92" width="300" height="24" as="geometry" /></mxCell>
+        <mxCell id="hdr-ros" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=center;" value="ontology-ros" vertex="1"><mxGeometry x="1630" y="92" width="300" height="24" as="geometry" /></mxCell>
+
+        <mxCell id="row-op" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Operational Analysis" vertex="1"><mxGeometry x="60" y="120" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-beh" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Behavioral" vertex="1"><mxGeometry x="60" y="360" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-fun" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Functional" vertex="1"><mxGeometry x="60" y="600" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-log" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Logical" vertex="1"><mxGeometry x="60" y="840" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-sw" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Software" vertex="1"><mxGeometry x="60" y="1080" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-hw" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Hardware" vertex="1"><mxGeometry x="60" y="1320" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-ver" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Verification" vertex="1"><mxGeometry x="60" y="1560" width="1900" height="220" as="geometry" /></mxCell>
+        <mxCell id="row-imp" parent="1" style="swimlane;fontSize=14;fontStyle=1;fillColor=#F5F5F5;strokeColor=#666666;startSize=30;horizontal=0;swimlaneLine=0;" value="Implementation" vertex="1"><mxGeometry x="60" y="1800" width="1900" height="220" as="geometry" /></mxCell>
+
+        <mxCell id="core-op1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="System" vertex="1"><mxGeometry x="95" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-op2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SystemContext" vertex="1"><mxGeometry x="235" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-op3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="ExternalActor" vertex="1"><mxGeometry x="95" y="185" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-op4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="MissionObjective" vertex="1"><mxGeometry x="235" y="185" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-beh1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SystemScenario" vertex="1"><mxGeometry x="95" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-beh2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="StateMachine" vertex="1"><mxGeometry x="235" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-beh3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SequenceBehavior" vertex="1"><mxGeometry x="95" y="425" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-beh4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="OperatingMode" vertex="1"><mxGeometry x="235" y="425" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SystemFunction" vertex="1"><mxGeometry x="95" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="FunctionalChain" vertex="1"><mxGeometry x="235" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="FunctionPort" vertex="1"><mxGeometry x="95" y="665" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="FunctionalExchange" vertex="1"><mxGeometry x="235" y="665" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-l1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="LogicalComponent" vertex="1"><mxGeometry x="95" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-l2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Subsystem" vertex="1"><mxGeometry x="235" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-l3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="InterfaceContract" vertex="1"><mxGeometry x="95" y="905" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-l4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="DataType" vertex="1"><mxGeometry x="235" y="905" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-sw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SoftwareSystem" vertex="1"><mxGeometry x="95" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-sw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SoftwareSubsystem" vertex="1"><mxGeometry x="235" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-sw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SoftwareComponent" vertex="1"><mxGeometry x="95" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-sw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SoftwareService" vertex="1"><mxGeometry x="235" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-sw5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="ExecutionThread" vertex="1"><mxGeometry x="95" y="1185" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-sw6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="SoftwareInterface" vertex="1"><mxGeometry x="235" y="1185" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-hw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="HardwareComponent" vertex="1"><mxGeometry x="95" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-hw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Processor" vertex="1"><mxGeometry x="235" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-hw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Sensor" vertex="1"><mxGeometry x="95" y="1385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-hw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Actuator" vertex="1"><mxGeometry x="235" y="1385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-hw5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Bus" vertex="1"><mxGeometry x="95" y="1425" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-hw6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="PowerDomain" vertex="1"><mxGeometry x="235" y="1425" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Requirement" vertex="1"><mxGeometry x="95" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="Risk" vertex="1"><mxGeometry x="235" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-v3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="VerificationCase" vertex="1"><mxGeometry x="95" y="1625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-v4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="VerificationEvidence" vertex="1"><mxGeometry x="235" y="1625" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="core-i1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="BuildArtifact" vertex="1"><mxGeometry x="95" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-i2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="DeploymentUnit" vertex="1"><mxGeometry x="235" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-i3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="ConfigurationBaseline" vertex="1"><mxGeometry x="95" y="1865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="core-i4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#666666;" value="RuntimeInstance" vertex="1"><mxGeometry x="235" y="1865" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-op1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="ClinicalUseContext" vertex="1"><mxGeometry x="405" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-op2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="IntendedUse" vertex="1"><mxGeometry x="545" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-op3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="IndicationForUse" vertex="1"><mxGeometry x="405" y="185" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-op4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="Contraindication" vertex="1"><mxGeometry x="545" y="185" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-be1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="ClinicalWorkflow" vertex="1"><mxGeometry x="405" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-be2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="HazardousScenario" vertex="1"><mxGeometry x="545" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-be3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="AlarmResponseScenario" vertex="1"><mxGeometry x="405" y="425" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-be4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="UserInteractionScenario" vertex="1"><mxGeometry x="545" y="425" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="TherapyFunction" vertex="1"><mxGeometry x="405" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="MonitoringFunction" vertex="1"><mxGeometry x="545" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="AlarmFunction" vertex="1"><mxGeometry x="405" y="665" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="SafetyInterlockFunction" vertex="1"><mxGeometry x="545" y="665" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-l1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="ClinicalSubsystem" vertex="1"><mxGeometry x="405" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-l2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="SafetyIsolationZone" vertex="1"><mxGeometry x="545" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-l3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="AppliedPartSubsystem" vertex="1"><mxGeometry x="405" y="905" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-l4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="SterileBoundary" vertex="1"><mxGeometry x="545" y="905" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-sw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="SafetyClassifiedSW" vertex="1"><mxGeometry x="405" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-sw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="DoseCalculationService" vertex="1"><mxGeometry x="545" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-sw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="AlarmManager" vertex="1"><mxGeometry x="405" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-sw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="CyberSafetyMonitor" vertex="1"><mxGeometry x="545" y="1145" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-hw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="AppliedPart" vertex="1"><mxGeometry x="405" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-hw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="IsolationBarrier" vertex="1"><mxGeometry x="545" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-hw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="LeakageControlPath" vertex="1"><mxGeometry x="405" y="1385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-hw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="PatientContactSurface" vertex="1"><mxGeometry x="545" y="1385" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="ClinicalEvaluationEvidence" vertex="1"><mxGeometry x="405" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="EssentialPerformanceEvidence" vertex="1"><mxGeometry x="545" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-v3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="UsabilityValidationEvidence" vertex="1"><mxGeometry x="405" y="1625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-v4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="BiocompatibilityEvidence" vertex="1"><mxGeometry x="545" y="1625" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="med-i1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="DeviceVariant" vertex="1"><mxGeometry x="405" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-i2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="LabelingIFUArtifact" vertex="1"><mxGeometry x="545" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-i3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="SafetyCasePackage" vertex="1"><mxGeometry x="405" y="1865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="med-i4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#6C8EBF;" value="RegSubmissionUnit" vertex="1"><mxGeometry x="545" y="1865" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="proc-op1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="RiskManagementPlan" vertex="1"><mxGeometry x="715" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-op2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="QMSPlan" vertex="1"><mxGeometry x="855" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-be1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="DevelopmentProcess" vertex="1"><mxGeometry x="715" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-be2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="ProcessActivity" vertex="1"><mxGeometry x="855" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="RequirementsSpecActivity" vertex="1"><mxGeometry x="715" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="RiskControlAllocationActivity" vertex="1"><mxGeometry x="855" y="625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-l1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="ArchitectureReview" vertex="1"><mxGeometry x="715" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-l2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="DesignReviewGate" vertex="1"><mxGeometry x="855" y="865" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-sw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="IEC62304Lifecycle" vertex="1"><mxGeometry x="715" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-sw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="SOUPAssessment" vertex="1"><mxGeometry x="855" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-hw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="IEC60601SafetyActivity" vertex="1"><mxGeometry x="715" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-hw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="EMCAnalysisActivity" vertex="1"><mxGeometry x="855" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="VerificationTest" vertex="1"><mxGeometry x="715" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="ValidationActivity" vertex="1"><mxGeometry x="855" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-v3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="RiskControlVerification" vertex="1"><mxGeometry x="715" y="1625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-v4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="ReviewRecord" vertex="1"><mxGeometry x="855" y="1625" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-i1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="DHFPackage" vertex="1"><mxGeometry x="715" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="proc-i2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#82B366;" value="DMRPackage" vertex="1"><mxGeometry x="855" y="1825" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="op-op1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#008080;" value="OperativeFlow" vertex="1"><mxGeometry x="1025" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="op-op2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#008080;" value="ClinicalRole" vertex="1"><mxGeometry x="1165" y="145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="op-be1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#008080;" value="ProcedureStep" vertex="1"><mxGeometry x="1025" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="op-be2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#008080;" value="ClinicalAction" vertex="1"><mxGeometry x="1165" y="385" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="op-f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#008080;" value="InstrumentUseFunction" vertex="1"><mxGeometry x="1025" y="625" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="sd-sw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="SoftwarePattern" vertex="1"><mxGeometry x="1335" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-sw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="SchedulingModel" vertex="1"><mxGeometry x="1475" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-sw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="RTOSProfile" vertex="1"><mxGeometry x="1335" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-sw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="FaultContainmentRegion" vertex="1"><mxGeometry x="1475" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-hw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="MemoryPartition" vertex="1"><mxGeometry x="1335" y="1345" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="TimingAnalysis" vertex="1"><mxGeometry x="1335" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="MemoryAnalysis" vertex="1"><mxGeometry x="1475" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="sd-i1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#9673A6;" value="RuntimeProfile" vertex="1"><mxGeometry x="1335" y="1825" width="130" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="ros-sw1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSNode" vertex="1"><mxGeometry x="1645" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-sw2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSTopic" vertex="1"><mxGeometry x="1785" y="1105" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-sw3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSService" vertex="1"><mxGeometry x="1645" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-sw4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSAction" vertex="1"><mxGeometry x="1785" y="1145" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSIntegrationTest" vertex="1"><mxGeometry x="1645" y="1585" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-i1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="ROSPackage" vertex="1"><mxGeometry x="1645" y="1825" width="130" height="30" as="geometry" /></mxCell>
+        <mxCell id="ros-i2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#FFFFFF;strokeColor=#D79B00;" value="LaunchProfile" vertex="1"><mxGeometry x="1785" y="1825" width="130" height="30" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="deep-critique" name="Expert Critique">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1400" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="dc-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" value="Harsh Expert Critique (SysML v2 + Architecture Ontology)" vertex="1"><mxGeometry x="40" y="20" width="980" height="40" as="geometry" /></mxCell>
+
+        <mxCell id="dc-h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Issue" vertex="1"><mxGeometry x="40" y="80" width="260" height="30" as="geometry" /></mxCell>
+        <mxCell id="dc-h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Why This Is Bad" vertex="1"><mxGeometry x="300" y="80" width="500" height="30" as="geometry" /></mxCell>
+        <mxCell id="dc-h3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Correction In v4" vertex="1"><mxGeometry x="800" y="80" width="540" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="dc1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="No real system/software backbone"><mxGeometry x="40" y="110" width="260" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Without SoftwareSystem/Subsystem/Component/Service/Thread and Hardware Processor/Sensor/Actuator/Bus, the model cannot represent concrete architecture." vertex="1"><mxGeometry x="300" y="110" width="500" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Added explicit multi-level system+software+hardware class sets in ontology-core and constrained medical specializations in ontology-medical-architecture." vertex="1"><mxGeometry x="800" y="110" width="540" height="76" as="geometry" /></mxCell>
+
+        <mxCell id="dc4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Category error: mixing attributes/relationships as elements"><mxGeometry x="40" y="186" width="260" height="86" as="geometry" /></mxCell>
+        <mxCell id="dc5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="A relationship (e.g., allocatedTo) is an object property, not a class. An attribute (e.g., criticality) is a data property, not a class. Mixing them breaks ontology semantics." vertex="1"><mxGeometry x="300" y="186" width="500" height="86" as="geometry" /></mxCell>
+        <mxCell id="dc6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Tab 1 now contains classes only. Relationships are isolated to Tab 3; attributes are defined as property contracts (Tab 3), not nodes." vertex="1"><mxGeometry x="800" y="186" width="540" height="86" as="geometry" /></mxCell>
+
+        <mxCell id="dc7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Weak core/medical separation"><mxGeometry x="40" y="272" width="260" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="If medical semantics leak into core, reuse across non-medical mechatronics fails and governance collapses." vertex="1"><mxGeometry x="300" y="272" width="500" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Renamed and re-bounded columns: ontology-core generic; ontology-medical-architecture is specialization-only." vertex="1"><mxGeometry x="800" y="272" width="540" height="76" as="geometry" /></mxCell>
+
+        <mxCell id="dc10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Medical domain not expressive enough"><mxGeometry x="40" y="348" width="260" height="86" as="geometry" /></mxCell>
+        <mxCell id="dc11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Generic terms alone cannot model intended use, contraindications, essential performance, applied part isolation, or clinical evidence." vertex="1"><mxGeometry x="300" y="348" width="500" height="86" as="geometry" /></mxCell>
+        <mxCell id="dc12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Added explicit medical-only elements per layer: ClinicalUseContext, IntendedUse, Contraindication, Therapy/Alarm/Safety functions, AppliedPart, EssentialPerformanceEvidence, etc." vertex="1"><mxGeometry x="800" y="348" width="540" height="86" as="geometry" /></mxCell>
+
+        <mxCell id="dc13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Traceability obligations were not enforceable"><mxGeometry x="40" y="434" width="260" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="A pretty trace line is meaningless unless required by constraints (release gating, risk closure conditions)." vertex="1"><mxGeometry x="300" y="434" width="500" height="76" as="geometry" /></mxCell>
+        <mxCell id="dc15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Tab 3 declares mandatory constraints: released requirements require evidence; closed risks require mitigation + verification." vertex="1"><mxGeometry x="800" y="434" width="540" height="76" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="relationships-v4" name="Relationships &amp; Property Contracts">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1400" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="rp-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" value="Relationship and Property Contracts (No Class/Property Mixing)" vertex="1"><mxGeometry x="40" y="20" width="980" height="40" as="geometry" /></mxCell>
+
+        <mxCell id="rp-h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Source Class" vertex="1"><mxGeometry x="40" y="80" width="260" height="30" as="geometry" /></mxCell>
+        <mxCell id="rp-h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Object Property" vertex="1"><mxGeometry x="300" y="80" width="220" height="30" as="geometry" /></mxCell>
+        <mxCell id="rp-h3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Target Class" vertex="1"><mxGeometry x="520" y="80" width="260" height="30" as="geometry" /></mxCell>
+        <mxCell id="rp-h4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Cardinality / Rule" vertex="1"><mxGeometry x="780" y="80" width="260" height="30" as="geometry" /></mxCell>
+        <mxCell id="rp-h5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Data Properties (Attributes)" vertex="1"><mxGeometry x="1040" y="80" width="300" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="rp1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement"><mxGeometry x="40" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="decomposesTo"><mxGeometry x="300" y="110" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SystemFunction"><mxGeometry x="520" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="0..* (acyclic)"><mxGeometry x="780" y="110" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="priority, status, sourceStandard, regulatoryReference"><mxGeometry x="1040" y="110" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SystemFunction"><mxGeometry x="40" y="138" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="allocatedTo"><mxGeometry x="300" y="138" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent"><mxGeometry x="520" y="138" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..* for safety-critical function"><mxGeometry x="780" y="138" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="criticalityClass"><mxGeometry x="1040" y="138" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="LogicalComponent"><mxGeometry x="40" y="166" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="realizedBy"><mxGeometry x="300" y="166" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent / HardwareComponent"><mxGeometry x="520" y="166" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="1..*"><mxGeometry x="780" y="166" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="safetyClass, timingClass"><mxGeometry x="1040" y="166" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Risk / HazardousScenario"><mxGeometry x="40" y="194" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="mitigatedBy"><mxGeometry x="300" y="194" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SafetyInterlockFunction / SecurityControl"><mxGeometry x="520" y="194" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="min 1 for closed risk"><mxGeometry x="780" y="194" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="riskIndex, riskStatus"><mxGeometry x="1040" y="194" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="MitigationArtifact"><mxGeometry x="40" y="222" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="verifiedBy"><mxGeometry x="300" y="222" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationCase"><mxGeometry x="520" y="222" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="min 1 for closure"><mxGeometry x="780" y="222" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="verificationMethod, passFailStatus"><mxGeometry x="1040" y="222" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement"><mxGeometry x="40" y="250" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="tracedTo"><mxGeometry x="300" y="250" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="VerificationEvidence"><mxGeometry x="520" y="250" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="min 1 for released requirement"><mxGeometry x="780" y="250" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="evidenceId, evidenceType"><mxGeometry x="1040" y="250" width="300" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="rp31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="OperationalActivity"><mxGeometry x="40" y="278" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="extensionHook"><mxGeometry x="300" y="278" width="220" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="OperativeFlow"><mxGeometry x="520" y="278" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="base package -> extension package only"><mxGeometry x="780" y="278" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="rp35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="extensionVersion"><mxGeometry x="1040" y="278" width="300" height="28" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="sysmlv2-v4" name="SysMLv2 Kernel">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1400" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="sk-title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" value="SysML v2 Modeling Kernel For MEMO Ontologies" vertex="1"><mxGeometry x="40" y="20" width="980" height="40" as="geometry" /></mxCell>
+
+        <mxCell id="sk-h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Ontology Class" vertex="1"><mxGeometry x="40" y="80" width="280" height="30" as="geometry" /></mxCell>
+        <mxCell id="sk-h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="SysML v2 Form" vertex="1"><mxGeometry x="320" y="80" width="320" height="30" as="geometry" /></mxCell>
+        <mxCell id="sk-h3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Typing Rule" vertex="1"><mxGeometry x="640" y="80" width="300" height="30" as="geometry" /></mxCell>
+        <mxCell id="sk-h4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#E6E6E6;strokeColor=#666666;align=center;" value="Mandatory Properties" vertex="1"><mxGeometry x="940" y="80" width="400" height="30" as="geometry" /></mxCell>
+
+        <mxCell id="sk1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="System / Subsystem"><mxGeometry x="40" y="110" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def / part usage"><mxGeometry x="320" y="110" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must type components and interfaces"><mxGeometry x="640" y="110" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="id, lifecycleState"><mxGeometry x="940" y="110" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SystemFunction"><mxGeometry x="40" y="138" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="action def"><mxGeometry x="320" y="138" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must bind to input/output types"><mxGeometry x="640" y="138" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="criticality, sourceStandard"><mxGeometry x="940" y="138" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="SoftwareComponent / SoftwareService"><mxGeometry x="40" y="166" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def (software specialization)"><mxGeometry x="320" y="166" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must realize logical component"><mxGeometry x="640" y="166" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="safetyClass, executionRate"><mxGeometry x="940" y="166" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="ExecutionThread"><mxGeometry x="40" y="194" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="behavior allocation / thread usage"><mxGeometry x="320" y="194" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must belong to SoftwareComponent"><mxGeometry x="640" y="194" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="wcetBudget, periodMs"><mxGeometry x="940" y="194" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="HardwareComponent"><mxGeometry x="40" y="222" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="part def (hardware specialization)"><mxGeometry x="320" y="222" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must define interfaces/power domain"><mxGeometry x="640" y="222" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="safetyClass, isolationClass"><mxGeometry x="940" y="222" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="Requirement / Risk"><mxGeometry x="40" y="250" width="280" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="requirement def / concern model"><mxGeometry x="320" y="250" width="320" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk23" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="must trace to verification"><mxGeometry x="640" y="250" width="300" height="28" as="geometry" /></mxCell>
+        <mxCell id="sk24" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;" value="status, sourceStandardClause"><mxGeometry x="940" y="250" width="400" height="28" as="geometry" /></mxCell>
+
+        <mxCell id="sk25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#FFF2CC;strokeColor=#D6B656;" value="Rule: do not create classes for relationships or attributes. Relationships are object properties; attributes are data properties. This is mandatory for OWL/OML-style semantic correctness." vertex="1"><mxGeometry x="40" y="300" width="1300" height="58" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

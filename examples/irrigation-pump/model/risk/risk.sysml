@@ -1,5 +1,5 @@
 package IrrigationPump_Risk {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
 
     requirement hazOverpressure : Hazard {
         attribute redefines hazardId = "HAZ-IRR-001";

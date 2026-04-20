@@ -1,0 +1,14 @@
+# MEMO trace element: FEAT-CFG-001
+id: "FEAT-CFG-001"
+type: "feature"
+domain: "CFG"
+title: "Project Bootstrap & Configuration feature"
+description: "Project Bootstrap & Configuration capability surface inferred from architecture decomposition and runtime contracts."
+status: "active"
+tags:
+  - "capability"
+  - "fallback-generated"
+links:
+  - "SR-CFG-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.611Z"

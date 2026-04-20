@@ -2,18 +2,6 @@ package MEMO_Ontology_Cybersecurity {
 
     // ─── IEC 81001-5-1 / FDA Cybersecurity Guidance ──────────────────────────
 
-    // A cybersecurity-specific technical requirement (§4 IEC 81001-5-1).
-    requirement def CybersecurityRequirement :> TechnicalRequirement {
-        attribute title : String;
-        attribute controlCategory : String; // Confidentiality | Integrity | Availability
-    }
-
-    requirement def AuthenticationRequirement :> CybersecurityRequirement { }
-
-    requirement def AuthorizationRequirement :> CybersecurityRequirement { }
-
-    requirement def AuditLogRequirement :> CybersecurityRequirement { }
-
     // A valuable asset that must be protected from threats.
     part def CyberAsset {
         attribute name : String;

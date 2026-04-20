@@ -21,13 +21,13 @@ This Software Requirements Specification (SRS) defines the software requirements
 ## 2. Requirements Summary
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 display: count
 label: Total software requirements
 ```
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: count
 label: System requirements
 ```
@@ -37,7 +37,7 @@ label: System requirements
 ## 3. Functional Requirements
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 where: doc contains "shall"
 display: table
 columns: name, layer, doc
@@ -48,11 +48,11 @@ empty: "No functional software requirements defined."
 ### All Software Requirements
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 display: table
 columns: name, kind, layer, doc
 sort: name
-empty: "No software requirements defined. Add SoftwareRequirement elements to model/requirements/*.sysml."
+empty: "No software requirements defined. Add Requirement elements to model/requirements/*.sysml."
 ```
 
 ---
@@ -60,7 +60,7 @@ empty: "No software requirements defined. Add SoftwareRequirement elements to mo
 ## 4. System Requirements (Allocated to Software)
 
 ```memo-query
-kind: SystemRequirement
+kind: Requirement
 display: table
 columns: name, layer, doc
 sort: name
@@ -112,7 +112,7 @@ empty: "No SOUP components identified."
 ## 7. Requirements Traceability
 
 ```memo-query
-kind: SoftwareRequirement
+kind: Requirement
 display: table
 columns: name, layer
 sort: name

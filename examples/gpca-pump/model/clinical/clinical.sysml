@@ -5,7 +5,7 @@
 // ============================================================================
 
 package GPCA_Clinical {
-    import MEMO_Ontology_Medical::*;
+    import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;
 
@@ -37,14 +37,16 @@ package GPCA_Clinical {
              * pain in palliative care settings. */
     }
 
-    requirement contraDrugAllergy : OtherRequirement {
+    requirement contraDrugAllergy : Requirement {
+        attribute redefines category = RequirementCategory::Constraint;
         attribute redefines reqId = "CL-CI-001";
         attribute redefines title = "Contraindication: Known Drug Allergy";
         doc /* The GPCA pump must not be used to deliver drugs to which
              * the patient has a documented allergic reaction. */
     }
 
-    requirement contraRespiratoryCompromise : OtherRequirement {
+    requirement contraRespiratoryCompromise : Requirement {
+        attribute redefines category = RequirementCategory::Constraint;
         attribute redefines reqId = "CL-CI-002";
         attribute redefines title = "Contraindication: Severe Respiratory Compromise";
         doc /* The GPCA pump must not be used for PCA in patients with
@@ -52,7 +54,8 @@ package GPCA_Clinical {
              * without continuous SpO2 monitoring. */
     }
 
-    requirement contraPediatric : OtherRequirement {
+    requirement contraPediatric : Requirement {
+        attribute redefines category = RequirementCategory::Constraint;
         attribute redefines reqId = "CL-CI-003";
         attribute redefines title = "Contraindication: Pediatric Patients Under 7";
         doc /* The GPCA pump patient bolus function must not be used
@@ -232,7 +235,9 @@ package GPCA_Clinical {
     }
 
     // UI Requirements
-    requirement uiReqAlarmVisibility : UserInterfaceRequirement {
+    requirement uiReqAlarmVisibility : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines reqId = "UI-REQ-001";
         attribute redefines title = "Alarm Visibility from 2 Meters";
         doc /* Visual alarm indicators (LED and display) shall be
@@ -240,7 +245,9 @@ package GPCA_Clinical {
              * typical ward lighting conditions (300-500 lux). */
     }
 
-    requirement uiReqButtonForce : UserInterfaceRequirement {
+    requirement uiReqButtonForce : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines reqId = "UI-REQ-002";
         attribute redefines title = "Bolus Button Activation Force <5N";
         doc /* Patient bolus button shall require activation force
@@ -248,7 +255,9 @@ package GPCA_Clinical {
              * hand strength while preventing accidental activation. */
     }
 
-    requirement uiReqDisplayContrast : UserInterfaceRequirement {
+    requirement uiReqDisplayContrast : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines reqId = "UI-REQ-003";
         attribute redefines title = "Display Contrast Ratio ≥7:1";
         doc /* Display shall maintain contrast ratio of at least 7:1
@@ -256,7 +265,9 @@ package GPCA_Clinical {
              * lighting conditions per IEC 60601-1-6. */
     }
 
-    requirement uiReqFontSize : UserInterfaceRequirement {
+    requirement uiReqFontSize : Requirement {
+        attribute redefines category = RequirementCategory::Interface;
+        attribute redefines domain = "UI";
         attribute redefines reqId = "UI-REQ-004";
         attribute redefines title = "Critical Value Font Size ≥5mm";
         doc /* Flow rate, mode status, and alarm text shall be displayed

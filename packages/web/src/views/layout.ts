@@ -641,8 +641,8 @@ export function computeContainmentLayout(
 
 // ─── Functional Breakdown Structure (FBS) Layout ────────────────────────────
 //
-// Builds a decomposition tree from functional kinds (SystemFunction,
-// ComponentFunction) linked by decomposedBy/composedOf relationships.
+// Builds a decomposition tree from functional kinds (Function,
+// Function) linked by decomposedBy/composedOf relationships.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Functional kinds eligible for FBS diagrams */

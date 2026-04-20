@@ -1,0 +1,15 @@
+# MEMO trace element: SR-DHF-001
+id: "SR-DHF-001"
+type: "software_requirement"
+domain: "DHF"
+title: "DHF Workbench & Evidence Generation requirement"
+description: "When a user executes dhf workbench & evidence generation workflows, the system shall provide deterministic behavior, persistence, and feedback for this domain."
+status: "active"
+tags:
+  - "ears"
+  - "pattern:when"
+  - "fallback-generated"
+links:
+  - "UN-DHF-001"
+source: "docs/src/developers/requirements/functional-decomposition-tree.md"
+updated_at: "2026-04-18T14:09:41.616Z"
