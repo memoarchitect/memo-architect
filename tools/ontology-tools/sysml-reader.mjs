@@ -64,14 +64,6 @@ export function findOntologyPackages() {
     for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
         const pkgDir = join(pkgsDir, entry.name);
-        if (entry.name === 'ontology-extensions') {
-            for (const sub of readdirSync(pkgDir, { withFileTypes: true })) {
-                if (!sub.isDirectory()) continue;
-                const subDir = join(pkgDir, sub.name);
-                if (existsSync(join(subDir, 'sysml'))) pkgs.push(makePackage(subDir));
-            }
-            continue;
-        }
         if (!entry.name.startsWith('ontology-')) continue;
         if (existsSync(join(pkgDir, 'sysml'))) pkgs.push(makePackage(pkgDir));
     }

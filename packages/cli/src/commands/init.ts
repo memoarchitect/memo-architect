@@ -214,26 +214,17 @@ export interface AvailableOntology {
 
 /**
  * Discover ontology packages available in the workspace.
- * Scans packages/ and packages/ontology-extensions/ directories
- * upward for memo.package.yaml files whose type is "ontology" or "profile".
+ * Scans packages/ upward for memo.package.yaml files whose type is
+ * "ontology" or "profile".
  */
 export function discoverOntologies(fromDir: string): AvailableOntology[] {
     const results: AvailableOntology[] = [];
     let dir = resolve(fromDir);
 
-    // Walk up to find the monorepo root (has packages/ dir)
     while (true) {
         const packagesDir = resolve(dir, 'packages');
         if (existsSync(packagesDir)) {
-            // Scan packages/ (top-level ontology packages)
             scanOntologyDir(packagesDir, results);
-
-            // Scan packages/ontology-extensions/ (modular extensions)
-            const extDir = resolve(packagesDir, 'ontology-extensions');
-            if (existsSync(extDir)) {
-                scanOntologyDir(extDir, results);
-            }
-
             if (results.length > 0) break;
         }
 

@@ -92,4 +92,35 @@ package MEMO_Ontology_MedicalArch_Hardware {
         attribute location : String;
         attribute environment : String;
     }
+
+    // ─── Compute nodes (folded from ontology-extensions/hardware-advanced) ──
+    part def HardwareModule {
+        attribute name : String;
+    }
+
+    part def HardwareNode :> HardwareComponent {
+        attribute ip : String;
+    }
+
+    part def ComputingDevice :> HardwareNode {
+        attribute numberOfCores : Integer;
+        attribute ram : Integer;
+        attribute storage : Integer;
+        attribute deviceType : String;
+    }
+
+    part def FPGA :> ComputingDevice {
+        attribute fabric : String;
+        attribute logicCells : Integer;
+    }
+
+    part def Microcontroller :> ComputingDevice {
+        attribute mcuFamily : String;
+        attribute powerMode : String;
+    }
+
+    part def SingleBoardComputer :> ComputingDevice {
+        attribute formFactor : String;
+        attribute peripherals : String;
+    }
 }

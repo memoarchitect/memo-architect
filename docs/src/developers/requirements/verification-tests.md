@@ -3,7 +3,7 @@
 App source-of-truth export for verification tests.
 
 Generated from app data: `tools/app/data/elements/*.yaml`
-Generated at: 2026-04-18T14:09:41.735Z
+Generated at: 2026-04-20T21:10:15.555Z
 
 ## CFG
 

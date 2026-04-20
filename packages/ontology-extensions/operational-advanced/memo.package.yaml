@@ -1,6 +1,0 @@
-name: "@memo/ontology-operational-advanced"
-version: "0.1.0"
-type: ontology
-description: "Advanced operational concepts — missions, contexts, substances, operational scenarios, procedural relationships"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "operational"]

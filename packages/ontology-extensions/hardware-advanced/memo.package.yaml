@@ -1,6 +1,0 @@
-name: "@memo/ontology-hardware-advanced"
-version: "0.1.0"
-type: ontology
-description: "Advanced hardware node definitions — computing devices, FPGAs, microcontrollers"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "hardware"]

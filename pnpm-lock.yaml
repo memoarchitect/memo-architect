@@ -113,18 +113,6 @@ importers:
 
   packages/ontology-cybersecurity: {}
 
-  packages/ontology-extensions/analysis-advanced: {}
-
-  packages/ontology-extensions/hardware-advanced: {}
-
-  packages/ontology-extensions/logical-advanced: {}
-
-  packages/ontology-extensions/operational-advanced: {}
-
-  packages/ontology-extensions/platform-core: {}
-
-  packages/ontology-extensions/requirements-advanced: {}
-
   packages/ontology-iec62304: {}
 
   packages/ontology-medical-arch: {}
@@ -133,7 +121,7 @@ importers:
 
   packages/ontology-medical-process: {}
 
-  packages/ontology-middleware-ros: {}
+  packages/ontology-ros: {}
 
   packages/web:
     dependencies:

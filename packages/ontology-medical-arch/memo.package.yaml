@@ -11,7 +11,7 @@ optionalModules:
   - "@memo/ontology-medical-process"        # ISO 14971 risk, IEC 62366 usability, ISO 13485 QMS, IEC 60601 safety
   - "@memo/ontology-iec62304"               # IEC 62304 software lifecycle classes (A/B/C), SOUP
   - "@memo/ontology-cybersecurity"          # IEC 81001-5-1 / FDA cybersecurity (threats, controls, vulnerabilities)
-  - "@memo/ontology-middleware-ros"         # ROS 2 nodes/topics/services for robotic medical devices
+  - "@memo/ontology-ros"         # ROS 2 nodes/topics/services for robotic medical devices
   - "@memo/ontology-medical-clinical-trial" # Clinical trial study ontology
   - "@memo/ontology-clinical-procedure"     # Clinical procedure / workflow kinds
   - "@memo/ontology-clinical-interop"       # HL7 FHIR / DICOM interoperability kinds

@@ -263,7 +263,7 @@ export interface MEMOConfig {
      * project explicitly opts into are loaded — disabled modules contribute
      * no kinds/relationships, no validation rules, and no viewpoints.
      *
-     * Each entry is a package name like "@memo/ontology-middleware-ros" or a
+     * Each entry is a package name like "@memo/ontology-ros" or a
      * short alias like "ros" (resolved against the base ontology's optionalModules list).
      */
     modules?: string[];

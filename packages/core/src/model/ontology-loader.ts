@@ -82,7 +82,7 @@ const LAYER_COLORS: Record<string, string> = {
     'software-lifecycle': '#3B82F6',
     // ontology-cybersecurity layers
     cybersecurity: '#EF4444', privacy: '#6366F1',
-    // ontology-middleware-ros layers
+    // ontology-ros layers
     middleware: '#0EA5E9',
 };
 
@@ -324,14 +324,7 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
             try {
                 for (const entry of readdirSync(pkgsDir, { withFileTypes: true })) {
                     if (!entry.isDirectory()) continue;
-                    if (entry.name === 'ontology-extensions') {
-                        const extRoot = join(pkgsDir, entry.name);
-                        for (const ext of readdirSync(extRoot, { withFileTypes: true })) {
-                            if (ext.isDirectory()) candidates.push(join(extRoot, ext.name));
-                        }
-                    } else {
-                        candidates.push(join(pkgsDir, entry.name));
-                    }
+                    candidates.push(join(pkgsDir, entry.name));
                 }
             } catch { /* skip */ }
             break; // Found a packages/ dir, stop walking up
@@ -641,21 +634,14 @@ const CONFIG_SEARCH_ORDER = [
  */
 function resolvePackageConfig(packageName: string, fromDir: string): string | undefined {
     const shortName = packageName.replace(/^@memo\//, '');
-    const extensionStem = shortName.replace(/^ontology-ext-/, '').replace(/^ontology-/, '');
 
     let dir = resolve(fromDir);
     while (true) {
-        // Try workspace packages
         for (const configName of CONFIG_SEARCH_ORDER) {
             const candidate = resolve(dir, 'packages', shortName, configName);
             if (existsSync(candidate)) return candidate;
         }
-        for (const configName of CONFIG_SEARCH_ORDER) {
-            const extCandidate = resolve(dir, 'packages', 'ontology-extensions', extensionStem, configName);
-            if (existsSync(extCandidate)) return extCandidate;
-        }
 
-        // Try node_modules
         for (const configName of CONFIG_SEARCH_ORDER) {
             const nmCandidate = resolve(dir, 'node_modules', packageName, configName);
             if (existsSync(nmCandidate)) return nmCandidate;
