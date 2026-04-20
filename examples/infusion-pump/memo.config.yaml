@@ -17,7 +17,7 @@ ontologies:
 modules:
   - "@memo/ontology-iec62304"        # software lifecycle (classes A/B/C, SOUP)
   # - "@memo/ontology-cybersecurity"          # IEC 81001-5-1 threats/controls
-  # - "@memo/ontology-middleware-ros"         # ROS 2 (nodes/topics/services)
+  # - "@memo/ontology-ros"         # ROS 2 (nodes/topics/services)
   # - "@memo/ontology-medical-clinical-trial" # clinical study
   # - "@memo/ontology-clinical-procedure"     # clinical workflow
   # - "@memo/ontology-clinical-interop"       # HL7 FHIR / DICOM

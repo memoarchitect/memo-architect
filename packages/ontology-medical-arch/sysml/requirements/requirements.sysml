@@ -46,4 +46,9 @@ package MEMO_Ontology_MedicalArch_Requirements {
         attribute topic : String;
         attribute scope : String;
     }
+
+    // ─── Aggregation (folded from ontology-extensions/requirements-advanced) ──
+    part def RequirementSet {
+        attribute name : String;
+    }
 }

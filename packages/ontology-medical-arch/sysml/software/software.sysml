@@ -59,4 +59,21 @@ package MEMO_Ontology_MedicalArch_Software {
     part def Firmware :> SoftwareComponent {
         attribute targetHardware : String;
     }
+
+    // ─── Platform runtimes (folded from ontology-extensions/platform-core) ──
+    part def Docker :> Software {
+        attribute image : String;
+        attribute tag : String;
+        attribute runtimeSocket : String;
+    }
+
+    part def EventDrivenService :> SoftwareComponent {
+        attribute consumedEvent : String;
+        attribute deliverySemantic : String;
+    }
+
+    part def MessageBroker :> SoftwareComponent {
+        attribute brokerProtocol : String;
+        attribute clusterSize : Integer;
+    }
 }

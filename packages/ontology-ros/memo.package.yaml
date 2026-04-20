@@ -1,4 +1,4 @@
-name: "@memo/ontology-middleware-ros"
+name: "@memo/ontology-ros"
 version: "0.1.0"
 type: ontology
 extends: "@memo/ontology-medical-arch"

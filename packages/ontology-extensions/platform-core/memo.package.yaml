@@ -1,6 +1,0 @@
-name: "@memo/ontology-platform-core"
-version: "0.1.0"
-type: ontology
-description: "Platform, messaging, and advanced interface definitions — pub/sub, request/response, message schemas"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "platform", "messaging", "interfaces"]

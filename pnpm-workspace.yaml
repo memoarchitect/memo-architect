@@ -1,5 +1,4 @@
 packages:
   - "packages/*"
-  - "packages/ontology-extensions/*"
   - "examples/*"
   - "tools/*"
