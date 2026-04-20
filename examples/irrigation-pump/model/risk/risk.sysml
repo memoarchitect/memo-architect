@@ -1,4 +1,5 @@
 package IrrigationPump_Risk {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
 
     requirement hazOverpressure : Hazard {

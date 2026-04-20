@@ -4,6 +4,7 @@
 // ============================================================================
 
 package GPCA_Cybersecurity {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;

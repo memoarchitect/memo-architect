@@ -4,6 +4,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Architecture {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
     import InfusionPump_Requirements::*;
 

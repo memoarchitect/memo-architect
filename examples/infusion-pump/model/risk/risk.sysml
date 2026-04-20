@@ -7,6 +7,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Risk {
+    import MEMO_Ontology_MedicalArch::*;
     import MEMO_Ontology_MedicalProcess::*;
 
     // Hazards (ISO 14971)
