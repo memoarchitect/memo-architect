@@ -43,6 +43,7 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 - `docs/src/developers/architecture/websocket-protocol.md` — CLI ↔ web app protocol
 - `docs/src/developers/adr/ADR-1-6-ontology-core-medical-split.md` — three-tier ontology rationale
 - `docs/src/developers/adr/ADR-1-8-project-format-contract.md` — canonical project config format (memo.config.yaml vs memo.package.yaml)
+- `docs/src/developers/adr/ADR-1-10-two-ontology-collapse.md` — collapse 9 legacy ontology packages into ontology-arch + ontology-process
 - `/Users/someshkashyap/Downloads/System Architecture Document-wip.pdf`
 - `/Users/someshkashyap/Downloads/System Architecture Overview.pdf`
 - `/Users/someshkashyap/EA/NewMDG/AfferaMDG.qea` (SQLite, 78 stereotypes)
@@ -67,25 +68,36 @@ packages/
   core/                      — Langium grammar, parser, model builder, validator, serializers
   cli/                       — CLI commands (init, dev, validate, export, import, ontology)
   web/                       — React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
-  ontology-core/             — Domain-agnostic MBSE backbone (11 architecture layers, 165 kinds, OWL exporter)
-  ontology-medical/          — Medical device backbone extending core (15 entity domains, 200+ kinds, OWL exporter)
-  medical-modeling-profile/  — Modeling profile with closure rules, viewpoints, and templates (extends ontology-medical)
+  ontology-arch/             — Architecture layers (11 layers, 118+ kinds: operational/functional/logical/software/hardware/behavioral/verification/safety/security/privacy + ROS extension)
+  ontology-process/          — Regulatory standards (ISO 14971, IEC 62304, ISO 13485, IEC 60601, ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR)
+  medical-modeling-profile/  — Modeling profile with closure rules, viewpoints, and templates (extends both ontology packages)
 examples/
   infusion-pump/             — Multi-file medical device model with compliance/risk models
   irrigation-pump/           — Behavior-focused example with architecture, risk, and compliance models
+  gpca-pump/                 — Large reference model (GPCA pump, 500+ elements)
 ```
 
-**Target package structure (after Phase 7-8 rearchitecture):**
+Each ontology package follows the Apollo-11 pattern (directory = architecture layer):
 ```
-packages/ontology-core/
+packages/ontology-arch/
   .project.json              — SysAnd manifest
   memo.package.yaml          — Identity (name, version, license)
-  memo.rendering.yaml        — Architecture layer colors/icons (~30 lines)
+  memo.rendering.yaml        — Architecture layer colors/icons
   sysml/
-    purpose/business.sysml   — Directory = architecture layer (Apollo-11 pattern)
-    operational/...
-    requirements/...
-    relationships/...
+    index.sysml              — Aggregate entry point (imports all sub-packages)
+    operational/             — Directory = layer name
+    functional/
+    logical/
+    software/
+    hardware/
+    behavioral/
+    verification/
+    safety/
+    security/
+    privacy/
+    relationships/
+    axioms/
+    software-extension/      — ROS 2 middleware kinds
 ```
 
 ## Build & Test Commands
@@ -158,7 +170,8 @@ glab milestone list --project somesh_sandbox/memo --per-page 50
 
 ## Completed Phases
 
-Phases 1-18 complete (Foundation through GPCA Reference Model). 352+ tests passing. See GitLab closed milestones for history.
+Phases 1-18 + two-ontology refactor (Phases 7-8) complete. 346 tests passing. See GitLab closed milestones for history.
+Two-ontology refactor: collapsed 9 legacy ontology packages into `@memo/ontology-arch` and `@memo/ontology-process` (see ADR-1-10).
 
 ## Key Architecture Decisions
 
