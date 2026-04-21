@@ -10,12 +10,15 @@ import { resolve } from 'node:path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, createReadStream, statSync, readdirSync } from 'node:fs';
 import { extname } from 'node:path';
 import type { ServerMessage, ModelUpdateMessage, DiagramDTO, DiagramLayout } from '@memo/core';
+import type { BuilderRegistries } from '@memo/core';
 
 export interface DevServerOptions {
     port: number;
     projectRoot: string;
     webPackagePath: string;
     initialMessages: ServerMessage[];
+    /** Frozen ontology registries from bootstrap — used to validate diagrams/layouts on load */
+    ontologyRegistries?: BuilderRegistries;
 }
 
 export interface DevServer {

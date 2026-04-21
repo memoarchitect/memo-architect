@@ -24,7 +24,8 @@ export type ServerMessage =
     | LlmAskResultMessage
     | LlmGenerateResultMessage
     | LlmDraftResultMessage
-    | LlmSuggestResultMessage;
+    | LlmSuggestResultMessage
+    | RestartRequiredMessage;
 
 export interface ModelUpdateMessage {
     type: 'model:update';
@@ -301,6 +302,14 @@ export interface LlmSuggestMessage {
 export interface LlmSuggestResultMessage {
     type: 'llm:suggest:result';
     payload: { requestId: string; suggestions?: string[]; error?: string };
+}
+
+/** Server → Client: ontology changed on disk — client must reload after server restart */
+export interface RestartRequiredMessage {
+    type: 'app:restart-required';
+    reason: 'ontology-source-changed' | 'ontology-selection-changed';
+    changedFile: string;
+    instruction: string;
 }
 
 /** Server → Client: CSV import results */

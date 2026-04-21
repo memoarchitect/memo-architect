@@ -1,23 +1,25 @@
 // ─── memo dev ────────────────────────────────────────────────────────────────
 //
 // Starts the development server:
-//   1. Load config → parse .sysml → build model → validate
+//   1. bootstrap() — load config + ontology registries once (frozen after)
 //   2. Start HTTP server (Vite middleware for web app + WebSocket)
-//   3. Watch .sysml and .yaml files for changes → rebuild → broadcast
+//   3. Project watcher → rebuildProject() (hot reload)
+//      Ontology watcher → notifyRestartRequired() (no model mutation)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve } from 'node:path';
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata } from '@memo/core';
-import type { BuilderRegistries } from '@memo/core';
+import type { BuilderRegistries, RestartRequiredMessage } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import type { ServerMessage, ViewpointDTO, ArchLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { createDevServer } from '../server/dev-server.js';
-import { createFileWatcher } from '../server/file-watcher.js';
+import { createProjectWatcher, createOntologyWatcher } from '../server/file-watcher.js';
 import { checkLockFile } from '../lock.js';
 
 /** Gather git info for model metadata */
@@ -50,6 +52,15 @@ function findSysmlFiles(dir: string): string[] {
     return files;
 }
 
+/** Stable hash of ontology registries — stamped on every broadcast for stale-server detection */
+function computeOntologyHash(registries: BuilderRegistries): string {
+    const kr = registries.kindRegistry;
+    const rr = registries.relationshipRegistry;
+    const kindKeys = kr ? kr.kindNames().sort().join(',') : '';
+    const relKeys = rr ? rr.relTypeNames().sort().join(',') : '';
+    return createHash('sha256').update(`${kindKeys}|${relKeys}`).digest('hex').slice(0, 16);
+}
+
 export async function devCommand(options: { port?: number; open?: boolean }): Promise<void> {
     const cwd = process.cwd();
     const port = options.port || 3000;
@@ -57,7 +68,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
 
     console.log(chalk.bold('\n🚀 MEMO Dev Server\n'));
 
-    // 1. Find and load config
+    // ── bootstrap: runs once ───────────────────────────────────────────────────
     const configPath = findConfigFile(cwd);
     if (!configPath) {
         console.error(chalk.red('❌ No memo config found (memo.package.yaml or memo.config.yaml). Run `memo init` first.'));
@@ -69,7 +80,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     let buildCount = 0;
     console.log(chalk.gray(`Project: ${config.projectName}`));
 
-    // 1a. Check ontology lock
     const lockCheck = checkLockFile(configPath);
     if (!lockCheck.ok) {
         console.error(chalk.red(`\n❌ ${lockCheck.message}\n`));
@@ -79,12 +89,20 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         console.log(chalk.gray(`Ontology: locked to ${lockCheck.locked.ontology} v${lockCheck.locked.version}`));
     }
 
-    // 1b. Load ontology registries (SysML-driven kind/relationship discovery)
+    // Load + freeze ontology registries — no mid-session mutation
     let ontologyRegistries: BuilderRegistries | undefined;
+    let ontologyRoots: string[] = [];
+    let ontologyHash = '';
+
     try {
         const loadResult = await loadOntologyRegistries(configPath);
         if (loadResult.fileCount > 0) {
             ontologyRegistries = loadResult.registries;
+            ontologyRoots = loadResult.ontologyDirs;
+            if (ontologyRegistries.kindRegistry) Object.freeze(ontologyRegistries.kindRegistry);
+            if (ontologyRegistries.relationshipRegistry) Object.freeze(ontologyRegistries.relationshipRegistry);
+            ontologyHash = computeOntologyHash(ontologyRegistries);
+
             const kr = loadResult.registries.kindRegistry;
             const rr = loadResult.registries.relationshipRegistry;
             console.log(chalk.gray(
@@ -95,11 +113,10 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     } catch (e) {
         console.log(chalk.yellow(`  ⚠ Could not load ontology registries: ${e instanceof Error ? e.message : e}`));
     }
+    // ── end bootstrap ──────────────────────────────────────────────────────────
 
-    // 2. Initial parse + build
-    async function rebuild(): Promise<{
-        messages: ServerMessage[];
-    }> {
+    // ── rebuildProject: hot path — no ontology reload ─────────────────────────
+    async function rebuildProject(): Promise<{ messages: ServerMessage[] }> {
         buildCount++;
         const sysmlFiles = findSysmlFiles(cwd);
         const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
@@ -112,7 +129,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             `${validation.violations.length} violations, ${completeness.overall}% complete`
         ));
 
-        // Map config viewpoints/architectureLayers to DTOs
         const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({
             id: vp.id,
             label: vp.label,
@@ -122,8 +138,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             supportedDiagramTypes: vp.supportedDiagramTypes,
         }));
 
-        // Collect all diagrams from viewpoints + Model Viewpoint per-layer auto-diagrams.
-        // One diagram per architecture layer (instead of a single unreadable "Full Model Overview").
         const diagrams: DiagramDTO[] = [];
         for (const [layerId, layerElements] of model.elementsByLayer.entries()) {
             if (layerElements.length === 0) continue;
@@ -138,7 +152,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 elementIds: layerElements.map(e => e.id),
             });
         }
-        // Add diagrams from config viewpoints
         if (config.viewpoints) {
             for (const vp of config.viewpoints) {
                 if (vp.diagrams) {
@@ -165,7 +178,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             color: cl.color,
         }));
 
-        // Build metadata with version
         const baseVersion = config.ontologyMetadata?.version || '0.1.0';
         const metadata: ModelMetadata = {
             projectName: config.projectName,
@@ -173,7 +185,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             ...gitInfo,
         };
 
-        // Load user-created diagrams from .memo/user-diagrams.json (persist across rebuilds)
         const userDiagramsPath = resolve(cwd, '.memo', 'user-diagrams.json');
         if (existsSync(userDiagramsPath)) {
             try {
@@ -186,8 +197,8 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
 
         const dto = modelToDTO(model, { viewpoints, architectureLayers, diagrams });
         dto.metadata = metadata;
+        (dto as any).ontologyHash = ontologyHash;
 
-        // Build ontology package metadata for UI
         const ontologyPackages = getPackageMetadata(cwd);
 
         return {
@@ -195,7 +206,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 { type: 'model:update', payload: dto },
                 { type: 'validation:update', payload: validation },
                 { type: 'completeness:update', payload: completeness },
-                { type: 'ontology:packages', payload: { packages: ontologyPackages } },
+                { type: 'ontology:packages', payload: { packages: ontologyPackages, ontologyHash } as any },
             ],
         };
     }
@@ -208,46 +219,71 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         console.log(chalk.gray('    memo import template elements\n'));
     }
     console.log(chalk.gray('  Building model...'));
-    const initial = await rebuild();
+    const initial = await rebuildProject();
 
-    // 3. Start dev server
+    // Start dev server
     const server = await createDevServer({
         port,
         projectRoot: cwd,
         webPackagePath: resolveWebPackage(cwd),
         initialMessages: initial.messages,
+        ontologyRegistries,
     });
 
     console.log(chalk.green(`\n  ➜ http://${host}:${port}\n`));
 
-    // 4. Watch for changes
-    const watcher = createFileWatcher(cwd, async () => {
+    // ── notifyRestartRequired: ontology watcher callback ───────────────────────
+    // Declared after server so it can reference server directly.
+    function notifyRestartRequired(
+        reason: RestartRequiredMessage['reason'],
+        changedFile: string
+    ): void {
+        const msg: RestartRequiredMessage = {
+            type: 'app:restart-required',
+            reason,
+            changedFile,
+            instruction: 'Stop dev server (Ctrl+C) and run `memo dev` again to apply ontology changes.',
+        };
+        process.stderr.write(
+            chalk.yellow(`\n  ⚠ Ontology changed (${changedFile}) — restart required. Changes ignored until restart.\n\n`)
+        );
+        server.broadcast([msg]);
+    }
+
+    // Project watcher — hot reload
+    const projectWatcher = createProjectWatcher(cwd, async () => {
         console.log(chalk.gray(`  [${new Date().toLocaleTimeString()}] Rebuilding...`));
-        const result = await rebuild();
+        const result = await rebuildProject();
         server.broadcast(result.messages);
     });
 
-    // 5. Open browser
+    // Ontology watcher — restart notification only, no registry reload
+    const ontologyWatcher = createOntologyWatcher(
+        cwd,
+        ontologyRoots,
+        (changedFile) => notifyRestartRequired('ontology-source-changed', changedFile)
+    );
+
+    // Open browser
     if (options.open !== false) {
         const openModule = await import('open');
         openModule.default(`http://${host}:${port}`);
     }
 
-    // Keep alive
     process.on('SIGINT', () => {
         console.log(chalk.gray('\n  Shutting down...'));
-        watcher.close();
+        projectWatcher.close();
+        ontologyWatcher.close();
         server.close();
         process.exit(0);
     });
 }
 
 function resolveWebPackage(cwd: string): string {
-    // Try workspace path first
     const tryPaths = [
-        resolve(cwd, '../../packages/web'),    // from examples/infusion-pump
-        resolve(cwd, '../web'),                 // from packages/cli
-        resolve(cwd, 'node_modules/@memo/web'), // installed dependency
+        resolve(cwd, '../../packages/web'),
+        resolve(cwd, '../web'),
+        resolve(cwd, 'node_modules/@memo/web'),
     ];
 
     for (const p of tryPaths) {
