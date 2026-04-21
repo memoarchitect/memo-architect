@@ -1,6 +1,0 @@
-{
-  "type": "ontology-package",
-  "name": "@memo/ontology-medical-clinical-trial",
-  "version": "0.1.0",
-  "usage": ["kinds"]
-}

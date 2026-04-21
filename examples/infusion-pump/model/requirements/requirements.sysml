@@ -4,8 +4,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Requirements {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import InfusionPump_Risk::*;
 
     // User Needs
@@ -43,13 +43,13 @@ package InfusionPump_Requirements {
         attribute redefines domain = "Software";
         attribute redefines title = "Alarm Management";
         attribute redefines priority = "Critical";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     // Stable semantics: requirements derive downward and implement risk controls.
     connection : Derives connect source ::> unAccurateDelivery to derived ::> srFlowAccuracy;
     connection : Derives connect source ::> unAlarmAudibility to derived ::> srAlarmAudibility;
-    connection : ImplementsRiskControl connect implementer ::> srFlowAccuracy to control ::> rcFlowRateLimiter;
-    connection : ImplementsRiskControl connect implementer ::> srAlarmAudibility to control ::> rcOcclusionAlarm;
+    connection : TraceTo connect source ::> srFlowAccuracy to target ::> rcFlowRateLimiter;
+    connection : TraceTo connect source ::> srAlarmAudibility to target ::> rcOcclusionAlarm;
     connection : Derives connect source ::> srAlarmAudibility to derived ::> swrAlarmManagement;
 }

@@ -14,8 +14,8 @@
 // ============================================================================
 
 package InfusionPump {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
 
     // ═══════════════════════════════════════════════════════════════════════
     // BUSINESS ANALYSIS LAYER — Who uses this and why?
@@ -234,22 +234,25 @@ package InfusionPump {
         attribute redefines riskAcceptance = RiskAcceptance::Unacceptable;
     }
 
-    // Risk Controls
-    requirement rcFlowRateLimiter : RiskControl {
-        attribute redefines rcId = "RC-001";
-        attribute redefines title = "Software Flow Rate Limiter";
+    // Risk → Hazard identification
+    connection : IdentifiesRisk connect source ::> riskOverInfusion to risk ::> hazOverInfusion;
+
+    // Risk Controls (Mitigations per ISO 14971)
+    part rcFlowRateLimiter : Mitigation {
+        attribute mitigationId = "RC-001";
+        attribute title = "Software Flow Rate Limiter";
         doc /* Software enforces maximum flow rate regardless of user input. */
     }
 
-    requirement rcOcclusionAlarm : RiskControl {
-        attribute redefines rcId = "RC-002";
-        attribute redefines title = "Occlusion Detection and Alarm";
+    part rcOcclusionAlarm : Mitigation {
+        attribute mitigationId = "RC-002";
+        attribute title = "Occlusion Detection and Alarm";
         doc /* Pressure-based occlusion detection with alarm within 30s. */
     }
 
-    requirement rcAntiFreeFlowClamp : RiskControl {
-        attribute redefines rcId = "RC-003";
-        attribute redefines title = "Anti-Free-Flow Clamp";
+    part rcAntiFreeFlowClamp : Mitigation {
+        attribute mitigationId = "RC-003";
+        attribute title = "Anti-Free-Flow Clamp";
         doc /* Mechanical clamp engages when pump door opens. */
     }
 
@@ -420,38 +423,38 @@ package InfusionPump {
 
     part pumpControlSoftware : Software {
         attribute redefines name = "Pump Control Software";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         attribute redefines level = "System";
     }
 
     part flowController : SoftwareComponent {
         attribute redefines name = "Flow Rate Controller";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     part occlusionDetector : SoftwareComponent {
         attribute redefines name = "Occlusion Detector";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     part alarmManager : SoftwareComponent {
         attribute redefines name = "Alarm Manager";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     part displayDriver : SoftwareComponent {
         attribute redefines name = "Display Driver";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     part commModule : SoftwareComponent {
         attribute redefines name = "Communication Module";
-        attribute redefines safetyClassification = "A";
+        attribute safetyClass = "A";
     }
 
     part pumpFirmware : Firmware {
         attribute redefines name = "Pump Motor Firmware";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -879,7 +882,7 @@ package InfusionPump {
     connection : DefinesLossCondition connect performance ::> epControlledDelivery to condition ::> lossOfControlledDelivery;
     connection : Preserves connect function ::> sfMaintainControlledDelivery to performance ::> epControlledDelivery;
     connection : ProtectsEssentialPerformance connect control ::> rcFlowRateLimiter to performance ::> epControlledDelivery;
-    connection : ImplementsRiskControl connect implementer ::> sfMaintainControlledDelivery to control ::> rcFlowRateLimiter;
+    connection : TraceTo connect source ::> sfMaintainControlledDelivery to target ::> rcFlowRateLimiter;
     connection : EvaluatesRequirement connect evaluation ::> formativeEvalAlarmWorkflow to uiRequirement ::> uiReqAlarmAcknowledgement;
     connection : EvaluatesRequirement connect evaluation ::> summativeEvalAlarmWorkflow to uiRequirement ::> uiReqAlarmAcknowledgement;
     connection : AppliesStandardRequirement connect standardRequirement ::> collateralAlarmStandard to subject ::> epControlledDelivery;

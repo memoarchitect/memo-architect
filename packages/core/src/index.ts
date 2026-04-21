@@ -69,3 +69,6 @@ export * from './plugin/index.js';
 
 // ─── Protocol (WebSocket messages) ──────────────────────────────────────────
 export * from './protocol/messages.js';
+
+// ─── OWL Export ─────────────────────────────────────────────────────────────
+export * from './ontology/owl-exporter.js';

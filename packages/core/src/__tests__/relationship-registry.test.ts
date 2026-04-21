@@ -50,8 +50,8 @@ describe('RelationshipRegistry', () => {
             label: 'Mitigates',
             layer: 'crosscutting',
             ends: [
-                { name: 'control', type: 'RiskControl' },
-                { name: 'hazard', type: 'Hazard' },
+                { name: 'mitigation', type: 'Mitigation' },
+                { name: 'risk', type: 'Risk' },
             ],
         });
 
@@ -111,31 +111,31 @@ describe('RelationshipRegistry', () => {
     });
 });
 
-// ─── RelationshipRegistry Integration: ontology-medical-arch ────────────────────────
+// ─── RelationshipRegistry Integration: ontology-arch ────────────────────────────────
 
-describe('RelationshipRegistry integration with ontology-medical-arch', () => {
+describe('RelationshipRegistry integration with ontology-arch', () => {
     let registry: RelationshipRegistry;
 
     beforeAll(async () => {
-        const coreDir = resolve(__dirname, '../../../ontology-medical-arch/sysml');
+        const coreDir = resolve(__dirname, '../../../ontology-arch/sysml');
         const sysmlFiles = getSysmlFiles(coreDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-arch'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-arch'));
         expect(result.errors).toHaveLength(0);
 
         registry = new RelationshipRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers relationship types from ontology-medical-arch SysML files', () => {
-        // Slim core has 16 connection defs (down from 42 after ontology simplification)
+    it('discovers relationship types from ontology-arch SysML files', () => {
+        // ontology-arch has ~42 connection defs across structural/safety/security/etc.
         expect(registry.size).toBeGreaterThanOrEqual(14);
     });
 
     it('normalizes PascalCase SysML names to camelCase', () => {
         expect(registry.has('aggregation')).toBe(true);
         expect(registry.has('traceTo')).toBe(true);
-        expect(registry.has('mitigates')).toBe(false); // mitigates is in medical, not core
+        expect(registry.has('mitigates')).toBe(true); // mitigates is in ontology-arch (safety section)
     });
 
     it('resolves layer as crosscutting for relationships directory', () => {
@@ -169,46 +169,44 @@ describe('RelationshipRegistry integration with ontology-medical-arch', () => {
     it('part defs are NOT registered as relationship types', () => {
         // Part defs belong in KindRegistry, not RelationshipRegistry
         expect(registry.has('hazard')).toBe(false);
-        expect(registry.has('program')).toBe(false);
+        expect(registry.has('system')).toBe(false);
     });
 });
 
-// ─── RelationshipRegistry Integration: ontology-medical-process ─────────────────────
+// ─── RelationshipRegistry Integration: ontology-process ─────────────────────────────
 
-describe('RelationshipRegistry integration with ontology-medical-process', () => {
+describe('RelationshipRegistry integration with ontology-process', () => {
     let registry: RelationshipRegistry;
 
     beforeAll(async () => {
-        const medicalDir = resolve(__dirname, '../../../ontology-medical-process/sysml');
-        const sysmlFiles = getSysmlFiles(medicalDir);
+        const processDir = resolve(__dirname, '../../../ontology-process/sysml');
+        const sysmlFiles = getSysmlFiles(processDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-process'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-process'));
         expect(result.errors).toHaveLength(0);
 
         registry = new RelationshipRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers relationship types from ontology-medical-process SysML files', () => {
-        // Consolidated medical ontology exposes a broad relationship surface.
-        expect(registry.size).toBeGreaterThanOrEqual(40);
+    it('discovers relationship types from ontology-process SysML files', () => {
+        // ontology-process has 5 cross-package bridge connection defs
+        expect(registry.size).toBeGreaterThanOrEqual(3);
     });
 
-    it('discovers medical-specific relationship types', () => {
-        expect(registry.has('mitigates')).toBe(true);
-        expect(registry.has('causes')).toBe(true);
-        expect(registry.has('leadsTo')).toBe(true);
-        expect(registry.has('identifies')).toBe(true);
+    it('discovers process-specific relationship types', () => {
+        expect(registry.has('tracedTo')).toBe(true);
+        expect(registry.has('verifiesArch')).toBe(true);
+        expect(registry.has('governedBy')).toBe(true);
     });
 
-    it('normalizes medical relationship names correctly', () => {
-        const mitigates = registry.getRelType('mitigates');
-        expect(mitigates).toBeDefined();
-        expect(mitigates!.sysmlName).toBe('Mitigates');
-        expect(mitigates!.label).toBe('Mitigates');
+    it('normalizes process relationship names correctly', () => {
+        const tracedTo = registry.getRelType('tracedTo');
+        expect(tracedTo).toBeDefined();
+        expect(tracedTo!.sysmlName).toBe('TracedTo');
 
-        const plansRisk = registry.getRelType('plansRiskManagement');
-        expect(plansRisk).toBeDefined();
-        expect(plansRisk!.sysmlName).toBe('PlansRiskManagement');
+        const governedBy = registry.getRelType('governedBy');
+        expect(governedBy).toBeDefined();
+        expect(governedBy!.sysmlName).toBe('GovernedBy');
     });
 });

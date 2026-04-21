@@ -11,33 +11,33 @@ describe('loadOntologyRegistries', () => {
         const configPath = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
-        // Should find ontology-medical-process and ontology-medical-arch SysML dirs
+        // Should find ontology-arch and ontology-process SysML dirs
         expect(result.ontologyDirs.length).toBeGreaterThanOrEqual(2);
-        expect(result.fileCount).toBeGreaterThan(20);
+        expect(result.fileCount).toBeGreaterThan(10);
         expect(result.errors).toHaveLength(0);
 
-        // KindRegistry should have kinds from both ontology-medical-arch and ontology-medical-process
+        // KindRegistry should have kinds from both ontology-arch and ontology-process
         const kr = result.registries.kindRegistry!;
-        expect(kr.size).toBeGreaterThan(130); // consolidated kinds reduce total count
+        expect(kr.size).toBeGreaterThan(30);
 
-        // Check core kinds
-        expect(kr.has('Program')).toBe(true);
+        // Check arch kinds
+        expect(kr.has('System')).toBe(true);
         expect(kr.has('Requirement')).toBe(true);
-        expect(kr.has('Subsystem')).toBe(true);
+        expect(kr.has('SoftwareComponent')).toBe(true);
 
-        // Check medical kinds
+        // Check safety kinds
         expect(kr.has('Hazard')).toBe(true);
-        expect(kr.has('RiskControl')).toBe(true);
+        expect(kr.has('Mitigation')).toBe(true);
 
         // RelationshipRegistry should have relationships from both
         const rr = result.registries.relationshipRegistry!;
-        expect(rr.size).toBeGreaterThan(60); // slim core ~16 + medical ~58
+        expect(rr.size).toBeGreaterThan(30);
 
-        // Core relationships
+        // Arch relationships
         expect(rr.has('aggregation')).toBe(true);
         expect(rr.has('traceTo')).toBe(true);
 
-        // Medical relationships
+        // Safety relationships
         expect(rr.has('mitigates')).toBe(true);
         expect(rr.has('causes')).toBe(true);
     });
@@ -48,7 +48,7 @@ describe('loadOntologyRegistries', () => {
 
         // Should discover ontology packages through extends chain
         expect(result.ontologyDirs.length).toBeGreaterThanOrEqual(2);
-        expect(result.fileCount).toBeGreaterThan(20);
+        expect(result.fileCount).toBeGreaterThan(10);
 
         // Should have all ontology kinds available
         const kr = result.registries.kindRegistry!;
@@ -57,19 +57,19 @@ describe('loadOntologyRegistries', () => {
         expect(kr.has('Requirement')).toBe(true);
     });
 
-    it('loads registries from ontology-medical-arch config directly', async () => {
-        const configPath = resolve(PACKAGES_DIR, 'ontology-medical-arch/memo.package.yaml');
+    it('loads registries from ontology-arch config directly', async () => {
+        const configPath = resolve(PACKAGES_DIR, 'ontology-arch/memo.package.yaml');
         const result = await loadOntologyRegistries(configPath);
 
-        // Should find just ontology-medical-arch sysml dir
+        // Should find just ontology-arch sysml dir
         expect(result.ontologyDirs.length).toBeGreaterThanOrEqual(1);
-        expect(result.fileCount).toBeGreaterThan(10);
+        expect(result.fileCount).toBeGreaterThan(5);
 
         const kr = result.registries.kindRegistry!;
-        expect(kr.has('Program')).toBe(true);
+        expect(kr.has('System')).toBe(true);
         expect(kr.has('Requirement')).toBe(true);
-        // Should NOT have medical-specific kinds
-        expect(kr.has('RiskControl')).toBe(false);
+        // Should NOT have process-specific kinds
+        expect(kr.has('RiskManagementPlan')).toBe(false);
     });
 });
 
@@ -88,7 +88,7 @@ describe('Infusion pump with ontology registries', () => {
         const PUMP_FILE = resolve(PACKAGES_DIR, '../examples/infusion-pump/model/infusion-pump.sysml');
         const CONFIG_FILE = resolve(PACKAGES_DIR, 'medical-modeling-profile/memo.package.yaml');
 
-        // Load config
+        // Load config — resolveConfig now handles array extends correctly
         const config = resolveConfig(loadConfig(CONFIG_FILE), (packageName: string) => {
             const shortName = packageName.replace(/^@memo\//, '');
             const parentPath = resolve(PACKAGES_DIR, shortName, 'memo.package.yaml');

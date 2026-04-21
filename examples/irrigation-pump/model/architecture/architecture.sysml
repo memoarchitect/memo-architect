@@ -1,6 +1,6 @@
 package IrrigationPump_Architecture {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import IrrigationPump_Requirements::*;
     import IrrigationPump_Behavior::*;
 
@@ -58,22 +58,22 @@ package IrrigationPump_Architecture {
 
     part irrigationControlSoftware : Software {
         attribute redefines name = "Irrigation Control Software";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     part pressureControlModule : SoftwareComponent {
         attribute redefines name = "Pressure Control Module";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     part reservoirEstimationModule : SoftwareComponent {
         attribute redefines name = "Reservoir Estimation Module";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     part alarmCoordinatorModule : SoftwareComponent {
         attribute redefines name = "Alarm Coordinator Module";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     part setupScreen : UIScreen {

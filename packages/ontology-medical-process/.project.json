@@ -1,6 +1,0 @@
-{
-  "type": "ontology-package",
-  "name": "@memo/ontology-medical-process",
-  "version": "0.2.0",
-  "usage": ["kinds", "relationships"]
-}

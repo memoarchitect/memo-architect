@@ -1,5 +1,5 @@
-# @memo/medical-modeling-profile — viewpoint definitions
-# Medical device viewpoints for ISO 42010-aligned model views
+# @memo/medical-modeling-profile — viewpoint definitions (v12 two-ontology aligned)
+# All kinds reference @memo/ontology-arch or @memo/ontology-process namespaces.
 
 viewpoints:
   - id: risk-overview
@@ -10,674 +10,334 @@ viewpoints:
       - HazardousSituation
       - Harm
       - Risk
-      - RiskControl
-      - ClinicalBenefit
-      - BenefitRiskAssessment
-      - ResidualRiskEvaluation
-      - OverallResidualRiskEvaluation
-      - FailureModesAndEffectsAnalysis
+      - Mitigation
       - FailureMode
-      - FailureEffect
-      - FaultTreeAnalysis
-      - TopEvent
+      - FaultTreeNode
       - RiskManagementPlan
       - RiskManagementReport
-      - ProductionPostProductionSignal
-      - SafetyGoal
-      - UseError
-      - EssentialPerformance
-      - SafetyFunction
-      - Test
-      - ComplianceEvidence
+      - ResidualRiskEvaluation
+      - OverallResidualRiskEvaluation
+      - BenefitRiskAssessment
+      - PostMarketSurveillanceFeedback
+      - VerificationCase
+      - Evidence
     visibleRelationships:
       - mitigates
       - causes
       - leadsTo
-      - identifies
+      - identifiesRisk
       - plansRiskManagement
       - assessesResidualRisk
       - weighsAgainstBenefit
       - concludesBenefitRisk
       - concludesOverallResidualRisk
-      - monitorsRiskSubject
-      - analyzesFailureMode
-      - resultsInFailureEffect
-      - escalatesToRisk
-      - detectsFailureMode
-      - definesTopEvent
-      - contributesToEvent
-      - triggersHazardousSituation
-      - contributesToHazard
-      - implementsRiskControl
-      - protectsEssentialPerformance
-      - verify
-      - evidences
+      - monitorsPostMarket
+      - hasFailureMode
+      - contributesTo
+      - verifies
+      - producesEvidence
     visibleLayers:
-      - risk
       - safety
       - verification
+      - iso-14971
     diagrams:
       - id: diag-risk-chain
         name: Risk Mitigation Chain
         diagramType: risk
         viewpointId: risk-overview
         auto: true
-        description: Hazard to RiskControl to Test mitigation chain
-
-  - id: risk-analysis-view
-    label: Risk Analysis (FMEA / FTA)
-    supportedDiagramTypes: [risk, req, pkg]
-    visibleKinds:
-      - FailureModesAndEffectsAnalysis
-      - FaultTreeAnalysis
-      - FailureMode
-      - FailureCause
-      - FailureEffect
-      - ClinicalBenefit
-      - BenefitRiskAssessment
-      - ResidualRiskEvaluation
-      - OverallResidualRiskEvaluation
-      - TopEvent
-      - FaultTreeContributor
-      - FaultTreeGate
-      - Hazard
-      - HazardousSituation
-      - Harm
-      - RiskControl
-      - RiskManagementPlan
-      - RiskManagementReport
-      - ProductionPostProductionSignal
-      - Test
-      - DesignHistoryRecord
-    visibleRelationships:
-      - plansRiskManagement
-      - assessesResidualRisk
-      - weighsAgainstBenefit
-      - concludesBenefitRisk
-      - concludesOverallResidualRisk
-      - monitorsRiskSubject
-      - analyzesFailureMode
-      - hasFailureCause
-      - resultsInFailureEffect
-      - escalatesToRisk
-      - detectsFailureMode
-      - definesTopEvent
-      - usesGate
-      - contributesToEvent
-      - triggersHazardousSituation
-      - mitigates
-      - verify
-      - documents
-    visibleLayers:
-      - risk
-      - verification
-      - qms
-    diagrams:
-      - id: diag-risk-analysis
-        name: Failure Analysis And Fault Propagation
-        diagramType: risk
-        viewpointId: risk-analysis-view
-        auto: true
-        description: FMEA and fault-tree traces linked back to hazards, situations, controls, and verification
+        description: Hazard to Mitigation to VerificationCase chain (ISO 14971)
 
   - id: safety-view
     label: Safety Analysis
     supportedDiagramTypes: [bdd, req, pkg]
     visibleKinds:
-      - SafetyGoal
-      - EssentialPerformance
-      - BasicSafety
-      - PrimaryOperatingFunction
-      - EssentialPerformanceLossCondition
-      - RiskControl
       - Hazard
+      - HazardousSituation
+      - Harm
+      - Risk
+      - Mitigation
+      - FailureMode
+      - FaultTreeNode
+      - Function
       - Requirement
-      - UseError
-      - CollateralStandardRequirement
-      - ParticularStandardRequirement
-      - UseSpecification
-      - UseErrorAnalysis
-      - UsabilitySpecification
-      - FormativeEvaluation
-      - SummativeEvaluation
-      - UIScreen
-      - UIPanel
-      - UIElement
-      - ComplianceEvidence
-      - DesignHistoryRecord
-      - Function
-      - Function
-      - Test
+      - VerificationCase
+      - Evidence
+      - EssentialPerformanceDefinition
+      - BasicSafetyRequirement
     visibleRelationships:
       - mitigates
-      - preserves
-      - addressesUseError
-      - analyzesUseError
-      - specifiesScenario
-      - exposesUseError
-      - contributesToHazard
-      - allocateTo
-      - supportsOperatingFunction
-      - definesLossCondition
-      - protectsEssentialPerformance
-      - implementsRiskControl
-      - appliesStandardRequirement
-      - evaluatesRequirement
-      - satisfy
-      - documents
-      - evidences
-      - verify
+      - causes
+      - leadsTo
+      - identifiesRisk
+      - hasFailureMode
+      - contributesTo
+      - allocatedTo
+      - satisfies
+      - verifies
+      - producesEvidence
     visibleLayers:
-      - risk
       - safety
       - functional
-      - design-control
       - verification
-      - qms
-      - ui
+      - iec-60601
     diagrams:
       - id: diag-safety-mitigation
         name: Safety Mitigation
         diagramType: bdd
         viewpointId: safety-view
         auto: true
-        description: Safety goals linked to risk controls, functions, and verification tests
+        description: Safety chain from Hazard through Mitigation to VerificationCase and Evidence
 
   - id: software-view
-    label: Software Architecture
+    label: Software Architecture (IEC 62304)
     supportedDiagramTypes: [bdd, ibd, pkg]
     visibleKinds:
-      - Software
-      - SoftwareSystem
+      - SoftwareComponent
+      - SoftwareModule
+      - SoftwareInterface
+      - ExecutionThread
       - SoftwareItem
       - SoftwareUnit
       - SOUPItem
-      - SoftwareAnomaly
-      - SoftwareLifecycleProcess
-      - SoftwareLifecycleActivity
-      - SoftwareWorkProduct
       - SoftwareDevelopmentPlan
-      - SOUPEvaluation
+      - SoftwareRequirementsSpec
+      - SoftwareArchitectureDocument
+      - SoftwareUnitTestRecord
+      - SoftwareIntegrationTestRecord
+      - SoftwareSystemTestRecord
       - SoftwareProblemReport
       - ChangeImpactAssessment
-      - DesignHistoryRecord
-      - ReleaseBaseline
-      - ComplianceEvidence
+      - SOUPEvaluation
       - Requirement
-      - Requirement
-      - RiskControl
-      - SoftwareComponent
-      - EventDrivenService
-      - MessageBroker
-      - SoftwareModule
-      - Firmware
-      - Docker
-      - RabbitMqBroker
-      - OperatingSystem
-      - RosNode
-      - RosTopic
-      - RosService
-      - Interface
-      - InterfaceContract
+      - VerificationCase
+      - Evidence
     visibleRelationships:
-      - aggregation
       - composedOf
       - dependency
-      - realization
       - derives
-      - satisfy
-      - verify
-      - documents
-      - evidences
-      - governsActivity
-      - producesWorkProduct
+      - satisfies
+      - verifies
+      - producesEvidence
+      - deployedOn
+      - governs
     visibleLayers:
       - software
-      - software-lifecycle
-      - interfaces
-      - requirements
+      - iec-62304
       - verification
-      - qms
     diagrams:
       - id: diag-sw-decomposition
         name: Software Decomposition
         diagramType: bdd
         viewpointId: software-view
         auto: true
-        description: Software components and lifecycle decomposition
+        description: Software components and IEC 62304 lifecycle artifacts
 
-  - id: cybersecurity-view
-    label: Cybersecurity & Interoperability
+  - id: security-view
+    label: Cybersecurity (IEC 81001-5-1)
     supportedDiagramTypes: [bdd, req, pkg]
     visibleKinds:
-      - SystemOfSystems
-      - SystemExternal
-      - DataInterface
-      - Port
-      - CommunicationProtocol
-      - InteroperabilityProfile
-      - ExchangeItem
-      - Requirement
-      - Requirement
-      - Requirement
-      - Requirement
-      - CyberAsset
-      - ThreatModel
+      - TrustBoundary
+      - Asset
       - ThreatScenario
-      - Vulnerability
-      - SecurityControl
-      - SBOMArtifact
-      - SecureUpdateCapability
-      - SoftwareSystem
-      - SoftwareItem
-      - SOUPItem
-      - ProductionPostProductionSignal
-      - TerminologyBinding
-      - ClinicalCodeSystemReference
-      - ClinicalValueSetReference
-      - ClinicalConceptMapReference
+      - Control
+      - SecurityRequirement
+      - Interface
+      - Port
+      - LogicalComponent
+      - SoftwareComponent
+      - VerificationCase
+      - Evidence
     visibleRelationships:
-      - participatesInSystemOfSystems
-      - exposesInterface
-      - hasEndpoint
-      - implementsProtocol
-      - conformsToProfile
-      - carriesExchangeItem
-      - satisfy
-      - modelsThreat
       - threatensAsset
       - exploitsVulnerability
       - mitigatesThreat
-      - securesInterface
-      - maintainsSbom
-      - supportsSecureUpdate
-      - bindsTerminology
-      - referencesCodeSystem
-      - referencesValueSet
-      - usesConceptMap
-      - mapsSourceCodeSystem
-      - mapsTargetCodeSystem
-      - monitorsRiskSubject
-      - documents
-      - evidences
-      - verify
+      - protectsAsset
+      - crossesBoundary
+      - exposesInterface
+      - satisfies
+      - verifies
+      - producesEvidence
+      - addressesSecurityReq
     visibleLayers:
+      - security
       - logical
-      - interfaces
-      - requirements
-      - risk
-      - software
-      - software-lifecycle
-      - qms
       - verification
     diagrams:
       - id: diag-cybersecurity-trace
-        name: Cybersecurity And Interoperability Trace
+        name: Cybersecurity Threat Trace
         diagramType: bdd
-        viewpointId: cybersecurity-view
+        viewpointId: security-view
         auto: true
-        description: Connected-system interfaces, cyber threats and controls, and terminology bindings
+        description: ThreatScenario → Asset → Control → SecurityRequirement chain
+
+  - id: privacy-view
+    label: Privacy Engineering (GDPR / ISO 27701)
+    supportedDiagramTypes: [bdd, req, pkg]
+    visibleKinds:
+      - DataCategory
+      - DataSubjectCategory
+      - ProcessingActivity
+      - RetentionRule
+      - PrivacyRiskScenario
+      - PrivacyRequirement
+      - DataProtectionImpactAssessment
+      - PrivacyNotice
+      - DataBreachRecord
+      - Evidence
+    visibleRelationships:
+      - classifiesData
+      - processesData
+      - affectsDataSubject
+      - governedByRetention
+      - assessesPrivacyImpact
+      - addressesPrivacyReq
+      - producesEvidence
+    visibleLayers:
+      - privacy
+      - verification
+      - iso-27001-27701
+    diagrams:
+      - id: diag-privacy-governance
+        name: Privacy Governance
+        diagramType: bdd
+        viewpointId: privacy-view
+        auto: true
+        description: DataCategory → ProcessingActivity → RetentionRule and DPIA chain
 
   - id: clinical-evidence-view
-    label: Clinical Evidence & Claims
+    label: Clinical Evidence & Claims (ISO 14155)
     supportedDiagramTypes: [req, pkg, bdd]
     visibleKinds:
       - IntendedUse
       - ClinicalPerformanceClaim
       - ClinicalSafetyClaim
-      - ClinicalEvidenceArtifact
       - ClinicalEvaluationPlan
       - ClinicalEvaluationReport
-      - ClinicalBenefit
-      - OverallResidualRiskEvaluation
+      - ClinicalInvestigationPlan
+      - ClinicalInvestigationReport
       - BenefitRiskAssessment
+      - OverallResidualRiskEvaluation
       - RiskManagementReport
-      - ComplianceEvidence
-      - DesignHistoryRecord
-      - ProductionPostProductionSignal
+      - Evidence
+      - PostMarketSurveillanceFeedback
     visibleRelationships:
       - claimsForUse
-      - claimsClinicalBenefit
       - supportsClinicalClaim
       - plansClinicalEvaluation
       - evaluatesClinicalClaim
       - weighsAgainstBenefit
       - concludesBenefitRisk
       - concludesOverallResidualRisk
-      - monitorsRiskSubject
-      - documents
-      - evidences
+      - monitorsPostMarket
+      - producesEvidence
     visibleLayers:
-      - design-control
-      - risk
-      - qms
       - verification
+      - iso-14155
+      - iso-14971
     diagrams:
       - id: diag-clinical-evidence
         name: Clinical Evidence And Claims
         diagramType: req
         viewpointId: clinical-evidence-view
         auto: true
-        description: Clinical claims linked to intended use, evidence, benefit, and governed evaluation
+        description: Clinical claims linked to intended use, evidence, and governed evaluation
 
-  - id: privacy-governance-view
-    label: Privacy & Import Governance
-    supportedDiagramTypes: [bdd, req, pkg]
-    visibleKinds:
-      - Patient
-      - ClinicalObservation
-      - DataInterface
-      - ExchangeItem
-      - Message
-      - StateMessage
-      - EventMessage
-      - ClinicalCodeSystemReference
-      - ClinicalValueSetReference
-      - ClinicalConceptMapReference
-      - TerminologyBinding
-      - PersonalDataCategory
-      - ProtectedHealthInformation
-      - DataProcessingActivity
-      - PrivacyNotice
-      - PrivacyImpactAssessment
-      - DataSubjectRequest
-      - ComplianceEvidence
-      - DesignHistoryRecord
-    visibleRelationships:
-      - classifiesData
-      - processesData
-      - governedByProcessingBasis
-      - requiresConsent
-      - providesPrivacyNotice
-      - governedByRetentionPolicy
-      - appliesMinimumNecessary
-      - deIdentifiesData
-      - pseudonymizesData
-      - controlsProcessing
-      - processesOnBehalfOf
-      - assessesPrivacyImpact
-      - respondsToDataSubjectRequest
-      - bindsTerminology
-      - referencesCodeSystem
-      - referencesValueSet
-      - usesConceptMap
-      - scopesTerminologyReference
-      - bindsImportedConcept
-      - governedByImportBoundary
-      - providesImportProvenance
-      - securesInterface
-      - documents
-      - evidences
-    visibleLayers:
-      - privacy
-      - interfaces
-      - qms
-      - operational
-      - risk
-    diagrams:
-      - id: diag-privacy-governance
-        name: Privacy And Import Governance
-        diagramType: bdd
-        viewpointId: privacy-governance-view
-        auto: true
-        description: Privacy classifications, governed processing, and terminology import boundaries for connected-device data flows
-
-  - id: lifecycle-ops-view
-    label: Lifecycle Operations & Configuration
-    supportedDiagramTypes: [bdd, act, pkg]
-    visibleKinds:
-      - ManufacturingProcedure
-      - InstallationProcedure
-      - ServiceProcedure
-      - PreventiveMaintenanceProcedure
-      - CalibrationProcedure
-      - ManufacturingRecord
-      - InstallationQualification
-      - ServiceReport
-      - CalibrationRecord
-      - ProductFamily
-      - ProductVariant
-      - FeatureOption
-      - Accessory
-      - ConfigurationBaseline
-      - Requirement
-      - OperationalActor
-      - OperationalEnvironment
-      - Resource
-      - Subsystem
-      - LogicalComponent
-      - SoftwareSystem
-      - SoftwareItem
-      - DesignHistoryRecord
-    visibleRelationships:
-      - manufacturesSubject
-      - installsSubject
-      - servicesSubject
-      - maintainsSubject
-      - calibratesSubject
-      - qualifiesInstallation
-      - hasProductVariant
-      - selectsFeature
-      - supportsAccessory
-      - configuresItem
-      - constrainsVariant
-      - performedBy
-      - occursIn
-      - usesResource
-      - documents
-      - evidences
-    visibleLayers:
-      - operational
-      - logical
-      - physical
-      - software
-      - qms
-      - verification
-      - design-control
-    diagrams:
-      - id: diag-lifecycle-configuration
-        name: Lifecycle Operations And Product Configuration
-        diagramType: bdd
-        viewpointId: lifecycle-ops-view
-        auto: true
-        description: Manufacturing, installation, service, and product-variant semantics on the regulated backbone
-
-  - id: data-messaging-view
-    label: Data & Messaging
-    supportedDiagramTypes: [bdd, pkg, ibd]
-    visibleKinds:
-      - DataInterface
-      - PublishSubscribeChannel
-      - EventBus
-      - TopicChannel
-      - QueueChannel
-      - RequestResponseInterface
-      - SoftwareInterface
-      - MessageProducer
-      - MessageConsumer
-      - BrokerExchange
-      - BrokerQueue
-      - PublisherInterface
-      - SubscriberInterface
-      - ServiceProviderInterface
-      - ServiceConsumerInterface
-      - ExchangeItem
-      - Message
-      - EventMessage
-      - StateMessage
-      - CommandMessage
-      - RequestMessage
-      - ResponseMessage
-      - MessageSchema
-      - MessageField
-      - RosNode
-      - RosTopic
-      - RosService
-      - RosPublication
-      - RosSubscription
-      - RosServiceCall
-      - RosServiceServer
-      - RosMessage
-      - RosEventMessage
-      - RosStateMessage
-      - RosCommandMessage
-      - RosRequest
-      - RosResponse
-      - RosMessageSchema
-      - RosMessageField
-      - RabbitMqExchange
-      - RabbitMqQueue
-      - RabbitMqPublisher
-      - RabbitMqConsumer
-      - SoftwareComponent
-    visibleRelationships:
-      - exposesInterface
-      - carriesExchangeItem
-      - publishesTo
-      - subscribesTo
-      - publishesMessage
-      - consumesMessage
-      - servesInterface
-      - invokesInterface
-      - carriesRequestMessage
-      - carriesResponseMessage
-      - brokersChannel
-      - routesToChannel
-      - definesMessageSchema
-      - hasMessageField
-      - documents
-    visibleLayers:
-      - software
-      - interfaces
-      - qms
-    diagrams:
-      - id: diag-data-messaging
-        name: Data Messaging Semantics
-        diagramType: bdd
-        viewpointId: data-messaging-view
-        auto: true
-        description: Message schemas, publish/subscribe channels, request/response interfaces, and ROS specializations
-
-  - id: usability-view
-    label: Usability Engineering (IEC 62366 / IEC 60601-1-6)
-    supportedDiagramTypes: [req, act, bdd, pkg]
-    visibleKinds:
-      - Requirement
-      - UserProfile
-      - Patient
-      - AnatomicalSite
-      - UseEnvironment
-      - ClinicalEnvironmentQualifier
-      - UserActivity
-      - Procedure
-      - ClinicalStep
-      - TreatmentPathway
-      - ProcedureMethod
-      - RouteOfAdministration
-      - OperationalEnvironment
-      - Substance
-      - Observable
-      - ClinicalObservation
-      - MorphologyState
-      - Requirement
-      - UseError
-      - UseSpecification
-      - UseErrorAnalysis
-      - OperationalScenario
-      - UsabilitySpecification
-      - FormativeEvaluation
-      - SummativeEvaluation
-      - UIElement
-      - UIScreen
-      - UIPanel
-      - ComplianceEvidence
-      - DesignHistoryRecord
-      - EssentialPerformance
-      - BasicSafety
-      - Test
-    visibleRelationships:
-      - derives
-      - refines
-      - hasSubProcedure
-      - hasAnatomicalSite
-      - usesMethod
-      - usesRoute
-      - producesObservation
-      - observesSubject
-      - affectsMorphology
-      - appliesEnvironmentQualifier
-      - performedBy
-      - performedOn
-      - occursIn
-      - usesResource
-      - hasEquipment
-      - hasPersonnel
-      - containsSubstance
-      - addressesUseError
-      - analyzesUseError
-      - specifiesScenario
-      - exposesUseError
-      - evaluatesRequirement
-      - contributesToHazard
-      - preserves
-      - satisfy
-      - documents
-      - evidences
-      - supportsOperatingFunction
-      - definesLossCondition
-      - verify
-    visibleLayers:
-      - requirements
-      - design-control
-      - operational
-      - risk
-      - safety
-      - verification
-      - qms
-      - ui
-    diagrams:
-      - id: diag-usability-trace
-        name: Usability Trace
-        diagramType: req
-        viewpointId: usability-view
-        auto: true
-        description: User needs, use errors, usability requirements, and validation trace
-
-  - id: physical-view
-    label: Physical Architecture
+  - id: hardware-view
+    label: Hardware Architecture
     supportedDiagramTypes: [bdd, ibd, pkg]
     visibleKinds:
-      - PhysicalComponent
-      - ElectricalComponent
-      - MechanicalComponent
-      - HardwareNode
-      - ComputingDevice
-      - PhysicalModule
-      - FPGA
-      - Microcontroller
-      - SingleBoardComputer
-      - Catheter
+      - HardwareComponent
+      - HardwareAssembly
+      - HardwareBoard
+      - HardwarePart
+      - Processor
+      - LogicalComponent
+      - SoftwareComponent
+      - ExecutionThread
     visibleRelationships:
-      - aggregation
       - composedOf
-      - association
+      - aggregation
+      - deployedOn
+      - allocatedTo
     visibleLayers:
-      - physical
+      - hardware
+      - logical
+      - software
     diagrams:
-      - id: diag-phy-bom
-        name: Physical BOM
+      - id: diag-hw-bom
+        name: Hardware BOM
         diagramType: bdd
-        viewpointId: physical-view
+        viewpointId: hardware-view
         auto: true
-        description: Physical components and hardware nodes
-      - id: diag-phy-containment
-        name: Physical Containment
-        diagramType: ibd
-        viewpointId: physical-view
+        description: Hardware component breakdown and software deployment allocation
+
+  - id: ros-view
+    label: ROS Topology
+    supportedDiagramTypes: [bdd, ibd, pkg]
+    visibleKinds:
+      - ROSNode
+      - ROSTopic
+      - ROSMessageType
+      - ROSService
+      - ROSAction
+      - SoftwareComponent
+      - Interface
+    visibleRelationships:
+      - composedOf
+      - flow
+      - exposesInterface
+      - connectsVia
+    visibleLayers:
+      - software-extension
+      - software
+    diagrams:
+      - id: diag-ros-topology
+        name: ROS Node Topology
+        diagramType: bdd
+        viewpointId: ros-view
         auto: true
-        description: Physical system breakdown — nested containment view
-        properties:
-          layoutStyle: ibd
+        description: ROS nodes, topics, services, and message types
+
+  - id: qms-dhf-view
+    label: Design History File (ISO 13485 / FDA 21 CFR 820)
+    supportedDiagramTypes: [req, pkg]
+    visibleKinds:
+      - DesignAndDevelopmentPlan
+      - DesignInput
+      - DesignOutput
+      - DesignVerification
+      - DesignValidation
+      - DesignTransfer
+      - DesignChange
+      - DesignHistoryFile
+      - DHFArtifact
+      - DeviceMasterRecord
+      - DeviceHistoryRecord
+      - QMSRecord
+      - CAPARecord
+      - Requirement
+      - Evidence
+    visibleRelationships:
+      - tracesDesignInput
+      - verifiesOutput
+      - validatesOutput
+      - documentsChange
+      - containsArtifact
+      - instantiatesDMR
+      - satisfies
+      - producesEvidence
+    visibleLayers:
+      - iso-13485
+      - fda-21cfr820
+      - verification
+    diagrams:
+      - id: diag-dhf
+        name: Design History File
+        diagramType: req
+        viewpointId: qms-dhf-view
+        auto: true
+        description: ISO 13485 design control and FDA 21 CFR 820 DHF artifacts
 
 firstRun:
   template: infusion-pump

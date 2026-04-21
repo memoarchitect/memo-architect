@@ -400,8 +400,8 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                         if (!existsSync(modelDir)) mkd(modelDir, { recursive: true });
 
                         const PACKAGE_NAMESPACE: Record<string, string> = {
-                            '@memo/ontology-medical-arch': 'MEMO_Ontology_MedicalArch',
-                            '@memo/ontology-medical-process': 'MEMO_Ontology_MedicalProcess',
+                            '@memo/ontology-arch': 'MEMO_Ontology_Arch',
+                            '@memo/ontology-process': 'MEMO_Ontology_Process',
                             '@memo/medical-modeling-profile': 'MEMO_Medical_Profile',
                         };
                         const importLines = selected

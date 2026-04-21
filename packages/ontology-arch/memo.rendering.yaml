@@ -1,0 +1,47 @@
+# @memo/ontology-arch rendering configuration
+# Architecture layer colors — v12 Visual Map palette
+
+layers:
+  - id: operational
+    label: Operational
+    color: "#C0392B"
+
+  - id: behavioral
+    label: Behavioral
+    color: "#E74C3C"
+
+  - id: functional
+    label: Functional
+    color: "#E67E22"
+
+  - id: logical
+    label: Logical
+    color: "#7B68EE"
+
+  - id: software
+    label: Software
+    color: "#F39C12"
+
+  - id: software-extension
+    label: Software Extension (ROS)
+    color: "#D4AC0D"
+
+  - id: hardware
+    label: Hardware
+    color: "#95A5A6"
+
+  - id: safety
+    label: Safety
+    color: "#E74C3C"
+
+  - id: security
+    label: Security
+    color: "#2C3E50"
+
+  - id: privacy
+    label: Privacy
+    color: "#8E44AD"
+
+  - id: verification
+    label: Verification
+    color: "#2ECC71"

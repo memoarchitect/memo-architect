@@ -1,7 +1,0 @@
-name: "@memo/ontology-cybersecurity"
-version: "0.1.0"
-type: ontology
-extends: "@memo/ontology-medical-arch"
-description: "Domain-agnostic cybersecurity ontology — threat models, vulnerabilities, security controls, SBOM, and secure update patterns"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "cybersecurity", "threat-modeling", "sbom"]

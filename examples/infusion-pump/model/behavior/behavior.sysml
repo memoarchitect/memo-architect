@@ -1,7 +1,7 @@
 package InfusionPump_Behavior {
 
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import InfusionPump::*;
     import InfusionPump_Risk::*;
 

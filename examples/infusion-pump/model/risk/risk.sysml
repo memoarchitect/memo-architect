@@ -7,8 +7,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 package InfusionPump_Risk {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
 
     // Hazards (ISO 14971)
     requirement hazOverInfusion : Hazard {
@@ -62,20 +62,23 @@ package InfusionPump_Risk {
         attribute redefines description = "Loss of intended therapy effect due to insufficient medication delivery";
     }
 
-    // Risk Controls
-    requirement rcFlowRateLimiter : RiskControl {
-        attribute redefines title = "Flow Rate Limiter";
-        attribute redefines controlType = "Design";
+    // Risk Controls (Mitigations per ISO 14971)
+    part rcFlowRateLimiter : Mitigation {
+        attribute mitigationId = "RC-001";
+        attribute title = "Flow Rate Limiter";
+        attribute mitigationType = "Design";
     }
 
-    requirement rcAntiFreeFlow : RiskControl {
-        attribute redefines title = "Anti-Free-Flow Mechanism";
-        attribute redefines controlType = "Design";
+    part rcAntiFreeFlow : Mitigation {
+        attribute mitigationId = "RC-002";
+        attribute title = "Anti-Free-Flow Mechanism";
+        attribute mitigationType = "Design";
     }
 
-    requirement rcOcclusionAlarm : RiskControl {
-        attribute redefines title = "Occlusion Detection Alarm";
-        attribute redefines controlType = "Protective";
+    part rcOcclusionAlarm : Mitigation {
+        attribute mitigationId = "RC-003";
+        attribute title = "Occlusion Detection Alarm";
+        attribute mitigationType = "Protective";
     }
 
     // Risk Assessment

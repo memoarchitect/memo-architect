@@ -1,6 +1,6 @@
 package InfusionPump_Compliance {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import InfusionPump_Requirements::*;
     import InfusionPump_Risk::*;
     import InfusionPump_Architecture::*;
@@ -193,7 +193,7 @@ package InfusionPump_Compliance {
     connection : DefinesLossCondition connect performance ::> epControlledDelivery to condition ::> lossOfControlledDelivery;
     connection : Preserves connect function ::> sfMaintainControlledDelivery to performance ::> epControlledDelivery;
     connection : ProtectsEssentialPerformance connect control ::> rcFlowRateLimiter to performance ::> epControlledDelivery;
-    connection : ImplementsRiskControl connect implementer ::> sfMaintainControlledDelivery to control ::> rcFlowRateLimiter;
+    connection : TraceTo connect source ::> sfMaintainControlledDelivery to target ::> rcFlowRateLimiter;
     connection : Satisfy connect satisfiedBy ::> swItemTherapyController to satisfies ::> srFlowAccuracy;
     connection : Satisfy connect satisfiedBy ::> swItemAlarmSupervisor to satisfies ::> srAlarmAudibility;
     connection : EvaluatesRequirement connect evaluation ::> formativeEvalAlarmWorkflow to uiRequirement ::> uiReqAlarmAcknowledgement;

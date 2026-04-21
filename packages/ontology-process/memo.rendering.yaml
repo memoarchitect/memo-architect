@@ -1,0 +1,39 @@
+# @memo/ontology-process rendering configuration
+# Process layer colors — one per regulatory standard
+
+layers:
+  - id: common
+    label: Common Process Concepts
+    color: "#7F8C8D"
+
+  - id: iso-14971
+    label: ISO 14971 (Risk Management)
+    color: "#E74C3C"
+
+  - id: iec-62304
+    label: IEC 62304 (Software Lifecycle)
+    color: "#F39C12"
+
+  - id: iec-60601
+    label: IEC 60601 (Essential Performance)
+    color: "#E67E22"
+
+  - id: iso-13485
+    label: ISO 13485 (QMS)
+    color: "#3498DB"
+
+  - id: iso-14155
+    label: ISO 14155 (Clinical Investigation)
+    color: "#1ABC9C"
+
+  - id: iso-27001-27701
+    label: ISO 27001/27701 (Security & Privacy Mgmt)
+    color: "#2C3E50"
+
+  - id: fda-21cfr820
+    label: FDA 21 CFR 820 (QSR)
+    color: "#8E44AD"
+
+  - id: eu-mdr
+    label: EU MDR 2017/745
+    color: "#2980B9"

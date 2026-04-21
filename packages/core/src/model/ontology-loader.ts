@@ -555,10 +555,19 @@ function collectOptionalModules(configPath: string): string[] {
             }
         }
 
-        const extendsMatch = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
-        if (extendsMatch) {
-            const parent = resolvePackageConfig(extendsMatch[1], dirname(p));
+        // Handle both single and array extends forms
+        const singleExt = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
+        if (singleExt) {
+            const parent = resolvePackageConfig(singleExt[1], dirname(p));
             if (parent) stack.push(parent);
+        } else {
+            const arraySection = content.match(/^extends:\s*\n((?:\s+-\s+.+\n?)+)/m);
+            if (arraySection) {
+                for (const m of arraySection[1].matchAll(/^\s+-\s+"?(@memo\/[\w-]+)"?/gm)) {
+                    const parent = resolvePackageConfig(m[1], dirname(p));
+                    if (parent) stack.push(parent);
+                }
+            }
         }
     }
     return [...modules];
@@ -573,13 +582,25 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
     seen.add(resolvedPath);
 
     // Read the YAML to find extends (lightweight — just look for extends line)
-    let extendsPackage: string | undefined;
+    let extendsPackages: string[] = [];
     let projectType: string | undefined;
     try {
         const content = readFileSync(resolvedPath, 'utf-8');
-        const extendsMatch = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
-        if (extendsMatch) {
-            extendsPackage = extendsMatch[1];
+        // Handle both single-string extends and array extends in YAML:
+        //   extends: "@memo/ontology-arch"
+        //   extends:
+        //     - "@memo/ontology-arch"
+        //     - "@memo/ontology-process"
+        const singleMatch = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
+        if (singleMatch) {
+            extendsPackages = [singleMatch[1]];
+        } else {
+            // Array form: collect all list entries under `extends:`
+            const arraySection = content.match(/^extends:\s*\n((?:\s+-\s+.+\n?)+)/m);
+            if (arraySection) {
+                const entries = [...arraySection[1].matchAll(/^\s+-\s+"?(@memo\/[\w-]+)"?/gm)];
+                extendsPackages = entries.map(m => m[1]);
+            }
         }
         // Match both legacy (projectType:) and new format (type:)
         const typeMatch = content.match(/^(?:projectType|type):\s*(\w+)/m);
@@ -598,8 +619,8 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
         dirs.push(packageDir);
     }
 
-    // Follow extends chain
-    if (extendsPackage) {
+    // Follow extends chain (handles both single and array extends)
+    for (const extendsPackage of extendsPackages) {
         const parentConfigPath = resolvePackageConfig(extendsPackage, packageDir);
         if (parentConfigPath) {
             walkExtendsChain(parentConfigPath, dirs, seen);
@@ -607,9 +628,9 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
     }
 
     // If this is an ontology that doesn't declare extends,
-    // fall back to ontology-medical-arch as the foundational sibling package.
-    if (projectType === 'ontology' && !extendsPackage) {
-        const archDir = resolve(packageDir, '../ontology-medical-arch');
+    // fall back to ontology-arch as the foundational sibling package.
+    if (projectType === 'ontology' && extendsPackages.length === 0) {
+        const archDir = resolve(packageDir, '../ontology-arch');
         const archSysml = resolve(archDir, 'sysml');
         const archConfigKey = resolve(archDir, 'memo.package.yaml');
         if (existsSync(archSysml) && !seen.has(archConfigKey)) {
