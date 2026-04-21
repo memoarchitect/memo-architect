@@ -20,21 +20,23 @@ import type { ViewpointDTO } from '@memo/core';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
 
-function loadUserViewpoints(): ViewpointDTO[] {
+/** One-time migration: read any legacy localStorage viewpoints and wipe the key. */
+function migrateLegacyViewpoints(): ViewpointDTO[] {
     try {
         const raw = localStorage.getItem(USER_VPS_KEY);
-        return raw ? (JSON.parse(raw) as ViewpointDTO[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveUserViewpoints(viewpoints: ViewpointDTO[]): void {
-    try {
-        localStorage.setItem(USER_VPS_KEY, JSON.stringify(viewpoints));
-    } catch {
-        // storage full or unavailable
-    }
+        if (raw) {
+            const vps = JSON.parse(raw) as ViewpointDTO[];
+            localStorage.removeItem(USER_VPS_KEY);
+            if (vps.length > 0) {
+                console.warn(
+                    `[MEMO] Migrated ${vps.length} user viewpoint(s) from localStorage. ` +
+                    'Save them to memo.viewpoints.yaml to persist across sessions.'
+                );
+            }
+            return vps;
+        }
+    } catch { /* ignore */ }
+    return [];
 }
 
 export const FOLDER_ATTR = '_folder';
@@ -341,8 +343,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     labelFilter: null,
     tagFilters: [],
 
-    // User-created viewpoints (persisted to localStorage)
-    userViewpoints: loadUserViewpoints(),
+    // User-created viewpoints (in-memory; migrates any legacy localStorage data on first load)
+    userViewpoints: migrateLegacyViewpoints(),
 
     // Sidecar layouts
     diagramLayouts: {},
@@ -748,24 +750,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
             sendElementUpdate(newElements[id]);
         }
     },
-    addUserViewpoint: (vp) => set((s) => {
-        const next = [...s.userViewpoints, vp];
-        saveUserViewpoints(next);
-        return { userViewpoints: next };
-    }),
-    updateUserViewpoint: (vp) => set((s) => {
-        const next = s.userViewpoints.map(v => v.id === vp.id ? vp : v);
-        saveUserViewpoints(next);
-        return { userViewpoints: next };
-    }),
-    deleteUserViewpoint: (id) => set((s) => {
-        const next = s.userViewpoints.filter(v => v.id !== id);
-        saveUserViewpoints(next);
-        return {
-            userViewpoints: next,
-            selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
-        };
-    }),
+    addUserViewpoint: (vp) => set((s) => ({ userViewpoints: [...s.userViewpoints, vp] })),
+    updateUserViewpoint: (vp) => set((s) => ({
+        userViewpoints: s.userViewpoints.map(v => v.id === vp.id ? vp : v),
+    })),
+    deleteUserViewpoint: (id) => set((s) => ({
+        userViewpoints: s.userViewpoints.filter(v => v.id !== id),
+        selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
+    })),
     createDiagram: ({ name, diagramType, viewpointId }) => {
         const id = `diag_${Math.random().toString(36).substr(2, 9)}`;
         const diagram: DiagramDTO = { id, name, diagramType, viewpointId, auto: false, elementIds: [] };

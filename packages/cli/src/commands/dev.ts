@@ -52,6 +52,30 @@ function findSysmlFiles(dir: string): string[] {
     return files;
 }
 
+/**
+ * Strip stale relationship types from user diagrams, warn on any dropped.
+ * Diagrams themselves are kept — only their stale relationshipType filter entries are removed.
+ */
+function validateDiagramsAgainstOntology(diagrams: DiagramDTO[], registries: BuilderRegistries): DiagramDTO[] {
+    const rr = registries.relationshipRegistry;
+    if (!rr) return diagrams;
+    const knownRels = new Set(rr.relTypeNames());
+    let droppedRels = 0;
+    const result = diagrams.map(d => {
+        if (!d.relationshipTypes || d.relationshipTypes.length === 0) return d;
+        const filtered = d.relationshipTypes.filter(rt => {
+            if (knownRels.has(rt)) return true;
+            droppedRels++;
+            return false;
+        });
+        return filtered.length !== d.relationshipTypes.length ? { ...d, relationshipTypes: filtered } : d;
+    });
+    if (droppedRels > 0) {
+        console.warn(`[Validate] Stripped ${droppedRels} stale relationship type filter(s) from user diagrams.`);
+    }
+    return result;
+}
+
 /** Stable hash of ontology registries — stamped on every broadcast for stale-server detection */
 function computeOntologyHash(registries: BuilderRegistries): string {
     const kr = registries.kindRegistry;
@@ -188,8 +212,11 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         const userDiagramsPath = resolve(cwd, '.memo', 'user-diagrams.json');
         if (existsSync(userDiagramsPath)) {
             try {
-                const userDiagrams = JSON.parse(readFileSync(userDiagramsPath, 'utf8')) as DiagramDTO[];
-                diagrams.push(...userDiagrams);
+                const rawUserDiagrams = JSON.parse(readFileSync(userDiagramsPath, 'utf8')) as DiagramDTO[];
+                const validUserDiagrams = ontologyRegistries
+                    ? validateDiagramsAgainstOntology(rawUserDiagrams, ontologyRegistries)
+                    : rawUserDiagrams;
+                diagrams.push(...validUserDiagrams);
             } catch {
                 // ignore corrupt file
             }
