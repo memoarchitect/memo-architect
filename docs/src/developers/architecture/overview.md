@@ -29,19 +29,19 @@ graph TD
         Protocol[WebSocket Protocol]
     end
 
-    subgraph "@memo/ontology-core"
-        CoreTypes[Core MBSE Types]
-        CoreRels[Core Relationships]
+    subgraph "@memo/ontology-arch"
+        ArchTypes[11 Architecture Layers]
+        ArchRels[Architecture Relationships]
     end
 
-    subgraph "@memo/ontology-medical"
-        MedTypes[Medical Backbone Types]
-        MedRels[Medical Relationships]
+    subgraph "@memo/ontology-process"
+        ProcTypes[Regulatory Standards Types]
+        ProcRels[Process Relationships]
     end
 
     subgraph "@memo/medical-modeling-profile"
         MedConfig[Medical Workbench Config]
-        Rules[109 Closure Rules]
+        Rules[35+ Closure Rules]
         Viewpoints[Medical Viewpoints]
         Templates[Starter Templates]
     end
@@ -74,8 +74,8 @@ graph TD
     DevCmd --> DevServer
     DevCmd --> FileWatcher
     ConfigResolver --> MedConfig
-    MedConfig --> MedTypes
-    MedTypes --> CoreTypes
+    MedConfig --> ArchTypes
+    MedConfig --> ProcTypes
 
     Protocol --> WS
     WS --> Zustand
@@ -89,9 +89,9 @@ graph TD
 | Package | Role | Key Exports |
 |---|---|---|
 | `@memo/core` | Parser, model, validation | `parseFiles`, `buildMemoModel`, `modelToDTO`, `evaluateClosureRules`, `computeCompleteness` |
-| `@memo/ontology-core` | Core ontology backbone | Domain-agnostic SysML v2 MBSE types |
-| `@memo/ontology-medical` | Medical ontology backbone | Medical device development types built on core |
-| `@memo/medical-modeling-profile` | Medical modeling profile | `memo.config.yaml` with rules, viewpoints, and starter templates |
+| `@memo/ontology-arch` | Architecture ontology | 11 ISO 42010 layers (operational→functional→logical→software→hardware→behavioral→verification→safety→security→privacy) + ROS extension |
+| `@memo/ontology-process` | Process ontology | Regulated standard artifacts (ISO 14971, IEC 62304, ISO 13485, IEC 60601, ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR) |
+| `@memo/medical-modeling-profile` | Medical modeling profile | `memo.package.yaml` with 35+ closure rules, viewpoints, and starter templates (extends both ontology packages) |
 | `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
 | `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
 
@@ -100,12 +100,12 @@ graph TD
 ```
 @memo/web ──> @memo/core
 @memo/cli ──> @memo/core
-@memo/medical-modeling-profile ──> @memo/ontology-medical
-@memo/cli ──> @memo/ontology-medical
-@memo/ontology-medical ──> @memo/ontology-core
+@memo/cli ──> @memo/ontology-arch
+@memo/cli ──> @memo/ontology-process
+@memo/medical-modeling-profile extends [@memo/ontology-arch, @memo/ontology-process]
 @memo/core (standalone)
-@memo/ontology-core (standalone)
-@memo/ontology-medical (standalone)
+@memo/ontology-arch (standalone)
+@memo/ontology-process extends @memo/ontology-arch
 ```
 
 The `@memo/core` package has zero runtime dependencies on domain packages. Domain knowledge flows through `memo.config.yaml` at runtime.
