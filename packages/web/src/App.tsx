@@ -12,6 +12,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { BulkImportModal } from './components/BulkImportModal';
 import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
+import { RestartRequiredBanner } from './components/RestartRequiredBanner';
 import { CatalogHomePage } from './views/CatalogHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
 
@@ -450,6 +451,9 @@ export function App() {
 
             {/* First-run onboarding tour */}
             <OnboardingTour />
+
+            {/* Ontology restart-required overlay — blocks UI on mid-session ontology change */}
+            <RestartRequiredBanner />
         </div>
     );
 }
