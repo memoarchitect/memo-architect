@@ -1,0 +1,7 @@
+name: "@memo/ontology-process"
+version: "0.1.0"
+type: ontology
+description: "MEMO process ontology — regulatory process activities and work products per standard (ISO 14971, IEC 62304, IEC 60601, ISO 13485, ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR). Bridges to ontology-arch via producesEvidence / tracedTo."
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "medical-device", "process", "iso-14971", "iec-62304", "iso-13485", "fda", "eu-mdr"]
+extends: "@memo/ontology-arch"

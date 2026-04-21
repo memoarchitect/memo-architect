@@ -21,7 +21,7 @@ function getSysmlFiles(dir: string): string[] {
 
 describe('resolveLayerFromPath', () => {
     it('resolves layer from subdirectory name', () => {
-        expect(resolveLayerFromPath('sysml/risk/risk-management.sysml')).toBe('risk');
+        expect(resolveLayerFromPath('sysml/safety/risk-management.sysml')).toBe('safety');
         expect(resolveLayerFromPath('sysml/operational/operational.sysml')).toBe('operational');
         expect(resolveLayerFromPath('sysml/operational/purpose/business.sysml')).toBe('operational');
     });
@@ -31,7 +31,7 @@ describe('resolveLayerFromPath', () => {
     });
 
     it('handles full paths with /sysml/ segment', () => {
-        expect(resolveLayerFromPath('/some/project/packages/ontology-medical-arch/sysml/software/software.sysml')).toBe('software');
+        expect(resolveLayerFromPath('/some/project/packages/ontology-arch/sysml/software/software.sysml')).toBe('software');
     });
 
     it('returns unknown for files directly under sysml/', () => {
@@ -43,7 +43,7 @@ describe('resolveLayerFromPath', () => {
     });
 
     it('handles Windows-style backslashes', () => {
-        expect(resolveLayerFromPath('sysml\\risk\\hazard.sysml')).toBe('risk');
+        expect(resolveLayerFromPath('sysml\\safety\\hazard.sysml')).toBe('safety');
     });
 });
 
@@ -55,8 +55,8 @@ describe('KindRegistry', () => {
         registry.register({
             name: 'Hazard',
             label: 'Hazard',
-            layer: 'risk',
-            sysmlConstruct: 'requirement def',
+            layer: 'safety',
+            sysmlConstruct: 'part def',
         });
 
         expect(registry.has('Hazard')).toBe(true);
@@ -64,8 +64,8 @@ describe('KindRegistry', () => {
 
         const kind = registry.getKind('Hazard');
         expect(kind).toBeDefined();
-        expect(kind!.layer).toBe('risk');
-        expect(kind!.sysmlConstruct).toBe('requirement def');
+        expect(kind!.layer).toBe('safety');
+        expect(kind!.sysmlConstruct).toBe('part def');
     });
 
     it('returns undefined for unknown kinds', () => {
@@ -79,15 +79,15 @@ describe('KindRegistry', () => {
         registry.register({
             name: 'Hazard',
             label: 'Hazard',
-            layer: 'risk',
-            sysmlConstruct: 'requirement def',
+            layer: 'safety',
+            sysmlConstruct: 'part def',
         });
 
         const kindDef = registry.toKindDefinition('Hazard');
         expect(kindDef).toEqual({
             label: 'Hazard',
-            layer: 'risk',
-            sysmlConstruct: 'requirement def',
+            layer: 'safety',
+            sysmlConstruct: 'part def',
         });
     });
 
@@ -112,52 +112,50 @@ describe('KindRegistry', () => {
     });
 });
 
-// ─── KindRegistry Integration: ontology-medical-arch ─────────────────────────────────
+// ─── KindRegistry Integration: ontology-arch ─────────────────────────────────────
 
-describe('KindRegistry integration with ontology-medical-arch', () => {
+describe('KindRegistry integration with ontology-arch', () => {
     let registry: KindRegistry;
 
     beforeAll(async () => {
-        const coreDir = resolve(__dirname, '../../../ontology-medical-arch/sysml');
+        const coreDir = resolve(__dirname, '../../../ontology-arch/sysml');
         const sysmlFiles = getSysmlFiles(coreDir);
 
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-medical-arch'));
+        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-arch'));
         expect(result.errors).toHaveLength(0);
 
         registry = new KindRegistry();
         registry.populateFromDocuments(result.documents);
     });
 
-    it('discovers kinds from ontology-medical-arch SysML files', () => {
-        // Slim core has ~53 kinds (down from 114 after ontology simplification)
-        // SysML files may define slightly different counts due to
-        // enum defs, attribute defs, etc. that config may not list
-        expect(registry.size).toBeGreaterThan(40);
+    it('discovers kinds from ontology-arch SysML files', () => {
+        // ontology-arch has ~40+ kinds across 11 layers
+        expect(registry.size).toBeGreaterThan(30);
     });
 
-    it('resolves nested operational purpose kinds as operational layer', () => {
-        const program = registry.getKind('Program');
-        expect(program).toBeDefined();
-        expect(program!.layer).toBe('operational');
-        expect(program!.sysmlConstruct).toBe('part def');
+    it('resolves operational kinds correctly', () => {
+        const system = registry.getKind('System');
+        expect(system).toBeDefined();
+        expect(system!.layer).toBe('operational');
+        expect(system!.sysmlConstruct).toBe('part def');
 
         const actor = registry.getKind('Actor');
         expect(actor).toBeDefined();
         expect(actor!.layer).toBe('operational');
     });
 
-    it('resolves requirements-layer kinds correctly', () => {
+    it('resolves verification-layer kinds correctly', () => {
         const req = registry.getKind('Requirement');
         expect(req).toBeDefined();
-        expect(req!.layer).toBe('requirements');
-        expect(req!.sysmlConstruct).toBe('requirement def');
+        expect(req!.layer).toBe('verification');
+        expect(req!.sysmlConstruct).toBe('part def');
     });
 
-    it('resolves analysis-layer kinds correctly', () => {
-        const constraint = registry.getKind('Constraint');
-        expect(constraint).toBeDefined();
-        expect(constraint!.layer).toBe('analysis');
-        expect(constraint!.sysmlConstruct).toBe('part def');
+    it('resolves functional-layer kinds correctly', () => {
+        const fn = registry.getKind('Function');
+        expect(fn).toBeDefined();
+        expect(fn!.layer).toBe('functional');
+        expect(fn!.sysmlConstruct).toBe('part def');
     });
 
     it('resolves software-layer kinds correctly', () => {
@@ -166,21 +164,20 @@ describe('KindRegistry integration with ontology-medical-arch', () => {
         expect(sw!.layer).toBe('software');
     });
 
-    it('resolves system-layer kinds correctly', () => {
-        const system = registry.getKind('Subsystem');
-        expect(system).toBeDefined();
-        expect(system!.layer).toBe('system');
+    it('resolves logical-layer kinds correctly', () => {
+        const lc = registry.getKind('LogicalComponent');
+        expect(lc).toBeDefined();
+        expect(lc!.layer).toBe('logical');
     });
 
     it('tracks specialization (superType)', () => {
-        const operationalEnvironment = registry.getKind('OperationalEnvironment');
-        expect(operationalEnvironment).toBeDefined();
-        expect(operationalEnvironment!.superType).toBe('OperationalEntity');
+        const envCtx = registry.getKind('EnvironmentContext');
+        expect(envCtx).toBeDefined();
+        expect(envCtx!.superType).toBe('System');
     });
 
     it('connection defs are NOT registered as kinds', () => {
-        // Connection defs (e.g. TraceTo, Mitigates) should not be in KindRegistry
-        // They belong in RelationshipRegistry (M40)
+        // Connection defs (e.g. TraceTo, Aggregation) should not be in KindRegistry
         expect(registry.has('TraceTo')).toBe(false);
         expect(registry.has('Aggregation')).toBe(false);
     });

@@ -1,6 +1,0 @@
-name: "@memo/ontology-clinical-interop"
-version: "0.1.0"
-type: ontology
-description: "Clinical terminology interoperability defs (SNOMED CT, LOINC, HL7) — optional extension for connected/integrated medical devices"
-license: "Apache-2.0"
-tags: ["mbse", "sysml-v2", "hl7", "fhir", "terminology", "interoperability"]

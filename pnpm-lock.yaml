@@ -20,9 +20,12 @@ importers:
       '@memo/core':
         specifier: workspace:*
         version: link:../core
-      '@memo/ontology-medical-process':
+      '@memo/ontology-arch':
         specifier: workspace:*
-        version: link:../ontology-medical-process
+        version: link:../ontology-arch
+      '@memo/ontology-process':
+        specifier: workspace:*
+        version: link:../ontology-process
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -94,9 +97,12 @@ importers:
 
   packages/medical-modeling-profile:
     dependencies:
-      '@memo/ontology-medical-process':
+      '@memo/ontology-arch':
         specifier: workspace:*
-        version: link:../ontology-medical-process
+        version: link:../ontology-arch
+      '@memo/ontology-process':
+        specifier: workspace:*
+        version: link:../ontology-process
     devDependencies:
       typescript:
         specifier: ~5.5.0
@@ -105,23 +111,9 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
 
-  packages/medical-product-line-profile: {}
+  packages/ontology-arch: {}
 
-  packages/ontology-clinical-interop: {}
-
-  packages/ontology-clinical-procedure: {}
-
-  packages/ontology-cybersecurity: {}
-
-  packages/ontology-iec62304: {}
-
-  packages/ontology-medical-arch: {}
-
-  packages/ontology-medical-clinical-trial: {}
-
-  packages/ontology-medical-process: {}
-
-  packages/ontology-ros: {}
+  packages/ontology-process: {}
 
   packages/web:
     dependencies:

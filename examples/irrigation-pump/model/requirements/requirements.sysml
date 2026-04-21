@@ -1,6 +1,6 @@
 package IrrigationPump_Requirements {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import IrrigationPump_Risk::*;
 
     requirement unStableFieldPressure : Requirement {
@@ -62,7 +62,7 @@ package IrrigationPump_Requirements {
         attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-001";
         attribute redefines title = "Pressure Control Loop";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
     }
 
     requirement swrReservoirEstimation : Requirement {
@@ -71,7 +71,7 @@ package IrrigationPump_Requirements {
         attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-002";
         attribute redefines title = "Reservoir Estimation";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     requirement swrAlarmCoordinator : Requirement {
@@ -80,7 +80,7 @@ package IrrigationPump_Requirements {
         attribute redefines domain = "Software";
         attribute redefines reqId = "SW-IRR-003";
         attribute redefines title = "Alarm Coordination";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
     }
 
     connection : Derives connect source ::> unStableFieldPressure to derived ::> srPressureRegulation;
@@ -92,8 +92,8 @@ package IrrigationPump_Requirements {
     connection : Derives connect source ::> srReservoirLowAlarm to derived ::> swrReservoirEstimation;
     connection : Derives connect source ::> srAlarmAudibility to derived ::> swrAlarmCoordinator;
 
-    connection : ImplementsRiskControl connect implementer ::> srPressureRegulation to control ::> rcPressureLimiter;
-    connection : ImplementsRiskControl connect implementer ::> srPrimeInterlock to control ::> rcPrimeCompletionInterlock;
-    connection : ImplementsRiskControl connect implementer ::> srReservoirLowAlarm to control ::> rcReservoirLowAlarm;
-    connection : ImplementsRiskControl connect implementer ::> srAlarmAudibility to control ::> rcReservoirLowAlarm;
+    connection : TraceTo connect source ::> srPressureRegulation to target ::> rcPressureLimiter;
+    connection : TraceTo connect source ::> srPrimeInterlock to target ::> rcPrimeCompletionInterlock;
+    connection : TraceTo connect source ::> srReservoirLowAlarm to target ::> rcReservoirLowAlarm;
+    connection : TraceTo connect source ::> srAlarmAudibility to target ::> rcReservoirLowAlarm;
 }

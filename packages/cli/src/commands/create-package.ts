@@ -61,7 +61,7 @@ export async function createPackageCommand(
         process.exit(1);
     }
 
-    const extendsPackage = options.extends || (type === 'profile' ? '@memo/ontology-medical-process' : undefined);
+    const extendsPackage = options.extends || (type === 'profile' ? '@memo/ontology-process' : undefined);
     const description = options.description || `MEMO ${type} package`;
     const author = options.author || '';
     const license = options.license || 'Apache-2.0';

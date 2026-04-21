@@ -1,0 +1,6 @@
+name: "@memo/ontology-arch"
+version: "0.1.0"
+type: ontology
+description: "MEMO architecture ontology — 11-layer MBSE backbone per v12 (Operational → Behavioral → Functional → Logical → Software → Software-Extension → Hardware → Safety → Security → Privacy → Verification). 56 classes, 45 object properties, ~55 data properties, 37 axioms."
+license: "Apache-2.0"
+tags: ["mbse", "sysml-v2", "arcadia", "iso-42010", "medical-device", "architecture"]

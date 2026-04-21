@@ -12,8 +12,7 @@ import { createHash } from 'node:crypto';
 import { basename, dirname, extname, relative, resolve } from 'node:path';
 import chalk from 'chalk';
 import type { MEMOConfig } from '@memo/core';
-import { findConfigFile, loadOntologyRegistries } from '@memo/core';
-import { exportToOwlTurtle, exportToOwlXml } from '@memo/ontology-medical-process';
+import { findConfigFile, loadOntologyRegistries, exportToOwlTurtle, exportToOwlXml } from '@memo/core';
 import { loadAndResolveConfig, loadConfigChain, type ConfigChainEntry } from '../server/config-resolver.js';
 
 export async function ontologyShowCommand(): Promise<void> {
@@ -222,7 +221,7 @@ interface ExportedPackage {
     version: string;
     projectType: string;
     path: string;
-    extends?: string;
+    extends?: string | string[];
     files: string[];
     sources: ExportedSource[];
 }
@@ -386,7 +385,8 @@ function renderSysandLock(currentConfig: MEMOConfig, packages: ExportedPackage[]
         lines.push(`project_type = ${tomlString(pkg.projectType)}`);
         lines.push(`path = ${tomlString(pkg.path)}`);
         if (pkg.extends) {
-            lines.push(`extends = ${tomlString(pkg.extends)}`);
+            const extendsStr = Array.isArray(pkg.extends) ? pkg.extends.join(', ') : pkg.extends;
+            lines.push(`extends = ${tomlString(extendsStr)}`);
         }
         if (pkg.files.length > 0) {
             lines.push(`files = [${pkg.files.map(file => tomlString(file)).join(', ')}]`);

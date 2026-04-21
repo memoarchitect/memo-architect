@@ -59,9 +59,12 @@ function loadConfigChainInternal(configPath: string, seen: Set<string>): ConfigC
     const chain: ConfigChainEntry[] = [];
 
     if (config.extends) {
-        const parentPath = resolveParentConfigPath(config.extends, dirname(configPath));
-        if (parentPath) {
-            chain.push(...loadConfigChainInternal(parentPath, seen));
+        const extendsArr = Array.isArray(config.extends) ? config.extends : [config.extends];
+        for (const parentName of extendsArr) {
+            const parentPath = resolveParentConfigPath(parentName, dirname(configPath));
+            if (parentPath) {
+                chain.push(...loadConfigChainInternal(parentPath, seen));
+            }
         }
     }
 

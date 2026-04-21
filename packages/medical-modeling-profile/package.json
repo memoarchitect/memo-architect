@@ -1,7 +1,7 @@
 {
   "name": "@memo/medical-modeling-profile",
   "version": "2.0.0",
-  "description": "MEMO medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-medical-process",
+  "description": "MEMO medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-arch and @memo/ontology-process",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -11,7 +11,8 @@
     "clean": "rm -rf lib/"
   },
   "dependencies": {
-    "@memo/ontology-medical-process": "workspace:*"
+    "@memo/ontology-arch": "workspace:*",
+    "@memo/ontology-process": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.5.0",

@@ -1,6 +1,6 @@
 package IrrigationPump_Compliance {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import IrrigationPump_Requirements::*;
     import IrrigationPump_Risk::*;
     import IrrigationPump_Behavior::*;
@@ -760,7 +760,7 @@ package IrrigationPump_Compliance {
     connection : DefinesLossCondition connect performance ::> epControlledIrrigationPressure to condition ::> lossOfControlledIrrigation;
     connection : Preserves connect function ::> sfMaintainSafePressure to performance ::> epControlledIrrigationPressure;
     connection : ProtectsEssentialPerformance connect control ::> rcPressureLimiter to performance ::> epControlledIrrigationPressure;
-    connection : ImplementsRiskControl connect implementer ::> sfMaintainSafePressure to control ::> rcPressureLimiter;
+    connection : TraceTo connect source ::> sfMaintainSafePressure to target ::> rcPressureLimiter;
     connection : AppliesStandardRequirement connect standardRequirement ::> collateralAlarmStandard to subject ::> epControlledIrrigationPressure;
     connection : AppliesStandardRequirement connect standardRequirement ::> particularIrrigationStandard to subject ::> pofMaintainFieldDistension;
     connection : PlansRiskManagement connect plan ::> riskPlanIrrigationConsole to subject ::> riskPressureInjury;

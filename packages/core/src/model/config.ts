@@ -250,8 +250,8 @@ export interface MEMOConfig {
     /** Project type: "ontology", "profile", "library", or "device" */
     projectType: ProjectType;
 
-    /** Parent config to inherit from, e.g. '@memo/medical-modeling-profile' */
-    extends?: string;
+    /** Parent config to inherit from. String for single parent, array for multiple. */
+    extends?: string | string[];
 
     /** Ontology references (device projects only) */
     ontologies?: OntologyReference[];

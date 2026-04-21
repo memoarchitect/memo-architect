@@ -1,0 +1,27 @@
+{
+  "name": "@memo/ontology-arch",
+  "version": "0.1.0",
+  "description": "MEMO architecture ontology — 11-layer MBSE backbone (v12 aligned). 56 classes, 45 object properties.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "echo 'no build step for sysml-only package'",
+    "clean": "echo 'nothing to clean'"
+  },
+  "files": [
+    "sysml/",
+    "memo.package.yaml",
+    "memo.rendering.yaml",
+    ".project.json"
+  ],
+  "keywords": [
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "ontology",
+    "medical-device",
+    "architecture",
+    "iso-42010"
+  ],
+  "license": "Apache-2.0"
+}

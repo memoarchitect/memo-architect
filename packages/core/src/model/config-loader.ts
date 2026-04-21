@@ -191,6 +191,7 @@ export function loadConfig(filePath: string): MEMOConfig {
 /**
  * Resolve the `extends` chain by merging configs.
  * Child properties override parent properties; arrays are concatenated.
+ * `extends` may be a single package name or an array of names.
  */
 export function resolveConfig(
     config: MEMOConfig,
@@ -198,15 +199,21 @@ export function resolveConfig(
 ): MEMOConfig {
     if (!config.extends) return config;
 
-    const parent = loader(config.extends);
-    if (!parent) {
-        console.warn(`Warning: Could not resolve parent config "${config.extends}"`);
-        return config;
+    const extendsArr = Array.isArray(config.extends) ? config.extends : [config.extends];
+
+    let base: MEMOConfig | undefined;
+    for (const parentName of extendsArr) {
+        const parent = loader(parentName);
+        if (!parent) {
+            console.warn(`Warning: Could not resolve parent config "${parentName}"`);
+            continue;
+        }
+        const resolvedParent = resolveConfig(parent, loader);
+        base = base ? mergeConfigs(base, resolvedParent) : resolvedParent;
     }
 
-    const resolvedParent = resolveConfig(parent, loader);
-
-    return mergeConfigs(resolvedParent, config);
+    if (!base) return config;
+    return mergeConfigs(base, config);
 }
 
 /** Deduplicate an array by a key function. Last occurrence wins. */

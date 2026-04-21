@@ -1,0 +1,29 @@
+{
+  "name": "@memo/ontology-process",
+  "version": "0.1.0",
+  "description": "MEMO process ontology — regulatory process activities and work products (ISO 14971, IEC 62304, ISO 13485, FDA 21 CFR 820, EU MDR, and more).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "echo 'no build step for sysml-only package'",
+    "clean": "echo 'nothing to clean'"
+  },
+  "files": [
+    "sysml/",
+    "memo.package.yaml",
+    "memo.rendering.yaml",
+    ".project.json"
+  ],
+  "keywords": [
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "ontology",
+    "medical-device",
+    "process",
+    "iso-14971",
+    "iec-62304",
+    "iso-13485"
+  ],
+  "license": "Apache-2.0"
+}

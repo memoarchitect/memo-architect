@@ -320,7 +320,7 @@ export function loadProfile(profileName: string, fromDir: string): ProfilePreset
                 return {
                     name: parsed.name ?? profileName,
                     description: parsed.description ?? '',
-                    extends: parsed.extends ?? '@memo/ontology-medical-arch',
+                    extends: parsed.extends ?? '@memo/ontology-arch',
                     ontologies: parsed.ontologies ?? [],
                 };
             } catch {
@@ -627,23 +627,23 @@ function resolveImportPackage(ontology: string, available: AvailableOntology[]):
     // If the ontology is medical-related, import MEMO_Ontology_Medical
     // If it's core-only, import MEMO_Ontology_Core
     const ont = available.find(o => o.name === ontology);
-    if (!ont) return 'MEMO_Ontology_Medical'; // safe default
+    if (!ont) return 'MEMO_Ontology_Arch'; // safe default
 
     // Walk extends chain to see what's in the ancestry
     const visited = new Set<string>();
     let current: AvailableOntology | undefined = ont;
     while (current && !visited.has(current.name)) {
         visited.add(current.name);
-        if (current.name === '@memo/ontology-medical-process' || current.extends === '@memo/ontology-medical-process') {
-            return 'MEMO_Ontology_Medical';
+        if (current.name === '@memo/ontology-process' || current.extends === '@memo/ontology-process') {
+            return 'MEMO_Ontology_Arch';
         }
-        if (current.name === '@memo/ontology-medical-arch' && !current.extends) {
-            return 'MEMO_Ontology_Core';
+        if (current.name === '@memo/ontology-arch' && !current.extends) {
+            return 'MEMO_Ontology_Arch';
         }
         current = current.extends ? available.find(o => o.name === current!.extends) : undefined;
     }
 
-    return 'MEMO_Ontology_Medical';
+    return 'MEMO_Ontology_Arch';
 }
 
 function toIdentifier(name: string): string {

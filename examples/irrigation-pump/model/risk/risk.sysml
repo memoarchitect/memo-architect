@@ -1,6 +1,6 @@
 package IrrigationPump_Risk {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
 
     requirement hazOverpressure : Hazard {
         attribute redefines hazardId = "HAZ-IRR-001";
@@ -81,24 +81,24 @@ package IrrigationPump_Risk {
         attribute redefines conclusion = "The residual risks are acceptable relative to the benefit of maintaining visualization and procedure continuity.";
     }
 
-    requirement rcPressureLimiter : RiskControl {
-        attribute redefines rcId = "RC-IRR-001";
-        attribute redefines title = "Pressure Limiter";
+    part rcPressureLimiter : Mitigation {
+        attribute mitigationId = "RC-IRR-001";
+        attribute title = "Pressure Limiter";
     }
 
-    requirement rcPrimeCompletionInterlock : RiskControl {
-        attribute redefines rcId = "RC-IRR-002";
-        attribute redefines title = "Prime Completion Interlock";
+    part rcPrimeCompletionInterlock : Mitigation {
+        attribute mitigationId = "RC-IRR-002";
+        attribute title = "Prime Completion Interlock";
     }
 
-    requirement rcReservoirLowAlarm : RiskControl {
-        attribute redefines rcId = "RC-IRR-003";
-        attribute redefines title = "Reservoir Low Alarm";
+    part rcReservoirLowAlarm : Mitigation {
+        attribute mitigationId = "RC-IRR-003";
+        attribute title = "Reservoir Low Alarm";
     }
 
-    requirement dcPressurePlausibilityCheck : RiskControl {
-        attribute redefines rcId = "RC-IRR-004";
-        attribute redefines title = "Pressure Sensor Plausibility Check";
+    part dcPressurePlausibilityCheck : Mitigation {
+        attribute mitigationId = "RC-IRR-004";
+        attribute title = "Pressure Sensor Plausibility Check";
     }
 
     part fmeaPressureAndAlarmIntegrity : FailureModesAndEffectsAnalysis {
@@ -187,7 +187,7 @@ package IrrigationPump_Risk {
     connection : LeadsTo connect situation ::> hsUnprimedFluidPath to harm ::> harmAirEmbolicComplication;
     connection : LeadsTo connect situation ::> hsCollapsedField to harm ::> harmLossOfVisualization;
 
-    connection : Identifies connect risk ::> riskPressureInjury to hazard ::> hazOverpressure;
+    connection : IdentifiesRisk connect source ::> riskPressureInjury to risk ::> hazOverpressure;
     connection : AssessesResidualRisk connect evaluation ::> residualRiskEvalPressureControl to subject ::> riskPressureInjury;
     connection : AssessesResidualRisk connect evaluation ::> residualRiskEvalPressureControl to subject ::> hsCollapsedField;
     connection : WeighsAgainstBenefit connect assessment ::> benefitRiskAssessmentIrrigation to benefit ::> benefitSustainedVisualization;

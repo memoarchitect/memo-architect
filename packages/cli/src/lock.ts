@@ -110,10 +110,13 @@ export function createLockFile(configPath: string): { lockPath: string; lock: On
     const leafConfig = chain[chain.length - 1]?.config;
     const ontologyEntry = findOntologyRoot(chain);
 
+    const leafExtends = leafConfig?.extends;
+    const leafExtendsStr = Array.isArray(leafExtends) ? leafExtends.join('+') : leafExtends;
+
     const lock: OntologyLock = {
         ontology: ontologyEntry?.config.ontologyMetadata?.id
             || ontologyEntry?.config.projectName
-            || leafConfig?.extends
+            || leafExtendsStr
             || 'unknown',
         version: ontologyEntry?.config.ontologyMetadata?.version || '0.0.0',
         lockedAt: new Date().toISOString().split('T')[0],
@@ -165,9 +168,11 @@ export function checkLockFile(configPath: string): LockCheckResult {
     // Get current ontology identity from config chain
     const chain = loadConfigChain(configPath);
     const ontologyEntry = findOntologyRoot(chain);
+    const tailExtends = chain[chain.length - 1]?.config.extends;
+    const tailExtendsStr = Array.isArray(tailExtends) ? tailExtends.join('+') : tailExtends;
     const currentOntology = ontologyEntry?.config.ontologyMetadata?.id
         || ontologyEntry?.config.projectName
-        || chain[chain.length - 1]?.config.extends
+        || tailExtendsStr
         || 'unknown';
     const currentVersion = ontologyEntry?.config.ontologyMetadata?.version || '0.0.0';
 
