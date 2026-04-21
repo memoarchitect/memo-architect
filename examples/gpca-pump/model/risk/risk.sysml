@@ -6,8 +6,8 @@
 // ============================================================================
 
 package GPCA_Risk {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import GPCA_Requirements::*;
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -15,7 +15,7 @@ package GPCA_Risk {
     // ═══════════════════════════════════════════════════════════════════════
 
     requirement harmDeath : Harm {
-        attribute redefines reqId = "HARM-001";
+        attribute mitigationId = "HARM-001";
         attribute redefines title = "Patient Death";
         attribute redefines severity = SeverityLevel::Catastrophic;
         doc /* Death due to respiratory depression from opioid overdose
@@ -23,7 +23,7 @@ package GPCA_Risk {
     }
 
     requirement harmRespiratoryDepression : Harm {
-        attribute redefines reqId = "HARM-002";
+        attribute mitigationId = "HARM-002";
         attribute redefines title = "Respiratory Depression";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Clinically significant respiratory depression from
@@ -31,7 +31,7 @@ package GPCA_Risk {
     }
 
     requirement harmTissueDamage : Harm {
-        attribute redefines reqId = "HARM-003";
+        attribute mitigationId = "HARM-003";
         attribute redefines title = "Tissue Damage / Extravasation";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Local tissue damage from extravasation due to occlusion
@@ -39,7 +39,7 @@ package GPCA_Risk {
     }
 
     requirement harmSepsis : Harm {
-        attribute redefines reqId = "HARM-004";
+        attribute mitigationId = "HARM-004";
         attribute redefines title = "Sepsis / Infection";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Systemic infection from contaminated drug or compromised
@@ -47,7 +47,7 @@ package GPCA_Risk {
     }
 
     requirement harmInadequatePainRelief : Harm {
-        attribute redefines reqId = "HARM-005";
+        attribute mitigationId = "HARM-005";
         attribute redefines title = "Inadequate Pain Relief";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Prolonged uncontrolled pain from under-infusion or
@@ -55,7 +55,7 @@ package GPCA_Risk {
     }
 
     requirement harmPsychologicalDistress : Harm {
-        attribute redefines reqId = "HARM-006";
+        attribute mitigationId = "HARM-006";
         attribute redefines title = "Psychological Distress";
         attribute redefines severity = SeverityLevel::Minor;
         doc /* Patient anxiety and distress from repeated false alarms,
@@ -63,7 +63,7 @@ package GPCA_Risk {
     }
 
     requirement harmDelayedTreatment : Harm {
-        attribute redefines reqId = "HARM-007";
+        attribute mitigationId = "HARM-007";
         attribute redefines title = "Delayed Treatment";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Delay in pain management due to pump malfunction requiring
@@ -71,7 +71,7 @@ package GPCA_Risk {
     }
 
     requirement harmAdverseDrugReaction : Harm {
-        attribute redefines reqId = "HARM-008";
+        attribute mitigationId = "HARM-008";
         attribute redefines title = "Adverse Drug Reaction";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Adverse reaction from wrong drug or wrong concentration
@@ -79,7 +79,7 @@ package GPCA_Risk {
     }
 
     requirement harmInfection : Harm {
-        attribute redefines reqId = "HARM-009";
+        attribute mitigationId = "HARM-009";
         attribute redefines title = "Local Infection at IV Site";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Local infection at IV insertion site from prolonged
@@ -87,7 +87,7 @@ package GPCA_Risk {
     }
 
     requirement harmNerveDamage : Harm {
-        attribute redefines reqId = "HARM-010";
+        attribute mitigationId = "HARM-010";
         attribute redefines title = "Nerve Damage";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Peripheral nerve damage from excessive local pressure
@@ -95,7 +95,7 @@ package GPCA_Risk {
     }
 
     requirement harmAirEmbolism : Harm {
-        attribute redefines reqId = "HARM-011";
+        attribute mitigationId = "HARM-011";
         attribute redefines title = "Air Embolism";
         attribute redefines severity = SeverityLevel::Catastrophic;
         doc /* Venous air embolism from air-in-line reaching the patient
@@ -107,153 +107,153 @@ package GPCA_Risk {
     // ═══════════════════════════════════════════════════════════════════════
 
     requirement hazOverInfusion : Hazard {
-        attribute redefines reqId = "HAZ-001";
+        attribute mitigationId = "HAZ-001";
         attribute redefines title = "Over-Infusion";
         doc /* Delivery of drug volume or rate exceeding the prescribed amount. */
     }
 
     requirement hazUnderInfusion : Hazard {
-        attribute redefines reqId = "HAZ-002";
+        attribute mitigationId = "HAZ-002";
         attribute redefines title = "Under-Infusion";
         doc /* Delivery of drug volume or rate below the prescribed amount. */
     }
 
     requirement hazAirInLine : Hazard {
-        attribute redefines reqId = "HAZ-003";
+        attribute mitigationId = "HAZ-003";
         attribute redefines title = "Air in Line";
         doc /* Presence of air bubbles in the infusion tubing reaching the patient. */
     }
 
     requirement hazReverseDelivery : Hazard {
-        attribute redefines reqId = "HAZ-004";
+        attribute mitigationId = "HAZ-004";
         attribute redefines title = "Reverse Flow / Backflow";
         doc /* Drug or blood flowing in reverse direction through the infusion line. */
     }
 
     requirement hazEmptyReservoir : Hazard {
-        attribute redefines reqId = "HAZ-005";
+        attribute mitigationId = "HAZ-005";
         attribute redefines title = "Empty Reservoir Undetected";
         doc /* Continued pumping after reservoir is empty, introducing air into line. */
     }
 
     requirement hazLowReservoir : Hazard {
-        attribute redefines reqId = "HAZ-006";
+        attribute mitigationId = "HAZ-006";
         attribute redefines title = "Low Reservoir Undetected";
         doc /* Failure to warn about low reservoir before running empty. */
     }
 
     requirement hazBolusOverdose : Hazard {
-        attribute redefines reqId = "HAZ-007";
+        attribute mitigationId = "HAZ-007";
         attribute redefines title = "Bolus Overdose";
         doc /* Excessive bolus dose delivered due to lockout failure or
              * maximum count bypass. */
     }
 
     requirement hazConfigurationError : Hazard {
-        attribute redefines reqId = "HAZ-008";
+        attribute mitigationId = "HAZ-008";
         attribute redefines title = "Configuration / Programming Error";
         doc /* Incorrect prescription parameters entered leading to wrong
              * drug, wrong dose, or wrong rate. */
     }
 
     requirement hazUnauthorizedAccess : Hazard {
-        attribute redefines reqId = "HAZ-009";
+        attribute mitigationId = "HAZ-009";
         attribute redefines title = "Unauthorized Access";
         doc /* Unauthorized modification of prescription parameters or
              * device configuration by non-clinical personnel. */
     }
 
     requirement hazCommunicationFailure : Hazard {
-        attribute redefines reqId = "HAZ-010";
+        attribute mitigationId = "HAZ-010";
         attribute redefines title = "Communication Failure";
         doc /* Loss of communication with pharmacy database during
              * prescription validation, resulting in unvalidated parameters. */
     }
 
     requirement hazPowerFailure : Hazard {
-        attribute redefines reqId = "HAZ-011";
+        attribute mitigationId = "HAZ-011";
         attribute redefines title = "Power Failure";
         doc /* Complete loss of electrical power (mains + battery depleted)
              * during active infusion. */
     }
 
     requirement hazMechanicalOcclusion : Hazard {
-        attribute redefines reqId = "HAZ-012";
+        attribute mitigationId = "HAZ-012";
         attribute redefines title = "Mechanical Occlusion";
         doc /* Physical blockage of infusion line from kink, clamp, or
              * precipitate buildup. */
     }
 
     requirement hazDrugIncompatibility : Hazard {
-        attribute redefines reqId = "HAZ-013";
+        attribute mitigationId = "HAZ-013";
         attribute redefines title = "Drug Incompatibility";
         doc /* Administration of incompatible drug or concentration not
              * suitable for PCA delivery. */
     }
 
     requirement hazIncorrectConcentration : Hazard {
-        attribute redefines reqId = "HAZ-014";
+        attribute mitigationId = "HAZ-014";
         attribute redefines title = "Incorrect Drug Concentration";
         doc /* Mismatch between actual drug concentration and programmed
              * concentration leading to dose error. */
     }
 
     requirement hazSensorDrift : Hazard {
-        attribute redefines reqId = "HAZ-015";
+        attribute mitigationId = "HAZ-015";
         attribute redefines title = "Sensor Drift / Calibration Error";
         doc /* Gradual drift in flow sensor or pressure sensor readings
              * leading to undetected delivery error. */
     }
 
     requirement hazAlarmFatigue : Hazard {
-        attribute redefines reqId = "HAZ-016";
+        attribute mitigationId = "HAZ-016";
         attribute redefines title = "Alarm Fatigue";
         doc /* Excessive non-actionable alarms leading clinician to ignore
              * or silence critical alarms. */
     }
 
     requirement hazWrongPatient : Hazard {
-        attribute redefines reqId = "HAZ-017";
+        attribute mitigationId = "HAZ-017";
         attribute redefines title = "Use Error — Wrong Patient";
         doc /* Pump configured for one patient but connected to another. */
     }
 
     requirement hazWrongDrug : Hazard {
-        attribute redefines reqId = "HAZ-018";
+        attribute mitigationId = "HAZ-018";
         attribute redefines title = "Use Error — Wrong Drug";
         doc /* Incorrect drug loaded into reservoir, not matching programmed drug. */
     }
 
     requirement hazSoftwareMalfunction : Hazard {
-        attribute redefines reqId = "HAZ-019";
+        attribute mitigationId = "HAZ-019";
         attribute redefines title = "Software Malfunction";
         doc /* Software crash, hang, or incorrect computation leading to
              * loss of infusion control. */
     }
 
     requirement hazCybersecurityBreach : Hazard {
-        attribute redefines reqId = "HAZ-020";
+        attribute mitigationId = "HAZ-020";
         attribute redefines title = "Cybersecurity Breach";
         doc /* Remote exploitation of network interface to modify pump
              * parameters or disable safety functions. */
     }
 
     requirement hazFreeFlow : Hazard {
-        attribute redefines reqId = "HAZ-021";
+        attribute mitigationId = "HAZ-021";
         attribute redefines title = "Free Flow";
         doc /* Uncontrolled gravity-driven drug delivery when tubing set
              * is disconnected from pump mechanism. */
     }
 
     requirement hazValveFailure : Hazard {
-        attribute redefines reqId = "HAZ-022";
+        attribute mitigationId = "HAZ-022";
         attribute redefines title = "Valve Stuck Open";
         doc /* Flow control valve stuck in open position allowing
              * uncontrolled drug delivery. */
     }
 
     requirement hazBatteryDepletion : Hazard {
-        attribute redefines reqId = "HAZ-023";
+        attribute mitigationId = "HAZ-023";
         attribute redefines title = "Battery Depletion During Infusion";
         doc /* Battery exhaustion during active infusion without adequate
              * warning leading to uncontrolled shutdown. */
@@ -264,182 +264,182 @@ package GPCA_Risk {
     // ═══════════════════════════════════════════════════════════════════════
 
     requirement hsExcessiveDoseClinicianAbsent : HazardousSituation {
-        attribute redefines reqId = "HS-001";
+        attribute mitigationId = "HS-001";
         attribute redefines title = "Over-infusion during basal delivery while clinician absent";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsAirEmbolismBasal : HazardousSituation {
-        attribute redefines reqId = "HS-002";
+        attribute mitigationId = "HS-002";
         attribute redefines title = "Air embolism during basal delivery undetected due to sensor failure";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsBolusOverdoseLockoutBypass : HazardousSituation {
-        attribute redefines reqId = "HS-003";
+        attribute mitigationId = "HS-003";
         attribute redefines title = "Multiple bolus doses delivered due to lockout timer failure";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsWrongDrugWrongPatient : HazardousSituation {
-        attribute redefines reqId = "HS-004";
+        attribute mitigationId = "HS-004";
         attribute redefines title = "Wrong drug delivered to wrong patient due to mislabeling";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsOcclusionUndetected : HazardousSituation {
-        attribute redefines reqId = "HS-005";
+        attribute mitigationId = "HS-005";
         attribute redefines title = "Prolonged occlusion undetected leading to tissue damage";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsFreeFlowTubingRemoval : HazardousSituation {
-        attribute redefines reqId = "HS-006";
+        attribute mitigationId = "HS-006";
         attribute redefines title = "Free flow after tubing removal from pump during active infusion";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsPowerLossMidInfusion : HazardousSituation {
-        attribute redefines reqId = "HS-007";
+        attribute mitigationId = "HS-007";
         attribute redefines title = "Complete power loss during active infusion without safe shutdown";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsAlarmSilencedCritical : HazardousSituation {
-        attribute redefines reqId = "HS-008";
+        attribute mitigationId = "HS-008";
         attribute redefines title = "Critical alarm silenced and not re-escalated while condition persists";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Occasional;
     }
 
     requirement hsConcentrationMismatch : HazardousSituation {
-        attribute redefines reqId = "HS-009";
+        attribute mitigationId = "HS-009";
         attribute redefines title = "10x dose error from concentration mismatch between reservoir and program";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsSoftwareCrashDuringBolus : HazardousSituation {
-        attribute redefines reqId = "HS-010";
+        attribute mitigationId = "HS-010";
         attribute redefines title = "Software crash during bolus delivery leaving valve open";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsCyberAttackRateChange : HazardousSituation {
-        attribute redefines reqId = "HS-011";
+        attribute mitigationId = "HS-011";
         attribute redefines title = "Remote attacker modifies flow rate via network vulnerability";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsEmptyReservoirContinuedPumping : HazardousSituation {
-        attribute redefines reqId = "HS-012";
+        attribute mitigationId = "HS-012";
         attribute redefines title = "Continued pumping after reservoir empty introduces air";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsSensorDriftUndetected : HazardousSituation {
-        attribute redefines reqId = "HS-013";
+        attribute mitigationId = "HS-013";
         attribute redefines title = "Gradual sensor drift causes 30% over-delivery over 8-hour shift";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsAlarmFatigueIgnoredOcclusion : HazardousSituation {
-        attribute redefines reqId = "HS-014";
+        attribute mitigationId = "HS-014";
         attribute redefines title = "Clinician ignores occlusion alarm due to alarm fatigue";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Occasional;
     }
 
     requirement hsUnauthorizedRateIncrease : HazardousSituation {
-        attribute redefines reqId = "HS-015";
+        attribute mitigationId = "HS-015";
         attribute redefines title = "Patient or visitor increases flow rate without clinical authorization";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsReverseFlowBloodContamination : HazardousSituation {
-        attribute redefines reqId = "HS-016";
+        attribute mitigationId = "HS-016";
         attribute redefines title = "Reverse flow causes blood to contaminate drug reservoir";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsPharmacyDBDownInvalidParams : HazardousSituation {
-        attribute redefines reqId = "HS-017";
+        attribute mitigationId = "HS-017";
         attribute redefines title = "Pharmacy DB unavailable; clinician enters unsafe parameters manually";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsBatteryDiesNoWarning : HazardousSituation {
-        attribute redefines reqId = "HS-018";
+        attribute mitigationId = "HS-018";
         attribute redefines title = "Battery depletes without warning during nighttime infusion";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsWatchdogFailSoftwareHang : HazardousSituation {
-        attribute redefines reqId = "HS-019";
+        attribute mitigationId = "HS-019";
         attribute redefines title = "Watchdog timer fails to trigger on software hang";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsValveStuckOpenDuringAlarm : HazardousSituation {
-        attribute redefines reqId = "HS-020";
+        attribute mitigationId = "HS-020";
         attribute redefines title = "Flow control valve stuck open during inhibit command";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsDrugPrecipitateInLine : HazardousSituation {
-        attribute redefines reqId = "HS-021";
+        attribute mitigationId = "HS-021";
         attribute redefines title = "Drug precipitate blocks line undetected causing under-delivery";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsIncorrectConcentrationEntry : HazardousSituation {
-        attribute redefines reqId = "HS-022";
+        attribute mitigationId = "HS-022";
         attribute redefines title = "Clinician enters wrong concentration due to confusing UI";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Occasional;
     }
 
     requirement hsMotorStallUndetected : HazardousSituation {
-        attribute redefines reqId = "HS-023";
+        attribute mitigationId = "HS-023";
         attribute redefines title = "Motor stall during delivery goes undetected by software";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsDoorOpenDuringInfusion : HazardousSituation {
-        attribute redefines reqId = "HS-024";
+        attribute mitigationId = "HS-024";
         attribute redefines title = "Pump door opened during active infusion without interlock";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
     }
 
     requirement hsTemperatureExtremeDeliveryError : HazardousSituation {
-        attribute redefines reqId = "HS-025";
+        attribute mitigationId = "HS-025";
         attribute redefines title = "Extreme temperature causes motor speed drift and delivery error";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Improbable;
     }
 
     requirement hsDisplayFailureNoStatus : HazardousSituation {
-        attribute redefines reqId = "HS-026";
+        attribute mitigationId = "HS-026";
         attribute redefines title = "Display failure during active infusion with no status visibility";
         attribute redefines severity = SeverityLevel::Serious;
         attribute redefines probability = ProbabilityLevel::Improbable;
@@ -449,225 +449,225 @@ package GPCA_Risk {
     // RISK CONTROLS (≥30)
     // ═══════════════════════════════════════════════════════════════════════
 
-    requirement rcFlowRateMonitor : RiskControl {
-        attribute redefines reqId = "RC-001";
+    part rcFlowRateMonitor : Mitigation {
+        attribute mitigationId = "RC-001";
         attribute redefines title = "Flow Rate Tolerance Monitor (±20%)";
         doc /* Continuous monitoring of actual vs prescribed flow rate with
              * automatic inhibit when deviation exceeds ±20%. */
     }
 
-    requirement rcKVOFallback : RiskControl {
-        attribute redefines reqId = "RC-002";
+    part rcKVOFallback : Mitigation {
+        attribute mitigationId = "RC-002";
         attribute redefines title = "KVO Fallback Delivery";
         doc /* Automatic transition to KVO rate (1 mL/hr) when infusion
              * is inhibited, maintaining venous access. */
     }
 
-    requirement rcDualAirSensor : RiskControl {
-        attribute redefines reqId = "RC-003";
+    part rcDualAirSensor : Mitigation {
+        attribute mitigationId = "RC-003";
         attribute redefines title = "Dual Ultrasonic Air Detection";
         doc /* Two independent ultrasonic sensors for air bubble detection
              * with cross-validation; inhibit infusion at 50 µL cumulative. */
     }
 
-    requirement rcAlarmEscalation : RiskControl {
-        attribute redefines reqId = "RC-004";
+    part rcAlarmEscalation : Mitigation {
+        attribute mitigationId = "RC-004";
         attribute redefines title = "Alarm Priority Escalation";
         doc /* Unacknowledged medium-priority alarms escalate to high
              * priority after configurable timeout. Visual always persists. */
     }
 
-    requirement rcLockoutEnforcement : RiskControl {
-        attribute redefines reqId = "RC-005";
+    part rcLockoutEnforcement : Mitigation {
+        attribute mitigationId = "RC-005";
         attribute redefines title = "Bolus Lockout Period Enforcement";
         doc /* Hardware-backed timer prevents patient bolus delivery before
              * lockout period has elapsed. Non-overridable by patient. */
     }
 
-    requirement rcMaxBolusLimit : RiskControl {
-        attribute redefines reqId = "RC-006";
+    part rcMaxBolusLimit : Mitigation {
+        attribute mitigationId = "RC-006";
         attribute redefines title = "Maximum Bolus Count Limit";
         doc /* Cumulative bolus counter per time window; exceeding limit
              * inhibits further patient bolus requests. */
     }
 
-    requirement rcPrescriptionValidation : RiskControl {
-        attribute redefines reqId = "RC-007";
+    part rcPrescriptionValidation : Mitigation {
+        attribute mitigationId = "RC-007";
         attribute redefines title = "Drug Library Prescription Validation";
         doc /* All prescription parameters validated against pharmacy DB
              * hard/soft limits before infusion can start. */
     }
 
-    requirement rcSessionAuthentication : RiskControl {
-        attribute redefines reqId = "RC-008";
+    part rcSessionAuthentication : Mitigation {
+        attribute mitigationId = "RC-008";
         attribute redefines title = "Clinician Session Authentication";
         doc /* Multi-factor authentication required for prescription
              * configuration changes. Automatic lockout after timeout. */
     }
 
-    requirement rcAntiFreeFLow : RiskControl {
-        attribute redefines reqId = "RC-009";
+    part rcAntiFreeFLow : Mitigation {
+        attribute mitigationId = "RC-009";
         attribute redefines title = "Anti-Free-Flow Valve";
         doc /* Mechanical valve that automatically closes when tubing
              * set is removed from pump mechanism. */
     }
 
-    requirement rcHardwareWatchdog : RiskControl {
-        attribute redefines reqId = "RC-010";
+    part rcHardwareWatchdog : Mitigation {
+        attribute mitigationId = "RC-010";
         attribute redefines title = "Hardware Watchdog Timer";
         doc /* Independent hardware watchdog triggers safe shutdown
              * (valve close + alarm) if software fails to reset in 100ms. */
     }
 
-    requirement rcDualFlowSensor : RiskControl {
-        attribute redefines reqId = "RC-011";
+    part rcDualFlowSensor : Mitigation {
+        attribute mitigationId = "RC-011";
         attribute redefines title = "Dual Flow Sensor Cross-Validation";
         doc /* Two independent flow sensors with continuous cross-check;
              * disagreement beyond threshold raises sensor alarm. */
     }
 
-    requirement rcPressureMonitoring : RiskControl {
-        attribute redefines reqId = "RC-012";
+    part rcPressureMonitoring : Mitigation {
+        attribute mitigationId = "RC-012";
         attribute redefines title = "Line Pressure Monitoring";
         doc /* Continuous pressure monitoring for occlusion (high) and
              * disconnection (low) detection within 30 seconds. */
     }
 
-    requirement rcBatteryMonitor : RiskControl {
-        attribute redefines reqId = "RC-013";
+    part rcBatteryMonitor : Mitigation {
+        attribute mitigationId = "RC-013";
         attribute redefines title = "Battery Level Monitoring";
         doc /* Continuous battery monitoring with low-battery alarm at
              * 30-minute remaining and critical at 10-minute. */
     }
 
-    requirement rcPowerFailValveClose : RiskControl {
-        attribute redefines reqId = "RC-014";
+    part rcPowerFailValveClose : Mitigation {
+        attribute mitigationId = "RC-014";
         attribute redefines title = "Power-Fail Valve Close";
         doc /* Normally-closed valve design ensures valve closes on
              * complete power loss, preventing uncontrolled delivery. */
     }
 
-    requirement rcConcentrationScan : RiskControl {
-        attribute redefines reqId = "RC-015";
+    part rcConcentrationScan : Mitigation {
+        attribute mitigationId = "RC-015";
         attribute redefines title = "Barcode/RFID Drug Verification";
         doc /* Automated drug identification via barcode/RFID to prevent
              * concentration mismatch and wrong-drug errors. */
     }
 
-    requirement rcHardLimits : RiskControl {
-        attribute redefines reqId = "RC-016";
+    part rcHardLimits : Mitigation {
+        attribute mitigationId = "RC-016";
         attribute redefines title = "Non-Overridable Hard Limits";
         doc /* Drug library hard limits that cannot be overridden by any
              * user role, preventing extreme dose entries. */
     }
 
-    requirement rcDoorInterlock : RiskControl {
-        attribute redefines reqId = "RC-017";
+    part rcDoorInterlock : Mitigation {
+        attribute mitigationId = "RC-017";
         attribute redefines title = "Door Open Interlock";
         doc /* Pump mechanism door sensor inhibits infusion when door
              * is open, preventing operation with exposed mechanism. */
     }
 
-    requirement rcSelfTest : RiskControl {
-        attribute redefines reqId = "RC-018";
+    part rcSelfTest : Mitigation {
+        attribute mitigationId = "RC-018";
         attribute redefines title = "Power-On Self Test";
         doc /* Comprehensive hardware and software self-test on every
              * power-on; blocks operation on any test failure. */
     }
 
-    requirement rcOverInfusionInhibit : RiskControl {
-        attribute redefines reqId = "RC-019";
+    part rcOverInfusionInhibit : Mitigation {
+        attribute mitigationId = "RC-019";
         attribute redefines title = "Over-Infusion Automatic Inhibit";
         doc /* Real-time comparison of delivered vs prescribed volume;
              * automatic inhibit when >10% over-delivery detected. */
     }
 
-    requirement rcReverseFlowValve : RiskControl {
-        attribute redefines reqId = "RC-020";
+    part rcReverseFlowValve : Mitigation {
+        attribute mitigationId = "RC-020";
         attribute redefines title = "Reverse Flow Detection and Valve";
         doc /* One-way valve plus software reverse flow detection;
              * immediate valve close on negative flow detection. */
     }
 
-    requirement rcTLSEncryption : RiskControl {
-        attribute redefines reqId = "RC-021";
+    part rcTLSEncryption : Mitigation {
+        attribute mitigationId = "RC-021";
         attribute redefines title = "TLS 1.3 Network Encryption";
         doc /* All network communications encrypted with TLS 1.3
              * preventing interception and modification of data. */
     }
 
-    requirement rcRoleBasedAccess : RiskControl {
-        attribute redefines reqId = "RC-022";
+    part rcRoleBasedAccess : Mitigation {
+        attribute mitigationId = "RC-022";
         attribute redefines title = "Role-Based Access Control";
         doc /* Three access roles (patient, clinician, biomed) with
              * privilege separation enforced in software. */
     }
 
-    requirement rcNVDataIntegrity : RiskControl {
-        attribute redefines reqId = "RC-023";
+    part rcNVDataIntegrity : Mitigation {
+        attribute mitigationId = "RC-023";
         attribute redefines title = "Non-Volatile Storage with CRC";
         doc /* All stored data protected with CRC integrity checks;
              * corrupted data detected on read and reported. */
     }
 
-    requirement rcTemperatureMonitor : RiskControl {
-        attribute redefines reqId = "RC-024";
+    part rcTemperatureMonitor : Mitigation {
+        attribute mitigationId = "RC-024";
         attribute redefines title = "Ambient Temperature Monitor";
         doc /* Environmental temperature monitoring with alarm when
              * outside 10°C-40°C operating range. */
     }
 
-    requirement rcAlarmSilenceLimit : RiskControl {
-        attribute redefines reqId = "RC-025";
+    part rcAlarmSilenceLimit : Mitigation {
+        attribute mitigationId = "RC-025";
         attribute redefines title = "Alarm Silence Time Limit";
         doc /* Audio silence limited to 120 seconds maximum with
              * visual indication always persisting. */
     }
 
-    requirement rcPrescriptionConfirmation : RiskControl {
-        attribute redefines reqId = "RC-026";
+    part rcPrescriptionConfirmation : Mitigation {
+        attribute mitigationId = "RC-026";
         attribute redefines title = "Prescription Summary Confirmation";
         doc /* Full prescription summary display requiring explicit
              * clinician confirmation before infusion starts. */
     }
 
-    requirement rcSoftLimitWarning : RiskControl {
-        attribute redefines reqId = "RC-027";
+    part rcSoftLimitWarning : Mitigation {
+        attribute mitigationId = "RC-027";
         attribute redefines title = "Soft Limit Warning with Override Logging";
         doc /* Soft limit exceeded generates warning; override allowed
              * only with explicit confirmation and logged to audit trail. */
     }
 
-    requirement rcMotorStallDetection : RiskControl {
-        attribute redefines reqId = "RC-028";
+    part rcMotorStallDetection : Mitigation {
+        attribute mitigationId = "RC-028";
         attribute redefines title = "Motor Stall Detection";
         doc /* Motor position feedback detects stall condition within
              * 500ms; raises alarm and inhibits infusion. */
     }
 
-    requirement rcConfigTimeout : RiskControl {
-        attribute redefines reqId = "RC-029";
+    part rcConfigTimeout : Mitigation {
+        attribute mitigationId = "RC-029";
         attribute redefines title = "Configuration Timeout";
         doc /* Auto-return to IDLE after 10 minutes of incomplete
              * configuration preventing abandoned partial setup. */
     }
 
-    requirement rcReservoirLevelSensor : RiskControl {
-        attribute redefines reqId = "RC-030";
+    part rcReservoirLevelSensor : Mitigation {
+        attribute mitigationId = "RC-030";
         attribute redefines title = "Reservoir Level Monitoring";
         doc /* Weight or optical level sensor detects low and empty
              * reservoir conditions before air enters line. */
     }
 
-    requirement rcAuditTrail : RiskControl {
-        attribute redefines reqId = "RC-031";
+    part rcAuditTrail : Mitigation {
+        attribute mitigationId = "RC-031";
         attribute redefines title = "Tamper-Evident Audit Trail";
         doc /* All events, configuration changes, and alarms logged
              * with timestamps in append-only non-volatile storage. */
     }
 
-    requirement rcDisplayRedundancy : RiskControl {
-        attribute redefines reqId = "RC-032";
+    part rcDisplayRedundancy : Mitigation {
+        attribute mitigationId = "RC-032";
         attribute redefines title = "Display Failure Detection";
         doc /* Display self-test detects failure; LED alarm indicators
              * provide backup status even with display failure. */
@@ -684,7 +684,7 @@ package GPCA_Risk {
     }
 
     requirement riskOverInfusionPre : Risk {
-        attribute redefines reqId = "RISK-001-PRE";
+        attribute mitigationId = "RISK-001-PRE";
         attribute redefines title = "Over-Infusion Risk (Pre-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Occasional;
@@ -692,7 +692,7 @@ package GPCA_Risk {
     }
 
     requirement riskOverInfusionPost : Risk {
-        attribute redefines reqId = "RISK-001-POST";
+        attribute mitigationId = "RISK-001-POST";
         attribute redefines title = "Over-Infusion Risk (Post-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
@@ -701,7 +701,7 @@ package GPCA_Risk {
     }
 
     requirement riskAirEmbolismPre : Risk {
-        attribute redefines reqId = "RISK-002-PRE";
+        attribute mitigationId = "RISK-002-PRE";
         attribute redefines title = "Air Embolism Risk (Pre-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Remote;
@@ -709,7 +709,7 @@ package GPCA_Risk {
     }
 
     requirement riskAirEmbolismPost : Risk {
-        attribute redefines reqId = "RISK-002-POST";
+        attribute mitigationId = "RISK-002-POST";
         attribute redefines title = "Air Embolism Risk (Post-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Incredible;
@@ -718,7 +718,7 @@ package GPCA_Risk {
     }
 
     requirement riskBolusOverdosePre : Risk {
-        attribute redefines reqId = "RISK-003-PRE";
+        attribute mitigationId = "RISK-003-PRE";
         attribute redefines title = "Bolus Overdose Risk (Pre-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Occasional;
@@ -726,7 +726,7 @@ package GPCA_Risk {
     }
 
     requirement riskBolusOverdosePost : Risk {
-        attribute redefines reqId = "RISK-003-POST";
+        attribute mitigationId = "RISK-003-POST";
         attribute redefines title = "Bolus Overdose Risk (Post-Mitigation)";
         attribute redefines severity = SeverityLevel::Catastrophic;
         attribute redefines probability = ProbabilityLevel::Improbable;
@@ -735,7 +735,7 @@ package GPCA_Risk {
     }
 
     requirement riskConfigErrorPre : Risk {
-        attribute redefines reqId = "RISK-004-PRE";
+        attribute mitigationId = "RISK-004-PRE";
         attribute redefines title = "Configuration Error Risk (Pre-Mitigation)";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Occasional;
@@ -743,7 +743,7 @@ package GPCA_Risk {
     }
 
     requirement riskConfigErrorPost : Risk {
-        attribute redefines reqId = "RISK-004-POST";
+        attribute mitigationId = "RISK-004-POST";
         attribute redefines title = "Configuration Error Risk (Post-Mitigation)";
         attribute redefines severity = SeverityLevel::Critical;
         attribute redefines probability = ProbabilityLevel::Remote;
@@ -898,305 +898,305 @@ package GPCA_Risk {
     }
 
     requirement fmMotorFailure : FailureMode {
-        attribute redefines reqId = "FM-001";
+        attribute mitigationId = "FM-001";
         attribute redefines title = "Pump Motor Failure";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Pump motor ceases operation — no drug delivery. */
     }
 
     requirement fcMotorWinding : FailureCause {
-        attribute redefines reqId = "FC-001";
+        attribute mitigationId = "FC-001";
         attribute redefines title = "Motor Winding Degradation";
     }
 
     requirement feNoDelivery : FailureEffect {
-        attribute redefines reqId = "FE-001";
+        attribute mitigationId = "FE-001";
         attribute redefines title = "Complete Loss of Drug Delivery";
     }
 
     requirement fmSensorMalfunction : FailureMode {
-        attribute redefines reqId = "FM-002";
+        attribute mitigationId = "FM-002";
         attribute redefines title = "Flow Sensor Malfunction";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Flow sensor provides erroneous readings. */
     }
 
     requirement fcSensorAgeing : FailureCause {
-        attribute redefines reqId = "FC-002";
+        attribute mitigationId = "FC-002";
         attribute redefines title = "Sensor Component Ageing";
     }
 
     requirement feUndetectedFlowError : FailureEffect {
-        attribute redefines reqId = "FE-002";
+        attribute mitigationId = "FE-002";
         attribute redefines title = "Undetected Flow Rate Deviation";
     }
 
     requirement fmValveStuckOpen : FailureMode {
-        attribute redefines reqId = "FM-003";
+        attribute mitigationId = "FM-003";
         attribute redefines title = "Valve Stuck Open";
         attribute redefines severity = SeverityLevel::Catastrophic;
         doc /* Flow control valve fails to close on command. */
     }
 
     requirement fcValveMechanicalWear : FailureCause {
-        attribute redefines reqId = "FC-003";
+        attribute mitigationId = "FC-003";
         attribute redefines title = "Valve Mechanical Wear";
     }
 
     requirement feUncontrolledDelivery : FailureEffect {
-        attribute redefines reqId = "FE-003";
+        attribute mitigationId = "FE-003";
         attribute redefines title = "Uncontrolled Drug Delivery";
     }
 
     requirement fmValveStuckClosed : FailureMode {
-        attribute redefines reqId = "FM-004";
+        attribute mitigationId = "FM-004";
         attribute redefines title = "Valve Stuck Closed";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Flow control valve fails to open on command. */
     }
 
     requirement feNoFlowDelivery : FailureEffect {
-        attribute redefines reqId = "FE-004";
+        attribute mitigationId = "FE-004";
         attribute redefines title = "No Drug Delivery Despite Command";
     }
 
     requirement fmBatteryDepletion : FailureMode {
-        attribute redefines reqId = "FM-005";
+        attribute mitigationId = "FM-005";
         attribute redefines title = "Battery Rapid Depletion";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Battery capacity drops faster than expected. */
     }
 
     requirement fcBatteryCellDegradation : FailureCause {
-        attribute redefines reqId = "FC-005";
+        attribute mitigationId = "FC-005";
         attribute redefines title = "Battery Cell Degradation";
     }
 
     requirement fePrematurePowerLoss : FailureEffect {
-        attribute redefines reqId = "FE-005";
+        attribute mitigationId = "FE-005";
         attribute redefines title = "Premature Power Loss During Infusion";
     }
 
     requirement fmDisplayFailure : FailureMode {
-        attribute redefines reqId = "FM-006";
+        attribute mitigationId = "FM-006";
         attribute redefines title = "Display Failure";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Display blanks or shows corrupted information. */
     }
 
     requirement fcDisplayDriver : FailureCause {
-        attribute redefines reqId = "FC-006";
+        attribute mitigationId = "FC-006";
         attribute redefines title = "Display Driver IC Failure";
     }
 
     requirement feLossOfStatusVisibility : FailureEffect {
-        attribute redefines reqId = "FE-006";
+        attribute mitigationId = "FE-006";
         attribute redefines title = "Loss of Status Information Visibility";
     }
 
     requirement fmButtonStuck : FailureMode {
-        attribute redefines reqId = "FM-007";
+        attribute mitigationId = "FM-007";
         attribute redefines title = "Bolus Button Stuck Pressed";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Patient bolus button mechanically stuck in pressed state. */
     }
 
     requirement fcButtonMechanicalFatigue : FailureCause {
-        attribute redefines reqId = "FC-007";
+        attribute mitigationId = "FC-007";
         attribute redefines title = "Button Mechanical Fatigue";
     }
 
     requirement feRepeatedBolusRequests : FailureEffect {
-        attribute redefines reqId = "FE-007";
+        attribute mitigationId = "FE-007";
         attribute redefines title = "Repeated Unintended Bolus Requests";
     }
 
     requirement fmTubingOcclusion : FailureMode {
-        attribute redefines reqId = "FM-008";
+        attribute mitigationId = "FM-008";
         attribute redefines title = "Tubing Occlusion (Kink)";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Infusion tubing kinked or compressed. */
     }
 
     requirement fcTubingPositioning : FailureCause {
-        attribute redefines reqId = "FC-008";
+        attribute mitigationId = "FC-008";
         attribute redefines title = "Improper Tubing Routing";
     }
 
     requirement feReducedDelivery : FailureEffect {
-        attribute redefines reqId = "FE-008";
+        attribute mitigationId = "FE-008";
         attribute redefines title = "Reduced or Stopped Drug Delivery";
     }
 
     requirement fmReservoirLeak : FailureMode {
-        attribute redefines reqId = "FM-009";
+        attribute mitigationId = "FM-009";
         attribute redefines title = "Drug Reservoir Leak";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Reservoir seal failure causing drug leakage. */
     }
 
     requirement fcReservoirSealDegradation : FailureCause {
-        attribute redefines reqId = "FC-009";
+        attribute mitigationId = "FC-009";
         attribute redefines title = "Reservoir Seal Material Degradation";
     }
 
     requirement feDrugLossContamination : FailureEffect {
-        attribute redefines reqId = "FE-009";
+        attribute mitigationId = "FE-009";
         attribute redefines title = "Drug Loss and Potential Contamination";
     }
 
     requirement fmCommTimeout : FailureMode {
-        attribute redefines reqId = "FM-010";
+        attribute mitigationId = "FM-010";
         attribute redefines title = "Communication Timeout with Pharmacy DB";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Network timeout prevents drug library validation. */
     }
 
     requirement fcNetworkCongestion : FailureCause {
-        attribute redefines reqId = "FC-010";
+        attribute mitigationId = "FC-010";
         attribute redefines title = "Hospital Network Congestion";
     }
 
     requirement feUnvalidatedPrescription : FailureEffect {
-        attribute redefines reqId = "FE-010";
+        attribute mitigationId = "FE-010";
         attribute redefines title = "Prescription Used Without DB Validation";
     }
 
     requirement fmWatchdogTimeout : FailureMode {
-        attribute redefines reqId = "FM-011";
+        attribute mitigationId = "FM-011";
         attribute redefines title = "Software Watchdog Timeout";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Software fails to service watchdog within deadline. */
     }
 
     requirement fcSoftwareDeadlock : FailureCause {
-        attribute redefines reqId = "FC-011";
+        attribute mitigationId = "FC-011";
         attribute redefines title = "Software Deadlock or Infinite Loop";
     }
 
     requirement feEmergencyShutdown : FailureEffect {
-        attribute redefines reqId = "FE-011";
+        attribute mitigationId = "FE-011";
         attribute redefines title = "Emergency Hardware Shutdown";
     }
 
     requirement fmAirSensorFailure : FailureMode {
-        attribute redefines reqId = "FM-012";
+        attribute mitigationId = "FM-012";
         attribute redefines title = "Air Bubble Sensor Failure";
         attribute redefines severity = SeverityLevel::Catastrophic;
         doc /* Ultrasonic air sensor fails to detect air bubbles. */
     }
 
     requirement fcUltrasonicTransducerDegradation : FailureCause {
-        attribute redefines reqId = "FC-012";
+        attribute mitigationId = "FC-012";
         attribute redefines title = "Ultrasonic Transducer Degradation";
     }
 
     requirement feUndetectedAirInLine : FailureEffect {
-        attribute redefines reqId = "FE-012";
+        attribute mitigationId = "FE-012";
         attribute redefines title = "Undetected Air Reaching Patient";
     }
 
     requirement fmPressureSensorDrift : FailureMode {
-        attribute redefines reqId = "FM-013";
+        attribute mitigationId = "FM-013";
         attribute redefines title = "Pressure Sensor Drift";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Pressure sensor readings drift from true value over time. */
     }
 
     requirement fcPressureTransducerBias : FailureCause {
-        attribute redefines reqId = "FC-013";
+        attribute mitigationId = "FC-013";
         attribute redefines title = "Pressure Transducer Calibration Bias";
     }
 
     requirement feOcclusionDetectionDelay : FailureEffect {
-        attribute redefines reqId = "FE-013";
+        attribute mitigationId = "FE-013";
         attribute redefines title = "Delayed Occlusion Detection";
     }
 
     requirement fmPCBCorrosion : FailureMode {
-        attribute redefines reqId = "FM-014";
+        attribute mitigationId = "FM-014";
         attribute redefines title = "PCB Corrosion from Fluid Ingress";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Fluid penetrating enclosure causing PCB corrosion and electrical failure. */
     }
 
     requirement fcSealFailure : FailureCause {
-        attribute redefines reqId = "FC-014";
+        attribute mitigationId = "FC-014";
         attribute redefines title = "Enclosure Seal Failure";
     }
 
     requirement feIntermittentElectricalFailure : FailureEffect {
-        attribute redefines reqId = "FE-014";
+        attribute mitigationId = "FE-014";
         attribute redefines title = "Intermittent Electrical Failures";
     }
 
     requirement fmNVMemoryCorruption : FailureMode {
-        attribute redefines reqId = "FM-015";
+        attribute mitigationId = "FM-015";
         attribute redefines title = "Non-Volatile Memory Corruption";
         attribute redefines severity = SeverityLevel::Critical;
         doc /* Flash memory data corruption affecting stored configuration or logs. */
     }
 
     requirement fcFlashWearout : FailureCause {
-        attribute redefines reqId = "FC-015";
+        attribute mitigationId = "FC-015";
         attribute redefines title = "Flash Memory Wear-Out";
     }
 
     requirement feConfigDataLoss : FailureEffect {
-        attribute redefines reqId = "FE-015";
+        attribute mitigationId = "FE-015";
         attribute redefines title = "Loss of Configuration or Log Data";
     }
 
     requirement fmBarcodeReaderFailure : FailureMode {
-        attribute redefines reqId = "FM-016";
+        attribute mitigationId = "FM-016";
         attribute redefines title = "Barcode Reader Failure";
         attribute redefines severity = SeverityLevel::Serious;
         doc /* Barcode scanner fails to read or misreads drug identifier. */
     }
 
     requirement fcOpticalDegradation : FailureCause {
-        attribute redefines reqId = "FC-016";
+        attribute mitigationId = "FC-016";
         attribute redefines title = "Optical Component Degradation";
     }
 
     requirement feManualDrugEntry : FailureEffect {
-        attribute redefines reqId = "FE-016";
+        attribute mitigationId = "FE-016";
         attribute redefines title = "Fallback to Manual Drug Entry (Error-Prone)";
     }
 
     // FMEA Detection Controls
-    requirement dcMotorPositionFeedback : RiskControl {
-        attribute redefines reqId = "DC-001";
+    part dcMotorPositionFeedback : Mitigation {
+        attribute mitigationId = "DC-001";
         attribute redefines title = "Motor Position Encoder Feedback";
     }
 
-    requirement dcDualSensorCrossCheck : RiskControl {
-        attribute redefines reqId = "DC-002";
+    part dcDualSensorCrossCheck : Mitigation {
+        attribute mitigationId = "DC-002";
         attribute redefines title = "Dual Sensor Cross-Validation";
     }
 
-    requirement dcValvePositionSensor : RiskControl {
-        attribute redefines reqId = "DC-003";
+    part dcValvePositionSensor : Mitigation {
+        attribute mitigationId = "DC-003";
         attribute redefines title = "Valve Position Feedback Sensor";
     }
 
-    requirement dcBatteryVoltageMonitor : RiskControl {
-        attribute redefines reqId = "DC-004";
+    part dcBatteryVoltageMonitor : Mitigation {
+        attribute mitigationId = "DC-004";
         attribute redefines title = "Battery Voltage Continuous Monitor";
     }
 
-    requirement dcDisplaySelfTest : RiskControl {
-        attribute redefines reqId = "DC-005";
+    part dcDisplaySelfTest : Mitigation {
+        attribute mitigationId = "DC-005";
         attribute redefines title = "Display Pixel Self-Test";
     }
 
-    requirement dcButtonDebounce : RiskControl {
-        attribute redefines reqId = "DC-006";
+    part dcButtonDebounce : Mitigation {
+        attribute mitigationId = "DC-006";
         attribute redefines title = "Button State Debounce Logic";
     }
 
-    requirement dcCRCIntegrityCheck : RiskControl {
-        attribute redefines reqId = "DC-007";
+    part dcCRCIntegrityCheck : Mitigation {
+        attribute mitigationId = "DC-007";
         attribute redefines title = "CRC Integrity Check on Read";
     }
 
@@ -1283,62 +1283,62 @@ package GPCA_Risk {
     }
 
     requirement teLethalOverdose : TopEvent {
-        attribute redefines reqId = "TE-001";
+        attribute mitigationId = "TE-001";
         attribute redefines title = "Patient Receives Lethal Overdose";
     }
 
     requirement ieExcessiveDrugDelivered : FaultTreeContributor {
-        attribute redefines reqId = "IE-001";
+        attribute mitigationId = "IE-001";
         attribute redefines title = "Excessive Drug Delivered to Patient";
     }
 
     requirement ieSafetyInhibitFails : FaultTreeContributor {
-        attribute redefines reqId = "IE-002";
+        attribute mitigationId = "IE-002";
         attribute redefines title = "Safety Inhibit Mechanism Fails";
     }
 
     requirement ieOverDeliveryUndetected : FaultTreeContributor {
-        attribute redefines reqId = "IE-003";
+        attribute mitigationId = "IE-003";
         attribute redefines title = "Over-Delivery Goes Undetected";
     }
 
     requirement beValveStuckOpen : FaultTreeContributor {
-        attribute redefines reqId = "BE-001";
+        attribute mitigationId = "BE-001";
         attribute redefines title = "Flow Control Valve Stuck Open";
     }
 
     requirement beMotorRunaway : FaultTreeContributor {
-        attribute redefines reqId = "BE-002";
+        attribute mitigationId = "BE-002";
         attribute redefines title = "Motor Runaway (Control Loop Failure)";
     }
 
     requirement beLockoutBypass : FaultTreeContributor {
-        attribute redefines reqId = "BE-003";
+        attribute mitigationId = "BE-003";
         attribute redefines title = "Bolus Lockout Timer Bypass";
     }
 
     requirement beConcentrationMismatch : FaultTreeContributor {
-        attribute redefines reqId = "BE-004";
+        attribute mitigationId = "BE-004";
         attribute redefines title = "10x Concentration Mismatch";
     }
 
     requirement beWatchdogFailure : FaultTreeContributor {
-        attribute redefines reqId = "BE-005";
+        attribute mitigationId = "BE-005";
         attribute redefines title = "Hardware Watchdog Fails to Fire";
     }
 
     requirement beBothFlowSensorsFail : FaultTreeContributor {
-        attribute redefines reqId = "BE-006";
+        attribute mitigationId = "BE-006";
         attribute redefines title = "Both Flow Sensors Fail Simultaneously";
     }
 
     requirement beSoftwareCrash : FaultTreeContributor {
-        attribute redefines reqId = "BE-007";
+        attribute mitigationId = "BE-007";
         attribute redefines title = "Software Crash During Delivery";
     }
 
     requirement beCyberIntrusion : FaultTreeContributor {
-        attribute redefines reqId = "BE-008";
+        attribute mitigationId = "BE-008";
         attribute redefines title = "Cyber Intrusion Modifies Rate";
     }
 

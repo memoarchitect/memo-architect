@@ -6,8 +6,8 @@
 // ============================================================================
 
 package GPCA_Architecture {
-    import MEMO_Ontology_MedicalArch::*;
-    import MEMO_Ontology_MedicalProcess::*;
+    import MEMO_Ontology_Arch::*;
+    import MEMO_Ontology_Process::*;
     import GPCA_Requirements::*;
     import GPCA_Risk::*;
 
@@ -184,7 +184,7 @@ package GPCA_Architecture {
 
     part gpcaSoftware : SoftwareSystem {
         attribute redefines name = "GPCA Embedded Software";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* IEC 62304 Class C software system for safety-critical
              * infusion pump control. Runs on ARM Cortex-M7 main processor
              * with RTOS. Safety co-processor runs independent watchdog. */
@@ -196,70 +196,70 @@ package GPCA_Architecture {
 
     part siInfusionManager : SoftwareItem {
         attribute redefines name = "Infusion Manager";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* Core infusion control: flow rate regulation, mode management,
              * delivery tracking. Safety-critical. */
     }
 
     part siAlarmManager : SoftwareItem {
         attribute redefines name = "Alarm Manager";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* Alarm detection, priority resolution, escalation, and
              * notification output. Safety-critical. */
     }
 
     part siNotificationController : SoftwareItem {
         attribute redefines name = "Notification Controller";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* Implements GPCA 20-row notification action table. Maps
              * alarm conditions to inhibit/stop actions. Safety-critical. */
     }
 
     part siConfigurationManager : SoftwareItem {
         attribute redefines name = "Configuration Manager";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
         doc /* Prescription entry, validation, drug library lookup,
              * parameter storage. */
     }
 
     part siSystemMonitor : SoftwareItem {
         attribute redefines name = "System Monitor";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* Hardware health monitoring: sensors, battery, temperature,
              * door interlock, self-test. Safety-critical. */
     }
 
     part siDrugDatabaseInterface : SoftwareItem {
         attribute redefines name = "Drug Database Interface";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
         doc /* HL7/FHIR interface to pharmacy database. Drug library
              * query, caching, and fallback. */
     }
 
     part siLoggingService : SoftwareItem {
         attribute redefines name = "Logging Service";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
         doc /* Event logging, non-volatile storage management, log
              * export via USB/network. */
     }
 
     part siUIController : SoftwareItem {
         attribute redefines name = "User Interface Controller";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
         doc /* Display rendering, touch input processing, barcode
              * scanning, LED/buzzer control. */
     }
 
     part siAuthenticationService : SoftwareItem {
         attribute redefines name = "Authentication Service";
-        attribute redefines safetyClassification = "B";
+        attribute safetyClass = "B";
         doc /* Clinician authentication, session management, role-based
              * access control. */
     }
 
     part siSafetyCoprocessorFirmware : SoftwareItem {
         attribute redefines name = "Safety Co-Processor Firmware";
-        attribute redefines safetyClassification = "C";
+        attribute safetyClass = "C";
         doc /* Independent safety firmware on Cortex-M0: hardware watchdog,
              * valve control, emergency shutdown. Safety-critical. */
     }
@@ -520,26 +520,26 @@ package GPCA_Architecture {
     connection : AllocateTo connect function ::> swReqEncryption to structure ::> siAuthenticationService;
 
     // Risk Control → Software Item allocation
-    connection : ImplementsRiskControl connect control ::> rcFlowRateMonitor to subject ::> siInfusionManager;
-    connection : ImplementsRiskControl connect control ::> rcKVOFallback to subject ::> siInfusionManager;
-    connection : ImplementsRiskControl connect control ::> rcLockoutEnforcement to subject ::> siInfusionManager;
-    connection : ImplementsRiskControl connect control ::> rcMaxBolusLimit to subject ::> siInfusionManager;
-    connection : ImplementsRiskControl connect control ::> rcOverInfusionInhibit to subject ::> siAlarmManager;
-    connection : ImplementsRiskControl connect control ::> rcDualAirSensor to subject ::> siAlarmManager;
-    connection : ImplementsRiskControl connect control ::> rcAlarmEscalation to subject ::> siNotificationController;
-    connection : ImplementsRiskControl connect control ::> rcAlarmSilenceLimit to subject ::> siNotificationController;
-    connection : ImplementsRiskControl connect control ::> rcPrescriptionValidation to subject ::> siConfigurationManager;
-    connection : ImplementsRiskControl connect control ::> rcHardLimits to subject ::> siConfigurationManager;
-    connection : ImplementsRiskControl connect control ::> rcSoftLimitWarning to subject ::> siConfigurationManager;
-    connection : ImplementsRiskControl connect control ::> rcConcentrationScan to subject ::> siConfigurationManager;
-    connection : ImplementsRiskControl connect control ::> rcDualFlowSensor to subject ::> siSystemMonitor;
-    connection : ImplementsRiskControl connect control ::> rcSelfTest to subject ::> siSystemMonitor;
-    connection : ImplementsRiskControl connect control ::> rcHardwareWatchdog to subject ::> siSafetyCoprocessorFirmware;
-    connection : ImplementsRiskControl connect control ::> rcPowerFailValveClose to subject ::> siSafetyCoprocessorFirmware;
-    connection : ImplementsRiskControl connect control ::> rcSessionAuthentication to subject ::> siAuthenticationService;
-    connection : ImplementsRiskControl connect control ::> rcRoleBasedAccess to subject ::> siAuthenticationService;
-    connection : ImplementsRiskControl connect control ::> rcTLSEncryption to subject ::> siDrugDatabaseInterface;
-    connection : ImplementsRiskControl connect control ::> rcAuditTrail to subject ::> siLoggingService;
+    connection : TraceTo connect source ::> rcFlowRateMonitor to target ::> siInfusionManager;
+    connection : TraceTo connect source ::> rcKVOFallback to target ::> siInfusionManager;
+    connection : TraceTo connect source ::> rcLockoutEnforcement to target ::> siInfusionManager;
+    connection : TraceTo connect source ::> rcMaxBolusLimit to target ::> siInfusionManager;
+    connection : TraceTo connect source ::> rcOverInfusionInhibit to target ::> siAlarmManager;
+    connection : TraceTo connect source ::> rcDualAirSensor to target ::> siAlarmManager;
+    connection : TraceTo connect source ::> rcAlarmEscalation to target ::> siNotificationController;
+    connection : TraceTo connect source ::> rcAlarmSilenceLimit to target ::> siNotificationController;
+    connection : TraceTo connect source ::> rcPrescriptionValidation to target ::> siConfigurationManager;
+    connection : TraceTo connect source ::> rcHardLimits to target ::> siConfigurationManager;
+    connection : TraceTo connect source ::> rcSoftLimitWarning to target ::> siConfigurationManager;
+    connection : TraceTo connect source ::> rcConcentrationScan to target ::> siConfigurationManager;
+    connection : TraceTo connect source ::> rcDualFlowSensor to target ::> siSystemMonitor;
+    connection : TraceTo connect source ::> rcSelfTest to target ::> siSystemMonitor;
+    connection : TraceTo connect source ::> rcHardwareWatchdog to target ::> siSafetyCoprocessorFirmware;
+    connection : TraceTo connect source ::> rcPowerFailValveClose to target ::> siSafetyCoprocessorFirmware;
+    connection : TraceTo connect source ::> rcSessionAuthentication to target ::> siAuthenticationService;
+    connection : TraceTo connect source ::> rcRoleBasedAccess to target ::> siAuthenticationService;
+    connection : TraceTo connect source ::> rcTLSEncryption to target ::> siDrugDatabaseInterface;
+    connection : TraceTo connect source ::> rcAuditTrail to target ::> siLoggingService;
 
     // ═══════════════════════════════════════════════════════════════════════
     // VERIFICATION TEST CASES (≥20)
