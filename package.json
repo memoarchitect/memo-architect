@@ -4,7 +4,8 @@
   "private": true,
   "description": "MEMO — Git-native MBSE tool for medical device systems engineering",
   "scripts": {
-    "build": "pnpm run ontology:lint && turbo build",
+    "build": "pnpm run ontology:lint && pnpm run check:cache && turbo build",
+    "check:cache": "bash scripts/check-no-ontology-cache.sh",
     "dev": "turbo dev",
     "test": "turbo test",
     "test:coverage": "turbo test:coverage",

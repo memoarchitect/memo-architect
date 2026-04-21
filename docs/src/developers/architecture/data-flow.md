@@ -4,35 +4,39 @@ This page traces how data flows from `.sysml` source files through the system to
 
 ## End-to-End Pipeline
 
+The pipeline has two distinct phases: **bootstrap** (runs once at dev server start) and **hot rebuild** (runs on every project file change).
+
 ```mermaid
 sequenceDiagram
     participant FS as File System
-    participant Parser as Langium Parser
-    participant Builder as Model Builder
-    participant Validator as Rule Engine
-    participant Complete as Completeness
-    participant DTO as Serializer
+    participant Boot as bootstrap()
+    participant OntReg as OntologyRegistries (frozen)
+    participant Rebuild as rebuildProject()
     participant WS as WebSocket
     participant Store as Zustand Store
     participant UI as React UI
 
-    FS->>Parser: .sysml files
-    Parser->>Builder: AST documents
-    Builder->>Builder: buildMemoModel(docs, config)
-    Builder->>Validator: MemoModel
-    Validator->>Validator: evaluateClosureRules(model, config)
-    Builder->>Complete: MemoModel + ValidationResult
-    Complete->>Complete: computeCompleteness()
-    Builder->>DTO: modelToDTO(model, {viewpoints, cosmaLayers})
-    DTO->>WS: MemoModelDTO (JSON)
-    Validator->>WS: ValidationResult
-    Complete->>WS: CompletenessReport
-    WS->>Store: model:update
-    WS->>Store: validation:update
-    WS->>Store: completeness:update
+    Note over Boot,OntReg: Dev server start — runs once
+    Boot->>FS: loadOntologyRegistries(configPath)
+    FS-->>Boot: KindRegistry + RelationshipRegistry
+    Boot->>OntReg: Object.freeze(registries) + computeOntologyHash()
+
+    Note over Rebuild,WS: Project file change — hot path
+    FS->>Rebuild: model/**/*.sysml changed
+    Rebuild->>FS: parseFiles(projectSysmlFiles)
+    Rebuild->>Rebuild: buildMemoModel(docs, config, frozenRegistries)
+    Rebuild->>Rebuild: validateModel() + computeCompleteness()
+    Rebuild->>WS: model:update + validation:update + completeness:update
+    WS->>Store: dispatch messages (guarded by ontologyHash)
     Store->>UI: React re-render
-    UI->>UI: computeLayout(model, viewpointFilter)
+
+    Note over WS,UI: Ontology file change — restart only
+    FS->>WS: ontology sysml changed (ontologyWatcher fires)
+    WS->>Store: app:restart-required (no registry reload)
+    Store->>UI: RestartRequiredBanner overlay blocks UI
 ```
+
+**Key invariant:** Ontology registries are loaded exactly once at bootstrap and frozen. `rebuildProject()` never calls `loadOntologyRegistries()`. Any ontology change triggers `app:restart-required` — the server does not hot-swap registries.
 
 ## Key Data Types
 

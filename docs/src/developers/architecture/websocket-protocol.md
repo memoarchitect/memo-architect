@@ -94,6 +94,30 @@ Sent after completeness computation.
 }
 ```
 
+### `app:restart-required`
+
+Sent when the ontology source or selection changes on disk. The server **does not reload registries** — the client must restart the dev server (`Ctrl+C`, then `memo dev`) to apply changes.
+
+```json
+{
+    "type": "app:restart-required",
+    "reason": "ontology-source-changed",
+    "changedFile": "/path/to/packages/ontology-medical-arch/sysml/risk/hazard.sysml",
+    "instruction": "Stop dev server (Ctrl+C) and run `memo dev` again to apply ontology changes."
+}
+```
+
+**Reasons:**
+
+| `reason` | Trigger |
+|----------|---------|
+| `ontology-source-changed` | File watcher detected a change in an ontology package's `sysml/` directory or `memo.package.yaml` / `memo.rendering.yaml` |
+| `ontology-selection-changed` | User saved ontology selection via the Ontology Viewer UI |
+
+**Client behaviour:** On receipt, the web app shows a blocking modal overlay (`RestartRequiredBanner`) and stops accepting `model:update`, `validation:update`, and `completeness:update` messages. Clicking "Reload page" triggers `window.location.reload()` which reconnects to the freshly bootstrapped server.
+
+**Ontology hash field:** Every `model:update` and `ontology:packages` message carries an `ontologyHash` field (16-char hex sha256 of kind + relationship names). The web client stores the hash from the first `ontology:packages` received. If a later message carries a different hash (stale server race after restart), the client triggers `app:restart-required` locally.
+
 ### `error`
 
 Sent when the server encounters an unrecoverable error.
