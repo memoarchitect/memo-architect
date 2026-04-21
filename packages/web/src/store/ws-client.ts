@@ -29,6 +29,8 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_DELAY = 10000;
 /** Block model updates after restart-required until the page reloads */
 let restartPending = false;
+/** Ontology hash received from the first ontology:packages message this session */
+let currentOntologyHash: string | null = null;
 
 /**
  * Load embedded data if available (static build), otherwise connect WebSocket.
@@ -61,6 +63,9 @@ export function connectWebSocket(url?: string): void {
     ws.onopen = () => {
         store.setConnected(true);
         reconnectAttempts = 0;
+        currentOntologyHash = null; // reset on each fresh connection
+        restartPending = false;
+        store.setRestartRequired(null);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -116,9 +121,26 @@ function handleMessage(msg: ServerMessage): void {
         case 'diagram:parse:result':
             store.applyDiagramParseResult(msg.payload.diagramId, msg.payload.elementIds, msg.payload.errors);
             break;
-        case 'ontology:packages':
+        case 'ontology:packages': {
+            const hash = (msg.payload as any).ontologyHash as string | undefined;
+            if (hash) {
+                if (currentOntologyHash === null) {
+                    currentOntologyHash = hash;
+                } else if (currentOntologyHash !== hash) {
+                    // Hash mismatch — stale server messages after a restart race
+                    restartPending = true;
+                    store.setRestartRequired({
+                        type: 'app:restart-required',
+                        reason: 'ontology-source-changed',
+                        changedFile: '(server restarted with different ontology)',
+                        instruction: 'Reload the page to connect to the new server.',
+                    } as RestartRequiredMessage);
+                    return;
+                }
+            }
             store.setAvailableOntologies(msg.payload.packages);
             break;
+        }
         case 'ontology:install:result':
             store.setOntologyInstallStatus({
                 installing: false,
