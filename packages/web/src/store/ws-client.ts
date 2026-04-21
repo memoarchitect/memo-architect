@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
-import type { ServerMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage } from '@memo/core';
+import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage } from '@memo/core';
 
 /** Embedded data injected by `memo build` */
 interface EmbeddedData {
@@ -26,7 +26,9 @@ declare global {
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_DELAY = 10000; // Cap at 10s
+const MAX_RECONNECT_DELAY = 10000;
+/** Block model updates after restart-required until the page reloads */
+let restartPending = false;
 
 /**
  * Load embedded data if available (static build), otherwise connect WebSocket.
@@ -92,13 +94,20 @@ function handleMessage(msg: ServerMessage): void {
     const store = useModelStore.getState();
 
     switch (msg.type) {
+        case 'app:restart-required':
+            restartPending = true;
+            store.setRestartRequired(msg as RestartRequiredMessage);
+            return;
         case 'model:update':
+            if (restartPending) return; // ignore stale updates from old server
             store.setModel(msg.payload);
             break;
         case 'validation:update':
+            if (restartPending) return;
             store.setValidation(msg.payload);
             break;
         case 'completeness:update':
+            if (restartPending) return;
             store.setCompleteness(msg.payload);
             break;
         case 'error':

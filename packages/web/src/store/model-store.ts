@@ -11,6 +11,7 @@ import type {
     MemoRelationship,
     DiagramDTO,
     DiagramLayout,
+    RestartRequiredMessage,
 } from '@memo/core';
 import type { ValidationResult, CompletenessReport } from '@memo/core';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
@@ -133,6 +134,7 @@ export interface ModelState {
     validation: ValidationResult | null;
     completeness: CompletenessReport | null;
     connected: boolean;
+    restartRequired: RestartRequiredMessage | null;
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
@@ -193,6 +195,7 @@ export interface ModelState {
     setValidation: (validation: ValidationResult) => void;
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
+    setRestartRequired: (msg: RestartRequiredMessage | null) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -296,6 +299,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     validation: null,
     completeness: null,
     connected: false,
+    restartRequired: null,
 
     // UI state
     activeMode: 'catalog' as AppMode,
@@ -422,6 +426,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     pendingEdits: new Map(),
 
     // Actions
+    setRestartRequired: (msg) => set({ restartRequired: msg }),
     setModel: (model) => set((s) => ({
         model,
         // Navigate to dashboard on first model load if we're on welcome/dashboard
