@@ -269,7 +269,10 @@ function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInf
     const description = readYamlField(configContent, 'description') || '';
     const extendsField = readYamlField(configContent, 'extends') || undefined;
 
-    const sysmlDir = join(pkgDir, 'sysml');
+    const sysmlDirOverride = readYamlField(configContent, 'sysmlDir');
+    const sysmlDir = sysmlDirOverride
+        ? resolve(pkgDir, sysmlDirOverride)
+        : join(pkgDir, 'sysml');
     const layers = buildLayers(sysmlDir);
     const kindCount = layers.reduce((s, l) => s + l.kindCount, 0);
     const relationshipTypes = buildRelationshipTypes(sysmlDir);
@@ -613,8 +616,15 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
 
     const packageDir = dirname(resolvedPath);
 
-    // If this package has a sysml/ directory, it's an ontology source
-    const sysmlDir = resolve(packageDir, 'sysml');
+    // Honor `sysmlDir:` override (points outside package, e.g. ../../ontology)
+    let sysmlDir: string;
+    try {
+        const content = readFileSync(resolvedPath, 'utf-8');
+        const override = readYamlField(content, 'sysmlDir');
+        sysmlDir = override ? resolve(packageDir, override) : resolve(packageDir, 'sysml');
+    } catch {
+        sysmlDir = resolve(packageDir, 'sysml');
+    }
     if (existsSync(sysmlDir)) {
         dirs.push(packageDir);
     }
@@ -700,10 +710,18 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
         };
     }
 
-    // Collect all SysML files from all ontology packages
+    // Collect all SysML files from all ontology packages (honor sysmlDir override)
     const allSysmlFiles: string[] = [];
     for (const pkgDir of ontologyDirs) {
-        const sysmlDir = resolve(pkgDir, 'sysml');
+        let sysmlDir = resolve(pkgDir, 'sysml');
+        for (const cfg of CONFIG_SEARCH_ORDER) {
+            const cp = resolve(pkgDir, cfg);
+            if (existsSync(cp)) {
+                const ov = readYamlField(readFileSync(cp, 'utf-8'), 'sysmlDir');
+                if (ov) sysmlDir = resolve(pkgDir, ov);
+                break;
+            }
+        }
         const files = collectSysmlFiles(sysmlDir);
         allSysmlFiles.push(...files);
     }
