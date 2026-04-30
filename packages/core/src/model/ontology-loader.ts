@@ -375,7 +375,16 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
     const projectModules = new Set(readDeclaredModules(primaryConfig));
 
     for (const pkgDir of candidates) {
-        const hasSysml = existsSync(join(pkgDir, 'sysml'));
+        let sysmlPath = join(pkgDir, 'sysml');
+        for (const cfg of CONFIG_SEARCH_ORDER) {
+            const cp = join(pkgDir, cfg);
+            if (existsSync(cp)) {
+                const ov = readYamlField(readFileSync(cp, 'utf-8'), 'sysmlDir');
+                if (ov) sysmlPath = resolve(pkgDir, ov);
+                break;
+            }
+        }
+        const hasSysml = existsSync(sysmlPath);
         if (!hasSysml) continue;
         if (seen.has(pkgDir)) continue;
         seen.add(pkgDir);
