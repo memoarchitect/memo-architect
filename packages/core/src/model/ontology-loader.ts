@@ -453,7 +453,7 @@ function collectSysmlFiles(dir: string): string[] {
  * 3. For each package in the chain, check if it has a sysml/ directory
  * 4. Also check for ontology-core (may not be in extends chain directly)
  */
-function findOntologyPackageDirs(configPath: string): string[] {
+export function findOntologyPackageDirs(configPath: string): string[] {
     const dirs: string[] = [];
     const seen = new Set<string>();
 
@@ -657,6 +657,24 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
             seen.add(archConfigKey);
         }
     }
+}
+
+/**
+ * Resolve the SysML root directory for an ontology package.
+ * Honors `sysmlDir:` override in the package's manifest; falls back to `<pkgDir>/sysml`.
+ */
+export function resolvePackageSysmlDir(pkgDir: string): string {
+    for (const cfg of CONFIG_SEARCH_ORDER) {
+        const cp = resolve(pkgDir, cfg);
+        if (existsSync(cp)) {
+            try {
+                const ov = readYamlField(readFileSync(cp, 'utf-8'), 'sysmlDir');
+                if (ov) return resolve(pkgDir, ov);
+            } catch { /* skip */ }
+            break;
+        }
+    }
+    return resolve(pkgDir, 'sysml');
 }
 
 /** Ordered list of config filenames to search for (new format first, then legacy) */

@@ -2,8 +2,8 @@
 
 **Branch:** `feedback-ontology-replace`
 **Baseline tag:** `pre-feedback-ontology-replace` (commit `00b798a`)
-**Latest commit on branch:** Phase A — methodology folder convention
-**Status:** Phases 0–A complete. Build green. Prototype boots. UI re-IA + methodology-as-data + studio app pending.
+**Latest commit on branch:** Phase B — methodology as data (descriptor + WS plumbing)
+**Status:** Phases 0–B complete. Build green. Prototype boots. Methodology descriptor reaches the web client over WebSocket — no UI consumer yet. UI re-IA + methodology package split + studio app pending.
 
 ---
 
@@ -130,6 +130,23 @@ This is what links the empty `@memo/ontology-arch` package wrapper to the top-le
 - Convention going forward: `ontology/methodology/<methodology-name>/*.sysml`
 - The root aggregator `medical_device_library.sysml` already imports by namespace (e.g. `memo::methodology::core::*`), so file location does not matter — `collectSysmlFiles` already recurses.
 
+### Phase B — methodology as data
+
+Goal achieved: `ontology/methodology/<name>/*.sysml` is parsed into a typed `MethodologyDescriptor` and broadcast to the web client over WebSocket, with no UI changes yet.
+
+- Added `packages/core/src/model/methodology-loader.ts`:
+  - Types: `MethodologyAttrValue`, `MethodologyPart`, `MethodologyPartDef`, `MethodologyFolderInfo`, `MethodologyDescriptor`.
+  - `loadMethodologyDescriptor(configPath, projectRoot?)` — regex-based scan (mirrors `parseConstructsInFile` style; independent of Langium grammar so it survives ongoing grammar work).
+  - Captures `part def Foo :> Bar { ... }` declarations and `part name : Type { attribute k = v; }` instances. Attribute parser handles string literals, qualified-enum refs (stored as both short and `__qualified` form), integers, and booleans. Part body capture relies on no-nested-brace assumption — true today across `memo_*.sysml`.
+  - Discovery merges two sources, deduped by package directory: (1) `findOntologyPackageDirs(configPath)` and (2) `getPackageMetadata(projectRoot)`. Source (2) is what makes things work in the transitional state where `examples/gpca-pump/memo.config.yaml` still references retired ontology stubs (`@memo/ontology-medical-arch`, `@memo/medical-modeling-profile`); the `@memo/ontology-arch` wrapper with its `sysmlDir: "../../ontology"` override is found via the package scan.
+- Exposed `findOntologyPackageDirs` and added `resolvePackageSysmlDir(pkgDir)` from `ontology-loader.ts`.
+- Added `MethodologyUpdateMessage` (`type: 'methodology:update'`) to `packages/core/src/protocol/messages.ts`.
+- `packages/cli/src/commands/dev.ts`:
+  - Loads the descriptor once at bootstrap, logs counts, and includes a `methodology:update` message in every `rebuildProject()` broadcast (alongside `model:update`, `validation:update`, etc.).
+  - Bootstrap log on gpca-pump: `Methodology: 1 folder(s), 7 file(s), 7 namespace(s), 9 part defs, 15 part instances (memo)`.
+- WS payload verified end-to-end with a small native-WebSocket script — descriptor arrives with all 7 namespaces, 7 source files, 9 part defs, 15 instances across 10 partTypes (`MethodologyLibrary`, `MethodologyDefinition`, `ResolvedMethodology`, `Viewpoint:2`, `ElementUsageRule`, `RelationUsageRule`, `ModelingPattern:2`, `WorkflowStep:4`, `QualityGate`, `ProjectMethodBinding`).
+- `pnpm run test` baseline unchanged: 7 failed | 267 passed | 18 skipped (same set of pre-existing infusion-pump / removed-stub failures from Phase 2 cut-over).
+
 ---
 
 ## Verified working
@@ -160,23 +177,6 @@ This is what links the empty `@memo/ontology-arch` package wrapper to the top-le
 ---
 
 ## Phases queued (do these in a new session, in this order)
-
-### Phase B — methodology as data
-
-Goal: parse `ontology/methodology/memo/*.sysml` into a typed object the UI can read.
-
-- Define methodology DSL shape (pure SysML — no YAML hybrid). Likely `part def Methodology { ... }` with attributes:
-  - `viewpoints[]` — references into `memo::viewpoints::*`
-  - `views[]` — references into `memo::views::*` grouped under viewpoints
-  - `kinds[]` — references into `memo::architecture::*`
-  - `dhf_documents[]` — references into `memo::compliance::*`
-  - `rules[]` — references into rules pkg
-  - `gates[]`, `workflow[]`, `profiles[]`
-  - `extends?` — parent methodology for derive/override
-- Extend the loader (or add a new `methodology-loader.ts`) to extract a typed `MethodologyDescriptor` from parsed SysML.
-- Expose the descriptor through the dev-server `model-update` WS message so the web app can read it.
-- No UI changes yet — just plumb the data.
-- Verify with `memo dev` + a debug log that the descriptor populates with the seven `memo::methodology::*` packages.
 
 ### Phase C — methodology package split
 

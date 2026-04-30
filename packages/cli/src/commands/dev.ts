@@ -12,8 +12,8 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata } from '@memo/core';
-import type { BuilderRegistries, RestartRequiredMessage } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor } from '@memo/core';
+import type { BuilderRegistries, RestartRequiredMessage, MethodologyDescriptor } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import type { ServerMessage, ViewpointDTO, ArchLayerDTO, DiagramDTO, ModelMetadata } from '@memo/core';
@@ -137,6 +137,34 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     } catch (e) {
         console.log(chalk.yellow(`  ⚠ Could not load ontology registries: ${e instanceof Error ? e.message : e}`));
     }
+
+    // Phase B — methodology descriptor (data-only; no UI consumer yet)
+    let methodologyDescriptor: MethodologyDescriptor = { folders: [], errors: [] };
+    try {
+        methodologyDescriptor = await loadMethodologyDescriptor(configPath, cwd);
+        const folderCount = methodologyDescriptor.folders.length;
+        const totalParts = methodologyDescriptor.folders.reduce(
+            (s, f) => s + Object.values(f.parts).reduce((a, p) => a + p.length, 0), 0,
+        );
+        const totalDefs = methodologyDescriptor.folders.reduce((s, f) => s + f.partDefs.length, 0);
+        const namespaces = new Set<string>();
+        const totalFiles = methodologyDescriptor.folders.reduce((s, f) => s + f.sourceFiles.length, 0);
+        for (const f of methodologyDescriptor.folders) {
+            for (const ns of f.namespaces) namespaces.add(ns);
+        }
+        if (folderCount > 0) {
+            console.log(chalk.gray(
+                `Methodology: ${folderCount} folder(s), ${totalFiles} file(s), ${namespaces.size} namespace(s), ` +
+                `${totalDefs} part defs, ${totalParts} part instances ` +
+                `(${methodologyDescriptor.folders.map(f => f.name).join(', ')})`
+            ));
+        }
+        for (const err of methodologyDescriptor.errors) {
+            console.log(chalk.yellow(`  ⚠ methodology: ${err}`));
+        }
+    } catch (e) {
+        console.log(chalk.yellow(`  ⚠ Could not load methodology descriptor: ${e instanceof Error ? e.message : e}`));
+    }
     // ── end bootstrap ──────────────────────────────────────────────────────────
 
     // ── rebuildProject: hot path — no ontology reload ─────────────────────────
@@ -234,6 +262,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 { type: 'validation:update', payload: validation },
                 { type: 'completeness:update', payload: completeness },
                 { type: 'ontology:packages', payload: { packages: ontologyPackages, ontologyHash } as any },
+                { type: 'methodology:update', payload: methodologyDescriptor },
             ],
         };
     }

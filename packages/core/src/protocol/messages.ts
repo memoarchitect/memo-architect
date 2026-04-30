@@ -6,6 +6,7 @@
 import type { MemoModelDTO } from '../model/semantic.js';
 import type { ValidationResult, CompletenessReport } from '../validator/types.js';
 import type { OntologyPackageInfo } from '../model/ontology-loader.js';
+import type { MethodologyDescriptor } from '../model/methodology-loader.js';
 
 // ─── Server → Client ────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ export type ServerMessage =
     | ImportResultMessage
     | DiagramParseResultMessage
     | OntologyPackagesMessage
+    | MethodologyUpdateMessage
     | DiagramLayoutMessage
     | OntologyInstallResultMessage
     | OntologyRemoveResultMessage
@@ -51,6 +53,12 @@ export interface ErrorMessage {
 export interface OntologyPackagesMessage {
     type: 'ontology:packages';
     payload: { packages: OntologyPackageInfo[] };
+}
+
+/** Server sends parsed methodology data — Phase B (data-only, no UI yet) */
+export interface MethodologyUpdateMessage {
+    type: 'methodology:update';
+    payload: MethodologyDescriptor;
 }
 
 // ─── Client → Server ────────────────────────────────────────────────────────
