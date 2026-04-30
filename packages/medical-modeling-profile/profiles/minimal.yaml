@@ -1,8 +1,0 @@
-# Medical Device — Minimal Profile
-# Core ontology only (~53 kinds, ~16 relationships)
-# For: early-stage startups, Class I devices, or quick prototyping
-
-name: "Medical Device - Minimal"
-description: "Core MBSE backbone only — requirements, architecture, verification, basic risk"
-extends: "@memo/ontology-medical-arch"
-ontologies: []
