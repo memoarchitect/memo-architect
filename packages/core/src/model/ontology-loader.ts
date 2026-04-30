@@ -27,7 +27,7 @@ export interface OntologyRelationshipInfo {
 export interface OntologyPackageInfo {
     name: string;
     version: string;
-    type: 'ontology' | 'profile' | 'extension';
+    type: 'ontology' | 'profile' | 'extension' | 'methodology';
     description: string;
     extends?: string;
     layers: OntologyLayerInfo[];
@@ -235,6 +235,47 @@ function readYamlField(content: string, field: string): string {
 }
 
 /**
+ * Read the `methodology:` field from a project config.
+ * Returns a Set of package names: the methodology pkg + every pkg on its
+ * extends chain. Used to mark them as selected in getPackageMetadata.
+ */
+function readMethodologyChain(configPath: string): Set<string> {
+    const out = new Set<string>();
+    let methodologyName: string | undefined;
+    try {
+        const content = readFileSync(configPath, 'utf-8');
+        const m = content.match(/^methodology:\s*"?([^"\s#]+)"?/m);
+        if (!m) return out;
+        const raw = m[1];
+        const lastAt = raw.lastIndexOf('@');
+        methodologyName = lastAt > 0 ? raw.slice(0, lastAt) : raw;
+        if (!methodologyName.startsWith('@memo/')) methodologyName = `@memo/${methodologyName}`;
+    } catch { return out; }
+    if (!methodologyName) return out;
+
+    // Walk the extends chain starting at the methodology pkg.
+    const stack: string[] = [methodologyName];
+    const visited = new Set<string>();
+    while (stack.length) {
+        const pkgName = stack.pop()!;
+        if (visited.has(pkgName)) continue;
+        visited.add(pkgName);
+        out.add(pkgName);
+        const pkgCfg = resolvePackageConfig(pkgName, dirname(configPath));
+        if (!pkgCfg) continue;
+        let content = '';
+        try { content = readFileSync(pkgCfg, 'utf-8'); } catch { continue; }
+        const single = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
+        if (single) { stack.push(single[1]); continue; }
+        const arr = content.match(/^extends:\s*\n((?:\s+-\s+.+\n?)+)/m);
+        if (arr) {
+            for (const em of arr[1].matchAll(/^\s+-\s+"?(@memo\/[\w-]+)"?/gm)) stack.push(em[1]);
+        }
+    }
+    return out;
+}
+
+/**
  * Get the list of selected ontology package names from a project config file.
  */
 function readSelectedOntologies(configPath: string): Set<string> {
@@ -265,7 +306,7 @@ function buildPackageInfo(pkgDir: string, selected: boolean): OntologyPackageInf
     const name = readYamlField(configContent, 'name') || basename(pkgDir);
     const version = readYamlField(configContent, 'version') || '0.0.0';
     const rawType = readYamlField(configContent, 'type') || 'ontology';
-    const type = (['ontology', 'profile', 'extension'].includes(rawType) ? rawType : 'ontology') as OntologyPackageInfo['type'];
+    const type = (['ontology', 'profile', 'extension', 'methodology'].includes(rawType) ? rawType : 'ontology') as OntologyPackageInfo['type'];
     const description = readYamlField(configContent, 'description') || '';
     const extendsField = readYamlField(configContent, 'extends') || undefined;
 
@@ -374,6 +415,10 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
     // Also collect project-declared modules so they get selected=true.
     const projectModules = new Set(readDeclaredModules(primaryConfig));
 
+    // Phase C: methodology field also marks packages selected — methodology
+    // pkg itself plus everything on its extends chain.
+    const methodologySelected = readMethodologyChain(primaryConfig);
+
     for (const pkgDir of candidates) {
         let sysmlPath = join(pkgDir, 'sysml');
         for (const cfg of CONFIG_SEARCH_ORDER) {
@@ -394,7 +439,8 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
         // Mark as selected if name is in project's ontologies list, or inferred heuristic
         info.selected = selectedNames.has(info.name)
             || selectedNames.has(info.name.replace('@memo/', ''))
-            || projectModules.has(info.name);
+            || projectModules.has(info.name)
+            || methodologySelected.has(info.name);
         info.isOptionalModule = optionalModuleNames.has(info.name);
         result.push(info);
     }
@@ -456,6 +502,26 @@ function collectSysmlFiles(dir: string): string[] {
 export function findOntologyPackageDirs(configPath: string): string[] {
     const dirs: string[] = [];
     const seen = new Set<string>();
+
+    // 0. (Phase C) If project pins a `methodology:`, resolve it and walk its
+    // extends chain. The methodology package brings in its own SysML and
+    // chain-pulls the kinds ontology (e.g. @memo/ontology-arch).
+    try {
+        const content = readFileSync(configPath, 'utf-8');
+        const methodologyMatch = content.match(/^methodology:\s*"?([^"\s#]+)"?/m);
+        if (methodologyMatch) {
+            // Strip optional version range "@^1.0" → just the package name.
+            // The leading @memo/ scope must be preserved, so only strip the LAST `@`.
+            const raw = methodologyMatch[1];
+            const lastAt = raw.lastIndexOf('@');
+            const methodologyName = lastAt > 0 ? raw.slice(0, lastAt) : raw;
+            const fullName = methodologyName.startsWith('@memo/')
+                ? methodologyName
+                : `@memo/${methodologyName}`;
+            const pkgConfig = resolvePackageConfig(fullName, dirname(configPath));
+            if (pkgConfig) walkExtendsChain(pkgConfig, dirs, seen);
+        }
+    } catch { /* skip */ }
 
     // 1. Walk the primary extends chain
     walkExtendsChain(configPath, dirs, seen);
@@ -737,8 +803,11 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
         };
     }
 
-    // Collect all SysML files from all ontology packages (honor sysmlDir override)
-    const allSysmlFiles: string[] = [];
+    // Collect all SysML files from all ontology packages (honor sysmlDir override).
+    // Dedupe by absolute path — methodology and base ontology pkgs may have
+    // overlapping sysmlDirs (e.g. methodology points at ontology/methodology/memo
+    // while ontology-arch points at ontology/).
+    const sysmlSet = new Set<string>();
     for (const pkgDir of ontologyDirs) {
         let sysmlDir = resolve(pkgDir, 'sysml');
         for (const cfg of CONFIG_SEARCH_ORDER) {
@@ -749,9 +818,9 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
                 break;
             }
         }
-        const files = collectSysmlFiles(sysmlDir);
-        allSysmlFiles.push(...files);
+        for (const f of collectSysmlFiles(sysmlDir)) sysmlSet.add(f);
     }
+    const allSysmlFiles = [...sysmlSet];
 
     if (allSysmlFiles.length === 0) {
         return {

@@ -2,8 +2,8 @@
 
 **Branch:** `feedback-ontology-replace`
 **Baseline tag:** `pre-feedback-ontology-replace` (commit `00b798a`)
-**Latest commit on branch:** Phase B — methodology as data (descriptor + WS plumbing)
-**Status:** Phases 0–B complete. Build green. Prototype boots. Methodology descriptor reaches the web client over WebSocket — no UI consumer yet. UI re-IA + methodology package split + studio app pending.
+**Latest commit on branch:** Phase C — methodology package split (`@memo/methodology-medical-default`, project `methodology:` field)
+**Status:** Phases 0–C complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Ontology viewer shows methodology + ontology-arch as type-discriminated entries. UI re-IA (Phase D) + authoring app (Phase E) pending.
 
 ---
 
@@ -147,6 +147,25 @@ Goal achieved: `ontology/methodology/<name>/*.sysml` is parsed into a typed `Met
 - WS payload verified end-to-end with a small native-WebSocket script — descriptor arrives with all 7 namespaces, 7 source files, 9 part defs, 15 instances across 10 partTypes (`MethodologyLibrary`, `MethodologyDefinition`, `ResolvedMethodology`, `Viewpoint:2`, `ElementUsageRule`, `RelationUsageRule`, `ModelingPattern:2`, `WorkflowStep:4`, `QualityGate`, `ProjectMethodBinding`).
 - `pnpm run test` baseline unchanged: 7 failed | 267 passed | 18 skipped (same set of pre-existing infusion-pump / removed-stub failures from Phase 2 cut-over).
 
+### Phase C — methodology package split
+
+Goal achieved: methodology is its own publishable package; gpca-pump pins it via `methodology:`.
+
+- New package `packages/methodology-medical-default/`:
+  - `memo.package.yaml` — `name: "@memo/methodology-medical-default"`, `type: methodology`, `version: 1.0.0`, `extends: "@memo/ontology-arch"`, `sysmlDir: "../../ontology/methodology/memo"`.
+  - `package.json`, `.project.json` (sysml-only, no build step).
+- `examples/gpca-pump/memo.config.yaml` reduced to four lines: project name/type plus `methodology: "@memo/methodology-medical-default@^1.0"`. Dropped `extends:`, `ontologies:`, `modules:` — methodology now covers the chain.
+- `packages/core/src/model/ontology-loader.ts`:
+  - `OntologyPackageInfo['type']` extended with `'methodology'`. `buildPackageInfo` accepts `type: methodology` from manifests instead of coercing to ontology.
+  - `findOntologyPackageDirs` got step 0: read `methodology:` field, resolve to package, walk its extends chain. Captures the chain BEFORE the legacy primary-extends step so kinds load correctly when the project no longer declares `extends:`.
+  - New helper `readMethodologyChain` walks the methodology package's extends chain and returns the package names; `getPackageMetadata` ORs that set into the `selected` flag so the methodology pkg + ontology-arch render as selected in the Ontology viewer.
+  - `loadOntologyRegistries` now dedupes its SysML file list by absolute path — the methodology pkg's `sysmlDir` (`ontology/methodology/memo`) is nested inside `@memo/ontology-arch`'s `sysmlDir` (`ontology/`), so the two pkg dirs would otherwise re-parse the same files.
+  - Methodology field regex preserves `@memo/` scope when stripping the optional `@<version>` suffix (uses last-`@` rather than character-class exclusion).
+- `pnpm run build` — 9/9 successful. Bootstrap log on gpca-pump: `Ontology: 116 kinds, 0 relationships (from 31 SysML files); Methodology: 1 folder(s), 7 file(s), 7 namespace(s), 9 part defs, 15 part instances (memo)`. Browser: 67 elements, 100% complete, 0 console errors. Ontology viewer lists `@memo/methodology-medical-default` (type `methodology`, selected) and `@memo/ontology-arch` (type `ontology`, selected, 100 kinds, 7 layers).
+- `pnpm run test` unchanged: 7 failed | 267 passed | 18 skipped — same pre-existing failures.
+
+Phase C **deferred** the empty-stub deletion (`packages/ontology-process`, `packages/medical-modeling-profile`). They're still referenced by `@memo/cli` deps, `init.ts` defaults, `dev-server.ts` profile-name table, and the e2e test suite. Removing them is a wider cleanup that belongs to Phase G alongside the doc/ADR alignment, not this milestone.
+
 ---
 
 ## Verified working
@@ -177,26 +196,6 @@ Goal achieved: `ontology/methodology/<name>/*.sysml` is parsed into a typed `Met
 ---
 
 ## Phases queued (do these in a new session, in this order)
-
-### Phase C — methodology package split
-
-Goal: methodology is its own publishable package, separate from kinds.
-
-- Create `packages/methodology-medical-default/` with `memo.package.yaml`:
-  ```yaml
-  name: "@memo/methodology-medical-default"
-  type: methodology
-  version: "1.0.0"
-  extends: "@memo/ontology-arch"
-  sysmlDir: "../../ontology/methodology/memo"
-  ```
-- Update `examples/gpca-pump/memo.config.yaml`:
-  ```yaml
-  methodology: "@memo/methodology-medical-default@^1.0"
-  ```
-- Update loader to resolve `methodology:` field, walk its extends chain to pull kinds.
-- Drop the `ontologies:` and `extends:` fields from the project config — methodology covers it.
-- Delete (or formally retire) `packages/ontology-process/` and `packages/medical-modeling-profile/` once nothing references them.
 
 ### Phase D — UI re-IA
 
@@ -257,7 +256,7 @@ Goal: close known gaps.
    node ../../packages/cli/lib/bin/memo.js dev
    ```
    open http://127.0.0.1:3000 and verify Ontology tab shows `@memo/ontology-arch` with 100 kinds, 7 layers.
-4. Pick the next phase from the queue (start with **Phase B**).
+4. Pick the next phase from the queue (start with **Phase D**).
 5. Work in small commits. After each substantive change run `pnpm run build` and reload the dev server. Accept test failures only when explicitly noted in this doc — fix the rest.
 6. Update this handoff file at the end of every session: tick off completed phases, add any new known gaps, leave a one-line "next person picks up at" pointer.
 7. Do **not** merge to `main` until Phase G passes.
