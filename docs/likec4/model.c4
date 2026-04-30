@@ -528,92 +528,45 @@ model {
     // ── Ontology packages ───────────────────────────────────────────────────
     container ont "Ontology Packages" {
       description "
-        Independent npm packages that define domain-specific type systems,
-        closure rules, and viewpoints. Device projects compose them by listing
-        package names in memo.config.yaml `ontologies:`.
-        Loaded at runtime by @memo/core's ontology-loader.
+        Two-ontology backbone (post-ADR-1-10): an architecture ontology
+        (`ontology-arch`, 11 ISO 42010 layers) and a process ontology
+        (`ontology-process`, regulatory standards) bridged by a single
+        modeling profile (`medical-modeling-profile`) that adds closure
+        rules, viewpoints, and starter templates.
+        Device projects compose them by listing package names in
+        `memo.config.yaml `ontologies:``. Loaded at runtime by
+        `@memo/core`'s ontology-loader.
       "
-      technology "YAML · SysML v2 snippets"
+      technology "SysML v2 (source of truth) · YAML side-cars"
 
-      library ontCore "@memo/ontology-core" {
+      library ontologyArch "@memo/ontology-arch" {
         description "
-          Domain-agnostic MBSE backbone. Defines fundamental architectural kinds
-          (Block, Port, Interface, Requirement, Action, UseCase, Item) and their
-          base relationships. Foundation for all other packages.
-          Path: packages/ontology-core/
+          Architecture ontology — 11-layer MBSE backbone per ISO 42010 /
+          Arcadia. Layers: Operational · Behavioral · Functional · Logical ·
+          Software (+ Software-Extension/ROS) · Hardware · Safety · Security ·
+          Privacy · Verification.
+          ~56 classes, 45 object properties, ~55 data properties, 37 axioms.
+          Path: packages/ontology-arch/
         "
       }
 
-      library ontMedical "@memo/ontology-medical" {
+      library ontologyProcess "@memo/ontology-process" {
         description "
-          Medical device development backbone. Adds:
-            Hazard · HazardousSituation · Risk · MitigationMeasure
-            ClinicalFunction · SafetyRequirement · RegulatoryReference
-          Closure rules aligned with ISO 14971 and IEC 62304.
-          Path: packages/ontology-medical/
+          Process ontology — regulatory process activities and work
+          products. Standards: ISO 14971, IEC 62304, ISO 13485, IEC 60601,
+          ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR.
+          Bridges to ontology-arch via `producesEvidence` / `tracedTo`.
+          Path: packages/ontology-process/
         "
       }
 
       library medProfile "@memo/medical-modeling-profile" {
         description "
-          Full compliance profile for medical device projects.
-          109 closure rules covering ISO 14971, IEC 62304, ISO 13485.
-          11 viewpoints: Risk, Requirements Traceability, Architecture,
-          Software, V&V, DHF, and more.
-          Viewpoint-specific diagram definitions + guided workflow steps.
+          Modeling profile that combines arch + process. Adds 35+ closure
+          rules, viewpoints (Risk · Requirements Traceability · Architecture ·
+          Software · V&V · DHF), guided workflow steps, and starter
+          templates. Extends both ontology packages.
           Path: packages/medical-modeling-profile/
-        "
-      }
-
-      library ontClinical "@memo/ontology-clinical" {
-        description "
-          Clinical workflow and patient-safety extension.
-          Adds care-pathway kinds, ICD/SNOMED references, and
-          clinical risk relationship types.
-          Path: packages/ontology-clinical/
-        "
-      }
-
-      library ontInterop "@memo/ontology-clinical-interop" {
-        description "
-          Interoperability extension for clinical data standards.
-          HL7 FHIR mapping kinds, HL7 v2 message types, DICOM integration.
-          Path: packages/ontology-clinical-interop/
-        "
-      }
-
-      library ontMessaging "@memo/ontology-platform-messaging" {
-        description "
-          Connected medical device messaging ontology.
-          MQTT topic, REST endpoint, and message-flow kinds.
-          Closure rules for API consistency.
-          Path: packages/ontology-platform-messaging/
-        "
-      }
-
-      library ontRobotics "@memo/ontology-platform-robotics" {
-        description "
-          Surgical / assistive robot modeling extension.
-          ROS2 Node, Topic, Action, Service kinds.
-          Safety-critical allocation rules.
-          Path: packages/ontology-platform-robotics/
-        "
-      }
-
-      library ontExtensions "@memo/ontology-extensions" {
-        description "
-          Community / experimental staging bundle.
-          Kinds and rules not yet promoted to a domain-specific package.
-          Path: packages/ontology-extensions/
-        "
-      }
-
-      library medPlatformProfile "@memo/medical-product-line-profile" {
-        description "
-          Product-line engineering profile for device families.
-          Variant management kinds, feature model relationships,
-          and product-line completeness rules.
-          Path: packages/medical-product-line-profile/
         "
       }
     }
@@ -677,19 +630,14 @@ model {
   memo.core.llmEngine         -> memo.core.modelBuilder         "serialises model as LLM context"
 
   // Ontology loading
-  memo.core.ontologyLoader -> memo.ont.ontCore    "loads kinds and relationships"
-  memo.core.ontologyLoader -> memo.ont.ontMedical "loads medical kinds and rules"
-  memo.core.ontologyLoader -> memo.ont.medProfile "loads 109 rules and 11 viewpoints"
+  memo.core.ontologyLoader -> memo.ont.ontologyArch    "loads 11 architecture layers + kinds"
+  memo.core.ontologyLoader -> memo.ont.ontologyProcess "loads regulatory process activities"
+  memo.core.ontologyLoader -> memo.ont.medProfile      "loads 35+ closure rules + viewpoints"
 
-  // Ontology extensions (optional plug-ins)
-  memo.ont.ontCore    -> memo.ont.ontMedical        "extends"
-  memo.ont.ontMedical -> memo.ont.medProfile        "extends"
-  memo.ont.ontMedical -> memo.ont.ontClinical       "extends"
-  memo.ont.ontMedical -> memo.ont.ontInterop        "extends"
-  memo.ont.ontMedical -> memo.ont.ontMessaging      "extends"
-  memo.ont.ontMedical -> memo.ont.ontRobotics       "extends"
-  memo.ont.ontCore    -> memo.ont.ontExtensions     "extends"
-  memo.ont.ontMedical -> memo.ont.medPlatformProfile "extends"
+  // Ontology composition (per ADR-1-10)
+  memo.ont.ontologyArch    -> memo.ont.ontologyProcess "extends (process bridges to arch)"
+  memo.ont.ontologyArch    -> memo.ont.medProfile      "extends"
+  memo.ont.ontologyProcess -> memo.ont.medProfile      "extends"
 
   // Web app
   memo.web.wsClient          -> memo.cli.devServer   "WebSocket bidirectional"
@@ -771,8 +719,8 @@ views {
     include
       memo.core,
       memo.core.*,
-      memo.ont.ontCore,
-      memo.ont.ontMedical,
+      memo.ont.ontologyArch,
+      memo.ont.ontologyProcess,
       memo.ont.medProfile,
       llmProviders
 
@@ -841,16 +789,16 @@ views {
   view of memo.ont {
     title "Ontology Package Family"
     description "
-      Domain-specific type systems published as independent npm packages.
+      Two-ontology backbone (post-ADR-1-10): architecture + process,
+      bridged by a single modeling profile.
       Device projects compose them in memo.config.yaml `ontologies:`.
       The core ontology-loader discovers and merges them at startup.
 
-      Hierarchy:
-        ontology-core → ontology-medical → medical-modeling-profile
-                                         → ontology-clinical
-                                         → ontology-clinical-interop
-                                         → ontology-platform-messaging
-                                         → ontology-platform-robotics
+      Composition:
+        ontology-arch    ──┐
+                           ├──> medical-modeling-profile
+        ontology-process ──┘
+        (ontology-process also extends ontology-arch for `producesEvidence`)
     "
 
     include

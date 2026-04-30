@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MEMO Ontology Deck</title>
+<style>
+  :root{
+    --bg:#f6f6f3;
+    --surface:#ffffff;
+    --surface-2:#f2f5f5;
+    --text:#0f2230;
+    --muted:#60717c;
+    --line:#dfe5e7;
+    --accent:#2DD4A8;
+    --accent-2:#57e0c0;
+    --navy:#071f35;
+    --navy-2:#0d3650;
+    --navy-3:#134a66;
+    --mint:#e9f7f2;
+    --mint-2:#dff5ef;
+    --risk:#E74C3C;
+    --warn:#F39C12;
+    --req:#4A90D9;
+    --logic:#7B68EE;
+    --verify:#2ECC71;
+    --shadow:0 18px 40px rgba(12,38,52,.08), 0 3px 10px rgba(12,38,52,.05);
+    --radius:26px;
+    --radius-sm:18px;
+    --slide-w:min(1360px, calc(100vw - 48px));
+    --slide-h:calc(var(--slide-w) * 9 / 16);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;background:#e8ecec;color:var(--text)}
+  body{overflow:hidden}
+  .app{height:100%;display:grid;place-items:center;position:relative}
+  .frame{width:var(--slide-w);height:var(--slide-h);position:relative}
+  .slide{
+    position:absolute;inset:0;display:none;background:var(--bg);border-radius:18px;overflow:hidden;
+    box-shadow:0 28px 60px rgba(0,0,0,.14);
+  }
+  .slide.active{display:block}
+  .pad{padding:42px 42px 30px}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  .title{font-size:52px;line-height:1.02;letter-spacing:-.04em;font-weight:800;color:var(--text);margin-top:14px}
+  .title.sm{font-size:38px}
+  .sub{margin-top:10px;color:var(--muted);font-size:16px;line-height:1.45;max-width:760px}
+  .footer{position:absolute;left:42px;right:42px;bottom:18px;display:flex;justify-content:space-between;color:#99a7af;font-size:11px;z-index:4}
+  .dark .footer{color:rgba(255,255,255,.55)}
+  .grid-2{display:grid;grid-template-columns:1.06fr .94fr;gap:24px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .stack{display:grid;gap:16px}
+  .card{
+    background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+    border:1px solid rgba(15,34,48,.08); border-radius:var(--radius);
+    box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .card:before{
+    content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--stripe, linear-gradient(90deg,var(--accent),var(--accent-2)));
+  }
+  .card .in{padding:18px 20px 18px}
+  .label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8ea0a9}
+  .h3{font-size:24px;line-height:1.08;font-weight:800;letter-spacing:-.03em;margin-top:8px}
+  .body{font-size:14px;line-height:1.5;color:var(--muted);margin-top:10px}
+  .callout{
+    background:linear-gradient(180deg,#eef9f5,#e6f7f0);
+    border:1px solid #d8efe6;border-radius:28px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .callout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent)}
+  .callout .in{padding:18px 22px 20px 24px}
+  .callout .tag{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:#1eb58f}
+  .callout .quote{font-size:28px;line-height:1.18;font-weight:780;letter-spacing:-.03em;margin-top:10px}
+  .mini{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:14px
+  }
+  .mini .box{background:rgba(255,255,255,.78);border:1px solid rgba(15,34,48,.08);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+  .mini .box .t{font-size:15px;font-weight:780;letter-spacing:-.02em}
+  .mini .box .d{font-size:12px;line-height:1.45;color:var(--muted);margin-top:8px}
+  .dark{
+    background:
+      radial-gradient(1200px 520px at 90% 0%, rgba(87,224,192,.18), transparent 60%),
+      radial-gradient(900px 420px at 100% 100%, rgba(45,212,168,.12), transparent 60%),
+      linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 55%, #0a2740 100%);
+    color:#fff;
+  }
+  .dark .title,.dark .sub,.dark .h3{color:#fff}
+  .dark .sub{color:rgba(255,255,255,.78)}
+  .cover-grid{display:grid;grid-template-columns:1.05fr .95fr;height:100%}
+  .cover-left{padding:50px 40px 34px;position:relative;z-index:3}
+  .brand-row{display:flex;align-items:center;gap:12px}
+  .brand-mark{width:32px;height:32px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));position:relative;box-shadow:0 0 0 8px rgba(45,212,168,.08)}
+  .brand-mark:before,.brand-mark:after{content:"";position:absolute;background:#072034;border-radius:20px}
+  .brand-mark:before{left:7px;top:7px;width:6px;height:18px}
+  .brand-mark:after{right:7px;top:7px;width:6px;height:18px}
+  .cover-title{font-size:66px;line-height:.96;letter-spacing:-.05em;font-weight:830;margin-top:70px}
+  .cover-title .accent{color:var(--accent)}
+  .cover-right{position:relative}
+  .network{position:absolute;inset:0}
+  .network svg{width:100%;height:100%}
+  .wave{position:absolute;left:-6%;right:-6%;bottom:-8%;height:62%}
+  .wave svg{width:100%;height:100%}
+  .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px;max-width:760px}
+  .metric{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:16px 18px
+  }
+  .metric .m1{font-size:17px;font-weight:760}
+  .metric .m2{font-size:13px;line-height:1.42;color:rgba(255,255,255,.72);margin-top:8px}
+  .chain{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:center;margin-top:26px}
+  .step{
+    background:rgba(255,255,255,.88);border:1px solid rgba(15,34,48,.08);border-radius:20px;box-shadow:var(--shadow);padding:16px 14px 14px;position:relative
+  }
+  .step .ico{width:44px;height:44px;border-radius:14px;background:linear-gradient(180deg,#f9fbfc,#edf3f6);display:grid;place-items:center;font-size:21px;color:#2a556a;border:1px solid rgba(15,34,48,.08)}
+  .step .t{margin-top:10px;font-size:15px;font-weight:800}
+  .step .d{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.35}
+  .chain-arrow{font-size:24px;color:#7d8f99;text-align:center}
+  .status-card{padding:18px}
+  .status-line{display:flex;gap:8px;align-items:center;margin:18px 0 14px}
+  .dot{width:14px;height:14px;border-radius:999px;background:var(--c)}
+  .line{height:4px;flex:1;background:linear-gradient(90deg,var(--c), var(--c2, #d9dee2));border-radius:999px}
+  .status-title{font-size:18px;font-weight:800}
+  .status-desc{font-size:13px;line-height:1.5;color:var(--muted);margin-top:10px}
+  .domain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}
+  .domain{background:rgba(255,255,255,.92);border:1px solid rgba(15,34,48,.08);border-radius:24px;overflow:hidden;box-shadow:var(--shadow)}
+  .domain .hero{
+    height:128px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(circle at 70% 20%, rgba(255,255,255,.9), transparent 28%),
+      linear-gradient(135deg, rgba(45,212,168,.25), rgba(11,52,71,.06)),
+      linear-gradient(135deg,#d6e4ea,#b9cbd6);
+  }
+  .domain .hero:after{content:"";position:absolute;left:18px;bottom:18px;width:52px;height:52px;border-radius:18px;background:rgba(255,255,255,.85);box-shadow:var(--shadow)}
+  .domain .in{padding:16px 18px 18px}
+  .domain .name{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .domain ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5}
+  .quote-card{
+    background:linear-gradient(135deg,#08253d,#103850 60%,#0c2f46);
+    border-radius:26px;color:#fff;padding:28px 28px 26px;box-shadow:var(--shadow);min-height:188px;position:relative;overflow:hidden
+  }
+  .quote-card:after{
+    content:"";position:absolute;right:-60px;bottom:-60px;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle, rgba(45,212,168,.18), transparent 62%);
+  }
+  .quote-card .q{font-size:34px;color:var(--accent);line-height:1}
+  .quote-card .qt{font-size:26px;line-height:1.22;font-weight:760;letter-spacing:-.03em;margin-top:8px}
+  .quote-card .qt .green{color:var(--accent)}
+  .feature{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:26px;padding:22px 20px 24px;box-shadow:var(--shadow);text-align:center
+  }
+  .icon{
+    width:72px;height:72px;border-radius:22px;margin:0 auto 18px;display:grid;place-items:center;font-size:28px;
+    background:linear-gradient(135deg, rgba(45,212,168,.18), rgba(87,224,192,.3)); color:#13876e; border:1px solid rgba(45,212,168,.2)
+  }
+  .feature h3{margin:0;font-size:24px;font-weight:800;letter-spacing:-.03em}
+  .feature p{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.48}
+  .chain-layout{display:grid;grid-template-columns:220px 1fr 320px;gap:22px;align-items:center;margin-top:18px}
+  .seal{
+    width:210px;height:210px;border-radius:38px;background:linear-gradient(180deg,#effaf4,#e2f5ec);
+    border:1px solid #d6efe4;box-shadow:var(--shadow);display:grid;place-items:center;text-align:center;padding:22px
+  }
+  .seal .shield{
+    width:82px;height:82px;border-radius:26px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center;font-size:40px;color:var(--verify);margin:0 auto 16px
+  }
+  .seal .tx{font-size:22px;line-height:1.12;font-weight:800;letter-spacing:-.03em}
+  .chain-list{display:grid;gap:10px}
+  .chain-item{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:18px;box-shadow:var(--shadow);
+    padding:13px 14px;display:grid;grid-template-columns:16px 150px 1fr;gap:14px;align-items:center
+  }
+  .chain-item .b{width:16px;height:16px;border-radius:999px;background:var(--bc)}
+  .chain-item .n{font-size:17px;font-weight:800;letter-spacing:-.02em}
+  .chain-item .d{font-size:12.8px;color:var(--muted)}
+  .connector{text-align:center;color:#99a9b2;font-size:18px}
+  .impact-grid{display:grid;grid-template-columns:230px 90px 250px 1fr;gap:18px;align-items:center;margin-top:30px}
+  .panel{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:26px;box-shadow:var(--shadow);padding:20px 22px
+  }
+  .panel h3{margin:0 0 10px;font-size:22px;line-height:1.08;letter-spacing:-.03em}
+  .panel p{margin:0;color:var(--muted);font-size:14px;line-height:1.48}
+  .arrow{display:grid;place-items:center;font-size:42px;color:var(--teal-3)}
+  .stats{display:grid;gap:12px}
+  .stat{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px;
+    display:flex;justify-content:space-between;align-items:center
+  }
+  .stat .l{font-size:14px;font-weight:760}
+  .stat .r{font-size:24px;font-weight:820;letter-spacing:-.03em}
+  .badge-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+  .badge{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:999px;box-shadow:var(--shadow);padding:10px 14px;font-size:13px;font-weight:760
+  }
+  .std-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+  .std{
+    background:#fff;border:1px solid rgba(15,34,48,.08);border-radius:26px;box-shadow:var(--shadow);overflow:hidden
+  }
+  .std .head{padding:18px 20px 12px;background:linear-gradient(180deg,#fbfdfd,#f3f7f8)}
+  .std .ey{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#90a0a9;font-weight:800}
+  .std .name{font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:8px}
+  .std .body{padding:6px 20px 22px;color:var(--muted);font-size:14px;line-height:1.5}
+  .nav{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+  .nav button{
+    width:48px;height:48px;border:none;border-radius:16px;background:rgba(7,31,53,.78);color:#fff;box-shadow:0 10px 24px rgba(0,0,0,.18);font-size:24px;cursor:pointer
+  }
+  .counter{
+    position:fixed;left:18px;top:18px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);padding:10px 14px;border-radius:999px;border:1px solid rgba(15,34,48,.06);box-shadow:var(--shadow);font-size:14px;font-weight:760
+  }
+  .progress{position:fixed;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.08)}
+  .progress > div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s ease}
+  .dots{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;display:flex;gap:8px}
+  .dots button{width:10px;height:10px;border-radius:999px;border:none;background:rgba(7,31,53,.18);cursor:pointer}
+  .dots button.active{width:28px;background:var(--accent)}
+  @media (max-width:1200px){
+    .title{font-size:44px}.title.sm{font-size:34px}
+    .cover-title{font-size:54px}
+  }
+  @media print{
+    body{overflow:visible;background:#fff}
+    .slide{display:block;position:relative;page-break-after:always;height:100vh}
+    .nav,.counter,.progress,.dots{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="frame">
+    <section class="slide dark active">
+      <div class="cover-grid">
+        <div class="cover-left">
+          <div class="brand-row"><div class="brand-mark"></div><div style="font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)">Memo</div></div>
+          <div class="cover-title"><span class="accent">MEMO</span> Ontology</div>
+          <div class="subtitle" style="max-width:500px">Model-driven safety traceability for regulated systems.</div>
+          <div class="metric-row">
+            <div class="metric"><div class="m1">Typed elements</div><div class="m2">Explicit model meaning across risk, requirements, architecture, and verification.</div></div>
+            <div class="metric"><div class="m1">Closure rules</div><div class="m2">Safety chains are evaluated for completeness instead of reviewed by inference.</div></div>
+            <div class="metric"><div class="m1">Open source</div><div class="m2">Designed for extensibility, transparency, and reuse.</div></div>
+          </div>
+        </div>
+        <div class="cover-right">
+          <div class="network">
+            <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
+              <defs>
+                <filter id="glow"><feGaussianBlur stdDeviation="3.5" result="c"/><feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <g stroke="rgba(125,220,230,.26)" stroke-width="1.4" fill="none">
+                <path d="M520 90 L610 150 L700 120 L760 200 L870 170" />
+                <path d="M610 150 L650 240 L760 200 L810 280 L920 250" />
+                <path d="M700 120 L760 200 L840 120 L900 190" />
+              </g>
+              <g fill="#9FEFE1" filter="url(#glow)">
+                <circle cx="520" cy="90" r="3"/><circle cx="610" cy="150" r="3"/><circle cx="700" cy="120" r="3"/>
+                <circle cx="760" cy="200" r="3"/><circle cx="870" cy="170" r="3"/><circle cx="650" cy="240" r="3"/>
+                <circle cx="810" cy="280" r="3"/><circle cx="920" cy="250" r="3"/><circle cx="840" cy="120" r="3"/>
+              </g>
+            </svg>
+          </div>
+          <div class="wave">
+            <svg viewBox="0 0 1000 520" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="g1" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#0b2440" stop-opacity=".1"/>
+                  <stop offset="40%" stop-color="#2DD4A8" stop-opacity=".28"/>
+                  <stop offset="100%" stop-color="#6CF0E0" stop-opacity=".08"/>
+                </linearGradient>
+                <linearGradient id="g2" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#0b2440" stop-opacity="0"/>
+                  <stop offset="60%" stop-color="#39e3c7" stop-opacity=".95"/>
+                  <stop offset="100%" stop-color="#7df5e7" stop-opacity=".7"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,320 C180,270 260,400 410,340 C540,288 580,160 710,175 C835,188 875,118 1000,128 L1000,520 L0,520 Z" fill="url(#g1)"/>
+              <path d="M0,330 C170,280 280,418 420,352 C560,286 590,152 720,170 C840,186 905,118 1000,126" stroke="url(#g2)" stroke-width="10" fill="none" filter="url(#glow)"/>
+              <path d="M0,360 C180,320 290,430 455,370 C620,310 640,212 760,216 C880,220 920,190 1000,170" stroke="rgba(90,240,220,.26)" stroke-width="2" fill="none"/>
+              <path d="M0,385 C190,345 315,448 480,386 C630,330 664,240 790,244 C900,248 938,214 1000,198" stroke="rgba(90,240,220,.16)" stroke-width="2" fill="none"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>01</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Problem</div>
+        <div class="title sm">Evidence is not stable under change</div>
+        <div class="sub">A small requirement change can silently invalidate the downstream safety case.</div>
+
+        <div class="grid-2" style="margin-top:28px">
+          <div>
+            <div class="chain">
+              <div class="step">
+                <div class="ico">⚠</div><div class="t">Hazard</div><div class="d">H-23 · Overheating</div>
+              </div>
+              <div class="chain-arrow">→</div>
+              <div class="step">
+                <div class="ico">▣</div><div class="t">Requirement</div><div class="d">REQ-145 · Limit surface temperature</div>
+              </div>
+              <div class="chain-arrow">→</div>
+              <div class="step">
+                <div class="ico">☑</div><div class="t">Test</div><div class="d">TC-78 · Thermal soak verification</div>
+              </div>
+              <div class="chain-arrow">→</div>
+              <div class="step">
+                <div class="ico">✓</div><div class="t">Result</div><div class="d">PASS · 2024-06-12</div>
+              </div>
+            </div>
+            <div class="mini-note"><span class="dot" style="background:var(--risk)"></span>Changing <strong>REQ-145</strong> can invalidate <strong>TC-78</strong> and its result.</div>
+          </div>
+          <div>
+            <div class="callout">
+              <div class="in">
+                <div class="tag">The challenge</div>
+                <div class="quote" style="font-size:24px">Links exist, but their meaning is implicit. When intent changes, we cannot know what is truly impacted.</div>
+              </div>
+            </div>
+            <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+              <div class="card"><div class="in"><div class="label">Trace links</div><div class="h3">Present</div><div class="body">Visible in tools, but not always typed or closed.</div></div></div>
+              <div class="card"><div class="in"><div class="label">Evidence</div><div class="h3">Visible</div><div class="body">But not guaranteed to remain valid after change.</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>02</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Evidence Drift</div>
+        <div class="title sm">Evidence drift accumulates with each system change</div>
+        <div class="sub">Traceability can look complete while the system logic is already broken.</div>
+        <div class="grid-3" style="margin-top:28px">
+          <div class="card status-card" style="--stripe:var(--verify)">
+            <div class="label">Aligned baseline</div>
+            <div class="status-line"><div class="dot" style="--c:var(--verify)"></div><div class="line" style="--c:var(--verify);--c2:var(--verify)"></div></div>
+            <div class="status-title">All links valid</div>
+            <div class="status-desc">Evidence is sound and the safety claim is defensible.</div>
+          </div>
+          <div class="card status-card" style="--stripe:var(--warn)">
+            <div class="label">Partial mismatch</div>
+            <div class="status-line"><div class="dot" style="--c:var(--warn)"></div><div class="line" style="--c:var(--verify);--c2:#d8dde2"></div></div>
+            <div class="status-title">Some links stale</div>
+            <div class="status-desc">Unclear what is affected or whether existing evidence still applies.</div>
+          </div>
+          <div class="card status-card" style="--stripe:var(--risk)">
+            <div class="label">Broken trace</div>
+            <div class="status-line"><div class="dot" style="--c:var(--risk)"></div><div class="line" style="--c:var(--risk);--c2:#d8dde2"></div></div>
+            <div class="status-title">Critical links invalid</div>
+            <div class="status-desc">Trace can no longer support the safety case with confidence.</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>03</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Industry Context</div>
+        <div class="title sm">Adjacent safety-critical domains already solved this class of problem</div>
+        <div class="sub">Aerospace and automotive operationalized semantic traceability earlier. Medical devices can build on that lesson.</div>
+        <div class="domain-grid">
+          <div class="domain">
+            <div class="hero"></div>
+            <div class="in">
+              <div class="name">Aerospace</div>
+              <ul>
+                <li>MBSE-centered engineering flow</li>
+                <li>Formal safety and verification linkage</li>
+                <li>Strong cross-artifact consistency</li>
+              </ul>
+            </div>
+          </div>
+          <div class="domain">
+            <div class="hero"></div>
+            <div class="in">
+              <div class="name">Automotive</div>
+              <ul>
+                <li>ISO 26262 safety integration</li>
+                <li>Architecture and safety tightly linked</li>
+                <li>Toolchain-enforced trace logic</li>
+              </ul>
+            </div>
+          </div>
+          <div class="domain">
+            <div class="hero"></div>
+            <div class="in">
+              <div class="name">Medical devices</div>
+              <ul>
+                <li>Document-centric traceability</li>
+                <li>Fragmented lifecycle views</li>
+                <li>Manual alignment across evidence</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="mini-note" style="max-width:720px"><span class="dot"></span>The problem is not unsolved. It is <strong>unevenly solved</strong> across safety-critical industries.</div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>04</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Key Insight</div>
+        <div class="title sm">The gap is semantic, not tooling</div>
+        <div class="grid-2" style="margin-top:20px">
+          <div>
+            <div class="sub" style="margin-top:0;max-width:420px">Tools can store links. Only a shared meaning model can ensure those links stay correct.</div>
+            <div class="mini" style="margin-top:26px">
+              <div class="box"><div class="t">Implicit intent</div><div class="d">Different teams read the same trace differently.</div></div>
+              <div class="box"><div class="t">Ad-hoc links</div><div class="d">Connections exist, but their semantics are brittle.</div></div>
+              <div class="box"><div class="t">Manual impact</div><div class="d">Change analysis becomes guesswork and misses ripple effects.</div></div>
+              <div class="box"><div class="t">Audit risk</div><div class="d">It becomes harder to justify why evidence should still be trusted.</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="quote-card">
+              <div class="q">“</div>
+              <div class="qt">Without semantics, traceability is a graph.<br><span class="green">With semantics, it is a guarantee.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>05</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Solution</div>
+        <div class="title sm">MEMO defines the missing semantic layer</div>
+        <div class="sub">A domain ontology that makes model meaning explicit and keeps lifecycle views aligned.</div>
+        <div class="grid-3" style="margin-top:28px">
+          <div class="feature">
+            <div class="icon">◉</div>
+            <h3>Typed elements</h3>
+            <p>Hazard, risk, control, requirement, architecture element, and verification artifact all have explicit meaning.</p>
+          </div>
+          <div class="feature">
+            <div class="icon">⇄</div>
+            <h3>Typed relationships</h3>
+            <p>Mitigates, allocates-to, satisfies, verifies, and traces-to relationships express intent and constraint.</p>
+          </div>
+          <div class="feature">
+            <div class="icon">✓</div>
+            <h3>Closure rules</h3>
+            <p>Safety chains can be evaluated for completeness and consistency under system change.</p>
+          </div>
+        </div>
+        <div class="mini-note" style="max-width:760px"><span class="dot"></span>MEMO is not another document set. It is the <strong>enforceable model</strong> that keeps those documents aligned.</div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>06</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Ontology</div>
+        <div class="title sm">Safety must form a closed chain</div>
+        <div class="sub">Every claim is supported from hazard to verification.</div>
+        <div class="chain-layout">
+          <div class="seal">
+            <div class="shield">✓</div>
+            <div class="tx">Closed<br/>Safety Chain</div>
+          </div>
+          <div class="chain-list">
+            <div class="chain-item"><div class="b" style="--bc:var(--risk)"></div><div class="n">Hazard</div><div class="d">What can go wrong</div></div>
+            <div class="connector">↓</div>
+            <div class="chain-item"><div class="b" style="--bc:#ef8c57"></div><div class="n">Risk</div><div class="d">How bad and how likely</div></div>
+            <div class="connector">↓</div>
+            <div class="chain-item"><div class="b" style="--bc:var(--warn)"></div><div class="n">Control</div><div class="d">What we do about it</div></div>
+            <div class="connector">↓</div>
+            <div class="chain-item"><div class="b" style="--bc:var(--req)"></div><div class="n">Requirement</div><div class="d">What must be built</div></div>
+            <div class="connector">↓</div>
+            <div class="chain-item"><div class="b" style="--bc:var(--logic)"></div><div class="n">Implementation</div><div class="d">How it is built</div></div>
+            <div class="connector">↓</div>
+            <div class="chain-item"><div class="b" style="--bc:var(--verify)"></div><div class="n">Verification</div><div class="d">Evidence it works</div></div>
+          </div>
+          <div class="callout small">
+            <div class="in">
+              <div class="tag">Rule</div>
+              <p>If any edge in the chain is missing or stale, the safety argument is incomplete.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>07</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Impact Analysis</div>
+        <div class="title sm">Change impact becomes deterministic</div>
+        <div class="sub">Semantic rules compute exactly what must be reviewed, updated, or re-verified.</div>
+        <div class="impact-grid">
+          <div class="panel"><h3>Trigger</h3><p><strong>REQ-145</strong> is modified to reflect a new control strategy.</p></div>
+          <div class="arrow">→</div>
+          <div class="panel"><h3>Reasoning engine</h3><p>Typed relationships and closure rules evaluate downstream dependencies.</p></div>
+          <div class="stats">
+            <div class="stat"><span class="l">Impacted requirements</span><span class="r">3</span></div>
+            <div class="stat"><span class="l">Impacted tests</span><span class="r">4</span></div>
+            <div class="stat"><span class="l">Design elements</span><span class="r">2</span></div>
+            <div class="stat"><span class="l">Verification items</span><span class="r">1</span></div>
+          </div>
+        </div>
+        <div class="badge-row">
+          <div class="badge">Complete — no blind spots</div>
+          <div class="badge">Consistent — rule-driven</div>
+          <div class="badge">Explainable — trace the why</div>
+          <div class="badge">Scalable — works at size</div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>08</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="pad">
+        <div class="eyebrow">Standards Alignment</div>
+        <div class="title sm">The model aligns directly with regulatory expectations</div>
+        <div class="sub">MEMO complements standards by making traceability logic explicit and operational.</div>
+        <div class="std-grid">
+          <div class="std">
+            <div class="head"><div class="ey">Standard</div><div class="name">ISO 14971</div></div>
+            <div class="body">Supports hazard identification, risk evaluation, and risk-control traceability with explicit semantic linkage.</div>
+          </div>
+          <div class="std">
+            <div class="head"><div class="ey">Standard</div><div class="name">IEC 62304</div></div>
+            <div class="body">Links software lifecycle artifacts to design intent, implementation structure, and verification evidence.</div>
+          </div>
+          <div class="std">
+            <div class="head"><div class="ey">Expectation</div><div class="name">Cybersecurity</div></div>
+            <div class="body">Extends naturally to threats, mitigations, and cybersecurity evidence without breaking the safety model.</div>
+          </div>
+        </div>
+        <div class="mini-note" style="max-width:760px"><span class="dot"></span>The ontology does not compete with standards. It makes their required trace logic <strong>machine-checkable</strong>.</div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>09</span></div>
+    </section>
+
+    <section class="slide dark">
+      <div class="pad">
+        <div class="eyebrow">Next Step</div>
+        <div class="title">Adopt the semantic<br>backbone</div>
+        <div class="subtitle" style="max-width:560px">Build safer systems. Move from descriptive traceability to enforceable system logic.</div>
+        <div class="metric-row" style="margin-top:130px;max-width:none">
+          <div class="metric"><div class="m1">Faster changes</div><div class="m2">Compute impact instead of reconstructing it manually.</div></div>
+          <div class="metric"><div class="m1">Stronger cases</div><div class="m2">Support regulatory arguments with explicit, explainable linkage.</div></div>
+          <div class="metric"><div class="m1">Less rework</div><div class="m2">Detect misalignment before it turns into downstream evidence debt.</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>MEMO Ontology</span><span>10</span></div>
+    </section>
+  </div>
+
+  <div class="counter"><span id="idx">1</span> / <span id="tot">10</span></div>
+  <div class="nav"><button id="prev">‹</button><button id="next">›</button></div>
+  <div class="dots" id="dots"></div>
+  <div class="progress"><div id="bar"></div></div>
+</div>
+
+<script>
+const slides = [...document.querySelectorAll('.slide')];
+const idxEl = document.getElementById('idx');
+const totEl = document.getElementById('tot');
+const bar = document.getElementById('bar');
+const dots = document.getElementById('dots');
+totEl.textContent = slides.length;
+let i = 0;
+
+slides.forEach((_,n)=>{
+  const b=document.createElement('button');
+  b.onclick=()=>go(n);
+  dots.appendChild(b);
+});
+
+function paint(){
+  slides.forEach((s,n)=>s.classList.toggle('active', n===i));
+  [...dots.children].forEach((d,n)=>d.classList.toggle('active', n===i));
+  idxEl.textContent=i+1;
+  bar.style.width=((i+1)/slides.length*100)+'%';
+  location.hash='#slide-'+(i+1);
+}
+function go(n){ i=Math.max(0,Math.min(slides.length-1,n)); paint(); }
+document.getElementById('prev').onclick=()=>go(i-1);
+document.getElementById('next').onclick=()=>go(i+1);
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(i+1)}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(i-1)}
+  if(e.key==='Home'){go(0)}
+  if(e.key==='End'){go(slides.length-1)}
+});
+if(location.hash.startsWith('#slide-')){
+  const n=parseInt(location.hash.replace('#slide-',''),10);
+  if(!isNaN(n)&&n>=1&&n<=slides.length)i=n-1;
+}
+paint();
+</script>
+</body>
+</html>

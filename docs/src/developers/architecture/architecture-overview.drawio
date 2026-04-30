@@ -1,0 +1,318 @@
+<mxfile host="memo-architect" agent="claude-architecture-v1" pages="7">
+  <diagram id="L0" name="L0 — Landscape">
+    <mxGraphModel dx="1600" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p1_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="MEMO — System Landscape (L0)"><mxGeometry x="40" y="20" width="1520" height="32" as="geometry"/></mxCell>
+        <mxCell id="p1_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="Who uses MEMO and the external systems it depends on. Drill down into MEMO Platform on the next page (L1)."><mxGeometry x="40" y="56" width="1520" height="22" as="geometry"/></mxCell>
+
+        <!-- Actors row -->
+        <mxCell id="p1_eng" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="Medical Device Engineer&#10;&#10;writes .sysml · runs CLI · browses web app"><mxGeometry x="400" y="130" width="320" height="100" as="geometry"/></mxCell>
+        <mxCell id="p1_rev" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="Regulatory Reviewer&#10;&#10;consumes DHF · traceability matrices · review packets"><mxGeometry x="880" y="130" width="320" height="100" as="geometry"/></mxCell>
+
+        <!-- Platform -->
+        <mxCell id="p1_memo" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;" value="MEMO Platform&#10;&#10;SysML v2-native tool for medical device architecture · ISO 14971 · IEC 62304 · ISO/IEC/IEEE 42010&#10;&#10;@memo/core · @memo/cli · @memo/web · @memo/ontology-arch · @memo/ontology-process · @memo/medical-modeling-profile"><mxGeometry x="200" y="350" width="1200" height="200" as="geometry"/></mxCell>
+
+        <!-- External row -->
+        <mxCell id="p1_llm" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="LLM Providers&#10;&#10;Anthropic Claude · OpenAI GPT-4o"><mxGeometry x="200" y="720" width="320" height="100" as="geometry"/></mxCell>
+        <mxCell id="p1_git" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Git / npm Registry&#10;&#10;ontology package source"><mxGeometry x="640" y="720" width="320" height="100" as="geometry"/></mxCell>
+        <mxCell id="p1_ci" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="CI / CD Pipeline&#10;&#10;memo validate · memo build"><mxGeometry x="1080" y="720" width="320" height="100" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p1_e1" parent="1" edge="1" source="p1_eng" target="p1_memo" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="uses CLI / web"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_e2" parent="1" edge="1" source="p1_rev" target="p1_memo" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="reviews DHF"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_e3" parent="1" edge="1" source="p1_memo" target="p1_llm" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="REST (memo ask / generate)"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_e4" parent="1" edge="1" source="p1_memo" target="p1_git" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo install"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_e5" parent="1" edge="1" source="p1_ci" target="p1_memo" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="invokes CLI"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L1" name="L1 — Containers">
+    <mxGraphModel dx="1700" dy="1500" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p2_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="MEMO — Containers (L1)"><mxGeometry x="40" y="20" width="1620" height="32" as="geometry"/></mxCell>
+        <mxCell id="p2_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="Top-down: Engineer → CLI → Core pipeline → Web SPA. Ontologies + filesystem feed the pipeline; external services hang off the bottom."><mxGeometry x="40" y="56" width="1620" height="22" as="geometry"/></mxCell>
+
+        <!-- Actors -->
+        <mxCell id="p2_eng" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" value="Engineer"><mxGeometry x="500" y="120" width="280" height="70" as="geometry"/></mxCell>
+        <mxCell id="p2_rev" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" value="Reviewer"><mxGeometry x="920" y="120" width="280" height="70" as="geometry"/></mxCell>
+
+        <!-- CLI (entry layer) -->
+        <mxCell id="p2_cli" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/cli&#10;&#10;CLI binary `memo` + dev server&#10;Commander.js · Vite · chokidar · ws"><mxGeometry x="200" y="260" width="1300" height="120" as="geometry"/></mxCell>
+
+        <!-- Core (pipeline) -->
+        <mxCell id="p2_core" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/core&#10;&#10;Shared kernel — Langium parser · model builder · rule engine · completeness tracker · DHF · LLM · importers · WebSocket protocol&#10;TypeScript · zero runtime deps"><mxGeometry x="200" y="450" width="1300" height="140" as="geometry"/></mxCell>
+
+        <!-- Web -->
+        <mxCell id="p2_web" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/web&#10;&#10;React 18 SPA at http://localhost:3000&#10;ReactFlow · Zustand · ELK.js · Tailwind 4 · Vite"><mxGeometry x="200" y="660" width="1300" height="120" as="geometry"/></mxCell>
+
+        <!-- Ontology + filesystems row -->
+        <mxCell id="p2_ont" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="Ontology Packages&#10;&#10;@memo/ontology-arch&#10;@memo/ontology-process&#10;@memo/medical-modeling-profile"><mxGeometry x="200" y="850" width="380" height="160" as="geometry"/></mxCell>
+        <mxCell id="p2_proj" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Device Project (FS)&#10;&#10;*.sysml&#10;memo.config.yaml&#10;memo.lock.yaml&#10;.memo/ (diagrams · layouts)"><mxGeometry x="660" y="850" width="380" height="160" as="geometry"/></mxCell>
+        <mxCell id="p2_docs" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Documentation Site (FS)&#10;&#10;MkDocs build (docs/dist/)&#10;served under /help"><mxGeometry x="1120" y="850" width="380" height="160" as="geometry"/></mxCell>
+
+        <!-- External -->
+        <mxCell id="p2_llm" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="LLM Providers&#10;Anthropic · OpenAI"><mxGeometry x="200" y="1100" width="380" height="80" as="geometry"/></mxCell>
+        <mxCell id="p2_reg" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Git / npm Registry&#10;ontology package source"><mxGeometry x="660" y="1100" width="380" height="80" as="geometry"/></mxCell>
+        <mxCell id="p2_ci" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="CI / CD Pipeline&#10;memo validate · memo build"><mxGeometry x="1120" y="1100" width="380" height="80" as="geometry"/></mxCell>
+
+        <!-- Edges (top-down) -->
+        <mxCell id="p2e1" parent="1" edge="1" source="p2_eng" target="p2_cli" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="runs commands"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e2" parent="1" edge="1" source="p2_rev" target="p2_web" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="browses model / DHF"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e3" parent="1" edge="1" source="p2_cli" target="p2_core" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="in-process calls"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e4" parent="1" edge="1" source="p2_core" target="p2_web" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;startArrow=classic;" value="WebSocket (via cli dev server)"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e5" parent="1" edge="1" source="p2_core" target="p2_ont" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="loads kinds / rules"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e6" parent="1" edge="1" source="p2_cli" target="p2_proj" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;startArrow=classic;" value="reads/writes .sysml + diagrams"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e7" parent="1" edge="1" source="p2_cli" target="p2_docs" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="serves /help"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e8" parent="1" edge="1" source="p2_core" target="p2_llm" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="REST"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e9" parent="1" edge="1" source="p2_cli" target="p2_reg" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo install"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e10" parent="1" edge="1" source="p2_ci" target="p2_cli" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="invokes"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L2a" name="L2a — @memo/core">
+    <mxGraphModel dx="1800" dy="1400" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p3_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="@memo/core — Components (L2a)"><mxGeometry x="40" y="20" width="1720" height="32" as="geometry"/></mxCell>
+        <mxCell id="p3_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="Critical pipeline runs down the centre; config feeds left, model consumers branch right. Zero runtime deps."><mxGeometry x="40" y="56" width="1720" height="22" as="geometry"/></mxCell>
+
+        <!-- External feeds (top) -->
+        <mxCell id="p3_sysml" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="*.sysml files"><mxGeometry x="780" y="100" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p3_cfg" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="memo.config.yaml"><mxGeometry x="280" y="100" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p3_pkg" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="ontology packages&#10;(node_modules + memo_packages/)"><mxGeometry x="40" y="220" width="240" height="70" as="geometry"/></mxCell>
+
+        <!-- Centre pipeline -->
+        <mxCell id="p3_parser" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="parser&#10;Langium SysML v2 parser"><mxGeometry x="780" y="220" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_builder" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="modelBuilder&#10;AST → MemoModel + indexes"><mxGeometry x="780" y="350" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_rule" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="ruleEngine&#10;109 closure rules"><mxGeometry x="780" y="480" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_compl" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="completenessTracker&#10;per-layer % readiness"><mxGeometry x="780" y="610" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_proto" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="wsProtocol (types only)&#10;discriminated-union messages"><mxGeometry x="780" y="740" width="240" height="80" as="geometry"/></mxCell>
+
+        <!-- Left config column -->
+        <mxCell id="p3_cfgload" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="configLoader&#10;extends inheritance"><mxGeometry x="280" y="220" width="240" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_ontload" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="ontologyLoader&#10;merge kinds + rules"><mxGeometry x="280" y="350" width="240" height="80" as="geometry"/></mxCell>
+
+        <!-- Right consumer column -->
+        <mxCell id="p3_dhf" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="dhfWorkbench&#10;templates + exporters (HTML/MD/DOCX)"><mxGeometry x="1280" y="220" width="280" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_llm" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="llmEngine&#10;ask · generate · draft"><mxGeometry x="1280" y="350" width="280" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_imp" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="importers&#10;CSV · EA · Cameo · SysAnd · OWL"><mxGeometry x="1280" y="480" width="280" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_anal" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="analysisEngine&#10;DSM · impact tracing"><mxGeometry x="1280" y="610" width="280" height="80" as="geometry"/></mxCell>
+        <mxCell id="p3_plg" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="pluginSystem&#10;custom generators"><mxGeometry x="1280" y="740" width="280" height="80" as="geometry"/></mxCell>
+
+        <!-- External LLM target (bottom) -->
+        <mxCell id="p3_llmext" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="LLM Providers (external)"><mxGeometry x="1320" y="900" width="200" height="60" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p3e1" parent="1" edge="1" source="p3_sysml" target="p3_parser" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e2" parent="1" edge="1" source="p3_parser" target="p3_builder" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="AST"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e3" parent="1" edge="1" source="p3_builder" target="p3_rule" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="MemoModel"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e4" parent="1" edge="1" source="p3_rule" target="p3_compl" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="violations"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e5" parent="1" edge="1" source="p3_compl" target="p3_proto" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="DTO"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="p3e6" parent="1" edge="1" source="p3_cfg" target="p3_cfgload" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e7" parent="1" edge="1" source="p3_cfgload" target="p3_ontload" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e8" parent="1" edge="1" source="p3_pkg" target="p3_ontload" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e9" parent="1" edge="1" source="p3_ontload" target="p3_builder" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="kinds + rules"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="p3e10" parent="1" edge="1" source="p3_builder" target="p3_dhf" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="queries"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e11" parent="1" edge="1" source="p3_builder" target="p3_llm" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="context"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e12" parent="1" edge="1" source="p3_imp" target="p3_parser" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="emit .sysml"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e13" parent="1" edge="1" source="p3_builder" target="p3_anal" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e14" parent="1" edge="1" source="p3_llm" target="p3_llmext" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="HTTPS"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L2b" name="L2b — @memo/cli">
+    <mxGraphModel dx="1600" dy="1100" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p4_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="@memo/cli — Components (L2b)"><mxGeometry x="40" y="20" width="1520" height="32" as="geometry"/></mxCell>
+        <mxCell id="p4_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="`memo dev` boots the dev server, which fans out to file-watcher, persistor, and config-resolver. All three call into @memo/core."><mxGeometry x="40" y="56" width="1520" height="22" as="geometry"/></mxCell>
+
+        <!-- Top: cliCommands -->
+        <mxCell id="p4_cmd" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="cliCommands (Commander.js)&#10;&#10;init · dev · validate · build · import · export · dhf · ask · generate · install · plugin"><mxGeometry x="500" y="120" width="600" height="100" as="geometry"/></mxCell>
+
+        <!-- Centre: devServer -->
+        <mxCell id="p4_dev" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="devServer&#10;&#10;HTTP + WebSocket · Vite middleware&#10;serves @memo/web SPA + /help docs"><mxGeometry x="500" y="290" width="600" height="120" as="geometry"/></mxCell>
+
+        <!-- Branches -->
+        <mxCell id="p4_fw" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="fileWatcher&#10;chokidar on *.sysml · memo.config.yaml"><mxGeometry x="80" y="490" width="320" height="90" as="geometry"/></mxCell>
+        <mxCell id="p4_per" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="persistor&#10;line-level patch of source .sysml"><mxGeometry x="640" y="490" width="320" height="90" as="geometry"/></mxCell>
+        <mxCell id="p4_cr" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="configResolver&#10;resolve `extends` chain at runtime"><mxGeometry x="1200" y="490" width="320" height="90" as="geometry"/></mxCell>
+
+        <!-- Core targets -->
+        <mxCell id="p4_cp" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.parser"><mxGeometry x="80" y="680" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4_cb" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.modelBuilder"><mxGeometry x="320" y="680" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4_cre" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.ruleEngine"><mxGeometry x="560" y="680" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4_cd" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.dhfWorkbench"><mxGeometry x="800" y="680" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4_cl" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.llmEngine"><mxGeometry x="1040" y="680" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4_ci" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.importers"><mxGeometry x="1280" y="680" width="220" height="60" as="geometry"/></mxCell>
+
+        <!-- Filesystem -->
+        <mxCell id="p4_fs" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Device Project (FS)&#10;*.sysml · memo.config.yaml · .memo/"><mxGeometry x="500" y="900" width="600" height="100" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p4e1" parent="1" edge="1" source="p4_cmd" target="p4_dev" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo dev: starts"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e2" parent="1" edge="1" source="p4_dev" target="p4_fw" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="subscribe"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e3" parent="1" edge="1" source="p4_dev" target="p4_per" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="element:update / create"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e4" parent="1" edge="1" source="p4_dev" target="p4_cr" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="bootstrap"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e5" parent="1" edge="1" source="p4_fw" target="p4_cp" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="re-parse"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e6" parent="1" edge="1" source="p4_per" target="p4_fs" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="write .sysml"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e7" parent="1" edge="1" source="p4_fw" target="p4_fs" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;startArrow=classic;" value="watches"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e8" parent="1" edge="1" source="p4_cmd" target="p4_cre" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo validate"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e9" parent="1" edge="1" source="p4_cmd" target="p4_cd" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo dhf"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e10" parent="1" edge="1" source="p4_cmd" target="p4_cl" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo ask / generate"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e11" parent="1" edge="1" source="p4_cmd" target="p4_ci" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="memo import"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L2c" name="L2c — @memo/web">
+    <mxGraphModel dx="1700" dy="1300" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p5_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="@memo/web — Components (L2c)"><mxGeometry x="40" y="20" width="1620" height="32" as="geometry"/></mxCell>
+        <mxCell id="p5_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="WebSocket → wsClient → Zustand modelStore → 8 view components. modelStore is the single source of UI truth."><mxGeometry x="40" y="56" width="1620" height="22" as="geometry"/></mxCell>
+
+        <!-- External: cli devServer -->
+        <mxCell id="p5_dev" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="cli.devServer&#10;(out of process · WebSocket peer)"><mxGeometry x="650" y="120" width="400" height="80" as="geometry"/></mxCell>
+
+        <!-- WsClient -->
+        <mxCell id="p5_ws" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="wsClient&#10;persistent WebSocket · typed send/dispatch"><mxGeometry x="650" y="250" width="400" height="80" as="geometry"/></mxCell>
+
+        <!-- ModelStore -->
+        <mxCell id="p5_ms" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" value="modelStore (Zustand)&#10;&#10;model · validation · completeness · activeView (14 variants)&#10;selection · diagrams · ontology · DHF · pending edits"><mxGeometry x="450" y="380" width="800" height="140" as="geometry"/></mxCell>
+
+        <!-- Views row 1 (y=580) -->
+        <mxCell id="p5_dc" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="diagramCanvas&#10;ReactFlow + ELK auto-layout"><mxGeometry x="40" y="580" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_ce" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="catalogExplorer&#10;left-sidebar tree (V-Cycle)"><mxGeometry x="450" y="580" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_ed" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="elementDetailView&#10;right-panel attribute inspector"><mxGeometry x="860" y="580" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_db" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="dashboardViews&#10;Home · Review · Statistics · DHF"><mxGeometry x="1270" y="580" width="380" height="90" as="geometry"/></mxCell>
+
+        <!-- Views row 2 (y=720) -->
+        <mxCell id="p5_ov" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="ontologyViewer&#10;package list · kind grid · detail panel"><mxGeometry x="40" y="720" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_av" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="analysisViews&#10;Traceability · DSM · ModelDiff · Tabular"><mxGeometry x="450" y="720" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_gw" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="guidedWorkflows&#10;Workflow · Compliance wizards"><mxGeometry x="860" y="720" width="380" height="90" as="geometry"/></mxCell>
+        <mxCell id="p5_dw" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;" value="dhfWorkbenchUI&#10;document editor (CodeMirror)"><mxGeometry x="1270" y="720" width="380" height="90" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p5e1" parent="1" edge="1" source="p5_dev" target="p5_ws" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="WebSocket bidirectional"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e2" parent="1" edge="1" source="p5_ws" target="p5_ms" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="dispatch / send"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e3" parent="1" edge="1" source="p5_ms" target="p5_dc" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e4" parent="1" edge="1" source="p5_ms" target="p5_ce" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e5" parent="1" edge="1" source="p5_ms" target="p5_ed" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e6" parent="1" edge="1" source="p5_ms" target="p5_db" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e7" parent="1" edge="1" source="p5_ms" target="p5_ov" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e8" parent="1" edge="1" source="p5_ms" target="p5_av" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e9" parent="1" edge="1" source="p5_ms" target="p5_gw" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e10" parent="1" edge="1" source="p5_ms" target="p5_dw" style="endArrow=classic;startArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L2d" name="L2d — Ontology packages">
+    <mxGraphModel dx="1500" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p6_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="Ontology Packages (L2d)"><mxGeometry x="40" y="20" width="1420" height="32" as="geometry"/></mxCell>
+        <mxCell id="p6_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="Two-ontology backbone per ADR-1-10: architecture + process bridged by a single modeling profile. Device project imports the profile."><mxGeometry x="40" y="56" width="1420" height="22" as="geometry"/></mxCell>
+
+        <!-- Top row: arch + process -->
+        <mxCell id="p6_arch" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/ontology-arch&#10;&#10;11-layer MBSE backbone (ISO 42010)&#10;Operational · Behavioral · Functional · Logical · Software (+ Software-Extension/ROS) · Hardware · Safety · Security · Privacy · Verification&#10;~56 classes · 45 object props · 37 axioms"><mxGeometry x="60" y="160" width="640" height="200" as="geometry"/></mxCell>
+        <mxCell id="p6_proc" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/ontology-process&#10;&#10;Regulatory process activities + work products&#10;ISO 14971 · IEC 62304 · ISO 13485 · IEC 60601 · ISO 14155 · ISO 27001/27701 · FDA 21 CFR 820 · EU MDR&#10;Bridges to arch via producesEvidence / tracedTo"><mxGeometry x="800" y="160" width="640" height="200" as="geometry"/></mxCell>
+
+        <!-- Middle: profile -->
+        <mxCell id="p6_prof" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" value="@memo/medical-modeling-profile&#10;&#10;Modeling profile · extends both ontology packages&#10;35+ closure rules · viewpoints (Risk · Requirements · Architecture · Software · V&amp;V · DHF) · guided workflows · starter templates"><mxGeometry x="380" y="470" width="740" height="160" as="geometry"/></mxCell>
+
+        <!-- Bottom: device project -->
+        <mxCell id="p6_dev" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="Device Project&#10;memo.config.yaml: ontologies: [&quot;@memo/medical-modeling-profile&quot;]"><mxGeometry x="500" y="730" width="500" height="80" as="geometry"/></mxCell>
+
+        <!-- Side: ontology-loader -->
+        <mxCell id="p6_load" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;dashed=1;" value="core.ontologyLoader&#10;discover · merge · expose"><mxGeometry x="60" y="490" width="240" height="80" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p6e1" parent="1" edge="1" source="p6_arch" target="p6_proc" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="extends"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e2" parent="1" edge="1" source="p6_arch" target="p6_prof" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="extends"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e3" parent="1" edge="1" source="p6_proc" target="p6_prof" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;" value="extends"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e4" parent="1" edge="1" source="p6_prof" target="p6_dev" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=11;startArrow=classic;" value="imports"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e5" parent="1" edge="1" source="p6_load" target="p6_arch" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;" value="loads"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e6" parent="1" edge="1" source="p6_load" target="p6_proc" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;" value="loads"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e7" parent="1" edge="1" source="p6_load" target="p6_prof" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;fontSize=10;dashed=1;" value="loads"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="L3" name="L3 — Edit round-trip">
+    <mxGraphModel dx="1500" dy="1700" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1750" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p7_title" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" value="L3 — Element Edit Round-Trip"><mxGeometry x="40" y="20" width="1420" height="32" as="geometry"/></mxCell>
+        <mxCell id="p7_sub" parent="1" vertex="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=2;fontColor=#555555;" value="Numbered top-down: browser edit → WebSocket → .sysml patch → re-parse → broadcast → UI re-render. Filesystem is the source of truth."><mxGeometry x="40" y="56" width="1420" height="22" as="geometry"/></mxCell>
+
+        <!-- Lane labels -->
+        <mxCell id="p7_lane_b" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#999999;rotation=-90;" value="BROWSER"><mxGeometry x="40" y="200" width="60" height="200" as="geometry"/></mxCell>
+        <mxCell id="p7_lane_s" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#999999;rotation=-90;" value="SERVER"><mxGeometry x="40" y="540" width="60" height="200" as="geometry"/></mxCell>
+        <mxCell id="p7_lane_f" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#999999;rotation=-90;" value="FILESYSTEM"><mxGeometry x="40" y="760" width="60" height="100" as="geometry"/></mxCell>
+        <mxCell id="p7_lane_p" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#999999;rotation=-90;" value="PIPELINE"><mxGeometry x="40" y="900" width="60" height="320" as="geometry"/></mxCell>
+        <mxCell id="p7_lane_b2" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#999999;rotation=-90;" value="BROWSER"><mxGeometry x="40" y="1370" width="60" height="240" as="geometry"/></mxCell>
+
+        <!-- Steps (centred x=350 w=800) -->
+        <mxCell id="p7_s1" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="1. elementDetailView&#10;user edits an attribute"><mxGeometry x="350" y="120" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s2" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="2. modelStore.applyEdit (optimistic local update)"><mxGeometry x="350" y="230" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s3" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="3. wsClient.sendElementUpdate&#10;{ type: &quot;element:update&quot;, elementId, attributes }"><mxGeometry x="350" y="340" width="800" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="p7_gap1" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;fontColor=#888888;" value="── WebSocket ──"><mxGeometry x="350" y="445" width="800" height="20" as="geometry"/></mxCell>
+
+        <mxCell id="p7_s4" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="4. cli.devServer receives `element:update`"><mxGeometry x="350" y="475" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s5" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="5. cli.persistor.saveElementToFile&#10;line-level patch of source .sysml"><mxGeometry x="350" y="585" width="800" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="p7_s6" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="6. .sysml file mutated on disk"><mxGeometry x="350" y="700" width="800" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="p7_s7" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="7. cli.fileWatcher (chokidar) fires change event"><mxGeometry x="350" y="815" width="800" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="p7_s8" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="8. core.parser re-parses changed file (Langium)"><mxGeometry x="350" y="930" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s9" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="9. core.modelBuilder rebuilds MemoModel + indexes"><mxGeometry x="350" y="1040" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s10" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="10. core.ruleEngine re-validates (109 closure rules)&#10;11. core.completenessTracker recomputes per-layer %"><mxGeometry x="350" y="1150" width="800" height="100" as="geometry"/></mxCell>
+        <mxCell id="p7_s12" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="12. cli.devServer broadcasts:&#10;model:update · validation:update · completeness:update"><mxGeometry x="350" y="1280" width="800" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="p7_gap2" parent="1" vertex="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;fontColor=#888888;" value="── WebSocket ──"><mxGeometry x="350" y="1375" width="800" height="20" as="geometry"/></mxCell>
+
+        <mxCell id="p7_s13" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="13. wsClient dispatches messages → modelStore"><mxGeometry x="350" y="1405" width="800" height="80" as="geometry"/></mxCell>
+        <mxCell id="p7_s14" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" value="14. all subscribed React components re-render with reconciled state"><mxGeometry x="350" y="1515" width="800" height="80" as="geometry"/></mxCell>
+
+        <!-- Edges -->
+        <mxCell id="p7e1" parent="1" edge="1" source="p7_s1" target="p7_s2" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e2" parent="1" edge="1" source="p7_s2" target="p7_s3" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e3" parent="1" edge="1" source="p7_s3" target="p7_s4" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;dashed=1;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e4" parent="1" edge="1" source="p7_s4" target="p7_s5" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e5" parent="1" edge="1" source="p7_s5" target="p7_s6" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e6" parent="1" edge="1" source="p7_s6" target="p7_s7" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e7" parent="1" edge="1" source="p7_s7" target="p7_s8" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e8" parent="1" edge="1" source="p7_s8" target="p7_s9" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e9" parent="1" edge="1" source="p7_s9" target="p7_s10" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e10" parent="1" edge="1" source="p7_s10" target="p7_s12" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e11" parent="1" edge="1" source="p7_s12" target="p7_s13" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;dashed=1;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e12" parent="1" edge="1" source="p7_s13" target="p7_s14" style="endArrow=classic;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

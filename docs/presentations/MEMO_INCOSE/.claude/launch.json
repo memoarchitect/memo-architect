@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "memo-incose",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3001", "--directory", "/Users/someshkashyap/Downloads/MEMO_INCOSE"],
+      "port": 3001
+    }
+  ]
+}
