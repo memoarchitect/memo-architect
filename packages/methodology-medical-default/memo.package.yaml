@@ -1,0 +1,8 @@
+name: "@memo/methodology-medical-default"
+version: "1.0.0"
+type: methodology
+extends: "@memo/ontology-arch"
+sysmlDir: "../../ontology/methodology/memo"
+description: "MEMO default medical-device methodology — selects viewpoints/views/DHF documents from @memo/ontology-arch and adds rules, gates, patterns, profiles, and workflow."
+license: "Apache-2.0"
+tags: ["methodology", "medical-device", "iso-14971", "iec-62304", "memo"]

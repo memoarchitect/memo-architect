@@ -111,6 +111,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
 
+  packages/methodology-medical-default: {}
+
   packages/ontology-arch: {}
 
   packages/ontology-process: {}

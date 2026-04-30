@@ -1,0 +1,8 @@
+{
+  "type": "methodology-package",
+  "name": "@memo/methodology-medical-default",
+  "version": "1.0.0",
+  "extends": "@memo/ontology-arch",
+  "sysmlDir": "../../ontology/methodology/memo",
+  "usage": ["viewpoints", "views", "rules", "gates", "patterns", "profiles", "workflow", "dhf"]
+}
