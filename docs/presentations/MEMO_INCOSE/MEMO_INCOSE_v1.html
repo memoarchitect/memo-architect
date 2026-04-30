@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEMO — INCOSE 2026</title>
+<style>
+:root{
+  --ink:#071f35;
+  --ink-2:#0a2540;
+  --teal:#2dd4aa;
+  --teal-deep:#0d8b6f;
+  --teal-soft:#e6faf3;
+  --gray-50:#f5f7fa;
+  --gray-100:#eef2f5;
+  --gray-200:#dbe2e8;
+  --gray-400:#94a3b8;
+  --gray-600:#475569;
+  --gray-800:#1e293b;
+  --amber:#f59e0b;
+  --red:#dc2626;
+  --violet:#8b5cf6;
+  --blue:#3b82f6;
+  --green:#10b981;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#dde3e6;font-family:"Inter","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink);overflow:hidden}
+.app{height:100%;display:grid;place-items:center}
+.frame{width:min(1360px,calc(100vw - 56px));aspect-ratio:16/9;position:relative}
+.slide{position:absolute;inset:0;display:none;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 32px 70px rgba(7,31,53,.18);font-feature-settings:"ss01","cv11"}
+.slide.active{display:block}
+.slide.dark{background:radial-gradient(ellipse at 75% 30%, #0a3a5c 0%, #071f35 55%, #04101e 100%);color:#fff}
+
+/* Shared chrome */
+.badge{position:absolute;top:42px;left:56px;display:inline-flex;align-items:center;gap:14px;font-weight:700;font-size:14px;letter-spacing:.18em;color:var(--teal-deep)}
+.badge .num{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--teal-deep);color:#fff;font-size:16px;letter-spacing:0}
+.slide.dark .badge{color:#7ce5c2}
+.slide.dark .badge .num{background:rgba(45,212,170,.18);color:#7ce5c2;box-shadow:inset 0 0 0 1.5px #2dd4aa}
+.foot{position:absolute;bottom:22px;left:56px;right:56px;display:flex;justify-content:space-between;font-size:12px;color:var(--gray-400);letter-spacing:.12em;text-transform:uppercase}
+.foot .num{color:var(--gray-600);font-weight:700}
+.slide.dark .foot{color:rgba(255,255,255,.45)}
+.slide.dark .foot .num{color:#7ce5c2}
+
+/* Hero */
+.hero{padding:96px 64px 96px 64px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+.hero h1{font-size:84px;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0 0 12px}
+.hero h1 .accent{color:var(--teal)}
+.hero h2{font-size:24px;font-weight:500;color:#a4d0e8;margin:0 0 28px;letter-spacing:.01em}
+.hero .lede{font-size:32px;font-weight:600;line-height:1.25;max-width:780px;color:#fff;margin:0 0 28px}
+.hero .meta{font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.hero .net{position:absolute;right:-40px;top:-40px;width:680px;height:680px;background:radial-gradient(circle at 60% 40%, rgba(45,212,170,.18) 0%, transparent 60%);pointer-events:none}
+.hero .wave{position:absolute;left:0;right:0;bottom:0;height:380px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1360 380' preserveAspectRatio='none'><path d='M0 280 C300 100 700 360 1360 180 L1360 380 L0 380 Z' fill='none' stroke='%232dd4aa' stroke-width='2' opacity='.55'/><path d='M0 300 C300 140 700 380 1360 200' fill='none' stroke='%232dd4aa' stroke-width='1.4' opacity='.35'/><path d='M0 320 C300 180 700 400 1360 230' fill='none' stroke='%232dd4aa' stroke-width='1' opacity='.25'/></svg>") no-repeat center bottom/cover;pointer-events:none}
+
+/* Content slides */
+.body{padding:108px 64px 64px;height:100%;display:flex;flex-direction:column}
+.eyebrow{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-deep);font-weight:700;margin-bottom:8px}
+h1.title{font-size:54px;line-height:1.05;font-weight:800;letter-spacing:-.025em;margin:0 0 14px;color:var(--ink)}
+.subtitle{font-size:20px;color:var(--gray-600);max-width:1000px;margin:0 0 36px;line-height:1.4}
+
+/* Card grid */
+.grid{display:grid;gap:18px}
+.grid.c2{grid-template-columns:1fr 1fr}
+.grid.c3{grid-template-columns:1fr 1fr 1fr}
+.grid.c4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--gray-50);border-radius:16px;padding:24px 22px;border:1px solid var(--gray-200);position:relative}
+.card .ic{width:42px;height:42px;border-radius:11px;background:var(--teal-soft);color:var(--teal-deep);display:grid;place-items:center;margin-bottom:14px;font-weight:800}
+.card h3{margin:0 0 8px;font-size:18px;font-weight:700;color:var(--ink)}
+.card p{margin:0;font-size:15px;line-height:1.45;color:var(--gray-600)}
+.card.accent{background:#fff;border:1.5px solid var(--teal);box-shadow:0 8px 24px rgba(45,212,170,.12)}
+.card .top-bar{position:absolute;top:0;left:18px;right:18px;height:4px;border-radius:0 0 4px 4px;background:var(--teal)}
+.card.violet .top-bar{background:var(--violet)} .card.blue .top-bar{background:var(--blue)} .card.amber .top-bar{background:var(--amber)} .card.red .top-bar{background:var(--red)} .card.green .top-bar{background:var(--green)}
+
+.callout{margin-top:auto;padding:18px 22px;border-radius:14px;background:var(--teal-soft);color:var(--ink);display:flex;gap:14px;align-items:center;font-size:16px;border-left:4px solid var(--teal-deep)}
+.callout strong{color:var(--teal-deep)}
+.callout.warn{background:#fff5f5;border-left-color:var(--red)}
+.callout.warn strong{color:var(--red)}
+
+/* Image-only slides */
+.imgslide{height:100%;width:100%;background:#fff}
+.imgslide img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* Story-page (slide 2) */
+.story{padding:96px 80px;height:100%;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(135deg,#071f35 0%,#0a3550 100%);color:#fff}
+.story .quote{font-size:42px;font-weight:600;line-height:1.25;max-width:1100px;letter-spacing:-.015em}
+.story .quote .hl{color:var(--teal);font-weight:700}
+.story .attr{margin-top:36px;font-size:16px;color:rgba(255,255,255,.55);letter-spacing:.15em;text-transform:uppercase}
+.story .small{font-size:18px;color:rgba(255,255,255,.75);max-width:780px;margin-top:24px;line-height:1.5}
+
+/* Loop diagram */
+.loop{display:grid;grid-template-columns:200px 1fr 200px;gap:28px;align-items:center;flex:1}
+.loop .col{display:flex;flex-direction:column;gap:14px}
+.loop .col .lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-deep);font-weight:700}
+.loop .col .desc{font-size:14px;color:var(--gray-600);line-height:1.4}
+.loop .center{position:relative;height:380px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;place-items:center}
+.node{width:148px;height:148px;border-radius:50%;display:grid;place-items:center;text-align:center;font-weight:700;font-size:15px;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.node small{display:block;font-weight:500;font-size:11px;margin-top:4px;opacity:.85;line-height:1.3;padding:0 10px}
+.node.arch{background:#3b82f6;grid-row:2;grid-column:2;width:170px;height:170px;font-size:17px}
+.node.beh{background:#8b5cf6;grid-row:1;grid-column:2}
+.node.req{background:#3b82f6;grid-row:3;grid-column:2;background:#5b9bd5}
+.node.risk{background:#ef6c5a;grid-row:2;grid-column:3}
+.node.ass{background:#10b981;grid-row:2;grid-column:1}
+
+/* Hierarchy bars */
+.hier{display:flex;flex-direction:column;gap:14px;flex:1}
+.row{display:grid;grid-template-columns:200px 1fr 220px;align-items:center;gap:18px;padding:18px 22px;border-radius:14px;background:var(--gray-50);border:1px solid var(--gray-200);position:relative}
+.row::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:6px;border-radius:3px;background:var(--teal)}
+.row.b::before{background:#3b82f6} .row.v::before{background:#8b5cf6} .row.o::before{background:#f59e0b} .row.g::before{background:#10b981}
+.row .name{font-size:22px;font-weight:800;color:var(--ink);padding-left:14px}
+.row .meaning{font-size:15px;color:var(--gray-600)}
+.row .pill{justify-self:end;padding:8px 14px;border-radius:999px;background:#fff;border:1px solid var(--gray-200);font-size:12px;font-weight:700;color:var(--gray-800);letter-spacing:.04em}
+
+/* Three-col data slides */
+.tri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;flex:1}
+.tri .panel{background:#fff;border:1px solid var(--gray-200);border-radius:16px;padding:22px;position:relative;display:flex;flex-direction:column}
+.tri .panel::before{content:"";position:absolute;top:0;left:18px;right:18px;height:4px;border-radius:0 0 4px 4px;background:var(--teal)}
+.tri .panel.b::before{background:#3b82f6}.tri .panel.v::before{background:#8b5cf6}.tri .panel.o::before{background:#f59e0b}.tri .panel.r::before{background:#ef6c5a}.tri .panel.g::before{background:#10b981}
+.tri h3{margin:8px 0 12px;font-size:17px;font-weight:800;color:var(--ink)}
+.tri ul{margin:0;padding-left:18px;color:var(--gray-600);font-size:14px;line-height:1.6}
+.tri li{margin-bottom:4px}
+.tri li code{background:var(--gray-100);padding:1px 6px;border-radius:5px;font-size:12.5px;color:var(--ink-2);font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+
+/* Flow chips */
+.flow{display:flex;align-items:center;gap:12px;margin:14px 0 22px}
+.chip{flex:1;background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;text-align:center;font-weight:700;font-size:14px;color:var(--ink);position:relative}
+.chip::before{content:"";position:absolute;top:0;left:14px;right:14px;height:3px;border-radius:0 0 3px 3px;background:var(--teal)}
+.chip.b::before{background:#3b82f6}.chip.v::before{background:#8b5cf6}.chip.o::before{background:#f59e0b}.chip.r::before{background:#ef6c5a}.chip.g::before{background:#10b981}.chip.y::before{background:#eab308}
+.arr{color:var(--gray-400);font-size:18px}
+
+/* GPCA thread */
+.thread{display:grid;grid-template-columns:280px 1fr;gap:32px;flex:1;align-items:start}
+.thread .stack{display:flex;flex-direction:column;gap:10px}
+.thread .step{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}
+.thread .tag{padding:10px 12px;border-radius:10px;color:#fff;font-size:12.5px;font-weight:700;text-align:center;letter-spacing:.02em}
+.thread .tag.t1{background:#10b981}.thread .tag.t2{background:#5b9bd5}.thread .tag.t3{background:#8b5cf6}.thread .tag.t4{background:#f59e0b}.thread .tag.t5{background:#ef6c5a}.thread .tag.t6{background:#10b981}.thread .tag.t7{background:#22c1a3}.thread .tag.t8{background:#eab308}
+.thread .val{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:14px;color:var(--ink);font-weight:600}
+.thread .arrow{grid-column:1/3;text-align:center;color:var(--gray-400);font-size:14px;margin:-4px 0}
+
+/* Strategy horizons */
+.horiz{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;flex:1}
+.horiz .h{position:relative;background:linear-gradient(180deg,#fff,var(--gray-50));border:1px solid var(--gray-200);border-radius:16px;padding:24px;display:flex;flex-direction:column}
+.horiz .h .when{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-deep);font-weight:800;margin-bottom:6px}
+.horiz .h h3{margin:0 0 12px;font-size:22px;font-weight:800;color:var(--ink);line-height:1.15}
+.horiz .h ul{margin:0;padding-left:18px;color:var(--gray-600);font-size:14.5px;line-height:1.55}
+.horiz .h .num{position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:10px;background:var(--teal-soft);color:var(--teal-deep);display:grid;place-items:center;font-weight:800;font-size:14px}
+
+/* Comparison table */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;border-radius:16px;overflow:hidden;border:1px solid var(--gray-200)}
+.cmp .col{padding:24px 26px;display:flex;flex-direction:column;gap:8px}
+.cmp .col.before{background:#fff5f0;border-right:1px solid var(--gray-200)}
+.cmp .col.after{background:var(--teal-soft)}
+.cmp .col h3{margin:0 0 8px;font-size:18px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:10px}
+.cmp .col.before h3 .dot{background:#ef6c5a}
+.cmp .col.after h3 .dot{background:var(--teal-deep)}
+.cmp .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.cmp .item{font-size:15px;color:var(--gray-800);padding:8px 0;border-top:1px solid rgba(0,0,0,.06);line-height:1.45}
+.cmp .item:first-of-type{border-top:none}
+
+/* Cover bottom */
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:24px;color:#fff;letter-spacing:.01em}
+.brand .m{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--teal);color:#04101e;font-weight:900;font-size:20px}
+
+/* Final slide stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:42px;margin:24px 0 32px}
+.stat .k{font-size:14px;color:rgba(255,255,255,.6);letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.stat .v{font-size:30px;font-weight:800;color:#fff;margin-top:8px;line-height:1.15}
+.stat .v .accent{color:var(--teal)}
+
+/* Insight quote */
+.quote-card{position:absolute;top:42px;right:56px;width:380px;padding:30px;border-radius:18px;background:linear-gradient(135deg,#0a3550,#071f35);color:#fff}
+.quote-card .mark{font-size:48px;color:var(--teal);line-height:0;display:block;margin-bottom:18px}
+.quote-card p{font-size:18px;line-height:1.4;margin:0}
+.quote-card .hl{color:var(--teal);font-weight:700;display:block;margin-top:8px}
+
+/* Nav */
+.counter{position:fixed;left:18px;top:18px;background:rgba(255,255,255,.92);padding:9px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.nav{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+.nav button{width:46px;height:46px;border:none;border-radius:14px;background:rgba(7,31,53,.85);color:#fff;font-size:22px;cursor:pointer;backdrop-filter:blur(6px)}
+.nav button:hover{background:#071f35}
+.dots{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:7px;flex-wrap:wrap;max-width:80vw;justify-content:center;background:rgba(255,255,255,.85);padding:8px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.dots button{width:9px;height:9px;border-radius:999px;border:none;background:#cbd5e1;cursor:pointer;padding:0}
+.dots button.active{background:var(--teal-deep);width:24px;border-radius:6px}
+.progress{position:fixed;left:0;right:0;top:0;height:3px;background:transparent}
+.progress>div{height:100%;width:0;background:var(--teal);transition:width .3s ease}
+</style>
+</head>
+<body>
+<div class="app"><div class="frame">
+
+<!-- 1 — COVER -->
+<section class="slide dark active">
+  <div class="hero">
+    <div class="net"></div>
+    <div class="wave"></div>
+    <div style="position:absolute;top:48px;left:64px;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:700">INCOSE 2026 · Medical Systems Working Group</div>
+    <h2>Medical Engineering Modeling Ontology</h2>
+    <h1>MEMO<span class="accent">.</span></h1>
+    <p class="lede">A semantic backbone that makes safety evidence stable under change — for safety-critical medical devices.</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div class="brand"><span class="m">M</span> MEMO Ontology</div>
+      <div class="meta">Open Source · SysML v2 · ISO 42010</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 — STORY OPEN -->
+<section class="slide">
+  <div class="story">
+    <div class="quote">It is <span class="hl">11 p.m. before an audit.</span><br>An engineer changes one line in <span class="hl">REQ-145</span>. The next morning, no one in the room can answer the question that follows: <span class="hl">"What evidence is still valid?"</span></div>
+    <div class="small">A small change. A clean diff. And a safety case that quietly stopped meaning what it said.</div>
+    <div class="attr">— A familiar story across regulated medical engineering</div>
+  </div>
+</section>
+
+<!-- 3 — Problem -->
+<section class="slide imgslide"><img src="images/02_Problem_Evidence_Not_Stable.png" alt="Evidence not stable"></section>
+
+<!-- 4 — Drift -->
+<section class="slide imgslide"><img src="images/03_Evidence_Drift.png" alt="Evidence drift"></section>
+
+<!-- 5 — Cost of drift -->
+<section class="slide">
+  <div class="badge"><span class="num">05</span><span>WHY IT MATTERS</span></div>
+  <div class="body">
+    <h1 class="title">Drift is expensive — and quiet</h1>
+    <p class="subtitle">Unverified change is the silent driver of recalls, rework, and audit findings.</p>
+    <div class="grid c4" style="flex:1">
+      <div class="card"><div class="ic">21%</div><h3>FDA recalls</h3><p>Software & traceability flagged in roughly one-fifth of Class II/III recalls (FDA MAUDE, 2023).</p></div>
+      <div class="card"><div class="ic">~40%</div><h3>Rework cost</h3><p>Late-stage requirement and risk rework absorbs 30–45% of typical V&amp;V budgets.</p></div>
+      <div class="card"><div class="ic">⏱</div><h3>Audit time</h3><p>Reconstructing a single broken trace before audit: days, not minutes.</p></div>
+      <div class="card"><div class="ic">↻</div><h3>Lost confidence</h3><p>Each silent break weakens the safety case the next reviewer reads.</p></div>
+    </div>
+    <div class="callout warn" style="margin-top:18px"><strong>The cost is not the link.</strong>&nbsp;It is the doubt every broken link injects into the case.</div>
+  </div>
+</section>
+
+<!-- 6 — Industry context -->
+<section class="slide imgslide"><img src="images/04_Industry_Context.png" alt="Industry context"></section>
+
+<!-- 7 — Key insight -->
+<section class="slide imgslide"><img src="images/05_Key_Insight.png" alt="Key insight"></section>
+
+<!-- 8 — MEMO solution -->
+<section class="slide imgslide"><img src="images/06_Our_Solution.png" alt="Our solution"></section>
+
+<!-- 9 — ISO 42010 / MBSE alignment (NEW for INCOSE) -->
+<section class="slide">
+  <div class="badge"><span class="num">09</span><span>FRAMING · INCOSE</span></div>
+  <div class="body">
+    <h1 class="title">Built on what you already practice</h1>
+    <p class="subtitle">MEMO is not a new methodology. It is a semantic layer underneath the methodologies your teams use.</p>
+    <div class="grid c3" style="flex:1">
+      <div class="card"><span class="top-bar"></span><div class="ic">ISO</div><h3>ISO/IEC/IEEE 42010</h3><p>Concerns → Viewpoints → Views → Models. MEMO supplies the typed elements that views reference.</p></div>
+      <div class="card violet"><span class="top-bar"></span><div class="ic" style="background:#ede9fe;color:#6d28d9">SE</div><h3>Arcadia / MBSE</h3><p>Operational → System → Logical → Physical. MEMO names them, links them, and keeps them consistent.</p></div>
+      <div class="card blue"><span class="top-bar"></span><div class="ic" style="background:#dbeafe;color:#1d4ed8">v2</div><h3>SysML v2</h3><p>Kinds and links live in SysML v2 source — parsed, version-controlled, diffable. The model is the artifact.</p></div>
+    </div>
+    <div class="callout" style="margin-top:18px"><strong>Position.</strong>&nbsp;MEMO sits between the standards (ISO 14971, IEC 62304) and the modeling tools — a domain ontology, not a new tool stack.</div>
+  </div>
+</section>
+
+<!-- 10 — Architecture-centered loop -->
+<section class="slide">
+  <div class="badge"><span class="num">10</span><span>STORYLINE</span></div>
+  <div class="body">
+    <h1 class="title">Architecture-centered MEMO loop</h1>
+    <p class="subtitle">Use MEMO as an iterative engineering loop — not a one-way checklist.</p>
+    <div class="loop">
+      <div class="col">
+        <div class="lbl">Context</div>
+        <div class="desc">stakeholders, care setting, intended use</div>
+      </div>
+      <div class="center">
+        <div class="node beh">Behavior<br>+ Scenarios<small>walk scenarios, modes, contracts</small></div>
+        <div class="node ass">Assurance<small>verification &amp; evidence</small></div>
+        <div class="node arch">Architecture<small>stable design backbone</small></div>
+        <div class="node risk">Risk<small>hazard chains &amp; controls</small></div>
+        <div class="node req">Requirements<small>needs + risk-driven obligations</small></div>
+      </div>
+      <div class="col">
+        <div class="lbl">Views / documents</div>
+        <div class="desc">RMF · SDD · V&amp;V · compiled views</div>
+      </div>
+    </div>
+    <div class="callout"><strong>Practitioner sequence.</strong>&nbsp;Architecture → behavior/scenarios → risk → requirements + assurance, then iterate back through architecture.</div>
+  </div>
+</section>
+
+<!-- 11 — Ontology hierarchy -->
+<section class="slide">
+  <div class="badge"><span class="num">11</span><span>ONTOLOGY HIERARCHY</span></div>
+  <div class="body">
+    <h1 class="title">Keep the mental model small</h1>
+    <p class="subtitle">A stable core. Architecture, process, extensions, and examples around it.</p>
+    <div class="hier">
+      <div class="row"><div class="name">Core</div><div class="meaning">traceable elements + typed links</div><div class="pill">stable semantics</div></div>
+      <div class="row b"><div class="name">Architecture</div><div class="meaning">context, behavior, risk, requirements, assurance</div><div class="pill">model the system</div></div>
+      <div class="row v"><div class="name">Process</div><div class="meaning">viewpoints, rules, gates, document views</div><div class="pill">apply the method</div></div>
+      <div class="row o"><div class="name">Extensions</div><div class="meaning">cybersecurity, usability, AI/ML, device-specific profiles</div><div class="pill">add domain depth</div></div>
+      <div class="row g"><div class="name">Examples</div><div class="meaning">GPCA-style worked trace threads</div><div class="pill">learn by reference</div></div>
+    </div>
+    <div class="callout" style="margin-top:14px"><strong>Rule.</strong>&nbsp;Extend by packages and profiles. Do not keep expanding the core vocabulary.</div>
+  </div>
+</section>
+
+<!-- 12 — Architecture layer -->
+<section class="slide">
+  <div class="badge"><span class="num">12</span><span>ARCHITECTURE LAYER</span></div>
+  <div class="body">
+    <h1 class="title">Start with architecture viewpoints</h1>
+    <p class="subtitle">Arcadia-inspired flow: separate need from solution, then move from context to functions, logical architecture, and realization.</p>
+    <div class="tri">
+      <div class="panel g"><h3>Viewpoints</h3><ul><li>context and operational intent</li><li>functional chains and flows</li><li>logical structure and interfaces</li><li>software / hardware realization</li><li>constraint definitions</li></ul></div>
+      <div class="panel b"><h3>MEMO elements</h3><ul><li><code>Actor</code>, <code>UseContext</code></li><li><code>LogicalFunction</code>, <code>LogicalFlow</code></li><li><code>LogicalComponent</code>, <code>Interface</code></li><li><code>SoftwareComponent</code>, <code>HardwareAssembly</code></li><li>constraints &amp; allocations</li></ul></div>
+      <div class="panel g"><h3>Architect questions</h3><ul><li>who owns each responsibility?</li><li>where do interfaces and timing matter?</li><li>which elements implement safety controls?</li><li>what changes when a design decision changes?</li></ul></div>
+    </div>
+    <div class="callout" style="margin-top:18px"><strong>Takeaway.</strong>&nbsp;Architecture is the backbone that behavior, risk, requirements, and evidence attach to.</div>
+  </div>
+</section>
+
+<!-- 13 — Behavior + scenarios -->
+<section class="slide">
+  <div class="badge"><span class="num">13</span><span>BEHAVIOR + SCENARIOS</span></div>
+  <div class="body">
+    <h1 class="title">Walk scenarios before formalizing behavior</h1>
+    <p class="subtitle">Scenario analysis turns abstract architecture into observable system behavior.</p>
+    <div class="tri">
+      <div class="panel v"><h3>Scenario view</h3><ul><li>actor + stimulus</li><li>system response</li><li>environment / assumptions</li><li>response measure</li></ul></div>
+      <div class="panel b"><h3>Behavior model</h3><ul><li><code>BehaviorMachine</code></li><li><code>ModeState</code>, <code>Transition</code></li><li>behavior properties</li><li>contracts</li></ul></div>
+      <div class="panel o"><h3>Architectural value</h3><ul><li>reveals missing interactions</li><li>surfaces timing assumptions</li><li>feeds hazard analysis</li><li>creates verification anchors</li></ul></div>
+    </div>
+    <div class="flow" style="margin-top:18px">
+      <div class="chip v">Normal scenario</div><span class="arr">→</span>
+      <div class="chip b">Alternate flow</div><span class="arr">→</span>
+      <div class="chip r">Off-nominal behavior</div><span class="arr">→</span>
+      <div class="chip g">Behavior property</div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 — Risk layer -->
+<section class="slide">
+  <div class="badge"><span class="num">14</span><span>RISK LAYER · ISO 14971</span></div>
+  <div class="body">
+    <h1 class="title">Analyze risk from behavior and architecture</h1>
+    <p class="subtitle">Risk is most useful when the hazard chain points to scenarios, interfaces, allocations, and controls.</p>
+    <div class="flow">
+      <div class="chip r">Hazard</div><span class="arr">→</span>
+      <div class="chip o">Sequence</div><span class="arr">→</span>
+      <div class="chip y">Situation</div><span class="arr">→</span>
+      <div class="chip b">Harm</div><span class="arr">→</span>
+      <div class="chip g">Control</div><span class="arr">→</span>
+      <div class="chip v">Residual</div>
+    </div>
+    <div class="tri" style="margin-top:14px">
+      <div class="panel r"><h3>Risk elements</h3><ul><li><code>Hazard</code>, <code>Harm</code></li><li><code>SequenceOfEvents</code></li><li><code>HazardousSituation</code></li><li><code>RiskBefore</code> / <code>RiskAfter</code></li><li><code>RiskControl</code></li></ul></div>
+      <div class="panel b"><h3>Architect questions</h3><ul><li>which scenario creates exposure?</li><li>which element implements the control?</li><li>what must be segregated?</li><li>what must be verified?</li></ul></div>
+      <div class="panel g"><h3>GPCA example</h3><ul><li>overdose hazard</li><li>frequent bolus sequence</li><li>excess infusion situation</li><li>lockout control</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 — Requirements -->
+<section class="slide">
+  <div class="badge"><span class="num">15</span><span>REQUIREMENTS LAYER</span></div>
+  <div class="body">
+    <h1 class="title">Stabilize intent after design and risk insight</h1>
+    <p class="subtitle">Requirements capture agreed obligations — but their quality depends on architecture, behavior, and risk analysis.</p>
+    <div class="tri">
+      <div class="panel b"><h3>Inputs</h3><ul><li>stakeholder needs</li><li>scenario findings</li><li>risk controls</li><li>architecture decisions</li></ul></div>
+      <div class="panel v"><h3>Requirement model</h3><ul><li><code>Requirement</code></li><li><code>SystemRequirement</code></li><li><code>SoftwareRequirement</code></li><li><code>HardwareRequirement</code></li><li>acceptance criteria</li></ul></div>
+      <div class="panel g"><h3>Typed links</h3><ul><li><code>source</code> link</li><li><code>satisfaction</code> link</li><li><code>allocation</code> link</li><li><code>verification</code> link</li></ul></div>
+    </div>
+    <div class="flow" style="margin-top:18px">
+      <div class="chip">Need</div><span class="arr">→</span>
+      <div class="chip b">Design insight</div><span class="arr">→</span>
+      <div class="chip r">Risk driver</div><span class="arr">→</span>
+      <div class="chip v">Requirement</div><span class="arr">→</span>
+      <div class="chip g">Verification intent</div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 — Assurance closure -->
+<section class="slide">
+  <div class="badge"><span class="num">16</span><span>ASSURANCE + CLOSURE</span></div>
+  <div class="body">
+    <h1 class="title">Close the safety thread with current evidence</h1>
+    <p class="subtitle">The goal is not more links. The goal is a checkable path from claim to current evidence.</p>
+    <div class="flow">
+      <div class="chip b">Claim</div><span class="arr">→</span>
+      <div class="chip v">Realization</div><span class="arr">→</span>
+      <div class="chip g">VerificationCase</div><span class="arr">→</span>
+      <div class="chip o">Evidence</div><span class="arr">→</span>
+      <div class="chip">Document view</div>
+    </div>
+    <div class="tri" style="margin-top:14px">
+      <div class="panel g"><h3>Assurance elements</h3><ul><li><code>VerificationCase</code></li><li><code>TestArtifact</code></li><li><code>Evidence</code></li><li><code>VerificationLink</code></li><li><code>EvidenceProductionLink</code></li></ul></div>
+      <div class="panel"><h3>Closure check</h3><ul><li>claim is allocated</li><li>control is realized</li><li>case is defined</li><li>evidence is current</li></ul></div>
+      <div class="panel b"><h3>Architectural value</h3><ul><li>impact analysis</li><li>stale evidence detection</li><li>audit-ready reasoning</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 — GPCA worked thread -->
+<section class="slide">
+  <div class="badge"><span class="num">17</span><span>ONTOLOGY IN ACTION</span></div>
+  <div class="body">
+    <h1 class="title">One GPCA-style closed thread</h1>
+    <p class="subtitle">Small enough to follow. Complete enough to prove the semantic backbone.</p>
+    <div class="thread">
+      <div class="stack">
+        <div class="step"><div class="tag t1">Need</div><div class="val">needSafeTherapy</div></div>
+        <div class="step"><div class="tag t2">Requirement</div><div class="val">reqLockout</div></div>
+        <div class="step"><div class="tag t3">Architecture</div><div class="val">infusionMgr</div></div>
+        <div class="step"><div class="tag t4">Behavior</div><div class="val">guaranteeLockoutPreventsBolus</div></div>
+        <div class="step"><div class="tag t5">Risk control</div><div class="val">prevent overdose during lockout</div></div>
+        <div class="step"><div class="tag t6">Verification</div><div class="val">vcLockout</div></div>
+        <div class="step"><div class="tag t7">Evidence</div><div class="val">evidenceLockout</div></div>
+        <div class="step"><div class="tag t8">Document view</div><div class="val">rmfView</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card accent"><h3>Why this works</h3><p>The path crosses architecture, behavior, risk, and evidence. Change impact is computed — not reconstructed. Document views compile from the same baseline.</p></div>
+        <div class="callout"><strong>Takeaway.</strong>&nbsp;MEMO becomes useful when the safety argument and the architecture model live in the same semantic system.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 — Strategy: 3 horizons (NEW) -->
+<section class="slide">
+  <div class="badge"><span class="num">18</span><span>ADOPTION STRATEGY</span></div>
+  <div class="body">
+    <h1 class="title">Three horizons, one trajectory</h1>
+    <p class="subtitle">An adoption-first roadmap that earns trust before it grows scope.</p>
+    <div class="horiz">
+      <div class="h"><div class="num">H1</div><div class="when">Now · 2026</div><h3>Prove the backbone</h3><ul><li>open-source ontology + reference models (GPCA, infusion pump)</li><li>SysML v2 source-of-truth, CLI + viewer</li><li>worked safety threads as proof artifacts</li><li>seed adoption with one design partner per modality</li></ul></div>
+      <div class="h"><div class="num">H2</div><div class="when">2026–2027</div><h3>Compile compliance</h3><ul><li>auto-compiled RMF, SDD, V&amp;V views from one model</li><li>typed-link impact analysis &amp; stale-evidence detection</li><li>profiles: cybersecurity, usability, AI/ML, alarms</li><li>integrate with existing PLM &amp; ALM via export adapters</li></ul></div>
+      <div class="h"><div class="num">H3</div><div class="when">2027+</div><h3>Ecosystem &amp; assurance</h3><ul><li>device-specific profile registry</li><li>auditor-readable assurance cases</li><li>cross-domain bridges to ARP4761 / ISO 26262 patterns</li><li>community-governed ontology evolution</li></ul></div>
+    </div>
+    <div class="callout" style="margin-top:18px"><strong>Sequence.</strong>&nbsp;Unified model first, then compliance outputs, then ecosystem — never the other way around.</div>
+  </div>
+</section>
+
+<!-- 19 — Before / after -->
+<section class="slide">
+  <div class="badge"><span class="num">19</span><span>WHAT CHANGES</span></div>
+  <div class="body">
+    <h1 class="title">Documents → Models → Computable evidence</h1>
+    <p class="subtitle">Same regulations. Same engineers. A different substrate underneath them.</p>
+    <div class="cmp">
+      <div class="col before">
+        <h3><span class="dot"></span> Today: documents drift</h3>
+        <div class="item">Word, Excel, DOORS, Polarion — links across silos</div>
+        <div class="item">Trace meaning is implicit, owned by individuals</div>
+        <div class="item">Change impact is reconstructed by hand, before audit</div>
+        <div class="item">RMF, SDD, V&amp;V evolve in parallel — and disagree</div>
+        <div class="item">Evidence is "true" only at submission time</div>
+      </div>
+      <div class="col after">
+        <h3><span class="dot"></span> With MEMO: a semantic backbone</h3>
+        <div class="item">SysML v2 source — diffable, versioned, machine-checkable</div>
+        <div class="item">Typed links carry intent — satisfaction, allocation, verification</div>
+        <div class="item">Closure rules compute impact &amp; flag stale evidence on every change</div>
+        <div class="item">RMF, SDD, V&amp;V compile from one model — they cannot disagree</div>
+        <div class="item">Evidence currency is a property, not a snapshot</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 20 — Why INCOSE / call to action -->
+<section class="slide dark">
+  <div class="badge"><span class="num">20</span><span>NEXT STEP</span></div>
+  <div style="padding:120px 64px 64px;height:100%;display:flex;flex-direction:column;position:relative">
+    <div class="net" style="position:absolute;right:-80px;top:-80px;width:780px;height:780px;background:radial-gradient(circle at 60% 40%, rgba(45,212,170,.18) 0%, transparent 60%);pointer-events:none"></div>
+    <div class="wave" style="position:absolute;left:0;right:0;bottom:0;height:300px;background:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1360 300' preserveAspectRatio='none'><path d='M0 220 C300 80 700 280 1360 140' fill='none' stroke='%232dd4aa' stroke-width='2' opacity='.5'/><path d='M0 240 C300 120 700 300 1360 170' fill='none' stroke='%232dd4aa' stroke-width='1.4' opacity='.3'/></svg>&quot;) no-repeat center bottom/cover;pointer-events:none"></div>
+    <h1 style="font-size:80px;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0 0 18px;color:#fff;max-width:1000px">Adopt the<br><span style="color:var(--teal)">semantic backbone.</span></h1>
+    <p style="font-size:24px;color:#a4d0e8;margin:0 0 28px;max-width:780px;line-height:1.35">Build safer medical devices. Prove it with confidence.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Faster changes</div><div class="v">with <span class="accent">lower risk</span></div></div>
+      <div class="stat"><div class="k">Stronger cases</div><div class="v">for <span class="accent">regulators</span></div></div>
+      <div class="stat"><div class="k">Better quality</div><div class="v">with <span class="accent">less rework</span></div></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;position:relative;z-index:2">
+      <div>
+        <div style="font-size:13px;color:rgba(255,255,255,.55);letter-spacing:.18em;text-transform:uppercase;font-weight:700;margin-bottom:8px">Get involved</div>
+        <div style="font-size:18px;color:#fff;line-height:1.5">github.com/memo-ontology · INCOSE Medical SE WG<br>Open source · SysML v2 · ISO 42010 aligned</div>
+      </div>
+      <div class="brand"><span class="m">M</span> MEMO</div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="counter"><span id="idx">1</span> / <span id="tot"></span></div>
+<div class="nav"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button></div>
+<div class="dots" id="dots"></div>
+<div class="progress"><div id="bar"></div></div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const idxEl=document.getElementById('idx'),totEl=document.getElementById('tot'),bar=document.getElementById('bar'),dots=document.getElementById('dots');
+let i=0;
+function render(){
+  slides.forEach((s,n)=>s.classList.toggle('active',n===i));
+  [...dots.children].forEach((d,n)=>d.classList.toggle('active',n===i));
+  idxEl.textContent=i+1;totEl.textContent=slides.length;
+  bar.style.width=((i+1)/slides.length*100)+'%';
+  location.hash='#slide-'+(i+1);
+}
+window.go=function(n){i=Math.max(0,Math.min(slides.length-1,n));render()};
+slides.forEach((_,n)=>{const b=document.createElement('button');b.onclick=()=>go(n);dots.appendChild(b)});
+document.getElementById('prev').onclick=()=>go(i-1);
+document.getElementById('next').onclick=()=>go(i+1);
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(i+1)}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(i-1)}
+  if(e.key==='Home')go(0);
+  if(e.key==='End')go(slides.length-1);
+});
+if(location.hash.startsWith('#slide-')){const n=parseInt(location.hash.replace('#slide-',''),10);if(!isNaN(n)&&n>=1&&n<=slides.length)i=n-1;}
+render();
+</script>
+</body>
+</html>

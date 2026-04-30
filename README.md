@@ -2,6 +2,17 @@
 
 MEMO is an open-source, SysML v2-native platform for medical device architecture, analysis, traceability, and documentation. It enables teams to model systems as code, connect architecture to risk and requirements, and generate review-ready engineering artifacts from a single living model.
 
+> ## 📐 Architecture & Roadmap (read first)
+>
+> | Doc | Purpose |
+> |---|---|
+> | **[`docs/src/developers/architecture/fresh-architecture-plan.md`](docs/src/developers/architecture/fresh-architecture-plan.md)** | **v3 architecture spec** — 20 sections, 32 ADRs, 15 principles. Namespace, ontology shape, four-tab UI, Miro-like diagramming engine, ConsistencyRule taxonomy, three-wave release. |
+> | **[`docs/src/developers/architecture/sysmlv2-rulebook.md`](docs/src/developers/architecture/sysmlv2-rulebook.md)** | **SysML v2 modelling rule book** — 60+ rules from OMG SysML-v2-Release, GfSE, FiBO2SysMLv2. |
+> | **[`docs/src/developers/architecture/execution-plan.md`](docs/src/developers/architecture/execution-plan.md)** | **133 Sonnet-sized sessions** across three release waves: W1 ontology (`.kpar` for SysON/SysIDE) → W2 CLI (`memo` command) → W3 web (modular feature flags). |
+> | **[`docs/src/developers/architecture/architecture-blocks.drawio`](docs/src/developers/architecture/architecture-blocks.drawio)** | 7-tab block diagram (hierarchy · namespace map · core blocks · UI tabs · data flow · quality attributes · dependency graph). |
+>
+> **GitLab is the single source of truth for issues + milestones.** Run `pnpm run roadmap` for live state. Use `memo roadmap-sync` to reconcile execution-plan.md ↔ GitLab. See [§Roadmap & Sync](#roadmap--sync) below.
+
 ## Why MEMO?
 
 Existing MBSE tools are either too complex (Cameo, Enterprise Architect — months of training) or too generic (no regulatory compliance). MEMO bridges the gap:
@@ -179,21 +190,47 @@ cd ../irrigation-pump
 node ../../packages/cli/lib/bin/memo.js validate
 ```
 
-## Roadmap & Project Management
+## Roadmap & Sync
 
-GitLab is the single source of truth for planning. The roadmap queries GitLab live — no local cache files.
+**GitLab is the single source of truth for issues + milestones.** The architecture spec (`fresh-architecture-plan.md`) and execution plan (`execution-plan.md`) define what to build; GitLab tracks state.
+
+### Three-wave release plan
+
+```
+W1 ONTOLOGY  →  W2 CLI  →  W3 WEB TOOL  (modular feature flags)
+```
+
+- **W1 — Ontology release** (`@memo/ontology-base` as `.kpar`) — usable in Eclipse SysON, SysIDE, Sysand. 32 sessions.
+- **W2 — CLI release** (`memo` command + VS Code language server) — headless, scriptable, CI-friendly. 25 sessions.
+- **W3 — Web tool release** (`memo-architect`) — incremental, modular, feature-flagged per tab/renderer/tool. 76 sessions.
+
+Each wave ships independently. Total: **133 sessions** mapped to GitLab milestones grouped by `wave::` scoped labels.
+
+### Live state
 
 ```bash
 pnpm run roadmap              # Phase summary (live from GitLab)
-pnpm run roadmap:open         # Open issues grouped by phase
-pnpm run roadmap:done         # Closed issues grouped by phase
+pnpm run roadmap:open         # Open issues grouped by milestone
 pnpm run roadmap:bugs         # Open bugs only
-pnpm run roadmap -- -p c2     # Single phase detail
+pnpm run roadmap -- -p w1.p2  # Single milestone detail
 ```
 
-To add or modify work: create/update GitLab issues and milestones directly.
+### Sync local spec ↔ GitLab
 
-**Product strategy:** [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md) — the strategic anchor for prioritization decisions.
+```bash
+memo roadmap-sync --dry-run   # Show diff between execution-plan.md and GitLab
+memo roadmap-sync --apply     # Create missing milestones/issues; close superseded ones
+memo roadmap-sync --verify    # Fail if GitLab and spec drift apart (CI gate)
+```
+
+The sync utility parses `docs/src/developers/architecture/execution-plan.md` session tables, reconciles with GitLab via `glab`, and updates milestones, issues, labels, and ADR cross-references. **GitLab wins on state (open/closed/in-progress); spec wins on scope (what should exist).**
+
+To add or modify work:
+1. Edit the relevant section in `execution-plan.md` (or `fresh-architecture-plan.md` if architectural).
+2. Run `memo roadmap-sync --apply`.
+3. Verify in GitLab.
+
+**Product strategy:** [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md) — strategic anchor for prioritisation.
 
 ## Documentation
 
