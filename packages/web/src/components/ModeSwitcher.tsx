@@ -145,6 +145,7 @@ export function ModeSwitcher() {
         if (activeView.type === 'scenario-editor') return 'scenario';
         if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') return 'ontology';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
+        if (activeMode === 'catalog') return 'catalog';
         if (activeView.type === 'dashboard') return 'dashboard';
         return activeMode;
     })();
@@ -167,6 +168,7 @@ export function ModeSwitcher() {
                 navigate('/');
                 break;
             case 'catalog':
+                setActiveView({ type: 'welcome' });
                 navigate('/catalog');
                 break;
             case 'diagram':
