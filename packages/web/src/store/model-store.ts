@@ -144,6 +144,7 @@ export interface ModelState {
     explorerTab: ExplorerTab;
     selectedElementId: string | null;
     selectedElementIds: Set<string>;
+    recentlyVisited: string[];
     selectedViewpointId: string | null;
     selectedDiagramId: string | null;
     searchTerm: string;
@@ -309,6 +310,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     explorerTab: 'model' as ExplorerTab,
     selectedElementId: null,
     selectedElementIds: new Set<string>(),
+    recentlyVisited: [],
     selectedViewpointId: null,
     selectedDiagramId: null,
     searchTerm: '',
@@ -446,9 +448,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setExplorerTab: (tab) => set({ explorerTab: tab }),
     selectElement: (id) => {
         if (id) {
-            set({
-                selectedElementId: id,
-                activeView: { type: 'element-detail', elementId: id },
+            set((s) => {
+                const next = [id, ...s.recentlyVisited.filter(x => x !== id)].slice(0, 20);
+                return {
+                    selectedElementId: id,
+                    activeView: { type: 'element-detail', elementId: id },
+                    recentlyVisited: next,
+                };
             });
         } else {
             set({ selectedElementId: id });
