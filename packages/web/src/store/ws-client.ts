@@ -115,6 +115,10 @@ function handleMessage(msg: ServerMessage): void {
             if (restartPending) return;
             store.setCompleteness(msg.payload);
             break;
+        case 'methodology:update':
+            if (restartPending) return;
+            store.setMethodology(msg.payload);
+            break;
         case 'error':
             console.error('[MEMO] Server error:', msg.payload.message);
             break;

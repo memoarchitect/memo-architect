@@ -2,8 +2,8 @@
 
 **Branch:** `feedback-ontology-replace`
 **Baseline tag:** `pre-feedback-ontology-replace` (commit `00b798a`)
-**Latest commit on branch:** Phase C — methodology package split (`@memo/methodology-medical-default`, project `methodology:` field)
-**Status:** Phases 0–C complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Ontology viewer shows methodology + ontology-arch as type-discriminated entries. UI re-IA (Phase D) + authoring app (Phase E) pending.
+**Latest commit on branch:** Phase D1 — dashboard sidebar shows recently-visited elements
+**Status:** Phases 0–D1 complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Ontology viewer shows methodology + ontology-arch as type-discriminated entries. Dashboard sidebar now shows session-local recently-visited feed. D2–D5 + authoring app (Phase E) pending.
 
 ---
 
@@ -201,7 +201,7 @@ Phase C **deferred** the empty-stub deletion (`packages/ontology-process`, `pack
 
 Goal: implement the target IA. **Touch one tab at a time. Verify in browser between each.**
 
-- **D1** Dashboard sidebar → "Recently updated elements" feed (replace current full-tree element list).
+- **D1** Dashboard sidebar → "Recently updated elements" feed (replace current full-tree element list). ✅ done — `DashboardSidebar.tsx`, store gained `recentlyVisited: string[]` (session-only, top 20). Falls back to kind-diverse sample when empty. Activated only for `activeView.type === 'dashboard'`.
 - **D2** Diagrams tab → tree = methodology.viewpoints → views → user-drawn diagrams. Each view-def from `ontology/views/` becomes a template; user diagrams appear nested under their matching view.
 - **D3** Model Explorer → pure element catalog (kinds + instances). Drop view rendering from this tab.
 - **D4** DHF tab → list driven by `methodology.dhf_documents`. Each entry uses its referenced document-view template from `ontology/compliance/`.

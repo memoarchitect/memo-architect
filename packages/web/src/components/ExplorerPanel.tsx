@@ -1082,6 +1082,7 @@ function CollapsibleSection({ label, count, defaultOpen, children }: {
 
 function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
+    const methodology = useModelStore(s => s.methodology);
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
@@ -1100,6 +1101,29 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     };
 
     const viewpoints = useMemo(() => model?.viewpoints ?? [], [model?.viewpoints]);
+
+    // ─── Phase D2: methodology viewpoints (top-level tree source) ───────────
+    const methodologyViewpoints = useMemo(() => {
+        if (!methodology) return [];
+        const out: { id: string; name: string; title: string; description: string; folder: string }[] = [];
+        for (const folder of methodology.folders) {
+            const vps = folder.parts['Viewpoint'] ?? [];
+            for (const vp of vps) {
+                const idAttr = vp.attributes['id'];
+                const nameAttr = vp.attributes['name'];
+                const titleAttr = vp.attributes['title'];
+                const descAttr = vp.attributes['shortDescription'] ?? vp.attributes['longDescription'];
+                out.push({
+                    id: typeof idAttr === 'string' ? idAttr : vp.partName,
+                    name: typeof nameAttr === 'string' ? nameAttr : vp.partName,
+                    title: typeof titleAttr === 'string' ? titleAttr : (typeof nameAttr === 'string' ? nameAttr : vp.partName),
+                    description: typeof descAttr === 'string' ? descAttr : '',
+                    folder: folder.name,
+                });
+            }
+        }
+        return out;
+    }, [methodology]);
 
     const filterDiagrams = (diagrams: DiagramDTO[]): DiagramDTO[] => {
         if (!searchTerm) return diagrams;
@@ -1132,6 +1156,48 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+            {/* Phase D2: Methodology Viewpoints — primary tree when methodology pinned */}
+            {methodologyViewpoints.length > 0 && (
+                <div style={{ marginBottom: '6px', borderBottom: `1px solid ${COLOR.border}`, paddingBottom: '6px' }}>
+                    <div className="px-3 py-1" style={{
+                        fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                        letterSpacing: '0.08em', color: COLOR.muted,
+                    }}>
+                        Methodology Viewpoints
+                    </div>
+                    {methodologyViewpoints.map(mvp => {
+                        const isExpanded = expandedVps.has(`mvp::${mvp.id}`);
+                        return (
+                            <div key={`mvp::${mvp.id}`} className="mb-0.5">
+                                <div
+                                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                                    style={{ borderRadius: '4px', margin: '0 4px' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    onClick={() => toggleExpand(`mvp::${mvp.id}`)}
+                                    title={mvp.description}
+                                >
+                                    <ChevronIcon expanded={isExpanded} size={14} color={COLOR.accent} />
+                                    <FolderIcon open={isExpanded} color={COLOR.accent} />
+                                    <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>
+                                        {mvp.title}
+                                    </span>
+                                    <span style={{ color: COLOR.faint, fontSize: FONT.badge, fontFamily: 'monospace' }}>{mvp.id}</span>
+                                </div>
+                                {isExpanded && (
+                                    <div style={{ marginLeft: '24px', padding: '4px 0', fontSize: FONT.xs, color: COLOR.muted, lineHeight: 1.5 }}>
+                                        {mvp.description || <em>No description.</em>}
+                                        <div style={{ marginTop: '4px', fontSize: '10px', color: COLOR.faint }}>
+                                            from <code style={{ fontFamily: 'monospace' }}>{mvp.folder}</code> · views &amp; diagrams pending (Phase D2 stub)
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
             {/* Model Viewpoint */}
             <div className="mb-0.5">
                 <div

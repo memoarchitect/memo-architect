@@ -137,6 +137,7 @@ export interface ModelState {
     completeness: CompletenessReport | null;
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
+    methodology: import('@memo/core').MethodologyDescriptor | null;
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
@@ -199,6 +200,7 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
+    setMethodology: (m: import('@memo/core').MethodologyDescriptor | null) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -303,6 +305,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     completeness: null,
     connected: false,
     restartRequired: null,
+    methodology: null,
 
     // UI state
     activeMode: 'catalog' as AppMode,
@@ -431,6 +434,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
+    setMethodology: (m) => set({ methodology: m }),
     setModel: (model) => set((s) => ({
         model,
         // Navigate to dashboard on first model load if we're on welcome/dashboard
