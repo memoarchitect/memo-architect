@@ -134,4 +134,64 @@ package memo::methodology::profiles {
         attribute name = "GPCAProjectMethodBinding";
         attribute projectName = "GPCA";
     }
+
+    part rmpDoc : DhfDocumentBinding {
+        attribute id = "DHF-001";
+        attribute name = "RiskManagementPlan";
+        attribute documentTitle = "Risk Management Plan";
+        attribute groupLabel = "Risk Management";
+        attribute templateId = "iso-14971/rmp";
+        attribute viewKind = "RMF";
+        attribute regulatoryReference = "ISO 14971";
+        attribute lifecycleStage = WorkflowStageKind::risk;
+        attribute required = true;
+    }
+
+    part harDoc : DhfDocumentBinding {
+        attribute id = "DHF-002";
+        attribute name = "HazardAnalysisReport";
+        attribute documentTitle = "Hazard Analysis Report";
+        attribute groupLabel = "Risk Management";
+        attribute templateId = "iso-14971/har";
+        attribute viewKind = "RMF";
+        attribute regulatoryReference = "ISO 14971";
+        attribute lifecycleStage = WorkflowStageKind::risk;
+        attribute required = true;
+    }
+
+    part sadDoc : DhfDocumentBinding {
+        attribute id = "DHF-003";
+        attribute name = "SoftwareArchitectureDescription";
+        attribute documentTitle = "Software Architecture Description";
+        attribute groupLabel = "Software";
+        attribute templateId = "iec-62304/sad";
+        attribute viewKind = "ArchitectureDescription";
+        attribute regulatoryReference = "IEC 62304";
+        attribute lifecycleStage = WorkflowStageKind::architecture;
+        attribute required = true;
+    }
+
+    part threatModelDoc : DhfDocumentBinding {
+        attribute id = "DHF-004";
+        attribute name = "CybersecurityThreatModel";
+        attribute documentTitle = "Threat Model";
+        attribute groupLabel = "Cybersecurity";
+        attribute templateId = "fda-cybersecurity/threat-model";
+        attribute viewKind = "ThreatModel";
+        attribute regulatoryReference = "FDA Cybersecurity Guidance";
+        attribute lifecycleStage = WorkflowStageKind::risk;
+        attribute required = true;
+    }
+
+    part vvPlanDoc : DhfDocumentBinding {
+        attribute id = "DHF-005";
+        attribute name = "VerificationValidationPlan";
+        attribute documentTitle = "V&V Plan";
+        attribute groupLabel = "Verification & Validation";
+        attribute templateId = "21cfr820/vv-plan";
+        attribute viewKind = "VV";
+        attribute regulatoryReference = "21 CFR 820.30";
+        attribute lifecycleStage = WorkflowStageKind::verification;
+        attribute required = true;
+    }
 }

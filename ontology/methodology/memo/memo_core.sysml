@@ -24,4 +24,14 @@ package memo::methodology::core {
     part def ProjectMethodBinding :> TraceableElement {
         attribute projectName : String;
     }
+
+    part def DhfDocumentBinding :> TraceableElement {
+        attribute documentTitle : String;
+        attribute groupLabel : String;
+        attribute templateId : String;
+        attribute viewKind : String;
+        attribute regulatoryReference : String;
+        attribute lifecycleStage : WorkflowStageKind;
+        attribute required : Boolean;
+    }
 }
