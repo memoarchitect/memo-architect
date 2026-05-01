@@ -2,8 +2,8 @@
 
 **Branch:** `feedback-ontology-replace`
 **Baseline tag:** `pre-feedback-ontology-replace` (commit `00b798a`)
-**Latest commit on branch:** Phase D1 — dashboard sidebar shows recently-visited elements
-**Status:** Phases 0–D1 complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Ontology viewer shows methodology + ontology-arch as type-discriminated entries. Dashboard sidebar now shows session-local recently-visited feed. D2–D5 + authoring app (Phase E) pending.
+**Latest commit on branch:** Phase D2 — methodology viewpoints in Diagrams sidebar
+**Status:** Phases 0–D2 complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Dashboard sidebar shows session-local recently-visited feed. Diagrams sidebar shows methodology viewpoints (RiskManagementView VP-001, SoftwareArchitectureView VP-002 from gpca methodology) above the legacy viewpoint tree. D3–D5 + authoring app (Phase E) pending.
 
 ---
 
@@ -202,7 +202,7 @@ Phase C **deferred** the empty-stub deletion (`packages/ontology-process`, `pack
 Goal: implement the target IA. **Touch one tab at a time. Verify in browser between each.**
 
 - **D1** Dashboard sidebar → "Recently updated elements" feed (replace current full-tree element list). ✅ done — `DashboardSidebar.tsx`, store gained `recentlyVisited: string[]` (session-only, top 20). Falls back to kind-diverse sample when empty. Activated only for `activeView.type === 'dashboard'`.
-- **D2** Diagrams tab → tree = methodology.viewpoints → views → user-drawn diagrams. Each view-def from `ontology/views/` becomes a template; user diagrams appear nested under their matching view.
+- **D2** Diagrams tab → tree = methodology.viewpoints → views → user-drawn diagrams. Each view-def from `ontology/views/` becomes a template; user diagrams appear nested under their matching view. ⚠️ partial — methodology:update wired into store (`methodology` field + `setMethodology`); `ViewExplorerContent` shows a "Methodology Viewpoints" section above the legacy tree, sourced from `methodology.folders[*].parts['Viewpoint']`. Each entry currently a stub (title + id + description on expand). Still pending: nesting view-defs from `ontology/views/` under each viewpoint, and matching user diagrams to a methodology viewpoint id (today they only know about legacy `model.viewpoints`).
 - **D3** Model Explorer → pure element catalog (kinds + instances). Drop view rendering from this tab.
 - **D4** DHF tab → list driven by `methodology.dhf_documents`. Each entry uses its referenced document-view template from `ontology/compliance/`.
 - **D5** Delete Ontology tab. Add **Methodology** tab — read-only viewer showing the active methodology (viewpoints, views, DHF docs, rules). Add a "Edit in <authoring app>" button (disabled until Phase E lands).
