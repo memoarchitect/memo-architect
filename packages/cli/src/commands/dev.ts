@@ -168,8 +168,14 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
     // ── end bootstrap ──────────────────────────────────────────────────────────
 
     // ── rebuildProject: hot path — no ontology reload ─────────────────────────
+    const methodologyConfigPath: string = configPath;
     async function rebuildProject(): Promise<{ messages: ServerMessage[] }> {
         buildCount++;
+        try {
+            methodologyDescriptor = await loadMethodologyDescriptor(methodologyConfigPath, cwd);
+        } catch {
+            // keep last good descriptor on transient parse failure
+        }
         const sysmlFiles = findSysmlFiles(cwd);
         const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
         const model = buildMemoModel(documents, config, errors, ontologyRegistries);

@@ -1591,6 +1591,42 @@ function DhfExplorerContent() {
     const addDhfDocument = useModelStore(s => s.addDhfDocument);
     const removeDhfDocument = useModelStore(s => s.removeDhfDocument);
     const dhfSettings = useModelStore(s => s.dhfSettings);
+    const methodology = useModelStore(s => s.methodology);
+
+    // ─── Phase D4: methodology-pinned DHF documents ─────────────────────────
+    const methodologyDhfBindings = useMemo(() => {
+        if (!methodology) return [];
+        const out: {
+            id: string; partName: string; documentTitle: string; groupLabel: string;
+            templateId: string; viewKind: string; regulatoryReference: string;
+            required: boolean; folder: string;
+        }[] = [];
+        for (const folder of methodology.folders) {
+            const bindings = folder.parts['DhfDocumentBinding'] ?? [];
+            for (const b of bindings) {
+                const a = b.attributes;
+                const idAttr = a['id'];
+                const titleAttr = a['documentTitle'];
+                const groupAttr = a['groupLabel'];
+                const templateAttr = a['templateId'];
+                const viewKindAttr = a['viewKind'];
+                const regAttr = a['regulatoryReference'];
+                const reqAttr = a['required'];
+                out.push({
+                    id: typeof idAttr === 'string' ? idAttr : b.partName,
+                    partName: b.partName,
+                    documentTitle: typeof titleAttr === 'string' ? titleAttr : b.partName,
+                    groupLabel: typeof groupAttr === 'string' ? groupAttr : '',
+                    templateId: typeof templateAttr === 'string' ? templateAttr : '',
+                    viewKind: typeof viewKindAttr === 'string' ? viewKindAttr : '',
+                    regulatoryReference: typeof regAttr === 'string' ? regAttr : '',
+                    required: typeof reqAttr === 'boolean' ? reqAttr : false,
+                    folder: folder.name,
+                });
+            }
+        }
+        return out;
+    }, [methodology]);
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
         new Set(DHF_GROUPS.map(g => g.id))
@@ -1663,9 +1699,68 @@ function DhfExplorerContent() {
         return () => window.removeEventListener('click', handler);
     }, [contextMenu]);
 
+    function createFromBinding(b: typeof methodologyDhfBindings[number]) {
+        const existingDoc = dhfDocuments.find(d => d.templateId === b.templateId);
+        if (existingDoc) {
+            setActiveView({ type: 'dhf-document', docId: existingDoc.id });
+            return;
+        }
+        const tmpl = DHF_GROUPS.flatMap(g => g.templates).find(t => t.id === b.templateId);
+        if (tmpl) {
+            createDocuments([tmpl]);
+        }
+    }
+
     return (
         <>
             <div className="flex-1 overflow-y-auto py-1">
+                {/* Phase D4: Methodology DHF documents — driven by methodology.dhf_documents */}
+                {methodologyDhfBindings.length > 0 && (
+                    <div style={{ marginBottom: '6px', borderBottom: `1px solid ${COLOR.border}`, paddingBottom: '6px' }}>
+                        <div className="px-3 py-1" style={{
+                            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                            letterSpacing: '0.08em', color: COLOR.muted,
+                        }}>
+                            Methodology DHF
+                        </div>
+                        {methodologyDhfBindings.map(b => {
+                            const existingDoc = dhfDocuments.find(d => d.templateId === b.templateId);
+                            const isActive = existingDoc != null && activeDocId === existingDoc.id;
+                            const tmplKnown = DHF_GROUPS.some(g => g.templates.some(t => t.id === b.templateId));
+                            return (
+                                <div
+                                    key={`mdhf::${b.id}`}
+                                    onClick={() => createFromBinding(b)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                        padding: '5px 12px',
+                                        cursor: tmplKnown ? 'pointer' : 'default',
+                                        background: isActive ? '#EEF2FF' : 'transparent',
+                                        borderLeft: isActive ? '2px solid #6366F1' : '2px solid transparent',
+                                    }}
+                                    title={`${b.regulatoryReference || ''} · template: ${b.templateId}${tmplKnown ? '' : ' (unknown — no built-in template)'}`}
+                                    onMouseEnter={e => { if (!isActive && tmplKnown) e.currentTarget.style.background = COLOR.surfaceAlt; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = isActive ? '#EEF2FF' : 'transparent'; }}
+                                >
+                                    <span style={{
+                                        fontSize: '9px', fontFamily: 'monospace',
+                                        color: b.required ? '#DC2626' : COLOR.faint,
+                                        fontWeight: 700,
+                                    }}>{b.id}</span>
+                                    <span style={{ flex: 1, fontSize: FONT.explorer.element, color: COLOR.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {b.documentTitle}
+                                    </span>
+                                    {existingDoc ? (
+                                        <span style={{ fontSize: '9px', color: '#059669', fontWeight: 700 }}>✓</span>
+                                    ) : (
+                                        <span style={{ fontSize: '9px', color: COLOR.faint }}>+</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
                 {DHF_GROUPS.map(group => {
                     const expanded = expandedGroups.has(group.id);
                     const groupDocs = dhfDocuments.filter(d => d.group === group.label);
