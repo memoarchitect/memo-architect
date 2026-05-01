@@ -12,6 +12,7 @@ import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GRO
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
+import { DashboardSidebar } from './DashboardSidebar';
 import type { MemoElement, DiagramDTO } from '@memo/core';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
@@ -1805,7 +1806,9 @@ export function ExplorerPanel() {
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
 
             {/* Content driven entirely by top-nav mode — no redundant tab strip */}
-            {activeMode === 'dhf' ? (
+            {activeView.type === 'dashboard' ? (
+                <DashboardSidebar />
+            ) : activeMode === 'dhf' ? (
                 <DhfExplorerContent />
             ) : activeMode === 'diagram' ? (
                 <>
