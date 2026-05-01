@@ -2,8 +2,8 @@
 
 **Branch:** `feedback-ontology-replace`
 **Baseline tag:** `pre-feedback-ontology-replace` (commit `00b798a`)
-**Latest commit on branch:** Phase D2 — methodology viewpoints in Diagrams sidebar
-**Status:** Phases 0–D2 complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Dashboard sidebar shows session-local recently-visited feed. Diagrams sidebar shows methodology viewpoints (RiskManagementView VP-001, SoftwareArchitectureView VP-002 from gpca methodology) above the legacy viewpoint tree. D3–D5 + authoring app (Phase E) pending.
+**Latest commit on branch:** Phase D3 — Model Explorer pure element catalog
+**Status:** Phases 0–D3 complete. Build green. Prototype boots on gpca-pump with the new methodology pin. Dashboard sidebar shows session-local recently-visited feed. Diagrams sidebar shows methodology viewpoints (RiskManagementView VP-001, SoftwareArchitectureView VP-002) above the legacy viewpoint tree. Model Explorer drops the `views` layer (and `viewpoints`/`methodology`/`manifest`) — sidebar now Architecture/Core/Undefined only. D4–D5 + authoring app (Phase E) pending.
 
 ---
 
@@ -203,7 +203,7 @@ Goal: implement the target IA. **Touch one tab at a time. Verify in browser betw
 
 - **D1** Dashboard sidebar → "Recently updated elements" feed (replace current full-tree element list). ✅ done — `DashboardSidebar.tsx`, store gained `recentlyVisited: string[]` (session-only, top 20). Falls back to kind-diverse sample when empty. Activated only for `activeView.type === 'dashboard'`.
 - **D2** Diagrams tab → tree = methodology.viewpoints → views → user-drawn diagrams. Each view-def from `ontology/views/` becomes a template; user diagrams appear nested under their matching view. ⚠️ partial — methodology:update wired into store (`methodology` field + `setMethodology`); `ViewExplorerContent` shows a "Methodology Viewpoints" section above the legacy tree, sourced from `methodology.folders[*].parts['Viewpoint']`. Each entry currently a stub (title + id + description on expand). Still pending: nesting view-defs from `ontology/views/` under each viewpoint, and matching user diagrams to a methodology viewpoint id (today they only know about legacy `model.viewpoints`).
-- **D3** Model Explorer → pure element catalog (kinds + instances). Drop view rendering from this tab.
+- **D3** Model Explorer → pure element catalog (kinds + instances). Drop view rendering from this tab. ✅ done — `ExplorerPanel.tsx` `groupTree` filters out `NON_ELEMENT_LAYERS = {views, viewpoints, methodology, manifest}` from both the layer-group derivation and the `Undefined — Not in Ontology` fallback. Sidebar gate switched from `activeView.type === 'dashboard'` to `activeMode === 'dashboard'` so DashboardSidebar no longer leaks into catalog mode. `ModeSwitcher` `case 'catalog'` now `setActiveView({ type: 'welcome' })` so the dashboard view doesn't linger after navigation, and `activeNavMode` returns `'catalog'` when `activeMode === 'catalog'` so the Model Explorer button highlights correctly. Verified in browser: gpca-pump Catalog shows Architecture (56), Core (3), Undefined (6) — no Views group.
 - **D4** DHF tab → list driven by `methodology.dhf_documents`. Each entry uses its referenced document-view template from `ontology/compliance/`.
 - **D5** Delete Ontology tab. Add **Methodology** tab — read-only viewer showing the active methodology (viewpoints, views, DHF docs, rules). Add a "Edit in <authoring app>" button (disabled until Phase E lands).
 - After D5, the old kinds list moves to a collapsed sub-pane inside Model Explorer (dev-only debug surface).

@@ -668,8 +668,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         const elements = Object.values(model.elements);
         const lower = searchTerm.toLowerCase();
 
-        // Derive groups and kind→layer map from the currently selected ontology packages
-        const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies);
+        // Derive groups and kind→layer map from the currently selected ontology packages.
+        // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
+        const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'methodology', 'manifest']);
+        const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies)
+            .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
         const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
         const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
@@ -697,6 +700,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         for (const el of elements) {
             const layerId = kindToLayerId[el.kind] ?? el.layer;
             if (knownLayerIds.has(layerId)) continue;
+            if (NON_ELEMENT_LAYERS.has(layerId)) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
             if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
             uncategorizedMap.get(el.kind)!.push(el);
@@ -1872,7 +1876,7 @@ export function ExplorerPanel() {
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
 
             {/* Content driven entirely by top-nav mode — no redundant tab strip */}
-            {activeView.type === 'dashboard' ? (
+            {activeMode === 'dashboard' ? (
                 <DashboardSidebar />
             ) : activeMode === 'dhf' ? (
                 <DhfExplorerContent />
