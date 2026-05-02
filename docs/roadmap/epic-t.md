@@ -4,6 +4,8 @@ Wave: 1 (SysML foundation)
 
 Priority: P0
 
+Story Types: Architecture + Implementation (FB5 reclassification is architectural)
+
 Goal: adopt the Sysand package format (`.project.json`, `sysand-lock.toml`, `.kpar` build) so MEMO ontology and methodology packages are consumable by SysON, SysIDE, and Sysand without a MEMO-specific loader.
 
 Depends on: ADR-1-12.

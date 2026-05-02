@@ -80,6 +80,54 @@ Epics M–DD do not yet have GitLab parent issues. Their prefix slots are reserv
 
 GitLab milestones (timeboxes) are not used as roadmap hierarchy. Legacy milestones (`W1.P*`, `W2.P*`, `W3.P*`) are closed. Legacy issue migration + title prefixes + label setup + pinned Roadmap Overview issue are all applied by [scripts/migrate-roadmap-to-epics.sh](../../scripts/migrate-roadmap-to-epics.sh).
 
+### Listing Roadmap Items From GitLab
+
+Helper script [scripts/list-roadmap.sh](../../scripts/list-roadmap.sh) wraps the API + jq filters:
+
+| Subcommand | What it lists |
+|---|---|
+| `./scripts/list-roadmap.sh epics` | Open epic parents only (titles ending `.00]`) |
+| `./scripts/list-roadmap.sh stories` | Open stories only (titles ending `.NN]` where NN > 00) |
+| `./scripts/list-roadmap.sh all` | Open epics + stories together (full roadmap) |
+| `./scripts/list-roadmap.sh wave 1` | All open items in Wave 1 (parents + stories) |
+| `./scripts/list-roadmap.sh epic K` | All open items under Epic K |
+| `./scripts/list-roadmap.sh closed` | Closed roadmap items (recently completed) |
+
+Output is sorted by title prefix → reproduces roadmap order.
+
+Equivalent raw commands (without the script):
+
+```bash
+# Open epic parents only
+glab api 'projects/somesh_sandbox%2Fmemo/issues?state=opened&per_page=100' --paginate \
+  | jq -r '.[] | select(.title | test("^\\[W[0-9]+\\.[0-9]+\\.00\\] ")) | "#\(.iid)\t\(.title)"' \
+  | sort -t$'\t' -k2
+
+# All open epics + stories
+glab api 'projects/somesh_sandbox%2Fmemo/issues?state=opened&per_page=100' --paginate \
+  | jq -r '.[] | select(.title | test("^\\[W[0-9]+\\.[0-9]+\\.[0-9]+\\] ")) | "#\(.iid)\t\(.title)"' \
+  | sort -t$'\t' -k2
+
+# Wave 2 only
+glab api 'projects/somesh_sandbox%2Fmemo/issues?state=opened&per_page=100' --paginate \
+  | jq -r '.[] | select(.title | test("^\\[W2\\.")) | "#\(.iid)\t\(.title)"' \
+  | sort -t$'\t' -k2
+
+# All open issues (raw, no roadmap filter — includes legacy)
+glab issue list -R somesh_sandbox/memo --state opened --per-page 200
+```
+
+## Story Type Convention
+
+Each epic file declares a `Story Types:` line under `Priority:` covering the dominant work type for stories in that epic. Per-story overrides go in the story body when needed. Categories:
+
+- **Architecture** — story requires a binding decision affecting >1 epic or a public surface contract. Pre-step: write or update an ADR.
+- **Design** — story requires an internal API, file layout, schema, or algorithm choice. Pre-step: write a short design note in `docs/design/<topic>.md`.
+- **Implementation** — mechanical change against a known design / known ADR.
+- **Documentation** — doc-only change. No code.
+
+Refer to [LLM.md "Story Type Classification"](../LLM.md#story-type-classification) for the full table and the agent-facing rules.
+
 ## Rules
 
 - Epic and story files in this folder are the authoritative roadmap. GitLab work items mirror them.

@@ -1,8 +1,10 @@
 # Epic J: Repo Split Preparation
 
-Original scope: E9
+Wave: 4 (UI thin wrapper)
 
 Priority: P1
+
+Story Types: Design (boundary inventory + split checklist)
 
 Goal: prepare package and repository boundaries for `memo-base`, `memo-ontology`, `memo-methodologies`, and `memo-architect`.
 

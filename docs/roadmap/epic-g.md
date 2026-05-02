@@ -1,8 +1,10 @@
 # Epic G: Default Methodology
 
-Original scope: E6
+Wave: 2 (Methodology in SysML)
 
 Priority: P0
+
+Story Types: Implementation
 
 Goal: establish `@memo/methodology-default` as the comprehensive medical-device methodology.
 

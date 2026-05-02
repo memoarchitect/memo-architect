@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P0
 
+Story Types: Design + Implementation (dispatcher contract)
+
 Goal: introduce a renderer dispatcher with `RendererPlan` so each diagram kind is an isolated module wrapping ontology data, never owning truth.
 
 Depends on: Epic C, Epic D, Epic E (dimension data must exist first).

@@ -1,8 +1,10 @@
 # Epic K: Grammar Support
 
-Original scope: F
+Wave: 1 (SysML foundation)
 
 Priority: P0
+
+Story Types: Architecture (grammar decisions; may require new ADR)
 
 Goal: support the grammar features required by the architecture migration.
 

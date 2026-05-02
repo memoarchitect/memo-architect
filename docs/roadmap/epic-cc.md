@@ -4,6 +4,8 @@ Wave: 3 (CLI surface)
 
 Priority: P1
 
+Story Types: Documentation
+
 Goal: split documentation into Users vs Developers tracks, complete the user manual covering every CLI command, and document developer extension points.
 
 Depends on: Epic I, Epic S.

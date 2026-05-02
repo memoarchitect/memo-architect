@@ -4,6 +4,8 @@ Wave: 3 (CLI surface)
 
 Priority: P1
 
+Story Types: Design + Implementation (machine output schema)
+
 Goal: make every CLI command emit machine-readable output (`--format json`, `--format junit`) and document parity gaps against the web UI so the CLI stays a first-class authoring path.
 
 Depends on: Epic I (CLI authoring slices).

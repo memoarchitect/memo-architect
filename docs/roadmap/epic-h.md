@@ -1,8 +1,10 @@
 # Epic H: GPCA Custom Methodology
 
-Original scope: E7
+Wave: 2 (Methodology in SysML)
 
 Priority: P0
+
+Story Types: Implementation
 
 Goal: establish GPCA as a tailoring example that subtracts from the default methodology.
 

@@ -4,6 +4,8 @@ Wave: 1 (SysML foundation)
 
 Priority: P0
 
+Story Types: Design + Implementation (helper layout, stdlib wrapper choice)
+
 Depends on: ADR-1-12, ADR-1-13.
 
 Goal: create helper SysML definitions for dimensions, methodology scope, and the standard library import wrapper. No domain content.

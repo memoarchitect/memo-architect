@@ -4,6 +4,8 @@ Wave: 4 (final)
 
 Priority: P0
 
+Story Types: Documentation + Implementation (cleanup pass)
+
 Goal: remove competing plans, drop non-medical scope mentions per ADR-1-14, and align docs / ADRs / examples / roadmap / GitLab pointers after every other epic completes.
 
 ## Stories

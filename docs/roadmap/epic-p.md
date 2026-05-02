@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P0
 
+Story Types: Implementation
+
 Goal: replace the six-mode shell with a four-tab read-mostly shell where every tab wraps CLI output. UI never edits the model directly — text editor + CLI remains the authoring path.
 
 Depends on: Epic A (methodology IA), Epic O (dispatcher), Epic Q (DHF compiler).

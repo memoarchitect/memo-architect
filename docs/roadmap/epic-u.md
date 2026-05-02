@@ -4,6 +4,8 @@ Wave: 2 (Methodology + import)
 
 Priority: P2
 
+Story Types: Implementation
+
 Goal: import existing models from OWL, Sparx EA, Cameo/MagicDraw, AADL, and provide VS Code language support so the text editor stays the primary authoring surface.
 
 Depends on: Epic K, Epic T.

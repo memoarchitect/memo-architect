@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P2
 
+Story Types: Design + Implementation (module manifest contract)
+
 Goal: model UI features as `FeatureModule` parts in SysML and load them lazily so UI stays a CLI-data wrapper.
 
 Depends on: Epic P (shell).

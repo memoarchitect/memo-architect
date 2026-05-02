@@ -4,6 +4,8 @@ Wave: 2 (Methodology in SysML)
 
 Priority: P1
 
+Story Types: Implementation
+
 Goal: make `examples/gpca-pump` the canonical sample, retire confusing alternates, and bring cybersecurity coverage to a useful level.
 
 Depends on: Epic H (GPCA methodology).

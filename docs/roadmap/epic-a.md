@@ -1,8 +1,10 @@
 # Epic A: Methodology-Centered UI IA
 
-Original scope: D5
+Wave: 4 (UI thin wrapper)
 
 Priority: P0
+
+Story Types: Implementation
 
 Goal: make methodology the primary way users understand active scope, while keeping ontology inspection secondary.
 

@@ -4,6 +4,8 @@ Wave: 1 (SysML foundation)
 
 Priority: P0
 
+Story Types: Architecture + Implementation (CI gate scope)
+
 Goal: guarantee that MEMO ontology and methodology packages open cleanly in **SysON**, **SysIDE**, and **Sysand** without MEMO-specific tooling, so authors can use any SysML v2 conformant editor — text editor remains the primary workflow.
 
 Depends on: ADR-1-12, Epic K, Epic T.
