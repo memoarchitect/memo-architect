@@ -36,14 +36,16 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 
 ## Architecture Reference Documents
 
-- `docs/roadmap/north-star.md` — **Product strategy and north star** — read this before making roadmap decisions
-- `docs/src/developers/architecture/overview.md` — package architecture diagram
-- `docs/src/developers/architecture/platform-strategy.md` — two-repo split, package format
-- `docs/src/developers/architecture/data-flow.md` — data flow through the system
-- `docs/src/developers/architecture/websocket-protocol.md` — CLI ↔ web app protocol
-- `docs/src/developers/adr/ADR-1-6-ontology-core-medical-split.md` — three-tier ontology rationale
-- `docs/src/developers/adr/ADR-1-8-project-format-contract.md` — canonical project config format (memo.config.yaml vs memo.package.yaml)
-- `docs/src/developers/adr/ADR-1-10-two-ontology-collapse.md` — collapse 9 legacy ontology packages into ontology-arch + ontology-process
+- `docs/design_guidelines/README.md` — **design guidelines index** — start here
+- `docs/design_guidelines/memo-platform-architecture.md` — **canonical platform architecture + grand plan** — key doc; supersedes earlier ontology/methodology splits
+- `docs/design_guidelines/feedback-ontology-replace-handoff.md` — active branch handoff
+- `docs/roadmap/north-star.md` — **product strategy and north star** — read this before making roadmap decisions
+- `docs/design_guidelines/architecture/sysmlv2-rulebook.md` — normative SysML v2 authoring rules
+- `docs/design_guidelines/architecture/overview.md` — package architecture diagram
+- `docs/design_guidelines/architecture/platform-strategy.md` — two-repo split, package format
+- `docs/design_guidelines/architecture/data-flow.md` — data flow through the system
+- `docs/design_guidelines/architecture/websocket-protocol.md` — CLI ↔ web app protocol
+- `docs/design_guidelines/adr/` — decision records (ADR-1-1..ADR-1-10)
 - `/Users/someshkashyap/Downloads/System Architecture Document-wip.pdf`
 - `/Users/someshkashyap/Downloads/System Architecture Overview.pdf`
 - `/Users/someshkashyap/EA/NewMDG/AfferaMDG.qea` (SQLite, 78 stereotypes)

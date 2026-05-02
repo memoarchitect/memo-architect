@@ -190,7 +190,7 @@ Phase C **deferred** the empty-stub deletion (`packages/ontology-process`, `pack
 3. **`methodology/`, `viewpoints/`, `views/`, `compliance/` not yet surfaced in UI** — loader treats the whole `ontology/` tree as one architecture package. Need per-area packaging or a new methodology-aware loader to drive Diagrams (viewpoints→views) and DHF (artifacts).
 4. **`@memo/ontology-process` and `@memo/medical-modeling-profile`** — empty wrappers. Either delete entirely or repurpose later (medical-modeling-profile may become the first methodology pkg).
 5. **`@memo/cli` e2e tests** — 11 failing on `spawnSync /bin/sh ENOENT` (test runner shell issue, not ontology).
-6. **Docs in `docs/src/developers/architecture/`** still reference the pre-replace structure.
+6. **Docs in `docs/design_guidelines/architecture/`** still reference the pre-replace structure.
 7. **GitLab roadmap milestones** (W1.P-FB, W1.P0, W1.P1, W1.P2, W1.P3, W2.P6, W3.P-MEDWB, etc.) are not yet aligned with the new top-level `ontology/` layout.
 
 ---
@@ -228,7 +228,7 @@ Goal: close known gaps.
 
 ### Phase G — alignment + merge
 
-- Update `docs/src/developers/architecture/overview.md` and ADRs (especially ADR-1-10) to describe `ontology/` layout + methodology-as-package model.
+- Update `docs/design_guidelines/architecture/overview.md` and ADRs (especially ADR-1-10) to describe `ontology/` layout + methodology-as-package model.
 - Reconcile GitLab roadmap (W1.P-FB, W1.P0–P3, W2.P6, W3.P-MEDWB) with the actual layout — close anything Phase 0–A already covered, file gap issues for what's missing.
 - Run full `pnpm run build && pnpm run test`. Aim for green.
 - Run `memo dev` on gpca-pump end-to-end (every tab loads, ontology viewer populates, no console errors, completeness > 0%).
