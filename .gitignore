@@ -48,6 +48,4 @@ __pypackages__/
 site/
 *.egg-info/
 
-# Roadmap (generated files — GitLab is source of truth)
-docs/roadmap/
-!docs/roadmap/north-star.md
+# Roadmap plans are tracked docs, not generated GitLab truth.

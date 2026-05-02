@@ -8,7 +8,7 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
 2. [architecture/platform.md](architecture/platform.md) for the canonical architecture.
 3. [design/sysmlv2-rulebook.md](design/sysmlv2-rulebook.md) before editing `.sysml`.
 4. [decisions/index.md](decisions/index.md) for accepted and superseded ADRs.
-5. [roadmap/north-star.md](roadmap/north-star.md) for product priorities.
+5. [roadmap/index.md](roadmap/index.md) for incremental implementation epics and stories.
 
 ## Use Only When Needed
 
@@ -16,17 +16,16 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
 - [design/](design/README.md) for runtime design, protocols, and authoring specifics.
 - [decisions/adr/](decisions/adr/) for historical rationale.
 - [generated/requirements/](generated/requirements/) for generated traceability baselines.
-- [handoffs/](handoffs/) for branch-specific transition context.
 - `docs/src/` for published user/developer docs.
 
 ## Do Not Treat As Planning Sources
 
 - `docs/dist/` is built site output.
 - `docs/generated/` is generated/reference material.
-- `docs/roadmap/*.md` except `north-star.md` are GitLab-synced snapshots.
+- `docs/roadmap/*.md` are implementation plans, not architecture source.
 
 ## Update Rules
 
 - Architecture changes go to [architecture/platform.md](architecture/platform.md) or a new ADR.
-- Roadmap state changes go through GitLab and the roadmap tooling.
+- Roadmap scope changes update [roadmap/index.md](roadmap/index.md) and the relevant epic file.
 - Avoid duplicate plan files. Prefer updating the canonical doc and linking from indexes.

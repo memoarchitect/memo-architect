@@ -130,7 +130,7 @@ Elements are visible if they match `visibleKinds` OR belong to a `visibleLayers`
 
 ## `workflows`
 
-Guided step-by-step workflows (placeholder — not yet implemented).
+Legacy YAML workflow examples are retained here only to explain historical config shape. New workflow definitions belong in methodology SysML packages.
 
 ```yaml
 workflows:

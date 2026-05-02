@@ -89,5 +89,5 @@ During local development, subtree or workspace integration may keep these source
 
 - Architecture-changing work updates [../platform.md](../platform.md) or adds/supersedes an ADR.
 - Reference docs summarize current behavior; they do not define competing plans.
-- Generated requirements and roadmap snapshots are not source architecture.
-- The standalone ontology viewer remains a read-only inspection tool, not a primary MEMO Architect mode.
+- Generated requirements and roadmap plans are not source architecture.
+- Ontology inspection remains read-only and secondary. The primary MEMO Architect mode is methodology-scoped modeling, compliance, artifacts, and diagrams.

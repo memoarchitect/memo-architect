@@ -22,8 +22,7 @@ memo/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
 │   ├── generated/            # generated baselines
-│   ├── handoffs/             # branch handoffs
-│   ├── roadmap/              # GitLab-synced roadmap snapshots
+│   ├── roadmap/              # incremental roadmap plan and milestone files
 │   └── src/                  # MkDocs user/developer docs source
 ├── mkdocs.yml
 ├── pnpm-workspace.yaml
