@@ -8,20 +8,20 @@ The project is structured as a **Turborepo** monorepo using **pnpm** workspaces.
 
 ### Packages
 
-- **[@memo/core](packages/core/):** 
+- **`@memo/core`:**
   - **The Engine:** Shared logic for SysML v2 parsing, model AST management (MemoModel), and the semantic validation framework.
   - **Registries:** Implements the `KindRegistry` and `RelationshipRegistry` discovery mechanisms.
   - **Parsing:** Uses **Langium** and a custom SysML v2 grammar subset for robust model indexing.
-- **[@memo/cli](packages/cli/):**
+- **`@memo/cli`:**
   - **Server & Persistence:** Manages the WebSocket-to-disk persistence layer. It watches `.sysml` files for changes and broadcasts updates to the UI.
   - **Tools:** Provides `memo dhf`, `memo plugin`, and AI-powered commands (`ask`, `generate`).
-- **[@memo/web](packages/web/):**
+- **`@memo/web`:**
   - **Workbench UI:** A high-performance React application featuring a custom diagramming engine (ELK.js + React Flow).
   - **State Management:** Uses **Zustand** for real-time model state synchronization with the CLI server.
-- **[@memo/ontology-core](packages/ontology-core/):**
-  - **MBSE Backbone:** Defines the domain-agnostic part of the ontology (Operational, Functional, Logical, Physical, Software, Interfaces).
-- **[@memo/ontology-medical](packages/ontology-medical/):**
-  - **Regulated Domain:** Extends the core with medical-specific concepts (ISO 14971 Risk, IEC 62304 Lifecycle, Cybersecurity, Use Errors).
+- **`ontology/`:**
+  - **Canonical ontology source:** SysML packages for architecture, compliance, artifacts, viewpoints, methodology, and base helpers.
+
+Repository-level architecture and decisions live under `docs/architecture/` and `docs/decisions/`.
 
 ## Key Technologies
 

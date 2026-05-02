@@ -56,18 +56,16 @@ These MUST be followed. Violating these will break the app or contradict design 
 ### Package Boundaries
 
 ```
-@memo/ontology-core          → domain-agnostic MBSE types (no medical concepts)
-@memo/ontology-medical       → medical device backbone (extends core, no tool logic)
-@memo/medical-modeling-profile → closure rules, viewpoints, templates (extends medical)
+ontology/                    → canonical SysML ontology source
+methodology packages         → project-specific scope, workflows, rules, and viewpoints
 @memo/core                   → parser, builder, validator, serializers (no UI)
 @memo/cli                    → CLI commands (depends on core, no UI framework)
 @memo/web                    → React web app (depends on core via WebSocket, not direct import)
 ```
 
-- `ontology-core` MUST NOT import from `ontology-medical` or `medical-modeling-profile`
-- `ontology-medical` MUST NOT import from `medical-modeling-profile`
 - `core` MUST NOT import from `cli` or `web`
 - `web` communicates with `core` via WebSocket protocol only — no direct function imports
+- Architecture and package-boundary decisions live in `docs/architecture/platform.md` and `docs/decisions/index.md`
 
 ### UI Constraints
 
@@ -79,10 +77,10 @@ These MUST be followed. Violating these will break the app or contradict design 
 
 ### Ontology Constraints
 
-- **Three-tier hierarchy:** `ontology-core` → `ontology-medical` → `medical-modeling-profile` — never flatten
+- **Single canonical ontology:** current direction is `@memo/ontology`; see `docs/architecture/platform.md`
 - **SysML is source of truth:** Kinds and relationships are defined in `.sysml` files — do not duplicate in YAML or JSON config
-- **Directory = architecture layer:** `sysml/<layer>/<file>.sysml` determines which layer a kind belongs to (Apollo-11 pattern)
-- **Ontology locked per project:** Selected at `memo init`; changing ontology shows validation errors, no auto-migration
+- **Methodology selects scope:** methodology packages tailor layers, standards, artifacts, viewpoints, and workflow
+- **Generated docs are not plans:** generated requirements and roadmap snapshots should not become hand-maintained architecture specs
 
 ### Architectural Patterns
 
@@ -144,8 +142,11 @@ Do not maintain plans in local files. GitLab is the single source of truth — t
 
 ## Architecture Reference Documents
 
-- `docs/src/developers/architecture/overview.md` — package architecture diagram
-- `docs/src/developers/architecture/platform-strategy.md` — two-repo split, package format
-- `docs/src/developers/architecture/data-flow.md` — data flow through the system
-- `docs/src/developers/architecture/websocket-protocol.md` — CLI ↔ web app protocol
-- `docs/src/developers/adr/ADR-1-6-ontology-core-medical-split.md` — three-tier ontology rationale
+- `docs/README.md` — documentation map and source-of-truth rules
+- `docs/architecture/platform.md` — canonical platform architecture
+- `docs/architecture/reference/sysmlv2-rulebook.md` — SysML v2 authoring rules
+- `docs/architecture/reference/overview.md` — package architecture diagram
+- `docs/architecture/reference/platform-strategy.md` — repo/package strategy
+- `docs/architecture/reference/data-flow.md` — data flow through the system
+- `docs/architecture/reference/websocket-protocol.md` — CLI ↔ web app protocol
+- `docs/decisions/index.md` — ADR catalog and current decision state

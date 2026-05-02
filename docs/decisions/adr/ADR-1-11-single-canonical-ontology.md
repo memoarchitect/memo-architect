@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-05-02
 **Supersedes:** [ADR-1-6](ADR-1-6-ontology-core-medical-split.md), [ADR-1-10](ADR-1-10-two-ontology-collapse.md)
-**Reference:** [memo-platform-architecture.md](../memo-platform-architecture.md)
+**Reference:** [platform.md](../../architecture/platform.md)
 
 ---
 
@@ -34,6 +34,6 @@ L0 helpers (`@memo/sysml-base`) hold dimension type defs, rule type, viewpoint b
 
 **UI** — tab content = `(ontology kinds tagged dim X) ∩ (methodology.includedX)`. Generic; same code path for every tab.
 
-**Migration** — incremental phases E1–E9 in [memo-platform-architecture.md §11](../memo-platform-architecture.md). Build green at every phase boundary.
+**Migration** — incremental phases E1–E9 in [platform.md §11](../../architecture/platform.md). Build green at every phase boundary.
 
 **Deprecated package names** — `@memo/ontology-core`, `@memo/ontology-medical`, `@memo/medical-modeling-profile`, `@memo/ontology-arch`, `@memo/ontology-process` all collapse into `@memo/ontology`. References in older docs remain for historical traceability.

@@ -235,9 +235,9 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 - Wire into Turbo `lint` task.
 
 ### Phase 10 — Docs
-- Update `docs/src/developers/architecture/websocket-protocol.md`: document `app:restart-required`, hash field.
-- Update `docs/src/developers/architecture/data-flow.md`: document bootstrap-only ontology load, project-only hot rebuild.
-- Add ADR: `docs/src/developers/adr/ADR-X-ontology-restart-required.md` capturing the rationale (no mid-session ontology mutation, zero model cache).
+- Update `docs/architecture/reference/websocket-protocol.md`: document `app:restart-required`, hash field.
+- Update `docs/architecture/reference/data-flow.md`: document bootstrap-only ontology load, project-only hot rebuild.
+- Add ADR: `docs/decisions/adr/ADR-X-ontology-restart-required.md` capturing the rationale (no mid-session ontology mutation, zero model cache).
 
 ### Phase 11 — Verification
 - `pnpm run build && pnpm run test` (all packages).

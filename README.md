@@ -2,16 +2,17 @@
 
 MEMO is an open-source, SysML v2-native platform for medical device architecture, analysis, traceability, and documentation. It enables teams to model systems as code, connect architecture to risk and requirements, and generate review-ready engineering artifacts from a single living model.
 
-> ## 📐 Architecture & Roadmap (read first)
+> ## Architecture & Roadmap (read first)
 >
 > | Doc | Purpose |
 > |---|---|
-> | **[`docs/src/developers/architecture/fresh-architecture-plan.md`](docs/src/developers/architecture/fresh-architecture-plan.md)** | **v3 architecture spec** — 20 sections, 32 ADRs, 15 principles. Namespace, ontology shape, four-tab UI, Miro-like diagramming engine, ConsistencyRule taxonomy, three-wave release. |
-> | **[`docs/src/developers/architecture/sysmlv2-rulebook.md`](docs/src/developers/architecture/sysmlv2-rulebook.md)** | **SysML v2 modelling rule book** — 60+ rules from OMG SysML-v2-Release, GfSE, FiBO2SysMLv2. |
-> | **[`docs/src/developers/architecture/execution-plan.md`](docs/src/developers/architecture/execution-plan.md)** | **133 Sonnet-sized sessions** across three release waves: W1 ontology (`.kpar` for SysON/SysIDE) → W2 CLI (`memo` command) → W3 web (modular feature flags). |
-> | **[`docs/src/developers/architecture/architecture-blocks.drawio`](docs/src/developers/architecture/architecture-blocks.drawio)** | 7-tab block diagram (hierarchy · namespace map · core blocks · UI tabs · data flow · quality attributes · dependency graph). |
+> | **[`docs/README.md`](docs/README.md)** | Documentation map and source-of-truth rules. |
+> | **[`docs/LLM.md`](docs/LLM.md)** | Minimal context pack for AI agents and LLMs. |
+> | **[`docs/architecture/platform.md`](docs/architecture/platform.md)** | Canonical platform architecture and grand plan. |
+> | **[`docs/architecture/reference/sysmlv2-rulebook.md`](docs/architecture/reference/sysmlv2-rulebook.md)** | SysML v2 modelling rule book. |
+> | **[`docs/decisions/index.md`](docs/decisions/index.md)** | ADR catalog and current decision state. |
 >
-> **GitLab is the single source of truth for issues + milestones.** Run `pnpm run roadmap` for live state. Use `memo roadmap-sync` to reconcile execution-plan.md ↔ GitLab. See [§Roadmap & Sync](#roadmap--sync) below.
+> **GitLab is the single source of truth for issues + milestones.** Run `pnpm run roadmap` for live state. See [§Roadmap & Sync](#roadmap--sync) below.
 
 ## Why MEMO?
 
@@ -135,17 +136,17 @@ node packages/cli/lib/bin/memo.js dev --port 3000
 ```
 memo/
 ├── packages/
-│   ├── ontology-core/ @memo/ontology-core — Domain-agnostic MBSE backbone ontology
-│   ├── ontology-medical/ @memo/ontology-medical — Reusable medical device development backbone
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-│   └── medical-modeling-profile/ @memo/medical-modeling-profile — Medical modeling profile (109 closure rules, 11 viewpoints)
 ├── examples/
 │   ├── infusion-pump/              — Primary infusion-device reference model
 │   └── irrigation-pump/            — Second medical reference model for pressure-control workflows
+├── ontology/                       — Canonical SysML ontology source
 └── docs/                           — MkDocs documentation site
 ```
+
+The canonical ontology and methodology layout is documented in [`docs/architecture/platform.md`](docs/architecture/platform.md).
 
 ## Architecture
 
@@ -192,19 +193,7 @@ node ../../packages/cli/lib/bin/memo.js validate
 
 ## Roadmap & Sync
 
-**GitLab is the single source of truth for issues + milestones.** The architecture spec (`fresh-architecture-plan.md`) and execution plan (`execution-plan.md`) define what to build; GitLab tracks state.
-
-### Three-wave release plan
-
-```
-W1 ONTOLOGY  →  W2 CLI  →  W3 WEB TOOL  (modular feature flags)
-```
-
-- **W1 — Ontology release** (`@memo/ontology-base` as `.kpar`) — usable in Eclipse SysON, SysIDE, Sysand. 32 sessions.
-- **W2 — CLI release** (`memo` command + VS Code language server) — headless, scriptable, CI-friendly. 25 sessions.
-- **W3 — Web tool release** (`memo-architect`) — incremental, modular, feature-flagged per tab/renderer/tool. 76 sessions.
-
-Each wave ships independently. Total: **133 sessions** mapped to GitLab milestones grouped by `wave::` scoped labels.
+**GitLab is the single source of truth for issues + milestones.** Product strategy lives in [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md), and architecture-changing work updates [`docs/architecture/platform.md`](docs/architecture/platform.md) or an ADR.
 
 ### Live state
 
@@ -215,20 +204,20 @@ pnpm run roadmap:bugs         # Open bugs only
 pnpm run roadmap -- -p w1.p2  # Single milestone detail
 ```
 
-### Sync local spec ↔ GitLab
+### Roadmap Sync
 
 ```bash
-memo roadmap-sync --dry-run   # Show diff between execution-plan.md and GitLab
+memo roadmap-sync --dry-run   # Show diff between local roadmap snapshots and GitLab
 memo roadmap-sync --apply     # Create missing milestones/issues; close superseded ones
 memo roadmap-sync --verify    # Fail if GitLab and spec drift apart (CI gate)
 ```
 
-The sync utility parses `docs/src/developers/architecture/execution-plan.md` session tables, reconciles with GitLab via `glab`, and updates milestones, issues, labels, and ADR cross-references. **GitLab wins on state (open/closed/in-progress); spec wins on scope (what should exist).**
+GitLab is the source of truth for roadmap state. Local roadmap files under `docs/roadmap/` are snapshots for review and navigation.
 
 To add or modify work:
-1. Edit the relevant section in `execution-plan.md` (or `fresh-architecture-plan.md` if architectural).
-2. Run `memo roadmap-sync --apply`.
-3. Verify in GitLab.
+1. Update GitLab issues or milestones.
+2. Run the roadmap sync command if local snapshots need refresh.
+3. Update [docs/architecture/platform.md](docs/architecture/platform.md) or an ADR only when the work changes architecture.
 
 **Product strategy:** [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md) — strategic anchor for prioritisation.
 
