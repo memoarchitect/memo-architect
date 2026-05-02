@@ -1,10 +1,12 @@
 # Epic B: L0 Helpers
 
-Original scope: E1
+Wave: 1 (SysML foundation)
 
 Priority: P0
 
-Goal: create helper SysML definitions for dimensions and methodology scope without moving domain content.
+Depends on: ADR-1-12, ADR-1-13.
+
+Goal: create helper SysML definitions for dimensions, methodology scope, and the standard library import wrapper. No domain content.
 
 ## Stories
 
@@ -38,7 +40,17 @@ Session target: 30 minutes or less.
 
 Acceptance: methodology packages can import helper definitions.
 
+### B-4 Standard library import wrapper
+
+Session target: 30 minutes or less.
+
+- Add `memo::base::stdlib::scalars`, `::collections`, `::functions`, `::time` as re-export-only wrapper packages per ADR-1-13.
+- No new types defined inside the wrapper.
+
+Acceptance: ontology files can import standard library symbols exclusively through `memo::base::stdlib::*`.
+
 ## Epic Exit
 
-- L0 helper definitions exist and contain no domain content.
+- L0 helper definitions exist under `memo::base::*` and contain no domain content.
+- Standard library wrapper insulates ontology files from kernel-path differences across SysON / SysIDE / Sysand.
 - No behavioral UI or project migration is required.

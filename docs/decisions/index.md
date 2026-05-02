@@ -6,6 +6,9 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*` |
+| [ADR-1-13](adr/ADR-1-13-sysml-library-import-wrapper.md) | Accepted | Standard library wrapper at `memo::base::stdlib::*` insulates from SysON/SysIDE/Sysand path drift |
+| [ADR-1-12](adr/ADR-1-12-namespace-canonicalization.md) | Accepted | Three-segment namespaces `memo::{base,ontology,methodology}::*`; snake_case filenames; SysON/SysIDE/Sysand interop binding |
 | [ADR-1-11](adr/ADR-1-11-single-canonical-ontology.md) | Accepted | Single canonical `@memo/ontology`; supersedes ADR-1-6 and ADR-1-10 |
 | [ADR-1-9](adr/ADR-1-9-ontology-restart-required.md) | Accepted | Ontology changes require dev server restart |
 | [ADR-1-8](adr/ADR-1-8-project-format-contract.md) | Accepted | Project configuration format contract |
