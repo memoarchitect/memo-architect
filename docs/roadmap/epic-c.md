@@ -1,10 +1,12 @@
 # Epic C: Architecture Sublayers
 
-Original scope: E2
+Wave: 1 (SysML foundation)
 
 Priority: P0
 
-Goal: move architecture kinds toward `architecture/<sublayer>/*.sysml` without breaking current loading.
+Depends on: Epic B, ADR-1-12.
+
+Goal: move architecture kinds into `memo::ontology::architecture::<layer>::*` per ADR-1-12 namespace canonicalization, without breaking current loading.
 
 ## Stories
 
