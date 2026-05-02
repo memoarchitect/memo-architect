@@ -46,6 +46,12 @@
         "path": "./syntaxes/sysml.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "plaintext",
+        "path": "./snippets/memo-ears.code-snippets"
+      }
+    ],
     "configuration": {
       "title": "MEMO SysML",
       "properties": {

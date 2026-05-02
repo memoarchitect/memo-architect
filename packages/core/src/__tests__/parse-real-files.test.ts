@@ -60,7 +60,8 @@ describe('Real file: memo-ontology.sysml', () => {
     });
 });
 
-describe('Real file: infusion-pump.sysml', () => {
+// SKIP: infusion-pump fixture removed in c22b2e3 (single-example branch).
+describe.skip('Real file: infusion-pump.sysml', () => {
     it('parses without errors', async () => {
         const source = readFileSync(resolve(TEMPLATES_DIR, 'infusion-pump.sysml'), 'utf-8');
         const doc = await parse(source);

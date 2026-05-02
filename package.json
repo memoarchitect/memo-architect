@@ -23,9 +23,6 @@
     "roadmap:bugs": "bash scripts/show-roadmap.sh --bugs",
     "ontology:lint": "node tools/ontology-tools/lint.mjs",
     "diagram:ontology": "node tools/ontology-tools/diagram-gen.mjs",
-    "trace-app:dev": "node tools/app/server.mjs",
-    "trace-app:bootstrap": "node tools/app/scripts/bootstrap-from-docs.mjs",
-    "trace-app:sync-docs": "node tools/app/scripts/sync-docs-from-elements.mjs",
     "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {

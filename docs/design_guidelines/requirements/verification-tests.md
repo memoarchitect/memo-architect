@@ -1,8 +1,7 @@
-# Verification Tests (App-Synced)
+# Verification Tests (Generated)
 
-App source-of-truth export for verification tests.
+Generated export for verification tests.
 
-Generated from app data: `tools/app/data/elements/*.yaml`
 Generated at: 2026-04-20T21:10:15.555Z
 
 ## CFG

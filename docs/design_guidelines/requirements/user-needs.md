@@ -1,8 +1,7 @@
-# User Needs (App-Synced)
+# User Needs (Generated)
 
-App source-of-truth export for user needs.
+Generated export for user needs.
 
-Generated from app data: `tools/app/data/elements/*.yaml`
 Generated at: 2026-04-20T21:10:15.553Z
 
 ## CFG

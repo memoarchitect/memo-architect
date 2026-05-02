@@ -33,6 +33,9 @@ coverage/
 # SysAnd local cache
 .sysand/
 
+# Local feedback
+feedback/
+
 # Built kpar archives
 *.kpar
 

@@ -330,7 +330,9 @@ describe('loadConfig with real ontology package files', () => {
         expect(config.extends).toBe('@memo/ontology-arch');
     });
 
-    it('medical-modeling-profile loads closure rules from memo.package.yaml + memo.rules.yaml', () => {
+    // SKIP: memo.rules.yaml + memo.viewpoints.yaml removed in c22b2e3 (single-example branch).
+    // firstRun.template references infusion-pump which is also removed.
+    it.skip('medical-modeling-profile loads closure rules from memo.package.yaml + memo.rules.yaml', () => {
         const configPath = resolve(__dirname, '../../../medical-modeling-profile/memo.package.yaml');
         const config = loadConfig(configPath);
 

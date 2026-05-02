@@ -1,8 +1,10 @@
 # ADR-1-6: Ontology Core vs Medical Backbone Split
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-1-11](ADR-1-11-single-canonical-ontology.md)
 **Date:** 2026-03-19
 **Context:** Ontology Backbone Restructuring
+
+> **Superseded 2026-05-02.** Single canonical `@memo/ontology` replaces the core/medical split. Domain dimensions (architecture/compliance/artifact/viewpoint) live inside one ontology; tailoring moves to methodology layer. See [memo-platform-architecture.md](../memo-platform-architecture.md).
 
 ## Decision
 

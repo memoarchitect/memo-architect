@@ -1,54 +1,53 @@
 # MEMO Documentation Index
 
-**For humans, AI agents (Claude / Sonnet / etc.), and LLMs:** start here. This is the hub for every architectural and operational document in the repo.
+**For humans, AI agents, and LLMs:** start here. Hub for every architectural and operational document in the repo.
 
-## Authoritative architecture (read first, in order)
+## Authoritative architecture (read first)
 
-1. **[`src/developers/architecture/fresh-architecture-plan.md`](src/developers/architecture/fresh-architecture-plan.md)** — v3 architecture spec.
-   20 sections, 32 ADRs, 15 principles. The *what*. Namespace (`memo::*`), ontology shape, four-tab UI (🏗 Architecture · 🎨 Diagramming · 📄 DHF · 🛠 Tools), Miro-like diagramming engine (E1–E12), ConsistencyRule taxonomy (C1–C9), three-wave release, feature flags, drop-file extensibility.
+1. **[`design_guidelines/memo-platform-architecture.md`](design_guidelines/memo-platform-architecture.md)** — canonical platform architecture and grand plan.
+   L0–L3 stack, four dimensions (architecture / compliance / artifact / viewpoint), default vs custom methodology, CLI surface, repo layout, migration phases E1–E9. The *what* and the *how to evolve*.
 
-2. **[`src/developers/architecture/sysmlv2-rulebook.md`](src/developers/architecture/sysmlv2-rulebook.md)** — SysML v2 modelling rule book.
-   60+ rules grouped P/N/D/S/I/B/R/C/M/V/A/CE/DC/Q/L + FB rules. Cited from OMG SysML-v2-Release · GfSE/SysML-v2-Models · FiBO2SysMLv2. The *how to model*.
+2. **[`design_guidelines/architecture/sysmlv2-rulebook.md`](design_guidelines/architecture/sysmlv2-rulebook.md)** — SysML v2 modelling rule book.
+   Normative authoring rules every `.sysml` file must comply with. The *how to model*.
 
-3. **[`src/developers/architecture/execution-plan.md`](src/developers/architecture/execution-plan.md)** — three-wave shipping plan.
-   133 Sonnet-sized sessions across 18 phases. Per-session: scope, files, acceptance, tests, GitLab refs. The *how to ship*.
+3. **[`design_guidelines/architecture/platform-strategy.md`](design_guidelines/architecture/platform-strategy.md)** — two-repo split (`memo-base` + `memo-architect`), package format, git subtree.
 
-4. **[`src/developers/architecture/architecture-blocks.drawio`](src/developers/architecture/architecture-blocks.drawio)** — 7-tab block diagram.
-   Hierarchy · namespace map · core blocks (B1–B14) · UI four-tab · data flow · quality attributes · dependency graph.
+4. **[`design_guidelines/feedback-ontology-replace-handoff.md`](design_guidelines/feedback-ontology-replace-handoff.md)** — active branch state.
 
-## Other architecture docs (specialised, supplementary)
+## Reference architecture
 
 | Doc | Topic |
 |---|---|
-| [`src/developers/architecture/overview.md`](src/developers/architecture/overview.md) | Package architecture diagram (legacy; superseded by §4 of v3 plan) |
-| [`src/developers/architecture/platform-strategy.md`](src/developers/architecture/platform-strategy.md) | Two-repo split (memo-base + memo-architect), git subtree |
-| [`src/developers/architecture/data-flow.md`](src/developers/architecture/data-flow.md) | Data flow detail (legacy; see v3 plan §12) |
-| [`src/developers/architecture/websocket-protocol.md`](src/developers/architecture/websocket-protocol.md) | CLI ↔ web app protocol |
-| [`src/developers/architecture/ontology-rearchitecture.md`](src/developers/architecture/ontology-rearchitecture.md) | OWL + Arcadia + EARS direction (some content folded into v3 plan) |
-| [`src/developers/architecture/ontology-refactor-inventory.md`](src/developers/architecture/ontology-refactor-inventory.md) | Per-element audit |
-| [`src/developers/architecture/two-ontology-refactor.md`](src/developers/architecture/two-ontology-refactor.md) | Collapsed 9 packages → arch + process (ADR-1-10) |
-| [`src/developers/architecture/diagram-subsystem-audit.md`](src/developers/architecture/diagram-subsystem-audit.md) | Diagram subsystem audit driving v3 redesign |
-| [`src/developers/architecture/monorepo.md`](src/developers/architecture/monorepo.md) | Turborepo + pnpm setup |
+| [`design_guidelines/architecture/overview.md`](design_guidelines/architecture/overview.md) | System context + package architecture |
+| [`design_guidelines/architecture/data-flow.md`](design_guidelines/architecture/data-flow.md) | `.sysml` → parser → model → web pipeline |
+| [`design_guidelines/architecture/websocket-protocol.md`](design_guidelines/architecture/websocket-protocol.md) | CLI ↔ web app protocol |
+| [`design_guidelines/architecture/monorepo.md`](design_guidelines/architecture/monorepo.md) | Turborepo + pnpm layout |
+| [`design_guidelines/architecture/live-reload.md`](design_guidelines/architecture/live-reload.md) | Project hot-reload vs ontology restart-required |
 
 ## ADRs
 
-[`src/developers/adr/`](src/developers/adr/) — full ADR catalogue. v3 plan §14 lists ADR-1-1 through ADR-1-32 with cross-references.
+[`design_guidelines/adr/`](design_guidelines/adr/) — full catalog. Current direction: [ADR-1-11](design_guidelines/adr/ADR-1-11-single-canonical-ontology.md), which supersedes ADR-1-6 and ADR-1-10.
 
-## Roadmap (live)
+## Requirements baseline
+
+[`design_guidelines/requirements/`](design_guidelines/requirements/) — implementation-derived feature/function catalogs. Auto-derived from code; orthogonal to platform spec.
+
+## Roadmap (live, GitLab-backed)
 
 ```bash
 pnpm run roadmap                  # phase summary from GitLab
-memo roadmap-sync --dry-run       # show drift between spec and GitLab
-memo roadmap-sync --apply         # reconcile (writes to GitLab)
+pnpm run roadmap:open             # open issues by phase
+pnpm run roadmap:bugs             # open bugs
 ```
 
-GitLab is source of truth for state. `execution-plan.md` is source of truth for scope.
+GitLab is source of truth for state and scope. `roadmap/*.md` files are auto-synced — do not edit manually.
+
+[`roadmap/north-star.md`](roadmap/north-star.md) — product strategy.
 
 ## For AI agents
 
-If you are an LLM or AI agent working on this repo:
-- **Always read v3 plan + rule book + execution plan before non-trivial work.** They override defaults.
-- **Three-wave release order is binding.** Don't ship CLI before ontology; don't ship web before CLI base.
-- **Quality priorities (in order):** usability → modularity → extensibility. See v3 §6.
-- **Top user instructions** in `CLAUDE.md` at repo root + `~/.claude/CLAUDE.md`.
-- **Do not delete or rewrite** these architecture docs without explicit user request — they are spec.
+- Always read **memo-platform-architecture** + **sysmlv2-rulebook** before non-trivial work. They override defaults.
+- **Quality priorities (in order):** usability → modularity → separation of concerns → extensibility.
+- **Adoption-first sequencing** — see [`roadmap/north-star.md`](roadmap/north-star.md).
+- **Trunk-based development** — work on `main`, no feature branches (per `CLAUDE.md`).
+- **Do not rewrite** authoritative architecture docs without explicit user request — they are spec. Add ADRs for decisions; supersede rather than overwrite.
