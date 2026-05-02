@@ -6,13 +6,14 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
 
 1. [README.md](README.md) for the documentation map.
 2. [architecture/platform.md](architecture/platform.md) for the canonical architecture.
-3. [architecture/reference/sysmlv2-rulebook.md](architecture/reference/sysmlv2-rulebook.md) before editing `.sysml`.
+3. [design/sysmlv2-rulebook.md](design/sysmlv2-rulebook.md) before editing `.sysml`.
 4. [decisions/index.md](decisions/index.md) for accepted and superseded ADRs.
 5. [roadmap/north-star.md](roadmap/north-star.md) for product priorities.
 
 ## Use Only When Needed
 
-- [architecture/reference/](architecture/reference/) for implementation architecture details.
+- [architecture/reference/](architecture/reference/) for high-level architecture reference details.
+- [design/](design/README.md) for runtime design, protocols, and authoring specifics.
 - [decisions/adr/](decisions/adr/) for historical rationale.
 - [generated/requirements/](generated/requirements/) for generated traceability baselines.
 - [handoffs/](handoffs/) for branch-specific transition context.

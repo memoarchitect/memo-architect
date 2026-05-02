@@ -546,7 +546,7 @@ UI elements in the medical ontology are modeled as product software realization 
 
 ## Next Steps
 
-- **Need more element kinds?** → see `docs/architecture/platform.md` and `docs/architecture/reference/sysmlv2-rulebook.md`
+- **Need more element kinds?** → see `docs/architecture/platform.md` and `docs/design/sysmlv2-rulebook.md`
 - **Want to customize rules?** → [Validation & Closure Rules](validation.md)
 - **Creating diagrams for reviews?** → [Viewpoints & Diagrams](viewpoints-diagrams.md)
 - **Setting up CI?** → [Configuration Reference](../developers/config/reference.md)

@@ -1,6 +1,6 @@
 # MEMO Platform Architecture & Grand Plan
 
-**Status:** Proposal (supersedes earlier ontology/methodology splits once accepted)
+**Status:** Accepted (supersedes earlier ontology/methodology splits)
 **Owner:** Somesh Kashyap
 **Branch context:** continues from `feedback-ontology-replace`
 
@@ -12,8 +12,8 @@
 2. One canonical ontology — **MEMO Ontology** — comprehensive for medical-device modeling.
 3. Default methodology — **MEMO Default** — comprehensive medical-device methodology covering full DHF set.
 4. Custom methodology (e.g. **GPCA**) demonstrates tailoring: hide layers, hide element kinds, hide DHF docs, override workflow.
-5. Three orthogonal dimensions for grouping: **Architecture**, **Compliance**, **Artifacts**.
-6. Methodology selects subsets across all dimensions including **viewpoints**.
+5. Four orthogonal dimensions for grouping: **Architecture**, **Compliance**, **Artifacts**, and **Viewpoints**.
+6. Methodology selects subsets across all dimensions.
 7. Helper SysML packages (base/core) are libraries — not ontology content.
 8. CLI tools for creating/extending ontology, methodology, project.
 
@@ -27,11 +27,11 @@ L0  helpers                     ← @memo/sysml-base (libraries, not ontology)
     Reused by every higher layer. No domain content.
 
 L1  MEMO ontology               ← @memo/ontology
-    domain kinds across 3 dimensions:
+    domain kinds across 4 dimensions:
       - Architecture (layered: operational, functional, ..., safety, cybersecurity)
       - Compliance (per standard: ISO 14971, IEC 62304, FDA 21 CFR 820, ...)
       - Artifacts (concrete DHF docs: SAD, SRS, RMP, FMEA, ...)
-    + viewpoint types (RiskMgmt, SwArch, Cybersecurity, ...)
+      - Viewpoints (RiskMgmt, SwArch, Cybersecurity, ...)
     + relationships
     + invariant rules
 

@@ -10,9 +10,9 @@ Current dev server (`packages/cli/src/commands/dev.ts:224-228`) rebuilds **every
 |-------------|----------|
 | Project SysML (`model/**/*.sysml`) | Live reload, push via WS |
 | Project config rendering/rules | Live reload |
-| Ontology selection (`memo.config.yaml` `ontologies:` list) | Force restart prompt |
-| Ontology package source (`packages/ontology-*/sysml/**`) | Force restart prompt |
-| `memo.package.yaml` ontologies section | Force restart prompt |
+| Methodology pin or ontology selection (`memo.config.yaml`) | Force restart prompt |
+| Ontology or methodology source (`ontology/**/*.sysml`, `packages/methodology-*/sysml/**`) | Force restart prompt |
+| Package metadata (`memo.package.yaml`, `.project.json`) | Force restart prompt |
 | App startup | Fresh parse, zero cache |
 
 ---
@@ -35,11 +35,12 @@ createProjectWatcher({
 // scope 2: ONTOLOGY — restart required
 createOntologyWatcher({
   paths: [
-    resolvedOntologyRoots.map(r => `${r}/sysml/**/*.sysml`),
+    resolvedOntologyRoots.map(r => `${r}/**/*.sysml`),
+    resolvedMethodologyRoots.map(r => `${r}/**/*.sysml`),
     resolvedOntologyRoots.map(r => `${r}/memo.package.yaml`),
     resolvedOntologyRoots.map(r => `${r}/memo.rendering.yaml`),
-    'memo.config.yaml',                  // ontology selection lives here
-    'model/ontology-selection.sysml',    // selection as SysML imports
+    'memo.config.yaml',                  // methodology pin / ontology selection lives here
+    'model/ontology-selection.sysml',    // transitional selection as SysML imports
   ],
   onChange: notifyRestartRequired
 })
@@ -235,13 +236,13 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 - Wire into Turbo `lint` task.
 
 ### Phase 10 — Docs
-- Update `docs/architecture/reference/websocket-protocol.md`: document `app:restart-required`, hash field.
-- Update `docs/architecture/reference/data-flow.md`: document bootstrap-only ontology load, project-only hot rebuild.
+- Update `docs/design/runtime/websocket-protocol.md`: document `app:restart-required`, hash field.
+- Update `docs/design/runtime/data-flow.md`: document bootstrap-only ontology load, project-only hot rebuild.
 - Add ADR: `docs/decisions/adr/ADR-X-ontology-restart-required.md` capturing the rationale (no mid-session ontology mutation, zero model cache).
 
 ### Phase 11 — Verification
 - `pnpm run build && pnpm run test` (all packages).
-- `cd examples/infusion-pump && memo dev`. Web open. Edit a `model/**/*.sysml` → diagrams update instantly. Edit `../../packages/ontology-core/sysml/**/*.sysml` → modal appears, no model update.
+- `cd examples/infusion-pump && memo dev`. Web open. Edit a `model/**/*.sysml` → diagrams update instantly. Edit `../../ontology/**/*.sysml` → modal appears, no model update.
 - Toggle ontology in UI → file written, modal appears, reload → new ontology active.
 - Hard reload page repeatedly → identical model each time (no drift).
 - `grep -r "memo:userViewpoints" packages/web/src` → no matches.
