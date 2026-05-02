@@ -4,6 +4,8 @@ Wave: 1 (SysML foundation)
 
 Priority: P0
 
+Story Types: Design + Implementation (rule engine API)
+
 Goal: replace `memo.rules.yaml` with `ConsistencyRule` part-def authored in SysML so rules participate in ontology versioning and standard tool inspection.
 
 Depends on: Epic B (L0 helpers), Epic K.

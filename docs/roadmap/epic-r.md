@@ -4,6 +4,8 @@ Wave: 2 (Methodology in SysML)
 
 Priority: P0
 
+Story Types: Implementation
+
 Goal: replace YAML profile files with SysML `Archetype` parts so device-class presets ship inside the methodology package and `memo init` runs descriptor-driven.
 
 Depends on: Epic G (default methodology).

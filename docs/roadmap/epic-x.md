@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P2
 
+Story Types: Implementation
+
 Goal: ship medical-specific viewpoints (risk grid, bowtie, fault tree, residual heatmap, STPA, DFD, claim chain, evidence matrix, privacy matrix, software safety class tree, benefit-risk delta) and their workbench modes (risk, usability, software lifecycle).
 
 Depends on: Epic O (dispatcher), Epic R (archetypes), Epic V (modules).

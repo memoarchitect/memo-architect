@@ -1,8 +1,10 @@
 # Epic F: Methodology Scope Expansion
 
-Original scope: E5
+Wave: 2 (Methodology in SysML)
 
 Priority: P0
+
+Story Types: Design + Implementation (filter helper API)
 
 Goal: make UI surfaces filter ontology dimensions by active methodology scope.
 

@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper, deferred)
 
 Priority: P3
 
+Story Types: Design + Implementation (canvas engine API)
+
 Goal: build a free-form canvas engine for diagram authoring layered above the renderer dispatcher. Canvas is a viewer/composer; persistence still lives in SysML.
 
 Depends on: Epic O (dispatcher), Epic V (modules).

@@ -1,8 +1,10 @@
 # Epic E: Artifact Kinds
 
-Original scope: E4
+Wave: 1 (SysML foundation)
 
 Priority: P0
+
+Story Types: Implementation
 
 Goal: model concrete DHF/review documents as artifact dimension kinds.
 

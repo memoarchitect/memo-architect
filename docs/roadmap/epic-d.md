@@ -1,8 +1,10 @@
 # Epic D: Compliance Dimension
 
-Original scope: E3
+Wave: 1 (SysML foundation)
 
 Priority: P0
+
+Story Types: Implementation
 
 Goal: introduce compliance as a first-class dimension grouped by standard.
 

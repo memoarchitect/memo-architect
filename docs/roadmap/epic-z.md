@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P3
 
+Story Types: Architecture (plugin API contract)
+
 Goal: formalise the plugin API and prove the out-of-tree extension pattern with **medical sub-domain** examples (per ADR-1-14, MEMO is medical-only — automotive and aerospace are out of scope).
 
 Depends on: Epic V (module infra), ADR-1-14.

@@ -4,6 +4,8 @@ Wave: 1 (SysML foundation)
 
 Priority: P0
 
+Story Types: Architecture + Implementation (port grammar binding)
+
 Goal: support standard SysML v2 `port def`, `interface def`, `connect`, and flow notation in grammar, model, and validators so the ontology can express interface architectures consumable by SysON/SysIDE.
 
 Depends on: Epic K.

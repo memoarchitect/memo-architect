@@ -1,8 +1,10 @@
 # Epic I: CLI Authoring Tools
 
-Original scope: E8
+Wave: 3 (CLI surface)
 
 Priority: P1
+
+Story Types: Design + Implementation (CLI command shape)
 
 Goal: add narrow SysML-writing CLI slices for ontology and methodology authoring.
 

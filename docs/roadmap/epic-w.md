@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P2
 
+Story Types: Implementation
+
 Goal: ship analysis tools (DSM, FMEA, trace, coverage, lint, diff, impact, SBOM, FIBO, EA importer, risk ALARP, rule explainer, codemod) as feature modules. Each tool wraps a CLI command — UI never owns analysis logic.
 
 Depends on: Epic V (module infra), Epic S (CLI parity).

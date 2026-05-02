@@ -4,6 +4,8 @@ Wave: 4 (UI thin wrapper)
 
 Priority: P2
 
+Story Types: Design + Implementation (diff core algorithm)
+
 Goal: support scenario branches with element-link tooling and a visual diff renderer.
 
 Depends on: Epic P (shell), Epic W (diff viewer).

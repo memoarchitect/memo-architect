@@ -4,6 +4,8 @@ Wave: 3 (CLI surface)
 
 Priority: P0
 
+Story Types: Design + Implementation (descriptor walker)
+
 Goal: convert the DHF compiler from custom queries to a descriptor walk over `DocumentBackedView` defs, so document generation is data-driven and the UI stays a viewer.
 
 Depends on: Epic E (artifact kinds), Epic F (methodology scope), Epic N (rules in SysML).
