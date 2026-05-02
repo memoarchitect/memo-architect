@@ -121,4 +121,4 @@ The parser recursively finds all `.sysml` files — organize however suits your 
 - **Detailed walkthrough** → [Starting a New Project](new-project.md) — CoSMA layers, SysML syntax, multi-file models
 - **All CLI commands** → [CLI Usage](cli-usage.md)
 - **Customize your model** → [Configuration Reference](../developers/config/reference.md)
-- **Understand the internals** → [Architecture Overview](../developers/architecture/overview.md)
+- **Understand the internals** → see `docs/architecture/README.md`

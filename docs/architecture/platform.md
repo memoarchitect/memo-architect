@@ -420,7 +420,7 @@ Each phase is one branch, build + boot must stay green at the end.
 
 ### Phase D5 — finish current UI re-IA branch
 - Delete Ontology tab, add read-only Methodology tab.
-- Already queued in `feedback-ontology-replace-handoff.md`.
+- Already queued in `../handoffs/feedback-ontology-replace.md`.
 
 ### Phase E1 — extract L0 helpers
 - Rename `ontology/core/` → `ontology/base/` (or keep core, alias).
@@ -502,6 +502,6 @@ Each phase is one branch, build + boot must stay green at the end.
 
 ## 14. Pointers
 
-- Earlier phase log + queued work: [feedback-ontology-replace-handoff.md](feedback-ontology-replace-handoff.md)
+- Earlier phase log + queued work: [../handoffs/feedback-ontology-replace.md](../handoffs/feedback-ontology-replace.md)
 - Currently committed methodology pkg (will be renamed/restructured under E6): `packages/methodology-medical-default/`
 - DhfDocumentBinding (added Phase D4) — will be retargeted to artifact kinds in E4.

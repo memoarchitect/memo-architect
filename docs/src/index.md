@@ -1,7 +1,7 @@
 ## Get Started
 
 - **Users:** [Installation](users/installation.md), [Running MEMO](users/running.md), and [CLI Usage](users/cli-usage.md) or [Workbench UI Usage](users/ui-usage.md).
-- **Developers:** [Codebase Overview](developers/codebase-overview.md), [Design Guidelines](../design_guidelines/README.md), [Platform Architecture](../design_guidelines/memo-platform-architecture.md), and [Ontology Design](../design_guidelines/design/ontology.md).
+- **Developers:** [Codebase Overview](developers/codebase-overview.md). Repository-level architecture, decisions, roadmap, and LLM context live under `docs/`.
 
 ---
 
@@ -43,7 +43,7 @@ memo dev
 
 ## Project Status
 
-MEMO is in active development. Phase 1–Phase 18 are complete, culminating in the **GPCA Reference Model** expansion. Current focus is on **UI/UX Refinement** and **Ecosystem Tooling**. See the [Roadmap](developers/development/roadmap.md) for details.
+MEMO is in active development. Roadmap state is tracked in GitLab and summarized by `pnpm run roadmap`.
 
 ---
 
@@ -58,4 +58,3 @@ MEMO is in active development. Phase 1–Phase 18 are complete, culminating in t
 | Diagram | [ReactFlow](https://reactflow.dev/), [ELK.js](https://www.eclipse.org/elk/) |
 | Protocol | WebSocket (ws) |
 | Testing | Vitest |
-

@@ -139,7 +139,7 @@ Device projects are intentionally **configuration-light**: they declare a profil
 
 This ADR supersedes the device-project portion of **ADR-1-5** (which documented an outdated TypeScript `MEMOConfig` interface and an incorrect `.memo/config.yaml` path). ADR-1-5 is updated to refer here.
 
-The decomposed package format was introduced during Phase 7–8 rearchitecture and is documented in `docs/src/developers/architecture/platform-strategy.md`.
+The decomposed package format was introduced during Phase 7–8 rearchitecture and is documented in `docs/architecture/reference/platform-strategy.md`.
 
 ---
 
