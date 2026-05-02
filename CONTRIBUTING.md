@@ -144,9 +144,9 @@ Do not maintain plans in local files. GitLab is the single source of truth — t
 
 - `docs/README.md` — documentation map and source-of-truth rules
 - `docs/architecture/platform.md` — canonical platform architecture
-- `docs/architecture/reference/sysmlv2-rulebook.md` — SysML v2 authoring rules
+- `docs/design/sysmlv2-rulebook.md` — SysML v2 authoring rules
 - `docs/architecture/reference/overview.md` — package architecture diagram
 - `docs/architecture/reference/platform-strategy.md` — repo/package strategy
-- `docs/architecture/reference/data-flow.md` — data flow through the system
-- `docs/architecture/reference/websocket-protocol.md` — CLI ↔ web app protocol
+- `docs/design/runtime/data-flow.md` — data flow through the system
+- `docs/design/runtime/websocket-protocol.md` — CLI ↔ web app protocol
 - `docs/decisions/index.md` — ADR catalog and current decision state

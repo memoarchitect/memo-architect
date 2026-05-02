@@ -9,7 +9,7 @@ MEMO is an open-source, SysML v2-native platform for medical device architecture
 > | **[`docs/README.md`](docs/README.md)** | Documentation map and source-of-truth rules. |
 > | **[`docs/LLM.md`](docs/LLM.md)** | Minimal context pack for AI agents and LLMs. |
 > | **[`docs/architecture/platform.md`](docs/architecture/platform.md)** | Canonical platform architecture and grand plan. |
-> | **[`docs/architecture/reference/sysmlv2-rulebook.md`](docs/architecture/reference/sysmlv2-rulebook.md)** | SysML v2 modelling rule book. |
+> | **[`docs/design/sysmlv2-rulebook.md`](docs/design/sysmlv2-rulebook.md)** | SysML v2 modelling rule book. |
 > | **[`docs/decisions/index.md`](docs/decisions/index.md)** | ADR catalog and current decision state. |
 >
 > **GitLab is the single source of truth for issues + milestones.** Run `pnpm run roadmap` for live state. See [§Roadmap & Sync](#roadmap--sync) below.

@@ -42,8 +42,11 @@ Sent on initial connection and after each rebuild.
         "viewpoints": [
             { "id": "risk-overview", "label": "Risk Overview (ISO 14971)", "visibleKinds": ["Hazard", ...], ... }
         ],
-        "cosmaLayers": [
-            { "id": "risk", "label": "Risk Management", "color": "#E74C3C" }
+        "dimensions": [
+            { "id": "architecture", "label": "Architecture" },
+            { "id": "compliance", "label": "Compliance" },
+            { "id": "artifact", "label": "Artifacts" },
+            { "id": "viewpoint", "label": "Viewpoints" }
         ]
     }
 }
@@ -65,7 +68,8 @@ Sent after closure rule evaluation.
                 "elementId": "UnmitigatedHazard",
                 "elementKind": "Hazard",
                 "elementName": "Unmitigated hazard",
-                "layer": "risk"
+                "dimension": "compliance",
+                "standard": "ISO 14971"
             }
         ],
         "rulesEvaluated": 15,
@@ -83,9 +87,9 @@ Sent after completeness computation.
 {
     "type": "completeness:update",
     "payload": {
-        "layers": [
-            { "id": "risk", "label": "Risk Management", "color": "#E74C3C", "total": 5, "complete": 3, "percentage": 60 },
-            { "id": "requirements", "label": "Requirements", "color": "#4A90D9", "total": 8, "complete": 5, "percentage": 62 }
+        "groups": [
+            { "id": "safety", "dimension": "architecture", "label": "Safety", "total": 5, "complete": 3, "percentage": 60 },
+            { "id": "iec-62304", "dimension": "compliance", "label": "IEC 62304", "total": 8, "complete": 5, "percentage": 62 }
         ],
         "overall": 58,
         "totalElements": 25,
@@ -102,7 +106,7 @@ Sent when the ontology source or selection changes on disk. The server **does no
 {
     "type": "app:restart-required",
     "reason": "ontology-source-changed",
-    "changedFile": "/path/to/packages/ontology-medical-arch/sysml/risk/hazard.sysml",
+    "changedFile": "/path/to/ontology/architecture/safety/hazard.sysml",
     "instruction": "Stop dev server (Ctrl+C) and run `memo dev` again to apply ontology changes."
 }
 ```
@@ -111,8 +115,8 @@ Sent when the ontology source or selection changes on disk. The server **does no
 
 | `reason` | Trigger |
 |----------|---------|
-| `ontology-source-changed` | File watcher detected a change in an ontology package's `sysml/` directory or `memo.package.yaml` / `memo.rendering.yaml` |
-| `ontology-selection-changed` | User saved ontology selection via the Ontology Viewer UI |
+| `ontology-source-changed` | File watcher detected a change in ontology or methodology SysML/package metadata |
+| `ontology-selection-changed` | User saved methodology or ontology selection via the UI |
 
 **Client behaviour:** On receipt, the web app shows a blocking modal overlay (`RestartRequiredBanner`) and stops accepting `model:update`, `validation:update`, and `completeness:update` messages. Clicking "Reload page" triggers `window.location.reload()` which reconnects to the freshly bootstrapped server.
 

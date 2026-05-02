@@ -1,111 +1,72 @@
 # Architecture Overview
 
-MEMO is a monorepo containing multiple packages that form a layered architecture from ontology definition through parsing, validation, and visualization.
+This reference page summarizes the runtime architecture. The canonical product and ontology architecture lives in [../platform.md](../platform.md).
 
 ## System Context
 
 ```mermaid
 graph LR
-    Dev[Developer] -->|writes| SysML[.sysml files]
-    Dev -->|configures| Config[memo.config.yaml]
-    Dev -->|runs| CLI[memo CLI]
-    CLI -->|parses| SysML
-    CLI -->|loads| Config
-    CLI -->|serves| Web[Web App]
-    Web -->|displays| Diagram[Interactive Diagram]
-    Dev -->|views| Diagram
+    Author[Model Author] -->|edits| ProjectSysML[Project .sysml files]
+    Author -->|pins| Config[memo.config.yaml methodology]
+    Author -->|runs| CLI[memo CLI]
+
+    CLI -->|loads once at startup| Ontology[Canonical @memo/ontology]
+    CLI -->|loads once at startup| Methodology[@memo/methodology-*]
+    CLI -->|parses on change| ProjectSysML
+    CLI -->|serves| Web[MEMO Web App]
+    Web -->|renders| Views[Model, compliance, artifact, and diagram views]
 ```
 
-## Package Architecture
+## Conceptual Stack
 
 ```mermaid
 graph TD
-    subgraph "@memo/core"
-        Parser[Langium Parser]
-        Builder[Model Builder]
-        Validator[Rule Engine]
-        Completeness[Completeness Tracker]
-        Semantic[Semantic Model]
-        Protocol[WebSocket Protocol]
-    end
+    L0[L0 helpers: @memo/sysml-base]
+    L1[L1 canonical ontology: @memo/ontology]
+    L2[L2 methodology: @memo/methodology-default or custom]
+    L3[L3 project: examples/* or user project]
+    Tool[MEMO Architect: @memo/core + @memo/cli + @memo/web]
 
-    subgraph "@memo/ontology-arch"
-        ArchTypes[11 Architecture Layers]
-        ArchRels[Architecture Relationships]
-    end
-
-    subgraph "@memo/ontology-process"
-        ProcTypes[Regulatory Standards Types]
-        ProcRels[Process Relationships]
-    end
-
-    subgraph "@memo/medical-modeling-profile"
-        MedConfig[Medical Workbench Config]
-        Rules[35+ Closure Rules]
-        Viewpoints[Medical Viewpoints]
-        Templates[Starter Templates]
-    end
-
-    subgraph "@memo/cli"
-        DevCmd[memo dev]
-        ValidateCmd[memo validate]
-        InitCmd[memo init]
-        FileWatcher[File Watcher]
-        DevServer[Dev Server]
-        ConfigResolver[Config Resolver]
-    end
-
-    subgraph "@memo/web"
-        React[React 18 App]
-        ReactFlow[ReactFlow Diagram]
-        ELK[ELK.js Layout]
-        Zustand[Zustand Store]
-        WS[WebSocket Client]
-    end
-
-    Parser --> Builder
-    Builder --> Semantic
-    Semantic --> Validator
-    Semantic --> Completeness
-    Semantic --> Protocol
-
-    DevCmd --> Parser
-    DevCmd --> ConfigResolver
-    DevCmd --> DevServer
-    DevCmd --> FileWatcher
-    ConfigResolver --> MedConfig
-    MedConfig --> ArchTypes
-    MedConfig --> ProcTypes
-
-    Protocol --> WS
-    WS --> Zustand
-    Zustand --> React
-    React --> ReactFlow
-    ReactFlow --> ELK
+    L0 --> L1
+    L0 --> L2
+    L1 --> L2
+    L2 --> L3
+    Tool --> L1
+    Tool --> L2
+    Tool --> L3
 ```
 
-## Package Responsibilities
+The core separation is:
 
-| Package | Role | Key Exports |
+| Layer | Owns | Does not own |
 |---|---|---|
-| `@memo/core` | Parser, model, validation | `parseFiles`, `buildMemoModel`, `modelToDTO`, `evaluateClosureRules`, `computeCompleteness` |
-| `@memo/ontology-arch` | Architecture ontology | 11 ISO 42010 layers (operational→functional→logical→software→hardware→behavioral→verification→safety→security→privacy) + ROS extension |
-| `@memo/ontology-process` | Process ontology | Regulated standard artifacts (ISO 14971, IEC 62304, ISO 13485, IEC 60601, ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR) |
-| `@memo/medical-modeling-profile` | Medical modeling profile | `memo.package.yaml` with 35+ closure rules, viewpoints, and starter templates (extends both ontology packages) |
-| `@memo/cli` | CLI commands | `memo dev`, `memo validate`, `memo init` |
-| `@memo/web` | Browser UI | React app with diagram, sidebar, completeness |
+| L0 helpers | Common SysML library types, dimensions, rule/view base defs | Domain kinds |
+| L1 ontology | Architecture, compliance, artifact, viewpoint kinds and invariant relationships/rules | Project scope or workflow |
+| L2 methodology | Scope, aliases, workflow, tailoring, rule strengths | New ontology kinds unless extending ontology |
+| L3 project | Concrete element instances and project configuration | Shared type definitions |
 
-## Dependency Graph
+## Runtime Package Responsibilities
 
-```
-@memo/web ──> @memo/core
-@memo/cli ──> @memo/core
-@memo/cli ──> @memo/ontology-arch
-@memo/cli ──> @memo/ontology-process
-@memo/medical-modeling-profile extends [@memo/ontology-arch, @memo/ontology-process]
-@memo/core (standalone)
-@memo/ontology-arch (standalone)
-@memo/ontology-process extends @memo/ontology-arch
-```
+| Package / area | Role |
+|---|---|
+| `@memo/core` | Langium parser, semantic model builder, registries, validation, DTO conversion |
+| `@memo/cli` | `memo dev`, `memo validate`, project bootstrap, file watching, WebSocket server |
+| `@memo/web` | Browser UI, viewpoint filtering, diagrams, dashboards, artifact/compliance surfaces |
+| `ontology/` | Local development checkout of the canonical ontology and methodology SysML packages |
+| `examples/*` | Project instances that pin a methodology and contain concrete `.sysml` model files |
 
-The `@memo/core` package has zero runtime dependencies on domain packages. Domain knowledge flows through `memo.config.yaml` at runtime.
+`@memo/core` has no compiled dependency on a specific domain package. Domain knowledge enters at runtime from parsed ontology and methodology SysML.
+
+## UI Mapping
+
+Tabs and workbenches are generic projections over ontology dimensions filtered by methodology scope:
+
+| Surface | Source | Grouping |
+|---|---|---|
+| Model Explorer | Architecture dimension | `archLayer` selected by methodology |
+| Compliance | Compliance dimension | standard and clause |
+| Artifacts / DHF | Artifact dimension | document kind, regulatory reference, workflow stage |
+| Diagrams | Viewpoint instances | viewpoint type selected by methodology |
+| Methodology | Methodology package | scope, aliases, workflow, rule strengths |
+
+Same project element may appear in multiple surfaces when its ontology kind carries multiple dimensions.

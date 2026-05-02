@@ -1,6 +1,6 @@
 # SysML v2 Rule Book — for MEMO ontology authors
 
-**Status:** Normative for every `.sysml` file in `ontology/memo-base/**` and `projects/**`.
+**Status:** Normative for every `.sysml` file in `ontology/**` and `projects/**`.
 **Date:** 2026-04-24.
 **Source corpus studied:**
 - `Systems-Modeling/SysML-v2-Release` — `sysml/src/training/` (42 numbered topics), `sysml/src/examples/` (Vehicle, Camera, Flashlight, Cause-and-Effect, Requirements, Mass Roll-up, Metadata, Geometry, Variability, Views, Analysis, Interaction, etc.), `sysml/src/validation/` (executable conformance models 01–18).
@@ -75,7 +75,7 @@ alias Torque for ISQ::TorqueValue;
 
 ### P5 · Filesystem path encodes namespace one-to-one.
 **Source:** OMG repo: `examples/Vehicle Example/VehicleDefinitions.sysml` ↔ `package VehicleDefinitions`. GfSE: `models/SE_Models/ForestFireDetectionSystemModel.sysml` ↔ `package ForestFireDetectionSystemModel`.
-**MEMO rule:** `ontology/memo-base/<segment>/<seg>.sysml` ↔ `package memo::<segment>::<seg>`. The Apollo-11 directory-derives-layer rule (CLAUDE.md) is a special case of P5.
+**MEMO rule:** `ontology/<dimension>/<segment>/<file>.sysml` maps to a matching `memo::<dimension>::...` package namespace. The dimension-first layout in [../architecture/platform.md](../architecture/platform.md) is the canonical path convention.
 **Lint:** P5.
 
 ---
@@ -441,7 +441,7 @@ view 'vehicle structure view' : 'Part Structure View' {
     render asTreeDiagram;
 }
 ```
-**MEMO rule:** MEMO `DiagramView : View` and `DocumentBackedView : View` are view definitions. Every concrete view in `memo::profile::views::*` is a `view <id> : DiagramView { … }` (one file per view, see fresh-architecture-plan §5.2).
+**MEMO rule:** MEMO `DiagramView : View` and `DocumentBackedView : View` are view definitions. Every concrete view in `memo::profile::views::*` is a `view <id> : DiagramView { … }` (one file per view, see platform.md §5.2).
 
 ### V4 · `expose` selects exposed elements via path expressions; `**` recurses; `[…]` filters.
 **Source:** OMG `Views Example.sysml`:
@@ -598,7 +598,7 @@ And the `User Keyword Example` then uses `#situation`, `#cause`, etc.
 
 ## 16. Rule book → MEMO architecture mapping
 
-| Rule | Maps to fresh-architecture-plan v3 |
+| Rule | Maps to platform.md |
 |---|---|
 | P1, P2, P5 | §2 R1 R2 R8 |
 | P3, L1, L3 | §5.1 (`memo::core::*` is a library) |
@@ -612,7 +612,7 @@ And the `User Keyword Example` then uses `#situation`, `#cause`, etc.
 | A1–A3 | §5.1 (`memo::core::relationships`) |
 | CE1, CE2 | §6 §10.2 (Risk views — bowtie / FTA) |
 
-The fresh-architecture-plan v3 already names these patterns; this rule book is the authoritative how-to.
+The platform.md already names these patterns; this rule book is the authoritative how-to.
 
 ---
 
@@ -644,7 +644,7 @@ Below: a single Hazard kind, fully compliant with all rules above. Copy-and-past
 ### 18.1 Library package — `memo::arch::risk` (definitions + abstract usages)
 
 ```sysml
-// ontology/memo-base/arch/risk.sysml
+// ontology/arch/risk.sysml
 library package memo::arch::risk {
     private import memo::core::common::*;
     private import memo::core::enumerations::*;
@@ -686,7 +686,7 @@ library package memo::arch::risk {
 ### 18.2 Sibling stereotype file — `memo::arch::risk::stereotypes`
 
 ```sysml
-// ontology/memo-base/arch/risk_metadata.sysml
+// ontology/arch/risk_metadata.sysml
 library package memo::arch::risk::stereotypes {
     private import memo::arch::risk::*;
     private import Metaobjects::SemanticMetadata;
@@ -723,10 +723,10 @@ package memo::projects::infusion_pump::risk {
 }
 ```
 
-### 18.4 View — `memo::profile::views::risk::matrix` (already shown in fresh-architecture-plan §5.3, repeated here using `expose` form):
+### 18.4 View — `memo::profile::views::risk::matrix` (already shown in platform.md §5.3, repeated here using `expose` form):
 
 ```sysml
-// ontology/memo-base/profile/views/risk/risk_matrix.sysml
+// ontology/profile/views/risk/risk_matrix.sysml
 package memo::profile::views::risk::matrix {
     private import memo::profile::views::core::*;
     private import memo::profile::viewpoints::default_viewpoints::*;
@@ -764,7 +764,7 @@ Studied corpus deliberately omits:
 | Usability per IEC 62366-1 | none | `memo::arch::usability` package |
 | Clinical evidence chain | partial (Requirements only) | `memo::arch::clinical_evidence` with `IntendedUseClaim → ClinicalQuestion → Study → Endpoint → Evidence` chain |
 
-These are the seven additions identified in the principal-systems-engineer critique (fresh-architecture-plan §16). Rule book scope = "how to do SysML right". Domain scope = those seven packages. Both ship together.
+These are the seven additions identified in the principal-systems-engineer critique (platform.md §16). Rule book scope = "how to do SysML right". Domain scope = those seven packages. Both ship together.
 
 ---
 
@@ -776,7 +776,7 @@ deepwiki summary (already fetched) calls out: library imports, definition/usage 
 
 ## 21. Maintenance
 
-Owner: ontology-arch reviewer. Update process:
+Owner: ontology reviewer. Update process:
 1. Find a missing pattern in OMG release > 2026.x, GfSE main, or FiBO2SysMLv2 main.
 2. Add a numbered rule with source citation (`Source: <file>:<lines>`).
 3. If the rule is lint-checkable, add to §17.
@@ -822,7 +822,7 @@ package FIBO_FND_Law {
 
 **MEMO directory layout (revised):**
 ```
-ontology/memo-base/arch/
+ontology/arch/
 ├── MEMO_ARCH_Risk.sysml          ← CI aggregator + Hazards + Mitigations + RiskControls + Harms
 ├── MEMO_ARCH_Cybersecurity.sysml ← CI aggregator + Threats + Vulnerabilities + Assets + …
 ├── MEMO_ARCH_LogicalStructure.sysml
@@ -852,7 +852,7 @@ ontology/memo-base/arch/
   ]
 }
 ```
-**MEMO rule FB2:** every shippable ontology package (`ontology/memo-base/**`) carries a `.project.json` declaring `name`, `version`, `license`, `maintainer[]`, `topic[]`, and `usage[]` listing every external SysML library URN it consumes (`semantic-library`, `systems-library`, `metadata-library`, `requirement-derivation-library`, `quantities-and-units-library`, plus MEMO-specific `urn:kpar:memo-core`, `urn:kpar:memo-arch`, etc.). Replaces the planned `memo.package.yaml` — adopt Sysand's existing format instead of inventing one.
+**MEMO rule FB2:** every shippable ontology or methodology package carries a `.project.json` declaring `name`, `version`, `license`, `maintainer[]`, `topic[]`, and `usage[]` listing every external SysML library URN it consumes (`semantic-library`, `systems-library`, `metadata-library`, `requirement-derivation-library`, `quantities-and-units-library`, plus MEMO-specific package URNs such as `urn:kpar:memo-sysml-base`, `urn:kpar:memo-ontology`, and `urn:kpar:memo-methodology-default`). Replaces the planned `memo.package.yaml` as release metadata — adopt Sysand's existing format instead of inventing one.
 
 This **supersedes ADR-1-8** for ontology packages. Device-project format (`memo.config.yaml`) unchanged.
 **Lint:** FB2.
@@ -879,10 +879,10 @@ exports = [ "AccountingEquity", "Addresses", "Agents", "Agreements", … ]
 **MEMO rule FB4:** ontology releases ship as `.kpar` via Sysand. CI pipeline:
 ```
 sysand info               # validate metadata
-sysand build              # produce memo-base-<version>.kpar
+sysand build              # produce memo-ontology-<version>.kpar
 sysand publish            # push to registry (TBD)
 ```
-Three published artefacts per release: `memo-core-<v>.kpar`, `memo-arch-<v>.kpar`, `memo-process-<v>.kpar`. `memo-architect` consumes them as URN dependencies in its own `.project.json`.
+Published artifacts follow the L0/L1/L2 split: `memo-sysml-base-<v>.kpar`, `memo-ontology-<v>.kpar`, and methodology packages such as `memo-methodology-default-<v>.kpar`. `memo-architect` consumes them as URN dependencies in its own `.project.json`.
 
 ### 22.5 `part def` vs `item def` — actor / processed semantics (FB5) — **NEW** (resolves §4 S1 ambiguity)
 
@@ -908,7 +908,7 @@ Three published artefacts per release: `memo-core-<v>.kpar`, `memo-arch-<v>.kpar
 | `DesignReview`, `CAPA`, `ChangeRequest` | `part def` | `item def` | Process artefacts |
 | `ControlledArtifact` (DHF doc) | `part def` | `item def` | Document — processed |
 
-**Impact:** every `part def Hazard` in v3 plan / feedback package becomes `item def Hazard`. Significant correction. Update fresh-architecture-plan §16 critique item — list "FB5 reclassification" as P1 work alongside the namespace migration.
+**Impact:** every `part def Hazard` in v3 plan / feedback package becomes `item def Hazard`. Significant correction. Update platform.md §16 critique item — list "FB5 reclassification" as P1 work alongside the namespace migration.
 
 ### 22.6 `specializes` keyword preferred over `:>` for ontology (FB6) — **NEW**
 
@@ -1005,9 +1005,9 @@ package Relations {
 - **Method Steward** (medical-domain owner, e.g. clinical engineering lead): signs off on FB5 actor/item classification, on regulatory clause coverage, on closure-rule semantics. Owns §16 critique gaps.
 - **Syntax Steward** (SysML tooling owner): signs off on §17 lint pass, OMG round-trip (`memo check --sysml-compat`), `sysand build` success, FB7 multiplicity completeness.
 
-`CODEOWNERS` for `ontology/memo-base/**`:
+`CODEOWNERS` for `ontology/**`:
 ```
-ontology/memo-base/  @method-steward @syntax-steward
+ontology/  @method-steward @syntax-steward
 ```
 Both required-reviewers; PR cannot merge with one approval. AI-generated changes (Claude-assisted ontology edits) explicitly require both — Paper §4.2: *"AI assistance is not a replacement for methodology, but a multiplier."*
 
@@ -1044,13 +1044,13 @@ Replaces hand-curated docs with deterministic output of B11/B12. Every package g
 
 **MEMO principle FB15** (no lint — design discipline):
 - Ontology is **the system**, not metadata about the system.
-- Tool (`memo-architect`) is the wrapper; the SysML files in `memo-base` are the truth.
+- Tool (`memo-architect`) is the wrapper; the SysML files in `@memo/ontology` and the active methodology package are the truth.
 - Every UI feature, every CLI command, every DHF section ultimately resolves to a query against the ontology AST. No business logic outside the ontology + view descriptors.
-- Reinforces fresh-architecture-plan v3 §1 principle 1 ("Ontology is SysML, not YAML") and the "SysML-as-Source-of-Truth" memory marker (`feedback_sysml_ground_truth.md`).
+- Reinforces platform.md §1 principle 1 ("Ontology is SysML, not YAML") and the "SysML-as-Source-of-Truth" memory marker (`feedback_sysml_ground_truth.md`).
 
 ### 22.16 FiBO patterns → MEMO architecture mapping
 
-| FB rule | Maps to fresh-architecture-plan v3 |
+| FB rule | Maps to platform.md |
 |---|---|
 | FB1 (CI aggregator) | §4 repo layout — `MEMO_ARCH_*.sysml` files; revises §5.2 one-view-per-file (views still 1:1; ontology layers go CI-aggregator) |
 | FB2 (`.project.json`) | §0 namespace + §13 ADR-1-11 — replaces `memo.package.yaml`; new ADR-1-19 ".project.json + sysand-lock.toml supersede ADR-1-8 for ontology packages" |
@@ -1096,7 +1096,7 @@ FB13c no dangling type references
 ### 22.19 Worked example — revised under FB rules
 
 ```sysml
-// ontology/memo-base/arch/MEMO_ARCH_Risk.sysml
+// ontology/arch/MEMO_ARCH_Risk.sysml
 
 // CI aggregator — public re-export
 package MEMO_ARCH_Risk {
@@ -1175,7 +1175,7 @@ Compliance with FB1 + FB2 + FB5 + FB6 + FB7 + FB8 + FB9 + FB13 + L2 (separate st
 
 1. **Are `Requirement`s parts or items?** SysML reserved `requirement def` sidesteps the choice. MEMO keeps `requirement def` for ISO-clause-traceable requirements; FB5 doesn't apply.
 2. **Are `DesignReview`, `CAPA`, `ChangeRequest` items or parts?** They are activities (someone performs a review). SysML offers `action def` — possibly a third bucket. Likely classification: `action def DesignReview` (the activity) + `item def DesignReviewRecord` (the document produced). Worth resolving before ADR-1-22 is accepted.
-3. **Is FIBO `urn:kpar:requirement-derivation-library` available for MEMO?** Should `memo-base` `usage[]` include it for `derive` chains in cybersecurity threat modelling? Investigate during P2.
+3. **Is FIBO `urn:kpar:requirement-derivation-library` available for MEMO?** Should `memo-ontology` `usage[]` include it for `derive` chains in cybersecurity threat modelling? Investigate during P2.
 4. **Does `sysand publish` support a private MEMO registry?** Needed for proprietary device projects. Investigate during P-FB.
 
 These four go into the architecture backlog; not blockers for ADR adoption but must be answered before P2 lands.

@@ -1,116 +1,72 @@
 # Monorepo Structure
 
-MEMO uses **pnpm workspaces** with **Turborepo** for build orchestration.
+MEMO currently uses a single pnpm/Turborepo workspace for tool code, ontology source, examples, and documentation. The intended long-term split is documented in [../platform.md §10](../platform.md#10-repo-layout-final-state).
 
-## Directory Layout
+## Current Working Tree
 
-```
+```text
 memo/
 ├── packages/
-│   ├── core/                    # @memo/core — parser, model, validation
-│   │   ├── src/
-│   │   │   ├── grammar/
-│   │   │   │   └── memo-sysml.langium    # SysML v2 grammar definition
-│   │   │   ├── language/
-│   │   │   │   └── generated/            # Langium-generated parser code
-│   │   │   ├── model/
-│   │   │   │   ├── config.ts             # Config type definitions
-│   │   │   │   ├── config-loader.ts      # YAML loading + extends resolution
-│   │   │   │   ├── semantic.ts           # MemoModel, MemoModelDTO, converters
-│   │   │   │   ├── builder.ts            # AST → MemoModel
-│   │   │   │   └── parser-utils.ts       # Parse helpers
-│   │   │   ├── validator/
-│   │   │   │   ├── types.ts              # Violation, ValidationResult types
-│   │   │   │   └── rule-engine.ts        # evaluateClosureRules()
-│   │   │   ├── completeness/
-│   │   │   │   └── tracker.ts            # computeCompleteness()
-│   │   │   ├── protocol/
-│   │   │   │   └── messages.ts           # WebSocket message types
-│   │   │   └── index.ts                  # Public API barrel
-│   │   └── src/__tests__/               # 120 tests (parser, builder, ontology)
-│   │
-│   ├── ontology-core/           # @memo/ontology-core — domain-agnostic MBSE backbone
-│   │   ├── sysml/
-│   │   │   ├── entities/                 # Core SysML v2 entity definitions
-│   │   │   ├── relationships/            # Core connection definitions
-│   │   │   └── index.sysml              # Package entry
-│   │   └── memo.config.yaml             # Core ontology config
-│   │
-│   ├── ontology-medical/        # @memo/ontology-medical — medical backbone
-│   │   ├── sysml/
-│   │   │   ├── entities/                 # Medical SysML v2 entity definitions
-│   │   │   ├── relationships/            # Medical connection definitions
-│   │   │   └── index.sysml              # Package entry
-│   │   └── memo.config.yaml             # Medical ontology config
-│   │
-│   ├── medical-modeling-profile/   # @memo/medical-modeling-profile — modeling profile config
-│   │   └── memo.config.yaml             # medical modeling profile rules, viewpoints, and templates
-│   │
-│   ├── cli/                     # @memo/cli — command-line interface
-│   │   └── src/
-│   │       ├── bin/
-│   │       │   └── memo.ts              # CLI entry point (commander)
-│   │       ├── commands/
-│   │       │   ├── dev.ts               # memo dev
-│   │       │   ├── validate.ts          # memo validate
-│   │       │   └── init.ts              # memo init
-│   │       └── server/
-│   │           ├── dev-server.ts        # HTTP + WebSocket server
-│   │           ├── file-watcher.ts      # Chokidar file watcher
-│   │           └── config-resolver.ts   # Config extends resolver
-│   │
-│   └── web/                     # @memo/web — React application
-│       └── src/
-│           ├── App.tsx                  # Root component
-│           ├── main.tsx                 # Vite entry
-│           ├── store/
-│           │   ├── model-store.ts       # Zustand state
-│           │   └── ws-client.ts         # WebSocket client
-│           ├── views/
-│           │   ├── DiagramCanvas.tsx     # ReactFlow diagram
-│           │   └── layout.ts            # ELK.js layout engine
-│           └── components/
-│               ├── Sidebar.tsx          # Left sidebar
-│               ├── ModelExplorer.tsx     # Hierarchical element explorer
-│               ├── ViewpointSelector.tsx # Viewpoint filter tabs
-│               ├── CompletenessBar.tsx   # Top completeness bar
-│               └── GapBar.tsx           # Bottom violations bar
-│
-├── examples/
-│   ├── infusion-pump/          # Infusion-device reference model
-│   └── irrigation-pump/        # Surgical irrigation reference model
-│
-├── docs/                        # This documentation (MkDocs)
-│   └── adr/                    # Architecture Decision Records
-│
-├── mkdocs.yml                  # MkDocs configuration
-├── turbo.json                  # Turborepo task definitions
-├── pnpm-workspace.yaml         # Workspace package list
-└── package.json                # Root scripts
+│   ├── core/                 # @memo/core: parser, model builder, registries, validation
+│   ├── cli/                  # @memo/cli: commands, dev server, file watching
+│   ├── web/                  # @memo/web: React application
+│   ├── methodology-*/        # methodology packages during migration
+│   └── ...                   # transitional packages until migration phases remove or rename them
+├── ontology/                 # canonical SysML ontology source for local development
+├── examples/                 # projects that pin a methodology and contain element instances
+├── tools/
+│   ├── ontology-tools/       # lint and diagram helper scripts
+│   ├── ontology-viewer/      # standalone read-only ontology viewer
+│   └── vscode-extension/     # VS Code language support and snippets
+├── docs/
+│   ├── architecture/         # canonical architecture and reference docs
+│   ├── decisions/            # ADRs
+│   ├── generated/            # generated baselines
+│   ├── handoffs/             # branch handoffs
+│   ├── roadmap/              # GitLab-synced roadmap snapshots
+│   └── src/                  # MkDocs user/developer docs source
+├── mkdocs.yml
+├── pnpm-workspace.yaml
+├── turbo.json
+└── package.json
 ```
+
+## Workspace Scope
+
+`pnpm-workspace.yaml` intentionally includes consumable packages and examples, not every folder under `tools/`. Most tools are scripts or standalone utilities rather than workspace packages.
+
+The canonical ontology is represented as source under `ontology/` during this migration. Publishable package boundaries are:
+
+| Boundary | Purpose |
+|---|---|
+| `@memo/sysml-base` | L0 helper library, no domain content |
+| `@memo/ontology` | L1 canonical medical-device ontology |
+| `@memo/methodology-default` | L2 comprehensive default methodology |
+| custom methodology packages | L2 tailoring packages such as GPCA |
+| `@memo/core`, `@memo/cli`, `@memo/web` | L3 tool runtime |
 
 ## Build System
 
-Turborepo manages the build pipeline with these task definitions:
+Turborepo manages package tasks:
 
-| Task | Dependencies | Outputs |
-|---|---|---|
-| `build` | `^build` (upstream packages first) | `dist/`, `lib/`, `out/` |
-| `test` | `build` | — |
-| `dev` | — | — (persistent) |
-| `clean` | — | — |
+| Task | Purpose |
+|---|---|
+| `build` | Compile packages and generated outputs |
+| `test` | Run package tests |
+| `type-check` | TypeScript checking |
+| `dev` | Persistent development servers |
+| `clean` | Remove build outputs |
 
-The `^build` dependency ensures the ontology/build chain is respected:
-
-```
-@memo/ontology-core → @memo/ontology-medical → @memo/medical-modeling-profile → @memo/cli
-```
+The tool packages build independently of any hard-coded ontology package. At runtime, CLI commands parse the configured ontology, methodology, and project SysML.
 
 ## Key Commands
 
 ```bash
-pnpm run build          # Build all packages
-pnpm run test           # Run all tests
-pnpm run clean          # Clean all build artifacts
-pnpm run type-check     # TypeScript checking only
+pnpm run build
+pnpm run test
+pnpm run type-check
+pnpm run docs:build
+pnpm run roadmap
 ```
+
+Use [platform.md](../platform.md) for architecture decisions. Keep this file limited to workspace layout and build orchestration.

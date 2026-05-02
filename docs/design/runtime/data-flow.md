@@ -48,9 +48,10 @@ Represents a single model element (part, requirement, action, port):
 interface MemoElement {
     id: string;          // Unique identifier (usage name)
     name: string;        // Human-readable name
-    kind: string;        // Config kind key, e.g. "Hazard"
+    kind: string;        // Ontology kind key, e.g. "Hazard"
     construct: string;   // SysML construct: "part", "requirement", etc.
-    layer: string;       // CoSMA layer: "risk", "requirements", etc.
+    dimensions: string[]; // architecture, compliance, artifact, viewpoint
+    archLayer?: string;  // operational, software, safety, cybersecurity, etc.
     file: string;        // Source file path
     attributes: Record<string, string>;
     doc?: string;        // Doc comment
@@ -84,7 +85,8 @@ interface MemoModel {
     errors: ParseError[];
     // Derived indexes:
     elementsByKind: Map<string, MemoElement[]>;
-    elementsByLayer: Map<string, MemoElement[]>;
+    elementsByDimension: Map<string, MemoElement[]>;
+    elementsByArchLayer: Map<string, MemoElement[]>;
     relationshipsByType: Map<string, MemoRelationship[]>;
     outgoing: Map<string, MemoRelationship[]>;
     incoming: Map<string, MemoRelationship[]>;
@@ -101,7 +103,8 @@ interface MemoModelDTO {
     relationships: MemoRelationship[];
     errors: ParseError[];
     viewpoints?: ViewpointDTO[];
-    cosmaLayers?: CosmaLayerDTO[];
+    methodology?: MethodologyDTO;
+    dimensions?: DimensionDTO[];
 }
 ```
 
@@ -134,9 +137,9 @@ Viewpoint filtering happens **client-side** in the browser:
 
 1. The server sends the full model + viewpoint definitions in the DTO
 2. The user selects a viewpoint in `ViewpointSelector`
-3. `DiagramCanvas` builds a filter function from the viewpoint's `visibleKinds` and `visibleLayers`
+3. `DiagramCanvas` builds a filter function from the viewpoint type, visible kinds, and methodology scope
 4. `computeLayout()` applies the filter to produce a subgraph
 5. ELK.js lays out only the visible elements
 6. Relationships are included only if both endpoints are visible
 
-This keeps the server stateless — it always sends the complete model.
+This keeps the server stateless with respect to the selected view — it sends the current model and methodology scope, and the client projects that model into tabs and diagrams.

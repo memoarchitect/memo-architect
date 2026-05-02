@@ -9,13 +9,13 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 - `docs/LLM.md` — minimal context pack for agents and LLMs
 - `docs/README.md` — documentation map and source-of-truth rules
 - `docs/architecture/platform.md` — canonical platform architecture + grand plan
-- `docs/architecture/reference/sysmlv2-rulebook.md` — normative SysML v2 authoring rules
+- `docs/design/sysmlv2-rulebook.md` — normative SysML v2 authoring rules
 - `docs/roadmap/north-star.md` — product strategy and north star
 - `docs/decisions/index.md` — ADR catalog and current decision state
 - `docs/architecture/reference/overview.md` — package architecture diagram
 - `docs/architecture/reference/platform-strategy.md` — repo/package strategy
-- `docs/architecture/reference/data-flow.md` — data flow through the system
-- `docs/architecture/reference/websocket-protocol.md` — CLI ↔ web app protocol
+- `docs/design/runtime/data-flow.md` — data flow through the system
+- `docs/design/runtime/websocket-protocol.md` — CLI ↔ web app protocol
 - `docs/handoffs/` — branch-specific handoffs
 
 ## Tech Stack
