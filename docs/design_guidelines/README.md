@@ -6,60 +6,48 @@ Single source of truth for MEMO platform design, architecture, ADRs, and authori
 
 ## Start here
 
-**[memo-platform-architecture.md](memo-platform-architecture.md)** — canonical platform architecture + grand plan. Read this first. All other docs in this directory either feed into it (normative authoring rules, decision records) or are historical context that it supersedes.
+**[memo-platform-architecture.md](memo-platform-architecture.md)** — canonical platform architecture and grand plan. Read first. L0–L3 stack, four dimensions (architecture / compliance / artifact / viewpoint), default vs custom methodology, migration phases E1–E9. Every other doc here either feeds into it (normative authoring rules, decision records, reference architecture) or is an active branch handoff.
 
-**[feedback-ontology-replace-handoff.md](feedback-ontology-replace-handoff.md)** — active branch handoff (`feedback-ontology-replace`). Picks up where the last session ended; checked off as phases land.
+**[feedback-ontology-replace-handoff.md](feedback-ontology-replace-handoff.md)** — active branch (`feedback-ontology-replace`). Phase log + queued work.
 
 ---
 
-## Document index
+## Document map
 
 ### Authoritative
 
-| Doc | Status | Role |
-|---|---|---|
-| [memo-platform-architecture.md](memo-platform-architecture.md) | Proposal (key doc) | L0–L3 stack, 4 dimensions, default vs custom methodology, migration phases E1–E9 |
-| [feedback-ontology-replace-handoff.md](feedback-ontology-replace-handoff.md) | Active | Branch state + queued phases |
-| [architecture/sysmlv2-rulebook.md](architecture/sysmlv2-rulebook.md) | Normative | SysML v2 authoring rules for every `.sysml` file |
-| [architecture/platform-strategy.md](architecture/platform-strategy.md) | Accepted | Two-repo split, package format (still valid; updated by memo-platform-architecture for ontology shape) |
-| [architecture/overview.md](architecture/overview.md) | Reference | Package architecture diagram |
-| [architecture/data-flow.md](architecture/data-flow.md) | Reference | Data flow through the system |
-| [architecture/websocket-protocol.md](architecture/websocket-protocol.md) | Reference | CLI ↔ web app protocol |
-| [architecture/monorepo.md](architecture/monorepo.md) | Reference | Turborepo + pnpm layout |
+| Doc | Role |
+|---|---|
+| [memo-platform-architecture.md](memo-platform-architecture.md) | Platform spec — single canonical ontology, methodology tailoring, dimensions, CLI surface, repo layout, migration phases |
+| [feedback-ontology-replace-handoff.md](feedback-ontology-replace-handoff.md) | Active branch state |
+| [architecture/sysmlv2-rulebook.md](architecture/sysmlv2-rulebook.md) | Normative SysML v2 authoring rules — every `.sysml` file must comply |
+| [architecture/platform-strategy.md](architecture/platform-strategy.md) | Two-repo split (`memo-base` / `memo-architect`), package format. Ontology shape inside is updated by memo-platform-architecture |
 
-### Decision records (ADRs)
+### Reference architecture
 
-[adr/](adr/) — ADR-1-1 through ADR-1-10. ADR-1-10 (two-ontology collapse) is being superseded by memo-platform-architecture's single-ontology direction; pending re-issue as ADR-1-11.
+| Doc | Role |
+|---|---|
+| [architecture/overview.md](architecture/overview.md) | System context + package architecture |
+| [architecture/data-flow.md](architecture/data-flow.md) | `.sysml` → parser → model → web pipeline |
+| [architecture/websocket-protocol.md](architecture/websocket-protocol.md) | CLI ↔ web app protocol |
+| [architecture/monorepo.md](architecture/monorepo.md) | Turborepo + pnpm layout |
+| [architecture/live-reload.md](architecture/live-reload.md) | Split watcher: project hot-reload vs ontology restart-required |
 
-### Design briefs
+### Decision records
 
-[design/](design/) — closure-rules.md, configuration.md, cosma-layers.md, ontology.md, viewpoints.md.
+[adr/](adr/) — ADR-1-1 … ADR-1-11. Current direction is set by [ADR-1-11](adr/ADR-1-11-single-canonical-ontology.md), which supersedes ADR-1-6 and ADR-1-10. Older ADRs are retained for traceability with supersedence notes inline.
 
-### Ontology authoring
+### Requirements baseline
 
-[ontology/](ontology/) — ONTOLOGY_DESIGN_PROMPT.md, reference.md.
-
-### Requirements
-
-[requirements/](requirements/) — feature/function catalogs, traceability, capability statistics, user needs, software requirements, verification tests.
-
-### Historical / superseded
-
-| Doc | Superseded by | Reason |
-|---|---|---|
-| [architecture/two-ontology-refactor.md](architecture/two-ontology-refactor.md) | memo-platform-architecture (single ontology) | Two-ontology split collapsed to one |
-| [architecture/ontology-refactor-inventory.md](architecture/ontology-refactor-inventory.md) | memo-platform-architecture | Companion to two-ontology-refactor |
-| [architecture/ontology-rearchitecture.md](architecture/ontology-rearchitecture.md) | memo-platform-architecture | Layer naming covered by §4 + §5 |
-| [architecture/diagram-subsystem-audit.md](architecture/diagram-subsystem-audit.md) | architecture/fresh-architecture-plan.md | Replaced by v3 |
-| [architecture/fresh-architecture-plan.md](architecture/fresh-architecture-plan.md) | memo-platform-architecture | Folded into grand plan |
-| [architecture/execution-plan.md](architecture/execution-plan.md) | memo-platform-architecture §11 | Re-sequenced as E1–E9 |
-| [architecture/rearchitect-prompt.md](architecture/rearchitect-prompt.md) | CLAUDE.md "Executing Milestones" section | Process doc moved into harness instructions |
+[requirements/](requirements/) — implementation-derived feature/function catalogs, traceability, runtime surfaces. Auto-generated from code scans; orthogonal to platform architecture. Refresh as code evolves.
 
 ---
 
 ## Conventions
 
-- **One key doc** — `memo-platform-architecture.md`. New design proposals either update it or land as ADRs that it eventually folds in.
-- **No status drift** — when a doc is superseded, mark it in this README's "Historical" table; do NOT delete (kept for traceability).
-- **Live work tracking** stays in [`../roadmap/`](../roadmap/) — auto-synced from GitLab, do not edit manually.
-- **Branch handoffs** stay at the top of this directory (alongside memo-platform-architecture) so the current state is visible without spelunking.
+- **One canonical doc** — [memo-platform-architecture.md](memo-platform-architecture.md). New design proposals either update it directly or land as ADRs that get folded in. No parallel architecture docs.
+- **Modularity discipline** — design changes must respect the L0/L1/L2/L3 split (helpers / ontology / methodology / project). If a proposal blurs those layers, that's the first thing to challenge.
+- **Supersede, don't fork** — when an ADR is replaced, mark it `Superseded by [ADR-N]` and link forward. Keep the old file. Never edit historical decision content.
+- **Live work tracking** — [`../roadmap/`](../roadmap/) is auto-synced from GitLab. Do not edit manually.
+- **Branch handoffs** — kept at top level alongside memo-platform-architecture so current state is visible without spelunking.
+- **Authoring rules** — every `.sysml` file complies with [sysmlv2-rulebook.md](architecture/sysmlv2-rulebook.md). Every config file follows [platform-strategy.md](architecture/platform-strategy.md) §package format.

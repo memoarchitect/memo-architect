@@ -74,9 +74,7 @@ packages/
   ontology-process/          — Regulatory standards (ISO 14971, IEC 62304, ISO 13485, IEC 60601, ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR)
   medical-modeling-profile/  — Modeling profile with closure rules, viewpoints, and templates (extends both ontology packages)
 examples/
-  infusion-pump/             — Multi-file medical device model with compliance/risk models
-  irrigation-pump/           — Behavior-focused example with architecture, risk, and compliance models
-  gpca-pump/                 — Large reference model (GPCA pump, 500+ elements)
+  gpca-pump/                 — Reference medical device model (GPCA pump, 500+ elements)
 ```
 
 Each ontology package follows the Apollo-11 pattern (directory = architecture layer):
@@ -128,7 +126,7 @@ When asked to "execute" a milestone or phase, follow this protocol:
 4. **Verify baseline:** `pnpm run build && pnpm run test`
 5. **Work on `main`** — trunk-based development, no feature branches. Commit directly to `main`.
 6. **Execute:** Follow milestone scope from GitLab issue descriptions. Read all affected files before modifying. Run tests after each logical change.
-7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/infusion-pump && memo dev`.
+7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/gpca-pump && memo dev`.
 8. **Close issues:** After completing work for an issue, close it: `glab issue close -R somesh_sandbox/memo <number>`
 9. **Commit:** Reference the phase and issue number (e.g., `Phase A: fix product title (#81)`)
 

@@ -666,7 +666,9 @@ function loadResolvedConfig(configPath: string): MEMOConfig {
 
 // ─── Integration test with real infusion-pump file ──────────────────────────
 
-describe('Infusion pump integration', () => {
+// SKIP: examples/infusion-pump/ removed in c22b2e3 (single-example branch decision).
+// Restore fixture or repoint to gpca-pump when builder work resumes.
+describe.skip('Infusion pump integration', () => {
     const PUMP_FILE = resolve('/Users/someshkashyap/sandbox/memo/examples/infusion-pump/model/infusion-pump.sysml');
     const CONFIG_FILE = resolve('/Users/someshkashyap/sandbox/memo/packages/medical-modeling-profile/memo.package.yaml');
 

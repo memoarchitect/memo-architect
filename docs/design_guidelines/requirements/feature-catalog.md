@@ -1,8 +1,7 @@
-# Feature Catalog (App-Synced)
+# Feature Catalog (Generated)
 
-App source-of-truth export for features.
+Generated export for features.
 
-Generated from app data: `tools/app/data/elements/*.yaml`
 Generated at: 2026-04-20T21:10:15.554Z
 
 ## CFG

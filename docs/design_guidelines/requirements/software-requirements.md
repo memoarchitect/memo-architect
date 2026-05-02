@@ -1,8 +1,7 @@
-# Software Requirements (EARS, App-Synced)
+# Software Requirements (EARS, Generated)
 
-App source-of-truth export for software requirements.
+Generated export for software requirements.
 
-Generated from app data: `tools/app/data/elements/*.yaml`
 Generated at: 2026-04-20T21:10:15.554Z
 
 ## CFG

@@ -1,8 +1,10 @@
 # ADR-1-10: Collapse 9 Fragmented Ontology Packages into 2
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-1-11](ADR-1-11-single-canonical-ontology.md)
 **Date:** 2026-04-21
 **Replaces:** (none — new decision)
+
+> **Superseded 2026-05-02.** Two-ontology split (`ontology-arch` + `ontology-process`) collapses further into one canonical `@memo/ontology` with multi-dimensional kinds (architecture, compliance, artifact, viewpoint). Methodology — not ontology — selects subsets. See [memo-platform-architecture.md](../memo-platform-architecture.md).
 
 ---
 
