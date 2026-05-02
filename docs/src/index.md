@@ -1,7 +1,7 @@
 ## Get Started
 
 - **Users:** [Installation](users/installation.md), [Running MEMO](users/running.md), and [CLI Usage](users/cli-usage.md) or [Workbench UI Usage](users/ui-usage.md).
-- **Developers:** [Codebase Overview](developers/codebase-overview.md), [Architecture](developers/architecture/overview.md), and [Ontology Design](developers/design/ontology.md).
+- **Developers:** [Codebase Overview](developers/codebase-overview.md), [Design Guidelines](../design_guidelines/README.md), [Platform Architecture](../design_guidelines/memo-platform-architecture.md), and [Ontology Design](../design_guidelines/design/ontology.md).
 
 ---
 
