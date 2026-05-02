@@ -23,5 +23,4 @@ Canonical platform architecture and reference material live here.
 - Keep [platform.md](platform.md) as the canonical architecture doc.
 - Add or supersede ADRs in [../decisions/adr/](../decisions/adr/) for durable decisions.
 - Put concrete runtime behavior, protocols, and authoring rules in [../design/](../design/).
-- Keep branch-specific transition notes in [../handoffs/](../handoffs/), not in architecture docs.
 - Do not create new architecture plan files unless they are replacing a specific canonical doc.

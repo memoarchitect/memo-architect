@@ -2,7 +2,7 @@
 
 **Status:** Accepted (supersedes earlier ontology/methodology splits)
 **Owner:** Somesh Kashyap
-**Branch context:** continues from `feedback-ontology-replace`
+**Architecture source:** this document
 
 ---
 
@@ -414,70 +414,15 @@ Each repo is git-subtree-pulled into `memo-architect` for local dev (existing pa
 
 ---
 
-## 11. Migration plan (incremental phases)
+## 11. Implementation planning boundary
 
-Each phase is one branch, build + boot must stay green at the end.
+This document defines the target system architecture and architectural guardrails. It does not own the execution roadmap.
 
-### Phase D5 — finish current UI re-IA branch
-- Delete Ontology tab, add read-only Methodology tab.
-- Already queued in `../handoffs/feedback-ontology-replace.md`.
-
-### Phase E1 — extract L0 helpers
-- Rename `ontology/core/` → `ontology/base/` (or keep core, alias).
-- Add `dimensions.sysml`, dimension-typed kind defs (`ArchitectureElementKind`, `ComplianceElementKind`, `ArtifactElementKind`, `ViewpointTypeKind`).
-- Add `MethodologyLayerSet`, `MethodologyStandardSet`, `MethodologyArtifactSet`, `MethodologyViewpointTypeSet`, `MethodologyScope`, `ElementKindAlias` part defs.
-- No behavioral change yet — kinds still flat under existing dirs.
-
-### Phase E2 — promote architecture sublayers
-- Split `ontology/architecture/<file>.sysml` → `ontology/architecture/<sublayer>/*.sysml` (operational/, functional/, logical/, behavioral/, software/, hardware/, safety/, cybersecurity/, requirements/, context/, constraints/).
-- Tag each kind with `:> ArchitectureElementKind` and set `archLayer`.
-- Update `buildLayers` to walk one level deeper under `architecture/`.
-
-### Phase E3 — compliance dimension
-- Move regulatory kinds out of `architecture/` into `compliance/<standard>/`.
-- Tag with `:> ComplianceElementKind` and set `standard`/`clause`.
-- Add Compliance tab to web app — group by standard, filter by methodology.
-
-### Phase E4 — artifact kinds
-- Replace abstract document-view kinds with concrete artifact kinds (RiskManagementPlan, SoftwareArchitectureDocument, SoftwareDetailedDesign, SystemRequirementsSpecification, ...).
-- Each artifact kind = one `.sysml` file in `ontology/artifacts/`.
-- DhfDocumentBinding (added in D4) becomes thinner — just selects which artifact kinds to surface for current methodology.
-
-### Phase E5 — methodology scope expansion
-- Add `MethodologyViewpointTypeSet` and link methodology Viewpoint instances to viewpoint types via `typeRef`.
-- UI tab filters: each tab = ontology kinds in dim X ∩ methodology.includedX.
-- Diagrams sidebar: viewpoints filtered by `methodology.includedViewpointTypes`.
-
-### Phase E6 — default methodology
-- Author `@memo/methodology-default` with full inclusive scope.
-- Rename existing `@memo/methodology-medical-default` → `@memo/methodology-default`.
-
-### Phase E7 — GPCA custom methodology
-- Author `@memo/methodology-gpca` extending default with subtractions.
-- Repoint `examples/gpca-pump` from default to gpca.
-- Verify Compliance, Artifacts, Diagrams tabs hide cyber elements/docs/viewpoints.
-
-### Phase E8 — CLI authoring tools
-- Implement `memo ontology *` subcommands.
-- Implement `memo methodology *` subcommands.
-- Each subcommand writes `.sysml` files (no JSON state).
-
-### Phase E9 — repo split (memo-base, memo-ontology, memo-methodologies)
-- Move packages out, set up subtree.
-- ADRs updated.
-
-### Phase F — grammar + relationships
-- Langium grammar fills in `connection def`, `view def {private import}`, `presentationKind`, set literals, set difference (or workaround via explicit lists).
-- `RelationshipRegistry` populated.
-
-### Phase G — alignment + merge
-- Docs updated (this file becomes the canonical architecture doc).
-- ADR-1-10 superseded by an ADR pointing to this file.
-- Merge to `main`.
+Implementation planning lives in [../roadmap/index.md](../roadmap/index.md). Roadmap milestones must preserve the architecture in this document, but should be edited in the roadmap folder so architecture guidance and execution planning do not drift into the same artifact.
 
 ---
 
-## 12. Open questions to resolve before coding E2+
+## 12. Open questions
 
 1. SysML v2 set difference (`A - B`) syntax — does Langium support it? If not, methodology declares full lists explicitly.
 2. Multiple-inheritance kind definitions — `part def Hazard :> ArchitectureElementKind, ComplianceElementKind` — does grammar accept it? If not, model dimensions as composition (`part def Hazard :> ElementKind { attribute architecture : ArchitectureDim; attribute compliance : ComplianceDim; }`).
@@ -502,6 +447,5 @@ Each phase is one branch, build + boot must stay green at the end.
 
 ## 14. Pointers
 
-- Earlier phase log + queued work: [../handoffs/feedback-ontology-replace.md](../handoffs/feedback-ontology-replace.md)
 - Currently committed methodology pkg (will be renamed/restructured under E6): `packages/methodology-medical-default/`
 - DhfDocumentBinding (added Phase D4) — will be retargeted to artifact kinds in E4.

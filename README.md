@@ -12,7 +12,7 @@ MEMO is an open-source, SysML v2-native platform for medical device architecture
 > | **[`docs/design/sysmlv2-rulebook.md`](docs/design/sysmlv2-rulebook.md)** | SysML v2 modelling rule book. |
 > | **[`docs/decisions/index.md`](docs/decisions/index.md)** | ADR catalog and current decision state. |
 >
-> **GitLab is the single source of truth for issues + milestones.** Run `pnpm run roadmap` for live state. See [§Roadmap & Sync](#roadmap--sync) below.
+> **Architecture and roadmap are separate.** Platform guidance lives in `docs/architecture/platform.md`; execution epics and stories live in `docs/roadmap/`.
 
 ## Why MEMO?
 
@@ -191,35 +191,33 @@ cd ../irrigation-pump
 node ../../packages/cli/lib/bin/memo.js validate
 ```
 
-## Roadmap & Sync
+## Roadmap
 
-**GitLab is the single source of truth for issues + milestones.** Product strategy lives in [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md), and architecture-changing work updates [`docs/architecture/platform.md`](docs/architecture/platform.md) or an ADR.
+Architecture-changing work must respect [`docs/architecture/platform.md`](docs/architecture/platform.md). The incremental implementation plan lives in [`docs/roadmap/index.md`](docs/roadmap/index.md); GitLab epics and issues track execution detail.
 
 ### Live state
 
 ```bash
-pnpm run roadmap              # Phase summary (live from GitLab)
-pnpm run roadmap:open         # Open issues grouped by milestone
+pnpm run roadmap              # Roadmap summary (live from GitLab)
+pnpm run roadmap:open         # Open issues grouped by GitLab milestone
 pnpm run roadmap:bugs         # Open bugs only
-pnpm run roadmap -- -p w1.p2  # Single milestone detail
+pnpm run roadmap -- -p w1.p2  # Single GitLab milestone detail
 ```
 
-### Roadmap Sync
+### Sync
 
 ```bash
 memo roadmap-sync --dry-run   # Show diff between local roadmap snapshots and GitLab
-memo roadmap-sync --apply     # Create missing milestones/issues; close superseded ones
+memo roadmap-sync --apply     # Create missing GitLab records; close superseded ones
 memo roadmap-sync --verify    # Fail if GitLab and spec drift apart (CI gate)
 ```
 
-GitLab is the source of truth for roadmap state. Local roadmap files under `docs/roadmap/` are snapshots for review and navigation.
+Roadmap files under `docs/roadmap/` are the planning artifacts for incremental execution.
 
 To add or modify work:
-1. Update GitLab issues or milestones.
-2. Run the roadmap sync command if local snapshots need refresh.
-3. Update [docs/architecture/platform.md](docs/architecture/platform.md) or an ADR only when the work changes architecture.
-
-**Product strategy:** [`docs/roadmap/north-star.md`](docs/roadmap/north-star.md) — strategic anchor for prioritisation.
+1. Update [docs/roadmap/index.md](docs/roadmap/index.md) and the relevant epic file when execution scope changes.
+2. Update [docs/architecture/platform.md](docs/architecture/platform.md) or an ADR only when the target architecture changes.
+3. Retarget GitLab epics, issues, or release milestones to match the roadmap.
 
 ## Documentation
 
