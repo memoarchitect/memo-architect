@@ -22,6 +22,9 @@ Session target: 30 minutes or less.
 
 Acceptance: future helper edits have one clear target path.
 
+Status: done - `ontology/base/` is the active L0 helper source path for
+`memo::base::*`; `ontology/core/` remains legacy until migration.
+
 ### B-2 Dimension helper definitions
 
 Session target: 30 minutes or less.
