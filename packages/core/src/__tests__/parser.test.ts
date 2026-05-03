@@ -13,6 +13,7 @@ import type {
     PortDefinition,
     InterfaceDefinition,
     AttributeDefinition,
+    ViewDefinition,
     PartUsage,
     RequirementUsage,
     ActionUsage,
@@ -420,6 +421,58 @@ describe('Architecture fixture: methodology scope expressions', () => {
             package memo::methodology::gpca::scope {
                 part gpcaScope : MethodologyScope {
                     attribute includedArchLayers = defaultLayerSet.layers - {"cybersecurity"};
+                }
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+});
+
+describe('Architecture fixture: view and presentation syntax', () => {
+    it('parses view def with scalar presentationKind fallback entries', async () => {
+        const model = await parseValid(`
+            package memo::ontology::views::risk_management {
+                import memo::base::stdlib::*;
+
+                view def RiskMatrixView :> DiagramView {
+                    attribute presentationKind = PresentationKind::riskTable;
+                    attribute presentationKind = PresentationKind::matrix;
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const viewDef = pkg.members[1] as ViewDefinition;
+        expect(viewDef.$type).toBe('ViewDefinition');
+        expect(viewDef.name).toBe('RiskMatrixView');
+        expect(viewDef.specialization?.superType).toBe('DiagramView');
+        expect(viewDef.body).toHaveLength(2);
+    });
+
+    it('rejects private import visibility modifiers', async () => {
+        const errors = await parseErrors(`
+            package memo::ontology::views::risk_management {
+                private import memo::base::stdlib::*;
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('rejects multiplicity on presentationKind type declarations', async () => {
+        const errors = await parseErrors(`
+            package memo::ontology::views::risk_management {
+                view def RiskMatrixView :> DiagramView {
+                    attribute presentationKind : PresentationKind[*];
+                }
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('rejects collection-valued presentationKind assignments', async () => {
+        const errors = await parseErrors(`
+            package memo::ontology::views::risk_management {
+                view def RiskMatrixView :> DiagramView {
+                    attribute presentationKind = { PresentationKind::riskTable };
                 }
             }
         `);

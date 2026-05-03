@@ -30,6 +30,8 @@ Session target: 30 minutes or less.
 
 Acceptance: view/template work has known supported syntax.
 
+Status: done - ADR-1-16 records that `view def` is supported; current parser fixtures reject `private import`, `presentationKind` multiplicity declarations, and collection-valued `presentationKind` assignments, so view/template files must use bare imports and repeated scalar `presentationKind` assignments for now.
+
 ## Epic Exit
 
 - Grammar gaps are either implemented in thin slices or have explicit fallbacks.
