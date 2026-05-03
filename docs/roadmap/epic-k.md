@@ -19,6 +19,8 @@ Session target: 30 minutes or less.
 
 Acceptance: no production methodology depends on speculative syntax.
 
+Status: done - ADR-1-15 records the fallback to explicit enumerated methodology scope entries; current parser fixtures reject set literals and `A - B` set difference.
+
 ### K-2 View and presentation syntax gap check
 
 Session target: 30 minutes or less.

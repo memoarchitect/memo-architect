@@ -42,6 +42,13 @@ async function parseValid(input: string): Promise<Model> {
     return doc.parseResult.value;
 }
 
+async function parseErrors(input: string): Promise<string[]> {
+    const doc: LangiumDocument<Model> = await parse(input);
+    return doc.parseResult.lexerErrors
+        .concat(doc.parseResult.parserErrors as any[])
+        .map((e: any) => e.message);
+}
+
 // ─── Basic constructs ────────────────────────────────────────────────────────
 
 describe('Package', () => {
@@ -377,6 +384,46 @@ describe('AttributeDefinition', () => {
         expect(attrDef.$type).toBe('AttributeDefinition');
         expect(attrDef.name).toBe('RosMessage');
         expect(attrDef.specialization?.superType).toBe('DataType');
+    });
+});
+
+describe('Architecture fixture: methodology scope expressions', () => {
+    it('parses explicit scalar methodology scope entries', async () => {
+        const model = await parseValid(`
+            package memo::methodology::gpca::scope {
+                part gpcaScope : MethodologyScope {
+                    attribute includedArchLayer = "operational";
+                    attribute includedArchLayer = "functional";
+                    attribute includedStandard = "ISO 14971";
+                    attribute excludedKind = "SOUPComponent";
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const scope = pkg.members[0] as PartUsage;
+        expect(scope.body).toHaveLength(4);
+    });
+
+    it('rejects set literals in attribute assignments', async () => {
+        const errors = await parseErrors(`
+            package memo::methodology::default::scope {
+                part defaultLayerSet : MethodologyLayerSet {
+                    attribute layers = {"operational", "functional"};
+                }
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('rejects set-difference expressions in attribute assignments', async () => {
+        const errors = await parseErrors(`
+            package memo::methodology::gpca::scope {
+                part gpcaScope : MethodologyScope {
+                    attribute includedArchLayers = defaultLayerSet.layers - {"cybersecurity"};
+                }
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
     });
 });
 

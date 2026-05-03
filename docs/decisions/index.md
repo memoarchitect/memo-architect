@@ -6,6 +6,7 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-15](adr/ADR-1-15-methodology-scope-explicit-lists.md) | Accepted | Methodology scope uses explicit enumerated entries; current grammar does not support set literals or `A - B` set difference |
 | [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*` |
 | [ADR-1-13](adr/ADR-1-13-sysml-library-import-wrapper.md) | Accepted | Standard library wrapper at `memo::base::stdlib::*` insulates from SysON/SysIDE/Sysand path drift |
 | [ADR-1-12](adr/ADR-1-12-namespace-canonicalization.md) | Accepted | Three-segment namespaces `memo::{base,ontology,methodology}::*`; snake_case filenames; SysON/SysIDE/Sysand interop binding |
