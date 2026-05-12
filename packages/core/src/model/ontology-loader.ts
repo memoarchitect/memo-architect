@@ -147,8 +147,12 @@ function parseConstructsInFile(filePath: string): { kinds: ParsedKindInfo[]; rel
 /**
  * Build layer info by scanning the sysml/ directory tree.
  * Apollo-11 convention: sysml/<layer>/<file>.sysml
+ *
+ * Files under <layer>/ are collected recursively, so both flat
+ * (`<layer>/file.sysml`) and nested (`<layer>/<sublayer>/file.sysml`)
+ * layouts load. The first directory under sysmlDir is the layer id.
  */
-function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
+export function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
     const layers: OntologyLayerInfo[] = [];
     if (!existsSync(sysmlDir)) return layers;
 
