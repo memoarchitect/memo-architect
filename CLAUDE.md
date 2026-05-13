@@ -78,6 +78,16 @@ When asked to "execute" a milestone or phase, follow this protocol:
 
 **Do NOT:** attempt multiple milestones per session, modify files outside scope, add improvements beyond scope, create feature branches, push without being asked.
 
+## Test Hygiene
+
+Tests must track feature lifecycle:
+
+- **Adding a feature:** ship tests in the same commit. No untested public CLI command, ontology kind, or builder path.
+- **Removing or renaming a feature:** delete or update the corresponding tests in the same commit. Do not leave skipped or broken tests behind referencing removed examples, deprecated package names, or deleted CLI flags.
+- **Changing behavior:** update affected assertions before merging. A green suite that asserts the old behavior is worse than a red one.
+- Stale `it.skip` is a smell, not a fix. Either fix the test or delete it.
+- Baseline must be green (`pnpm run build && pnpm run test`) before any new work starts; if red, fix or remove the broken tests first.
+
 ## GitLab Project Management — Single Source of Truth
 
 **Remote:** `git@gitlab.com:somesh_sandbox/memo.git`
