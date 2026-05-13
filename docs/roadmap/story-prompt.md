@@ -81,6 +81,52 @@ auto-chain from a Design story into an Implementation story without
 showing me the design note first).
 ```
 
+### Auto-pick next story (generic)
+
+Use when you don't know the next story id — let the agent pick from live GitLab state and confirm before working.
+
+```
+Pick and execute the next roadmap story on branch <BRANCH or main>.
+
+Discovery (do this first, do not edit anything yet):
+1. Read CLAUDE.md, docs/LLM.md, docs/architecture/platform.md,
+   docs/decisions/index.md, docs/roadmap/index.md.
+2. Run `pnpm run roadmap` and `./scripts/list-roadmap.sh stories`
+   to enumerate open stories in title-prefix order.
+3. Cross-check with `glab issue list -R somesh_sandbox/memo --per-page 100`.
+4. Verify wave gate: do not propose a Wave N+1 story unless every
+   Wave N story is closed. Within a wave, the lowest open
+   `[W<wave>.<epic_seq>.<story_idx>]` is next unless it depends on
+   another open story (read the epic file to confirm).
+5. Verify baseline: `pnpm run build && pnpm run test`. If red,
+   propose fixing the baseline first instead.
+6. If no open story exists at all, stop and report "no open next
+   item". Do not invent work.
+
+Report to user, then STOP and wait for explicit confirmation:
+- Story id, GitLab issue number, title, wave, epic.
+- Story type classification (arch / design / impl / docs) and
+  reasoning.
+- Required ADR or design note pre-step, if any.
+- Files you expect to touch (best-effort list).
+- Baseline status (green / red + summary).
+- Any open questions or ambiguities in the acceptance criterion.
+
+End the report with the literal line:
+  "Proceed? (yes / pick different / abort)"
+
+Wait for the user's reply. Do not start editing until they reply
+"yes" (or equivalent). If they pick a different story, restart
+this prompt with that id via the standard Story Execution Prompt
+template above. If they abort, stop cleanly.
+
+After confirmation:
+- Switch to the standard Story Execution Prompt flow for the
+  confirmed story id (pre-step ADR/design note if required,
+  implement, verify, commit, close issue, push only if the user
+  asked you to push beyond the initial branch push).
+```
+
 ### Wave gate verification
 
 ```
