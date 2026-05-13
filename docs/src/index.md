@@ -43,7 +43,7 @@ memo dev
 
 ## Project Status
 
-MEMO is in active development. Roadmap state is tracked in GitLab and summarized by `pnpm run roadmap`.
+MEMO is in active development. Roadmap state is tracked in GitLab; run `./scripts/list-roadmap.sh next` for the next eligible story or open issue [#367](https://gitlab.com/somesh_sandbox/memo/-/issues/367) for the overview.
 
 ---
 

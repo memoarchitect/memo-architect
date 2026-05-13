@@ -36,7 +36,6 @@ import { importEaCommand, importCameoCommand } from '../commands/import-ea.js';
 import { importSysandCommand } from '../commands/import-sysand.js';
 import { importOwlCommand } from '../commands/import-owl.js';
 import { lockCommand } from '../commands/lock.js';
-import { roadmapSyncCommand } from '../commands/roadmap-sync.js';
 import { installCommand } from '../commands/install.js';
 import { createPackageCommand } from '../commands/create-package.js';
 import { askCommand } from '../commands/ask.js';
@@ -159,24 +158,6 @@ program
     .description('Regenerate memo.lock.yaml from the current ontology')
     .action(async () => {
         await lockCommand();
-    });
-
-program
-    .command('roadmap-sync')
-    .description('Reconcile execution-plan.md (scope) ↔ GitLab milestones+issues (state)')
-    .option('--apply', 'Write changes to GitLab')
-    .option('--verify', 'CI gate: exit non-zero on drift')
-    .option('--close-stale', 'Close GitLab issues whose session was removed from spec')
-    .option('--project <project>', 'GitLab project (owner/repo)', 'somesh_sandbox/memo')
-    .option('--spec <path>', 'Path to execution-plan.md')
-    .action(async (opts) => {
-        await roadmapSyncCommand({
-            apply: !!opts.apply,
-            verify: !!opts.verify,
-            closeStale: !!opts.closeStale,
-            project: opts.project,
-            specPath: opts.spec,
-        });
     });
 
 // ─── memo ontology ──────────────────────────────────────────────────────────

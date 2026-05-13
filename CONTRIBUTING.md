@@ -24,15 +24,16 @@ pnpm run test          # all tests must pass before starting work
 Always run before starting any work:
 
 ```bash
-pnpm run roadmap                      # see phases + active milestones (live from GitLab)
-pnpm run roadmap -- -p a              # see detail for a specific phase
+./scripts/list-roadmap.sh next        # next-eligible story (live from GitLab)
+./scripts/list-roadmap.sh stories     # all open stories, title-prefix order
+glab issue view <iid> -R somesh_sandbox/memo   # full story / epic body
 ```
 
 ## Execution Protocol
 
 When working on a phase or issue:
 
-1. **Check roadmap:** `pnpm run roadmap` then `pnpm run roadmap -- -p <slug>` for the phase you're working on
+1. **Identify story:** `./scripts/list-roadmap.sh next` (or the explicit id given). Then `glab issue view <iid>` for the full body.
 3. **Verify baseline:** `pnpm run build && pnpm run test` — must pass before changes
 4. **Read before writing:** Always read affected files before modifying them
 5. **Test after each change:** `pnpm run test` after each logical change
@@ -128,11 +129,13 @@ GitLab is the single source of truth for all planning.
 
 ```bash
 # View roadmap
-pnpm run roadmap                          # summary
-pnpm run roadmap -- -p a                  # phase detail
-pnpm run roadmap:open                     # all open issues by phase
+./scripts/list-roadmap.sh next            # next-eligible story
+./scripts/list-roadmap.sh stories         # all open stories
+./scripts/list-roadmap.sh epics           # open epic parents
+./scripts/list-roadmap.sh wave 1          # open items in wave 1
 
 # Issues
+glab issue view <iid> -R somesh_sandbox/memo
 glab issue list -R somesh_sandbox/memo --per-page 100
 glab issue create -R somesh_sandbox/memo --title "..." --label "bug"
 glab issue close -R somesh_sandbox/memo <number>
