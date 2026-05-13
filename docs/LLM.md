@@ -12,7 +12,7 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
    - **ADR-1-13** — standard library import wrapper at `memo::base::stdlib::*`. Ontology + methodology files MUST NOT import kernel paths directly.
    - **ADR-1-14** — medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*`. Automotive and aerospace are out of scope.
 4. [design/sysmlv2-rulebook.md](design/sysmlv2-rulebook.md) before editing `.sysml`.
-5. [roadmap/index.md](roadmap/index.md) for incremental implementation epics and stories.
+5. GitLab issue [#367 "Roadmap Overview"](https://gitlab.com/somesh_sandbox/memo/-/issues/367) for the wave plan and epic index. Local `docs/roadmap/epic-*.md` and `docs/roadmap/index.md` have been removed — GitLab is the sole source of truth for roadmap content.
 
 ## Roadmap Structure
 
@@ -49,7 +49,7 @@ Before executing any story, classify it as one of:
 | **Implementation** | Mechanical change against a known design / known ADR. | Code directly. Tests must precede or accompany the change. |
 | **Documentation** | Doc-only change. No code. | Code-free PR. |
 
-Story files in `docs/roadmap/epic-*.md` SHOULD declare the type per story. If a story file is silent, classify it during execution and record the classification in the commit message (`type: arch` / `type: design` / `type: impl` / `type: docs`).
+The GitLab issue description carries the story body, including any `Story Types:` declaration from the parent epic issue. If the issue is silent on type, classify during execution and record the classification in the commit message (`type: arch` / `type: design` / `type: impl` / `type: docs`).
 
 ## Story Execution Protocol
 
@@ -57,7 +57,7 @@ When asked to execute a specific story (e.g. "execute story B-2" or "execute sto
 
 1. **Read context** (this file already provides the load order).
 2. **Run `pnpm run roadmap`** to confirm live GitLab state.
-3. **Read the epic file**: `docs/roadmap/epic-<id>.md` for full story description.
+3. **Read the issue body**: `glab issue view <n> -R somesh_sandbox/memo` for full story description. Parent-epic body has epic-level scope and any closed-milestone provenance.
 4. **Classify the story** per the table above. If Architecture or Design type, produce the ADR or design note FIRST.
 5. **Verify baseline**: `pnpm run build && pnpm run test` must be green.
 6. **Verify wave gate**: do not start a Wave N+1 story unless Wave N is fully closed (all child issues closed).
@@ -87,7 +87,7 @@ A reusable prompt template lives at [roadmap/story-prompt.md](roadmap/story-prom
 ## Update Rules
 
 - Architecture changes go to [architecture/platform.md](architecture/platform.md) or a new ADR.
-- Roadmap scope changes update [roadmap/index.md](roadmap/index.md) and the relevant epic file.
+- Roadmap scope changes update the relevant GitLab issue body directly (epic parent or story). The Roadmap Overview issue [#367](https://gitlab.com/somesh_sandbox/memo/-/issues/367) holds the wave plan.
 - New ADRs increment the highest existing number; supersede instead of rewriting.
 - Avoid duplicate plan files. Prefer updating the canonical doc and linking from indexes.
 - Standard SysML v2 conformance is binding (per ADR-1-12). Do not introduce Langium-only shorthand outside the grammar package itself.
