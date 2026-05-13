@@ -11,25 +11,23 @@ Replace `<STORY>` with the story identifier (e.g. `B-2`, `K-1`, `[W1.04.02]`, or
 ## Prompt Template
 
 ```
-Execute roadmap story <STORY> on branch main.
+Execute roadmap story <STORY> on the currently checked-out branch.
 
-Mandatory pre-reads (in this order):
-1. CLAUDE.md (project overview + commit policy: trunk-based, commit to main).
-2. docs/LLM.md (load order, story execution protocol, story-type table).
-3. docs/architecture/platform.md (canonical architecture).
-4. docs/decisions/index.md and any ADR referenced by the story (esp. ADR-1-12, ADR-1-13, ADR-1-14 for Wave 1 SysML edits).
-5. docs/roadmap/epic-<id>.md for the full epic + the specific story description.
-6. Run `pnpm run roadmap` to confirm live GitLab state.
+Pre-reads (only what the story actually needs):
+1. The GitLab issue body: `glab issue view <iid> -R somesh_sandbox/memo`.
+2. The parent epic issue if its body is not echoed in the story body.
+3. Any ADR the story references (e.g. ADR-1-12, ADR-1-13, ADR-1-14 for Wave 1 SysML edits).
+4. CLAUDE.md is auto-injected — do not re-read.
 
 Pre-checks before any code change:
-- Verify wave gate: previous wave's stories all closed (do not start Wave N+1 work until Wave N is fully closed).
-- Verify baseline: pnpm run build && pnpm run test green.
-- Classify the story (per docs/LLM.md "Story Type Classification" section):
+- Wave gate is enforced by title-prefix order; `./scripts/list-roadmap.sh next` returns the eligible story.
+- Verify baseline: `pnpm run build && pnpm run test` green.
+- Classify the story (per docs/LLM.md "Story Type Classification" section), preferring the `Story Types:` line on the parent epic issue:
   - Architecture-required: write or update an ADR in docs/decisions/adr/. Land ADR before coding.
   - Design-required: write a short design note in docs/design/<topic>.md. Land doc before coding.
   - Implementation: code directly.
   - Documentation: code-free PR.
-  Record the classification in your final commit message.
+  Record the classification in the final commit message.
 
 Execute:
 - Stay strictly within the story's acceptance criterion. No scope creep.
@@ -37,19 +35,19 @@ Execute:
 - For Wave 1 SysML edits: imports go through memo::base::stdlib::* only (per ADR-1-13). Filenames are snake_case (per ADR-1-12). Standard SysML v2 syntax only — no Langium-only shorthand.
 
 Verify:
-- pnpm run build && pnpm run test
-- If CLI/builder touched: cd examples/gpca-pump && memo dev (smoke check).
-- If Wave 1 SysML touched: sysand build (Epic T) clean; SysON import smoke (Epic DD-3) when those gates exist.
+- `pnpm run build && pnpm run test`
+- If CLI/builder touched: `cd examples/gpca-pump && memo dev` (smoke check).
+- If Wave 1 SysML touched: `sysand build` (Epic T) clean; SysON import smoke (Epic DD-3) when those gates exist.
 
 Close the story:
-- Commit on main: "<W>.<E>.<S>: <short summary> (#<issue>)" with body noting type (arch/design/impl/docs) and any ADR / design-note link.
-- glab issue close -R somesh_sandbox/memo <issue>
-- If the story exposed something the epic file should record (completed acceptance, new follow-up note), update docs/roadmap/epic-<id>.md.
+- Commit: "<W>.<E>.<S>: <short summary> (#<issue>)" with body noting type (arch/design/impl/docs) and any ADR / design-note link.
+- `glab issue close -R somesh_sandbox/memo <issue>`
+- If the story exposed something the GitLab issue body should record (completed acceptance, new follow-up note), update the issue body via `glab issue update`.
 
 Stop conditions (report and ask before continuing):
 - Pre-check fails.
 - Story turns out to need Architecture or Design pre-step that wasn't anticipated.
-- Acceptance criterion is ambiguous; story description is silent on a key choice.
+- Acceptance criterion is ambiguous; story body is silent on a key choice.
 - Touching code outside the story scope appears unavoidable.
 ```
 
@@ -85,54 +83,51 @@ showing me the design note first).
 
 Use when you don't know the next story id — let the agent pick from live GitLab state and confirm before working.
 
+Optimized for low round-trips: rely on `list-roadmap.sh next` (which
+already enforces title-prefix order = wave gate) and on the epic
+file's own type declaration. CLAUDE.md is auto-injected; do NOT
+re-read it. Skip baseline check until after user confirms.
+
 ```
-Pick and execute the next roadmap story on branch <BRANCH or main>.
+Pick next roadmap story on branch <BRANCH or main>.
 
-Discovery (do this first, do not edit anything yet):
-1. Read CLAUDE.md, docs/LLM.md, docs/architecture/platform.md,
-   docs/decisions/index.md, docs/roadmap/index.md.
-2. Run `pnpm run roadmap` and `./scripts/list-roadmap.sh stories`
-   to enumerate open stories in title-prefix order.
-3. Cross-check with `glab issue list -R somesh_sandbox/memo --per-page 100`.
-4. Verify wave gate: do not propose a Wave N+1 story unless every
-   Wave N story is closed. Within a wave, the lowest open
-   `[W<wave>.<epic_seq>.<story_idx>]` is next unless it depends on
-   another open story (read the epic file to confirm).
-5. Verify baseline: `pnpm run build && pnpm run test`. If red,
-   propose fixing the baseline first instead.
-6. If no open story exists at all, stop and report "no open next
-   item". Do not invent work.
+Pick + report (no edits, no baseline yet):
+1. ./scripts/list-roadmap.sh next  → gives single next-eligible story.
+   If empty: report "no open next item" and stop.
+2. `glab issue view <iid> -R somesh_sandbox/memo` for the story body.
+   If the body references the parent epic, fetch the epic issue too.
+   Read any ADR the body names.
+3. Report:
+   - Story id, issue #, title.
+   - Type: use the parent-epic issue's declared "Story Types:" line if
+     present; otherwise classify per docs/LLM.md table.
+   - Required ADR / design note pre-step, if any.
+   - Files you expect to touch (best-effort).
+   - At most ONE open question if the acceptance criterion is
+     ambiguous; otherwise omit.
+4. End with literal line: "Proceed? (yes / pick different / abort)"
+5. STOP. Wait for explicit "yes".
 
-Report to user, then STOP and wait for explicit confirmation:
-- Story id, GitLab issue number, title, wave, epic.
-- Story type classification (arch / design / impl / docs) and
-  reasoning.
-- Required ADR or design note pre-step, if any.
-- Files you expect to touch (best-effort list).
-- Baseline status (green / red + summary).
-- Any open questions or ambiguities in the acceptance criterion.
-
-End the report with the literal line:
-  "Proceed? (yes / pick different / abort)"
-
-Wait for the user's reply. Do not start editing until they reply
-"yes" (or equivalent). If they pick a different story, restart
-this prompt with that id via the standard Story Execution Prompt
-template above. If they abort, stop cleanly.
-
-After confirmation:
-- Switch to the standard Story Execution Prompt flow for the
-  confirmed story id (pre-step ADR/design note if required,
-  implement, verify, commit, close issue, push only if the user
-  asked you to push beyond the initial branch push).
+After confirmation, switch to the standard Story Execution Prompt
+flow: verify baseline (`pnpm run build && pnpm run test`), pre-step
+ADR/design note if required, implement, verify, commit on the
+working branch, close issue.
 ```
+
+Notes on what NOT to do in pick phase:
+- Don't run `pnpm run roadmap` (summary view, zero signal for picking).
+- Don't run `glab issue list` (duplicates `list-roadmap.sh next`).
+- Don't run baseline build/test before user confirms — wasted minutes if they pick different / abort.
+- Don't re-read CLAUDE.md, LLM.md, platform.md, decisions/index.md
+  unless the chosen story's acceptance text references them.
+- Don't look for `docs/roadmap/epic-*.md` — those files were removed. Story body is in GitLab.
 
 ### Wave gate verification
 
 ```
 Audit Wave <N> readiness for closure. Confirm:
 - Every Wave <N> story issue closed in GitLab.
-- Wave <N> exit criteria from docs/roadmap/index.md "Wave Gates" section met.
+- Wave <N> exit criteria from issue #367 (Roadmap Overview) "Wave Gates" section met.
 - No regressions in pnpm run build && pnpm run test.
 - For Wave 1: sysand build clean and SysON imports the .kpar.
 Report findings as a checklist; do not change code.

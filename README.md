@@ -11,11 +11,11 @@ MEMO is an open-source, SysML v2-native platform for medical device architecture
 > | **[`docs/architecture/platform.md`](docs/architecture/platform.md)** | Canonical platform architecture and grand plan. |
 > | **[`docs/design/sysmlv2-rulebook.md`](docs/design/sysmlv2-rulebook.md)** | SysML v2 modelling rule book. |
 > | **[`docs/decisions/index.md`](docs/decisions/index.md)** | ADR catalog and current decision state. |
-> | **[`docs/roadmap/index.md`](docs/roadmap/index.md)** | 30 epics across 4 waves (SysML → CLI → UI). Roadmap source of truth. |
+> | **GitLab issue [#367](https://gitlab.com/somesh_sandbox/memo/-/issues/367)** | Roadmap Overview — 30 epics across 4 waves (SysML → CLI → UI). GitLab is the roadmap source of truth. |
 >
 > **AI agents and LLMs:** start at [`docs/LLM.md`](docs/LLM.md). It defines load order, story execution protocol, story-type classification (architecture / design / implementation / docs), GitLab title-prefix scheme, and binding ADRs.
 >
-> **Architecture and roadmap are separate.** Platform guidance lives in `docs/architecture/platform.md`; execution epics and stories live in `docs/roadmap/`.
+> **Architecture and roadmap are separate.** Platform guidance lives in `docs/architecture/platform.md`; epic + story content lives in GitLab issue descriptions (fetch via `./scripts/list-roadmap.sh next` and `glab issue view <iid>`).
 
 ## Why MEMO?
 
@@ -196,31 +196,22 @@ node ../../packages/cli/lib/bin/memo.js validate
 
 ## Roadmap
 
-Architecture-changing work must respect [`docs/architecture/platform.md`](docs/architecture/platform.md). The incremental implementation plan lives in [`docs/roadmap/index.md`](docs/roadmap/index.md); GitLab epics and issues track execution detail.
+Architecture-changing work must respect [`docs/architecture/platform.md`](docs/architecture/platform.md). The incremental implementation plan lives in GitLab as epic + story issues (Roadmap Overview: [#367](https://gitlab.com/somesh_sandbox/memo/-/issues/367)).
 
 ### Live state
 
 ```bash
-pnpm run roadmap              # Roadmap summary (live from GitLab)
-pnpm run roadmap:open         # Open issues grouped by GitLab milestone
-pnpm run roadmap:bugs         # Open bugs only
-pnpm run roadmap -- -p w1.p2  # Single GitLab milestone detail
+./scripts/list-roadmap.sh next      # Single next-eligible story
+./scripts/list-roadmap.sh stories   # All open stories, title-prefix order
+./scripts/list-roadmap.sh epics     # Open epic parents
+./scripts/list-roadmap.sh wave 1    # Open items in wave 1
+./scripts/list-roadmap.sh epic K    # Parent + stories under Epic K
+glab issue view <iid> -R somesh_sandbox/memo   # Full story / epic body
 ```
-
-### Sync
-
-```bash
-memo roadmap-sync --dry-run   # Show diff between local roadmap snapshots and GitLab
-memo roadmap-sync --apply     # Create missing GitLab records; close superseded ones
-memo roadmap-sync --verify    # Fail if GitLab and spec drift apart (CI gate)
-```
-
-Roadmap files under `docs/roadmap/` are the planning artifacts for incremental execution.
 
 To add or modify work:
-1. Update [docs/roadmap/index.md](docs/roadmap/index.md) and the relevant epic file when execution scope changes.
+1. Update the GitLab issue body directly (epic parent or story). For new stories, create with `glab issue create` using the `[Wn.nn.NN] <code> <title>` prefix scheme.
 2. Update [docs/architecture/platform.md](docs/architecture/platform.md) or an ADR only when the target architecture changes.
-3. Retarget GitLab epics, issues, or release milestones to match the roadmap.
 
 ## Documentation
 

@@ -7,6 +7,7 @@
 #   all             — open epics + stories together (full roadmap)
 #   wave <N>        — every open item in wave N (epic parents + their stories)
 #   epic <ID>       — every open item under epic <ID> (parent + stories)
+#   next            — single next-eligible story (lowest open story in lowest open wave)
 #   closed          — closed roadmap items (recently completed)
 #
 # Examples:
@@ -61,13 +62,22 @@ case "$CMD" in
           | "#\(.iid)\t\(.title)"' \
       | sort -t$'\t' -k2
     ;;
+  next)
+    # Pick lowest-titled open story whose wave has no earlier open story.
+    # Title-prefix sort ([Wn.nn.NN]) is the canonical roadmap order, so
+    # the very first open story line IS the next-eligible item.
+    fetch opened \
+      | jq -r '.[] | select(.title | test("^\\[W[0-9]+\\.[0-9]+\\.(0[1-9]|[1-9][0-9])\\] ")) | "#\(.iid)\t\(.title)"' \
+      | sort -t$'\t' -k2 \
+      | head -1
+    ;;
   closed)
     fetch closed \
       | jq -r '.[] | select(.title | test("^\\[W[0-9]+\\.[0-9]+\\.[0-9]+\\] ")) | "#\(.iid)\t\(.title)"' \
       | sort -t$'\t' -k2
     ;;
   *)
-    echo "Usage: $0 {epics|stories|all|wave <N>|epic <ID>|closed}" >&2
+    echo "Usage: $0 {epics|stories|all|wave <N>|epic <ID>|next|closed}" >&2
     exit 2
     ;;
 esac

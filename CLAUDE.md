@@ -58,20 +58,20 @@ pnpm run dev          # Start dev server (packages/cli: memo dev)
 
 **Always run at the start of every session** (before any other work):
 ```bash
-pnpm run roadmap
+./scripts/list-roadmap.sh next
 ```
-This queries GitLab live — no local cache files.
+Returns the next-eligible open story (lowest title-prefix). To execute that story, fetch its body with `glab issue view <iid> -R somesh_sandbox/memo`. GitLab is the only source of truth — no local roadmap files.
 
 ## Executing Milestones
 
 When asked to "execute" a milestone or phase, follow this protocol:
 
-1. **Check roadmap:** `pnpm run roadmap` (should already be done at session start)
-2. **Read phase detail:** `pnpm run roadmap -- -p c2` (replace `c2` with phase slug)
-3. **Read context:** This file (`CLAUDE.md`) — project overview, tech stack, decisions
+1. **Identify story:** `./scripts/list-roadmap.sh next` (or the explicit story id given by the user).
+2. **Read story body:** `glab issue view <iid> -R somesh_sandbox/memo`. Read the parent epic issue if the story references it.
+3. **Read context:** This file (`CLAUDE.md`) — project overview, tech stack, decisions.
 4. **Verify baseline:** `pnpm run build && pnpm run test`
-5. **Work on `main`** — trunk-based development, no feature branches. Commit directly to `main`.
-6. **Execute:** Follow milestone scope from GitLab issue descriptions. Read all affected files before modifying. Run tests after each logical change.
+5. **Work on the user's currently checked-out branch** — trunk-based; do not create feature branches.
+6. **Execute:** Follow story scope from the GitLab issue description. Read all affected files before modifying. Run tests after each logical change.
 7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/gpca-pump && memo dev`.
 8. **Close issues:** After completing work for an issue, close it: `glab issue close -R somesh_sandbox/memo <number>`
 9. **Commit:** Reference the phase and issue number (e.g., `Phase A: fix product title (#81)`)
@@ -94,28 +94,28 @@ Tests must track feature lifecycle:
 
 ### IMPORTANT: GitLab is the authoritative source for all planning
 
-- **Issues & milestones live in GitLab** — no local cache, no duplicate files
-- **To view roadmap:** `pnpm run roadmap` (queries GitLab live)
-- **To add/modify plan:** create or update GitLab issues and milestones
+- **Issues & milestones live in GitLab** — no local cache, no duplicate files. The previous `docs/roadmap/epic-*.md` and `docs/roadmap/index.md` have been removed; their content lives in GitLab issue descriptions.
+- **To view roadmap:** `./scripts/list-roadmap.sh {next|stories|epics|all|wave <N>|epic <ID>}` or `glab issue view <iid>`.
+- **To add/modify plan:** edit the relevant GitLab issue description directly. Do not reintroduce `docs/roadmap/epic-*.md`.
 
 ### `glab` CLI — use this, NOT the GitLab web API
 
 `glab` (v1.89.0) is installed at `/usr/local/bin/glab`. Always use `--project somesh_sandbox/memo` or `-R somesh_sandbox/memo`.
 
 ```bash
-# Roadmap (live from GitLab — no local files)
-pnpm run roadmap              # phase summary
-pnpm run roadmap:open         # open issues by phase
-pnpm run roadmap:bugs         # open bugs
-pnpm run roadmap -- -p c2     # single phase detail
+# Roadmap (live from GitLab)
+./scripts/list-roadmap.sh next         # single next-eligible story
+./scripts/list-roadmap.sh stories      # all open stories, title-prefix order
+./scripts/list-roadmap.sh epics        # open epic parents
+./scripts/list-roadmap.sh wave 1       # open items in wave 1
+./scripts/list-roadmap.sh epic K       # parent + stories under Epic K
+./scripts/list-roadmap.sh closed       # recently closed roadmap items
 
 # Issues
+glab issue view <iid> -R somesh_sandbox/memo
 glab issue list -R somesh_sandbox/memo --per-page 100
 glab issue create -R somesh_sandbox/memo --title "..." --label "bug"
 glab issue close -R somesh_sandbox/memo <number>
-
-# Milestones
-glab milestone list --project somesh_sandbox/memo --per-page 50
 ```
 
 ### Issue Labels
