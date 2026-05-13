@@ -22,7 +22,7 @@ memo/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
 │   ├── generated/            # generated baselines
-│   ├── roadmap/              # incremental roadmap plan and milestone files
+│   ├── roadmap/              # story execution prompt (roadmap content itself lives in GitLab)
 │   └── src/                  # MkDocs user/developer docs source
 ├── mkdocs.yml
 ├── pnpm-workspace.yaml
@@ -65,7 +65,7 @@ pnpm run build
 pnpm run test
 pnpm run type-check
 pnpm run docs:build
-pnpm run roadmap
+./scripts/list-roadmap.sh next
 ```
 
 Use [platform.md](../platform.md) for architecture decisions. Keep this file limited to workspace layout and build orchestration.

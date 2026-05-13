@@ -418,7 +418,7 @@ Each repo is git-subtree-pulled into `memo-architect` for local dev (existing pa
 
 This document defines the target system architecture and architectural guardrails. It does not own the execution roadmap.
 
-Implementation planning lives in [../roadmap/index.md](../roadmap/index.md). Roadmap milestones must preserve the architecture in this document, but should be edited in the roadmap folder so architecture guidance and execution planning do not drift into the same artifact.
+Implementation planning lives in GitLab — see Roadmap Overview issue [#367](https://gitlab.com/somesh_sandbox/memo/-/issues/367) for the wave plan and `./scripts/list-roadmap.sh` for epic/story navigation. Roadmap items must preserve the architecture in this document, but should be edited in GitLab so architecture guidance and execution planning do not drift into the same artifact.
 
 ---
 
