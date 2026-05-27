@@ -1,0 +1,18 @@
+# Syside configuration for MEMO
+# https://docs.sensmetry.com/modeler/configuration.html
+#
+# Folder mode (default) treats all .sysml files in included paths as one model.
+# The ontology and example model directories are included so Syside resolves
+# cross-package imports (e.g. gpca_architecture → memo::architecture::*).
+
+include = [
+    "ontology",
+    "examples/gpca-pump/model",
+]
+
+exclude = [
+    "node_modules",
+    "dist",
+    "packages/*/src",
+    ".sysand",
+]
