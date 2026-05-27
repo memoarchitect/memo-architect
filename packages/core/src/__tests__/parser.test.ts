@@ -405,15 +405,17 @@ describe('Architecture fixture: methodology scope expressions', () => {
         expect(scope.body).toHaveLength(4);
     });
 
-    it('rejects set literals in attribute assignments', async () => {
-        const errors = await parseErrors(`
+    it('parses set literals in attribute assignments', async () => {
+        const model = await parseValid(`
             package memo::methodology::default::scope {
                 part defaultLayerSet : MethodologyLayerSet {
                     attribute layers = {"operational", "functional"};
                 }
             }
         `);
-        expect(errors.length).toBeGreaterThan(0);
+        const pkg = model.members[0] as PackageDeclaration;
+        const usage = pkg.members[0] as PartUsage;
+        expect(usage.body).toHaveLength(1);
     });
 
     it('rejects set-difference expressions in attribute assignments', async () => {
@@ -448,35 +450,41 @@ describe('Architecture fixture: view and presentation syntax', () => {
         expect(viewDef.body).toHaveLength(2);
     });
 
-    it('rejects private import visibility modifiers', async () => {
-        const errors = await parseErrors(`
+    it('parses private import visibility modifiers', async () => {
+        const model = await parseValid(`
             package memo::ontology::views::risk_management {
                 private import memo::base::stdlib::*;
             }
         `);
-        expect(errors.length).toBeGreaterThan(0);
+        const pkg = model.members[0] as PackageDeclaration;
+        expect(pkg.members).toHaveLength(1);
+        expect(pkg.members[0].$type).toBe('ImportDeclaration');
     });
 
-    it('rejects multiplicity on presentationKind type declarations', async () => {
-        const errors = await parseErrors(`
+    it('parses multiplicity on attribute type declarations', async () => {
+        const model = await parseValid(`
             package memo::ontology::views::risk_management {
                 view def RiskMatrixView :> DiagramView {
                     attribute presentationKind : PresentationKind[*];
                 }
             }
         `);
-        expect(errors.length).toBeGreaterThan(0);
+        const pkg = model.members[0] as PackageDeclaration;
+        const viewDef = pkg.members[0] as ViewDefinition;
+        expect(viewDef.body).toHaveLength(1);
     });
 
-    it('rejects collection-valued presentationKind assignments', async () => {
-        const errors = await parseErrors(`
+    it('parses collection-valued attribute assignments', async () => {
+        const model = await parseValid(`
             package memo::ontology::views::risk_management {
                 view def RiskMatrixView :> DiagramView {
                     attribute presentationKind = { PresentationKind::riskTable };
                 }
             }
         `);
-        expect(errors.length).toBeGreaterThan(0);
+        const pkg = model.members[0] as PackageDeclaration;
+        const viewDef = pkg.members[0] as ViewDefinition;
+        expect(viewDef.body).toHaveLength(1);
     });
 });
 

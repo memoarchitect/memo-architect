@@ -49,7 +49,7 @@ PackageMember:
 // ─── Import ──────────────────────────────────────────────────────────────────
 
 ImportDeclaration:
-    'import' path=ImportPath ';';
+    visibility=('private' | 'public')? 'import' path=ImportPath ';';
 
 // Separate rule to handle wildcard imports (e.g. `import MEMO_Ontology_Medical::*`)
 // without LL parser ambiguity on `::` lookahead in QualifiedName
@@ -67,6 +67,7 @@ DefinitionMember:
     | InterfaceDefinition
     | ConnectionDefinition
     | AttributeDefinition
+    | ConstraintDefinition
     | EnumDefinition
     | ViewpointDefinition
     | ViewDefinition;
@@ -103,6 +104,10 @@ AttributeDefinition:
     'attribute' 'def' name=ID specialization=Specialization?
     ('{' body+=DefinitionBodyMember* '}' | ';');
 
+ConstraintDefinition:
+    'constraint' 'def' name=ID specialization=Specialization?
+    ('{' body+=DefinitionBodyMember* '}' | ';');
+
 EnumDefinition:
     'enum' 'def' name=ID '{'
         literals+=EnumLiteral*
@@ -126,12 +131,18 @@ EndDeclaration:
 
 Multiplicity:
     '[' lower=INT '..' (upper=INT | unbounded?='*') ']'
+    | '[' unbounded?='*' ']'
     | '[' exact=INT ']';
 
 // ─── Enum literal ────────────────────────────────────────────────────────────
 
 EnumLiteral:
-    'enum' name=ID ';';
+    'enum' name=EnumLiteralName ';';
+
+EnumLiteralName returns string:
+    ID | 'in' | 'out' | 'inout' | 'part' | 'requirement' | 'action' | 'item' | 'port'
+    | 'interface' | 'connection' | 'attribute' | 'constraint' | 'enum' | 'view' | 'viewpoint'
+    | 'ref' | 'import' | 'package' | 'flow' | 'first' | 'allocate' | 'library' | 'private' | 'public';
 
 // ─── Usages (instances) ─────────────────────────────────────────────────────
 
@@ -218,10 +229,13 @@ AllocateUsage:
 // ─── Body members ────────────────────────────────────────────────────────────
 
 DefinitionBodyMember:
-    AttributeMember | PartMember | DocComment;
+    AttributeMember | PartMember | RefMember | DocComment;
 
 UsageBodyMember:
-    AttributeMember | DocComment;
+    AttributeMember | ShorthandRedefinition | DocComment;
+
+ShorthandRedefinition:
+    name=MemberName '=' value=AttributeValue ';';
 
 // ─── Attribute member ────────────────────────────────────────────────────────
 // Two forms:
@@ -230,10 +244,10 @@ UsageBodyMember:
 
 AttributeMember:
     'attribute' redefines?='redefines'? name=ID
-    (':' type=QualifiedName ';' | '=' value=AttributeValue ';');
+    (':' type=QualifiedName multiplicity=Multiplicity? ';' | '=' value=AttributeValue ';');
 
 AttributeValue:
-    StringValue | IntValue | BooleanValue | EnumValue;
+    StringValue | IntValue | BooleanValue | SetLiteral | EnumValue;
 
 StringValue:
     value=STRING;
@@ -244,6 +258,12 @@ IntValue:
 BooleanValue:
     value=('true' | 'false');
 
+SetLiteral:
+    '{' elements+=SetElement (',' elements+=SetElement)* '}';
+
+SetElement:
+    value=QualifiedName | stringValue=STRING;
+
 // Enum literal reference: e.g. SeverityLevel::Catastrophic
 EnumValue:
     enumRef=QualifiedName;
@@ -252,7 +272,13 @@ EnumValue:
 // e.g. part subsystems : Subsystem[0..*];
 
 PartMember:
-    'part' name=ID (':' type=QualifiedName)? multiplicity=Multiplicity? ';';
+    'part' name=MemberName (':' type=QualifiedName)? multiplicity=Multiplicity? ';';
+
+// ─── Reference member ───────────────────────────────────────────────────────
+// e.g. ref subject : TraceableElement[*];
+
+RefMember:
+    'ref' name=ID ':' type=QualifiedName multiplicity=Multiplicity? ';';
 
 // ─── Doc comment ─────────────────────────────────────────────────────────────
 // Captured as a single terminal to prevent hidden ML_COMMENT from consuming it
@@ -268,10 +294,16 @@ Specialization:
 // ─── Qualified name (data type rule → returns string) ────────────────────────
 
 QualifiedName returns string:
-    ID ('::' ID)*;
+    QualifiedNameSegment ('::' QualifiedNameSegment)*;
 
-// Allow keywords that are also valid SysML v2 identifiers in specific contexts
-// (e.g. `end part[0..*]` in connection defs, `connect control ::> ref`)
+QualifiedNameSegment returns string:
+    ID | 'library';
+
+// Allow keywords as identifiers in member/feature contexts
+MemberName returns string:
+    ID | 'requirement' | 'action' | 'item' | 'port' | 'interface' | 'connection'
+    | 'attribute' | 'constraint' | 'view' | 'viewpoint' | 'ref' | 'part';
+
 FeatureName returns string:
     ID | 'part';
 
