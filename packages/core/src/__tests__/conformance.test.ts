@@ -294,3 +294,109 @@ describe('DD-5: sysand publish dry-run — publishable packages', () => {
         expect(result).toContain('memo-methodology-default-0.1.0.kpar');
     });
 });
+
+describe('DD-6: naming + casing lint (ADR-1-12)', () => {
+    const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
+    const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
+    const SNAKE_CASE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+
+    const DEF_CONSTRUCTS = ['part', 'item', 'enum', 'requirement', 'action', 'port', 'connection', 'attribute', 'view', 'viewpoint'];
+    const DEF_RE = new RegExp(
+        `(?:^|\\n)\\s*(?:${DEF_CONSTRUCTS.join('|')})\\s+def\\s+(\\w+)`,
+        'g',
+    );
+    const ATTR_RE = /(?:^|\n)\s*attribute\s+(\w+)\s*(?::|;|=)/g;
+
+    function collectAllSysml(): { relPath: string; text: string }[] {
+        const dirs = [ONTOLOGY_ROOT, GPCA_MODEL_DIR];
+        const entries: { relPath: string; text: string }[] = [];
+        const root = resolve(__dirname, '../../../..');
+        for (const dir of dirs) {
+            if (!existsSync(dir)) continue;
+            for (const f of collectSysmlFiles(dir)) {
+                entries.push({
+                    relPath: relative(root, f),
+                    text: readFileSync(f, 'utf-8'),
+                });
+            }
+        }
+        return entries;
+    }
+
+    const allEntries = collectAllSysml();
+
+    it('discovers SysML files to audit', () => {
+        expect(allEntries.length).toBeGreaterThanOrEqual(30);
+    });
+
+    it('N1: all type definitions use PascalCase', () => {
+        const violations: string[] = [];
+        for (const e of allEntries) {
+            DEF_RE.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = DEF_RE.exec(e.text)) !== null) {
+                const name = m[1];
+                if (!PASCAL_CASE_RE.test(name)) {
+                    const line = e.text.slice(0, m.index).split('\n').length;
+                    violations.push(`${e.relPath}:${line}: "${name}" is not PascalCase`);
+                }
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
+    });
+
+    it('N2: all attribute names use camelCase', () => {
+        const violations: string[] = [];
+        for (const e of allEntries) {
+            ATTR_RE.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = ATTR_RE.exec(e.text)) !== null) {
+                const name = m[1];
+                const preceding = e.text.slice(Math.max(0, m.index - 4), m.index + m[0].length);
+                if (/attribute\s+def\s/.test(preceding)) continue;
+                if (!CAMEL_CASE_RE.test(name)) {
+                    const line = e.text.slice(0, m.index).split('\n').length;
+                    violations.push(`${e.relPath}:${line}: "${name}" is not camelCase`);
+                }
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
+    });
+
+    it('N3: all .sysml filenames use snake_case', () => {
+        const violations: string[] = [];
+        for (const e of allEntries) {
+            const filename = e.relPath.split('/').pop()!.replace('.sysml', '');
+            if (!SNAKE_CASE_RE.test(filename)) {
+                violations.push(`${e.relPath}: filename "${filename}" is not snake_case`);
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
+    });
+
+    it('N4: ontology directory segments use snake_case', () => {
+        const violations: string[] = [];
+        for (const e of allEntries) {
+            if (!e.relPath.startsWith('ontology/')) continue;
+            const segments = e.relPath.split('/').slice(1, -1);
+            for (const seg of segments) {
+                if (!SNAKE_CASE_RE.test(seg)) {
+                    violations.push(`${e.relPath}: directory segment "${seg}" is not snake_case`);
+                }
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
+    });
+
+    it('lint.mjs exits cleanly with zero P6 violations', async () => {
+        const { execSync } = await import('node:child_process');
+        const repoRoot = resolve(__dirname, '../../../..');
+        const result = execSync('node tools/ontology-tools/lint.mjs', {
+            cwd: repoRoot,
+            encoding: 'utf-8',
+            timeout: 30_000,
+        });
+        expect(result).toContain('lint passed');
+        expect(result).not.toMatch(/P6/);
+    });
+});
