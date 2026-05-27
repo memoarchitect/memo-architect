@@ -466,6 +466,30 @@ describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
     });
 });
 
+describe('DD-5: sysand publish --dry-run', () => {
+    it('memo sysand publish --dry-run succeeds for ontology-arch', () => {
+        const pkgDir = join(REPO_ROOT, 'packages', 'ontology-arch');
+        const output = run('sysand publish --dry-run --package @memo/ontology-arch', pkgDir);
+        expect(output).toContain('PASS');
+        expect(output).toContain('.kpar');
+        expect(output).toContain('All packages pass dry-run');
+    });
+
+    it('memo sysand publish --dry-run reports failure for package with no SysML files', () => {
+        const pkgDir = join(REPO_ROOT, 'packages', 'ontology-process');
+        const { stdout, exitCode } = runMayFail('sysand publish --dry-run', pkgDir);
+        expect(stdout).toContain('No .sysml files found');
+        expect(exitCode).not.toBe(0);
+    });
+
+    it('memo sysand publish --dry-run fails gracefully outside a project', () => {
+        const tmpDir = mkdtempSync(join(tmpdir(), 'memo-publish-'));
+        const { exitCode } = runMayFail('sysand publish --dry-run', tmpDir);
+        rmSync(tmpDir, { recursive: true, force: true });
+        expect(exitCode).not.toBe(0);
+    });
+});
+
 describe('E2E: import ea/cameo/sysand/owl', () => {
     let tmpDir: string;
 

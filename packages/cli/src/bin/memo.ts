@@ -35,6 +35,7 @@ import { importCsvCommand, importRelCsvCommand, importTemplateCommand, importDif
 import { importEaCommand, importCameoCommand } from '../commands/import-ea.js';
 import { importSysandCommand } from '../commands/import-sysand.js';
 import { importOwlCommand } from '../commands/import-owl.js';
+import { sysandPublishCommand } from '../commands/sysand-publish.js';
 import { lockCommand } from '../commands/lock.js';
 import { installCommand } from '../commands/install.js';
 import { createPackageCommand } from '../commands/create-package.js';
@@ -447,6 +448,21 @@ dhfCmd
     .option('-o, --output <dir>', 'Output directory')
     .action(async (options: { format?: string; output?: string }) => {
         await dhfReviewPacketCommand(options);
+    });
+
+// ─── memo sysand ────────────────────────────────────────────────────────────
+
+const sysandCmd = program
+    .command('sysand')
+    .description('SysAnd tool interop commands');
+
+sysandCmd
+    .command('publish')
+    .description('Validate and package ontology for SysAnd registry publication')
+    .option('--dry-run', 'Validate without writing artifacts (default)')
+    .option('-p, --package <name>', 'Publish a specific package from the config chain')
+    .action(async (options: { dryRun?: boolean; package?: string }) => {
+        await sysandPublishCommand({ ...options, dryRun: options.dryRun ?? true });
     });
 
 program.parse();
