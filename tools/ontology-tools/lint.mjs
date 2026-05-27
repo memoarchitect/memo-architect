@@ -1,7 +1,8 @@
 // ─── Ontology Lint ──────────────────────────────────────────────────────────
 //
-// Enforces P1 (no empty subclasses) and P2 (no duplicate simple names across
-// packages without an `:>` link) universally across every element kind.
+// Enforces P1 (no empty subclasses), P2 (no duplicate simple names across
+// packages without an `:>` link), and P5 (no kernel-path standard library
+// imports outside memo::base::stdlib::* — ADR-1-13).
 //
 // P1 violations are gated by `packages/ontology-medical-arch/.p1-exceptions.yaml`:
 // any `def X :> Y { }` whose body is empty fails unless `X` is listed as an
@@ -16,8 +17,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { parseAllOntologyDefinitions, REPO_ROOT } from './sysml-reader.mjs';
+import { join, relative } from 'node:path';
+import { parseAllOntologyDefinitions, collectSysmlFiles, REPO_ROOT } from './sysml-reader.mjs';
 
 const COLORS = {
     red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -108,6 +109,54 @@ function lintP4(failures, warnings) {
     }
 }
 
+// SysML v2 standard library package names that must only be imported via
+// the memo::base::stdlib::* wrapper (ADR-1-13).
+const KERNEL_LIBRARY_PACKAGES = [
+    'ScalarValues', 'BaseFunctions', 'Collections',
+    'ISQBase', 'ISQ', 'SI', 'USCustomary',
+    'MeasurementReferences', 'Quantities',
+    'Time', 'Duration',
+    'Performances', 'Actions', 'Calculations',
+    'ControlPerformances', 'TransitionPerformances',
+    'StatePerformances', 'Triggers',
+    'KerML', 'SysML',
+];
+
+const KERNEL_IMPORT_RE = new RegExp(
+    String.raw`^\s*(?:private\s+|public\s+)?import\s+(?:all\s+)?(${KERNEL_LIBRARY_PACKAGES.join('|')})(?:::|;|\s)`,
+    'gm',
+);
+
+const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'ontology', 'base', 'stdlib');
+
+function lintP5(failures) {
+    const roots = [
+        join(REPO_ROOT, 'ontology'),
+        join(REPO_ROOT, 'feedback'),
+        join(REPO_ROOT, 'examples'),
+    ];
+    for (const root of roots) {
+        if (!existsSync(root)) continue;
+        const files = collectSysmlFiles(root);
+        for (const f of files) {
+            if (f.startsWith(STDLIB_WRAPPER_DIR)) continue;
+            let text;
+            try { text = readFileSync(f, 'utf-8'); } catch { continue; }
+            let m;
+            KERNEL_IMPORT_RE.lastIndex = 0;
+            while ((m = KERNEL_IMPORT_RE.exec(text)) !== null) {
+                const line = text.slice(0, m.index).split('\n').length;
+                failures.push({
+                    rule: 'P5',
+                    file: relative(REPO_ROOT, f),
+                    line,
+                    message: `Kernel-path import of '${m[1]}' — use memo::base::stdlib::* instead (ADR-1-13).`,
+                });
+            }
+        }
+    }
+}
+
 function main() {
     const { whitelist, path: whitelistPath } = loadP1Exceptions();
     const { packages, definitions } = parseAllOntologyDefinitions();
@@ -170,6 +219,9 @@ function main() {
 
     // P4
     lintP4(failures, warnings);
+
+    // P5: kernel-path standard library import enforcement (ADR-1-13, DD-2)
+    lintP5(failures);
 
     // Render report
     const header = COLORS.bold('memo ontology:lint');
