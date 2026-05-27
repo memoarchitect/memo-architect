@@ -211,3 +211,86 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
         expect(bad, bad.join('\n')).toHaveLength(0);
     });
 });
+
+describe('DD-5: sysand publish dry-run — publishable packages', () => {
+    const PACKAGE_MAP: { name: string; level: string; dirs: string[]; rootFiles?: string[] }[] = [
+        { name: '@memo/sysml-base', level: 'L0', dirs: ['base', 'core'] },
+        { name: '@memo/ontology', level: 'L1', dirs: ['architecture', 'compliance', 'manifest', 'viewpoints', 'views'], rootFiles: ['medical_device_library.sysml'] },
+        { name: '@memo/methodology-default', level: 'L2', dirs: ['methodology'] },
+    ];
+
+    function collectPackageFiles(pkg: typeof PACKAGE_MAP[0]): string[] {
+        const files: string[] = [];
+        for (const dir of pkg.dirs) {
+            const dirPath = resolve(ONTOLOGY_ROOT, dir);
+            if (existsSync(dirPath)) files.push(...collectSysmlFiles(dirPath));
+        }
+        if (pkg.rootFiles) {
+            for (const f of pkg.rootFiles) {
+                const fp = resolve(ONTOLOGY_ROOT, f);
+                if (existsSync(fp)) files.push(fp);
+            }
+        }
+        return files;
+    }
+
+    for (const pkg of PACKAGE_MAP) {
+        it(`${pkg.name} (${pkg.level}) has SysML files`, () => {
+            const files = collectPackageFiles(pkg);
+            expect(files.length).toBeGreaterThan(0);
+        });
+
+        it(`${pkg.name} (${pkg.level}) all files are readable and non-empty`, () => {
+            const files = collectPackageFiles(pkg);
+            const empty: string[] = [];
+            const unreadable: string[] = [];
+            for (const f of files) {
+                try {
+                    const content = readFileSync(f, 'utf-8');
+                    if (content.trim().length === 0) empty.push(relative(ONTOLOGY_ROOT, f));
+                } catch {
+                    unreadable.push(relative(ONTOLOGY_ROOT, f));
+                }
+            }
+            expect(unreadable, `Unreadable: ${unreadable.join(', ')}`).toHaveLength(0);
+            expect(empty, `Empty: ${empty.join(', ')}`).toHaveLength(0);
+        });
+
+        it(`${pkg.name} (${pkg.level}) all files parse without errors`, async () => {
+            const files = collectPackageFiles(pkg);
+            const errors: string[] = [];
+            for (const f of files) {
+                const source = readFileSync(f, 'utf-8');
+                const doc = await parse(source);
+                const parseErrors = [
+                    ...doc.parseResult.lexerErrors,
+                    ...doc.parseResult.parserErrors,
+                ];
+                if (parseErrors.length > 0) {
+                    errors.push(`${relative(ONTOLOGY_ROOT, f)}: ${parseErrors.length} error(s)`);
+                }
+            }
+            expect(errors, errors.join('\n')).toHaveLength(0);
+        });
+
+        it(`${pkg.name} (${pkg.level}) produces valid .kpar artifact name`, () => {
+            const safeName = pkg.name.replace(/^@/, '').replace(/\//g, '-');
+            const kparName = `${safeName}-0.1.0.kpar`;
+            expect(kparName).toMatch(/^[a-z0-9-]+-\d+\.\d+\.\d+\.kpar$/);
+        });
+    }
+
+    it('sysand-publish-dry-run.mjs exits cleanly', async () => {
+        const { execSync } = await import('node:child_process');
+        const repoRoot = resolve(__dirname, '../../../..');
+        const result = execSync('node tools/ontology-tools/sysand-publish-dry-run.mjs', {
+            cwd: repoRoot,
+            encoding: 'utf-8',
+            timeout: 30_000,
+        });
+        expect(result).toContain('All packages pass dry-run');
+        expect(result).toContain('memo-sysml-base-0.1.0.kpar');
+        expect(result).toContain('memo-ontology-0.1.0.kpar');
+        expect(result).toContain('memo-methodology-default-0.1.0.kpar');
+    });
+});
