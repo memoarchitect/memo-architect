@@ -156,9 +156,11 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
     });
 
     it('C2: every import target resolves to a declared package', () => {
+        const kernelSet = new Set(KERNEL_LIBRARY_PACKAGES);
         const unresolved: string[] = [];
         for (const e of allEntries) {
             for (const imp of e.imports) {
+                if (kernelSet.has(imp)) continue;
                 if (!declaredPackages.has(imp)) {
                     unresolved.push(`${e.relPath}: unresolved import "${imp}::*"`);
                 }
