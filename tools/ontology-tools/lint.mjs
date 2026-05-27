@@ -1,8 +1,10 @@
 // ─── Ontology Lint ──────────────────────────────────────────────────────────
 //
 // Enforces P1 (no empty subclasses), P2 (no duplicate simple names across
-// packages without an `:>` link), and P5 (no kernel-path standard library
-// imports outside memo::base::stdlib::* — ADR-1-13).
+// packages without an `:>` link), P5 (no kernel-path standard library
+// imports outside memo::base::stdlib::* — ADR-1-13), and P6 (naming/casing
+// conventions per ADR-1-12: PascalCase defs, camelCase attributes, snake_case
+// filenames).
 //
 // P1 violations are gated by `packages/ontology-medical-arch/.p1-exceptions.yaml`:
 // any `def X :> Y { }` whose body is empty fails unless `X` is listed as an
@@ -17,7 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, basename } from 'node:path';
 import { parseAllOntologyDefinitions, collectSysmlFiles, REPO_ROOT } from './sysml-reader.mjs';
 
 const COLORS = {
@@ -157,6 +159,101 @@ function lintP5(failures) {
     }
 }
 
+// ─── P6: Naming + casing lint (ADR-1-12, DD-6) ─────────────────────────────
+
+const PASCAL_CASE_RE = /^[A-Z][a-zA-Z0-9]*$/;
+const CAMEL_CASE_RE = /^[a-z][a-zA-Z0-9]*$/;
+const SNAKE_CASE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+
+const DEF_CONSTRUCTS = ['part', 'item', 'enum', 'requirement', 'action', 'port', 'connection', 'attribute', 'view', 'viewpoint'];
+const DEF_RE = new RegExp(
+    String.raw`(?:^|\n)\s*(?:${DEF_CONSTRUCTS.join('|')})\s+def\s+(\w+)`,
+    'g',
+);
+const ATTR_RE = /(?:^|\n)\s*attribute\s+(\w+)\s*(?::|;|=)/g;
+
+function lintP6(failures) {
+    const roots = [
+        join(REPO_ROOT, 'ontology'),
+        join(REPO_ROOT, 'examples'),
+    ];
+    for (const root of roots) {
+        if (!existsSync(root)) continue;
+        const files = collectSysmlFiles(root);
+        for (const f of files) {
+            const rel = relative(REPO_ROOT, f);
+            const filename = basename(f, '.sysml');
+
+            // P6-file: snake_case filenames (no hyphens checked by C5 already)
+            if (!SNAKE_CASE_RE.test(filename)) {
+                failures.push({
+                    rule: 'P6-file',
+                    file: rel,
+                    line: 1,
+                    message: `Filename "${filename}.sysml" is not snake_case (ADR-1-12 §5).`,
+                });
+            }
+
+            let text;
+            try { text = readFileSync(f, 'utf-8'); } catch { continue; }
+
+            // P6-def: PascalCase for type definitions
+            DEF_RE.lastIndex = 0;
+            let m;
+            while ((m = DEF_RE.exec(text)) !== null) {
+                const name = m[1];
+                if (!PASCAL_CASE_RE.test(name)) {
+                    const line = text.slice(0, m.index).split('\n').length;
+                    failures.push({
+                        rule: 'P6-def',
+                        file: rel,
+                        line,
+                        message: `Definition "${name}" is not PascalCase (ADR-1-12 §5).`,
+                    });
+                }
+            }
+
+            // P6-attr: camelCase for attribute names
+            ATTR_RE.lastIndex = 0;
+            while ((m = ATTR_RE.exec(text)) !== null) {
+                const name = m[1];
+                // Skip `attribute def` (those are type defs, checked by P6-def)
+                const preceding = text.slice(Math.max(0, m.index - 4), m.index + m[0].length);
+                if (/attribute\s+def\s/.test(preceding)) continue;
+                if (!CAMEL_CASE_RE.test(name)) {
+                    const line = text.slice(0, m.index).split('\n').length;
+                    failures.push({
+                        rule: 'P6-attr',
+                        file: rel,
+                        line,
+                        message: `Attribute "${name}" is not camelCase (ADR-1-12 §5).`,
+                    });
+                }
+            }
+        }
+    }
+
+    // P6-dir: snake_case directory segments under ontology/
+    const ontRoot = join(REPO_ROOT, 'ontology');
+    if (existsSync(ontRoot)) {
+        const walkDirs = (dir) => {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+                if (!entry.isDirectory()) continue;
+                if (!SNAKE_CASE_RE.test(entry.name)) {
+                    failures.push({
+                        rule: 'P6-dir',
+                        file: relative(REPO_ROOT, join(dir, entry.name)) + '/',
+                        line: 1,
+                        message: `Directory segment "${entry.name}" is not snake_case (ADR-1-12 §5).`,
+                    });
+                }
+                walkDirs(join(dir, entry.name));
+            }
+        };
+        walkDirs(ontRoot);
+    }
+}
+
 function main() {
     const { whitelist, path: whitelistPath } = loadP1Exceptions();
     const { packages, definitions } = parseAllOntologyDefinitions();
@@ -222,6 +319,9 @@ function main() {
 
     // P5: kernel-path standard library import enforcement (ADR-1-13, DD-2)
     lintP5(failures);
+
+    // P6: naming + casing lint (ADR-1-12, DD-6)
+    lintP6(failures);
 
     // Render report
     const header = COLORS.bold('memo ontology:lint');
