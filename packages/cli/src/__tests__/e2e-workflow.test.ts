@@ -6,8 +6,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'node:child_process';
-import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const CLI_PATH = join(__dirname, '../../lib/bin/memo.js');
@@ -378,6 +378,91 @@ description: "Another fake ontology"
         } finally {
             rmSync(emptyDir, { recursive: true, force: true });
         }
+    });
+});
+
+describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
+    const GPCA_DIR = join(REPO_ROOT, 'examples', 'gpca-pump');
+    let extractDir: string;
+
+    function collectSysmlFiles(dir: string): string[] {
+        const files: string[] = [];
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const full = join(dir, entry.name);
+            if (entry.isDirectory()) {
+                files.push(...collectSysmlFiles(full));
+            } else if (entry.name.endsWith('.sysml')) {
+                files.push(full);
+            }
+        }
+        return files;
+    }
+
+    beforeAll(() => {
+        extractDir = mkdtempSync(join(tmpdir(), 'memo-kpar-roundtrip-'));
+        run('build --kpar', GPCA_DIR);
+    });
+
+    afterAll(() => {
+        rmSync(extractDir, { recursive: true, force: true });
+        rmSync(join(GPCA_DIR, 'dist'), { recursive: true, force: true });
+        rmSync(join(GPCA_DIR, 'gpca-pump.kpar'), { force: true });
+    });
+
+    it('produces a .kpar file', () => {
+        expect(existsSync(join(GPCA_DIR, 'gpca-pump.kpar'))).toBe(true);
+    });
+
+    it('kpar extracts without errors', () => {
+        execSync(
+            `gunzip -c "${join(GPCA_DIR, 'gpca-pump.kpar')}" | tar xf -`,
+            { cwd: extractDir },
+        );
+        expect(existsSync(join(extractDir, 'manifest.json'))).toBe(true);
+    });
+
+    it('manifest lists all source SysML files', () => {
+        const manifest = JSON.parse(readFileSync(join(extractDir, 'manifest.json'), 'utf-8'));
+        const sourceFiles = collectSysmlFiles(join(GPCA_DIR, 'model'));
+        const manifestSysml = (manifest.files as string[]).filter((f: string) => f.endsWith('.sysml'));
+
+        expect(manifest.format).toBe('kpar');
+        expect(manifestSysml.length).toBe(sourceFiles.length);
+        for (const src of sourceFiles) {
+            const rel = relative(GPCA_DIR, src);
+            expect(manifestSysml).toContain(rel);
+        }
+    });
+
+    it('extracted SysML files are byte-identical to source', () => {
+        const sourceFiles = collectSysmlFiles(join(GPCA_DIR, 'model'));
+        expect(sourceFiles.length).toBeGreaterThanOrEqual(10);
+
+        const diffs: string[] = [];
+        for (const src of sourceFiles) {
+            const rel = relative(GPCA_DIR, src);
+            const extracted = join(extractDir, rel);
+            if (!existsSync(extracted)) {
+                diffs.push(`MISSING: ${rel}`);
+                continue;
+            }
+            const srcContent = readFileSync(src);
+            const extContent = readFileSync(extracted);
+            if (!srcContent.equals(extContent)) {
+                diffs.push(`CHANGED: ${rel}`);
+            }
+        }
+
+        if (diffs.length > 0) {
+            throw new Error(`Round-trip diff is not empty:\n${diffs.join('\n')}`);
+        }
+        expect(diffs).toHaveLength(0);
+    });
+
+    it('config file survives round-trip', () => {
+        const srcConfig = readFileSync(join(GPCA_DIR, 'memo.config.yaml'), 'utf-8');
+        const extConfig = readFileSync(join(extractDir, 'memo.config.yaml'), 'utf-8');
+        expect(extConfig).toBe(srcConfig);
     });
 });
 
