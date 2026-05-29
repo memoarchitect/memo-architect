@@ -87,9 +87,10 @@ program
     .argument('[name]', 'Project name')
     .option('-t, --template <template>', 'Template to use', 'medical')
     .option('--ontology <package>', 'Ontology package to use', '@memo/medical-modeling-profile')
-    .option('--profile <name>', 'Profile preset (minimal, standard, full)')
-    .option('--list-ontologies', 'List available ontology packages and profiles')
-    .action(async (name: string | undefined, options: { template: string; ontology: string; profile?: string; listOntologies?: boolean }) => {
+    .option('--archetype <id>', 'Device archetype (samd, connected, monitoring, infusion_pump, blank)')
+    .option('--from-example <id>', 'Copy from an example project (e.g. gpca-pump)')
+    .option('--list-ontologies', 'List available ontology packages and archetypes')
+    .action(async (name: string | undefined, options: { template: string; ontology: string; archetype?: string; fromExample?: string; listOntologies?: boolean }) => {
         await initCommand(name, options);
     });
 

@@ -34,7 +34,7 @@ package memo::examples::gpca::cybersecurity {
         attribute owningLayer = "software_structure";
     }
 
-    item maintenancePortBoundary : TrustBoundary {
+    part maintenancePortBoundary : TrustBoundary {
         attribute id = "TB-001";
         attribute name = "MaintenancePortBoundary";
         attribute boundaryType = "service-access";
@@ -42,7 +42,7 @@ package memo::examples::gpca::cybersecurity {
         attribute boundaryLayer = "physical_interfaces";
     }
 
-    item unauthorizedConfigChangeThreat : Threat {
+    part unauthorizedConfigChangeThreat : Threat {
         attribute id = "TH-001";
         attribute name = "UnauthorizedTherapyConfigurationChange";
         attribute driverKind = "cybersecurity";
@@ -54,7 +54,7 @@ package memo::examples::gpca::cybersecurity {
         attribute defaultTechnique = "STRIDE tampering";
     }
 
-    item weakServiceAuthentication : Vulnerability {
+    part weakServiceAuthentication : Vulnerability {
         attribute id = "VULN-001";
         attribute name = "WeakServiceAuthentication";
         attribute weakness = "service mode relies on shared default credential";
@@ -64,7 +64,7 @@ package memo::examples::gpca::cybersecurity {
         attribute cweReference = "CWE-798";
     }
 
-    item tamperedConfigurationScenario : ThreatScenario {
+    part tamperedConfigurationScenario : ThreatScenario {
         attribute id = "SCN-001";
         attribute name = "TamperedTherapyConfigurationScenario";
         attribute scenarioSummary = "An attacker uses the maintenance pathway to alter lockout or dose parameters.";
@@ -74,7 +74,7 @@ package memo::examples::gpca::cybersecurity {
         attribute attackerGoal = "alter therapy limits";
     }
 
-    item unsafeDoseCyberHazard : CyberHazard {
+    part unsafeDoseCyberHazard : CyberHazard {
         attribute id = "CHZ-001";
         attribute name = "UnsafeTherapyConfigurationHazard";
         attribute hazardType = HazardTypeKind::overdose;
@@ -85,7 +85,7 @@ package memo::examples::gpca::cybersecurity {
         attribute operationalImpact = "therapy interruption or unsafe continuation";
     }
 
-    item configurationTamperingRisk : CyberRisk {
+    part configurationTamperingRisk : CyberRisk {
         attribute id = "CRISK-001";
         attribute name = "ConfigurationTamperingRisk";
         attribute driverKind = "cyber risk";

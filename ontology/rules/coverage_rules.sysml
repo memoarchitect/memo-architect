@@ -182,6 +182,126 @@ package memo::rules::coverage {
         attribute coverageTarget = "CybersecurityAsset";
     }
 
+    part fdaCyberVulnerabilityCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-003";
+        attribute name = "VulnerabilityAnalysisCoverage";
+        attribute description = "Model must identify at least one vulnerability";
+        attribute appliesTo = "Vulnerability";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires vulnerability analysis.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.B";
+        attribute coverageTarget = "Vulnerability";
+    }
+
+    part fdaCyberTrustBoundaryCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-004";
+        attribute name = "TrustBoundaryCoverage";
+        attribute description = "Model must define trust boundaries";
+        attribute appliesTo = "TrustBoundary";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires trust boundary identification.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.A";
+        attribute coverageTarget = "TrustBoundary";
+    }
+
+    part fdaCyberThreatScenarioCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-005";
+        attribute name = "ThreatScenarioCoverage";
+        attribute description = "Model must include threat scenarios";
+        attribute appliesTo = "ThreatScenario";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires threat scenario analysis.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.A";
+        attribute coverageTarget = "ThreatScenario";
+    }
+
+    part fdaCyberMitigationCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-006";
+        attribute name = "CyberMitigationCoverage";
+        attribute description = "Model must define cybersecurity mitigations";
+        attribute appliesTo = "CyberMitigation";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires risk mitigation.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.C";
+        attribute coverageTarget = "CyberMitigation";
+    }
+
+    part fdaCyberRiskCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-007";
+        attribute name = "CyberRiskCoverage";
+        attribute description = "Model must include cybersecurity risk assessment";
+        attribute appliesTo = "CyberRisk";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires cyber risk assessment.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.B";
+        attribute coverageTarget = "CyberRisk";
+    }
+
+    part fdaCyberHazardCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-008";
+        attribute name = "CyberHazardCoverage";
+        attribute description = "Model must identify cyber hazards with safety impact";
+        attribute appliesTo = "CyberHazard";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires cyber-safety hazard mapping.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.B";
+        attribute coverageTarget = "CyberHazard";
+    }
+
+    part fdaCyberSecurityReqCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-009";
+        attribute name = "SecurityRequirementCoverage";
+        attribute description = "Model must define security requirements";
+        attribute appliesTo = "SecurityRequirement";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::error;
+        attribute rationaleText = "FDA cybersecurity guidance requires security requirements derivation.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.C";
+        attribute coverageTarget = "SecurityRequirement";
+    }
+
+    part fdaCyberVerificationCoverage : CoverageConsistencyRule {
+        attribute id = "COV-CYBER-010";
+        attribute name = "CyberVerificationCoverage";
+        attribute description = "Model must include cybersecurity verification cases";
+        attribute appliesTo = "VerificationCase";
+        attribute predicate = RulePredicateKind::coverageCheck;
+        attribute strength = RuleStrengthKind::required;
+        attribute severity = RuleSeverityKind::warning;
+        attribute rationaleText = "FDA cybersecurity guidance requires security testing and verification.";
+        attribute category = RuleCategoryKind::coverage;
+        attribute standard = "FDA Cybersecurity";
+        attribute clause = "V.D";
+        attribute coverageTarget = "VerificationCase";
+    }
+
     // ─── IEC 62366: Usability Engineering ────────────────────────────────
 
     part iec62366ActorCoverage : CoverageConsistencyRule {

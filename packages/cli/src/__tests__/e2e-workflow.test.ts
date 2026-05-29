@@ -116,6 +116,73 @@ describe('E2E: memo init → validate → export', () => {
         expect(output).toContain('@memo/medical-modeling-profile');
         expect(output).toContain('(default)');
     });
+
+    it('memo init --archetype samd creates project with archetype pinned', () => {
+        const projectDir = join(tmpDir, 'test-samd');
+        const output = run(`init ${projectDir} --archetype samd`, REPO_ROOT);
+
+        expect(output).toContain('Creating MEMO project');
+        expect(output).toContain('Project created');
+
+        const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
+        expect(config).toContain('archetype: "samd"');
+    });
+
+    it('memo init --archetype blank creates project without archetype field', () => {
+        const projectDir = join(tmpDir, 'test-blank');
+        const output = run(`init ${projectDir} --archetype blank`, REPO_ROOT);
+
+        expect(output).toContain('Project created');
+
+        const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
+        expect(config).not.toContain('archetype:');
+    });
+
+    it('memo init --archetype rejects unknown archetype', () => {
+        const projectDir = join(tmpDir, 'test-bad-arch');
+        const { exitCode, stdout } = runMayFail(`init ${projectDir} --archetype nonexistent`, REPO_ROOT);
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('Unknown archetype');
+    });
+
+    it('memo init --list-ontologies shows archetypes from SysML', () => {
+        const output = run('init --list-ontologies', REPO_ROOT);
+        expect(output).toContain('device archetypes');
+        expect(output).toContain('samd');
+        expect(output).toContain('connected');
+        expect(output).toContain('monitoring');
+        expect(output).toContain('infusion_pump');
+        expect(output).toContain('blank');
+    });
+
+    it('memo init --from-example gpca-pump copies example project', () => {
+        const projectDir = join(tmpDir, 'test-from-example');
+        const output = run(`init ${projectDir} --from-example gpca-pump`, REPO_ROOT);
+
+        expect(output).toContain('Creating project from example');
+        expect(output).toContain('gpca-pump');
+        expect(output).toContain('Project created');
+
+        expect(existsSync(join(projectDir, 'memo.config.yaml'))).toBe(true);
+        expect(existsSync(join(projectDir, 'model'))).toBe(true);
+
+        const modelFiles = readdirSync(join(projectDir, 'model'));
+        expect(modelFiles.length).toBeGreaterThan(0);
+        expect(modelFiles.some(f => f.endsWith('.sysml'))).toBe(true);
+    });
+
+    it('memo init --from-example rejects unknown example', () => {
+        const projectDir = join(tmpDir, 'test-bad-example');
+        const { exitCode, stdout } = runMayFail(`init ${projectDir} --from-example nonexistent`, REPO_ROOT);
+        expect(exitCode).not.toBe(0);
+        expect(stdout).toContain('Unknown example');
+    });
+
+    it('memo init --list-ontologies shows available examples', () => {
+        const output = run('init --list-ontologies', REPO_ROOT);
+        expect(output).toContain('Available examples');
+        expect(output).toContain('gpca-pump');
+    });
 });
 
 describe('E2E: ontology lock + change detection', () => {
