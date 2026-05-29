@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { readdirSync, statSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, loadOntologyRegistries } from '@memo/core';
 import type { BuilderRegistries, MemoModel, MemoElement, ParseError } from '@memo/core';
@@ -57,6 +57,31 @@ function findSysmlFiles(dir: string): string[] {
         // skip
     }
     return files;
+}
+
+function checkExplicitMultiplicity(sysmlFiles: string[]): CompatFinding[] {
+    const findings: CompatFinding[] = [];
+    const attrRegex = /attribute\s+(\w+)\s*:\s*(\w+)\s*(?:\[([^\]]*)\])?\s*[;{=]/g;
+    for (const file of sysmlFiles) {
+        let content: string;
+        try { content = readFileSync(file, 'utf-8'); } catch { continue; }
+        const lines = content.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            for (const m of line.matchAll(attrRegex)) {
+                if (!m[3]) {
+                    findings.push({
+                        severity: 'warning',
+                        code: 'FB7_MISSING_MULTIPLICITY',
+                        file,
+                        element: m[1],
+                        message: `Attribute "${m[1]}" (line ${i + 1}) missing explicit multiplicity — add [1], [0..1], or [1..*]`,
+                    });
+                }
+            }
+        }
+    }
+    return findings;
 }
 
 function checkSysmlCompat(model: MemoModel, parseErrors: ParseError[]): CompatFinding[] {
@@ -163,7 +188,10 @@ export async function checkCommand(
 
     const { documents, errors: parseErrors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
-    const findings = checkSysmlCompat(model, parseErrors);
+    const findings = [
+        ...checkSysmlCompat(model, parseErrors),
+        ...checkExplicitMultiplicity(sysmlFiles),
+    ];
 
     const errors = findings.filter(f => f.severity === 'error');
     const warnings = findings.filter(f => f.severity === 'warning');

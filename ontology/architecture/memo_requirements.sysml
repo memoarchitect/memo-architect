@@ -1,9 +1,9 @@
 package memo::architecture::requirements {
     private import memo::core::common::*;
     private import memo::core::enumerations::*;
-    requirement def StakeholderNeed :> RequirementDriver { attribute statement : String; attribute priority : String; }
-    part def RiskDriver :> RequirementDriver { attribute driverKind : String; }
-    requirement def Requirement :> VerifiableElement {
+    requirement def StakeholderNeed specializes RequirementDriver { attribute statement : String; attribute priority : String; }
+    part def RiskDriver specializes RequirementDriver { attribute driverKind : String; }
+    requirement def Requirement specializes VerifiableElement {
         attribute statement : String;
         attribute sourceKind : RequirementSourceKind;
         attribute concernKind : ConcernKind;
@@ -14,7 +14,7 @@ package memo::architecture::requirements {
         attribute assumptionSummary : String;
         attribute guaranteeSummary : String;
     }
-    requirement def SystemRequirement :> Requirement;
-    requirement def SoftwareRequirement :> Requirement { attribute safetyClass : SafetyClassKind; }
-    requirement def HardwareRequirement :> Requirement { attribute electricalSafetyRelevant : Boolean; }
+    requirement def SystemRequirement specializes Requirement;
+    requirement def SoftwareRequirement specializes Requirement { attribute safetyClass : SafetyClassKind; }
+    requirement def HardwareRequirement specializes Requirement { attribute electricalSafetyRelevant : Boolean; }
 }

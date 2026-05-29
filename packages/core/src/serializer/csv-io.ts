@@ -432,6 +432,7 @@ export function exportRelationshipsCsv(model: MemoModel): string {
 function sysmlConstructToUsage(sysmlConstruct: string): string {
     const map: Record<string, string> = {
         'part def': 'part',
+        'item def': 'item',
         'requirement def': 'requirement',
         'action def': 'action',
         'port def': 'port',

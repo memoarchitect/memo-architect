@@ -2,7 +2,7 @@ package memo::viewpoints::core {
     private import memo::core::common::*;
     private import memo::core::enumerations::*;
 
-    part def Viewpoint :> DocumentedElement {
+    part def Viewpoint specializes DocumentedElement {
         attribute purpose : String;
         attribute audience : AudienceKind[*];
         attribute stage : WorkflowStageKind;
@@ -19,7 +19,7 @@ package memo::viewpoints::core {
         attribute userExtensible : Boolean;
     }
 
-    part def ViewRule :> TraceableElement {
+    part def ViewRule specializes TraceableElement {
         attribute elementTypeName : String;
         attribute relationTypeName : String;
         attribute strength : RuleStrengthKind;

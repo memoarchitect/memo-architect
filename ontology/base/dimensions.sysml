@@ -10,26 +10,26 @@ package memo::base::dimensions {
         enum viewpointType;
     }
 
-    part def ElementKind :> TraceableElement {
+    part def ElementKind specializes TraceableElement {
         attribute kindName : String;
         attribute primaryDimension : DimensionKind;
     }
 
-    part def ArchitectureElementKind :> ElementKind {
+    part def ArchitectureElementKind specializes ElementKind {
         attribute archLayer : String;
     }
 
-    part def ComplianceElementKind :> ElementKind {
+    part def ComplianceElementKind specializes ElementKind {
         attribute standard : String;
         attribute clause : String;
     }
 
-    part def ArtifactElementKind :> ElementKind {
+    part def ArtifactElementKind specializes ElementKind {
         attribute documentTitle : String;
         attribute regulatoryReference : String;
     }
 
-    part def ViewpointTypeKind :> ElementKind {
+    part def ViewpointTypeKind specializes ElementKind {
         attribute typeId : String;
     }
 }

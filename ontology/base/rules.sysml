@@ -4,7 +4,7 @@ package memo::base::rules {
     import memo::core::common::*;
     import memo::core::enumerations::*;
 
-    part def ConsistencyRule :> TraceableElement {
+    part def ConsistencyRule specializes TraceableElement {
         attribute appliesTo : String;
         attribute predicate : RulePredicateKind;
         attribute strength : RuleStrengthKind;
@@ -13,7 +13,7 @@ package memo::base::rules {
         attribute category : RuleCategoryKind;
     }
 
-    part def RelationshipConsistencyRule :> ConsistencyRule {
+    part def RelationshipConsistencyRule specializes ConsistencyRule {
         attribute relationshipType : String;
         attribute minCount : String;
         attribute maxCount : String;
@@ -21,17 +21,17 @@ package memo::base::rules {
         attribute relatedKinds : String;
     }
 
-    part def AttributeConsistencyRule :> ConsistencyRule {
+    part def AttributeConsistencyRule specializes ConsistencyRule {
         attribute targetAttribute : String;
     }
 
-    part def ConditionalConsistencyRule :> RelationshipConsistencyRule {
+    part def ConditionalConsistencyRule specializes RelationshipConsistencyRule {
         attribute conditionAttribute : String;
         attribute conditionOperator : String;
         attribute conditionValues : String;
     }
 
-    part def CoverageConsistencyRule :> ConsistencyRule {
+    part def CoverageConsistencyRule specializes ConsistencyRule {
         attribute standard : String;
         attribute clause : String;
         attribute coverageTarget : String;

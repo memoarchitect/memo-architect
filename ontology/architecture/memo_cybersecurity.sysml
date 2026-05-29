@@ -5,7 +5,7 @@ package memo::architecture::cybersecurity {
     private import memo::architecture::risk::*;
     private import memo::architecture::assurance::*;
 
-    part def CybersecurityAsset :> ArchitectureElement {
+    part def CybersecurityAsset specializes ArchitectureElement {
         attribute assetKind : AssetKind;
         attribute confidentialityNeed : String;
         attribute integrityNeed : String;
@@ -17,14 +17,14 @@ package memo::architecture::cybersecurity {
         attribute classification : String;
     }
 
-    part def AttackSurface :> TraceableElement {
+    part def AttackSurface specializes TraceableElement {
         attribute entryPointKind : InterfaceKind;
         attribute exposureLevel : String;
         attribute reachableFrom : String;
         attribute authenticationExpected : Boolean;
     }
 
-    part def Threat :> RiskDriver {
+    item def Threat specializes RiskDriver {
         attribute threatCategory : ThreatCategoryKind;
         attribute attackVector : String;
         attribute threatSource : String;
@@ -34,7 +34,7 @@ package memo::architecture::cybersecurity {
         attribute strideCategory : ThreatCategoryKind;
     }
 
-    part def Vulnerability :> TraceableElement {
+    item def Vulnerability specializes TraceableElement {
         attribute weakness : String;
         attribute exploitability : String;
         attribute discoveryMethod : String;
@@ -43,7 +43,7 @@ package memo::architecture::cybersecurity {
         attribute remediable : Boolean;
     }
 
-    part def ThreatScenario :> TraceableElement {
+    item def ThreatScenario specializes TraceableElement {
         attribute actorDescription : String;
         attribute assumptionSummary : String;
         attribute guaranteeSummary : String;
@@ -52,7 +52,7 @@ package memo::architecture::cybersecurity {
         attribute defaultCategory : ThreatCategoryKind;
     }
 
-    part def CyberHazard :> Hazard {
+    item def CyberHazard specializes Hazard {
         attribute securityImpact : String;
         attribute safetyImpact : String;
         attribute privacyImpact : String;
@@ -60,7 +60,7 @@ package memo::architecture::cybersecurity {
         attribute linkedSafetyHazardId : String;
     }
 
-    part def CyberRisk :> RiskBeforeMitigation {
+    item def CyberRisk specializes RiskBeforeMitigation {
         attribute exploitabilityEstimate : String;
         attribute attackComplexity : String;
         attribute detectability : String;
@@ -68,27 +68,27 @@ package memo::architecture::cybersecurity {
         attribute patientSafetyContribution : String;
     }
 
-    part def CyberMitigation :> RiskControl {
+    part def CyberMitigation specializes RiskControl {
         attribute cyberControlKind : CyberControlKind;
         attribute securityMechanism : String;
         attribute verificationExpectation : String;
         attribute hardeningScope : String;
     }
 
-    part def SecurityRequirement :> Requirement {
+    part def SecurityRequirement specializes Requirement {
         attribute securityObjective : String;
         attribute derivedFromThreat : String;
         attribute derivedFromRisk : String;
         attribute defaultConcern : ConcernKind;
     }
 
-    part def TrustBoundary :> InterfaceElement {
+    item def TrustBoundary specializes InterfaceElement {
         attribute boundaryType : String;
         attribute crossingConstraint : String;
         attribute trustAssumption : String;
     }
 
-    part def SecurityClaim :> EvidenceElement {
+    part def SecurityClaim specializes EvidenceElement {
         attribute claimText : String;
         attribute claimScope : String;
         attribute supportedByEvidence : String;

@@ -289,7 +289,7 @@ DocComment:
 // ─── Specialization ──────────────────────────────────────────────────────────
 
 Specialization:
-    ':>' superType=QualifiedName;
+    (':>' | 'specializes') superType=QualifiedName;
 
 // ─── Qualified name (data type rule → returns string) ────────────────────────
 
