@@ -50,6 +50,7 @@ import { pluginListCommand, pluginCreateCommand, pluginRunCommand } from '../com
 import { reqNewCommand } from '../commands/req.js';
 import { checkCommand } from '../commands/check.js';
 import { roundTripCommand } from '../commands/roundtrip.js';
+import { rulesListCommand, rulesCheckCommand, rulesExplainCommand, rulesCoverageCommand } from '../commands/rules.js';
 
 const program = new Command();
 
@@ -493,6 +494,50 @@ program
     .option('-o, --output <file>', 'Write report to file instead of stdout')
     .action(async (dir: string, opts: { tool?: string; format?: string; output?: string }) => {
         await roundTripCommand(dir, { tool: opts.tool, format: opts.format as any, output: opts.output });
+    });
+
+// ─── memo rules ────────────────────────────────────────────────────────────
+
+const rulesCmd = program
+    .command('rules')
+    .description('Consistency rule management');
+
+rulesCmd
+    .command('list')
+    .description('List all consistency rules')
+    .argument('[dir]', 'Project directory', '.')
+    .option('--format <format>', 'Output format: text, json', 'text')
+    .option('--category <category>', 'Filter by category: closure, coverage, lifecycle, crossLayer, quantitative')
+    .action(async (dir: string, opts: { format?: string; category?: string }) => {
+        await rulesListCommand(dir, { format: opts.format as any, category: opts.category });
+    });
+
+rulesCmd
+    .command('check')
+    .description('Evaluate rules against the current model')
+    .argument('[dir]', 'Project directory', '.')
+    .option('--format <format>', 'Output format: text, json', 'text')
+    .action(async (dir: string, opts: { format?: string }) => {
+        await rulesCheckCommand(dir, { format: opts.format as any });
+    });
+
+rulesCmd
+    .command('explain')
+    .description('Show detailed info for a specific rule')
+    .argument('<ruleId>', 'Rule ID (e.g., CR-MED-001)')
+    .argument('[dir]', 'Project directory', '.')
+    .option('--format <format>', 'Output format: text, json', 'text')
+    .action(async (ruleId: string, dir: string, opts: { format?: string }) => {
+        await rulesExplainCommand(ruleId, dir, { format: opts.format as any });
+    });
+
+rulesCmd
+    .command('coverage')
+    .description('Show coverage rules grouped by regulatory standard')
+    .argument('[dir]', 'Project directory', '.')
+    .option('--format <format>', 'Output format: text, json', 'text')
+    .action(async (dir: string, opts: { format?: string }) => {
+        await rulesCoverageCommand(dir, { format: opts.format as any });
     });
 
 program.parse();

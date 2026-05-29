@@ -21,6 +21,9 @@ package memo::core::enumerations {
     enum def PropertyLanguageKind { enum naturalLanguage; enum pseudoFormal; enum agreeLike; enum ltlLike; enum ctlLike; }
     enum def MethodRigorKind { enum lightweight; enum balanced; enum formal; }
     enum def RuleStrengthKind { enum optional; enum recommended; enum required; enum forbidden; }
+    enum def RulePredicateKind { enum requireRelationship; enum conditionalRequireRelationship; enum requireAttribute; enum uniqueAttribute; enum cardinalityCheck; enum coverageCheck; }
+    enum def RuleSeverityKind { enum error; enum warning; enum info; }
+    enum def RuleCategoryKind { enum closure; enum coverage; enum lifecycle; enum crossLayer; enum quantitative; }
     enum def WorkflowStageKind { enum context; enum requirements; enum behavior; enum architecture; enum interfaces; enum risk; enum verification; enum evidence; enum documents; }
     enum def AudienceKind { enum systemArchitect; enum softwareArchitect; enum hardwareEngineer; enum safetyEngineer; enum verificationEngineer; enum regulatoryEngineer; enum projectLead; enum securityEngineer; enum privacyEngineer; }
     enum def ThreatCategoryKind { enum spoofing; enum tampering; enum repudiation; enum informationDisclosure; enum denialOfService; enum elevationOfPrivilege; enum privacyLoss; enum supplyChain; }

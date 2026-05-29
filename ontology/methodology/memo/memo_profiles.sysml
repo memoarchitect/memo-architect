@@ -6,6 +6,7 @@ package memo::methodology::profiles {
     private import memo::methodology::workflow::*;
     private import memo::methodology::gates::*;
     private import memo::core::enumerations::*;
+    private import memo::base::methodology::*;
 
     part mdCoreLibrary : MethodologyLibrary {
         attribute id = "METHLIB-001";
@@ -127,6 +128,18 @@ package memo::methodology::profiles {
         attribute name = "LightMethodReady";
         attribute gateStage = WorkflowStageKind::verification;
         attribute passCriteria = "Core traceability, risk, verification, and RMF view support are present.";
+    }
+
+    part mdCoverageScope : MethodologyScope {
+        attribute id = "SCOPE-COV-001";
+        attribute name = "MedicalDeviceCoverageScope";
+        attribute scopeName = "coverage";
+        attribute includedArchLayer = "risk";
+        attribute includedStandard = "ISO 14971";
+        attribute includedArtifactKind = "";
+        attribute includedViewpointType = "";
+        attribute excludedKind = "";
+        attribute description = "Coverage rules across ISO 14971, IEC 62304, FDA 21 CFR 820, ISO 13485, ISO 14155, FDA Cybersecurity, IEC 62366, IEC 60601-1, IEC 82304-1.";
     }
 
     part gpcaProjectBinding : ProjectMethodBinding {

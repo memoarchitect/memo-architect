@@ -1,16 +1,13 @@
 package memo::methodology::rules {
     private import memo::core::common::*;
     private import memo::core::enumerations::*;
+    private import memo::base::rules::*;
 
-    part def ElementUsageRule :> TraceableElement {
+    part def ElementUsageRule :> ConsistencyRule {
         attribute elementTypeName : String;
-        attribute strength : RuleStrengthKind;
-        attribute rationaleText : String;
     }
 
-    part def RelationUsageRule :> TraceableElement {
+    part def RelationUsageRule :> ConsistencyRule {
         attribute relationTypeName : String;
-        attribute strength : RuleStrengthKind;
-        attribute rationaleText : String;
     }
 }
