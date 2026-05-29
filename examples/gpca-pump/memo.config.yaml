@@ -3,7 +3,7 @@
 projectName: gpca-pump
 projectType: device
 
-# Phase C: project pins one methodology. The methodology package
-# (@memo/methodology-default) extends @memo/ontology-arch, which
-# pulls in architecture kinds and relationships from the top-level ontology/.
-methodology: "@memo/methodology-default@^1.0"
+# Phase H: project pins the GPCA-specific methodology.
+# @memo/methodology-gpca extends @memo/methodology-default and subtracts
+# cybersecurity and SOUP for the non-networked prototype variant.
+methodology: "@memo/methodology-gpca@^1.0"

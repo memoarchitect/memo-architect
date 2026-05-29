@@ -1,0 +1,24 @@
+{
+  "name": "@memo/methodology-gpca",
+  "version": "1.0.0",
+  "description": "GPCA infusion pump methodology — subtraction-based tailoring of @memo/methodology-default for the non-networked prototype variant.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "echo 'no build step for sysml-only package'",
+    "clean": "echo 'nothing to clean'"
+  },
+  "files": [
+    "memo.package.yaml",
+    ".project.json"
+  ],
+  "keywords": [
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "methodology",
+    "medical-device",
+    "gpca"
+  ],
+  "license": "Apache-2.0"
+}
