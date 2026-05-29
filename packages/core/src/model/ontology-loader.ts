@@ -88,6 +88,8 @@ const LAYER_COLORS: Record<string, string> = {
     middleware: '#0EA5E9',
     // compliance layer
     compliance: '#7C3AED',
+    // artifact dimension
+    artifacts: '#D97706',
 };
 
 /** Parsed kind info from a SysML file */
