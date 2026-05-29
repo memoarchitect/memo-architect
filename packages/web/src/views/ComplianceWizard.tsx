@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
 import { sendElementUpdate, sendAddRelationship } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
-import type { MemoElement } from '@memo/core';
+import type { MemoElement, OntologyPackageInfo } from '@memo/core';
 
 // ─── Compliance Wizard Steps ────────────────────────────────────────────────
 
@@ -162,11 +162,36 @@ function checkIEC62304(model: ReturnType<typeof useModelStore.getState>['model']
 
 // ─── Wizard Component ───────────────────────────────────────────────────────
 
+/** Extract discovered compliance standard groups from ontology package data. */
+function useDiscoveredStandards(): { standard: string; label: string; kindCount: number }[] {
+    const ontologies = useModelStore(s => s.availableOntologies);
+    return useMemo(() => {
+        const groups = new Map<string, number>();
+        for (const pkg of ontologies) {
+            for (const layer of pkg.layers) {
+                for (const kind of layer.kinds) {
+                    if (kind.standard) {
+                        groups.set(kind.standard, (groups.get(kind.standard) ?? 0) + 1);
+                    }
+                }
+            }
+        }
+        return Array.from(groups.entries())
+            .map(([standard, kindCount]) => ({
+                standard,
+                label: standard.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                kindCount,
+            }))
+            .sort((a, b) => a.standard.localeCompare(b.standard));
+    }, [ontologies]);
+}
+
 export function ComplianceWizard() {
     const model = useModelStore(s => s.model);
     const selectElement = useModelStore(s => s.selectElement);
     const [selectedStandard, setSelectedStandard] = useState<string | null>(null);
     const [currentStepIdx, setCurrentStepIdx] = useState(0);
+    const discoveredStandards = useDiscoveredStandards();
 
     const standard = STANDARDS.find(s => s.id === selectedStandard);
     const currentStep = standard?.steps[currentStepIdx];
@@ -234,6 +259,29 @@ export function ComplianceWizard() {
                             </button>
                         ))}
                     </div>
+
+                    {discoveredStandards.length > 0 && (
+                        <>
+                            <h3 className="text-xs font-semibold uppercase tracking-wider mt-8 mb-3" style={{ color: '#6B7280' }}>
+                                Discovered Standards
+                            </h3>
+                            <div className="space-y-2">
+                                {discoveredStandards.map(ds => (
+                                    <div
+                                        key={ds.standard}
+                                        className="flex items-center gap-3 p-3 rounded-lg"
+                                        style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#7C3AED' }} />
+                                        <span className="text-sm font-medium flex-1" style={{ color: '#374151' }}>{ds.label}</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#F3F4F6', color: '#6B7280' }}>
+                                            {ds.kindCount} {ds.kindCount === 1 ? 'kind' : 'kinds'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         );

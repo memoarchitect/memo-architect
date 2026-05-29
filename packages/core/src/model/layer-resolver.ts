@@ -41,3 +41,32 @@ export function resolveLayerFromPath(filePath: string): string {
 
     return layerDir === 'relationships' ? 'crosscutting' : layerDir;
 }
+
+/**
+ * For files under a compliance layer, extract the standard subdirectory.
+ *
+ * Convention: sysml/compliance/<standard>/<file>.sysml → standard name.
+ *
+ * @example
+ * resolveStandardFromPath("sysml/compliance/iso-14971/rmf.sysml") → "iso-14971"
+ * resolveStandardFromPath("sysml/safety/hazard.sysml")            → undefined
+ */
+export function resolveStandardFromPath(filePath: string): string | undefined {
+    const normalized = filePath.replace(/\\/g, '/');
+
+    let afterSysml: string;
+    const slashSysmlIndex = normalized.indexOf('/sysml/');
+    if (slashSysmlIndex !== -1) {
+        afterSysml = normalized.substring(slashSysmlIndex + 7);
+    } else if (normalized.startsWith('sysml/')) {
+        afterSysml = normalized.substring(6);
+    } else {
+        return undefined;
+    }
+
+    const parts = afterSysml.split('/');
+    if (parts[0] === 'compliance' && parts.length >= 3 && !parts[1].endsWith('.sysml')) {
+        return parts[1];
+    }
+    return undefined;
+}
