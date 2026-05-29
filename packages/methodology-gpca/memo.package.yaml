@@ -1,0 +1,8 @@
+name: "@memo/methodology-gpca"
+version: "1.0.0"
+type: methodology
+extends: "@memo/methodology-default"
+sysmlDir: "../../ontology/methodology/gpca"
+description: "GPCA infusion pump methodology — subtraction-based tailoring of @memo/methodology-default for the non-networked prototype variant. Excludes cybersecurity and SOUP."
+license: "Apache-2.0"
+tags: ["methodology", "medical-device", "gpca", "tailoring"]

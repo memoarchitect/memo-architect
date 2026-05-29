@@ -1,0 +1,8 @@
+{
+  "type": "methodology-package",
+  "name": "@memo/methodology-gpca",
+  "version": "1.0.0",
+  "extends": "@memo/methodology-default",
+  "sysmlDir": "../../ontology/methodology/gpca",
+  "usage": ["viewpoints", "views", "rules", "gates", "patterns", "profiles", "workflow", "dhf"]
+}
