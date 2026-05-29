@@ -167,7 +167,7 @@ ActionUsage:
     ('{' body+=ActionUsageBodyMember* '}' | ';');
 
 PortUsage:
-    'port' name=ID ':' type=QualifiedName
+    direction=('in' | 'out' | 'inout')? 'port' isConjugated?='~'? name=ID ':' type=QualifiedName
     ('{' body+=UsageBodyMember* '}' | ';');
 
 // ─── Connection usage (typed relationship instances) ─────────────────────────
@@ -229,7 +229,7 @@ AllocateUsage:
 // ─── Body members ────────────────────────────────────────────────────────────
 
 DefinitionBodyMember:
-    AttributeMember | PartMember | RefMember | DocComment;
+    AttributeMember | PartMember | PortUsage | RefMember | DocComment;
 
 UsageBodyMember:
     AttributeMember | ShorthandRedefinition | DocComment;

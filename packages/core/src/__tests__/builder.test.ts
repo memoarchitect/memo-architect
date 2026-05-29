@@ -648,6 +648,99 @@ describe('Multi-file model splitting', () => {
     });
 });
 
+// ─── M-2: Port wiring tests ───────────────────────────────────────────────
+
+describe('Port wiring (M-2)', () => {
+    it('populates portSpec on port usage elements', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                in port ~sensorIn : SensorPort;
+                out port controlOut : ControlPort;
+                port plain : GenericPort;
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const sensor = model.elements.get('sensorIn')!;
+        expect(sensor).toBeDefined();
+        expect(sensor.construct).toBe('port');
+        expect(sensor.portSpec).toBeDefined();
+        expect(sensor.portSpec!.type).toBe('SensorPort');
+        expect(sensor.portSpec!.direction).toBe('in');
+        expect(sensor.portSpec!.isConjugated).toBe(true);
+
+        const control = model.elements.get('controlOut')!;
+        expect(control.portSpec!.direction).toBe('out');
+        expect(control.portSpec!.isConjugated).toBe(false);
+
+        const plain = model.elements.get('plain')!;
+        expect(plain.portSpec!.direction).toBeUndefined();
+        expect(plain.portSpec!.isConjugated).toBe(false);
+    });
+
+    it('sets owner and ownedPorts for ports inside part def', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                part def PumpController {
+                    in port sensorIn : SensorPort;
+                    out port controlOut : ControlPort;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        // Ports extracted as elements
+        expect(model.elements.size).toBe(2);
+
+        const sensor = model.elements.get('sensorIn')!;
+        expect(sensor).toBeDefined();
+        expect(sensor.owner).toBe('PumpController');
+        expect(sensor.portSpec!.direction).toBe('in');
+
+        const control = model.elements.get('controlOut')!;
+        expect(control.owner).toBe('PumpController');
+        expect(control.portSpec!.direction).toBe('out');
+    });
+
+    it('tags port IDs on connection endpoints', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                port sensorOut : SensorPort;
+                port sensorIn : SensorPort;
+                connection : DataLink connect source ::> sensorOut to target ::> sensorIn;
+            }
+        `);
+        const config = {
+            ...testConfig,
+            relationshipTypes: [
+                ...(testConfig.relationshipTypes ?? []),
+                { name: 'dataLink', label: 'Data Link', layer: 'interfaces', color: '#3498DB' },
+            ],
+        };
+        const model = buildMemoModel([doc], config);
+
+        expect(model.relationships).toHaveLength(1);
+        const rel = model.relationships[0];
+        expect(rel.sourcePortId).toBe('sensorOut');
+        expect(rel.targetPortId).toBe('sensorIn');
+    });
+
+    it('does not set port IDs when endpoints are not ports', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement rc1 : RiskControl { attribute redefines title = "RC1"; }
+                requirement h1 : Hazard { attribute redefines title = "H1"; }
+                connection : Mitigates connect control ::> rc1 to hazard ::> h1;
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const rel = model.relationships[0];
+        expect(rel.sourcePortId).toBeUndefined();
+        expect(rel.targetPortId).toBeUndefined();
+    });
+});
+
 // ─── Helper: resolve extends chain for tests ────────────────────────────────
 
 function loadResolvedConfig(configPath: string): MEMOConfig {

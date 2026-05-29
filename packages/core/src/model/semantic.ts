@@ -5,8 +5,18 @@
 // decoupled from Langium's AST nodes so they can be sent over WebSocket.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Direction of an action parameter */
+/** Direction of a port or action parameter */
 export type ParameterDirection = 'in' | 'out' | 'inout';
+
+/** Port specification on a port usage element */
+export interface PortSpec {
+    /** Port type name (qualified) */
+    type: string;
+    /** Direction: in, out, or inout (undefined = undirected) */
+    direction?: ParameterDirection;
+    /** True if conjugated (~) */
+    isConjugated: boolean;
+}
 
 /** A typed parameter on an action definition */
 export interface ActionParameter {
@@ -46,6 +56,12 @@ export interface MemoElement {
     parentAction?: string;
     /** Structural part this action is allocated to (from allocate statements) */
     allocatedTo?: string;
+    /** Owner element ID (for ports nested inside a definition) */
+    owner?: string;
+    /** IDs of owned port elements (populated on the owner definition element) */
+    ownedPorts?: string[];
+    /** Port specification (for port usage elements) */
+    portSpec?: PortSpec;
 }
 
 /** A typed relationship between two elements */
@@ -66,6 +82,10 @@ export interface MemoRelationship {
     file: string;
     /** Item type being transported (for flow relationships) */
     flowItem?: string;
+    /** Source port element ID (when connection endpoint is a port) */
+    sourcePortId?: string;
+    /** Target port element ID (when connection endpoint is a port) */
+    targetPortId?: string;
 }
 
 /** A parse error from a specific file */

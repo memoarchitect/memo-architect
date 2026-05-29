@@ -15,6 +15,7 @@ import type {
     AttributeDefinition,
     ViewDefinition,
     PartUsage,
+    PortUsage,
     RequirementUsage,
     ActionUsage,
     ConnectionUsage,
@@ -613,6 +614,130 @@ describe('PortUsage', () => {
         expect(pkg.members).toHaveLength(2);
         const p1 = pkg.members[0] as PartUsage;
         expect(p1.name).toBe('pressureSensorPort');
+    });
+
+    it('parses conjugated port usage with ~ marker', async () => {
+        const model = await parseValid(`
+            package Test {
+                port ~sensorIn : SensorPort;
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const p = pkg.members[0] as PortUsage;
+        expect(p.$type).toBe('PortUsage');
+        expect(p.isConjugated).toBe(true);
+        expect(p.name).toBe('sensorIn');
+        expect(p.type).toBe('SensorPort');
+    });
+
+    it('parses directed port usage with in/out/inout', async () => {
+        const model = await parseValid(`
+            package Test {
+                part def Pump {
+                    in port sensorIn : SensorPort;
+                    out port controlOut : ControlPort;
+                    inout port diagPort : DiagPort;
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const partDef = pkg.members[0] as PartDefinition;
+        expect(partDef.body).toHaveLength(3);
+
+        const p1 = partDef.body[0] as PortUsage;
+        expect(p1.$type).toBe('PortUsage');
+        expect(p1.direction).toBe('in');
+        expect(p1.name).toBe('sensorIn');
+
+        const p2 = partDef.body[1] as PortUsage;
+        expect(p2.direction).toBe('out');
+        expect(p2.name).toBe('controlOut');
+
+        const p3 = partDef.body[2] as PortUsage;
+        expect(p3.direction).toBe('inout');
+        expect(p3.name).toBe('diagPort');
+    });
+
+    it('parses conjugated + directed port usage', async () => {
+        const model = await parseValid(`
+            package Test {
+                in port ~conjugatedIn : SensorPort;
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const p = pkg.members[0] as PortUsage;
+        expect(p.direction).toBe('in');
+        expect(p.isConjugated).toBe(true);
+        expect(p.name).toBe('conjugatedIn');
+    });
+});
+
+// ─── M-1 Combined fixture: port def + interface def + connect + flow + ~ ────
+
+describe('M-1 fixture: ports and interfaces', () => {
+    it('parses all port/interface constructs in one model', async () => {
+        const model = await parseValid(`
+            package PortsAndInterfaces {
+                // Definitions
+                port def SensorPort {
+                    attribute dataRate : String;
+                }
+                port def ControlPort :> SensorPort;
+                interface def SensorInterface {
+                    attribute protocol : String;
+                }
+
+                // Part with directed and conjugated ports
+                part def PumpController {
+                    in port sensorIn : SensorPort;
+                    out port ~controlOut : ControlPort;
+                }
+
+                part def SensorModule {
+                    out port sensorOut : SensorPort;
+                }
+
+                // Action with flow
+                action def InfusionControl {
+                    in prescription : DrugOrder;
+                    out rate : FlowRate;
+                }
+
+                action controlLoop : InfusionControl {
+                    action receive : ReceiveOrder;
+                    action regulate : RegulateFlow;
+                    flow of DrugOrder from receive.prescription to regulate.order;
+                    first start then receive then regulate then done;
+                }
+
+                // Connection usage
+                connection : SensorLink connect source ::> sensorModule to target ::> pumpController;
+
+                // Port usages at package level
+                port mainSensor : SensorPort;
+                in port ~conjugatedDiag : SensorPort;
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        expect(pkg.name).toBe('PortsAndInterfaces');
+
+        // Verify we got port defs, interface def, part defs with ports,
+        // action def, action usage with flow, connection, and port usages
+        const types = pkg.members.map((m: any) => m.$type);
+        expect(types).toContain('PortDefinition');
+        expect(types).toContain('InterfaceDefinition');
+        expect(types).toContain('PartDefinition');
+        expect(types).toContain('ActionDefinition');
+        expect(types).toContain('ActionUsage');
+        expect(types).toContain('ConnectionUsage');
+        expect(types).toContain('PortUsage');
+
+        // Verify conjugated port
+        const portUsages = pkg.members.filter((m: any) => m.$type === 'PortUsage');
+        const conjugated = portUsages.find((p: any) => p.isConjugated) as PortUsage;
+        expect(conjugated).toBeDefined();
+        expect(conjugated.name).toBe('conjugatedDiag');
+        expect(conjugated.direction).toBe('in');
     });
 });
 
