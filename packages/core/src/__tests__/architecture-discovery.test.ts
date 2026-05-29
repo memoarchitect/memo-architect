@@ -50,3 +50,48 @@ describe('buildLayers — architecture sublayer discovery', () => {
         expect(names).toEqual(['AnotherKind', 'FlatKind', 'NestedKind']);
     });
 });
+
+// W1.08.01 E-1: artifact folder skeleton — layer discovery for artifacts/
+
+describe('buildLayers — artifact layer discovery', () => {
+    let root: string;
+
+    beforeEach(() => {
+        root = mkdtempSync(join(tmpdir(), 'memo-artifact-discovery-'));
+    });
+
+    afterEach(() => {
+        rmSync(root, { recursive: true, force: true });
+    });
+
+    function writeKindFile(rel: string, content: string) {
+        const full = join(root, rel);
+        mkdirSync(full.substring(0, full.lastIndexOf('/')), { recursive: true });
+        writeFileSync(full, content, 'utf-8');
+    }
+
+    it('discovers artifacts/ as a layer', () => {
+        writeKindFile('artifacts/risk_plan.sysml', 'part def RiskManagementPlan;\n');
+        const layers = buildLayers(root);
+        const artifacts = layers.find(l => l.id === 'artifacts');
+        expect(artifacts).toBeDefined();
+        expect(artifacts!.kinds.map(k => k.name)).toContain('RiskManagementPlan');
+    });
+
+    it('coexists with other layers without interference', () => {
+        writeKindFile('architecture/some_kind.sysml', 'part def SomeKind;\n');
+        writeKindFile('artifacts/risk_plan.sysml', 'part def RiskManagementPlan;\n');
+        const layers = buildLayers(root);
+        expect(layers.find(l => l.id === 'architecture')).toBeDefined();
+        expect(layers.find(l => l.id === 'artifacts')).toBeDefined();
+        expect(layers).toHaveLength(2);
+    });
+
+    it('empty artifacts/ dir produces no layer', () => {
+        mkdirSync(join(root, 'artifacts'), { recursive: true });
+        const layers = buildLayers(root);
+        const artifacts = layers.find(l => l.id === 'artifacts');
+        expect(artifacts).toBeDefined();
+        expect(artifacts!.kindCount).toBe(0);
+    });
+});

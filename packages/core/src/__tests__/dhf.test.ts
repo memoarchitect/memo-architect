@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     DHF_DOCUMENT_TYPES, getDocumentType, getDocumentsByGroup, getAllDocumentIds,
+    resolveDocumentType,
     compileDocument, createQueryContext,
     text, xref, heading, paragraph, table, badge, metric, metricGroup, progress, divider,
     createSnapshot, diffSnapshots, generateRedlineDocument,
@@ -96,6 +97,27 @@ describe('DHF Document Registry', () => {
     it('document IDs are unique', () => {
         const ids = getAllDocumentIds();
         expect(new Set(ids).size).toBe(ids.length);
+    });
+});
+
+// ─── Artifact Kind → DHF Document Lookup (E-3) ─────────────────────────────
+
+describe('resolveDocumentType — artifact kind lookup', () => {
+    it('resolves RiskManagementPlan artifact kind to rmp document', () => {
+        const doc = resolveDocumentType('RiskManagementPlan');
+        expect(doc).toBeDefined();
+        expect(doc!.id).toBe('rmp');
+        expect(doc!.title).toBe('Risk Management Plan');
+    });
+
+    it('falls back to built-in document ID when no artifact kind matches', () => {
+        const doc = resolveDocumentType('har');
+        expect(doc).toBeDefined();
+        expect(doc!.id).toBe('har');
+    });
+
+    it('returns undefined for unknown artifact kind and unknown doc ID', () => {
+        expect(resolveDocumentType('NonExistentArtifact')).toBeUndefined();
     });
 });
 

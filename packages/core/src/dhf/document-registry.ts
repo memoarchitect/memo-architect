@@ -334,3 +334,22 @@ export function getDocumentsByGroup(group: string): DhfDocumentType[] {
 export function getAllDocumentIds(): string[] {
     return DHF_DOCUMENT_TYPES.map(d => d.id);
 }
+
+// ─── Artifact Kind → DHF Document Lookup (Epic E) ──────────────────────────
+
+const ARTIFACT_KIND_TO_DHF: Record<string, string> = {
+    RiskManagementPlan: 'rmp',
+};
+
+/**
+ * Resolve a DHF document type through an artifact kind name from the ontology.
+ * Falls back to built-in document types when no artifact kind mapping exists.
+ *
+ * @param artifactKindOrDocId - Artifact kind name (e.g. "RiskManagementPlan") or document ID (e.g. "rmp")
+ * @returns The matching DhfDocumentType, or undefined if no match
+ */
+export function resolveDocumentType(artifactKindOrDocId: string): DhfDocumentType | undefined {
+    const dhfId = ARTIFACT_KIND_TO_DHF[artifactKindOrDocId];
+    if (dhfId) return getDocumentType(dhfId);
+    return getDocumentType(artifactKindOrDocId);
+}
