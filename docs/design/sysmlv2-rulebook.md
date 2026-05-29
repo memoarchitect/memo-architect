@@ -882,7 +882,7 @@ sysand info               # validate metadata
 sysand build              # produce memo-ontology-<version>.kpar
 sysand publish            # push to registry (TBD)
 ```
-Published artifacts follow the L0/L1/L2 split: `memo-sysml-base-<v>.kpar`, `memo-ontology-<v>.kpar`, and methodology packages such as `memo-methodology-default-<v>.kpar`. `memo-architect` consumes them as URN dependencies in its own `.project.json`.
+Published artifacts follow the L0/L1/L2 split: `memo-sysml-base-<v>.kpar`, `memo-ontology-<v>.kpar`, and methodology packages such as `memo-methodology-default-<v>.kpar` — all shipped from the `memo-sysmlv2` repo (see [ADR-1-17](../decisions/adr/ADR-1-17-three-repo-split.md)). `memo-cli` consumes them as URN dependencies in its own `.project.json`.
 
 ### 22.5 `part def` vs `item def` — actor / processed semantics (FB5) — **NEW** (resolves §4 S1 ambiguity)
 

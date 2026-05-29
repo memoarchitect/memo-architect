@@ -6,6 +6,7 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Three-repo split `memo-sysmlv2` (pure content) / `memo-cli` (engine) / `memo-architect` (web); supersedes the four-repo layout in platform.md §10 |
 | [ADR-1-16](adr/ADR-1-16-view-presentation-syntax-fallbacks.md) | Accepted | View/template files use simple `view def`, bare imports, and repeated scalar `presentationKind` assignments until grammar support expands |
 | [ADR-1-15](adr/ADR-1-15-methodology-scope-explicit-lists.md) | Accepted | Methodology scope uses explicit enumerated entries; current grammar does not support set literals or `A - B` set difference |
 | [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*` |
