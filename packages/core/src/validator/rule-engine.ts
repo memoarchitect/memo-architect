@@ -1,7 +1,12 @@
 // ─── Closure Rule Engine ──────────────────────────────────────────────────────
 //
-// Evaluates closure rules from the config against the built model.
-// Returns violations for elements that fail their rules.
+// Evaluates closure rules against the built model.
+// Supports two rule sources:
+//   1. Config closure rules (legacy YAML/config path)
+//   2. RuleRegistry (SysML ontology path via ConstraintInterpreter)
+//
+// The validateModel / evaluateClosureRules functions accept either a config
+// or a plain ClosureRule[] array, so callers can supply rules from any source.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { MEMOConfig, ClosureRule, ClosureRuleDefinition, RuleCondition, RelationshipRuleDirection } from '../model/config.js';
@@ -12,12 +17,14 @@ import { validateBehavior } from './behavior-validator.js';
 /**
  * Full model validation: closure rules + built-in structural checks.
  * Preferred entry point — combines all validation passes.
+ *
+ * Accepts either a MEMOConfig (backward compat) or a plain ClosureRule[] array.
  */
 export function validateModel(
     model: MemoModel,
-    config: MEMOConfig
+    configOrRules: MEMOConfig | ClosureRule[]
 ): ValidationResult {
-    const closureResult = evaluateClosureRules(model, config);
+    const closureResult = evaluateClosureRules(model, configOrRules);
     const behaviorViolations = validateBehavior(model);
 
     return {
@@ -30,16 +37,23 @@ export function validateModel(
 
 /**
  * Evaluate all closure rules against the model.
+ *
+ * Accepts either a MEMOConfig (backward compat) or a plain ClosureRule[] array.
+ * When a ClosureRule[] is passed, rules are evaluated directly without config lookup.
  */
 export function evaluateClosureRules(
     model: MemoModel,
-    config: MEMOConfig
+    configOrRules: MEMOConfig | ClosureRule[]
 ): ValidationResult {
+    const rules: ClosureRule[] = Array.isArray(configOrRules)
+        ? configOrRules
+        : configOrRules.closureRules;
+
     const violations: Violation[] = [];
     let rulesEvaluated = 0;
     let rulesPassed = 0;
 
-    for (const rule of config.closureRules) {
+    for (const rule of rules) {
         rulesEvaluated++;
         const elements = model.elementsByKind.get(rule.entity) || [];
 

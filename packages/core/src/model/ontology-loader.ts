@@ -484,6 +484,8 @@ export interface OntologyLoadResult {
     ontologyDirs: string[];
     /** Errors encountered during parsing */
     errors: string[];
+    /** Parsed ontology documents (for rule registry and other consumers) */
+    parsedDocuments: import('./parser-utils.js').ParsedDocument[];
 }
 
 /**
@@ -818,6 +820,7 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
             fileCount: 0,
             ontologyDirs: [],
             errors: ['No ontology packages with sysml/ directories found in extends chain'],
+            parsedDocuments: [],
         };
     }
 
@@ -846,6 +849,7 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
             fileCount: 0,
             ontologyDirs,
             errors: ['Ontology packages found but no .sysml files in sysml/ directories'],
+            parsedDocuments: [],
         };
     }
 
@@ -866,5 +870,6 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
         fileCount: allSysmlFiles.length,
         ontologyDirs,
         errors,
+        parsedDocuments: parseResult.documents,
     };
 }
