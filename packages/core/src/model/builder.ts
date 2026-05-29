@@ -41,6 +41,10 @@ import type {
     EnumValue,
     ActionDefinition,
     ItemDefinition,
+    PartDefinition,
+    PortDefinition,
+    InterfaceDefinition,
+    ConnectionDefinition,
     ActionParameterMember,
     FlowConnectionUsage,
     SuccessionUsage,
@@ -53,6 +57,7 @@ import type {
     MemoModel,
     ParseError,
     ActionParameter,
+    PortSpec,
 } from './semantic.js';
 import type { ParsedDocument } from './parser-utils.js';
 import { PackageRegistry } from './package-registry.js';
@@ -185,7 +190,7 @@ export function buildMemoModel(
     // Phase 3: Resolve connections using the registry (all elements now known)
     const allElementIds = new Set(elements.keys());
     for (const { conn, filePath, packageName } of deferredConnections) {
-        resolveConnection(conn, filePath, packageName, config, relationships, registry, allElementIds);
+        resolveConnection(conn, filePath, packageName, config, elements, relationships, registry, allElementIds);
     }
 
     // Phase 3b: Resolve flow connections
@@ -352,7 +357,13 @@ function extractFromPackage(
             case 'ItemDefinition':
                 extractItemDefinition(member as ItemDefinition, filePath, packageName, config, elements, registry);
                 break;
-            // Other definitions (part def, interface def, etc.) inside packages are
+            case 'PartDefinition':
+            case 'PortDefinition':
+            case 'InterfaceDefinition':
+            case 'ConnectionDefinition':
+                extractDefinitionPorts(member as PartDefinition | PortDefinition | InterfaceDefinition | ConnectionDefinition, filePath, packageName, config, elements, registry, registries);
+                break;
+            // Other definitions (viewpoint def, view def, etc.) inside packages are
             // ontology-level — we don't extract them as model elements in device projects
         }
     }
@@ -395,6 +406,16 @@ function extractUsage(
         attributes,
         doc,
     };
+
+    // Port-specific fields
+    if (construct === 'port') {
+        const portNode = usage as PortUsage;
+        element.portSpec = {
+            type: portNode.type,
+            direction: portNode.direction as PortSpec['direction'],
+            isConjugated: portNode.isConjugated ?? false,
+        };
+    }
 
     elements.set(id, element);
     registry.registerElement(id, packageName);
@@ -477,6 +498,43 @@ function extractItemDefinition(
 
     elements.set(id, element);
     registry.registerElement(id, packageName);
+}
+
+/**
+ * Walk a definition body to extract port usages as owned port elements.
+ * Sets owner on ports and ownedPorts on the definition.
+ */
+function extractDefinitionPorts(
+    def: PartDefinition | PortDefinition | InterfaceDefinition | ConnectionDefinition,
+    filePath: string,
+    packageName: string,
+    config: MEMOConfig,
+    elements: Map<string, MemoElement>,
+    registry: PackageRegistry,
+    registries?: BuilderRegistries
+): void {
+    const ownerId = def.name;
+    const body = def.body || [];
+    const ownedPortIds: string[] = [];
+
+    for (const member of body) {
+        if (member.$type === 'PortUsage') {
+            const portUsage = member as PortUsage;
+            extractUsage(portUsage, 'port', filePath, packageName, config, elements, registry, registries);
+            const portEl = elements.get(portUsage.name);
+            if (portEl) {
+                portEl.owner = ownerId;
+                ownedPortIds.push(portUsage.name);
+            }
+        }
+    }
+
+    if (ownedPortIds.length > 0) {
+        const ownerEl = elements.get(ownerId);
+        if (ownerEl) {
+            ownerEl.ownedPorts = ownedPortIds;
+        }
+    }
 }
 
 /**
@@ -570,6 +628,7 @@ function resolveConnection(
     filePath: string,
     packageName: string,
     config: MEMOConfig,
+    elements: Map<string, MemoElement>,
     relationships: MemoRelationship[],
     registry: PackageRegistry,
     allElementIds: Set<string>
@@ -597,6 +656,16 @@ function resolveConnection(
         targetEnd: conn.target.endName,
         file: filePath,
     };
+
+    // Tag port IDs when endpoints reference port elements
+    const sourceEl = elements.get(sourceId);
+    if (sourceEl?.construct === 'port') {
+        rel.sourcePortId = sourceId;
+    }
+    const targetEl = elements.get(targetId);
+    if (targetEl?.construct === 'port') {
+        rel.targetPortId = targetId;
+    }
 
     relationships.push(rel);
 }
