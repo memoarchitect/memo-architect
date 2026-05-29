@@ -34,6 +34,8 @@ export interface MethodologyPart {
     partType: string;
     /** Attributes captured from the body (`attribute k = v;` lines). */
     attributes: Record<string, MethodologyAttrValue>;
+    /** Multi-valued attributes (repeated keys). Each key maps to all values in order. */
+    multiAttributes: Record<string, MethodologyAttrValue[]>;
     /** Source file path relative to the project root, for traceability. */
     sourceFile: string;
     /** Fully-qualified SysML namespace, e.g. "memo::methodology::profiles". */
@@ -86,26 +88,31 @@ const ATTR_RE = /attribute\s+(\w+)\s*=\s*(?:"([^"]*)"|(\w+(?:::\w+)*)|(-?\d+(?:\
 /** `package memo::methodology::profiles {` — top-level namespace */
 const PACKAGE_RE = /^\s*package\s+([\w:]+)\s*\{/m;
 
-function parseAttributes(body: string): Record<string, MethodologyAttrValue> {
+function parseAttributes(body: string): { attrs: Record<string, MethodologyAttrValue>; multi: Record<string, MethodologyAttrValue[]> } {
     const attrs: Record<string, MethodologyAttrValue> = {};
+    const multi: Record<string, MethodologyAttrValue[]> = {};
     for (const m of body.matchAll(ATTR_RE)) {
         const key = m[1];
+        let value: MethodologyAttrValue;
         if (m[2] !== undefined) {
-            attrs[key] = m[2];
+            value = m[2];
         } else if (m[3] !== undefined) {
-            // Enum reference like `MethodRigorKind::lightweight` — store last segment as the
-            // semantic value, stash full ref in `<key>__qualified` for traceability.
             const qualified = m[3];
             const short = qualified.includes('::') ? qualified.split('::').pop()! : qualified;
-            attrs[key] = short;
+            value = short;
             attrs[`${key}__qualified`] = qualified;
         } else if (m[4] !== undefined) {
-            attrs[key] = Number(m[4]);
+            value = Number(m[4]);
         } else if (m[5] !== undefined) {
-            attrs[key] = m[5] === 'true';
+            value = m[5] === 'true';
+        } else {
+            continue;
         }
+        if (!multi[key]) multi[key] = [];
+        multi[key].push(value);
+        attrs[key] = value;
     }
-    return attrs;
+    return { attrs, multi };
 }
 
 function parseMethodologyFile(absPath: string, projectRoot: string): {
@@ -141,10 +148,12 @@ function parseMethodologyFile(absPath: string, projectRoot: string): {
         // The PART_DEF_RE form has `def` after `part`; PART_INSTANCE_RE matches `part NAME :`,
         // but `part def Foo :> Bar { ... }` matches as partName="def", partType="Foo" — filter that.
         if (partName === 'def') continue;
+        const { attrs, multi } = parseAttributes(m[3]);
         parts.push({
             partName,
             partType,
-            attributes: parseAttributes(m[3]),
+            attributes: attrs,
+            multiAttributes: multi,
             sourceFile,
             namespace,
         });
@@ -167,6 +176,8 @@ function listSysmlFiles(dir: string): string[] {
     } catch { /* skip */ }
     return files;
 }
+
+export { extractScopeInfo, type MethodologyScopeInfo } from './dimension-filter.js';
 
 /**
  * Discover all methodology folders reachable from a project config and parse them.

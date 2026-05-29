@@ -137,7 +137,10 @@ package memo::methodology::profiles {
         attribute includedArchLayer = "risk";
         attribute includedStandard = "ISO 14971";
         attribute includedArtifactKind = "";
-        attribute includedViewpointType = "";
+        attribute includedViewpointType = "VP-CTX";
+        attribute includedViewpointType = "VP-LOG";
+        attribute includedViewpointType = "VP-RISK";
+        attribute includedViewpointType = "VP-CYB";
         attribute excludedKind = "";
         attribute description = "Coverage rules across ISO 14971, IEC 62304, FDA 21 CFR 820, ISO 13485, ISO 14155, FDA Cybersecurity, IEC 62366, IEC 60601-1, IEC 82304-1.";
     }

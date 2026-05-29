@@ -36,6 +36,7 @@ export * from './model/kind-registry.js';
 export * from './model/relationship-registry.js';
 export * from './model/ontology-loader.js';
 export * from './model/methodology-loader.js';
+export * from './model/dimension-filter.js';
 
 // ─── Validation + Completeness ──────────────────────────────────────────────
 export * from './validator/types.js';
