@@ -447,5 +447,5 @@ Implementation planning lives in GitLab — see Roadmap Overview issue [#367](ht
 
 ## 14. Pointers
 
-- Currently committed methodology pkg (will be renamed/restructured under E6): `packages/methodology-medical-default/`
+- Default methodology pkg: `packages/methodology-default/`
 - DhfDocumentBinding (added Phase D4) — will be retargeted to artifact kinds in E4.

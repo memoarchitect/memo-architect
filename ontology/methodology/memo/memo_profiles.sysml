@@ -134,15 +134,41 @@ package memo::methodology::profiles {
         attribute id = "SCOPE-COV-001";
         attribute name = "MedicalDeviceCoverageScope";
         attribute scopeName = "coverage";
+
+        attribute includedArchLayer = "context";
+        attribute includedArchLayer = "requirements";
+        attribute includedArchLayer = "functions";
+        attribute includedArchLayer = "logical_structure";
+        attribute includedArchLayer = "logical_interfaces";
+        attribute includedArchLayer = "physical_interfaces";
+        attribute includedArchLayer = "software_structure";
+        attribute includedArchLayer = "hardware_structure";
+        attribute includedArchLayer = "behavior";
         attribute includedArchLayer = "risk";
+        attribute includedArchLayer = "arch_risk";
+        attribute includedArchLayer = "assurance";
+        attribute includedArchLayer = "cybersecurity";
+        attribute includedArchLayer = "constraints";
+
         attribute includedStandard = "ISO 14971";
-        attribute includedArtifactKind = "";
+        attribute includedStandard = "IEC 62304";
+        attribute includedStandard = "21 CFR 820";
+        attribute includedStandard = "ISO 13485";
+        attribute includedStandard = "ISO 14155";
+        attribute includedStandard = "IEC 62366";
+        attribute includedStandard = "IEC 60601-1";
+        attribute includedStandard = "IEC 82304-1";
+        attribute includedStandard = "FDA Cybersecurity Guidance";
+
+        attribute includedArtifactKind = "RiskManagementPlan";
+
         attribute includedViewpointType = "VP-CTX";
         attribute includedViewpointType = "VP-LOG";
         attribute includedViewpointType = "VP-RISK";
         attribute includedViewpointType = "VP-CYB";
+
         attribute excludedKind = "";
-        attribute description = "Coverage rules across ISO 14971, IEC 62304, FDA 21 CFR 820, ISO 13485, ISO 14155, FDA Cybersecurity, IEC 62366, IEC 60601-1, IEC 82304-1.";
+        attribute description = "Comprehensive default methodology — includes all architecture layers, supported standards, artifact kinds, and viewpoint types. No GPCA-specific subtraction.";
     }
 
     part gpcaProjectBinding : ProjectMethodBinding {

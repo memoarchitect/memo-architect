@@ -4,6 +4,6 @@ projectName: gpca-pump
 projectType: device
 
 # Phase C: project pins one methodology. The methodology package
-# (@memo/methodology-medical-default) extends @memo/ontology-arch, which
+# (@memo/methodology-default) extends @memo/ontology-arch, which
 # pulls in architecture kinds and relationships from the top-level ontology/.
-methodology: "@memo/methodology-medical-default@^1.0"
+methodology: "@memo/methodology-default@^1.0"

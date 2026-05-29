@@ -1,6 +1,6 @@
 {
   "type": "methodology-package",
-  "name": "@memo/methodology-medical-default",
+  "name": "@memo/methodology-default",
   "version": "1.0.0",
   "extends": "@memo/ontology-arch",
   "sysmlDir": "../../ontology/methodology/memo",
