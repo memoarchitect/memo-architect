@@ -8,6 +8,26 @@ import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { FONT } from '../styles/tokens';
+interface MethodologyScopeData {
+    includedArchLayers: string[];
+    excludedKinds: string[];
+}
+
+function extractScope(methodology: { folders: Array<{ parts: Record<string, Array<{ attributes: Record<string, unknown>; multiAttributes?: Record<string, unknown[]> }>> }> }): MethodologyScopeData | null {
+    for (const folder of methodology.folders) {
+        const scopes = folder.parts['MethodologyScope'] ?? [];
+        if (scopes.length === 0) continue;
+        const s = scopes[0];
+        const strList = (key: string): string[] =>
+            ((s.multiAttributes?.[key] as string[] | undefined) ?? [])
+                .filter((v): v is string => typeof v === 'string' && v !== '');
+        return {
+            includedArchLayers: strList('includedArchLayer'),
+            excludedKinds: strList('excludedKind'),
+        };
+    }
+    return null;
+}
 
 const LAYER_ICONS: Record<string, string> = {
     business: '🏢', requirements: '📋', risk: '⚠️', functional: '⚙️',
@@ -32,8 +52,14 @@ interface DiagramPaletteProps {
 export function DiagramPalette({ collapsed, onToggleCollapse, eligibleKinds }: DiagramPaletteProps) {
     const model = useModelStore(s => s.model);
     const availableOntologies = useModelStore(s => s.availableOntologies);
+    const methodology = useModelStore(s => s.methodology);
     const [search, setSearch] = useState('');
     const [collapsedLayers, setCollapsedLayers] = useState<Set<string>>(new Set());
+
+    const methodologyScope = useMemo<MethodologyScopeData | null>(() => {
+        if (!methodology) return null;
+        return extractScope(methodology);
+    }, [methodology]);
 
     // Build kind list from ontology packages (with count from model)
     const byLayer = useMemo<Map<string, PaletteItem[]>>(() => {
@@ -55,6 +81,11 @@ export function DiagramPalette({ collapsed, onToggleCollapse, eligibleKinds }: D
                 if (!map.has(layer)) map.set(layer, []);
                 for (const kindInfo of layerInfo.kinds) {
                     if (eligibleKinds && !eligibleKinds.has(kindInfo.name)) continue;
+                    if (methodologyScope) {
+                        if (methodologyScope.excludedKinds.includes(kindInfo.name)) continue;
+                        if (methodologyScope.includedArchLayers.length > 0
+                            && !methodologyScope.includedArchLayers.includes(layer)) continue;
+                    }
                     const existing = map.get(layer)!.find(k => k.kind === kindInfo.name);
                     if (!existing) {
                         map.get(layer)!.push({
@@ -88,7 +119,7 @@ export function DiagramPalette({ collapsed, onToggleCollapse, eligibleKinds }: D
         }
 
         return map;
-    }, [model, availableOntologies, eligibleKinds]);
+    }, [model, availableOntologies, eligibleKinds, methodologyScope]);
 
     const layers = LAYER_ORDER.filter(l => byLayer.has(l));
 
