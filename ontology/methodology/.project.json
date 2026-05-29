@@ -1,0 +1,28 @@
+{
+  "name": "memo-methodology-default",
+  "description": "MEMO Default Methodology — comprehensive medical device methodology covering full DHF set, selecting subsets across architecture, compliance, artifacts, and viewpoints dimensions.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "maintainer": [
+    "Somesh Kashyap <seesomi@gmail.com>"
+  ],
+  "website": "https://gitlab.com/somesh_sandbox/memo",
+  "topic": [
+    "Medical Device",
+    "Methodology",
+    "DHF",
+    "Design History File",
+    "SysML v2"
+  ],
+  "usage": [
+    {
+      "resource": "urn:kpar:memo-ontology"
+    },
+    {
+      "resource": "urn:kpar:semantic-library"
+    },
+    {
+      "resource": "urn:kpar:systems-library"
+    }
+  ]
+}

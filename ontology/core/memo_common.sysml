@@ -7,12 +7,12 @@ package memo::core::common {
         attribute description : String;
     }
 
-    part def TraceableElement :> IdentifiedElement {
+    part def TraceableElement specializes IdentifiedElement {
         attribute rationale : String;
         attribute sourceReference : String;
     }
 
-    part def DocumentedElement :> TraceableElement {
+    part def DocumentedElement specializes TraceableElement {
         attribute title : String;
         attribute shortDescription : String;
         attribute longDescription : String;
@@ -20,13 +20,13 @@ package memo::core::common {
         attribute sectionIdentifier : String;
     }
 
-    part def RequirementDriver :> TraceableElement;
-    part def VerifiableElement :> TraceableElement;
-    part def ArchitectureElement :> TraceableElement;
-    part def InterfaceElement :> TraceableElement;
-    part def EvidenceElement :> TraceableElement;
+    part def RequirementDriver specializes TraceableElement;
+    part def VerifiableElement specializes TraceableElement;
+    part def ArchitectureElement specializes TraceableElement;
+    part def InterfaceElement specializes TraceableElement;
+    part def EvidenceElement specializes TraceableElement;
 
-    part def ExchangeItem :> TraceableElement {
+    part def ExchangeItem specializes TraceableElement {
         attribute semantics : String;
         attribute unit : String;
         attribute minValue : String;
@@ -35,7 +35,7 @@ package memo::core::common {
         attribute timestampRequired : Boolean;
     }
 
-    part def LayerElement :> TraceableElement {
+    part def LayerElement specializes TraceableElement {
         attribute layerName : String;
     }
 }

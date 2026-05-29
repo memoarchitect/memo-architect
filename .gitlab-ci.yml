@@ -1,0 +1,49 @@
+stages:
+  - build
+  - test
+  - package
+
+build:
+  stage: build
+  image: node:20
+  script:
+    - corepack enable
+    - pnpm install --frozen-lockfile
+    - pnpm run build
+  cache:
+    key: pnpm-$CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+      - .turbo/
+
+test:
+  stage: test
+  image: node:20
+  script:
+    - corepack enable
+    - pnpm install --frozen-lockfile
+    - pnpm run test
+  cache:
+    key: pnpm-$CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+      - .turbo/
+
+sysand-build:
+  stage: package
+  image: ghcr.io/sensmetry/sysand:latest
+  script:
+    - cd ontology
+    - sysand build
+    - mkdir -p ../dist
+    - cp output/*.kpar ../dist/ || true
+    - cd methodology
+    - sysand build
+    - cp output/*.kpar ../../dist/ || true
+  artifacts:
+    paths:
+      - dist/*.kpar
+    expire_in: 30 days
+  rules:
+    - changes:
+        - ontology/**/*

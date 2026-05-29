@@ -1,0 +1,29 @@
+{
+  "name": "memo-ontology",
+  "description": "MEMO Medical Engineering Modelling Ontology — SysML v2 domain kinds for medical device architecture per ISO 14971, IEC 62304, and ISO/IEC/IEEE 42010.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "maintainer": [
+    "Somesh Kashyap <seesomi@gmail.com>"
+  ],
+  "website": "https://gitlab.com/somesh_sandbox/memo",
+  "topic": [
+    "Medical Device",
+    "Ontology",
+    "ISO 14971",
+    "IEC 62304",
+    "Risk Management",
+    "SysML v2"
+  ],
+  "usage": [
+    {
+      "resource": "urn:kpar:semantic-library"
+    },
+    {
+      "resource": "urn:kpar:systems-library"
+    },
+    {
+      "resource": "urn:kpar:metadata-library"
+    }
+  ]
+}

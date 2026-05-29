@@ -1,7 +1,7 @@
 package memo::manifest::release {
     private import memo::core::common::*;
 
-    part def PackageRelease :> DocumentedElement {
+    part def PackageRelease specializes DocumentedElement {
         attribute packageName : String;
         attribute packageVersion : String;
         attribute releaseDate : String;

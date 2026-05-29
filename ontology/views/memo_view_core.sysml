@@ -4,7 +4,7 @@ package memo::views::core {
     private import memo::core::relationships::*;
     private import memo::viewpoints::core::*;
 
-    part def ViewSelectionQuery :> TraceableElement {
+    part def ViewSelectionQuery specializes TraceableElement {
         attribute includeElementKinds : String[*];
         attribute includeRelationshipKinds : String[*];
         attribute includeLayers : String[*];
@@ -14,7 +14,7 @@ package memo::views::core {
         attribute rationaleText : String;
     }
 
-    part def View :> DocumentedElement {
+    part def View specializes DocumentedElement {
         attribute outputKind : ViewOutputKind[*];
         attribute presentationKind : PresentationKind[*];
         attribute filterExpression : String;
@@ -28,20 +28,20 @@ package memo::views::core {
         part selectionQuery : ViewSelectionQuery[*];
     }
 
-    part def DiagramView :> View {
+    part def DiagramView specializes View {
         attribute diagramType : String;
         attribute layoutHint : String;
         attribute styleHint : String;
     }
 
-    part def DocumentBackedView :> View {
+    part def DocumentBackedView specializes View {
         attribute version : String;
         attribute lifecycleState : LifecycleStateKind;
         attribute generationRule : String;
         attribute marketScope : String;
     }
 
-    part def ViewInclusionRule :> TraceableElement {
+    part def ViewInclusionRule specializes TraceableElement {
         attribute includeElementKinds : String[*];
         attribute includeRelationshipKinds : String[*];
         attribute includeLayers : String[*];
