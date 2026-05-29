@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { resolve, join } from 'node:path';
 import { readdirSync } from 'node:fs';
-import { resolveLayerFromPath } from '../model/layer-resolver.js';
+import { resolveLayerFromPath, resolveStandardFromPath } from '../model/layer-resolver.js';
 import { KindRegistry } from '../model/kind-registry.js';
 import { parseFiles } from '../model/parser-utils.js';
 
@@ -44,6 +44,32 @@ describe('resolveLayerFromPath', () => {
 
     it('handles Windows-style backslashes', () => {
         expect(resolveLayerFromPath('sysml\\safety\\hazard.sysml')).toBe('safety');
+    });
+});
+
+// ─── Standard Resolver Tests ────────────────────────────────────────────────
+
+describe('resolveStandardFromPath', () => {
+    it('extracts standard from compliance subdirectory', () => {
+        expect(resolveStandardFromPath('sysml/compliance/iso_14971/rmf.sysml')).toBe('iso_14971');
+        expect(resolveStandardFromPath('sysml/compliance/iec_62304/slc.sysml')).toBe('iec_62304');
+    });
+
+    it('handles absolute paths', () => {
+        expect(resolveStandardFromPath('/project/ontology/sysml/compliance/iso_14971/rmf.sysml')).toBe('iso_14971');
+    });
+
+    it('returns undefined for non-compliance layers', () => {
+        expect(resolveStandardFromPath('sysml/safety/hazard.sysml')).toBeUndefined();
+        expect(resolveStandardFromPath('sysml/software/sw.sysml')).toBeUndefined();
+    });
+
+    it('returns undefined for files directly under compliance/', () => {
+        expect(resolveStandardFromPath('sysml/compliance/legacy.sysml')).toBeUndefined();
+    });
+
+    it('handles Windows backslashes', () => {
+        expect(resolveStandardFromPath('sysml\\compliance\\iso_14971\\rmf.sysml')).toBe('iso_14971');
     });
 });
 
@@ -109,6 +135,26 @@ describe('KindRegistry', () => {
 
         expect(registry.kindNames()).toContain('X');
         expect(registry.kindNames()).toContain('Y');
+    });
+
+    it('groups compliance kinds by standard', () => {
+        const registry = new KindRegistry();
+        registry.register({ name: 'RiskManagementFile', label: 'RiskManagementFile', layer: 'compliance', sysmlConstruct: 'part def', standard: 'iso_14971' });
+        registry.register({ name: 'SoftwareLifecyclePlan', label: 'SoftwareLifecyclePlan', layer: 'compliance', sysmlConstruct: 'part def', standard: 'iec_62304' });
+        registry.register({ name: 'Hazard', label: 'Hazard', layer: 'safety', sysmlConstruct: 'part def' });
+
+        const groups = registry.getComplianceGroups();
+        expect(groups).toHaveLength(2);
+        expect(groups[0].standard).toBe('iec_62304');
+        expect(groups[0].kinds).toHaveLength(1);
+        expect(groups[1].standard).toBe('iso_14971');
+        expect(groups[1].kinds).toHaveLength(1);
+    });
+
+    it('returns empty array when no compliance kinds exist', () => {
+        const registry = new KindRegistry();
+        registry.register({ name: 'Hazard', label: 'Hazard', layer: 'safety', sysmlConstruct: 'part def' });
+        expect(registry.getComplianceGroups()).toHaveLength(0);
     });
 });
 

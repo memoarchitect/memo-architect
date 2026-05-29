@@ -63,6 +63,8 @@ export interface OntologyKindInfo {
     derivesFrom?: string;
     derivedBy?: string[];
     relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
+    /** Compliance standard (e.g. "iso-14971"), set for kinds under compliance/<standard>/ */
+    standard?: string;
 }
 
 /** Layer color palette (mirrors web constants) */
@@ -84,6 +86,8 @@ const LAYER_COLORS: Record<string, string> = {
     cybersecurity: '#EF4444', privacy: '#6366F1',
     // ontology-ros layers
     middleware: '#0EA5E9',
+    // compliance layer
+    compliance: '#7C3AED',
 };
 
 /** Parsed kind info from a SysML file */
@@ -168,6 +172,13 @@ export function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
 
             for (const filePath of collectSysmlFiles(layerDir)) {
                 const { kinds } = parseConstructsInFile(filePath);
+                // For compliance layer, the first subdirectory is the standard
+                let standard: string | undefined;
+                if (layerId === 'compliance') {
+                    const rel = filePath.replace(/\\/g, '/').substring(layerDir.replace(/\\/g, '/').length + 1);
+                    const firstSeg = rel.split('/')[0];
+                    if (firstSeg && !firstSeg.endsWith('.sysml')) standard = firstSeg;
+                }
                 for (const k of kinds) {
                     allParsedKinds.push({ ...k, layer: layerId });
                     layerKinds.push({
@@ -179,6 +190,7 @@ export function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
                         viewpoints: [],
                         description: k.description,
                         derivesFrom: k.derivesFrom,
+                        standard,
                     });
                 }
             }

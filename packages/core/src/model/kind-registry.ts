@@ -25,7 +25,7 @@ import {
 } from '../language/generated/ast.js';
 import type { KindDefinition, SysMLConstruct } from './config.js';
 import type { ParsedDocument } from './parser-utils.js';
-import { resolveLayerFromPath } from './layer-resolver.js';
+import { resolveLayerFromPath, resolveStandardFromPath } from './layer-resolver.js';
 
 /** Entry in the KindRegistry, matching KindDefinition shape */
 export interface KindRegistryEntry {
@@ -43,6 +43,10 @@ export interface KindRegistryEntry {
     description?: string;
     /** Kinds that specialize this kind (reverse of superType) */
     derivedBy?: string[];
+    /** Compliance standard (e.g. "iso-14971"), set for kinds under compliance/<standard>/ */
+    standard?: string;
+    /** Standard clause reference (e.g. "4.5"), extracted from SysML attribute if present */
+    clause?: string;
 }
 
 /** AST $type → SysMLConstruct mapping */
@@ -121,6 +125,21 @@ export class KindRegistry {
         return Array.from(this.kinds.values());
     }
 
+    /** Get compliance standard groups discovered from the ontology tree. */
+    getComplianceGroups(): { standard: string; kinds: KindRegistryEntry[] }[] {
+        const groups = new Map<string, KindRegistryEntry[]>();
+        for (const entry of this.kinds.values()) {
+            if (entry.standard) {
+                let list = groups.get(entry.standard);
+                if (!list) { list = []; groups.set(entry.standard, list); }
+                list.push(entry);
+            }
+        }
+        return Array.from(groups.entries())
+            .map(([standard, kinds]) => ({ standard, kinds }))
+            .sort((a, b) => a.standard.localeCompare(b.standard));
+    }
+
     /** Register a kind manually (for testing or config fallback) */
     register(entry: KindRegistryEntry): void {
         this.kinds.set(entry.name, entry);
@@ -155,20 +174,21 @@ export class KindRegistry {
         for (const doc of documents) {
             const model = doc.document.parseResult.value;
             const layer = resolveLayerFromPath(doc.filePath);
+            const standard = resolveStandardFromPath(doc.filePath);
 
             for (const member of model.members) {
                 if (isPackageDeclaration(member)) {
-                    this.walkPackage(member, layer);
+                    this.walkPackage(member, layer, standard);
                 }
             }
         }
     }
 
     /** Walk a package declaration and register all Definition nodes */
-    private walkPackage(pkg: PackageDeclaration, layer: string): void {
+    private walkPackage(pkg: PackageDeclaration, layer: string, standard?: string): void {
         for (const member of pkg.members) {
             if (isPackageDeclaration(member)) {
-                this.walkPackage(member, layer);
+                this.walkPackage(member, layer, standard);
                 continue;
             }
 
@@ -199,6 +219,7 @@ export class KindRegistry {
                     layer,
                     sysmlConstruct: construct,
                     superType: superType || undefined,
+                    standard,
                 });
             }
         }
