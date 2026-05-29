@@ -272,19 +272,36 @@ export async function rulesCoverageCommand(
     options?: { format?: RulesFormat }
 ): Promise<void> {
     const format = options?.format || 'text';
-    const { ruleRegistry } = await loadContext(projectDir);
+    const { cwd, config, ontologyRegistries, ruleRegistry } = await loadContext(projectDir);
 
     const coverageRules = ruleRegistry?.byCategory('coverage') ?? [];
 
+    // Parse project model to evaluate coverage
+    const sysmlFiles = findSysmlFiles(cwd);
+    let model: ReturnType<typeof buildMemoModel> | undefined;
+    if (sysmlFiles.length > 0) {
+        const parseResult = await parseFiles(sysmlFiles);
+        model = buildMemoModel(parseResult.documents, config, parseResult.errors, ontologyRegistries);
+    }
+
+    // Evaluate each coverage rule against model
+    type CoverageResult = { rule: (typeof coverageRules)[0]; passed: boolean; count: number };
+    const results: CoverageResult[] = coverageRules.map(rule => {
+        const target = rule.attributes['coverageTarget'] || rule.appliesTo;
+        const count = model ? [...model.elements.values()].filter((e: any) => e.kind === target).length : 0;
+        return { rule, passed: count > 0, count };
+    });
+
     if (format === 'json') {
-        // Group by standard
-        const grouped: Record<string, typeof coverageRules> = {};
-        for (const rule of coverageRules) {
-            const std = rule.attributes['standard'] || 'unspecified';
+        const grouped: Record<string, { id: string; name: string; passed: boolean; count: number }[]> = {};
+        for (const r of results) {
+            const std = r.rule.attributes['standard'] || 'unspecified';
             if (!grouped[std]) grouped[std] = [];
-            grouped[std].push(rule);
+            grouped[std].push({ id: r.rule.id, name: r.rule.name, passed: r.passed, count: r.count });
         }
-        console.log(JSON.stringify(grouped, null, 2));
+        const totalPassed = results.filter(r => r.passed).length;
+        const pct = results.length > 0 ? Math.round((totalPassed / results.length) * 100) : 0;
+        console.log(JSON.stringify({ total: results.length, passed: totalPassed, percentage: pct, byStandard: grouped }, null, 2));
         return;
     }
 
@@ -296,23 +313,29 @@ export async function rulesCoverageCommand(
     }
 
     // Group by standard
-    const byStandard = new Map<string, typeof coverageRules>();
-    for (const rule of coverageRules) {
-        const std = rule.attributes['standard'] || 'unspecified';
+    const byStandard = new Map<string, CoverageResult[]>();
+    for (const r of results) {
+        const std = r.rule.attributes['standard'] || 'unspecified';
         if (!byStandard.has(std)) byStandard.set(std, []);
-        byStandard.get(std)!.push(rule);
+        byStandard.get(std)!.push(r);
     }
 
-    for (const [standard, rules] of byStandard) {
-        console.log(chalk.bold.cyan(`  ${standard} (${rules.length} rules)`));
-        for (const rule of rules) {
-            const clause = rule.attributes['clause'] ? chalk.gray(`[${rule.attributes['clause']}]`) : '';
-            const icon = severityIcon(rule.severity);
-            console.log(`    ${icon} ${chalk.white(rule.id)} ${rule.name} ${clause}`);
-            console.log(`      ${chalk.gray(`Checks: ${rule.attributes['coverageTarget'] || rule.appliesTo}`)}`);
+    for (const [standard, stdResults] of byStandard) {
+        const stdPassed = stdResults.filter(r => r.passed).length;
+        const stdPct = Math.round((stdPassed / stdResults.length) * 100);
+        const pctColor = stdPct >= 90 ? chalk.green : stdPct >= 50 ? chalk.yellow : chalk.red;
+        console.log(chalk.bold.cyan(`  ${standard}`) + chalk.gray(` (${stdResults.length} rules)`) + ` ${pctColor(`${stdPct}%`)}`);
+        for (const r of stdResults) {
+            const clause = r.rule.attributes['clause'] ? chalk.gray(`[${r.rule.attributes['clause']}]`) : '';
+            const icon = r.passed ? chalk.green('✔') : severityIcon(r.rule.severity);
+            const countLabel = r.passed ? chalk.green(`${r.count} found`) : chalk.red('0 found');
+            console.log(`    ${icon} ${chalk.white(r.rule.id)} ${r.rule.name} ${clause} — ${countLabel}`);
         }
         console.log();
     }
 
-    console.log(chalk.gray(`  Total: ${coverageRules.length} coverage rules across ${byStandard.size} standards`));
+    const totalPassed = results.filter(r => r.passed).length;
+    const totalPct = results.length > 0 ? Math.round((totalPassed / results.length) * 100) : 0;
+    const totalColor = totalPct >= 90 ? chalk.green : totalPct >= 50 ? chalk.yellow : chalk.red;
+    console.log(chalk.gray(`  Total: ${totalPassed}/${results.length} coverage rules satisfied`) + ` ${totalColor(`(${totalPct}%)`)}`);
 }

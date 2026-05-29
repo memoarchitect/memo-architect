@@ -34,4 +34,13 @@ package memo::methodology::core {
         attribute lifecycleStage : WorkflowStageKind;
         attribute required : Boolean;
     }
+
+    part def Archetype :> TraceableElement {
+        attribute label : String;
+        attribute description : String;
+        attribute category : String;
+        attribute includedLayer : String;
+        attribute includedStandard : String;
+        attribute templateDir : String;
+    }
 }

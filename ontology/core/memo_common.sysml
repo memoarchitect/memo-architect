@@ -38,4 +38,11 @@ package memo::core::common {
     part def LayerElement specializes TraceableElement {
         attribute layerName : String;
     }
+
+    part def Citation specializes IdentifiedElement {
+        attribute source : String;
+        attribute section : String;
+        attribute uri : String;
+        attribute year : String;
+    }
 }
