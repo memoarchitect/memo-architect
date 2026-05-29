@@ -74,16 +74,15 @@ This keeps ontology authors, methodology authors, and project authors on separat
 
 ## Release Direction
 
-The final-state split from [../platform.md §10](../platform.md#10-repo-layout-final-state) is:
+The final-state split from [../platform.md §10](../platform.md#10-repo-layout-final-state) is three repos — see [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md):
 
 ```text
-memo-base/             # L0 helpers
-memo-ontology/         # L1 canonical ontology
-memo-methodologies/    # L2 methodology library
-memo-architect/        # L3 tool
+memo-sysmlv2/          # L0+L1+L2 — pure SysML v2 / KerML content (no TypeScript)
+memo-cli/              # L3 engine: core (parser, validator, KerML evaluator) + cli
+memo-architect/        # L3 tool UI: web app
 ```
 
-During local development, subtree or workspace integration may keep these sources available in one checkout. Published consumers should depend on versioned ontology and methodology artifacts, not on tool internals.
+Dependency direction: `memo-sysmlv2 ◄─ memo-cli ◄─ memo-architect`. The ontology content (formerly L0/L1/L2 repos) collapses into one pure-content release; the tool splits into engine vs UI so CLI-only users are served without the web bundle. During local development, subtree or workspace integration may keep these sources in one checkout. Published consumers depend on versioned sysand artifacts, not on tool internals.
 
 ## Migration Guardrails
 

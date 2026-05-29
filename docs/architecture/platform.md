@@ -361,7 +361,7 @@ memo export dhf  # uses methodology.includedArtifactKinds
 
 ## 9. Helper packages (L0)
 
-`@memo/sysml-base` lives in `memo-base` repo and is consumed by both ontology and methodology packages. It only contains:
+`@memo/sysml-base` (L0 helpers) is consumed by both ontology and methodology packages. It ships inside the `memo-sysmlv2` repo (see §10). It only contains:
 
 - common attributes (id, name, version, description, ...)
 - enumerations (RuleStrengthKind, RigorKind, AudienceKind, WorkflowStageKind)
@@ -377,40 +377,37 @@ No domain content. Treat like a stdlib.
 
 ## 10. Repo layout (final state)
 
-```
-memo-base/                          (L0 helpers)
-  packages/sysml-base/
-    sysml/base/*.sysml
-  packages/methodology-base/
-    sysml/base/*.sysml
+Three repos, split along dependency lines — see [ADR-1-17](../decisions/adr/ADR-1-17-three-repo-split.md). The conceptual L0/L1/L2 content collapses into a single pure-content repo; the L3 tool splits into engine (cli) vs UI (web).
 
-memo-ontology/                      (L1 — single comprehensive ontology pkg)
+```
+memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)
   ontology/
-    base/                           re-exports memo-base
+    base/                           L0 helpers (@memo/sysml-base)
     architecture/
     compliance/
     artifacts/
     viewpoints/
     views/
     relationships/
-    rules/
-
-memo-methodologies/                 (L2 — methodology library)
-  packages/methodology-default/
-    sysml/methodology/default/*.sysml
-  packages/methodology-gpca/
-    sysml/methodology/gpca/*.sysml
-  examples/                          (illustrative example methodologies)
-
-memo-architect/                     (L3 — tool)
-  packages/core/
+    rules/                          native constraint def / requirement def (Epic EE)
+  methodology/
+    default/*.sysml                 L2 methodology library
+    gpca/*.sysml
+  .project.json + sysand-lock.toml  ships as a sysand package; SysIDE/SysON/sysand consumable
+        ▲ data-dependency (versioned sysand artifact)
+memo-cli/                           (L3 engine + CLI)
+  packages/core/                    Langium grammar, parser, builder, validator, KerML evaluator
   packages/cli/
+        ▲ build-dep (core types) + runtime WebSocket (dev server, versioned protocol)
+memo-architect/                     (L3 tool UI)
   packages/web/
-  examples/gpca-pump/               pins @memo/methodology-gpca
-  examples/full-medical-device/     pins @memo/methodology-default
+  examples/gpca-pump/               pins memo-sysmlv2 methodology content
+  examples/full-medical-device/
 ```
 
-Each repo is git-subtree-pulled into `memo-architect` for local dev (existing pattern continues).
+Dependency direction: `memo-sysmlv2 ◄─ memo-cli ◄─ memo-architect`. `web` does **not** build-depend on `cli` — only on `@memo/core` types; the CLI↔web link is the WebSocket protocol at runtime (kept a versioned contract). Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
+
+Execution: keystone Epic EE (rules → native constraints) gates the first cut; Epic J prepares boundaries; Epics FF (memo-sysmlv2) → GG (memo-cli) → HH (memo-architect) execute the cuts.
 
 ---
 
