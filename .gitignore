@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# Claude Code worktrees (internal)
+.claude/worktrees/
+
 # Build outputs
 dist/
 lib/

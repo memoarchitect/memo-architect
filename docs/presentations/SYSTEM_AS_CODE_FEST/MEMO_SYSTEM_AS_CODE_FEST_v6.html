@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meMO - Medical Device Architecture Modeling as Code</title>
+<style>
+:root {
+  --night:#061b31;
+  --night-2:#0a3452;
+  --ink:#082744;
+  --muted:#5c7188;
+  --paper:#fbfcfd;
+  --wash:#eef4f7;
+  --line:#d5e0e7;
+  --teal:#00cdbb;
+  --teal-deep:#008d80;
+  --teal-soft:#e4faf7;
+  --blue:#438ed0;
+  --blue-soft:#eaf4fd;
+  --purple:#8971dc;
+  --purple-soft:#f0edff;
+  --orange:#ef9b51;
+  --orange-soft:#fff3e8;
+  --red:#ea6b61;
+  --red-soft:#fff0ef;
+  --green:#59b875;
+  --green-soft:#edf9ef;
+  --shadow:0 22px 58px rgba(2,31,54,.18);
+}
+* { box-sizing:border-box; }
+html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#dbe6ea; }
+body { color:var(--ink); font-family:Inter,"Helvetica Neue",Arial,sans-serif; }
+button { font:inherit; }
+.app { display:grid; width:100%; height:100%; place-items:center; }
+.deck { position:relative; width:min(100vw,177.7778vh); height:min(56.25vw,100vh); overflow:hidden; background:var(--paper); box-shadow:var(--shadow); }
+.slide { position:absolute; inset:0; display:none; overflow:hidden; background:var(--paper); }
+.slide.active { display:block; }
+.slide.dark { color:#fff; background:radial-gradient(circle at 80% 38%,#0c496c 0,var(--night) 63%,#020e1b 100%); }
+.body { height:100%; padding:82px 76px 54px; }
+.chapter { position:absolute; top:24px; left:76px; display:flex; align-items:center; gap:12px; color:var(--teal-deep); font-size:14px; font-weight:900; letter-spacing:.17em; text-transform:uppercase; }
+.chapter b { display:grid; width:38px; height:38px; place-items:center; border-radius:10px; color:#fff; background:var(--teal-deep); letter-spacing:0; }
+.dark .chapter { color:var(--teal); }
+.dark .chapter b { color:var(--night); background:var(--teal); }
+h1,h2,h3,p { margin:0; }
+h1 { font-size:78px; line-height:.98; letter-spacing:-.058em; }
+h2 { max-width:1440px; font-size:53px; line-height:1.02; letter-spacing:-.05em; }
+h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
+.lede { max-width:1120px; margin-top:13px; color:var(--muted); font-size:21px; line-height:1.35; }
+.eyebrow { color:var(--teal-deep); font-size:13px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+.memo { color:var(--teal-deep); font-weight:950; letter-spacing:-.045em; }
+.dark .memo { color:var(--teal); }
+.message { margin-top:20px; padding:14px 17px; border-left:4px solid var(--teal-deep); color:var(--ink); background:var(--teal-soft); font-size:18px; font-weight:800; line-height:1.3; }
+.message strong { color:var(--teal-deep); }
+.notes { display:none; }
+
+/* Cover */
+.cover { background:var(--night); }
+.cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.75; }
+.cover:after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(2,14,27,.99) 0%,rgba(3,23,43,.96) 54%,rgba(3,23,43,.58) 100%); }
+.cover-content { position:absolute; z-index:2; top:122px; left:76px; width:1070px; }
+.cover .eyebrow { color:var(--teal); }
+.cover h1 { margin-top:17px; color:#fff; }
+.cover h1 span { color:var(--teal); }
+.cover p { max-width:930px; margin-top:22px; color:rgba(255,255,255,.76); font-size:23px; line-height:1.36; }
+.speaker { margin-top:30px; color:#fff; font-size:16px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.speaker strong { color:var(--teal); }
+.pronounce { position:absolute; z-index:3; top:36px; right:150px; padding:10px 15px; border:1px solid rgba(0,205,187,.52); border-radius:999px; color:var(--teal); background:rgba(3,23,43,.7); font-size:13px; font-weight:900; letter-spacing:.12em; }
+
+/* Slide 2: expanding system boundary */
+.opening-grid { display:grid; grid-template-columns:53% 47%; gap:42px; align-items:center; margin-top:18px; }
+.opening-copy h2 { font-size:70px; }
+.opening-copy h2 span { color:var(--teal-deep); }
+.opening-copy p { max-width:730px; margin-top:20px; color:var(--muted); font-size:23px; line-height:1.38; }
+.opening-question { margin-top:28px; padding-top:19px; border-top:1px solid var(--line); color:var(--ink); font-size:34px; font-weight:900; letter-spacing:-.035em; }
+.opening-question span { color:var(--teal-deep); }
+.boundary-map { position:relative; height:570px; border:1px solid var(--line); border-radius:20px; background:#f7fafc; overflow:hidden; }
+.shell { position:absolute; border:1px solid var(--line); border-radius:18px; }
+.shell .label { position:absolute; top:14px; left:16px; color:var(--teal-deep); font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.shell.outer { inset:19px; background:#fff; }
+.shell.connected { inset:92px 80px 77px; border-color:#9bded5; background:var(--teal-soft); }
+.shell.software { inset:168px 154px 133px; border-color:#acd0ec; background:var(--blue-soft); }
+.device { position:absolute; left:50%; bottom:82px; width:224px; padding:15px 10px; transform:translateX(-50%); border-radius:13px; color:#fff; background:var(--night-2); text-align:center; }
+.device b { display:block; font-size:21px; }
+.device span { display:block; margin-top:5px; color:rgba(255,255,255,.69); font-size:12px; font-weight:800; letter-spacing:.08em; }
+.chip { position:absolute; padding:8px 10px; border:1px solid var(--line); border-radius:999px; color:var(--ink); background:#fff; font-size:13px; font-weight:850; line-height:1; }
+.outer .workflow { left:18px; top:52px; }
+.outer .updates { right:18px; top:17px; }
+.outer .ai { right:18px; top:52px; border-color:#e6c675; color:#76510b; background:#fff8e7; }
+.connected .cloud { right:16px; bottom:16px; }
+.connected .companion { left:16px; bottom:16px; }
+.software .logic { left:15px; bottom:15px; }
+.software .alarms { right:15px; bottom:15px; }
+.boundary-caption { position:absolute; right:0; bottom:0; left:0; padding:13px 16px; color:var(--ink); background:rgba(255,255,255,.94); border-top:1px solid var(--line); font-size:17px; font-weight:850; }
+
+/* Shared flow */
+.flow { display:flex; align-items:stretch; margin-top:32px; }
+.flow .step { position:relative; flex:1; min-height:124px; padding:18px 17px; border:1px solid var(--line); background:#fff; }
+.flow .step:first-child { border-radius:14px 0 0 14px; }
+.flow .step:last-child { border-radius:0 14px 14px 0; }
+.flow .step + .step:before { content:"\203A"; position:absolute; z-index:2; top:36px; left:-9px; color:var(--teal-deep); font-size:34px; }
+.flow b { display:block; color:var(--ink); font-size:19px; line-height:1.13; }
+.flow span { display:block; margin-top:9px; color:var(--muted); font-size:14px; line-height:1.3; }
+.flow .warn { border-color:#e6c675; background:#fff8e7; }
+
+/* Three lens convergence */
+.converge { display:grid; grid-template-columns:45% 10% 45%; gap:0; align-items:center; margin-top:28px; }
+.lenses { display:grid; gap:13px; }
+.lens { display:grid; grid-template-columns:155px 1fr; min-height:93px; overflow:hidden; border:1px solid var(--line); border-radius:13px; background:#fff; }
+.lens .who { display:flex; align-items:center; padding:15px; color:var(--teal-deep); background:var(--wash); font-size:13px; font-weight:900; letter-spacing:.11em; line-height:1.25; text-transform:uppercase; }
+.lens .ask { display:flex; align-items:center; padding:16px; color:var(--ink); font-size:19px; font-weight:900; }
+.join { display:grid; place-items:center; color:var(--teal-deep); font-size:54px; font-weight:900; }
+.architecture-card { min-height:320px; padding:22px; border:1px solid #9bded5; border-radius:17px; background:var(--teal-soft); }
+.architecture-card .eyebrow { margin-bottom:12px; }
+.arch-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:19px; }
+.arch-grid div { min-height:76px; padding:13px; border:1px solid rgba(0,141,128,.2); border-radius:10px; background:rgba(255,255,255,.56); }
+.arch-grid b { display:block; color:var(--ink); font-size:16px; }
+.arch-grid span { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.25; }
+
+/* Missing middle */
+.bridge { display:grid; grid-template-columns:1fr 1.12fr 1fr; gap:18px; align-items:stretch; margin-top:31px; }
+.bridge-card { min-height:345px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.bridge-card.middle { border-color:#9bded5; background:var(--teal-soft); }
+.bridge-card .eyebrow { margin-bottom:13px; }
+.bridge-card h3 { font-size:30px; }
+.bridge-card p { margin-top:14px; color:var(--muted); font-size:17px; line-height:1.36; }
+.bridge-items { display:grid; gap:8px; margin-top:20px; }
+.bridge-items div { padding-top:9px; border-top:1px solid var(--line); color:var(--ink); font-size:15px; font-weight:850; }
+.middle .bridge-items div { border-color:rgba(0,141,128,.23); color:var(--teal-deep); }
+
+/* Stakeholders */
+.stakeholders { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:31px; }
+.stake { min-height:280px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.stake .num { display:grid; width:42px; height:42px; place-items:center; border-radius:50%; color:#fff; background:var(--teal-deep); font-size:15px; font-weight:900; }
+.stake h3 { margin-top:18px; font-size:27px; }
+.stake p { margin-top:15px; color:var(--muted); font-size:17px; line-height:1.37; }
+.stake strong { color:var(--ink); }
+
+/* Generic language to method */
+.language-strip { display:grid; grid-template-columns:27% 11% 35% 11% 16%; align-items:center; margin-top:38px; }
+.language-block,.method-block { min-height:220px; padding:24px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.language-block h3,.method-block h3 { margin-top:14px; font-size:29px; }
+.language-block p,.method-block p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.34; }
+.language-arrow { color:var(--teal-deep); font-size:58px; font-weight:900; text-align:center; }
+.method-decisions { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+.method-decisions div { padding:12px 10px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:var(--wash); font-size:15px; font-weight:850; text-align:center; }
+.method-block { border-color:#9bded5; background:var(--teal-soft); }
+
+/* meMO split */
+.memo-split { display:grid; grid-template-columns:repeat(3,1fr); gap:17px; margin-top:31px; }
+.split { min-height:350px; padding:23px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.split:nth-child(1) { border-top:6px solid var(--teal-deep); }
+.split:nth-child(2) { border-top:6px solid var(--blue); }
+.split:nth-child(3) { border-top:6px solid var(--purple); }
+.split .n { color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.split h3 { margin-top:14px; font-size:31px; }
+.split p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.36; }
+.split ul { display:grid; gap:8px; margin:20px 0 0; padding:0; list-style:none; }
+.split li { padding-top:8px; border-top:1px solid var(--line); color:var(--ink); font-size:15px; font-weight:850; }
+
+/* Architecture hub */
+.hub-layout { display:grid; grid-template-columns:22% 56% 22%; align-items:center; margin-top:23px; }
+.hub-side { display:grid; gap:12px; }
+.hub-side div { padding:13px 11px; border:1px solid var(--line); border-radius:10px; color:var(--muted); background:#fff; font-size:15px; font-weight:800; text-align:center; }
+.hub-side b { display:block; margin-bottom:5px; color:var(--ink); font-size:17px; }
+.hub { position:relative; height:390px; }
+.hub-center { position:absolute; top:121px; left:50%; display:grid; width:224px; height:144px; place-items:center; transform:translateX(-50%); border:4px solid var(--blue); border-radius:50%; color:var(--ink); background:var(--blue-soft); text-align:center; }
+.hub-center b { display:block; font-size:27px; }
+.hub-center span { display:block; margin-top:4px; color:var(--muted); font-size:14px; }
+.hub-node { position:absolute; display:grid; width:178px; min-height:80px; place-items:center; padding:10px; border:2px solid; border-radius:50%; background:#fff; color:var(--ink); font-size:18px; font-weight:900; text-align:center; }
+.hub-node.context { top:16px; left:50%; transform:translateX(-50%); border-color:var(--teal-deep); }
+.hub-node.behavior { right:0; top:151px; border-color:var(--purple); }
+.hub-node.assurance { bottom:10px; left:50%; transform:translateX(-50%); border-color:var(--green); }
+.hub-node.risk { left:0; top:151px; border-color:var(--red); }
+.hub-line { position:absolute; height:2px; background:#bfccd5; transform-origin:left center; }
+.hub-line.top { top:104px; left:50%; width:68px; transform:rotate(90deg); }
+.hub-line.bottom { top:264px; left:50%; width:68px; transform:rotate(90deg); }
+.hub-line.left { top:194px; left:22%; width:20%; }
+.hub-line.right { top:194px; right:22%; width:20%; }
+
+/* Ontology path */
+.reasoning { display:flex; align-items:stretch; margin-top:36px; }
+.reason { position:relative; flex:1; min-height:156px; padding:18px 14px; border:1px solid var(--line); background:#fff; }
+.reason:first-child { border-radius:14px 0 0 14px; }
+.reason:last-child { border-radius:0 14px 14px 0; }
+.reason + .reason:before { content:"\203A"; position:absolute; top:47px; left:-9px; z-index:2; color:var(--teal-deep); font-size:34px; }
+.reason b { display:block; color:var(--ink); font-size:19px; }
+.reason span { display:block; margin-top:10px; color:var(--muted); font-size:14px; line-height:1.25; }
+.reason small { display:block; margin-bottom:11px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+
+/* Extension layers */
+.extension { display:grid; grid-template-columns:58% 42%; gap:28px; margin-top:28px; align-items:center; }
+.layer-stack { display:grid; gap:10px; }
+.ext-layer { padding:16px 18px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.ext-layer b { display:block; color:var(--ink); font-size:19px; }
+.ext-layer span { display:block; margin-top:5px; color:var(--muted); font-size:14px; }
+.ext-layer.core { border-color:#9bded5; background:var(--teal-soft); }
+.ext-layer.method { border-color:#acd0ec; background:var(--blue-soft); }
+.ext-layer.project { border-color:#cfc2fb; background:var(--purple-soft); }
+.profiles { padding:21px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.profiles h3 { font-size:28px; }
+.profile-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:18px; }
+.profile-grid div { padding:12px; border-radius:9px; color:var(--ink); background:var(--wash); font-size:15px; font-weight:850; text-align:center; }
+
+/* Safety thread */
+.thread { display:flex; align-items:stretch; margin-top:33px; }
+.thread-node { position:relative; flex:1; min-height:151px; padding:17px 12px; border:1px solid var(--line); background:#fff; }
+.thread-node:first-child { border-radius:13px 0 0 13px; }
+.thread-node:last-child { border-radius:0 13px 13px 0; }
+.thread-node + .thread-node:before { content:"\203A"; position:absolute; z-index:2; top:47px; left:-9px; color:var(--teal-deep); font-size:34px; }
+.thread-node small { display:block; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.thread-node b { display:block; margin-top:11px; color:var(--ink); font-size:17px; line-height:1.16; }
+.thread-node span { display:block; margin-top:9px; color:var(--muted); font-size:13px; line-height:1.27; }
+.thread-node.control { background:var(--orange-soft); }
+.thread-node.arch { background:var(--blue-soft); }
+.thread-node.verify { background:var(--green-soft); }
+
+/* Impact */
+.impact { display:grid; grid-template-columns:30% 12% 58%; align-items:center; margin-top:28px; }
+.change-card { padding:24px; border:2px solid var(--teal-deep); border-radius:17px; background:var(--teal-soft); }
+.change-card h3 { margin-top:12px; font-size:29px; }
+.change-card p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.35; }
+.impact-arrow { color:var(--teal-deep); font-size:65px; font-weight:900; text-align:center; }
+.impact-map { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.impact-map div { min-height:108px; padding:15px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.impact-map b { display:block; color:var(--ink); font-size:18px; }
+.impact-map span { display:block; margin-top:8px; color:var(--muted); font-size:14px; line-height:1.28; }
+
+/* Projections */
+.project-grid { display:grid; grid-template-columns:36% 12% 52%; align-items:center; margin-top:31px; }
+.source-model { padding:23px; border:2px solid var(--teal-deep); border-radius:18px; background:var(--teal-soft); }
+.source-model h3 { margin-top:13px; font-size:30px; }
+.source-model p { margin-top:12px; color:var(--muted); font-size:17px; line-height:1.35; }
+.project-arrow { color:var(--teal-deep); font-size:66px; font-weight:900; text-align:center; }
+.views { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.view { min-height:118px; padding:15px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.view b { display:block; color:var(--ink); font-size:18px; }
+.view span { display:block; margin-top:8px; color:var(--muted); font-size:14px; line-height:1.25; }
+
+/* Code flow */
+.code-flow { display:flex; align-items:stretch; margin-top:34px; }
+.code-step { position:relative; flex:1; min-height:170px; padding:19px 16px; border:1px solid var(--line); background:#fff; }
+.code-step:first-child { border-radius:14px 0 0 14px; }
+.code-step:last-child { border-radius:0 14px 14px 0; }
+.code-step + .code-step:before { content:"\203A"; position:absolute; z-index:2; top:56px; left:-9px; color:var(--teal-deep); font-size:35px; }
+.code-step .icon { color:var(--teal-deep); font-family:"SFMono-Regular",Consolas,monospace; font-size:25px; font-weight:900; }
+.code-step b { display:block; margin-top:16px; color:var(--ink); font-size:19px; }
+.code-step span { display:block; margin-top:8px; color:var(--muted); font-size:14px; line-height:1.28; }
+.code-step.ci { border-color:#9bded5; background:var(--teal-soft); }
+
+/* Tools */
+.tools { display:grid; grid-template-columns:39% 61%; gap:20px; margin-top:22px; }
+.terminal { overflow:hidden; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.terminal-head { padding:11px 14px; color:var(--teal-deep); background:var(--wash); border-bottom:1px solid var(--line); font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-family:"SFMono-Regular",Consolas,monospace; font-size:14px; line-height:1.58; }
+.cmd { color:var(--teal-deep); font-weight:900; }
+.comment { color:#7895a8; }
+.ui { overflow:hidden; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.ui img { display:block; width:100%; height:315px; object-fit:cover; object-position:center top; }
+.ui-caption { padding:10px 13px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
+.ui-caption strong { color:var(--teal-deep); }
+.status { margin-top:14px; padding:11px 14px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:15px; font-weight:800; }
+
+/* Scope */
+.scope { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:30px; }
+.scope-col { min-height:350px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.scope-col.solve { border-color:#9bded5; background:var(--teal-soft); }
+.scope-col h3 { font-size:30px; }
+.scope-col ul { display:grid; gap:14px; margin:20px 0 0; padding:0; list-style:none; }
+.scope-col li { padding-top:10px; border-top:1px solid rgba(0,141,128,.2); color:var(--ink); font-size:17px; font-weight:800; line-height:1.27; }
+.scope-col.no li { border-color:var(--line); color:var(--muted); }
+
+/* Pilot */
+.pilot { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:36px; }
+.pilot-step { position:relative; min-height:178px; padding:21px 17px; border:1px solid var(--line); background:#fff; }
+.pilot-step:first-child { border-radius:14px 0 0 14px; }
+.pilot-step:last-child { border-radius:0 14px 14px 0; }
+.pilot-step + .pilot-step:before { content:"\203A"; position:absolute; z-index:2; top:59px; left:-9px; color:var(--teal-deep); font-size:34px; }
+.pilot-step small { color:var(--teal-deep); font-size:12px; font-weight:900; letter-spacing:.13em; }
+.pilot-step b { display:block; margin-top:15px; color:var(--ink); font-size:21px; }
+.pilot-step span { display:block; margin-top:9px; color:var(--muted); font-size:14px; line-height:1.28; }
+
+/* Close */
+.close { padding:112px 106px; }
+.close h1 { max-width:1230px; margin-top:16px; }
+.close p { max-width:980px; margin-top:24px; color:rgba(255,255,255,.74); font-size:24px; line-height:1.4; }
+.close-bottom { position:absolute; right:106px; bottom:71px; left:106px; display:flex; justify-content:space-between; padding-top:15px; border-top:1px solid rgba(255,255,255,.22); color:rgba(255,255,255,.65); font-size:14px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.close-bottom strong { color:var(--teal); }
+
+/* UI chrome */
+.counter { position:absolute; z-index:20; top:18px; left:16px; padding:9px 12px; border-radius:999px; color:var(--ink); background:#fff; box-shadow:0 4px 12px rgba(3,23,43,.1); font-size:12px; font-weight:900; }
+.controls { position:absolute; z-index:20; right:17px; bottom:17px; display:flex; gap:8px; }
+.controls button,.notes-button { border:0; border-radius:11px; color:#fff; background:var(--night); box-shadow:0 5px 12px rgba(3,23,43,.15); cursor:pointer; font-weight:900; }
+.controls button { width:43px; height:43px; font-size:20px; }
+.notes-button { position:absolute; z-index:20; top:18px; right:17px; padding:13px 15px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+.notes-panel { position:absolute; z-index:30; right:0; bottom:0; display:none; width:43%; max-height:52%; overflow:auto; padding:22px; color:#fff; background:rgba(3,23,43,.96); box-shadow:-9px -9px 25px rgba(3,23,43,.2); }
+.notes-panel.open { display:block; }
+.notes-panel h3 { color:var(--teal); font-size:20px; }
+.notes-panel p { margin-top:10px; color:rgba(255,255,255,.78); font-size:15px; line-height:1.42; }
+</style>
+</head>
+<body>
+<main class="app">
+<div class="deck">
+
+  <section class="slide cover active" id="slide-1" data-title="Title">
+    <img src="../MEMO_INCOSE/images/01_MEMO_Ontology_Cover.png" alt="">
+    <div class="pronounce">meMO / mee-moh</div>
+    <div class="cover-content">
+      <div class="eyebrow">Systems as Code Fest</div>
+      <h1><span>meMO</span>: Medical Device Architecture Modeling as Code for Ontology-Backed Safety Assurance</h1>
+      <p>Ontology-driven architecture and behavior models that turn trace links into computable assurance evidence.</p>
+      <div class="speaker">Somesh Kashyap <strong>|</strong> Medtronic</div>
+    </div>
+    <aside class="notes">
+      <h3>Title</h3>
+      <p>Say the name as me-mo. The talk is about a direction people can implement independently: model architecture and behavior as code, attach safety meaning through a small ontology, and compute useful evidence checks. Avoid presenting meMO as an automatic safety tool.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-2" data-title="Devices became systems">
+    <div class="chapter"><b>02</b> The systems problem</div>
+    <div class="body">
+      <div class="opening-grid">
+        <div class="opening-copy">
+          <div class="eyebrow">Medical devices are becoming systems of systems</div>
+          <h2>The product is no longer only the <span>box.</span></h2>
+          <p>Software, connectivity, clinical workflow, updates, and AI-enabled functions expand the safety-relevant system boundary. Regulatory expectations are evolving alongside the technology.</p>
+          <div class="opening-question">How do we know the <span>whole system</span> is safe?</div>
+        </div>
+        <div class="boundary-map">
+          <div class="shell outer">
+            <div class="label">Clinical + lifecycle context</div>
+            <div class="chip workflow">Clinical workflow</div>
+            <div class="chip updates">Updates</div>
+            <div class="chip ai">AI + data</div>
+          </div>
+          <div class="shell connected">
+            <div class="label">Connected ecosystem</div>
+            <div class="chip companion">Companion app</div>
+            <div class="chip cloud">Cloud service</div>
+          </div>
+          <div class="shell software">
+            <div class="label">Software-defined behavior</div>
+            <div class="chip logic">Therapy logic</div>
+            <div class="chip alarms">Alarms</div>
+          </div>
+          <div class="device"><b>Physical device</b><span>SENSE | DECIDE | ACT</span></div>
+          <div class="boundary-caption">Illustrative connected therapy device: capabilities expand dependencies and assumptions.</div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Devices became systems</h3>
+      <p>The opening argument is engineering complexity, not a compliance requirement. A device increasingly participates in a broader software-defined and connected system. FDA also reflects this lifecycle context in its current February 2026 cybersecurity guidance and its January 2025 draft AI-enabled device software guidance, but regulation is supporting context rather than the premise of this talk.</p>
+      <p>FDA context: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/cybersecurity-medical-devices-quality-management-system-considerations-and-content-premarket and https://www.fda.gov/regulatory-information/search-fda-guidance-documents/artificial-intelligence-enabled-device-software-functions-lifecycle-management-and-marketing</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-3" data-title="Safety emerges across interactions">
+    <div class="chapter"><b>03</b> Problem 01 | emergent behavior</div>
+    <div class="body">
+      <h2>A component can be correct while the system is unsafe.</h2>
+      <p class="lede">Many safety-relevant failures emerge between components, modes, and clinical actions.</p>
+      <div class="flow">
+        <div class="step"><b>Sensor reading</b><span>Valid value during a mode transition</span></div>
+        <div class="step"><b>Control logic</b><span>Correct rule under an assumed state</span></div>
+        <div class="step"><b>State mismatch</b><span>Another component observes stale context</span></div>
+        <div class="step"><b>Late alarm</b><span>Clinical action occurs before notification</span></div>
+        <div class="step warn"><b>Unsafe outcome</b><span>No single code unit explains the chain</span></div>
+      </div>
+      <div class="message"><strong>Safety is a system property:</strong> structure, interfaces, modes, timing, and scenarios must be analyzed together.</div>
+    </div>
+    <aside class="notes">
+      <h3>Safety emerges across interactions</h3>
+      <p>This is an illustrative interaction chain, not a claim about a specific device. The point is that unit correctness is necessary but not sufficient. Safety analysis needs architecture and dynamic scenarios to explain composition.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-4" data-title="Knowledge is partial">
+    <div class="chapter"><b>04</b> Problem 02 | partial knowledge</div>
+    <div class="body">
+      <h2>Safety decisions are cross-functional. Knowledge is partial.</h2>
+      <p class="lede">No single discipline holds the complete safety argument at implementation depth.</p>
+      <div class="converge">
+        <div class="lenses">
+          <div class="lens"><div class="who">Clinical + risk</div><div class="ask">What can harm the patient?</div></div>
+          <div class="lens"><div class="who">Systems</div><div class="ask">Where is behavior allocated?</div></div>
+          <div class="lens"><div class="who">Software + hardware</div><div class="ask">What actually changed?</div></div>
+        </div>
+        <div class="join">&rarr;</div>
+        <div class="architecture-card">
+          <div class="eyebrow">Shared analytical layer</div>
+          <h3>System and software architecture</h3>
+          <div class="arch-grid">
+            <div><b>Responsibilities</b><span>Who owns the behavior?</span></div>
+            <div><b>Interfaces</b><span>What crosses the boundary?</span></div>
+            <div><b>Scenarios</b><span>When does behavior emerge?</span></div>
+            <div><b>Impact paths</b><span>What must be reviewed?</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Knowledge is partial</h3>
+      <p>Risk analysis, failure-mode analysis, impact analysis, and verification planning are cross-functional. People work with necessary slices of the product. Architecture provides the shared analytical layer where those slices meet.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-5" data-title="The analytical middle is missing">
+    <div class="chapter"><b>05</b> Problem 03 | the missing middle</div>
+    <div class="body">
+      <h2>Most teams have artifacts at both ends. The analytical middle is thin.</h2>
+      <p class="lede">Low-level detail and document traceability do not automatically produce system understanding.</p>
+      <div class="bridge">
+        <div class="bridge-card">
+          <div class="eyebrow">Code-first end</div>
+          <h3>Implementation detail</h3>
+          <p>Strong local reasoning, weak system-level visibility.</p>
+          <div class="bridge-items">
+            <div>Code and tests</div><div>Tickets and diffs</div><div>Component ownership</div>
+          </div>
+        </div>
+        <div class="bridge-card middle">
+          <div class="eyebrow">Missing analytical layer</div>
+          <h3>Architecture + behavior</h3>
+          <p>The place to reason about boundaries, allocations, interactions, and scenarios.</p>
+          <div class="bridge-items">
+            <div>Where does the control act?</div><div>Which interface carries the risk?</div><div>What behavior changes under fault?</div>
+          </div>
+        </div>
+        <div class="bridge-card">
+          <div class="eyebrow">Document-first end</div>
+          <h3>Traceability records</h3>
+          <p>Strong evidence inventory, weak semantic understanding.</p>
+          <div class="bridge-items">
+            <div>Requirements matrices</div><div>Risk spreadsheets</div><div>DHF documents</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>The analytical middle is missing</h3>
+      <p>This is the central argument for code-first teams and non-MBSE systems teams. More links are not enough. Teams need an architecture model that explains how safety-relevant behavior is realized and how it changes.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-6" data-title="Different scale, same gap">
+    <div class="chapter"><b>06</b> Different organizations | same gap</div>
+    <div class="body">
+      <h2>The pain changes with scale. The missing capability does not.</h2>
+      <div class="stakeholders">
+        <div class="stake"><div class="num">01</div><h3>Large manufacturers</h3><p>Architecture, risk, software, quality, and V&amp;V live across <strong>teams and tools.</strong></p></div>
+        <div class="stake"><div class="num">02</div><h3>Startups</h3><p>Need credible systems practice without a heavyweight MBSE rollout or a specialist modeling team.</p></div>
+        <div class="stake"><div class="num">03</div><h3>Reviewers</h3><p>Need an end-to-end explanation tied to the <strong>actual released baseline.</strong></p></div>
+      </div>
+      <div class="message"><strong>Shared need:</strong> an understandable architecture model that remains reviewable as the product changes.</div>
+    </div>
+    <aside class="notes">
+      <h3>Different scale, same gap</h3>
+      <p>Large companies struggle with fragmentation and handoffs. Startups struggle to establish a usable method without heavyweight tooling. Reviewers need defensible threads for the released baseline. The answer is not the same deployment model, but the architecture capability is shared.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-7" data-title="A language is not a method">
+    <div class="chapter"><b>07</b> Why generic MBSE is not enough</div>
+    <div class="body">
+      <h2>SysML is a language. Teams still need a usable method.</h2>
+      <p class="lede">Generic modeling capability leaves each team to invent the medical-device playbook.</p>
+      <div class="language-strip">
+        <div class="language-block">
+          <div class="eyebrow">Open modeling substrate</div>
+          <h3>SysML v2</h3>
+          <p>Textual notation, semantics, APIs, and interoperability direction.</p>
+        </div>
+        <div class="language-arrow">&rarr;</div>
+        <div class="method-decisions">
+          <div>Layers</div><div>Vocabulary</div><div>Viewpoints</div><div>Rules</div><div>Artifacts</div><div>Workflow</div>
+        </div>
+        <div class="language-arrow">&rarr;</div>
+        <div class="method-block">
+          <div class="eyebrow">Needed</div>
+          <h3>Starter method</h3>
+          <p>Lightweight, medical-device-oriented, and tailorable.</p>
+        </div>
+      </div>
+      <div class="message">Inspired by Arcadia-style separation of concerns, but designed to be <strong>lighter and non-prescriptive.</strong></div>
+    </div>
+    <aside class="notes">
+      <h3>A language is not a method</h3>
+      <p>Do not criticize SysML. It is the substrate. The adoption problem is that teams still spend substantial time deciding how to organize layers, views, viewpoints, rules, and evidence relationships for their context. meMO provides a medical-device starter method that remains tailorable.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-8" data-title="What meMO is">
+    <div class="chapter"><b>08</b> Introducing <span class="memo">meMO</span></div>
+    <div class="body">
+      <h2><span class="memo">meMO</span> is an architecture-centered evidence backbone.</h2>
+      <p class="lede">A small medical-device method on top of open, text-first models.</p>
+      <div class="memo-split">
+        <div class="split">
+          <div class="n">01 | meaning</div>
+          <h3>Ontology</h3>
+          <p>Defines the concepts and relationships that make an assurance thread explicit.</p>
+          <ul><li>Typed elements</li><li>Typed links</li><li>Closure rules</li></ul>
+        </div>
+        <div class="split">
+          <div class="n">02 | organization</div>
+          <h3>Method</h3>
+          <p>Provides a practical architecture path and review viewpoints for medical-device teams.</p>
+          <ul><li>Architecture layers</li><li>Behavior scenarios</li><li>Tailorable scope</li></ul>
+        </div>
+        <div class="split">
+          <div class="n">03 | workflow</div>
+          <h3>Tools</h3>
+          <p>Turns versioned source models into checks, views, and evidence-oriented outputs.</p>
+          <ul><li>CLI + CI</li><li>Compiled views</li><li>Architect workbench</li></ul>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>What meMO is</h3>
+      <p>Introduce the split before low-level detail. The ontology gives shared meaning. The method organizes how teams model and review. The tools make the model practical in normal engineering workflows. meMO is architecture-centered: it is not a QMS replacement and not a generic diagram tool.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-9" data-title="Architecture at the center">
+    <div class="chapter"><b>09</b> Architecture-centered reasoning</div>
+    <div class="body">
+      <h2>Architecture is the meeting point for the safety argument.</h2>
+      <p class="lede">Static structure and dynamic behavior must remain connected.</p>
+      <div class="hub-layout">
+        <div class="hub-side">
+          <div><b>Context</b>intended use + assumptions</div>
+          <div><b>Functions</b>what must happen</div>
+          <div><b>Realization</b>software + hardware</div>
+        </div>
+        <div class="hub">
+          <div class="hub-line top"></div><div class="hub-line bottom"></div><div class="hub-line left"></div><div class="hub-line right"></div>
+          <div class="hub-node context">Clinical context</div>
+          <div class="hub-node behavior">Behavior + scenarios</div>
+          <div class="hub-node assurance">Verification + evidence</div>
+          <div class="hub-node risk">Hazards + controls</div>
+          <div class="hub-center"><div><b>Architecture</b><span>stable design backbone</span></div></div>
+        </div>
+        <div class="hub-side">
+          <div><b>Responsibilities</b>where behavior lives</div>
+          <div><b>Interfaces</b>where assumptions meet</div>
+          <div><b>Baselines</b>what was released</div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Architecture at the center</h3>
+      <p>Architecture is not just a SAD document. It is the stable model that connects context, function, realization, behavior, risks, verification, and the released baseline. This is where meMO differs from traceability-only approaches.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-10" data-title="Ontology follows reasoning">
+    <div class="chapter"><b>10</b> Ontology-backed</div>
+    <div class="body">
+      <h2>The ontology follows the engineering reasoning path.</h2>
+      <p class="lede">It gives names and obligations to the links teams already reason about.</p>
+      <div class="reasoning">
+        <div class="reason"><small>01</small><b>Context</b><span>intended use + assumptions</span></div>
+        <div class="reason"><small>02</small><b>Functions</b><span>what the system must do</span></div>
+        <div class="reason"><small>03</small><b>Architecture</b><span>who is responsible</span></div>
+        <div class="reason"><small>04</small><b>Behavior</b><span>modes + scenarios</span></div>
+        <div class="reason"><small>05</small><b>Risk</b><span>hazards + controls</span></div>
+        <div class="reason"><small>06</small><b>Assurance</b><span>verification + evidence</span></div>
+      </div>
+      <div class="message"><strong>One typed model.</strong> Different reviewers can project the view they need without losing the cross-links.</div>
+    </div>
+    <aside class="notes">
+      <h3>Ontology follows reasoning</h3>
+      <p>An ontology is not a taxonomy slide. It is a shared semantic contract. It defines typed elements, allowed relationships, and closure obligations so an end-to-end safety thread can be checked rather than merely linked.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-11" data-title="Small core, extensible edges">
+    <div class="chapter"><b>11</b> Extensible by design</div>
+    <div class="body">
+      <h2>Keep the core small. Extend where variation belongs.</h2>
+      <p class="lede">Teams can start with a medical-device baseline and tailor it without inventing a new universe.</p>
+      <div class="extension">
+        <div class="layer-stack">
+          <div class="ext-layer"><b>L0 | SysML v2 substrate</b><span>Open textual modeling semantics and reusable helpers</span></div>
+          <div class="ext-layer core"><b>L1 | meMO ontology</b><span>Medical-device concepts, relationships, and invariant rules</span></div>
+          <div class="ext-layer method"><b>L2 | Methodology package</b><span>Selected layers, viewpoints, artifacts, workflow, and rule strengths</span></div>
+          <div class="ext-layer project"><b>L3 | Product model</b><span>Device-specific architecture, scenarios, risk threads, and evidence references</span></div>
+        </div>
+        <div class="profiles">
+          <div class="eyebrow">Extension examples</div>
+          <h3>Add depth only where needed</h3>
+          <div class="profile-grid">
+            <div>Cybersecurity</div><div>Alarms</div><div>Usability</div><div>AI + data</div><div>SOUP / SBOM</div><div>Product family</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Small core, extensible edges</h3>
+      <p>This is how meMO avoids becoming either generic or prescriptive. The ontology carries stable meaning. A methodology selects a usable subset and workflow. Product teams tailor the method and add profiles where their risk surface requires more depth.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-12" data-title="A safety thread becomes computable">
+    <div class="chapter"><b>12</b> A real thread | GPCA reference model</div>
+    <div class="body">
+      <h2>A safety thread becomes more than a row in a spreadsheet.</h2>
+      <p class="lede">The repository includes this inspectable GPCA lockout thread.</p>
+      <div class="thread">
+        <div class="thread-node"><small>Hazard</small><b>HZ-001<br>Overdose</b><span>patient receives excessive therapy</span></div>
+        <div class="thread-node control"><small>Risk control</small><b>RC-001<br>Lockout enforcement</b><span>ignore invalid bolus conditions</span></div>
+        <div class="thread-node"><small>Requirement</small><b>REQ-025<br>Ignore frequent request</b><span>required behavior</span></div>
+        <div class="thread-node arch"><small>Architecture</small><b>SW-005<br>Infusion manager</b><span>responsible software component</span></div>
+        <div class="thread-node"><small>Guarantee</small><b>GP-002<br>Lockout prevents bolus</b><span>behavior property</span></div>
+        <div class="thread-node verify"><small>Verification</small><b>VER-002<br>Verify lockout</b><span>acceptance criteria + evidence</span></div>
+      </div>
+      <div class="message">The useful question is not only "is there a link?" It is <strong>"is the safety thread complete and meaningful?"</strong></div>
+    </div>
+    <aside class="notes">
+      <h3>A safety thread becomes computable</h3>
+      <p>This is repo-backed, not hypothetical. The GPCA example contains HZ-001, RC-001, REQ-025, SW-005, the GP-002 guarantee, VER-002, and produced evidence. The ontology tells us what each link means and which closure obligations to check.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-13" data-title="Change impact becomes reviewable">
+    <div class="chapter"><b>13</b> Second-order effects</div>
+    <div class="body">
+      <h2>A model lets us ask what a change could invalidate.</h2>
+      <p class="lede">Typed architecture links expose a reviewable blast radius across structure and behavior.</p>
+      <div class="impact">
+        <div class="change-card">
+          <div class="eyebrow">Changed element</div>
+          <h3>SW-005<br>Infusion manager</h3>
+          <p>A code or configuration change affects a Class C software responsibility.</p>
+        </div>
+        <div class="impact-arrow">&rarr;</div>
+        <div class="impact-map">
+          <div><b>Architecture</b><span>interfaces, timing, dependencies</span></div>
+          <div><b>Behavior</b><span>modes, flows, lockout scenario</span></div>
+          <div><b>Risk controls</b><span>RC-001 implementation review</span></div>
+          <div><b>Verification</b><span>VER-002 evidence freshness</span></div>
+        </div>
+      </div>
+      <div class="message"><strong>meMO surfaces the review scope.</strong> Engineers still decide safety acceptability and re-verification depth.</div>
+    </div>
+    <aside class="notes">
+      <h3>Change impact becomes reviewable</h3>
+      <p>This is the second-level effect argument. A typed model can identify downstream responsibilities, scenarios, controls, and evidence that may need review. It does not make the safety decision. It makes the reasoning scope visible earlier.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-14" data-title="Compile the reviewer view">
+    <div class="chapter"><b>14</b> Views are projections</div>
+    <div class="body">
+      <h2>Model once. Project the view each reviewer needs.</h2>
+      <p class="lede">Documents remain important, but they become compiled views of a shared model.</p>
+      <div class="project-grid">
+        <div class="source-model">
+          <div class="eyebrow">Versioned source</div>
+          <h3>Architecture + ontology</h3>
+          <p>Typed model elements, stable identifiers, scenarios, controls, and evidence references.</p>
+        </div>
+        <div class="project-arrow">&rarr;</div>
+        <div class="views">
+          <div class="view"><b>Architecture view</b><span>boundaries, interfaces, responsibilities</span></div>
+          <div class="view"><b>Risk view</b><span>hazards, controls, allocations</span></div>
+          <div class="view"><b>Verification view</b><span>coverage and evidence freshness</span></div>
+          <div class="view"><b>DHF outputs</b><span>trace matrices and review packets</span></div>
+        </div>
+      </div>
+      <div class="message"><strong>PDF is packaging, not source.</strong> Review artifacts can carry provenance and baseline identity.</div>
+    </div>
+    <aside class="notes">
+      <h3>Compile the reviewer view</h3>
+      <p>Documents do not disappear. They stop being disconnected sources of truth. A shared model can compile consistent reviewer views and evidence-oriented outputs tied to a versioned baseline.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-15" data-title="Architecture as code">
+    <div class="chapter"><b>15</b> Architecture as code</div>
+    <div class="body">
+      <h2>Bring systems reasoning into normal engineering workflows.</h2>
+      <p class="lede">Text-first models make architecture diffable, reviewable, and automatable.</p>
+      <div class="code-flow">
+        <div class="code-step"><div class="icon">.sysml</div><b>Author</b><span>Model architecture, behavior, and safety threads in text.</span></div>
+        <div class="code-step"><div class="icon">git diff</div><b>Review</b><span>See semantic model changes alongside software changes.</span></div>
+        <div class="code-step ci"><div class="icon">memo validate</div><b>Check</b><span>Run syntax, semantics, and closure rules in CI.</span></div>
+        <div class="code-step"><div class="icon">memo build</div><b>Compile</b><span>Regenerate views and evidence-oriented outputs.</span></div>
+        <div class="code-step"><div class="icon">baseline</div><b>Release</b><span>Tie the explanation to the released version.</span></div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Architecture as code</h3>
+      <p>This is the wedge for code-first teams. meMO is SysML v2 text-first, Git-native, and compatible with pull-request and CI workflows. The aim is to make system architecture a living engineering asset rather than a periodically refreshed document.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-16" data-title="Concrete implementation">
+    <div class="chapter"><b>16</b> A glimpse of the implementation</div>
+    <div class="body">
+      <h2>Two entry points. One versioned model.</h2>
+      <p class="lede">Code-first teams can start at the CLI. Reviewers can navigate through Architect.</p>
+      <div class="tools">
+        <div class="terminal">
+          <div class="terminal-head">meMO CLI | project directory</div>
+          <pre><span class="comment"># inspect resolved vocabulary</span>
+<span class="cmd">$ memo ontology show</span>
+
+<span class="comment"># evaluate closure conditions</span>
+<span class="cmd">$ memo validate --format json</span>
+
+<span class="comment"># compile reviewable output</span>
+<span class="cmd">$ memo build --single-file</span></pre>
+        </div>
+        <div class="ui">
+          <img src="../../src/images/screenshots/ontology-viewer.png" alt="meMO Architect ontology workbench prototype">
+          <div class="ui-caption"><strong>meMO Architect:</strong> a visual workbench over the same inspectable model.</div>
+        </div>
+      </div>
+      <div class="status">Current repository: inspectable open prototype. Richer analysis, workbenches, and integrations remain roadmap work.</div>
+    </div>
+    <aside class="notes">
+      <h3>Concrete implementation</h3>
+      <p>Keep this grounded. The CLI commands and prototype Architect screenshot exist in the current repository. Present Architect as a visual workbench direction over the same source model, not as a finished product. The implementation ordering is SysML first, CLI second, UI last.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-17" data-title="Clear boundaries">
+    <div class="chapter"><b>17</b> Clear boundaries</div>
+    <div class="body">
+      <h2>What <span class="memo">meMO</span> solves, and what it deliberately does not.</h2>
+      <div class="scope">
+        <div class="scope-col solve">
+          <h3>Helps teams do</h3>
+          <ul>
+            <li>Make architecture responsibilities and interfaces explicit</li>
+            <li>Connect risk controls to behavior and verification evidence</li>
+            <li>Detect incomplete threads and surface change-review scope</li>
+            <li>Compile consistent views from a versioned model</li>
+          </ul>
+        </div>
+        <div class="scope-col no">
+          <h3>Does not claim to</h3>
+          <ul>
+            <li>Certify compliance or decide safety acceptability</li>
+            <li>Replace expert judgment, a QMS, or specialized analysis tools</li>
+            <li>Require a proprietary modeling repository</li>
+            <li>Deliver every enterprise integration today</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h3>Clear boundaries</h3>
+      <p>This slide is essential for credibility. meMO organizes and checks evidence semantics. It does not automate the safety decision, replace the QMS, claim tool qualification, or pretend that all integrations exist today.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-18" data-title="Start with one thread">
+    <div class="chapter"><b>18</b> A practical starting point</div>
+    <div class="body">
+      <h2>Do not start with a platform rollout. Start with one safety thread.</h2>
+      <p class="lede">The method is useful when the smallest pilot already improves a real engineering review.</p>
+      <div class="pilot">
+        <div class="pilot-step"><small>01</small><b>Choose a hazard</b><span>Pick one meaningful control and its clinical context.</span></div>
+        <div class="pilot-step"><small>02</small><b>Model the architecture</b><span>Name the responsible component, interface, and scenario.</span></div>
+        <div class="pilot-step"><small>03</small><b>Link the evidence</b><span>Add verification intent and acceptance criteria.</span></div>
+        <div class="pilot-step"><small>04</small><b>Review a change</b><span>Use the model to scope what must be reconsidered.</span></div>
+      </div>
+      <div class="message"><strong>Success criterion:</strong> the next design review asks a better system-level question.</div>
+    </div>
+    <aside class="notes">
+      <h3>Start with one thread</h3>
+      <p>This is implementable independently. Choose one safety-relevant thread, represent its architecture and scenario, link the control and verification intent, and then use a real change to test whether the model improves the review discussion.</p>
+    </aside>
+  </section>
+
+  <section class="slide dark" id="slide-19" data-title="Close">
+    <div class="chapter"><b>19</b> Close</div>
+    <div class="close">
+      <div class="eyebrow">Medical device architecture modeling as code</div>
+      <h1>Make architecture the <span class="memo">computable backbone</span> of the safety argument.</h1>
+      <p><span class="memo">meMO</span> is a direction: open models, medical-device semantics, explicit behavior, checkable safety threads, and evidence views tied to the released baseline.</p>
+      <div class="close-bottom"><strong>meMO / mee-moh</strong><span>Somesh Kashyap | Medtronic</span></div>
+    </div>
+    <aside class="notes">
+      <h3>Close</h3>
+      <p>The closing sentence is the argument: architecture should be the computable backbone of the safety argument. Invite people to try the pattern on one safety thread, not to adopt a monolithic platform.</p>
+    </aside>
+  </section>
+
+  <div class="counter" id="counter">1 / 19</div>
+  <button class="notes-button" id="notesButton" type="button">Notes [N]</button>
+  <div class="controls">
+    <button id="prev" type="button" aria-label="Previous slide">&larr;</button>
+    <button id="next" type="button" aria-label="Next slide">&rarr;</button>
+  </div>
+  <div class="notes-panel" id="notesPanel"></div>
+</div>
+</main>
+<script>
+(() => {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const counter = document.getElementById('counter');
+  const notesPanel = document.getElementById('notesPanel');
+  let index = 0;
+
+  function indexFromHash() {
+    const match = location.hash.match(/slide-(\d+)/);
+    if (!match) return 0;
+    return Math.max(0, Math.min(slides.length - 1, Number(match[1]) - 1));
+  }
+
+  function render(nextIndex, updateHash = true) {
+    index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+    slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+    counter.textContent = `${index + 1} / ${slides.length}`;
+    const notes = slides[index].querySelector('.notes');
+    notesPanel.innerHTML = notes ? notes.innerHTML : '';
+    if (updateHash) history.replaceState(null, '', `#slide-${index + 1}`);
+  }
+
+  function move(delta) { render(index + delta); }
+  function toggleNotes() { notesPanel.classList.toggle('open'); }
+
+  document.getElementById('prev').addEventListener('click', () => move(-1));
+  document.getElementById('next').addEventListener('click', () => move(1));
+  document.getElementById('notesButton').addEventListener('click', toggleNotes);
+  addEventListener('hashchange', () => render(indexFromHash(), false));
+  addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') move(1);
+    if (event.key === 'ArrowLeft' || event.key === 'PageUp') move(-1);
+    if (event.key.toLowerCase() === 'n') toggleNotes();
+  });
+  render(indexFromHash(), false);
+})();
+</script>
+</body>
+</html>
