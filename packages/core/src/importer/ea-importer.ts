@@ -10,6 +10,7 @@
 
 import type { KindRegistry } from '../model/kind-registry.js';
 import type { RelationshipRegistry } from '../model/relationship-registry.js';
+import { wrapPackage } from '../serializer/sysml-generator.js';
 
 /** An element extracted from an EA project */
 export interface EaElement {
@@ -312,7 +313,6 @@ export function eaResultToSysml(result: EaImportResult, packageName: string): st
     const lines: string[] = [];
     const indent = '    ';
 
-    lines.push(`package ${packageName} {`);
     lines.push('');
 
     // Build EA ID → SysML ID map
@@ -365,8 +365,7 @@ export function eaResultToSysml(result: EaImportResult, packageName: string): st
         lines.push('');
     }
 
-    lines.push('}');
-    return lines.join('\n') + '\n';
+    return wrapPackage(packageName, lines).join('\n') + '\n';
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

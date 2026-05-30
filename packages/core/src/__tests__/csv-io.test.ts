@@ -9,7 +9,7 @@ import {
     generateElementTemplate,
     generateRelationshipTemplate,
 } from '../serializer/csv-io.js';
-import { generateUsage, generateConnection, generateFile } from '../serializer/sysml-generator.js';
+import { generateUsage, generateConnection, generateFile, wrapPackage } from '../serializer/sysml-generator.js';
 
 // ─── Test Config ────────────────────────────────────────────────────────────
 
@@ -266,6 +266,33 @@ describe('generateRelationshipTemplate', () => {
 });
 
 // ─── SysML Generator ───────────────────────────────────────────────────────
+
+describe('wrapPackage (strict SysML v2 emit)', () => {
+    it('emits a single-segment name as one package block', () => {
+        const out = wrapPackage('imported_elements', ['    part p : T;']).join('\n');
+        expect(out).toBe('package imported_elements {\n    part p : T;\n}');
+    });
+
+    it('emits a qualified name as NESTED packages, never `package a::b {`', () => {
+        const out = wrapPackage('memo::imported::risk', ['    part p : T;']).join('\n');
+        expect(out).not.toMatch(/package\s+\w+::/);
+        expect(out).toContain('package memo {');
+        expect(out).toContain('    package imported {');
+        expect(out).toContain('        package risk {');
+        // inner line gets the extra nesting indentation (2 wrapper levels)
+        expect(out).toContain('            part p : T;');
+    });
+
+    it('generateFile never emits a qualified package declaration', () => {
+        const sysml = generateFile(
+            [{ id: 'h1', name: 'H', kind: 'Hazard', construct: 'requirement', layer: 'risk', attributes: {} }],
+            [],
+            'memo::imported::risk'
+        );
+        expect(sysml).not.toMatch(/package\s+\w+::/);
+        expect(sysml).toContain('package memo {');
+    });
+});
 
 describe('generateUsage', () => {
     it('generates a SysML usage block', () => {

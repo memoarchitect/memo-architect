@@ -64,15 +64,37 @@ export function generateConnection(rel: CsvRelationship): string {
  * @param relationships - Parsed relationships from CSV
  * @param packageName - SysML package name (e.g. "imported_elements")
  */
+/**
+ * Wrap already-indented inner package-body lines in `package` declarations.
+ *
+ * Standard SysML v2 requires single-identifier names in a package DECLARATION, so a
+ * qualified name (`a::b::c`) is emitted as NESTED packages, never `package a::b::c {`.
+ * The inner lines are assumed to already carry one indentation level (as the existing
+ * generators produce them); deeper nesting adds the extra levels. For a single-segment
+ * name this is byte-identical to the previous `package name { … }` output.
+ */
+export function wrapPackage(qualifiedName: string, innerLines: string[], opts?: { isLibrary?: boolean }): string[] {
+    const segs = qualifiedName.split('::').filter(Boolean);
+    if (segs.length === 0) return innerLines;
+    const out: string[] = [];
+    segs.forEach((seg, i) => {
+        const pad = '    '.repeat(i);
+        const lib = opts?.isLibrary && i === segs.length - 1 ? 'library ' : '';
+        out.push(`${pad}${lib}package ${seg} {`);
+    });
+    const extra = '    '.repeat(segs.length - 1); // innerLines already carry one level
+    for (const l of innerLines) out.push(l.length ? `${extra}${l}` : l);
+    for (let i = segs.length - 1; i >= 0; i--) out.push(`${'    '.repeat(i)}}`);
+    return out;
+}
+
 export function generateFile(
     elements: CsvElement[],
     relationships: CsvRelationship[],
     packageName: string
 ): string {
-    const lines: string[] = [];
-
-    lines.push(`package ${packageName} {`);
-    lines.push('');
+    const body: string[] = [];
+    body.push('');
 
     // Group elements by kind for readability
     const byKind = new Map<string, CsvElement[]>();
@@ -82,27 +104,26 @@ export function generateFile(
     }
 
     for (const [kind, kindElements] of byKind) {
-        lines.push(`    // ── ${kind} ──`);
+        body.push(`    // ── ${kind} ──`);
         for (const el of kindElements) {
             const usageLines = generateUsage(el).split('\n');
             for (const ul of usageLines) {
-                lines.push(`    ${ul}`);
+                body.push(`    ${ul}`);
             }
-            lines.push('');
+            body.push('');
         }
     }
 
     // Relationships
     if (relationships.length > 0) {
-        lines.push('    // ── Relationships ──');
+        body.push('    // ── Relationships ──');
         for (const rel of relationships) {
-            lines.push(`    ${generateConnection(rel)}`);
+            body.push(`    ${generateConnection(rel)}`);
         }
-        lines.push('');
+        body.push('');
     }
 
-    lines.push('}');
-    return lines.join('\n') + '\n';
+    return wrapPackage(packageName, body).join('\n') + '\n';
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
