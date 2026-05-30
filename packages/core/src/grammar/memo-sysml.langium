@@ -48,6 +48,7 @@ PackageMember:
     | UsageMember
     | ConnectionUsage
     | AllocateUsage
+    | MetadataApplication
     | DocComment;
 
 // ─── Import ──────────────────────────────────────────────────────────────────
@@ -74,7 +75,19 @@ DefinitionMember:
     | ConstraintDefinition
     | EnumDefinition
     | ViewpointDefinition
-    | ViewDefinition;
+    | ViewDefinition
+    | MetadataDefinition;
+
+// SysML v2 semantic-metadata definition — the standard, portable mechanism for
+// extending the ontology with domain semantics. Applied to elements via `@Name`.
+MetadataDefinition:
+    'metadata' 'def' name=ID specialization=Specialization?
+    ('{' body+=DefinitionBodyMember* '}' | ';');
+
+// Metadata application: `@AnnotationType;` or `@AnnotationType { redefinitions }`
+// applies a metadata def to the enclosing element (standard SysML v2 `@` annotation).
+MetadataApplication:
+    '@' type=QualifiedName ('{' body+=UsageBodyMember* '}' | ';');
 
 PartDefinition:
     'part' 'def' name=ID specialization=Specialization?
@@ -233,7 +246,7 @@ AllocateUsage:
 // ─── Body members ────────────────────────────────────────────────────────────
 
 DefinitionBodyMember:
-    AttributeMember | PartMember | PortUsage | RefMember | RequireConstraintMember | DocComment;
+    AttributeMember | PartMember | PortUsage | RefMember | RequireConstraintMember | MetadataApplication | DocComment;
 
 // ─── Constraint expression (KerML boolean subset — ADR-1-18) ─────────────────
 // Authored inside constraint def / requirement def bodies as:
@@ -277,7 +290,7 @@ PrimaryExpr infers ConstraintExpr:
 // value — the bare `name = value;` shorthand is non-standard and is not accepted.
 // Use `attribute redefines name = value;` (the form the serializer emits).
 UsageBodyMember:
-    AttributeMember | DocComment;
+    AttributeMember | MetadataApplication | DocComment;
 
 // ─── Attribute member ────────────────────────────────────────────────────────
 // Two forms:

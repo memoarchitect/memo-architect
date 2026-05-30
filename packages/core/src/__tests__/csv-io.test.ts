@@ -285,7 +285,7 @@ describe('wrapPackage (strict SysML v2 emit)', () => {
 
     it('generateFile never emits a qualified package declaration', () => {
         const sysml = generateFile(
-            [{ id: 'h1', name: 'H', kind: 'Hazard', construct: 'requirement', layer: 'risk', attributes: {} }],
+            [{ id: 'h1', name: 'H', kind: 'Hazard', construct: 'requirement', layer: 'risk', doc: '', attributes: {} }],
             [],
             'memo::imported::risk'
         );
