@@ -89,6 +89,50 @@ describe('Package', () => {
     });
 });
 
+describe('SysML v2 metadata extension (metadata def + @application)', () => {
+    it('parses a metadata def', async () => {
+        const model = await parseValid(`
+            package Ext {
+                metadata def Provenance {
+                    attribute source : String;
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        expect(pkg.members[0].$type).toBe('MetadataDefinition');
+        expect((pkg.members[0] as any).name).toBe('Provenance');
+    });
+
+    it('parses metadata application (@Name) on a definition body and as a package member', async () => {
+        const model = await parseValid(`
+            package Ext {
+                metadata def Regulatory { attribute standard : String; }
+                @Regulatory;
+                part def Pump {
+                    @Regulatory {
+                        attribute redefines standard = "IEC 62304";
+                    }
+                }
+            }
+        `);
+        const pkg = model.members[0] as PackageDeclaration;
+        const pkgApp = pkg.members.find(m => m.$type === 'MetadataApplication') as any;
+        expect(pkgApp).toBeDefined();
+        expect(pkgApp.type).toBe('Regulatory');
+        const pump = pkg.members.find(m => m.$type === 'PartDefinition') as any;
+        expect(pump.body.some((b: any) => b.$type === 'MetadataApplication')).toBe(true);
+    });
+
+    it('rejects metadata applied with a qualified declaration name (still strict)', async () => {
+        const errors = await parseErrors(`
+            package memo::ext {
+                metadata def X;
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+});
+
 describe('Strict SysML v2 subset: non-standard forms are rejected', () => {
     it('rejects bare shorthand redefinition (`name = value;`)', async () => {
         const errors = await parseErrors(`
