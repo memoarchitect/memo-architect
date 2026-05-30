@@ -14,6 +14,7 @@ package memo {
                 private import memo::examples::gpca::formal_behavior::*;
                 part linkNeedToModeReq : RequirementSourceLink { attribute id = "LINK-001"; attribute name = "NeedToSingleModeRequirement"; attribute linkStatus = LinkStatusKind::active; attribute sourceRole = "stakeholder need"; part sourceDriver = needSafeTherapy; part targetRequirement = reqSingleMode; }
                 part linkRiskToLockoutReq : RequirementSourceLink { attribute id = "LINK-002"; attribute name = "RiskToLockoutRequirement"; attribute linkStatus = LinkStatusKind::active; attribute sourceRole = "risk driver"; part sourceDriver = riskBefore; part targetRequirement = reqLockout; }
+                part linkRiskToAlarmReq : RequirementSourceLink { attribute id = "LINK-026"; attribute name = "RiskToAlarmRequirement"; attribute linkStatus = LinkStatusKind::active; attribute sourceRole = "risk driver"; part sourceDriver = riskBefore; part targetRequirement = reqAlarmStopsInfusion; }
                 part linkReqToTLM : RequirementSatisfactionLink { attribute id = "LINK-003"; attribute name = "ModeRequirementToTLM"; attribute linkStatus = LinkStatusKind::active; part requirement = reqSingleMode; part satisfyingElement = tlm; }
                 part linkReqToIM : RequirementSatisfactionLink { attribute id = "LINK-004"; attribute name = "LockoutRequirementToInfusionManager"; attribute linkStatus = LinkStatusKind::active; part requirement = reqLockout; part satisfyingElement = infusionMgr; }
                 part linkAlarmReqToAlarm : RequirementSatisfactionLink { attribute id = "LINK-005"; attribute name = "AlarmPauseRequirementToAlarm"; attribute linkStatus = LinkStatusKind::active; part requirement = reqAlarmStopsInfusion; part satisfyingElement = alarm; }
@@ -38,6 +39,16 @@ package memo {
                 part linkControlToAfter : RiskTraceLink { attribute id = "RLINK-006"; attribute name = "ControlResultsInAfterRisk"; attribute linkStatus = LinkStatusKind::active; attribute riskRole = "resultsIn"; part sourceRiskElement = lockoutControl; part targetRiskElement = riskAfter; }
                 part linkAfterToMatrix : RiskTraceLink { attribute id = "RLINK-007"; attribute name = "AfterRiskAssessedAgainstMatrix"; attribute linkStatus = LinkStatusKind::active; attribute riskRole = "assessedAgainst"; part sourceRiskElement = riskAfter; part targetRiskElement = riskMatrix; }
                 part linkResidualAggregation : RiskTraceLink { attribute id = "RLINK-008"; attribute name = "ResidualAggregated"; attribute linkStatus = LinkStatusKind::active; attribute riskRole = "aggregates"; part sourceRiskElement = residualEval; part targetRiskElement = riskAfter; }
+                // Risk control measure mitigating the overdose hazard (ISO 14971 clause 7.1).
+                part linkControlMitigatesHazard : HazardMitigationLink { attribute id = "LINK-019"; attribute name = "LockoutMitigatesOverdose"; attribute linkStatus = LinkStatusKind::active; part riskControl = lockoutControl; part mitigatedHazard = overdoseHazard; }
+                // Class-C software item verification (IEC 62304 §5.7).
+                part linkVerifyTlm : VerificationLink { attribute id = "LINK-020"; attribute name = "VerifyTopLevelMode"; attribute linkStatus = LinkStatusKind::active; part verificationTarget = tlm; part verificationCase = vcModeRange; }
+                part linkVerifyAlarm : VerificationLink { attribute id = "LINK-021"; attribute name = "VerifyAlarm"; attribute linkStatus = LinkStatusKind::active; part verificationTarget = alarm; part verificationCase = vcSameStepAlarm; }
+                part linkVerifyInfusionMgr : VerificationLink { attribute id = "LINK-022"; attribute name = "VerifyInfusionManager"; attribute linkStatus = LinkStatusKind::active; part verificationTarget = infusionMgr; part verificationCase = vcLockout; }
+                // Verification cases produce evidence records (IEC 62304 §5.7.5).
+                part linkEvidenceModeRange : EvidenceProductionLink { attribute id = "LINK-023"; attribute name = "ModeRangeProducesEvidence"; attribute linkStatus = LinkStatusKind::active; part producer = vcModeRange; part producedEvidence = evidenceModeRange; }
+                part linkEvidenceSameStep : EvidenceProductionLink { attribute id = "LINK-024"; attribute name = "SameStepAlarmProducesEvidence"; attribute linkStatus = LinkStatusKind::active; part producer = vcSameStepAlarm; part producedEvidence = evidenceSameStepAlarm; }
+                part linkEvidenceTemporal : EvidenceProductionLink { attribute id = "LINK-025"; attribute name = "TemporalModeSafetyProducesEvidence"; attribute linkStatus = LinkStatusKind::active; part producer = vcTemporalModeSafety; part producedEvidence = evidenceTemporalModeSafety; }
             }
         }
     }

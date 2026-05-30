@@ -57,6 +57,18 @@ package memo {
                     attribute defaultTechnique = "STRIDE tampering";
                 }
 
+                part eventLogTamperingThreat : Threat {
+                    attribute id = "TH-002";
+                    attribute name = "PatientEventLogTampering";
+                    attribute driverKind = "cybersecurity";
+                    attribute threatCategory = ThreatCategoryKind::repudiation;
+                    attribute attackVector = "maintenance port";
+                    attribute threatSource = "unauthorized actor with local access";
+                    attribute precondition = "audit log writable without integrity protection";
+                    attribute affectedConcern = ConcernKind::cybersecurity;
+                    attribute defaultTechnique = "STRIDE repudiation";
+                }
+
                 part weakServiceAuthentication : Vulnerability {
                     attribute id = "VULN-001";
                     attribute name = "WeakServiceAuthentication";
@@ -149,6 +161,15 @@ package memo {
                     part realizedThreat :> unauthorizedConfigChangeThreat;
                 }
 
+                part lnkLogAssetThreat : AssetThreatLink {
+                    attribute id = "CYL-010";
+                    attribute name = "EventLogThreatLink";
+                    attribute threatRole = "targeted asset";
+                    attribute linkStatus = LinkStatusKind::active;
+                    part protectedAsset :> patientEventLogAsset;
+                    part realizedThreat :> eventLogTamperingThreat;
+                }
+
                 part lnkThreatVulnerability : ThreatVulnerabilityLink {
                     attribute id = "CYL-002";
                     attribute name = "ThreatWeakAuthLink";
@@ -178,6 +199,14 @@ package memo {
                     attribute name = "ThreatRequirementLink";
                     attribute linkStatus = LinkStatusKind::active;
                     part sourceThreatOrRisk :> unauthorizedConfigChangeThreat;
+                    part targetRequirement :> reqAuthenticatedServiceAccess;
+                }
+
+                part lnkLogThreatRequirement : CyberRequirementDerivationLink {
+                    attribute id = "CYL-011";
+                    attribute name = "LogThreatRequirementLink";
+                    attribute linkStatus = LinkStatusKind::active;
+                    part sourceThreatOrRisk :> eventLogTamperingThreat;
                     part targetRequirement :> reqAuthenticatedServiceAccess;
                 }
 
