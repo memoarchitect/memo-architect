@@ -216,23 +216,28 @@ function scaffoldOntology(dir: string, name: string): void {
 }
 
 function scaffoldProfile(dir: string, name: string, extendsPackage?: string): void {
-    // memo.rules.yaml with example rule
-    const rulesYaml = `# Closure rules for ${name}
-# See @memo/medical-modeling-profile for examples
+    // Consistency rules as native SysML v2 `constraint def` bodies (KerML expressions).
+    // The KerML evaluator (memo validate / memo rules check) runs these directly — no
+    // proprietary rule format. Rule metadata travels as plain attribute members.
+    const rulesSysml = `// Consistency rules for ${name} — native SysML v2 constraints.
+// See @memo/medical-modeling-profile for examples.
+package ${name.replace(/^@[^/]+\//, '').replace(/-/g, '_')}_Rules {
+    // Example: every Requirement must trace to at least one stakeholder need.
+    // constraint def requirementTraceRule {
+    //     attribute id = "CR-001";
+    //     attribute appliesTo = "Requirement";
+    //     attribute severity = RuleSeverityKind::warning;
+    //     attribute rationaleText = "Requirements shall be traceable to needs.";
+    //     require constraint { traceTo->size() >= 1 }
+    // }
+}
+`;
+    const rulesDir = join(dir, 'rules');
+    mkdirSync(rulesDir, { recursive: true });
+    writeFileSync(join(rulesDir, 'rules.sysml'), rulesSysml);
 
-closureRules: []
-  # Example:
-  # - id: CR-001
-  #   description: "Every Requirement must have at least one Verify relationship"
-  #   entity: Requirement
-  #   rule:
-  #     type: requireRelationship
-  #     relationship: verify
-  #     min: 1
-  #     direction: incoming
-  #   severity: warning
-  #   completenessLayer: verification
-
+    // memo.viewpoints.yaml with example viewpoint
+    const viewpointsYaml = `# Viewpoints for ${name}
 viewpoints: []
   # Example:
   # - id: risk-view
@@ -241,7 +246,7 @@ viewpoints: []
   #   visibleRelationships: [mitigates, leadsTo, causes]
   #   visibleLayers: [risk]
 `;
-    writeFileSync(join(dir, 'memo.rules.yaml'), rulesYaml);
+    writeFileSync(join(dir, 'memo.viewpoints.yaml'), viewpointsYaml);
 
     // memo.rendering.yaml (empty — inherits from extended package)
     writeFileSync(join(dir, 'memo.rendering.yaml'), `# Layer rendering overrides for ${name}\n# Inherits from ${extendsPackage || 'base ontology'}\nlayers: []\n`);

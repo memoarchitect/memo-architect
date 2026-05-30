@@ -9,7 +9,7 @@ import type { MEMOConfig } from '../model/config.js';
 import { buildMemoModel, type BuilderRegistries } from '../model/builder.js';
 import { KindRegistry } from '../model/kind-registry.js';
 import { RelationshipRegistry } from '../model/relationship-registry.js';
-import { evaluateClosureRules } from '../validator/rule-engine.js';
+import { validateModel } from '../validator/rule-engine.js';
 import { computeCompleteness } from '../completeness/tracker.js';
 import type { ParsedDocument } from '../model/parser-utils.js';
 import { loadConfig, resolveConfig } from '../model/config-loader.js';
@@ -39,22 +39,6 @@ const testConfig: MEMOConfig = {
     relationshipTypes: [
         { name: 'mitigates', label: 'Mitigates', layer: 'risk', color: '#E74C3C' },
         { name: 'traceTo', label: 'Trace To', layer: 'requirements', color: '#4A90D9' },
-    ],
-    closureRules: [
-        {
-            id: 'CR-001',
-            description: 'Every Hazard must have at least one mitigates relationship',
-            entity: 'Hazard',
-            rule: { type: 'requireRelationship', relationship: 'mitigates', min: 1 },
-            severity: 'error',
-        },
-        {
-            id: 'CR-002',
-            description: 'Every Software must have safetyClassification attribute',
-            entity: 'Software',
-            rule: { type: 'requireAttribute', attribute: 'safetyClassification' },
-            severity: 'error',
-        },
     ],
     architectureLayers: [
         { id: 'risk', label: 'Risk', color: '#E74C3C' },
@@ -166,164 +150,6 @@ describe('buildMemoModel', () => {
     });
 });
 
-describe('evaluateClosureRules', () => {
-    it('detects missing required relationship', async () => {
-        const doc = await parseDoc(`
-            package TestPkg {
-                requirement h1 : Hazard { attribute redefines title = "H1"; }
-            }
-        `);
-        const model = buildMemoModel([doc], testConfig);
-        const result = evaluateClosureRules(model, testConfig);
-
-        expect(result.violations.length).toBe(1);
-        expect(result.violations[0].ruleId).toBe('CR-001');
-        expect(result.violations[0].elementId).toBe('h1');
-    });
-
-    it('passes when relationship exists', async () => {
-        const doc = await parseDoc(`
-            package TestPkg {
-                requirement rc1 : RiskControl { attribute redefines title = "RC1"; }
-                requirement h1 : Hazard { attribute redefines title = "H1"; }
-                connection : Mitigates connect control ::> rc1 to hazard ::> h1;
-            }
-        `);
-        const model = buildMemoModel([doc], testConfig);
-        const result = evaluateClosureRules(model, testConfig);
-
-        // h1 has mitigates → passes CR-001
-        // rc1 doesn't have relevant rules
-        const hazardViolations = result.violations.filter(v => v.ruleId === 'CR-001');
-        expect(hazardViolations.length).toBe(0);
-    });
-
-    it('detects missing required attribute', async () => {
-        const doc = await parseDoc(`
-            package TestPkg {
-                part sw1 : Software {
-                    attribute redefines name = "My Software";
-                }
-            }
-        `);
-        const model = buildMemoModel([doc], testConfig);
-        const result = evaluateClosureRules(model, testConfig);
-
-        const attrViolations = result.violations.filter(v => v.ruleId === 'CR-002');
-        expect(attrViolations.length).toBe(1);
-    });
-
-    it('passes when attribute exists', async () => {
-        const doc = await parseDoc(`
-            package TestPkg {
-                part sw1 : Software {
-                    attribute redefines safetyClassification = "C";
-                }
-            }
-        `);
-        const model = buildMemoModel([doc], testConfig);
-        const result = evaluateClosureRules(model, testConfig);
-
-        const attrViolations = result.violations.filter(v => v.ruleId === 'CR-002');
-        expect(attrViolations.length).toBe(0);
-    });
-
-    it('supports outgoing relationship rules filtered by related kind', async () => {
-        const config: MEMOConfig = {
-            ...testConfig,
-            kinds: {
-                ...testConfig.kinds,
-                UserNeed: { label: 'User Need', layer: 'requirements', sysmlConstruct: 'requirement def' },
-                UseCase: { label: 'Use Case', layer: 'functional', sysmlConstruct: 'part def' },
-            },
-            relationshipTypes: [
-                ...(testConfig.relationshipTypes ?? []),
-                { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
-                { name: 'refines', label: 'Refines', layer: 'requirements', color: '#2E86C1' },
-            ],
-            closureRules: [
-                {
-                    id: 'CR-OUT',
-                    description: 'Every UserNeed must derive at least one SystemRequirement',
-                    entity: 'UserNeed',
-                    rule: {
-                        type: 'requireRelationship',
-                        relationship: 'derives',
-                        min: 1,
-                        direction: 'outgoing',
-                        relatedKinds: ['SystemRequirement'],
-                    },
-                    severity: 'warning',
-                },
-            ],
-        };
-
-        const doc = await parseDoc(`
-            package TestPkg {
-                requirement un1 : UserNeed { attribute redefines title = "Need"; }
-                requirement sr1 : SystemRequirement { attribute redefines title = "System"; }
-                part uc1 : UseCase { attribute redefines name = "Use case"; }
-                connection : Derives connect source ::> un1 to derived ::> sr1;
-                connection : Refines connect refined ::> un1 to refiner ::> uc1;
-            }
-        `);
-
-        const model = buildMemoModel([doc], config);
-        const result = evaluateClosureRules(model, config);
-
-        expect(result.violations).toHaveLength(0);
-    });
-
-    it('supports incoming relationship rules filtered by related kind', async () => {
-        const config: MEMOConfig = {
-            ...testConfig,
-            kinds: {
-                ...testConfig.kinds,
-                UserNeed: { label: 'User Need', layer: 'requirements', sysmlConstruct: 'requirement def' },
-                Test: { label: 'Test', layer: 'verification', sysmlConstruct: 'part def' },
-            },
-            relationshipTypes: [
-                ...(testConfig.relationshipTypes ?? []),
-                { name: 'derives', label: 'Derives', layer: 'requirements', color: '#5DADE2' },
-                { name: 'verify', label: 'Verify', layer: 'verification', color: '#27AE60' },
-            ],
-            closureRules: [
-                {
-                    id: 'CR-IN',
-                    description: 'Every SystemRequirement must derive from a UserNeed',
-                    entity: 'SystemRequirement',
-                    rule: {
-                        type: 'requireRelationship',
-                        relationship: 'derives',
-                        min: 1,
-                        direction: 'incoming',
-                        relatedKinds: ['UserNeed'],
-                    },
-                    severity: 'warning',
-                },
-            ],
-        };
-
-        const doc = await parseDoc(`
-            package TestPkg {
-                requirement un1 : UserNeed { attribute redefines title = "Need"; }
-                requirement sr1 : SystemRequirement { attribute redefines title = "System"; }
-                requirement swr1 : SoftwareRequirement { attribute redefines title = "Software"; }
-                part test1 : Test { attribute redefines name = "Verification"; }
-                connection : Derives connect source ::> swr1 to derived ::> sr1;
-                connection : Verify connect verifiedBy ::> test1 to verifies ::> sr1;
-            }
-        `);
-
-        const model = buildMemoModel([doc], config);
-        const result = evaluateClosureRules(model, config);
-
-        expect(result.violations).toHaveLength(1);
-        expect(result.violations[0].ruleId).toBe('CR-IN');
-        expect(result.violations[0].elementId).toBe('sr1');
-    });
-});
-
 describe('computeCompleteness', () => {
     it('computes per-layer completeness', async () => {
         const doc = await parseDoc(`
@@ -335,7 +161,7 @@ describe('computeCompleteness', () => {
             }
         `);
         const model = buildMemoModel([doc], testConfig);
-        const validation = evaluateClosureRules(model, testConfig);
+        const validation = validateModel(model);
         const report = computeCompleteness(model, validation, testConfig);
 
         expect(report.totalElements).toBe(3);
@@ -816,8 +642,7 @@ describe.skip('Infusion pump integration', () => {
             config
         );
 
-        const result = evaluateClosureRules(model, config);
-        expect(result.rulesEvaluated).toBe(config.closureRules.length);
+        const result = validateModel(model);
         // Some rules should pass, some may have violations
         expect(result.violations.length).toBeGreaterThanOrEqual(0);
 

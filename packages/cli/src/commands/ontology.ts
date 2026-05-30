@@ -103,14 +103,6 @@ export async function ontologyShowCommand(): Promise<void> {
     }
     console.log('');
 
-    // Closure rules
-    console.log(chalk.bold(`  Closure Rules (${config.closureRules.length}):`));
-    for (const rule of config.closureRules) {
-        const icon = rule.severity === 'error' ? chalk.red('\u2716') : chalk.yellow('\u26A0');
-        console.log(`    ${icon} ${rule.id}: ${rule.description}`);
-    }
-    console.log('');
-
     // Viewpoints
     const viewpoints = config.viewpoints || [];
     console.log(chalk.bold(`  Viewpoints (${viewpoints.length}):`));

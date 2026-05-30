@@ -29,7 +29,6 @@ const behaviorConfig: MEMOConfig = {
         { name: 'flow', label: 'Flow', layer: 'behavior', color: '#3498DB' },
         { name: 'succession', label: 'Succession', layer: 'behavior', color: '#95A5A6' },
     ],
-    closureRules: [],
 };
 
 // ─── Grammar Parsing Tests ─────────────────────────────────────────────────

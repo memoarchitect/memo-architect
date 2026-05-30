@@ -44,7 +44,6 @@ const testConfig: MEMOConfig = {
         { name: 'traceTo', label: 'Trace To', layer: 'requirements', color: '#4A90D9' },
         { name: 'allocateTo', label: 'Allocate To', layer: 'functional', color: '#E67E22' },
     ],
-    closureRules: [],
 };
 
 // ─── Element CSV Parsing ────────────────────────────────────────────────────

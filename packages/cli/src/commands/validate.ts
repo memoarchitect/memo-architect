@@ -62,7 +62,7 @@ export async function validateCommand(projectDir?: string, options?: { format?: 
     if (lockCheck.locked) {
         console.log(chalk.gray(`Ontology: locked to ${lockCheck.locked.ontology} v${lockCheck.locked.version}`));
     }
-    console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds ?? {}).length} | Rules: ${config.closureRules.length} | Relationships: ${(config.relationshipTypes ?? []).length}`));
+    console.log(chalk.gray(`Kinds: ${Object.keys(config.kinds ?? {}).length} | Relationships: ${(config.relationshipTypes ?? []).length}`));
 
     // 2b. Load ontology registries (SysML-driven kind/relationship discovery)
     let ontologyRegistries: BuilderRegistries | undefined;
@@ -106,14 +106,14 @@ export async function validateCommand(projectDir?: string, options?: { format?: 
     const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
     console.log(chalk.cyan(`Model: ${model.elements.size} elements, ${model.relationships.length} relationships\n`));
 
-    // 6. Validate — native ontology constraints (constraint def bodies) + closure rules.
+    // 6. Validate — native ontology constraints (constraint def bodies) + structural checks.
     //    Constraint defs live in the ontology packages (parsed by loadOntologyRegistries),
     //    so collect across both ontology and project documents.
     const nativeConstraints = collectNativeConstraints([...ontologyDocuments, ...documents]);
     if (nativeConstraints.length > 0) {
         console.log(chalk.gray(`Native constraints: ${nativeConstraints.length} (from constraint def bodies)`));
     }
-    const result = validateModel(model, config, nativeConstraints);
+    const result = validateModel(model, nativeConstraints);
     const completeness = computeCompleteness(model, result, config);
 
     const errors = result.violations.filter(v => v.severity === 'error');

@@ -1,12 +1,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { MEMOConfig, ArchLayer, ClosureRule, ViewpointDefinition } from './config.js';
+import type { MEMOConfig, ArchLayer, ViewpointDefinition } from './config.js';
 
 const CONFIG_FILENAMES = ['memo.config.yaml', 'memo.config.yml'];
 const PACKAGE_FILENAMES = ['memo.package.yaml', 'memo.package.yml'];
 const RENDERING_FILENAMES = ['memo.rendering.yaml', 'memo.rendering.yml'];
-const RULES_FILENAMES = ['memo.rules.yaml', 'memo.rules.yml'];
 const VIEWPOINTS_FILENAMES = ['memo.viewpoints.yaml', 'memo.viewpoints.yml'];
 
 /**
@@ -50,26 +49,6 @@ export function loadRenderingLayers(configDir: string): ArchLayer[] {
                 const raw = readFileSync(candidate, 'utf-8');
                 const parsed = parseYaml(raw);
                 return parsed?.layers ?? [];
-            } catch {
-                // skip malformed file
-            }
-        }
-    }
-    return [];
-}
-
-/**
- * Load closure rules from a memo.rules.yaml file.
- * Returns the closureRules array, or empty array if file not found.
- */
-export function loadClosureRules(configDir: string): ClosureRule[] {
-    for (const name of RULES_FILENAMES) {
-        const candidate = resolve(configDir, name);
-        if (existsSync(candidate)) {
-            try {
-                const raw = readFileSync(candidate, 'utf-8');
-                const parsed = parseYaml(raw);
-                return parsed?.closureRules ?? [];
             } catch {
                 // skip malformed file
             }
@@ -123,9 +102,6 @@ export function loadConfig(filePath: string): MEMOConfig {
     // Load rendering layers from memo.rendering.yaml (new format)
     const renderingLayers = loadRenderingLayers(configDir);
 
-    // Load closure rules from memo.rules.yaml (new format)
-    const rulesFromFile = loadClosureRules(configDir);
-
     // Load viewpoints from memo.viewpoints.yaml (new format)
     const viewpointsData = loadViewpoints(configDir);
 
@@ -145,7 +121,6 @@ export function loadConfig(filePath: string): MEMOConfig {
                 tags: parsed.tags,
             } : undefined,
             architectureLayers: renderingLayers,
-            closureRules: rulesFromFile,
             viewpoints: viewpointsData.viewpoints,
             firstRun: viewpointsData.firstRun,
         };
@@ -158,12 +133,6 @@ export function loadConfig(filePath: string): MEMOConfig {
     const mergedLayers = renderingLayers.length > 0
         ? dedup([...archLayersFromConfig, ...renderingLayers], l => l.id)
         : archLayersFromConfig;
-
-    // Merge rules
-    const rulesFromConfig: ClosureRule[] = parsed.closureRules ?? [];
-    const mergedRules = rulesFromFile.length > 0
-        ? dedup([...rulesFromConfig, ...rulesFromFile], r => r.id)
-        : rulesFromConfig;
 
     // Merge viewpoints from file if present
     const viewpointsFromConfig = parsed.viewpoints;
@@ -181,7 +150,6 @@ export function loadConfig(filePath: string): MEMOConfig {
         architectureLayers: mergedLayers,
         kinds: parsed.kinds,
         relationshipTypes: parsed.relationshipTypes,
-        closureRules: mergedRules,
         viewpoints: mergedViewpoints,
         workflows: parsed.workflows,
         firstRun: viewpointsData.firstRun ?? parsed.firstRun,
@@ -293,10 +261,6 @@ function mergeConfigs(parent: MEMOConfig, child: MEMOConfig): MEMOConfig {
         relationshipTypes: dedup(
             [...(parent.relationshipTypes ?? []), ...(child.relationshipTypes ?? [])],
             r => r.name
-        ),
-        closureRules: dedup(
-            [...parent.closureRules, ...child.closureRules],
-            r => r.id
         ),
         viewpoints: mergeViewpoints(parent.viewpoints, child.viewpoints),
         workflows: child.workflows ?? parent.workflows,

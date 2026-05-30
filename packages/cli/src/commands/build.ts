@@ -61,7 +61,7 @@ export async function buildCommand(options: {
     const sysmlFiles = findSysmlFiles(cwd);
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, errors);
-    const validation = validateModel(model, config);
+    const validation = validateModel(model);
     const completeness = computeCompleteness(model, validation, config);
 
     const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({

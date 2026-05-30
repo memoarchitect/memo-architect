@@ -179,7 +179,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
         const sysmlFiles = findSysmlFiles(cwd);
         const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
         const model = buildMemoModel(documents, config, errors, ontologyRegistries);
-        const validation = validateModel(model, config);
+        const validation = validateModel(model);
         const completeness = computeCompleteness(model, validation, config);
 
         console.log(chalk.cyan(

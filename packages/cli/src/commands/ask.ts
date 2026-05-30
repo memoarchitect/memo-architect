@@ -70,7 +70,7 @@ export async function askCommand(question: string, options: AskCommandOptions): 
     const sysmlFiles = findSysmlFiles(cwd);
     const { documents, errors: parseErrors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
-    const validation = validateModel(model, config);
+    const validation = validateModel(model);
     const completeness = computeCompleteness(model, validation, config);
     const ctx = createQueryContext(model, validation, completeness, config);
 

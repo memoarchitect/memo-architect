@@ -6,7 +6,7 @@
 //
 // Four project types:
 //   - "ontology" — shared type system (kinds + relationships)
-//   - "profile"  — closure rules, viewpoints, templates (extends an ontology)
+//   - "profile"  — viewpoints, templates (extends an ontology)
 //   - "library"  — reusable model elements (instances, not types)
 //   - "device"   — specific medical device model referencing an ontology
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,58 +63,6 @@ export interface KindDefinition {
     template?: string;
     /** Default attributes for new instances */
     defaultAttributes?: Record<string, string>;
-}
-
-/** A closure rule evaluated by the validation engine */
-export interface ClosureRule {
-    /** Unique rule identifier, e.g. "CR-MED-001" */
-    id: string;
-    /** Human-readable description */
-    description: string;
-    /** Entity kind this rule applies to */
-    entity: string;
-    /** Rule definition */
-    rule: ClosureRuleDefinition;
-    /** Error severity when rule is violated */
-    severity: 'error' | 'warning' | 'info';
-    /** Architecture layer this rule contributes completeness to */
-    completenessLayer?: string;
-}
-
-export type RelationshipRuleDirection = 'any' | 'incoming' | 'outgoing';
-
-export type ClosureRuleDefinition =
-    | {
-          type: 'requireRelationship';
-          relationship: string;
-          min: number;
-          max?: number;
-          direction?: RelationshipRuleDirection;
-          relatedKinds?: string[];
-      }
-    | {
-          type: 'conditionalRequireRelationship';
-          condition: RuleCondition;
-          relationship: string;
-          min: number;
-          direction?: RelationshipRuleDirection;
-          relatedKinds?: string[];
-      }
-    | { type: 'requireAttribute'; attribute: string }
-    | { type: 'uniqueAttribute'; attribute: string }
-    | {
-          type: 'cardinalityCheck';
-          relationship: string;
-          min: number;
-          max: number;
-          direction?: RelationshipRuleDirection;
-          relatedKinds?: string[];
-      };
-
-export interface RuleCondition {
-    attribute: string;
-    operator: 'eq' | 'neq' | 'in' | 'gte' | 'lte';
-    values: string[];
 }
 
 /** SysML v2 diagram type classification */
@@ -285,9 +233,6 @@ export interface MEMOConfig {
 
     /** Typed relationship definitions with architecture layer mapping. Optional — prefer RelationshipRegistry. */
     relationshipTypes?: RelationshipType[];
-
-    /** Closure rules for model validation */
-    closureRules: ClosureRule[];
 
     /** Viewpoint definitions for filtered views */
     viewpoints?: ViewpointDefinition[];
