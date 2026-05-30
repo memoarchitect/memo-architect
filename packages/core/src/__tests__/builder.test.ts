@@ -179,6 +179,29 @@ describe('buildMemoModel', () => {
         expect(model.relationshipsByType.get('satisfies')?.length).toBe(1);
     });
 
+    it('projects HazardMitigationLink so a hazard is navigable via mitigates', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement haz1 : Hazard { attribute redefines title = "H1"; }
+                requirement rc1 : RiskControl { attribute redefines title = "RC1"; }
+                part link1 : HazardMitigationLink {
+                    attribute id = "L1";
+                    part riskControl = rc1;
+                    part mitigatedHazard = haz1;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const rel = model.relationships.find(r => r.type === 'mitigatedby');
+        expect(rel).toBeDefined();
+        expect(rel!.sourceId).toBe('rc1');
+        expect(rel!.targetId).toBe('haz1');
+        expect(rel!.inverseType).toBe('mitigates');
+        // The hazard (edge target) is reachable under the inverse name.
+        expect(model.relationshipsByType.get('mitigates')?.length).toBe(1);
+    });
+
     it('accepts the subsetting (:>) binding form for *Link ends', async () => {
         const doc = await parseDoc(`
             package TestPkg {

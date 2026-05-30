@@ -79,7 +79,7 @@ package memo {
                 attribute appliesTo = "SoftwareComponent";
                 attribute severity = RuleSeverityKind::error;
                 attribute rationaleText = "IEC 62304 requires safety classification for all software items.";
-                require constraint { attributes.safetyClassification != "" }
+                require constraint { attributes.safetyClass != "" }
             }
 
             constraint def swComponentReqRule {
@@ -105,7 +105,7 @@ package memo {
                 attribute appliesTo = "VerificationCase";
                 attribute severity = RuleSeverityKind::error;
                 attribute rationaleText = "Verification method (test, analysis, inspection, demonstration) required per IEC 62304.";
-                require constraint { attributes.verificationMethod != "" }
+                require constraint { attributes.methodKind != "" }
             }
 
             constraint def verificationCaseTargetRule {
@@ -159,7 +159,7 @@ package memo {
                 attribute appliesTo = "SoftwareComponent";
                 attribute severity = RuleSeverityKind::error;
                 attribute rationaleText = "IEC 62304 requires rigorous verification for Class C software.";
-                require constraint { not(attributes.safetyClassification == "C") or verifiedBy->size() >= 1 }
+                require constraint { not(attributes.safetyClass == "C") or verifiedBy->size() >= 1 }
             }
         }
     }

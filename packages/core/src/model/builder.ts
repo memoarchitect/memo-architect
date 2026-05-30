@@ -149,6 +149,7 @@ interface LinkRelation {
 const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     RequirementSourceLink: { type: 'traceTo' },
     RequirementSatisfactionLink: { type: 'satisfiedBy', inverse: 'satisfies' },
+    HazardMitigationLink: { type: 'mitigatedBy', inverse: 'mitigates' },
     FunctionAllocationLink: { type: 'allocatedTo' },
     InterfaceRealizationLink: { type: 'realizedBy' },
     VerificationLink: { type: 'verifiedBy', inverse: 'verifies' },
@@ -161,7 +162,9 @@ const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     ThreatVulnerabilityLink: { type: 'exploits' },
     ThreatScenarioLink: { type: 'realizedBy' },
     VulnerabilityMitigationLink: { type: 'mitigatedBy' },
-    CyberRequirementDerivationLink: { type: 'derivedFrom' },
+    // A security requirement derived from a threat is that threat's mitigation
+    // (FDA cybersecurity guidance), so the threat is navigable as mitigatedBy.
+    CyberRequirementDerivationLink: { type: 'mitigatedBy', inverse: 'mitigates' },
     CyberSafetyTraceLink: { type: 'impactsSafety' },
     TrustBoundaryCrossingLink: { type: 'crosses' },
 };

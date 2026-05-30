@@ -9,6 +9,9 @@ package memo {
                 part vcTemporalModeSafety : VerificationCase { attribute id = "VER-004"; attribute name = "VerifyTemporalModeSafety"; attribute methodKind = VerificationMethodKind::modelChecking; attribute acceptanceCriteria = "No invalid transitions and pause on critical alarms"; attribute status = "planned"; }
                 part testReportLockout : TestArtifact { attribute id = "TEST-001"; attribute name = "BolusLockoutTestReport"; attribute version = "0.1"; attribute lifecycleState = LifecycleStateKind::development; attribute artifactKind = ArtifactKind::testReport; attribute resultSummary = "planned"; }
                 part evidenceLockout : Evidence { attribute id = "EVD-001"; attribute name = "BolusLockoutEvidence"; attribute version = "0.1"; attribute lifecycleState = LifecycleStateKind::development; attribute evidenceType = "verification evidence"; attribute integrityStatus = "draft"; }
+                part evidenceModeRange : Evidence { attribute id = "EVD-002"; attribute name = "ModeRangeEvidence"; attribute version = "0.1"; attribute lifecycleState = LifecycleStateKind::development; attribute evidenceType = "formal proof evidence"; attribute integrityStatus = "draft"; }
+                part evidenceSameStepAlarm : Evidence { attribute id = "EVD-003"; attribute name = "SameStepAlarmEvidence"; attribute version = "0.1"; attribute lifecycleState = LifecycleStateKind::development; attribute evidenceType = "model checking evidence"; attribute integrityStatus = "draft"; }
+                part evidenceTemporalModeSafety : Evidence { attribute id = "EVD-004"; attribute name = "TemporalModeSafetyEvidence"; attribute version = "0.1"; attribute lifecycleState = LifecycleStateKind::development; attribute evidenceType = "model checking evidence"; attribute integrityStatus = "draft"; }
             }
         }
     }
