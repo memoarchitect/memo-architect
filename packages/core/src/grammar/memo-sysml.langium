@@ -229,7 +229,45 @@ AllocateUsage:
 // ─── Body members ────────────────────────────────────────────────────────────
 
 DefinitionBodyMember:
-    AttributeMember | PartMember | PortUsage | RefMember | DocComment;
+    AttributeMember | PartMember | PortUsage | RefMember | RequireConstraintMember | DocComment;
+
+// ─── Constraint expression (KerML boolean subset — ADR-1-18) ─────────────────
+// Authored inside constraint def / requirement def bodies as:
+//   require constraint { <boolean expr> }
+//   assert  constraint { <boolean expr> }
+// Precedence (loosest→tightest): or < and < cmp < add < mul < not < postfix(->) < primary.
+
+RequireConstraintMember:
+    kind=('require' | 'assert') 'constraint' '{' expression=OrExpr '}';
+
+OrExpr infers ConstraintExpr:
+    AndExpr ({infer BinaryExpr.left=current} op='or' right=AndExpr)*;
+
+AndExpr infers ConstraintExpr:
+    CmpExpr ({infer BinaryExpr.left=current} op='and' right=CmpExpr)*;
+
+CmpExpr infers ConstraintExpr:
+    AddExpr ({infer BinaryExpr.left=current} op=('==' | '!=' | '>=' | '<=' | '>' | '<') right=AddExpr)?;
+
+AddExpr infers ConstraintExpr:
+    MulExpr ({infer BinaryExpr.left=current} op=('+' | '-') right=MulExpr)*;
+
+MulExpr infers ConstraintExpr:
+    UnaryExpr ({infer BinaryExpr.left=current} op=('*' | '/') right=UnaryExpr)*;
+
+UnaryExpr infers ConstraintExpr:
+    {infer UnaryExpr} op='not' operand=UnaryExpr
+    | PostfixExpr;
+
+PostfixExpr infers ConstraintExpr:
+    PrimaryExpr ({infer CollectionOp.target=current} '->' op=ID '(' (argument=OrExpr)? ')')*;
+
+PrimaryExpr infers ConstraintExpr:
+      {infer LiteralExpr} intValue=INT
+    | {infer LiteralExpr} strValue=STRING
+    | {infer LiteralExpr} boolValue=('true' | 'false')
+    | {infer FeatureChain} segments+=ID ('.' segments+=ID)*
+    | '(' OrExpr ')';
 
 UsageBodyMember:
     AttributeMember | ShorthandRedefinition | DocComment;

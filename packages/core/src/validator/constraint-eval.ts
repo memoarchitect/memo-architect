@@ -29,6 +29,7 @@
 
 import type { MemoModel, MemoElement } from '../model/semantic.js';
 import type { Violation } from './types.js';
+import type { ConstraintExpr } from '../language/generated/ast.js';
 
 /** A constraint authored as a KerML-subset boolean expression over a subject element. */
 export interface NativeConstraint {
@@ -237,4 +238,65 @@ function toNumber(v: Value): number {
     if (typeof v === 'number') return v;
     if (typeof v === 'boolean') return v ? 1 : 0;
     return v.length; // a bare collection compares by size
+}
+
+// ─── Langium AST → evaluator AST (EE-1) ───────────────────────────────────────
+//
+// EE-1 moved expression PARSING into the Langium grammar (memo-sysml.langium,
+// ConstraintExpr rule family). The grammar accepts the full ADR-1-18 subset; the
+// evaluator below realizes the EE-0 evaluable core. Grammar-legal forms whose
+// evaluation is deferred to EE-2 (forAll/exists/select, arithmetic, string
+// comparison, multi-segment feature chains) are rejected here with a clear
+// diagnostic rather than silently mis-evaluated. See ADR-1-18.
+
+const COMPARISON_OPS = new Set(['==', '!=', '>=', '<=', '>', '<']);
+const COLLECTION_OPS_EVALUABLE = new Set(['size', 'notEmpty', 'isEmpty']);
+const COLLECTION_OPS_DEFERRED = new Set(['forAll', 'exists', 'select']);
+
+/** Map a Langium-parsed constraint expression to the evaluator AST. */
+export function langiumExprToNode(expr: ConstraintExpr): Node {
+    switch (expr.$type) {
+        case 'LiteralExpr': {
+            if (expr.intValue !== undefined) return { kind: 'int', value: parseInt(expr.intValue, 10) };
+            if (expr.boolValue !== undefined) return { kind: 'bool', value: expr.boolValue === 'true' };
+            // strValue is grammar-legal but the evaluator has no string semantics yet.
+            throw new Error('String literals in constraints are deferred to EE-2');
+        }
+        case 'FeatureChain': {
+            if (expr.segments.length === 1) return { kind: 'nav', relType: expr.segments[0].toLowerCase() };
+            throw new Error(
+                `Multi-segment feature chain '${expr.segments.join('.')}' is deferred to EE-2`
+            );
+        }
+        case 'CollectionOp': {
+            if (COLLECTION_OPS_EVALUABLE.has(expr.op)) {
+                if (expr.argument) throw new Error(`'->${expr.op}()' takes no argument`);
+                return {
+                    kind: 'method',
+                    target: langiumExprToNode(expr.target),
+                    name: expr.op as 'size' | 'notEmpty' | 'isEmpty',
+                };
+            }
+            if (COLLECTION_OPS_DEFERRED.has(expr.op)) {
+                throw new Error(`Collection op '->${expr.op}()' is deferred to EE-2`);
+            }
+            throw new Error(`Unsupported collection op '->${expr.op}()' (not in ADR-1-18 subset)`);
+        }
+        case 'UnaryExpr':
+            return { kind: 'not', operand: langiumExprToNode(expr.operand) };
+        case 'BinaryExpr': {
+            if (expr.op === 'and') return { kind: 'and', left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
+            if (expr.op === 'or') return { kind: 'or', left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
+            if (COMPARISON_OPS.has(expr.op)) {
+                return {
+                    kind: 'cmp',
+                    op: expr.op as '==' | '!=' | '>=' | '<=' | '>' | '<',
+                    left: langiumExprToNode(expr.left),
+                    right: langiumExprToNode(expr.right),
+                };
+            }
+            // arithmetic + - * /
+            throw new Error(`Arithmetic operator '${expr.op}' is deferred to EE-2`);
+        }
+    }
 }
