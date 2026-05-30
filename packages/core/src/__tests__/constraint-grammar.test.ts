@@ -15,7 +15,7 @@ import { langiumExprToNode } from '../validator/constraint-eval.js';
 // ─── EE-1: native KerML expression grammar for constraint/requirement bodies ──
 // Covers the ADR-1-18 supported subset: navigation, collection ops, comparison,
 // boolean operators, arithmetic, literals; plus the Langium AST → evaluator
-// mapping (langiumExprToNode) and its deferred-to-EE-2 diagnostics.
+// mapping (langiumExprToNode) over the full EE-2 evaluable breadth.
 
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
@@ -148,7 +148,7 @@ describe('EE-1 langiumExprToNode mapping', () => {
         expect(node).toEqual({
             kind: 'cmp',
             op: '>=',
-            left: { kind: 'method', target: { kind: 'nav', relType: 'allocations' }, name: 'size' },
+            left: { kind: 'method', target: { kind: 'feature', root: 'current', segments: ['allocations'] }, name: 'size' },
             right: { kind: 'int', value: 1 },
         });
     });
@@ -161,14 +161,22 @@ describe('EE-1 langiumExprToNode mapping', () => {
         expect(langiumExprToNode((await parseExpr('x == true')) as any)).toMatchObject({ right: { kind: 'bool', value: true } });
     });
 
-    it('rejects deferred forms with a clear diagnostic', async () => {
-        await expect(parseExpr('hazards->forAll(mitigates->notEmpty())').then(langiumExprToNode))
-            .rejects.toThrow(/deferred to EE-2/);
-        await expect(parseExpr('a.b->notEmpty()').then(langiumExprToNode))
-            .rejects.toThrow(/deferred to EE-2/);
-        await expect(parseExpr('count == 1 + 2').then(langiumExprToNode))
-            .rejects.toThrow(/deferred to EE-2/);
-        await expect(parseExpr('label == "x"').then(langiumExprToNode))
-            .rejects.toThrow(/deferred to EE-2/);
+    it('maps the EE-2 breadth (quantifiers, multi-segment chains, arithmetic, strings)', async () => {
+        // Quantifier with sub-expression body.
+        const quant = langiumExprToNode(await parseExpr('hazards->forAll(mitigates->notEmpty())'));
+        expect(quant).toMatchObject({
+            kind: 'quant', name: 'forAll',
+            target: { kind: 'feature', segments: ['hazards'] },
+            body: { kind: 'method', name: 'notEmpty', target: { kind: 'feature', segments: ['mitigates'] } },
+        });
+        // Multi-segment feature chain.
+        expect(langiumExprToNode(await parseExpr('a.b->notEmpty()')))
+            .toMatchObject({ kind: 'method', target: { kind: 'feature', segments: ['a', 'b'] } });
+        // Arithmetic.
+        expect(langiumExprToNode((await parseExpr('count == 1 + 2')) as any))
+            .toMatchObject({ right: { kind: 'arith', op: '+', left: { kind: 'int', value: 1 }, right: { kind: 'int', value: 2 } } });
+        // String literal.
+        expect(langiumExprToNode((await parseExpr('label == "x"')) as any))
+            .toMatchObject({ right: { kind: 'str', value: 'x' } });
     });
 });

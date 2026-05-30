@@ -1,30 +1,28 @@
-// ─── Native Constraint Evaluator (SPIKE — Epic EE ⊕-0) ─────────────────────────
+// ─── Native Constraint Evaluator (Epic EE) ────────────────────────────────────
 //
-// Proves the keystone thesis: MEMO can evaluate SysML v2 / KerML-style constraint
+// Proves the keystone thesis: MEMO evaluates SysML v2 / KerML-style constraint
 // EXPRESSIONS directly against the built MemoModel, instead of interpreting the
 // proprietary ClosureRule enum (validator/rule-engine.ts) or the predicate-attribute
 // pseudo-rules produced by RuleRegistry (validator/rule-registry.ts).
 //
-// SCOPE OF THIS SPIKE
-//   - A tiny hand-written recursive-descent parser + evaluator for a KerML EXPRESSION
-//     SUBSET: relationship navigation, collection ops (size/notEmpty/isEmpty),
-//     comparison, boolean and/or/not, integer + boolean literals.
-//   - Quantification ("for every element of kind K, expr holds") is the outer loop
-//     in evaluateNativeConstraint — the SysML requirement/constraint `subject`.
-//
-// WHAT THIS SPIKE DELIBERATELY DEFERS (sized as Epic EE stories — see issue):
-//   - EE-1 GRAMMAR: this parser is a stand-in. Production parses native
-//     `constraint def` / `requirement def { ... }` bodies in the Langium grammar
-//     (packages/core/src/grammar/memo-sysml.langium currently has NO expression rule).
-//     The `relType` bare-identifier surface here is a placeholder for KerML feature
-//     chains (`allocations->notEmpty()`), NOT a new DSL to keep.
-//   - EE-2: attribute predicates, ->forAll/->exists with sub-expressions, arithmetic.
-//   - EE-3: migrate ClosureRule + RuleRegistry rules to native constraint bodies.
+// SCOPE (after EE-2 — see docs/design/constraint-evaluator.md and ADR-1-18):
+//   - Feature/relationship navigation, including multi-segment feature chains and
+//     attribute access (`kind`, `attributes["safetyClass"]`).
+//   - Collection operations: ->size()/->notEmpty()/->isEmpty() and the quantifiers
+//     ->forAll(expr)/->exists(expr)/->select(expr) (sub-expression evaluated with
+//     each collection element as the implicit subject).
+//   - Operators: or < and < comparison < additive (+ -) < multiplicative (* /) <
+//     not < postfix(->) < primary.
+//   - Literals: integer, string ("…"), boolean.
+//   - `subject` root reference and `allOfKind("Kind")` extent accessor — these give
+//     uniqueAttribute-class rules a native form (EE-3 migration contract).
 //
 // Navigation semantics (matches ClosureRule direction default 'any'):
-//   a bare identifier `r` resolves to the set of elements related to the subject by
-//   a relationship whose type === r (lowercased), in EITHER direction — i.e. outgoing
-//   targets ∪ incoming sources. This mirrors getRelevantRelationships() in rule-engine.ts.
+//   a feature-chain segment resolves to a RELATIONSHIP (collection, either
+//   direction) if its lowercased name is a key in model.relationshipsByType,
+//   else to an ATTRIBUTE/typed-field scalar on the element. The `attributes`
+//   segment is the attribute-map accessor: the following segment (or `["key"]`
+//   index) names the attribute key.
 // ──────────────────────────────────────────────────────────────────────────────
 
 import type { MemoModel, MemoElement } from '../model/semantic.js';
@@ -52,7 +50,7 @@ export function evaluateNativeConstraint(constraint: NativeConstraint, model: Me
     const violations: Violation[] = [];
 
     for (const element of subjects) {
-        const ok = toBool(evalNode(ast, element, model));
+        const ok = toBool(evalNode(ast, { root: element, current: element }, model));
         if (!ok) {
             violations.push({
                 ruleId: constraint.id,
@@ -70,17 +68,37 @@ export function evaluateNativeConstraint(constraint: NativeConstraint, model: Me
 
 // ─── AST ────────────────────────────────────────────────────────────────────
 
+type CmpOp = '==' | '!=' | '>=' | '<=' | '>' | '<';
+type ArithOp = '+' | '-' | '*' | '/';
+
 type Node =
     | { kind: 'bool'; value: boolean }
     | { kind: 'int'; value: number }
-    | { kind: 'nav'; relType: string }
+    | { kind: 'str'; value: string }
+    /** Feature chain resolved against the current element (or the root subject). */
+    | { kind: 'feature'; root: 'current' | 'subject'; segments: string[] }
+    /** All elements of a named kind (the kind extent). */
+    | { kind: 'allOfKind'; kindName: string }
     | { kind: 'method'; target: Node; name: 'size' | 'notEmpty' | 'isEmpty' }
-    | { kind: 'cmp'; op: '==' | '!=' | '>=' | '<=' | '>' | '<'; left: Node; right: Node }
+    | { kind: 'quant'; target: Node; name: 'forAll' | 'exists' | 'select'; body: Node }
+    | { kind: 'arith'; op: ArithOp; left: Node; right: Node }
+    | { kind: 'cmp'; op: CmpOp; left: Node; right: Node }
     | { kind: 'and'; left: Node; right: Node }
     | { kind: 'or'; left: Node; right: Node }
     | { kind: 'not'; operand: Node };
 
-type Value = boolean | number | MemoElement[];
+/** A scalar element, a collection of elements, or a primitive. */
+type Value = boolean | number | string | MemoElement | MemoElement[];
+
+/** Evaluation scope: `root` is the constraint subject; `current` is the implicit
+ *  subject of the innermost quantifier body (equals `root` outside quantifiers). */
+interface Env {
+    root: MemoElement;
+    current: MemoElement;
+}
+
+/** Typed fields on MemoElement that a bare feature segment may resolve to. */
+const TYPED_FIELDS = new Set(['kind', 'layer', 'construct', 'allocatedTo', 'name', 'id', 'package', 'shortId']);
 
 // ─── Tokenizer ────────────────────────────────────────────────────────────────
 
@@ -88,7 +106,7 @@ type Token = { t: string; v?: string };
 
 function tokenize(src: string): Token[] {
     const tokens: Token[] = [];
-    const re = /\s*(->|==|!=|>=|<=|[<>()]|[A-Za-z_][A-Za-z0-9_]*|\d+)/y;
+    const re = /\s*(->|==|!=|>=|<=|"[^"]*"|[<>()[\].+\-*/]|[A-Za-z_][A-Za-z0-9_]*|\d+)/y;
     let m: RegExpExecArray | null;
     let pos = 0;
     while (pos < src.length) {
@@ -98,6 +116,7 @@ function tokenize(src: string): Token[] {
         pos = re.lastIndex;
         const raw = m[1];
         if (/^\d+$/.test(raw)) tokens.push({ t: 'int', v: raw });
+        else if (raw[0] === '"') tokens.push({ t: 'str', v: raw.slice(1, -1) });
         else if (/^[A-Za-z_]/.test(raw)) tokens.push({ t: 'ident', v: raw });
         else tokens.push({ t: raw });
     }
@@ -105,7 +124,12 @@ function tokenize(src: string): Token[] {
     return tokens;
 }
 
-// ─── Parser (precedence: or < and < not < cmp < method < primary) ─────────────
+// ─── Parser ───────────────────────────────────────────────────────────────────
+// Precedence (loosest→tightest): or < and < cmp < add < mul < not < postfix < primary.
+
+const KEYWORDS = new Set(['and', 'or', 'not', 'true', 'false']);
+const COLLECTION_OPS = new Set(['size', 'notEmpty', 'isEmpty']);
+const QUANTIFIER_OPS = new Set(['forAll', 'exists', 'select']);
 
 function parseExpression(src: string): Node {
     const tokens = tokenize(src);
@@ -117,42 +141,61 @@ function parseExpression(src: string): Node {
         return next();
     };
 
-    const KEYWORDS = new Set(['and', 'or', 'not', 'true', 'false']);
-
     function parseOr(): Node {
         let left = parseAnd();
         while (peek().t === 'ident' && peek().v === 'or') { next(); left = { kind: 'or', left, right: parseAnd() }; }
         return left;
     }
     function parseAnd(): Node {
+        let left = parseCmp();
+        while (peek().t === 'ident' && peek().v === 'and') { next(); left = { kind: 'and', left, right: parseCmp() }; }
+        return left;
+    }
+    function parseCmp(): Node {
+        const left = parseAdd();
+        const op = peek().t;
+        if (op === '==' || op === '!=' || op === '>=' || op === '<=' || op === '>' || op === '<') {
+            next();
+            return { kind: 'cmp', op, left, right: parseAdd() };
+        }
+        return left;
+    }
+    function parseAdd(): Node {
+        let left = parseMul();
+        while (peek().t === '+' || peek().t === '-') {
+            const op = next().t as ArithOp;
+            left = { kind: 'arith', op, left, right: parseMul() };
+        }
+        return left;
+    }
+    function parseMul(): Node {
         let left = parseNot();
-        while (peek().t === 'ident' && peek().v === 'and') { next(); left = { kind: 'and', left, right: parseNot() }; }
+        while (peek().t === '*' || peek().t === '/') {
+            const op = next().t as ArithOp;
+            left = { kind: 'arith', op, left, right: parseNot() };
+        }
         return left;
     }
     function parseNot(): Node {
         if (peek().t === 'ident' && peek().v === 'not') { next(); return { kind: 'not', operand: parseNot() }; }
-        return parseCmp();
+        return parsePostfix();
     }
-    function parseCmp(): Node {
-        const left = parseMethod();
-        const op = peek().t;
-        if (op === '==' || op === '!=' || op === '>=' || op === '<=' || op === '>' || op === '<') {
-            next();
-            return { kind: 'cmp', op, left, right: parseMethod() };
-        }
-        return left;
-    }
-    function parseMethod(): Node {
+    function parsePostfix(): Node {
         let node = parsePrimary();
         while (peek().t === '->') {
             next();
             const name = expect('ident').v!;
             expect('(');
-            expect(')');
-            if (name !== 'size' && name !== 'notEmpty' && name !== 'isEmpty') {
-                throw new Error(`Unsupported collection op '->${name}()' in spike subset`);
+            if (COLLECTION_OPS.has(name)) {
+                expect(')');
+                node = { kind: 'method', target: node, name: name as 'size' | 'notEmpty' | 'isEmpty' };
+            } else if (QUANTIFIER_OPS.has(name)) {
+                const body = parseOr();
+                expect(')');
+                node = { kind: 'quant', target: node, name: name as 'forAll' | 'exists' | 'select', body };
+            } else {
+                throw new Error(`Unsupported collection op '->${name}()'`);
             }
-            node = { kind: 'method', target: node, name };
         }
         return node;
     }
@@ -160,13 +203,33 @@ function parseExpression(src: string): Node {
         const tok = peek();
         if (tok.t === '(') { next(); const e = parseOr(); expect(')'); return e; }
         if (tok.t === 'int') { next(); return { kind: 'int', value: parseInt(tok.v!, 10) }; }
+        if (tok.t === 'str') { next(); return { kind: 'str', value: tok.v! }; }
         if (tok.t === 'ident') {
             if (tok.v === 'true' || tok.v === 'false') { next(); return { kind: 'bool', value: tok.v === 'true' }; }
+            if (tok.v === 'allOfKind') {
+                next();
+                expect('(');
+                const arg = peek();
+                if (arg.t !== 'str') throw new Error(`allOfKind expects a string kind name, got '${arg.t}'`);
+                next();
+                expect(')');
+                return { kind: 'allOfKind', kindName: arg.v! };
+            }
             if (KEYWORDS.has(tok.v!)) throw new Error(`Unexpected keyword '${tok.v}'`);
-            next();
-            return { kind: 'nav', relType: tok.v!.toLowerCase() };
+            return parseFeature();
         }
         throw new Error(`Unexpected token '${tok.t}'`);
+    }
+    function parseFeature(): Node {
+        const first = next().v!;
+        const root: 'current' | 'subject' = first === 'subject' ? 'subject' : 'current';
+        const segments: string[] = first === 'subject' ? [] : [first];
+        for (;;) {
+            if (peek().t === '.') { next(); segments.push(expect('ident').v!); continue; }
+            if (peek().t === '[') { next(); segments.push(expect('str').v!); expect(']'); continue; }
+            break;
+        }
+        return { kind: 'feature', root, segments };
     }
 
     const ast = parseOr();
@@ -176,35 +239,70 @@ function parseExpression(src: string): Node {
 
 // ─── Evaluator ────────────────────────────────────────────────────────────────
 
-function evalNode(node: Node, subject: MemoElement, model: MemoModel): Value {
+function evalNode(node: Node, env: Env, model: MemoModel): Value {
     switch (node.kind) {
         case 'bool': return node.value;
         case 'int': return node.value;
-        case 'nav': return navigate(subject, node.relType, model);
+        case 'str': return node.value;
+        case 'feature': return resolveFeature(node.root === 'subject' ? env.root : env.current, node.segments, model);
+        case 'allOfKind': return model.elementsByKind.get(node.kindName) ?? [];
         case 'method': {
-            const target = evalNode(node.target, subject, model);
-            const coll = asCollection(target);
-            if (node.name === 'size') return coll.length;
-            if (node.name === 'notEmpty') return coll.length > 0;
-            return coll.length === 0; // isEmpty
+            const len = lengthOf(evalNode(node.target, env, model));
+            if (node.name === 'size') return len;
+            if (node.name === 'notEmpty') return len > 0;
+            return len === 0; // isEmpty
         }
-        case 'cmp': {
-            const l = toNumber(evalNode(node.left, subject, model));
-            const r = toNumber(evalNode(node.right, subject, model));
+        case 'quant': {
+            const coll = asCollection(evalNode(node.target, env, model));
+            if (node.name === 'forAll') return coll.every(e => toBool(evalNode(node.body, { root: env.root, current: e }, model)));
+            if (node.name === 'exists') return coll.some(e => toBool(evalNode(node.body, { root: env.root, current: e }, model)));
+            return coll.filter(e => toBool(evalNode(node.body, { root: env.root, current: e }, model))); // select
+        }
+        case 'arith': {
+            const l = toNumber(evalNode(node.left, env, model));
+            const r = toNumber(evalNode(node.right, env, model));
             switch (node.op) {
-                case '==': return l === r;
-                case '!=': return l !== r;
-                case '>=': return l >= r;
-                case '<=': return l <= r;
-                case '>': return l > r;
-                case '<': return l < r;
+                case '+': return l + r;
+                case '-': return l - r;
+                case '*': return l * r;
+                case '/': return l / r;
             }
         }
         // eslint-disable-next-line no-fallthrough
-        case 'and': return toBool(evalNode(node.left, subject, model)) && toBool(evalNode(node.right, subject, model));
-        case 'or': return toBool(evalNode(node.left, subject, model)) || toBool(evalNode(node.right, subject, model));
-        case 'not': return !toBool(evalNode(node.operand, subject, model));
+        case 'cmp': return compare(node.op, evalNode(node.left, env, model), evalNode(node.right, env, model));
+        case 'and': return toBool(evalNode(node.left, env, model)) && toBool(evalNode(node.right, env, model));
+        case 'or': return toBool(evalNode(node.left, env, model)) || toBool(evalNode(node.right, env, model));
+        case 'not': return !toBool(evalNode(node.operand, env, model));
     }
+}
+
+/** Resolve a feature chain starting from `start`. See navigation semantics in header. */
+function resolveFeature(start: MemoElement, segments: string[], model: MemoModel): Value {
+    let val: Value = start;
+    for (let k = 0; k < segments.length; k++) {
+        const seg = segments[k];
+        if (isElement(val)) {
+            if (seg === 'attributes') {
+                const key = segments[++k];
+                if (key === undefined) throw new Error("'attributes' must be followed by an attribute key");
+                val = val.attributes[key] ?? '';
+            } else if (model.relationshipsByType.has(seg.toLowerCase())) {
+                val = navigate(val, seg.toLowerCase(), model);
+            } else if (TYPED_FIELDS.has(seg)) {
+                val = (val as unknown as Record<string, string | undefined>)[seg] ?? '';
+            } else {
+                val = val.attributes[seg] ?? '';
+            }
+        } else if (Array.isArray(val)) {
+            if (!model.relationshipsByType.has(seg.toLowerCase())) {
+                throw new Error(`Cannot resolve attribute '${seg}' on a collection; only relationship navigation chains across collections`);
+            }
+            val = val.flatMap(e => navigate(e, seg.toLowerCase(), model));
+        } else {
+            throw new Error(`Cannot navigate '${seg}' on a primitive value`);
+        }
+    }
+    return val;
 }
 
 /** Elements related to `subject` by a relationship of `relType`, in either direction. */
@@ -225,33 +323,74 @@ function navigate(subject: MemoElement, relType: string, model: MemoModel): Memo
     return out;
 }
 
+function compare(op: CmpOp, l: Value, r: Value): boolean {
+    if (typeof l === 'string' || typeof r === 'string') {
+        const ls = toStringValue(l);
+        const rs = toStringValue(r);
+        switch (op) {
+            case '==': return ls === rs;
+            case '!=': return ls !== rs;
+            case '>=': return ls >= rs;
+            case '<=': return ls <= rs;
+            case '>': return ls > rs;
+            case '<': return ls < rs;
+        }
+    }
+    const ln = toNumber(l);
+    const rn = toNumber(r);
+    switch (op) {
+        case '==': return ln === rn;
+        case '!=': return ln !== rn;
+        case '>=': return ln >= rn;
+        case '<=': return ln <= rn;
+        case '>': return ln > rn;
+        case '<': return ln < rn;
+    }
+}
+
+function isElement(v: Value): v is MemoElement {
+    return typeof v === 'object' && !Array.isArray(v);
+}
 function asCollection(v: Value): MemoElement[] {
     if (Array.isArray(v)) return v;
-    throw new Error('Collection operation applied to non-collection value');
+    throw new Error('Quantifier applied to non-collection value');
+}
+/** Length of a collection or string; the basis for size/notEmpty/isEmpty. */
+function lengthOf(v: Value): number {
+    if (Array.isArray(v)) return v.length;
+    if (typeof v === 'string') return v.length;
+    throw new Error('Collection operation applied to a non-collection, non-string value');
 }
 function toBool(v: Value): boolean {
     if (typeof v === 'boolean') return v;
     if (typeof v === 'number') return v !== 0;
-    return v.length > 0; // a bare collection is truthy iff non-empty
+    if (typeof v === 'string') return v.length > 0;
+    if (Array.isArray(v)) return v.length > 0; // a bare collection is truthy iff non-empty
+    return true; // a single element is truthy
 }
 function toNumber(v: Value): number {
     if (typeof v === 'number') return v;
     if (typeof v === 'boolean') return v ? 1 : 0;
-    return v.length; // a bare collection compares by size
+    if (typeof v === 'string') { const n = Number(v); return Number.isNaN(n) ? 0 : n; }
+    if (Array.isArray(v)) return v.length; // a bare collection compares by size
+    return 1;
+}
+function toStringValue(v: Value): string {
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    if (Array.isArray(v)) return String(v.length);
+    return v.id;
 }
 
-// ─── Langium AST → evaluator AST (EE-1) ───────────────────────────────────────
+// ─── Langium AST → evaluator AST (EE-1 grammar → EE-2 evaluator) ──────────────
 //
 // EE-1 moved expression PARSING into the Langium grammar (memo-sysml.langium,
-// ConstraintExpr rule family). The grammar accepts the full ADR-1-18 subset; the
-// evaluator below realizes the EE-0 evaluable core. Grammar-legal forms whose
-// evaluation is deferred to EE-2 (forAll/exists/select, arithmetic, string
-// comparison, multi-segment feature chains) are rejected here with a clear
-// diagnostic rather than silently mis-evaluated. See ADR-1-18.
+// ConstraintExpr rule family). EE-2 extends the evaluator to the full ADR-1-18
+// subset, so this mapping no longer defers attribute access, quantifiers,
+// arithmetic, string literals, or multi-segment feature chains. See ADR-1-18.
 
 const COMPARISON_OPS = new Set(['==', '!=', '>=', '<=', '>', '<']);
-const COLLECTION_OPS_EVALUABLE = new Set(['size', 'notEmpty', 'isEmpty']);
-const COLLECTION_OPS_DEFERRED = new Set(['forAll', 'exists', 'select']);
+const ARITH_OPS = new Set(['+', '-', '*', '/']);
 
 /** Map a Langium-parsed constraint expression to the evaluator AST. */
 export function langiumExprToNode(expr: ConstraintExpr): Node {
@@ -259,26 +398,18 @@ export function langiumExprToNode(expr: ConstraintExpr): Node {
         case 'LiteralExpr': {
             if (expr.intValue !== undefined) return { kind: 'int', value: parseInt(expr.intValue, 10) };
             if (expr.boolValue !== undefined) return { kind: 'bool', value: expr.boolValue === 'true' };
-            // strValue is grammar-legal but the evaluator has no string semantics yet.
-            throw new Error('String literals in constraints are deferred to EE-2');
+            return { kind: 'str', value: expr.strValue ?? '' };
         }
-        case 'FeatureChain': {
-            if (expr.segments.length === 1) return { kind: 'nav', relType: expr.segments[0].toLowerCase() };
-            throw new Error(
-                `Multi-segment feature chain '${expr.segments.join('.')}' is deferred to EE-2`
-            );
-        }
+        case 'FeatureChain':
+            return { kind: 'feature', root: 'current', segments: [...expr.segments] };
         case 'CollectionOp': {
-            if (COLLECTION_OPS_EVALUABLE.has(expr.op)) {
+            if (COLLECTION_OPS.has(expr.op)) {
                 if (expr.argument) throw new Error(`'->${expr.op}()' takes no argument`);
-                return {
-                    kind: 'method',
-                    target: langiumExprToNode(expr.target),
-                    name: expr.op as 'size' | 'notEmpty' | 'isEmpty',
-                };
+                return { kind: 'method', target: langiumExprToNode(expr.target), name: expr.op as 'size' | 'notEmpty' | 'isEmpty' };
             }
-            if (COLLECTION_OPS_DEFERRED.has(expr.op)) {
-                throw new Error(`Collection op '->${expr.op}()' is deferred to EE-2`);
+            if (QUANTIFIER_OPS.has(expr.op)) {
+                if (!expr.argument) throw new Error(`'->${expr.op}(expr)' requires a sub-expression`);
+                return { kind: 'quant', target: langiumExprToNode(expr.target), name: expr.op as 'forAll' | 'exists' | 'select', body: langiumExprToNode(expr.argument) };
             }
             throw new Error(`Unsupported collection op '->${expr.op}()' (not in ADR-1-18 subset)`);
         }
@@ -288,15 +419,12 @@ export function langiumExprToNode(expr: ConstraintExpr): Node {
             if (expr.op === 'and') return { kind: 'and', left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
             if (expr.op === 'or') return { kind: 'or', left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
             if (COMPARISON_OPS.has(expr.op)) {
-                return {
-                    kind: 'cmp',
-                    op: expr.op as '==' | '!=' | '>=' | '<=' | '>' | '<',
-                    left: langiumExprToNode(expr.left),
-                    right: langiumExprToNode(expr.right),
-                };
+                return { kind: 'cmp', op: expr.op as CmpOp, left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
             }
-            // arithmetic + - * /
-            throw new Error(`Arithmetic operator '${expr.op}' is deferred to EE-2`);
+            if (ARITH_OPS.has(expr.op)) {
+                return { kind: 'arith', op: expr.op as ArithOp, left: langiumExprToNode(expr.left), right: langiumExprToNode(expr.right) };
+            }
+            throw new Error(`Unsupported operator '${expr.op}'`);
         }
     }
 }
