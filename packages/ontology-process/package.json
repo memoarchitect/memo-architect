@@ -2,6 +2,7 @@
   "name": "@memo/ontology-process",
   "version": "0.1.0",
   "description": "MEMO process ontology — regulatory process activities and work products (ISO 14971, IEC 62304, ISO 13485, FDA 21 CFR 820, EU MDR, and more).",
+  "splitTarget": "memo-sysmlv2",
   "type": "module",
   "private": true,
   "scripts": {

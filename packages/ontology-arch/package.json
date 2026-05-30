@@ -2,6 +2,7 @@
   "name": "@memo/ontology-arch",
   "version": "0.1.0",
   "description": "MEMO architecture ontology — 11-layer MBSE backbone (v12 aligned). 56 classes, 45 object properties.",
+  "splitTarget": "memo-sysmlv2",
   "type": "module",
   "private": true,
   "scripts": {
