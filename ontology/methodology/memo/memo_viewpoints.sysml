@@ -1,3 +1,7 @@
-package memo::methodology::viewpoints {
-    public import memo::viewpoints::core::*;
+package memo {
+    package methodology {
+        package viewpoints {
+            public import memo::viewpoints::core::*;
+        }
+    }
 }

@@ -115,41 +115,80 @@ describe('DD-2: no kernel-path standard library imports outside stdlib wrapper (
 const GPCA_MODEL_DIR = resolve(__dirname, '../../../../examples/gpca-pump/model');
 
 describe('DD-4: Syside compatibility — structural invariants', () => {
-    function collectAllSysml(): { relPath: string; text: string; qualifiedName: string | null; imports: string[] }[] {
+    // EE-5: packages are declared in nested form (`package memo { package base { … } }`)
+    // because qualified names in a package *declaration* are non-standard SysML v2 and
+    // are rejected by external tools (sysand/SysIDE/SysON). Full qualified names are
+    // therefore reconstructed from the brace-nesting, not the first `package` line.
+    // `allPackages` = every declared FQN (wrappers included; wrappers are legitimately
+    // split across files). `leafPackages` = content-bearing innermost packages.
+    function extractPackages(text: string): { all: string[]; leaves: string[] } {
+        const clean = text
+            .replace(/\/\*[\s\S]*?\*\//g, '')   // block comments
+            .replace(/\/\/[^\n]*/g, '')          // line comments
+            .replace(/"(?:[^"\\]|\\.)*"/g, '""'); // string literals
+        const tokenRe = /(?:library\s+)?package\s+([A-Za-z_]\w*)\s*\{|\{|\}/g;
+        const all: string[] = [];
+        const leaves: string[] = [];
+        // stack frames: package name (string) or null for a non-package brace
+        const stack: (string | null)[] = [];
+        const hasChild = new Map<string, boolean>();
+        let m: RegExpExecArray | null;
+        while ((m = tokenRe.exec(clean)) !== null) {
+            if (m[1]) {
+                const parentSegs = stack.filter((s): s is string => s !== null);
+                const fqn = [...parentSegs, m[1]].join('::');
+                all.push(fqn);
+                if (parentSegs.length > 0) hasChild.set(parentSegs.join('::'), true);
+                hasChild.set(fqn, hasChild.get(fqn) ?? false);
+                stack.push(m[1]);
+            } else if (m[0] === '{') {
+                stack.push(null);
+            } else {
+                stack.pop();
+            }
+        }
+        for (const fqn of all) if (!hasChild.get(fqn)) leaves.push(fqn);
+        return { all, leaves };
+    }
+
+    function collectAllSysml(): { relPath: string; text: string; allPackages: string[]; leafPackages: string[]; imports: string[] }[] {
         const dirs = [ONTOLOGY_ROOT, GPCA_MODEL_DIR];
-        const entries: { relPath: string; text: string; qualifiedName: string | null; imports: string[] }[] = [];
+        const entries: { relPath: string; text: string; allPackages: string[]; leafPackages: string[]; imports: string[] }[] = [];
         const root = resolve(__dirname, '../../../..');
         for (const dir of dirs) {
             if (!existsSync(dir)) continue;
             for (const f of collectSysmlFiles(dir)) {
                 const text = readFileSync(f, 'utf-8');
                 const relPath = relative(root, f);
-                const pkgMatch = text.match(/^package\s+([\w:]+)\s*\{/m);
-                const qualifiedName = pkgMatch ? pkgMatch[1] : null;
+                const { all, leaves } = extractPackages(text);
                 const imports: string[] = [];
                 const importRe = /(?:private|public)?\s*import\s+([\w:]+)::\*/g;
                 let m: RegExpExecArray | null;
                 while ((m = importRe.exec(text)) !== null) {
                     imports.push(m[1]);
                 }
-                entries.push({ relPath, text, qualifiedName, imports });
+                entries.push({ relPath, text, allPackages: all, leafPackages: leaves, imports });
             }
         }
         return entries;
     }
 
     const allEntries = collectAllSysml();
-    const declaredPackages = new Set(allEntries.map(e => e.qualifiedName).filter(Boolean));
+    // Every declared package FQN (wrappers + leaves) across all files is a valid import target.
+    const declaredPackages = new Set(allEntries.flatMap(e => e.allPackages));
 
-    it('C1: no duplicate package declarations', () => {
+    it('C1: no duplicate leaf (content-bearing) package declarations', () => {
+        // Wrapper packages (memo, memo::base, …) are intentionally shared across files;
+        // only the innermost content packages must be unique.
         const seen = new Map<string, string>();
         const dupes: string[] = [];
         for (const e of allEntries) {
-            if (!e.qualifiedName) continue;
-            if (seen.has(e.qualifiedName)) {
-                dupes.push(`"${e.qualifiedName}" declared in both ${seen.get(e.qualifiedName)} and ${e.relPath}`);
-            } else {
-                seen.set(e.qualifiedName, e.relPath);
+            for (const leaf of e.leafPackages) {
+                if (seen.has(leaf)) {
+                    dupes.push(`"${leaf}" declared in both ${seen.get(leaf)} and ${e.relPath}`);
+                } else {
+                    seen.set(leaf, e.relPath);
+                }
             }
         }
         expect(dupes, dupes.join('\n')).toHaveLength(0);
@@ -167,6 +206,23 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
             }
         }
         expect(unresolved, unresolved.join('\n')).toHaveLength(0);
+    });
+
+    it('EE-5: no qualified names in package declarations (portable SysML v2)', () => {
+        // `package memo::a::b { }` is a MEMO grammar extension rejected by external tools.
+        // Every package declaration must use a single-identifier name and nest instead.
+        const violations: string[] = [];
+        for (const e of allEntries) {
+            const stripped = e.text
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/\/\/[^\n]*/g, '');
+            const re = /(?:^|\n)\s*(?:library\s+)?package\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)+)\s*\{/g;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(stripped)) !== null) {
+                violations.push(`${e.relPath}: qualified package declaration "${m[1]}" — nest packages instead`);
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
     });
 
     it('C3: no Langium-only syntax in SysML files', () => {
@@ -192,15 +248,16 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
     it('C4: ontology directory segments match namespace segments', () => {
         const mismatches: string[] = [];
         for (const e of allEntries) {
-            if (!e.qualifiedName) continue;
             if (!e.relPath.startsWith('ontology/')) continue;
-            const nsSegments = e.qualifiedName.split('::');
-            if (nsSegments[0] !== 'memo') continue;
-            if (nsSegments[1] === 'library') continue;
-            const dirSegments = dirname(e.relPath).split('/');
-            const dirLayer = dirSegments[1];
-            if (dirLayer && nsSegments[1] !== dirLayer) {
-                mismatches.push(`${e.relPath}: dir segment "${dirLayer}" vs namespace "${nsSegments[1]}"`);
+            for (const leaf of e.leafPackages) {
+                const nsSegments = leaf.split('::');
+                if (nsSegments[0] !== 'memo') continue;
+                if (nsSegments[1] === 'library') continue;
+                const dirSegments = dirname(e.relPath).split('/');
+                const dirLayer = dirSegments[1];
+                if (dirLayer && nsSegments[1] !== dirLayer) {
+                    mismatches.push(`${e.relPath}: dir segment "${dirLayer}" vs namespace "${nsSegments[1]}"`);
+                }
             }
         }
         expect(mismatches, mismatches.join('\n')).toHaveLength(0);

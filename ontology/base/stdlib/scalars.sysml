@@ -1,4 +1,10 @@
 // Re-export-only wrapper per ADR-1-13. No new types.
-package memo::base::stdlib::scalars {
-    public import ScalarValues::*;
+package memo {
+    package base {
+        package stdlib {
+            package scalars {
+                public import ScalarValues::*;
+            }
+        }
+    }
 }
