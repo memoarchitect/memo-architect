@@ -35,6 +35,20 @@ The same script runs in `.gitlab-ci.yml` (`sysand-portability` job) on any chang
 `ontology/`. It complements Epic DD's `memo round-trip` / `memo check --sysml-compat`,
 which are MEMO-internal model heuristics — this is the real external-tool round-trip.
 
+## Standard authoring forms the ontology must use
+
+Two MEMO grammar extensions are non-standard SysML v2 and are **banned from the ontology**
+(enforced by `conformance.test.ts`, scoped to `ontology/` + the gpca reference model):
+
+| Non-standard (MEMO extension) | Standard SysML v2 form |
+|---|---|
+| `package memo::a::b { … }` | nested `package memo { package a { package b { … } } }` |
+| bare `title = "x";` | `attribute redefines title = "x";` (or `:>> title = "x";`) |
+
+The MEMO serializer already emits the standard forms; only hand-authored legacy used the
+extensions. The parser still *accepts* the extensions (other tracked inputs such as
+`feedback/` rely on them), so compliance is enforced by test, not by grammar restriction.
+
 ## The one portability rule that matters
 
 External SysML v2 tools require a **single-identifier** name in a package *declaration*.
