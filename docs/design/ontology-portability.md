@@ -51,6 +51,20 @@ rule was removed. The serializer and importers emit nested packages via the shar
 `wrapPackage()` helper, so generated SysML is compliant too. Negative tests in
 `parser.test.ts` assert the grammar rejects both forms.
 
+Being a *subset* only constrains which **non-standard** forms are accepted — the subset
+still grows to cover more **standard** SysML v2 constructs as the ontology needs them. Three
+standard forms the grammar accepts (added for the gpca reference model, issue #516) are:
+
+| Standard SysML v2 form | Used by |
+|---|---|
+| real (rational) literals — `attribute periodMs = 20.0;` | timing/quantity attributes |
+| part feature-value / subsetting members — `part requirement = req1;`, `part protectedAsset :> asset1;` | the source/target ends of `SemanticLink` instances |
+| nested untyped part bodies — `part selectionQuery { … }` | view selection queries |
+
+The part feature-value / subsetting members carry the source/target ends of the
+`SemanticLink` part defs in `memo::core::relationships`; the model builder projects those
+into navigable relationships (see `LINK_RELATION_MAP` in `model/builder.ts`).
+
 ## Extending MEMO — via SysML v2, never via grammar
 
 Domain extension happens through **standard SysML v2 mechanisms**, so any conformant tool

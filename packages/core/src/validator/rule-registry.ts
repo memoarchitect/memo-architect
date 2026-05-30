@@ -166,6 +166,7 @@ export class RuleRegistry {
             case 'StringValue':
                 return value.value?.replace(/^"|"$/g, '') ?? '';
             case 'IntValue':
+            case 'RealValue':
                 return String(value.value);
             case 'BooleanValue':
                 return value.value;
