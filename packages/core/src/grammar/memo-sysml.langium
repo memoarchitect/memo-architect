@@ -290,7 +290,7 @@ PrimaryExpr infers ConstraintExpr:
 // value — the bare `name = value;` shorthand is non-standard and is not accepted.
 // Use `attribute redefines name = value;` (the form the serializer emits).
 UsageBodyMember:
-    AttributeMember | MetadataApplication | DocComment;
+    AttributeMember | PartMember | MetadataApplication | DocComment;
 
 // ─── Attribute member ────────────────────────────────────────────────────────
 // Two forms:
@@ -302,10 +302,15 @@ AttributeMember:
     (':' type=QualifiedName multiplicity=Multiplicity? ';' | '=' value=AttributeValue ';');
 
 AttributeValue:
-    StringValue | IntValue | BooleanValue | SetLiteral | EnumValue;
+    StringValue | RealValue | IntValue | BooleanValue | SetLiteral | EnumValue;
 
 StringValue:
     value=STRING;
+
+// Real (rational) literal, e.g. 20.0 — must precede IntValue so the lexer
+// prefers REAL over INT for the integral part.
+RealValue:
+    value=REAL;
 
 IntValue:
     value=INT;
@@ -324,10 +329,18 @@ EnumValue:
     enumRef=QualifiedName;
 
 // ─── Nested part member ──────────────────────────────────────────────────────
-// e.g. part subsystems : Subsystem[0..*];
+// Three forms:
+//   part subsystems : Subsystem[0..*];        (typed nested part)
+//   part requirement = reqSingleMode;          (feature value binding to a reference)
+//   part protectedAsset :> therapyAsset;       (subsetting an existing element)
+// The binding forms carry the source/target ends of semantic *Link instances,
+// which the model builder projects into navigable relationships.
 
 PartMember:
-    'part' name=MemberName (':' type=QualifiedName)? multiplicity=Multiplicity? ';';
+    'part' name=MemberName
+    (':' type=QualifiedName multiplicity=Multiplicity?)?
+    (bindingOp=('=' | ':>') boundRef=QualifiedName)?
+    ('{' body+=UsageBodyMember* '}' | ';');
 
 // ─── Reference member ───────────────────────────────────────────────────────
 // e.g. ref subject : TraceableElement[*];
@@ -377,4 +390,7 @@ terminal DOC_COMMENT: /doc\s+\/\*[\s\S]*?\*\//;
 
 terminal ID: /[a-zA-Z_][a-zA-Z0-9_]*/;
 terminal STRING: /"(?:[^"\\]|\\.)*"/;
+// REAL must be declared before INT so the longest-match lexer emits a single
+// REAL token for `20.0` rather than INT `.` INT.
+terminal REAL: /[0-9]+\.[0-9]+/;
 terminal INT: /[0-9]+/;

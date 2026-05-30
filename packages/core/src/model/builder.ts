@@ -110,6 +110,63 @@ interface DeferredAllocate {
 }
 
 /**
+ * A semantic *Link usage (a part typed by a SemanticLink subtype) whose two
+ * reference-binding members carry the source/target ends. Deferred so all
+ * referenced elements are known before the edge is projected.
+ */
+interface DeferredLink {
+    /** Element id of the link usage itself */
+    linkId: string;
+    /** Resolved link kind, e.g. "RequirementSatisfactionLink" */
+    linkKind: string;
+    /** Bound reference ends in document order (first = source, second = target) */
+    ends: Array<{ role: string; ref: string }>;
+    /** Attributes on the link (e.g. riskRole) used for role-based relation typing */
+    attributes: Record<string, string>;
+    filePath: string;
+}
+
+/** Forward + optional inverse navigation names for a projected link edge. */
+interface LinkRelation {
+    /** Forward relationship type (source → target) */
+    type: string;
+    /** Optional inverse navigation name (reachable from the target end) */
+    inverse?: string;
+    /** Attribute carrying a role that may override the type (e.g. "riskRole") */
+    roleAttr?: string;
+    /** Role value → relationship type overrides */
+    roleMap?: Record<string, string>;
+}
+
+/**
+ * Projection of each semantic *Link def (memo::core::relationships) onto a
+ * navigable relationship type. Relationship names match the vocabulary the
+ * native KerML rule packs navigate (traceTo, satisfies, verifies, …). Source is
+ * the link's first reference member, target the second (per the def's member
+ * order). Where a rule navigates the same link from both ends under different
+ * names, an `inverse` alias makes the single edge reachable both ways.
+ */
+const LINK_RELATION_MAP: Record<string, LinkRelation> = {
+    RequirementSourceLink: { type: 'traceTo' },
+    RequirementSatisfactionLink: { type: 'satisfiedBy', inverse: 'satisfies' },
+    FunctionAllocationLink: { type: 'allocatedTo' },
+    InterfaceRealizationLink: { type: 'realizedBy' },
+    VerificationLink: { type: 'verifiedBy', inverse: 'verifies' },
+    EvidenceProductionLink: { type: 'produces' },
+    DocumentInclusionLink: { type: 'includedIn' },
+    RiskTraceLink: { type: 'traceTo', roleAttr: 'riskRole', roleMap: { assessedAgainst: 'assessedAgainst' } },
+    ExecutionOrderLink: { type: 'precedes' },
+    MethodologyBindingLink: { type: 'resolvesTo' },
+    AssetThreatLink: { type: 'threatenedBy', inverse: 'exposes' },
+    ThreatVulnerabilityLink: { type: 'exploits' },
+    ThreatScenarioLink: { type: 'realizedBy' },
+    VulnerabilityMitigationLink: { type: 'mitigatedBy' },
+    CyberRequirementDerivationLink: { type: 'derivedFrom' },
+    CyberSafetyTraceLink: { type: 'impactsSafety' },
+    TrustBoundaryCrossingLink: { type: 'crosses' },
+};
+
+/**
  * Resolve a kind definition using registry-first, config-fallback strategy.
  * Returns the KindDefinition and the resolved kind name.
  */
@@ -176,6 +233,7 @@ export function buildMemoModel(
     const deferredFlows: DeferredFlow[] = [];
     const deferredSuccessions: DeferredSuccession[] = [];
     const deferredAllocates: DeferredAllocate[] = [];
+    const deferredLinks: DeferredLink[] = [];
 
     // Phase 1: Build package registry from all documents
     const registry = new PackageRegistry();
@@ -184,7 +242,7 @@ export function buildMemoModel(
     // Phase 2: Extract elements from all documents (populates registry)
     for (const { document, filePath } of documents) {
         const model = document.parseResult.value;
-        extractFromModel(model, filePath, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
+        extractFromModel(model, filePath, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, deferredLinks, errors, registry, registries);
     }
 
     // Phase 3: Resolve connections using the registry (all elements now known)
@@ -206,6 +264,11 @@ export function buildMemoModel(
     // Phase 3d: Resolve allocations
     for (const { allocate, filePath, packageName } of deferredAllocates) {
         resolveAllocate(allocate, filePath, packageName, elements, relationships, registry, allElementIds);
+    }
+
+    // Phase 3e: Project semantic *Link usages into navigable relationships
+    for (const link of deferredLinks) {
+        resolveLink(link, elements, relationships);
     }
 
     // Build indexes
@@ -262,6 +325,12 @@ export function buildMemoModel(
     for (const rel of relationships) {
         if (!relationshipsByType.has(rel.type)) relationshipsByType.set(rel.type, []);
         relationshipsByType.get(rel.type)!.push(rel);
+        // Inverse navigation name (e.g. "satisfies" for a "satisfiedBy" edge) is a
+        // navigable segment too, so register it as a known relationship type.
+        if (rel.inverseType) {
+            if (!relationshipsByType.has(rel.inverseType)) relationshipsByType.set(rel.inverseType, []);
+            relationshipsByType.get(rel.inverseType)!.push(rel);
+        }
         if (!outgoing.has(rel.sourceId)) outgoing.set(rel.sourceId, []);
         outgoing.get(rel.sourceId)!.push(rel);
         if (!incoming.has(rel.targetId)) incoming.set(rel.targetId, []);
@@ -291,13 +360,14 @@ function extractFromModel(
     deferredFlows: DeferredFlow[],
     deferredSuccessions: DeferredSuccession[],
     deferredAllocates: DeferredAllocate[],
+    deferredLinks: DeferredLink[],
     errors: ParseError[],
     registry: PackageRegistry,
     registries?: BuilderRegistries
 ): void {
     for (const member of model.members) {
         if (member.$type === 'PackageDeclaration') {
-            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
+            extractFromPackage(member as PackageDeclaration, filePath, '', config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, deferredLinks, errors, registry, registries);
         }
     }
 }
@@ -312,6 +382,7 @@ function extractFromPackage(
     deferredFlows: DeferredFlow[],
     deferredSuccessions: DeferredSuccession[],
     deferredAllocates: DeferredAllocate[],
+    deferredLinks: DeferredLink[],
     errors: ParseError[],
     registry: PackageRegistry,
     registries?: BuilderRegistries
@@ -321,10 +392,10 @@ function extractFromPackage(
     for (const member of pkg.members) {
         switch (member.$type) {
             case 'PackageDeclaration':
-                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, errors, registry, registries);
+                extractFromPackage(member as PackageDeclaration, filePath, packageName, config, elements, deferredConnections, deferredFlows, deferredSuccessions, deferredAllocates, deferredLinks, errors, registry, registries);
                 break;
             case 'PartUsage':
-                extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry, registries);
+                extractUsage(member as PartUsage, 'part', filePath, packageName, config, elements, registry, registries, deferredLinks);
                 break;
             case 'RequirementUsage':
                 extractUsage(member as RequirementUsage, 'requirement', filePath, packageName, config, elements, registry, registries);
@@ -379,7 +450,8 @@ function extractUsage(
     config: MEMOConfig,
     elements: Map<string, MemoElement>,
     registry: PackageRegistry,
-    registries?: BuilderRegistries
+    registries?: BuilderRegistries,
+    deferredLinks?: DeferredLink[]
 ): void {
     const id = usage.name;
     const typeName = usage.type; // e.g. "Hazard", "Requirement"
@@ -419,6 +491,71 @@ function extractUsage(
 
     elements.set(id, element);
     registry.registerElement(id, packageName);
+
+    // Defer semantic *Link projection: a part typed by a SemanticLink subtype
+    // carries its source/target ends as reference-binding part members.
+    if (deferredLinks && LINK_RELATION_MAP[resolvedKind]) {
+        const ends = extractPartBindings(usage.body);
+        if (ends.length >= 2) {
+            deferredLinks.push({ linkId: id, linkKind: resolvedKind, ends, attributes, filePath });
+        }
+    }
+}
+
+/**
+ * Extract reference-binding part members (`part role = ref;` / `part role :> ref;`)
+ * from a usage body, in document order. These carry the ends of a semantic *Link.
+ */
+function extractPartBindings(body: any[] | undefined): Array<{ role: string; ref: string }> {
+    if (!body) return [];
+    const ends: Array<{ role: string; ref: string }> = [];
+    for (const member of body) {
+        if (member.$type === 'PartMember' && member.boundRef) {
+            ends.push({ role: member.name, ref: member.boundRef });
+        }
+    }
+    return ends;
+}
+
+/**
+ * Project a deferred semantic *Link into a navigable MemoRelationship. The first
+ * bound end is the source, the second the target; the relationship type comes
+ * from LINK_RELATION_MAP (optionally overridden by a role attribute). Skips the
+ * link when either referenced element is unknown.
+ */
+function resolveLink(
+    link: DeferredLink,
+    elements: Map<string, MemoElement>,
+    relationships: MemoRelationship[]
+): void {
+    const mapping = LINK_RELATION_MAP[link.linkKind];
+    if (!mapping) return;
+
+    const [src, tgt] = link.ends;
+    // Reference may be qualified (a::b::c); the element id is the last segment.
+    const sourceId = src.ref.split('::').pop()!;
+    const targetId = tgt.ref.split('::').pop()!;
+    if (!elements.has(sourceId) || !elements.has(targetId)) return;
+
+    // Role attribute (e.g. riskRole) can refine the relationship type.
+    let type = mapping.type;
+    if (mapping.roleAttr && mapping.roleMap) {
+        const roleVal = link.attributes[mapping.roleAttr];
+        if (roleVal && mapping.roleMap[roleVal]) type = mapping.roleMap[roleVal];
+    }
+
+    // The constraint evaluator lowercases navigation segments before matching, so
+    // relationship type names are stored lowercased (matching the connection path).
+    relationships.push({
+        id: `rel-${++relationshipCounter}`,
+        type: type.toLowerCase(),
+        inverseType: mapping.inverse?.toLowerCase(),
+        sourceId,
+        sourceEnd: src.role,
+        targetId,
+        targetEnd: tgt.role,
+        file: link.filePath,
+    });
 }
 
 /**
@@ -827,6 +964,8 @@ function extractAttributeValue(value: any): string {
             return (value as StringValue).value.replace(/^"|"$/g, '');
         case 'IntValue':
             return String((value as IntValue).value);
+        case 'RealValue':
+            return String((value as { value: string }).value);
         case 'BooleanValue':
             return (value as BooleanValue).value;
         case 'EnumValue':

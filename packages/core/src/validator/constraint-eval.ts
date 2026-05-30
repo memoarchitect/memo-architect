@@ -330,14 +330,18 @@ function resolveFeature(start: MemoElement, segments: string[], model: MemoModel
 /** Elements related to `subject` by a relationship of `relType`, in either direction. */
 function navigate(subject: MemoElement, relType: string, model: MemoModel): MemoElement[] {
     const out: MemoElement[] = [];
+    // A relationship matches the requested name by its forward type or its
+    // inverse name; in either case we return the element at the opposite end.
+    const matches = (rel: { type: string; inverseType?: string }) =>
+        rel.type === relType || rel.inverseType === relType;
     for (const rel of model.outgoing.get(subject.id) ?? []) {
-        if (rel.type === relType) {
+        if (matches(rel)) {
             const e = model.elements.get(rel.targetId);
             if (e) out.push(e);
         }
     }
     for (const rel of model.incoming.get(subject.id) ?? []) {
-        if (rel.type === relType) {
+        if (matches(rel)) {
             const e = model.elements.get(rel.sourceId);
             if (e) out.push(e);
         }

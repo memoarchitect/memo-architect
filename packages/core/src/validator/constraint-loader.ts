@@ -93,6 +93,7 @@ function extractValue(value: any): string {
         case 'StringValue':
             return value.value?.replace(/^"|"$/g, '') ?? '';
         case 'IntValue':
+        case 'RealValue':
             return String(value.value);
         case 'BooleanValue':
             return String(value.value);

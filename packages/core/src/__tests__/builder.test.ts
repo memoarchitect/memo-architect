@@ -148,6 +148,111 @@ describe('buildMemoModel', () => {
         expect(model.incoming.get('h1')?.length).toBe(1);
         expect(model.relationshipsByType.get('mitigates')?.length).toBe(1);
     });
+
+    // ─── Semantic *Link projection (issue #516) ──────────────────────────────
+    // Relationships authored as part-typed SemanticLink instances (with
+    // reference-binding part members) are projected into navigable edges.
+
+    it('projects a *Link part usage into a navigable relationship', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement req1 : SystemRequirement { attribute redefines title = "R1"; }
+                part sw1 : Software { attribute redefines name = "SW1"; }
+                part link1 : RequirementSatisfactionLink {
+                    attribute id = "L1";
+                    part requirement = req1;
+                    part satisfyingElement = sw1;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const rel = model.relationships.find(r => r.type === 'satisfiedby');
+        expect(rel).toBeDefined();
+        expect(rel!.sourceId).toBe('req1');
+        expect(rel!.sourceEnd).toBe('requirement');
+        expect(rel!.targetId).toBe('sw1');
+        expect(rel!.targetEnd).toBe('satisfyingElement');
+        // Inverse name makes the single edge reachable from the other end.
+        expect(rel!.inverseType).toBe('satisfies');
+        expect(model.relationshipsByType.get('satisfiedby')?.length).toBe(1);
+        expect(model.relationshipsByType.get('satisfies')?.length).toBe(1);
+    });
+
+    it('accepts the subsetting (:>) binding form for *Link ends', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                part fn1 : Actor { attribute redefines name = "Fn"; }
+                part el1 : Software { attribute redefines name = "El"; }
+                part link1 : FunctionAllocationLink {
+                    attribute id = "L1";
+                    part function :> fn1;
+                    part allocatedElement :> el1;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const rel = model.relationships.find(r => r.type === 'allocatedto');
+        expect(rel).toBeDefined();
+        expect(rel!.sourceId).toBe('fn1');
+        expect(rel!.targetId).toBe('el1');
+    });
+
+    it('refines RiskTraceLink type from its riskRole attribute', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement risk1 : Hazard { attribute redefines title = "Risk"; }
+                requirement matrix1 : Hazard { attribute redefines title = "Matrix"; }
+                part link1 : RiskTraceLink {
+                    attribute id = "L1";
+                    attribute riskRole = "assessedAgainst";
+                    part sourceRiskElement = risk1;
+                    part targetRiskElement = matrix1;
+                }
+                part link2 : RiskTraceLink {
+                    attribute id = "L2";
+                    attribute riskRole = "leadsTo";
+                    part sourceRiskElement = risk1;
+                    part targetRiskElement = matrix1;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        // Mapped role → assessedAgainst; unmapped role falls back to traceTo.
+        expect(model.relationshipsByType.get('assessedagainst')?.length).toBe(1);
+        expect(model.relationshipsByType.get('traceto')?.length).toBe(1);
+    });
+
+    it('skips a *Link whose referenced ends are unknown', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement req1 : SystemRequirement { attribute redefines title = "R1"; }
+                part link1 : RequirementSatisfactionLink {
+                    attribute id = "L1";
+                    part requirement = req1;
+                    part satisfyingElement = missingElement;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+        expect(model.relationships.filter(r => r.type === 'satisfiedby')).toHaveLength(0);
+    });
+
+    it('parses real (float) literal attribute values', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                part sw1 : Software {
+                    attribute redefines name = "SW1";
+                    attribute periodMs = 20.0;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+        expect(model.errors).toHaveLength(0);
+        expect(model.elements.get('sw1')?.attributes['periodMs']).toBe('20.0');
+    });
 });
 
 describe('computeCompleteness', () => {
