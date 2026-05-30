@@ -1,52 +1,48 @@
-// C2 coverage rule packs per regulatory standard — Epic N-3.
-// Each standard has at least one coverage rule ensuring the model
-// addresses the standard's key requirements.
+// C2 coverage rule packs per regulatory standard — Epic EE-3.
+//
+// Coverage rules assert model-level *existence* ("the model must contain at least
+// one X for standard S"). Existence over the whole model is not a single-subject
+// boolean predicate, so it has no `require constraint { … }` body. The legacy
+// `predicate="coverageCheck"` parts were likewise never evaluated by the rule engine
+// (toClosureRule returned undefined for coverageCheck), so they produced no
+// violations — parity is preserved by keeping these as metadata-only constraint defs.
+//
+// Each rule retains its standard / clause / coverageTarget metadata so the coverage
+// catalog and DHF traceability stay intact; the constraint loader skips defs with no
+// require/assert body, so none of these fire. Model-level coverage is reported by the
+// completeness tooling, not the per-subject constraint evaluator. The proprietary
+// `predicate="…"` attribute pattern is removed per EE-3.
 package memo::rules::coverage {
     import memo::base::rules::*;
     import memo::core::enumerations::*;
 
     // ─── ISO 14971: Risk Management ──────────────────────────────────────
 
-    part iso14971HazardCoverage : CoverageConsistencyRule {
+    constraint def iso14971HazardCoverage {
         attribute id = "COV-14971-001";
-        attribute name = "HazardIdentificationCoverage";
-        attribute description = "Model must contain at least one Hazard for risk management";
         attribute appliesTo = "Hazard";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "ISO 14971 clause 5.4 requires hazard identification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "ISO 14971";
         attribute clause = "5.4";
         attribute coverageTarget = "Hazard";
     }
 
-    part iso14971RiskMatrixCoverage : CoverageConsistencyRule {
+    constraint def iso14971RiskMatrixCoverage {
         attribute id = "COV-14971-002";
-        attribute name = "RiskMatrixCoverage";
-        attribute description = "Model must contain a RiskMatrix for risk evaluation";
         attribute appliesTo = "RiskMatrix";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "ISO 14971 clause 5.5 requires risk estimation and evaluation criteria.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "ISO 14971";
         attribute clause = "5.5";
         attribute coverageTarget = "RiskMatrix";
     }
 
-    part iso14971ResidualRiskCoverage : CoverageConsistencyRule {
+    constraint def iso14971ResidualRiskCoverage {
         attribute id = "COV-14971-003";
-        attribute name = "ResidualRiskCoverage";
-        attribute description = "Model must contain residual risk evaluation";
         attribute appliesTo = "OverallResidualRiskEvaluation";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "ISO 14971 clause 8 requires overall residual risk evaluation.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "ISO 14971";
         attribute clause = "8";
         attribute coverageTarget = "OverallResidualRiskEvaluation";
@@ -54,31 +50,21 @@ package memo::rules::coverage {
 
     // ─── IEC 62304: Software Lifecycle ───────────────────────────────────
 
-    part iec62304SwArchCoverage : CoverageConsistencyRule {
+    constraint def iec62304SwArchCoverage {
         attribute id = "COV-62304-001";
-        attribute name = "SoftwareArchitectureCoverage";
-        attribute description = "Model must contain at least one SoftwareComponent";
         attribute appliesTo = "SoftwareComponent";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 62304 clause 5.3 requires software architecture.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "IEC 62304";
         attribute clause = "5.3";
         attribute coverageTarget = "SoftwareComponent";
     }
 
-    part iec62304SwReqCoverage : CoverageConsistencyRule {
+    constraint def iec62304SwReqCoverage {
         attribute id = "COV-62304-002";
-        attribute name = "SoftwareRequirementsCoverage";
-        attribute description = "Model must contain software requirements";
         attribute appliesTo = "SoftwareRequirement";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 62304 clause 5.2 requires software requirements specification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "IEC 62304";
         attribute clause = "5.2";
         attribute coverageTarget = "SoftwareRequirement";
@@ -86,31 +72,21 @@ package memo::rules::coverage {
 
     // ─── FDA 21 CFR 820: Quality System ──────────────────────────────────
 
-    part fda820DesignInputCoverage : CoverageConsistencyRule {
+    constraint def fda820DesignInputCoverage {
         attribute id = "COV-820-001";
-        attribute name = "DesignInputCoverage";
-        attribute description = "Model must contain system requirements as design inputs";
         attribute appliesTo = "SystemRequirement";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "21 CFR 820.30(c) requires design inputs including requirements.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA 21 CFR 820";
         attribute clause = "820.30(c)";
         attribute coverageTarget = "SystemRequirement";
     }
 
-    part fda820DesignVerificationCoverage : CoverageConsistencyRule {
+    constraint def fda820DesignVerificationCoverage {
         attribute id = "COV-820-002";
-        attribute name = "DesignVerificationCoverage";
-        attribute description = "Model must contain verification cases for design verification";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "21 CFR 820.30(f) requires design verification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA 21 CFR 820";
         attribute clause = "820.30(f)";
         attribute coverageTarget = "VerificationCase";
@@ -118,16 +94,11 @@ package memo::rules::coverage {
 
     // ─── ISO 13485: Quality Management ───────────────────────────────────
 
-    part iso13485StakeholderNeedCoverage : CoverageConsistencyRule {
+    constraint def iso13485StakeholderNeedCoverage {
         attribute id = "COV-13485-001";
-        attribute name = "StakeholderNeedCoverage";
-        attribute description = "Model must capture stakeholder needs";
         attribute appliesTo = "StakeholderNeed";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "ISO 13485 clause 7.2 requires determination of customer requirements.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "ISO 13485";
         attribute clause = "7.2";
         attribute coverageTarget = "StakeholderNeed";
@@ -135,16 +106,11 @@ package memo::rules::coverage {
 
     // ─── ISO 14155: Clinical Investigations ──────────────────────────────
 
-    part iso14155UseContextCoverage : CoverageConsistencyRule {
+    constraint def iso14155UseContextCoverage {
         attribute id = "COV-14155-001";
-        attribute name = "UseContextCoverage";
-        attribute description = "Model must define use context for clinical setting";
         attribute appliesTo = "UseContext";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "ISO 14155 requires definition of clinical investigation context.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "ISO 14155";
         attribute clause = "6";
         attribute coverageTarget = "UseContext";
@@ -152,151 +118,101 @@ package memo::rules::coverage {
 
     // ─── FDA Cybersecurity Guidance ──────────────────────────────────────
 
-    part fdaCyberThreatCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberThreatCoverage {
         attribute id = "COV-CYBER-001";
-        attribute name = "ThreatModelCoverage";
-        attribute description = "Model must contain threat analysis";
         attribute appliesTo = "Threat";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires threat modeling.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.A";
         attribute coverageTarget = "Threat";
     }
 
-    part fdaCyberAssetCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberAssetCoverage {
         attribute id = "COV-CYBER-002";
-        attribute name = "CybersecurityAssetCoverage";
-        attribute description = "Model must identify cybersecurity assets";
         attribute appliesTo = "CybersecurityAsset";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires asset identification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.A";
         attribute coverageTarget = "CybersecurityAsset";
     }
 
-    part fdaCyberVulnerabilityCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberVulnerabilityCoverage {
         attribute id = "COV-CYBER-003";
-        attribute name = "VulnerabilityAnalysisCoverage";
-        attribute description = "Model must identify at least one vulnerability";
         attribute appliesTo = "Vulnerability";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires vulnerability analysis.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.B";
         attribute coverageTarget = "Vulnerability";
     }
 
-    part fdaCyberTrustBoundaryCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberTrustBoundaryCoverage {
         attribute id = "COV-CYBER-004";
-        attribute name = "TrustBoundaryCoverage";
-        attribute description = "Model must define trust boundaries";
         attribute appliesTo = "TrustBoundary";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires trust boundary identification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.A";
         attribute coverageTarget = "TrustBoundary";
     }
 
-    part fdaCyberThreatScenarioCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberThreatScenarioCoverage {
         attribute id = "COV-CYBER-005";
-        attribute name = "ThreatScenarioCoverage";
-        attribute description = "Model must include threat scenarios";
         attribute appliesTo = "ThreatScenario";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires threat scenario analysis.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.A";
         attribute coverageTarget = "ThreatScenario";
     }
 
-    part fdaCyberMitigationCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberMitigationCoverage {
         attribute id = "COV-CYBER-006";
-        attribute name = "CyberMitigationCoverage";
-        attribute description = "Model must define cybersecurity mitigations";
         attribute appliesTo = "CyberMitigation";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires risk mitigation.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.C";
         attribute coverageTarget = "CyberMitigation";
     }
 
-    part fdaCyberRiskCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberRiskCoverage {
         attribute id = "COV-CYBER-007";
-        attribute name = "CyberRiskCoverage";
-        attribute description = "Model must include cybersecurity risk assessment";
         attribute appliesTo = "CyberRisk";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires cyber risk assessment.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.B";
         attribute coverageTarget = "CyberRisk";
     }
 
-    part fdaCyberHazardCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberHazardCoverage {
         attribute id = "COV-CYBER-008";
-        attribute name = "CyberHazardCoverage";
-        attribute description = "Model must identify cyber hazards with safety impact";
         attribute appliesTo = "CyberHazard";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires cyber-safety hazard mapping.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.B";
         attribute coverageTarget = "CyberHazard";
     }
 
-    part fdaCyberSecurityReqCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberSecurityReqCoverage {
         attribute id = "COV-CYBER-009";
-        attribute name = "SecurityRequirementCoverage";
-        attribute description = "Model must define security requirements";
         attribute appliesTo = "SecurityRequirement";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires security requirements derivation.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.C";
         attribute coverageTarget = "SecurityRequirement";
     }
 
-    part fdaCyberVerificationCoverage : CoverageConsistencyRule {
+    constraint def fdaCyberVerificationCoverage {
         attribute id = "COV-CYBER-010";
-        attribute name = "CyberVerificationCoverage";
-        attribute description = "Model must include cybersecurity verification cases";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "FDA cybersecurity guidance requires security testing and verification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "FDA Cybersecurity";
         attribute clause = "V.D";
         attribute coverageTarget = "VerificationCase";
@@ -304,16 +220,11 @@ package memo::rules::coverage {
 
     // ─── IEC 62366: Usability Engineering ────────────────────────────────
 
-    part iec62366ActorCoverage : CoverageConsistencyRule {
+    constraint def iec62366ActorCoverage {
         attribute id = "COV-62366-001";
-        attribute name = "ActorCoverage";
-        attribute description = "Model must define user actors for usability analysis";
         attribute appliesTo = "Actor";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "IEC 62366 clause 5.1 requires user profile specification.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "IEC 62366";
         attribute clause = "5.1";
         attribute coverageTarget = "Actor";
@@ -321,16 +232,11 @@ package memo::rules::coverage {
 
     // ─── IEC 60601-1: General Safety ─────────────────────────────────────
 
-    part iec60601HarmCoverage : CoverageConsistencyRule {
+    constraint def iec60601HarmCoverage {
         attribute id = "COV-60601-001";
-        attribute name = "HarmIdentificationCoverage";
-        attribute description = "Model must identify potential harms";
         attribute appliesTo = "Harm";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 60601-1 clause 4.2 requires identification of hazards and harms.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "IEC 60601-1";
         attribute clause = "4.2";
         attribute coverageTarget = "Harm";
@@ -338,16 +244,11 @@ package memo::rules::coverage {
 
     // ─── IEC 82304-1: Health Software ────────────────────────────────────
 
-    part iec82304SwSystemCoverage : CoverageConsistencyRule {
+    constraint def iec82304SwSystemCoverage {
         attribute id = "COV-82304-001";
-        attribute name = "SoftwareSystemCoverage";
-        attribute description = "Model must define the software system";
         attribute appliesTo = "SoftwareSystem";
-        attribute predicate = RulePredicateKind::coverageCheck;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 82304-1 requires health software product definition.";
-        attribute category = RuleCategoryKind::coverage;
         attribute standard = "IEC 82304-1";
         attribute clause = "6.1";
         attribute coverageTarget = "SoftwareSystem";

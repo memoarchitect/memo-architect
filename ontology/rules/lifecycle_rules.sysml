@@ -1,42 +1,39 @@
-// C3 lifecycle rule pack — Epic N-4.
-// Rules that enforce lifecycle-stage sequencing and completeness gates.
+// C3 lifecycle rule pack — Epic EE-3.
+// These rules express lifecycle-stage *ordering* (requirements before architecture,
+// risk before verification, evidence after verification). Ordering across the whole
+// model is not a single-subject boolean predicate, so it has no `require constraint`
+// body — and the legacy parts never enforced anything either (they carried
+// predicate=requireRelationship with no relationshipType, so they matched nothing).
+//
+// They are retained here as metadata-only constraint defs (id, subject, rationale)
+// so the catalog and traceability stay intact; the constraint loader skips defs that
+// have no require/assert body, so they evaluate to nothing — exactly as before.
+// The proprietary `predicate="…"` attribute pattern is removed per EE-3.
 package memo::rules::lifecycle {
     import memo::base::rules::*;
     import memo::core::enumerations::*;
 
-    part reqBeforeArchRule : ConsistencyRule {
+    constraint def reqBeforeArchRule {
         attribute id = "LC-001";
-        attribute name = "RequirementsBeforeArchitecture";
-        attribute description = "Requirements must exist before architecture elements are created";
         attribute appliesTo = "SoftwareComponent";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "IEC 62304 requires requirements to precede architecture decomposition.";
-        attribute category = RuleCategoryKind::lifecycle;
+        // Lifecycle ordering — model-level, no single-subject predicate.
     }
 
-    part riskBeforeVerificationRule : ConsistencyRule {
+    constraint def riskBeforeVerificationRule {
         attribute id = "LC-002";
-        attribute name = "RiskAnalysisBeforeVerification";
-        attribute description = "Risk controls must exist before verification cases are defined";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Risk controls drive verification scope per ISO 14971.";
-        attribute category = RuleCategoryKind::lifecycle;
+        // Lifecycle ordering — model-level, no single-subject predicate.
     }
 
-    part evidenceAfterVerificationRule : ConsistencyRule {
+    constraint def evidenceAfterVerificationRule {
         attribute id = "LC-003";
-        attribute name = "EvidenceAfterVerification";
-        attribute description = "Evidence records should reference completed verification cases";
         attribute appliesTo = "Evidence";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::info;
         attribute rationaleText = "Evidence is produced by executing verification — ordering matters for DHF assembly.";
-        attribute category = RuleCategoryKind::lifecycle;
+        // Lifecycle ordering — model-level, no single-subject predicate.
     }
 }

@@ -43,19 +43,38 @@ export interface NativeConstraint {
     severity: 'error' | 'warning' | 'info';
 }
 
-/** Evaluate one native constraint against every element of its subject kind. */
+/** Constraint metadata without the expression body — used by the AST entry point. */
+export type ConstraintMeta = Omit<NativeConstraint, 'expression'>;
+
+/** A constraint whose boolean body has already been parsed to an evaluator AST. */
+export interface CompiledConstraint extends ConstraintMeta {
+    /** Parsed boolean body; the subject element is the implicit root. */
+    ast: ConstraintNode;
+}
+
+/** Evaluate one native constraint (expression as source string) against its subject kind. */
 export function evaluateNativeConstraint(constraint: NativeConstraint, model: MemoModel): Violation[] {
     const ast = parseExpression(constraint.expression);
-    const subjects = model.elementsByKind.get(constraint.appliesToKind) ?? [];
+    const { expression: _drop, ...meta } = constraint;
+    return evaluateConstraintNode(meta, ast, model);
+}
+
+/**
+ * Evaluate a pre-parsed constraint body against every element of its subject kind.
+ * This is the shared core used by both the string entry point (above) and the
+ * ontology loader, which compiles `constraint def` bodies via {@link langiumExprToNode}.
+ */
+export function evaluateConstraintNode(meta: ConstraintMeta, ast: ConstraintNode, model: MemoModel): Violation[] {
+    const subjects = model.elementsByKind.get(meta.appliesToKind) ?? [];
     const violations: Violation[] = [];
 
     for (const element of subjects) {
         const ok = toBool(evalNode(ast, { root: element, current: element }, model));
         if (!ok) {
             violations.push({
-                ruleId: constraint.id,
-                description: constraint.description,
-                severity: constraint.severity,
+                ruleId: meta.id,
+                description: meta.description,
+                severity: meta.severity,
                 elementId: element.id,
                 elementKind: element.kind,
                 elementName: element.name,
@@ -86,6 +105,9 @@ type Node =
     | { kind: 'and'; left: Node; right: Node }
     | { kind: 'or'; left: Node; right: Node }
     | { kind: 'not'; operand: Node };
+
+/** Public alias for the evaluator AST node (the compiled form of a constraint body). */
+export type ConstraintNode = Node;
 
 /** A scalar element, a collection of elements, or a primitive. */
 type Value = boolean | number | string | MemoElement | MemoElement[];

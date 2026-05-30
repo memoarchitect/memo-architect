@@ -8,8 +8,8 @@ import { resolve } from 'node:path';
 import { readdirSync, statSync, writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import { findConfigFile, parseFiles, buildMemoModel, loadOntologyRegistries } from '@memo/core';
-import type { BuilderRegistries } from '@memo/core';
-import { validateModel } from '@memo/core';
+import type { BuilderRegistries, ParsedDocument } from '@memo/core';
+import { validateModel, collectNativeConstraints } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 import { checkLockFile } from '../lock.js';
@@ -66,10 +66,12 @@ export async function validateCommand(projectDir?: string, options?: { format?: 
 
     // 2b. Load ontology registries (SysML-driven kind/relationship discovery)
     let ontologyRegistries: BuilderRegistries | undefined;
+    let ontologyDocuments: ParsedDocument[] = [];
     try {
         const loadResult = await loadOntologyRegistries(configPath);
         if (loadResult.fileCount > 0) {
             ontologyRegistries = loadResult.registries;
+            ontologyDocuments = loadResult.parsedDocuments;
             const kr = loadResult.registries.kindRegistry;
             const rr = loadResult.registries.relationshipRegistry;
             console.log(chalk.gray(
@@ -104,8 +106,14 @@ export async function validateCommand(projectDir?: string, options?: { format?: 
     const model = buildMemoModel(documents, config, parseErrors, ontologyRegistries);
     console.log(chalk.cyan(`Model: ${model.elements.size} elements, ${model.relationships.length} relationships\n`));
 
-    // 6. Validate
-    const result = validateModel(model, config);
+    // 6. Validate — native ontology constraints (constraint def bodies) + closure rules.
+    //    Constraint defs live in the ontology packages (parsed by loadOntologyRegistries),
+    //    so collect across both ontology and project documents.
+    const nativeConstraints = collectNativeConstraints([...ontologyDocuments, ...documents]);
+    if (nativeConstraints.length > 0) {
+        console.log(chalk.gray(`Native constraints: ${nativeConstraints.length} (from constraint def bodies)`));
+    }
+    const result = validateModel(model, config, nativeConstraints);
     const completeness = computeCompleteness(model, result, config);
 
     const errors = result.violations.filter(v => v.severity === 'error');
