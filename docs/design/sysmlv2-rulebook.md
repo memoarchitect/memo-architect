@@ -37,9 +37,18 @@ This rule book extracts what those models do **consistently** and turns the patt
 
 ## 1. Packaging rules (P)
 
-### P1 · One package per file. File name = trailing namespace segment.
-**Source:** every OMG training file (`Package Example.sysml` declares `package 'Package Example'`), every GfSE model file (`Domain.sysml` declares `package Domain`).
-**MEMO rule:** filename `risk.sysml` → `package memo::arch::risk { … }`. No two top-level packages in one file.
+### P1 · One namespace per file, declared as **nested** packages. File name = trailing namespace segment.
+**Source:** every OMG training file (`Package Example.sysml` declares `package 'Package Example'`), every GfSE model file (`Domain.sysml` declares `package Domain`). Standard SysML v2 / KerML allows only a **single-identifier** name in a package *declaration* — qualified names (`::`) are for *references*, never declarations.
+**MEMO rule:** filename `risk.sysml` → nest the namespace:
+```sysml
+package memo {
+    package arch {
+        package risk { … }
+    }
+}
+```
+The trailing segment (`risk`) is the content-bearing leaf. Do **not** write `package memo::arch::risk { … }` — that flat-qualified form is a former MEMO grammar extension that external SysML v2 tools (sysand, SysIDE, SysON) reject, making the ontology non-portable. The model builder reconstructs the full FQN (`memo::arch::risk`) from the nesting, so addressing and imports are unchanged. Wrapper packages (`memo`, `memo::arch`) are legitimately shared across files; only the leaf must be unique. No two leaf packages in one file.
+**Why:** EE-5 portability gate — `scripts/sysand-portability-check.sh` builds the ontology with an external tool and fails CI if any declaration is non-portable. Enforced by conformance test `EE-5: no qualified names in package declarations`.
 **Lint:** P1.
 
 ### P2 · Use `private import` by default; `public import` only at intentional re-export boundaries.

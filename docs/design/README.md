@@ -9,6 +9,7 @@ Use [../architecture/platform.md](../architecture/platform.md) for canonical arc
 | Doc | Role |
 |---|---|
 | [sysmlv2-rulebook.md](sysmlv2-rulebook.md) | Normative SysML v2 authoring rules for ontology, methodology, and project models |
+| [ontology-portability.md](ontology-portability.md) | Why MEMO ontology constraints are portable standard SysML v2; the EE-5 external-parse gate |
 
 ## Runtime Design
 

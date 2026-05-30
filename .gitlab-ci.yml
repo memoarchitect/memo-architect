@@ -29,17 +29,20 @@ test:
       - node_modules/
       - .turbo/
 
-sysand-build:
+# EE-5 portability gate — proves the constraint-bearing ontology parses in an
+# external SysML v2 tool (sysand). FAILS the pipeline if the external parser
+# reports errors, so a non-portable ontology can never ship as memo-sysmlv2.
+# The script regenerates each project's .meta.json and runs the real `sysand build`.
+sysand-portability:
   stage: package
   image: ghcr.io/sensmetry/sysand:latest
+  before_script:
+    - apt-get update && apt-get install -y python3 unzip || true
   script:
-    - cd ontology
-    - sysand build
-    - mkdir -p ../dist
-    - cp output/*.kpar ../dist/ || true
-    - cd methodology
-    - sysand build
-    - cp output/*.kpar ../../dist/ || true
+    - ./scripts/sysand-portability-check.sh
+    - mkdir -p dist
+    - cp ontology/output/*.kpar dist/ || true
+    - cp ontology/methodology/output/*.kpar dist/ || true
   artifacts:
     paths:
       - dist/*.kpar
@@ -47,3 +50,4 @@ sysand-build:
   rules:
     - changes:
         - ontology/**/*
+        - scripts/sysand-portability-check.sh

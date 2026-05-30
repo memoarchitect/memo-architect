@@ -30,9 +30,12 @@ coverage/
 # Layouts (auto-generated, optional to version)
 .memo/layouts/
 
-# SysAnd local cache
+# SysAnd local cache + generated build metadata
 .sysand/
 sysand_env/
+# .meta.json is regenerated deterministically by scripts/sysand-portability-check.sh
+.meta.json
+output/
 
 # Local feedback
 feedback/
