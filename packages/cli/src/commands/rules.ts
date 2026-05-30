@@ -16,11 +16,11 @@ import {
     buildMemoModel,
     loadOntologyRegistries,
     RuleRegistry,
-    ConstraintInterpreter,
-    evaluateClosureRules,
+    collectNativeConstraints,
+    evaluateConstraintNode,
 } from '@memo/core';
 // parseFiles still needed by rulesCheckCommand for project SysML files
-import type { BuilderRegistries, ClosureRule } from '@memo/core';
+import type { BuilderRegistries, ParsedDocument } from '@memo/core';
 import { loadAndResolveConfig } from '../server/config-resolver.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -55,12 +55,14 @@ async function loadContext(projectDir?: string) {
     // Load ontology registries
     let ontologyRegistries: BuilderRegistries | undefined;
     let ruleRegistry: RuleRegistry | undefined;
+    let ontologyDocuments: ParsedDocument[] = [];
     try {
         const loadResult = await loadOntologyRegistries(configPath);
         if (loadResult.fileCount > 0) {
             ontologyRegistries = loadResult.registries;
+            ontologyDocuments = loadResult.parsedDocuments;
 
-            // Build rule registry from already-parsed ontology documents
+            // Build rule registry from already-parsed ontology documents (discovery/catalog)
             ruleRegistry = new RuleRegistry();
             ruleRegistry.populateFromDocuments(loadResult.parsedDocuments);
         }
@@ -68,14 +70,7 @@ async function loadContext(projectDir?: string) {
         // Ontology loading optional
     }
 
-    // Build constraint interpreter merging config + ontology rules
-    const interpreter = new ConstraintInterpreter();
-    interpreter.loadFromConfig(config.closureRules);
-    if (ruleRegistry) {
-        interpreter.loadFromRegistry(ruleRegistry);
-    }
-
-    return { cwd, configPath, config, ontologyRegistries, ruleRegistry, interpreter };
+    return { cwd, configPath, config, ontologyRegistries, ruleRegistry, ontologyDocuments };
 }
 
 function severityIcon(severity: string): string {
@@ -96,7 +91,7 @@ export async function rulesListCommand(
     options?: { format?: RulesFormat; category?: string }
 ): Promise<void> {
     const format = options?.format || 'text';
-    const { interpreter, ruleRegistry } = await loadContext(projectDir);
+    const { ruleRegistry } = await loadContext(projectDir);
 
     // Combine all rules from all sources
     const allRules = ruleRegistry?.entries() ?? [];
@@ -145,7 +140,7 @@ export async function rulesCheckCommand(
     options?: { format?: RulesFormat }
 ): Promise<void> {
     const format = options?.format || 'text';
-    const { cwd, config, ontologyRegistries, interpreter } = await loadContext(projectDir);
+    const { cwd, config, ontologyRegistries, ontologyDocuments } = await loadContext(projectDir);
 
     // Parse project SysML files
     const sysmlFiles = findSysmlFiles(cwd);
@@ -157,9 +152,21 @@ export async function rulesCheckCommand(
     const parseResult = await parseFiles(sysmlFiles);
     const model = buildMemoModel(parseResult.documents, config, parseResult.errors, ontologyRegistries);
 
-    // Get merged rules from interpreter
-    const rules = interpreter.toClosureRules();
-    const result = evaluateClosureRules(model, rules);
+    // Evaluate native `constraint def` bodies (KerML expressions) across ontology + project docs.
+    const constraints = collectNativeConstraints([...ontologyDocuments, ...parseResult.documents]);
+    let rulesPassed = 0;
+    const violations = [];
+    for (const constraint of constraints) {
+        const ruleViolations = evaluateConstraintNode(constraint, constraint.ast, model);
+        if (ruleViolations.length === 0) rulesPassed++;
+        violations.push(...ruleViolations);
+    }
+    const result = {
+        rulesEvaluated: constraints.length,
+        rulesPassed,
+        violations,
+        timestamp: Date.now(),
+    };
 
     if (format === 'json') {
         console.log(JSON.stringify(result, null, 2));
@@ -205,11 +212,11 @@ export async function rulesExplainCommand(
     options?: { format?: RulesFormat }
 ): Promise<void> {
     const format = options?.format || 'text';
-    const { ruleRegistry, interpreter } = await loadContext(projectDir);
+    const { ruleRegistry, ontologyDocuments } = await loadContext(projectDir);
 
-    // Look up in registry first, then in interpreter
+    // Look up in registry first (catalog metadata), then in native constraint defs.
     const registryEntry = ruleRegistry?.getRule(ruleId);
-    const constraint = interpreter.getConstraints().find(c => c.rule.id === ruleId);
+    const constraint = collectNativeConstraints(ontologyDocuments).find(c => c.id === ruleId);
 
     if (!registryEntry && !constraint) {
         console.error(chalk.red(`❌ Rule "${ruleId}" not found.`));
@@ -217,7 +224,8 @@ export async function rulesExplainCommand(
     }
 
     if (format === 'json') {
-        console.log(JSON.stringify(registryEntry ?? constraint?.rule, null, 2));
+        const payload = registryEntry ?? (constraint && { id: constraint.id, description: constraint.description, appliesTo: constraint.appliesToKind, severity: constraint.severity });
+        console.log(JSON.stringify(payload, null, 2));
         return;
     }
 
@@ -256,12 +264,10 @@ export async function rulesExplainCommand(
             console.log(`  ${chalk.cyan('Condition:')}    ${attrs['conditionAttribute']} ${attrs['conditionOperator']} ${attrs['conditionValues']}`);
         }
     } else if (constraint) {
-        const rule = constraint.rule;
-        console.log(`  ${chalk.cyan('Description:')}  ${rule.description}`);
-        console.log(`  ${chalk.cyan('Entity:')}       ${rule.entity}`);
-        console.log(`  ${chalk.cyan('Severity:')}     ${rule.severity}`);
-        console.log(`  ${chalk.cyan('Source:')}       ${constraint.source}`);
-        console.log(`  ${chalk.cyan('Rule type:')}    ${rule.rule.type}`);
+        console.log(`  ${chalk.cyan('Description:')}  ${constraint.description}`);
+        console.log(`  ${chalk.cyan('Applies to:')}   ${constraint.appliesToKind}`);
+        console.log(`  ${chalk.cyan('Severity:')}     ${constraint.severity}`);
+        console.log(`  ${chalk.cyan('Source:')}       native constraint def`);
     }
 }
 

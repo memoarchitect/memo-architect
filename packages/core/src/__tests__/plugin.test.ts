@@ -40,7 +40,6 @@ function createMockContext(): PluginContext {
         projectName: 'Test',
         projectType: 'device',
         architectureLayers: [],
-        closureRules: [],
         viewpoints: [],
         workflows: [],
     };

@@ -73,7 +73,7 @@ export async function exportJsonCommand(options: {
 
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
     const model = buildMemoModel(documents, config, errors);
-    const validation = validateModel(model, config);
+    const validation = validateModel(model);
     const completeness = computeCompleteness(model, validation, config);
     const dto = modelToDTO(model, { viewpoints, architectureLayers });
 

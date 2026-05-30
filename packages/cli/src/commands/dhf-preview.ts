@@ -194,7 +194,7 @@ export async function dhfPreviewCommand(options: { port?: number }): Promise<voi
 
             const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
             const model = buildMemoModel(documents, config, errors, ontologyRegistries);
-            const validation = validateModel(model, config);
+            const validation = validateModel(model);
             const completeness = computeCompleteness(model, validation, config);
             queryCtx = createQueryContext(model, validation, completeness, config);
             dhfConfig = loadDhfConfigV2(cwd) ?? {};

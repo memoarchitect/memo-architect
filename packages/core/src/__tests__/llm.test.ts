@@ -163,7 +163,6 @@ describe('serializeOntologyContext', () => {
                 SystemRequirement: { label: 'System Requirement', layer: 'requirements', sysmlConstruct: 'requirement def' },
             },
             architectureLayers: [{ id: 'risk', label: 'Risk', color: '#E53E3E' }],
-            closureRules: [],
             viewpoints: [],
             workflows: [],
         };
@@ -199,7 +198,6 @@ describe('generateSysml', () => {
             projectType: 'device',
             kinds: { Hazard: { label: 'Hazard', layer: 'risk', sysmlConstruct: 'part def' } },
             architectureLayers: [],
-            closureRules: [],
             viewpoints: [],
             workflows: [],
         };
@@ -220,7 +218,6 @@ describe('generateSysml', () => {
             projectName: 'Test',
             projectType: 'device',
             architectureLayers: [],
-            closureRules: [],
             viewpoints: [],
             workflows: [],
         };

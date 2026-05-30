@@ -6,11 +6,9 @@ import type { Model } from '../language/generated/ast.js';
 import type { ParsedDocument } from '../model/parser-utils.js';
 import { collectNativeConstraints } from '../validator/constraint-loader.js';
 import { evaluateConstraintNode } from '../validator/constraint-eval.js';
-import { evaluateClosureRules } from '../validator/rule-engine.js';
-import type { ClosureRule } from '../model/config.js';
 import type { MemoModel, MemoElement, MemoRelationship } from '../model/semantic.js';
 
-// ─── EE-3: ontology constraint def loader + ClosureRule equivalence ───────────
+// ─── EE-3: ontology constraint def loader ─────────────────────────────────────
 // collectNativeConstraints discovers native `constraint def` bodies (the EE-3
 // replacement for the proprietary ConsistencyRule predicate-attribute parts) and
 // compiles each into an evaluator AST with its rule metadata.
@@ -133,17 +131,12 @@ describe('collectNativeConstraints', () => {
     });
 });
 
-describe('native constraint ↔ ClosureRule equivalence (EE-3 parity)', () => {
-    it('requireRelationship: native and closure paths flag the same elements', async () => {
+describe('native constraint evaluation (EE-3 rule semantics)', () => {
+    it('requireRelationship: flags subjects missing the navigation', async () => {
         const h1 = elem('Hazard', 'H1');                 // unmitigated → violation
         const h2 = elem('Hazard', 'H2');                 // mitigated → ok
         const rc = elem('RiskControl', 'RC1');
         const m = buildModel([h1, h2, rc], [{ type: 'mitigates', from: h2.id, to: rc.id }]);
-
-        const closure = evaluateClosureRules(m, [{
-            id: 'CR-MED-001', description: 'hazard needs mitigation', entity: 'Hazard',
-            rule: { type: 'requireRelationship', relationship: 'mitigates', min: 1 }, severity: 'error',
-        } as ClosureRule]);
 
         const [native] = await load(`package P { constraint def hazardMitigationRule {
             attribute id = "CR-MED-001"; attribute appliesTo = "Hazard";
@@ -152,22 +145,15 @@ describe('native constraint ↔ ClosureRule equivalence (EE-3 parity)', () => {
             require constraint { mitigates->size() >= 1 } } }`);
         const nativeViolations = evaluateConstraintNode(native, native.ast, m);
 
-        const ids = (vs: { elementId: string }[]) => vs.map((v) => v.elementId).sort();
-        expect(ids(nativeViolations)).toEqual(ids(closure.violations));
         expect(nativeViolations).toHaveLength(1);
         expect(nativeViolations[0].elementName).toBe('H1');
         expect(nativeViolations[0].severity).toBe('error');
     });
 
-    it('requireAttribute: native attributes.X != "" matches closure requireAttribute', async () => {
+    it('requireAttribute: native attributes.X != "" flags empty attributes', async () => {
         const ok = elem('SoftwareComponent', 'SC1', { safetyClass: 'C' });
         const bad = elem('SoftwareComponent', 'SC2', {});
         const m = buildModel([ok, bad]);
-
-        const closure = evaluateClosureRules(m, [{
-            id: 'CR-MED-020', description: 'needs safety class', entity: 'SoftwareComponent',
-            rule: { type: 'requireAttribute', attribute: 'safetyClass' }, severity: 'error',
-        } as ClosureRule]);
 
         const [native] = await load(`package P { constraint def swSafety {
             attribute id = "CR-MED-020"; attribute appliesTo = "SoftwareComponent";
@@ -175,8 +161,6 @@ describe('native constraint ↔ ClosureRule equivalence (EE-3 parity)', () => {
             require constraint { attributes.safetyClass != "" } } }`);
         const nativeViolations = evaluateConstraintNode(native, native.ast, m);
 
-        const ids = (vs: { elementId: string }[]) => vs.map((v) => v.elementId).sort();
-        expect(ids(nativeViolations)).toEqual(ids(closure.violations));
         expect(nativeViolations).toHaveLength(1);
         expect(nativeViolations[0].elementName).toBe('SC2');
     });
