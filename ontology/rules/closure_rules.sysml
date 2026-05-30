@@ -1,293 +1,162 @@
-// Closure consistency rules — migrated from YAML per Epic N-2.
-// Each rule corresponds to a ClosureRule that was previously defined in
-// memo.rules.yaml or config closureRules arrays.
+// Closure consistency rules — native KerML constraints (Epic EE-3).
+// Migrated from the proprietary ConsistencyRule predicate-attribute parts to
+// native `constraint def` bodies whose `require constraint { … }` expression is
+// evaluated directly by the KerML constraint evaluator (validator/constraint-eval.ts).
+//
+// Rule metadata (id, appliesTo subject kind, severity, rationale) travels as plain
+// attribute members; the boolean body is the rule. Per the EE-3 mapping the native
+// surface drops the legacy `direction`/`relatedKinds` qualifiers — navigation counts
+// related elements in either direction. Cross-element `uniqueAttribute` (CR-MED-012)
+// has no single-subject expression and stays an engine-level exception (see note).
 package memo::rules::closure {
     import memo::base::rules::*;
     import memo::core::enumerations::*;
 
     // ─── Risk Layer Rules ────────────────────────────────────────────────
 
-    part hazardMitigationRule : RelationshipConsistencyRule {
+    constraint def hazardMitigationRule {
         attribute id = "CR-MED-001";
-        attribute name = "HazardMustHaveMitigation";
-        attribute description = "Every Hazard must have at least one mitigates relationship";
         attribute appliesTo = "Hazard";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "ISO 14971 requires each identified hazard to have risk control measures.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "mitigates";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "any";
-        attribute relatedKinds = "";
+        require constraint { mitigates->size() >= 1 }
     }
 
-    part hazardSeverityRule : AttributeConsistencyRule {
+    constraint def hazardSeverityRule {
         attribute id = "CR-MED-002";
-        attribute name = "HazardMustHaveSeverity";
-        attribute description = "Every Hazard must have a severity attribute";
         attribute appliesTo = "Hazard";
-        attribute predicate = RulePredicateKind::requireAttribute;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Hazard severity is required for risk estimation per ISO 14971.";
-        attribute category = RuleCategoryKind::closure;
-        attribute targetAttribute = "severity";
+        require constraint { attributes.severity != "" }
     }
 
-    part riskControlVerificationRule : RelationshipConsistencyRule {
+    constraint def riskControlVerificationRule {
         attribute id = "CR-MED-003";
-        attribute name = "RiskControlMustHaveVerification";
-        attribute description = "Every RiskControl must trace to at least one VerificationCase";
         attribute appliesTo = "RiskControl";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Risk controls shall be verified per ISO 14971 clause 7.4.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "verifies";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "incoming";
-        attribute relatedKinds = "VerificationCase";
+        require constraint { verifies->size() >= 1 }
     }
 
-    part riskBeforeMatrixRule : RelationshipConsistencyRule {
+    constraint def riskBeforeMatrixRule {
         attribute id = "CR-MED-004";
-        attribute name = "RiskBeforeMustLinkMatrix";
-        attribute description = "Every RiskBeforeMitigation must reference a RiskMatrix";
         attribute appliesTo = "RiskBeforeMitigation";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Pre-mitigation risk must be assessed against a risk acceptability matrix.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "assessedAgainst";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "RiskMatrix";
+        require constraint { assessedAgainst->size() >= 1 }
     }
 
     // ─── Requirements Layer Rules ────────────────────────────────────────
 
-    part sysReqTraceRule : RelationshipConsistencyRule {
+    constraint def sysReqTraceRule {
         attribute id = "CR-MED-010";
-        attribute name = "SystemReqMustTraceToNeed";
-        attribute description = "Every SystemRequirement must trace to at least one StakeholderNeed";
         attribute appliesTo = "SystemRequirement";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Requirements shall be traceable to stakeholder needs per ISO 13485.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "traceTo";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "StakeholderNeed";
+        require constraint { traceTo->size() >= 1 }
     }
 
-    part swReqTraceRule : RelationshipConsistencyRule {
+    constraint def swReqTraceRule {
         attribute id = "CR-MED-011";
-        attribute name = "SoftwareReqMustTraceToSysReq";
-        attribute description = "Every SoftwareRequirement must trace to a SystemRequirement";
         attribute appliesTo = "SoftwareRequirement";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Software requirements derive from system requirements per IEC 62304.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "traceTo";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "SystemRequirement";
+        require constraint { traceTo->size() >= 1 }
     }
 
-    part reqIdUniqueRule : AttributeConsistencyRule {
-        attribute id = "CR-MED-012";
-        attribute name = "RequirementIdMustBeUnique";
-        attribute description = "Requirement id attribute must be unique across all requirements";
-        attribute appliesTo = "Requirement";
-        attribute predicate = RulePredicateKind::uniqueAttribute;
-        attribute strength = RuleStrengthKind::required;
-        attribute severity = RuleSeverityKind::error;
-        attribute rationaleText = "Unique identifiers required for traceability.";
-        attribute category = RuleCategoryKind::closure;
-        attribute targetAttribute = "id";
-    }
+    // CR-MED-012 (RequirementIdMustBeUnique) is intentionally omitted from the native
+    // constraint set: cross-element uniqueness is not a single-subject predicate and
+    // cannot be expressed as a `require constraint { … }` body over one Requirement.
+    // It remains an engine-level check (future model-level constraint support).
+    // Do not reintroduce the `predicate="uniqueAttribute"` part.
 
     // ─── Architecture Layer Rules ────────────────────────────────────────
 
-    part swComponentSafetyClassRule : AttributeConsistencyRule {
+    constraint def swComponentSafetyClassRule {
         attribute id = "CR-MED-020";
-        attribute name = "SoftwareComponentMustHaveSafetyClass";
-        attribute description = "Every SoftwareComponent must have safetyClassification attribute";
         attribute appliesTo = "SoftwareComponent";
-        attribute predicate = RulePredicateKind::requireAttribute;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 62304 requires safety classification for all software items.";
-        attribute category = RuleCategoryKind::closure;
-        attribute targetAttribute = "safetyClassification";
+        require constraint { attributes.safetyClassification != "" }
     }
 
-    part swComponentReqRule : RelationshipConsistencyRule {
+    constraint def swComponentReqRule {
         attribute id = "CR-MED-021";
-        attribute name = "SoftwareComponentMustSatisfyReq";
-        attribute description = "Every SoftwareComponent must satisfy at least one SoftwareRequirement";
         attribute appliesTo = "SoftwareComponent";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Software items shall be linked to their requirements per IEC 62304.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "satisfies";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "SoftwareRequirement";
+        require constraint { satisfies->size() >= 1 }
     }
 
-    part logicalFunctionAllocationRule : RelationshipConsistencyRule {
+    constraint def logicalFunctionAllocationRule {
         attribute id = "CR-MED-022";
-        attribute name = "LogicalFunctionMustBeAllocated";
-        attribute description = "Every LogicalFunction must be allocated to a SoftwareComponent or HardwareAssembly";
         attribute appliesTo = "LogicalFunction";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Functions should be allocated to implementation elements.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "allocatedTo";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "SoftwareComponent,HardwareAssembly";
+        require constraint { allocatedTo->size() >= 1 }
     }
 
     // ─── Verification Layer Rules ────────────────────────────────────────
 
-    part verificationCaseMethodRule : AttributeConsistencyRule {
+    constraint def verificationCaseMethodRule {
         attribute id = "CR-MED-030";
-        attribute name = "VerificationCaseMustHaveMethod";
-        attribute description = "Every VerificationCase must specify a verification method";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::requireAttribute;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Verification method (test, analysis, inspection, demonstration) required per IEC 62304.";
-        attribute category = RuleCategoryKind::closure;
-        attribute targetAttribute = "verificationMethod";
+        require constraint { attributes.verificationMethod != "" }
     }
 
-    part verificationCaseTargetRule : RelationshipConsistencyRule {
+    constraint def verificationCaseTargetRule {
         attribute id = "CR-MED-031";
-        attribute name = "VerificationCaseMustHaveTarget";
-        attribute description = "Every VerificationCase must verify at least one requirement or risk control";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Verification cases must be linked to verifiable items.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "verifies";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "";
+        require constraint { verifies->size() >= 1 }
     }
 
-    part evidenceProductionRule : RelationshipConsistencyRule {
+    constraint def evidenceProductionRule {
         attribute id = "CR-MED-032";
-        attribute name = "VerificationCaseMustProduceEvidence";
-        attribute description = "Every VerificationCase should produce evidence";
         attribute appliesTo = "VerificationCase";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Verification results should be documented as evidence records.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "produces";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "Evidence";
+        require constraint { produces->size() >= 1 }
     }
 
     // ─── Cybersecurity Layer Rules ───────────────────────────────────────
 
-    part threatMitigationRule : RelationshipConsistencyRule {
+    constraint def threatMitigationRule {
         attribute id = "CR-MED-040";
-        attribute name = "ThreatMustHaveMitigation";
-        attribute description = "Every Threat must have at least one CyberMitigation";
         attribute appliesTo = "Threat";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "FDA cybersecurity guidance requires threat mitigation.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "mitigatedBy";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "outgoing";
-        attribute relatedKinds = "CyberMitigation";
+        require constraint { mitigatedBy->size() >= 1 }
     }
 
-    part assetThreatLinkRule : RelationshipConsistencyRule {
+    constraint def assetThreatLinkRule {
         attribute id = "CR-MED-041";
-        attribute name = "AssetMustLinkToThreat";
-        attribute description = "Every CybersecurityAsset must link to at least one Threat";
         attribute appliesTo = "CybersecurityAsset";
-        attribute predicate = RulePredicateKind::requireRelationship;
-        attribute strength = RuleStrengthKind::recommended;
         attribute severity = RuleSeverityKind::warning;
         attribute rationaleText = "Assets should have threat analysis per FDA cybersecurity guidance.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "threatenedBy";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "incoming";
-        attribute relatedKinds = "Threat";
+        require constraint { threatenedBy->size() >= 1 }
     }
 
     // ─── Interface Rules ─────────────────────────────────────────────────
 
-    part logicalInterfaceDirectionRule : AttributeConsistencyRule {
+    constraint def logicalInterfaceDirectionRule {
         attribute id = "CR-MED-050";
-        attribute name = "LogicalInterfaceMustHaveDirection";
-        attribute description = "Every LogicalInterface must specify direction";
         attribute appliesTo = "LogicalInterface";
-        attribute predicate = RulePredicateKind::requireAttribute;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "Interface direction required for integration analysis.";
-        attribute category = RuleCategoryKind::closure;
-        attribute targetAttribute = "direction";
+        require constraint { attributes.direction != "" }
     }
 
     // ─── Conditional Rules ───────────────────────────────────────────────
 
-    part safetyClassCVerificationRule : ConditionalConsistencyRule {
+    constraint def safetyClassCVerificationRule {
         attribute id = "CR-MED-101";
-        attribute name = "ClassCSoftwareMustHaveFormalVerification";
-        attribute description = "Class C software components must have formal verification";
         attribute appliesTo = "SoftwareComponent";
-        attribute predicate = RulePredicateKind::conditionalRequireRelationship;
-        attribute strength = RuleStrengthKind::required;
         attribute severity = RuleSeverityKind::error;
         attribute rationaleText = "IEC 62304 requires rigorous verification for Class C software.";
-        attribute category = RuleCategoryKind::closure;
-        attribute relationshipType = "verifiedBy";
-        attribute minCount = "1";
-        attribute maxCount = "";
-        attribute direction = "incoming";
-        attribute relatedKinds = "VerificationCase";
-        attribute conditionAttribute = "safetyClassification";
-        attribute conditionOperator = "eq";
-        attribute conditionValues = "C";
+        require constraint { not(attributes.safetyClassification == "C") or verifiedBy->size() >= 1 }
     }
 }

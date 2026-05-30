@@ -12,25 +12,39 @@
 import type { MEMOConfig, ClosureRule, ClosureRuleDefinition, RuleCondition, RelationshipRuleDirection } from '../model/config.js';
 import type { MemoModel, MemoElement, MemoRelationship } from '../model/semantic.js';
 import type { Violation, ValidationResult } from './types.js';
+import type { CompiledConstraint } from './constraint-eval.js';
+import { evaluateConstraintNode } from './constraint-eval.js';
 import { validateBehavior } from './behavior-validator.js';
 
 /**
- * Full model validation: closure rules + built-in structural checks.
+ * Full model validation: native constraints + closure rules + structural checks.
  * Preferred entry point — combines all validation passes.
  *
- * Accepts either a MEMOConfig (backward compat) or a plain ClosureRule[] array.
+ * @param configOrRules     a MEMOConfig (backward compat) or a plain ClosureRule[] array.
+ * @param nativeConstraints constraints compiled from ontology `constraint def` bodies
+ *                          (see collectNativeConstraints). Epic EE-3 evaluates these
+ *                          as native KerML expressions alongside the legacy closure path.
  */
 export function validateModel(
     model: MemoModel,
-    configOrRules: MEMOConfig | ClosureRule[]
+    configOrRules: MEMOConfig | ClosureRule[],
+    nativeConstraints: CompiledConstraint[] = []
 ): ValidationResult {
     const closureResult = evaluateClosureRules(model, configOrRules);
     const behaviorViolations = validateBehavior(model);
 
+    const nativeViolations: Violation[] = [];
+    let nativePassed = 0;
+    for (const constraint of nativeConstraints) {
+        const violations = evaluateConstraintNode(constraint, constraint.ast, model);
+        if (violations.length === 0) nativePassed++;
+        nativeViolations.push(...violations);
+    }
+
     return {
-        violations: [...closureResult.violations, ...behaviorViolations],
-        rulesEvaluated: closureResult.rulesEvaluated + (behaviorViolations.length > 0 ? 3 : 3),
-        rulesPassed: closureResult.rulesPassed,
+        violations: [...closureResult.violations, ...behaviorViolations, ...nativeViolations],
+        rulesEvaluated: closureResult.rulesEvaluated + 3 + nativeConstraints.length,
+        rulesPassed: closureResult.rulesPassed + nativePassed,
         timestamp: Date.now(),
     };
 }

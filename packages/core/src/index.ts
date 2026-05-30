@@ -44,6 +44,8 @@ export * from './validator/rule-engine.js';
 export * from './validator/behavior-validator.js';
 export * from './validator/rule-registry.js';
 export * from './validator/constraint-interpreter.js';
+export * from './validator/constraint-eval.js';
+export * from './validator/constraint-loader.js';
 export * from './completeness/tracker.js';
 
 // ─── Analysis ────────────────────────────────────────────────────────────────
