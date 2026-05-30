@@ -2,6 +2,7 @@
   "name": "@memo/medical-modeling-profile",
   "version": "2.0.0",
   "description": "MEMO medical modeling profile package — closure rules, viewpoints, and starter templates on top of @memo/ontology-arch and @memo/ontology-process",
+  "splitTarget": "memo-sysmlv2",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
