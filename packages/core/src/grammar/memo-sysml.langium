@@ -32,8 +32,12 @@ NamespaceMember:
 
 // ─── Package ─────────────────────────────────────────────────────────────────
 
+// Standard SysML v2: a package DECLARATION takes a single-identifier name.
+// Qualified names (`::`) are for references only; deep namespaces are expressed by
+// NESTING packages (`package memo { package arch { … } }`). The model builder
+// reconstructs the full FQN from the nesting (builder.ts: parentPackage::pkg.name).
 PackageDeclaration:
-    isLibrary?='library'? 'package' name=QualifiedName '{'
+    isLibrary?='library'? 'package' name=ID '{'
         members+=PackageMember*
     '}';
 
@@ -269,11 +273,11 @@ PrimaryExpr infers ConstraintExpr:
     | {infer FeatureChain} segments+=ID ('.' segments+=ID)*
     | '(' OrExpr ')';
 
+// Standard SysML v2 requires a redefinition operator (`redefines` / `:>>`) to bind a
+// value — the bare `name = value;` shorthand is non-standard and is not accepted.
+// Use `attribute redefines name = value;` (the form the serializer emits).
 UsageBodyMember:
-    AttributeMember | ShorthandRedefinition | DocComment;
-
-ShorthandRedefinition:
-    name=MemberName '=' value=AttributeValue ';';
+    AttributeMember | DocComment;
 
 // ─── Attribute member ────────────────────────────────────────────────────────
 // Two forms:
