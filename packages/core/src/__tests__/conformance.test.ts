@@ -208,6 +208,30 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
         expect(unresolved, unresolved.join('\n')).toHaveLength(0);
     });
 
+    it('EE-5: no bare shorthand redefinitions (standard SysML v2 requires `attribute redefines`/`:>>`)', () => {
+        // `title = "x";` (a bare feature value with no keyword/operator) is a MEMO
+        // grammar extension. Standard SysML v2 requires the redefinition operator:
+        // `attribute redefines title = "x";` or `:>> title = "x";`. The MEMO serializer
+        // already emits the `attribute redefines` form — authored files must match.
+        const violations: string[] = [];
+        // A statement line whose first token is immediately followed by ` = ` is a bare
+        // assignment; legitimate forms lead with `attribute`/`ref`/`part`/`:>>`, so their
+        // first token is the keyword, not the assigned name.
+        const re = /^[ \t]+([A-Za-z_]\w*) = [^=]/gm;
+        for (const e of allEntries) {
+            const stripped = e.text
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/\/\/[^\n]*/g, '');
+            let m: RegExpExecArray | null;
+            re.lastIndex = 0;
+            while ((m = re.exec(stripped)) !== null) {
+                const line = stripped.slice(0, m.index).split('\n').length;
+                violations.push(`${e.relPath}:${line}: bare "${m[1]} = …" — use "attribute redefines ${m[1]} = …"`);
+            }
+        }
+        expect(violations, violations.join('\n')).toHaveLength(0);
+    });
+
     it('EE-5: no qualified names in package declarations (portable SysML v2)', () => {
         // `package memo::a::b { }` is a MEMO grammar extension rejected by external tools.
         // Every package declaration must use a single-identifier name and nest instead.
