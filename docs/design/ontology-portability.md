@@ -37,17 +37,34 @@ which are MEMO-internal model heuristics — this is the real external-tool roun
 
 ## Standard authoring forms the ontology must use
 
-Two MEMO grammar extensions are non-standard SysML v2 and are **banned from the ontology**
-(enforced by `conformance.test.ts`, scoped to `ontology/` + the gpca reference model):
+The MEMO grammar (`packages/core/src/grammar/memo-sysml.langium`) is a **strict SysML v2
+subset**: the two formerly-accepted non-standard forms are now **rejected by the parser**, so
+compliance is guaranteed by construction (not only by lint):
 
-| Non-standard (MEMO extension) | Standard SysML v2 form |
+| Former MEMO extension (now rejected) | Standard SysML v2 form |
 |---|---|
 | `package memo::a::b { … }` | nested `package memo { package a { package b { … } } }` |
 | bare `title = "x";` | `attribute redefines title = "x";` (or `:>> title = "x";`) |
 
-The MEMO serializer already emits the standard forms; only hand-authored legacy used the
-extensions. The parser still *accepts* the extensions (other tracked inputs such as
-`feedback/` rely on them), so compliance is enforced by test, not by grammar restriction.
+`PackageDeclaration` takes a single-identifier `name=ID`; the bare `ShorthandRedefinition`
+rule was removed. The serializer and importers emit nested packages via the shared
+`wrapPackage()` helper, so generated SysML is compliant too. Negative tests in
+`parser.test.ts` assert the grammar rejects both forms.
+
+## Extending MEMO — via SysML v2, never via grammar
+
+Domain extension happens through **standard SysML v2 mechanisms**, so any conformant tool
+still reads the result:
+
+1. **Specialize ontology definitions.** Import the ontology library and specialize its
+   `part def` / `item def`s — e.g. `item def RadiationHazard :> Hazard`. This is how the
+   gpca reference model and downstream device models extend MEMO today.
+2. **Apply semantic metadata.** Define a `metadata def` (see `ontology/base/semantics.sysml`:
+   `StandardReference`, `Provenance`) and apply it with `@Name` / `@Name { … }` on any
+   element. This is SysML v2's purpose-built extension construct.
+
+There is no MEMO-private syntax to learn or invent — if it isn't standard SysML v2, the
+grammar rejects it, which is the point: extensions stay portable.
 
 ## The one portability rule that matters
 
@@ -66,8 +83,9 @@ package memo {
 ```
 
 not the former flat `package memo::rules::quantitative { … }` extension. The model builder
-reconstructs the full FQN from the nesting, so imports and addressing are unchanged. This
-is enforced by the conformance test `EE-5: no qualified names in package declarations`.
+reconstructs the full FQN from the nesting, so imports and addressing are unchanged. This is
+enforced both by the grammar (`name=ID`) and by the conformance test `EE-5: no qualified
+names in package declarations`.
 
 ## Feeds into
 

@@ -650,6 +650,12 @@ L2   every part-def library has a sibling Semantic Metadata file
 
 Below: a single Hazard kind, fully compliant with all rules above. Copy-and-paste skeleton for new ontology authors.
 
+> **Note on package syntax in the examples below.** For brevity these snippets write the
+> namespace as `library package memo::arch::risk { … }`. Per **P1**, the actual authored form
+> **nests** the segments — `package memo { package arch { library package risk { … } } }` —
+> because the strict grammar rejects qualified package *declarations*. The body content is
+> identical; only the wrapping differs.
+
 ### 18.1 Library package — `memo::arch::risk` (definitions + abstract usages)
 
 ```sysml
