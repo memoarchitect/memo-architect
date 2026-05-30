@@ -1,5 +1,5 @@
 package memo {
-    package library {
+    package medical_device_library {
         public import memo::core::enumerations::*;
         public import memo::core::common::*;
         public import memo::core::relationships::*;

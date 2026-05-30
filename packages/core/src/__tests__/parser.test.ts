@@ -78,6 +78,39 @@ describe('Package', () => {
         expect(inner.$type).toBe('PackageDeclaration');
         expect(inner.name).toBe('Inner');
     });
+
+    // Strict SysML v2 subset: a package DECLARATION must use a single-identifier name.
+    it('rejects qualified package declarations (non-standard SysML v2)', async () => {
+        const errors = await parseErrors(`
+            package memo::arch::risk {
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+});
+
+describe('Strict SysML v2 subset: non-standard forms are rejected', () => {
+    it('rejects bare shorthand redefinition (`name = value;`)', async () => {
+        const errors = await parseErrors(`
+            package Test {
+                part p : SomeType {
+                    title = "x";
+                }
+            }
+        `);
+        expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('accepts the standard redefinition form (`attribute redefines name = value;`)', async () => {
+        const model = await parseValid(`
+            package Test {
+                part p : SomeType {
+                    attribute redefines title = "x";
+                }
+            }
+        `);
+        expect(model.members).toHaveLength(1);
+    });
 });
 
 describe('Import', () => {
