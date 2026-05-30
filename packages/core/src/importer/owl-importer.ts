@@ -11,6 +11,8 @@
 //   const sysml = owlResultToSysml(result, "imported_ontology");
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { wrapPackage } from '../serializer/sysml-generator.js';
+
 /** An OWL class mapped to a MEMO kind */
 export interface OwlClass {
     /** IRI or local name */
@@ -278,7 +280,6 @@ export function owlResultToSysml(result: OwlImportResult, packageName: string): 
     const lines: string[] = [];
     const indent = '    ';
 
-    lines.push(`package ${packageName} {`);
     lines.push('');
 
     // Group classes by layer
@@ -331,8 +332,7 @@ export function owlResultToSysml(result: OwlImportResult, packageName: string): 
         }
     }
 
-    lines.push('}');
-    return lines.join('\n') + '\n';
+    return wrapPackage(packageName, lines).join('\n') + '\n';
 }
 
 /**
@@ -375,7 +375,6 @@ export function owlResultToPackage(
     for (const [layer, layerClasses] of byLayer) {
         const sysmlLines: string[] = [];
         const pkgName = `${toSysmlPackageName(packageName)}_${capitalizeFirst(layer)}`;
-        sysmlLines.push(`package ${pkgName} {`);
         sysmlLines.push('');
 
         for (const cls of layerClasses) {
@@ -389,15 +388,13 @@ export function owlResultToPackage(
             sysmlLines.push('');
         }
 
-        sysmlLines.push('}');
-        files.set(`sysml/${layer}/${layer}.sysml`, sysmlLines.join('\n') + '\n');
+        files.set(`sysml/${layer}/${layer}.sysml`, wrapPackage(pkgName, sysmlLines).join('\n') + '\n');
     }
 
     // Relationships in crosscutting
     if (result.properties.length > 0) {
         const relLines: string[] = [];
         const relPkgName = `${toSysmlPackageName(packageName)}_Relationships`;
-        relLines.push(`package ${relPkgName} {`);
         relLines.push('');
 
         for (const prop of result.properties) {
@@ -415,22 +412,19 @@ export function owlResultToPackage(
             relLines.push('');
         }
 
-        relLines.push('}');
-        files.set('sysml/relationships/relationships.sysml', relLines.join('\n') + '\n');
+        files.set('sysml/relationships/relationships.sysml', wrapPackage(relPkgName, relLines).join('\n') + '\n');
     }
 
     // Index.sysml
     const indexLines: string[] = [];
     const indexPkgName = toSysmlPackageName(packageName);
-    indexLines.push(`package ${indexPkgName} {`);
     for (const layer of byLayer.keys()) {
         indexLines.push(`    import ${indexPkgName}_${capitalizeFirst(layer)}::*;`);
     }
     if (result.properties.length > 0) {
         indexLines.push(`    import ${indexPkgName}_Relationships::*;`);
     }
-    indexLines.push('}');
-    files.set('sysml/index.sysml', indexLines.join('\n') + '\n');
+    files.set('sysml/index.sysml', wrapPackage(indexPkgName, indexLines).join('\n') + '\n');
 
     return files;
 }
