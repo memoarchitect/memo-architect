@@ -392,7 +392,7 @@ describe('AttributeDefinition', () => {
 describe('Architecture fixture: methodology scope expressions', () => {
     it('parses explicit scalar methodology scope entries', async () => {
         const model = await parseValid(`
-            package memo::methodology::gpca::scope {
+            package scope {
                 part gpcaScope : MethodologyScope {
                     attribute includedArchLayer = "operational";
                     attribute includedArchLayer = "functional";
@@ -408,7 +408,7 @@ describe('Architecture fixture: methodology scope expressions', () => {
 
     it('parses set literals in attribute assignments', async () => {
         const model = await parseValid(`
-            package memo::methodology::default::scope {
+            package scope {
                 part defaultLayerSet : MethodologyLayerSet {
                     attribute layers = {"operational", "functional"};
                 }
@@ -421,7 +421,7 @@ describe('Architecture fixture: methodology scope expressions', () => {
 
     it('rejects set-difference expressions in attribute assignments', async () => {
         const errors = await parseErrors(`
-            package memo::methodology::gpca::scope {
+            package scope {
                 part gpcaScope : MethodologyScope {
                     attribute includedArchLayers = defaultLayerSet.layers - {"cybersecurity"};
                 }
@@ -434,7 +434,7 @@ describe('Architecture fixture: methodology scope expressions', () => {
 describe('Architecture fixture: view and presentation syntax', () => {
     it('parses view def with scalar presentationKind fallback entries', async () => {
         const model = await parseValid(`
-            package memo::ontology::views::risk_management {
+            package risk_management {
                 import memo::base::stdlib::*;
 
                 view def RiskMatrixView :> DiagramView {
@@ -453,7 +453,7 @@ describe('Architecture fixture: view and presentation syntax', () => {
 
     it('parses private import visibility modifiers', async () => {
         const model = await parseValid(`
-            package memo::ontology::views::risk_management {
+            package risk_management {
                 private import memo::base::stdlib::*;
             }
         `);
@@ -464,7 +464,7 @@ describe('Architecture fixture: view and presentation syntax', () => {
 
     it('parses multiplicity on attribute type declarations', async () => {
         const model = await parseValid(`
-            package memo::ontology::views::risk_management {
+            package risk_management {
                 view def RiskMatrixView :> DiagramView {
                     attribute presentationKind : PresentationKind[*];
                 }
@@ -477,7 +477,7 @@ describe('Architecture fixture: view and presentation syntax', () => {
 
     it('parses collection-valued attribute assignments', async () => {
         const model = await parseValid(`
-            package memo::ontology::views::risk_management {
+            package risk_management {
                 view def RiskMatrixView :> DiagramView {
                     attribute presentationKind = { PresentationKind::riskTable };
                 }

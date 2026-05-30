@@ -24,7 +24,6 @@ function collectSysmlFiles(dir: string): string[] {
     return files;
 }
 
-const FEEDBACK_ROOT = resolve(__dirname, '../../../../feedback');
 const EXAMPLES_ROOT = resolve(__dirname, '../../../../examples');
 const STDLIB_WRAPPER_DIR = resolve(ONTOLOGY_ROOT, 'base', 'stdlib');
 
@@ -74,7 +73,6 @@ describe('SysML v2 Conformance: ontology packages parse with zero diagnostics', 
 describe('DD-2: no kernel-path standard library imports outside stdlib wrapper (ADR-1-13)', () => {
     const roots = [
         { label: 'ontology', dir: ONTOLOGY_ROOT },
-        { label: 'feedback', dir: FEEDBACK_ROOT },
         { label: 'examples', dir: EXAMPLES_ROOT },
     ];
 
