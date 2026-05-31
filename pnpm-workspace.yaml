@@ -1,3 +1,4 @@
 packages:
   - "packages/*"
+  - "vendor/memo-sysmlv2/packages/*"
   - "examples/*"

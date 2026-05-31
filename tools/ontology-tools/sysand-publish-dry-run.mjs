@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const ONTOLOGY_DIR = join(REPO_ROOT, 'ontology');
+const ONTOLOGY_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2');
 
 const COLORS = {
     red: (s) => `\x1b[31m${s}\x1b[0m`,

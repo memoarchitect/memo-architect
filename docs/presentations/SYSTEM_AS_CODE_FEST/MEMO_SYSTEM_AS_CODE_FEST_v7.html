@@ -50,14 +50,14 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .eyebrow { color:var(--teal-deep); font-size:13px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
 .memo { color:var(--teal-deep); font-weight:950; letter-spacing:-.045em; }
 .dark .memo { color:var(--teal); }
-.message { margin-top:20px; padding:14px 17px; border-left:4px solid var(--teal-deep); color:var(--ink); background:var(--teal-soft); font-size:18px; font-weight:800; line-height:1.3; }
+.message { position:absolute; right:76px; bottom:70px; left:76px; padding:14px 17px; border-left:4px solid var(--teal-deep); color:var(--ink); background:var(--teal-soft); font-size:18px; font-weight:800; line-height:1.3; }
 .message strong { color:var(--teal-deep); }
 .notes { display:none; }
 
 /* Cover */
 .cover { background:var(--night); }
 .cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.75; }
-.cover:after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(2,14,27,.99) 0%,rgba(3,23,43,.96) 54%,rgba(3,23,43,.58) 100%); }
+.cover:after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#020e1b 0%,#03172b 70%,rgba(3,23,43,.94) 78%,rgba(3,23,43,.52) 100%); }
 .cover-content { position:absolute; z-index:2; top:122px; left:76px; width:1070px; }
 .cover .eyebrow { color:var(--teal); }
 .cover h1 { margin-top:17px; color:#fff; }
@@ -67,31 +67,49 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .speaker strong { color:var(--teal); }
 .pronounce { position:absolute; z-index:3; top:36px; right:150px; padding:10px 15px; border:1px solid rgba(0,205,187,.52); border-radius:999px; color:var(--teal); background:rgba(3,23,43,.7); font-size:13px; font-weight:900; letter-spacing:.12em; }
 
-/* Slide 2: expanding system boundary */
-.opening-grid { display:grid; grid-template-columns:53% 47%; gap:42px; align-items:center; margin-top:18px; }
-.opening-copy h2 { font-size:70px; }
+/* Slide 2: accumulating device complexity */
+.opening-slide .body { position:relative; }
+.opening-grid { display:grid; grid-template-columns:48% 52%; gap:26px; align-items:center; margin-top:29px; }
+.opening-copy h2 { font-size:65px; }
 .opening-copy h2 span { color:var(--teal-deep); }
 .opening-copy p { max-width:730px; margin-top:20px; color:var(--muted); font-size:23px; line-height:1.38; }
-.opening-question { margin-top:28px; padding-top:19px; border-top:1px solid var(--line); color:var(--ink); font-size:34px; font-weight:900; letter-spacing:-.035em; }
+.opening-question { margin-top:43px; padding-top:0; color:var(--ink); font-size:34px; font-weight:900; letter-spacing:-.035em; }
 .opening-question span { color:var(--teal-deep); }
-.boundary-map { position:relative; height:570px; border:1px solid var(--line); border-radius:20px; background:#f7fafc; overflow:hidden; }
-.shell { position:absolute; border:1px solid var(--line); border-radius:18px; }
-.shell .label { position:absolute; top:14px; left:16px; color:var(--teal-deep); font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-.shell.outer { inset:19px; background:#fff; }
-.shell.connected { inset:92px 80px 77px; border-color:#9bded5; background:var(--teal-soft); }
-.shell.software { inset:168px 154px 133px; border-color:#acd0ec; background:var(--blue-soft); }
-.device { position:absolute; left:50%; bottom:82px; width:224px; padding:15px 10px; transform:translateX(-50%); border-radius:13px; color:#fff; background:var(--night-2); text-align:center; }
-.device b { display:block; font-size:21px; }
-.device span { display:block; margin-top:5px; color:rgba(255,255,255,.69); font-size:12px; font-weight:800; letter-spacing:.08em; }
-.chip { position:absolute; padding:8px 10px; border:1px solid var(--line); border-radius:999px; color:var(--ink); background:#fff; font-size:13px; font-weight:850; line-height:1; }
-.outer .workflow { left:18px; top:52px; }
-.outer .updates { right:18px; top:17px; }
-.outer .ai { right:18px; top:52px; border-color:#e6c675; color:#76510b; background:#fff8e7; }
-.connected .cloud { right:16px; bottom:16px; }
-.connected .companion { left:16px; bottom:16px; }
-.software .logic { left:15px; bottom:15px; }
-.software .alarms { right:15px; bottom:15px; }
-.boundary-caption { position:absolute; right:0; bottom:0; left:0; padding:13px 16px; color:var(--ink); background:rgba(255,255,255,.94); border-top:1px solid var(--line); font-size:17px; font-weight:850; }
+.complexity-map { position:relative; margin-left:-18px; padding:22px 22px 16px 88px; border:1px solid var(--line); border-radius:20px; background:#f7fafc; }
+.complexity-map .map-title { color:var(--teal-deep); font-size:12px; font-weight:900; letter-spacing:.15em; text-transform:uppercase; }
+.complexity-arrow { position:absolute; top:72px; bottom:74px; left:42px; width:25px; }
+.complexity-arrow:before { content:""; position:absolute; top:0; left:11px; width:3px; height:100%; border-radius:3px; background:linear-gradient(0deg,var(--night-2),var(--teal-deep),#d6961f); }
+.complexity-arrow:after { content:""; position:absolute; top:-1px; left:3px; width:15px; height:15px; border-top:3px solid #d6961f; border-left:3px solid #d6961f; transform:rotate(45deg); }
+.complexity-arrow span { position:absolute; bottom:7px; left:8px; width:225px; color:var(--muted); font-size:11px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; transform:rotate(-90deg); transform-origin:left bottom; }
+.complexity-stack { display:flex; flex-direction:column; gap:9px; margin-top:15px; }
+.complexity-surface { display:grid; grid-template-columns:1fr 145px; gap:9px; }
+.complexity-upper { display:flex; flex-direction:column; gap:9px; }
+.complexity-layer { padding:12px 15px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.complexity-layer b { display:block; color:var(--ink); font-size:17px; }
+.complexity-layer span { display:block; margin-top:5px; color:var(--muted); font-size:13px; line-height:1.22; }
+.complexity-layer.connected-layer { border-color:#9bded5; background:var(--teal-soft); }
+.complexity-layer.software-layer { border-color:#acd0ec; background:var(--blue-soft); }
+.complexity-layer.physical-layer { color:#fff; border-color:var(--night-2); background:var(--night-2); }
+.complexity-layer.physical-layer b { color:#fff; }
+.complexity-layer.physical-layer span { color:rgba(255,255,255,.72); }
+.ai-crosscut { display:flex; flex-direction:column; justify-content:center; padding:12px; border:1px solid #e6c675; border-radius:12px; background:#fff8e7; }
+.ai-crosscut small { color:#9b690c; font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.ai-crosscut b { display:block; margin-top:7px; color:var(--ink); font-size:17px; line-height:1.05; }
+.ai-crosscut span { display:block; margin-top:9px; color:var(--muted); font-size:12px; line-height:1.3; }
+.care-frame { position:relative; margin:15px 0 0 -5px; padding:41px 12px 12px; border:1px dashed #75cfc5; border-radius:14px; background:#fff; }
+.care-frame .complexity-stack { margin-top:0; }
+.care-context { position:absolute; top:11px; left:13px; color:var(--ink); font-size:13px; font-weight:800; line-height:1.25; }
+.care-context strong { color:var(--teal-deep); }
+.complexity-caption { margin-top:12px; color:var(--ink); font-size:15px; font-weight:850; line-height:1.25; }
+.opening-signals { position:absolute; right:76px; bottom:150px; left:76px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:#fff; }
+.opening-signal { min-height:132px; padding:16px 17px 14px; border-left:1px solid var(--line); }
+.opening-signal:first-child { border-left:0; }
+.opening-signal small { display:block; color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:.13em; line-height:1.15; text-transform:uppercase; }
+.opening-signal b { display:block; margin-top:9px; color:var(--ink); font-size:34px; letter-spacing:-.052em; }
+.opening-signal span { display:block; margin-top:4px; color:var(--muted); font-size:13px; font-weight:800; line-height:1.22; }
+.opening-signal em { display:block; margin-top:8px; color:var(--muted); font-size:9px; font-style:normal; line-height:1.18; }
+.opening-takeaway { position:absolute; right:76px; bottom:70px; left:76px; padding:13px 17px; border-left:4px solid var(--teal-deep); color:var(--ink); background:var(--teal-soft); font-size:19px; font-weight:850; line-height:1.28; }
+.opening-takeaway strong { color:var(--teal-deep); }
 
 /* Shared flow */
 .flow { display:flex; align-items:stretch; margin-top:32px; }
@@ -102,6 +120,26 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .flow b { display:block; color:var(--ink); font-size:19px; line-height:1.13; }
 .flow span { display:block; margin-top:9px; color:var(--muted); font-size:14px; line-height:1.3; }
 .flow .warn { border-color:#e6c675; background:#fff8e7; }
+
+/* Concrete system failures */
+.scenario-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:67px; }
+.scenario { position:relative; display:flex; min-height:500px; padding:58px 17px 16px; flex-direction:column; border:1px solid var(--line); border-top:4px solid var(--teal-deep); border-radius:16px; background:#fff; box-shadow:0 10px 24px rgba(12,43,73,.05); }
+.scenario:nth-child(2) { border-top-color:var(--blue); }
+.scenario:nth-child(3) { border-top-color:var(--orange); }
+.scenario-top { text-align:center; }
+.scenario .scenario-kicker { color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:.14em; line-height:1.2; text-transform:uppercase; }
+.scenario-icon { position:absolute; top:-48px; left:50%; display:grid; width:92px; height:92px; place-items:center; transform:translateX(-50%); border:2px solid #9bded5; border-radius:50%; color:var(--teal-deep); background:var(--teal-soft); box-shadow:0 8px 18px rgba(12,43,73,.08); }
+.scenario-icon svg { width:51px; height:51px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.65; }
+.scenario:nth-child(2) .scenario-icon { border-color:#acd0ec; color:#317bb4; background:var(--blue-soft); }
+.scenario:nth-child(3) .scenario-icon { border-color:#e6c675; color:#b66a19; background:var(--orange-soft); }
+.scenario h3 { margin-top:7px; color:var(--ink); font-size:22px; line-height:1.1; }
+.scenario p { margin-top:7px; color:var(--muted); font-size:14px; line-height:1.3; }
+.scenario-chain { display:grid; flex:1; grid-template-rows:repeat(4,1fr); gap:9px; margin:15px 0 18px; }
+.scenario-step { position:relative; padding:13px 10px 9px 36px; border:1px solid var(--line); border-radius:9px; color:var(--ink); background:var(--wash); font-size:14px; font-weight:800; line-height:1.2; }
+.scenario-step:before { content:attr(data-step); position:absolute; top:50%; left:11px; color:var(--teal-deep); font-size:11px; font-weight:900; transform:translateY(-50%); }
+.scenario-step.warn { border-color:#e6c675; background:#fff8e7; }
+.scenario-check { padding:10px 11px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:13px; font-weight:800; line-height:1.25; }
+.scenario-check strong { color:#a45c18; }
 
 /* Three lens convergence */
 .converge { display:grid; grid-template-columns:45% 10% 45%; gap:0; align-items:center; margin-top:28px; }
@@ -116,6 +154,62 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .arch-grid div { min-height:76px; padding:13px; border:1px solid rgba(0,141,128,.2); border-radius:10px; background:rgba(255,255,255,.56); }
 .arch-grid b { display:block; color:var(--ink); font-size:16px; }
 .arch-grid span { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.25; }
+
+/* Cross-functional architecture map */
+.knowledge-map { display:grid; grid-template-columns:39% 8% 53%; min-height:490px; margin-top:29px; align-items:stretch; }
+.actor-stack { display:grid; gap:14px; }
+.actor { display:grid; grid-template-columns:96px 1fr; overflow:hidden; border:1px solid var(--line); border-radius:15px; background:#fff; box-shadow:0 8px 18px rgba(12,43,73,.035); }
+.actor-symbol { display:grid; place-items:center; background:var(--wash); }
+.actor-symbol .actor-circle { display:grid; width:66px; height:66px; place-items:center; border:1px solid #9bded5; border-radius:50%; color:var(--teal-deep); background:var(--teal-soft); }
+.actor-symbol svg { width:40px; height:40px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.65; }
+.actor:nth-child(1) { border-left:4px solid #e2a635; }
+.actor:nth-child(1) .actor-circle { border-color:#e6c675; color:#b66a19; background:var(--orange-soft); }
+.actor:nth-child(2) { border-left:4px solid #8b78cb; }
+.actor:nth-child(2) .actor-circle { border-color:#cfc2fb; color:#7660bd; background:var(--purple-soft); }
+.actor:nth-child(3) { border-left:4px solid #66a9db; }
+.actor:nth-child(3) .actor-circle { border-color:#acd0ec; color:#317bb4; background:var(--blue-soft); }
+.actor-copy { display:flex; padding:13px 15px; flex-direction:column; justify-content:center; }
+.actor-copy .actor-name { color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.actor-copy b { display:block; margin-top:6px; color:var(--ink); font-size:19px; line-height:1.13; }
+.actor-copy span { display:block; margin-top:8px; color:var(--muted); font-size:13px; font-weight:800; line-height:1.2; }
+.knowledge-flow { position:relative; display:grid; place-items:center; }
+.knowledge-flow:before { content:""; position:absolute; top:42px; bottom:42px; left:50%; border-left:1px dashed #9bded5; }
+.knowledge-flow svg { position:relative; width:47px; height:47px; padding:8px; border:1px solid #9bded5; border-radius:50%; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; background:#fff; }
+.knowledge-flow span { position:absolute; bottom:36px; color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; transform:rotate(-90deg); }
+.arch-map { position:relative; overflow:hidden; border:1px solid #9bded5; border-radius:18px; background:radial-gradient(circle at center,rgba(255,255,255,.9) 0 15%,rgba(255,255,255,.18) 31%,transparent 52%),linear-gradient(135deg,#ebfbf9,#daf5f1); }
+.arch-map:before,.arch-map:after { content:""; position:absolute; top:50%; left:50%; border:1px solid rgba(0,141,128,.11); border-radius:50%; transform:translate(-50%,-50%); }
+.arch-map:before { width:340px; height:340px; }
+.arch-map:after { width:478px; height:478px; }
+.arch-map-title { position:absolute; top:19px; left:21px; padding:7px 10px; border:1px solid rgba(0,141,128,.18); border-radius:999px; color:var(--teal-deep); background:rgba(255,255,255,.6); font-size:11px; font-weight:900; letter-spacing:.15em; text-transform:uppercase; }
+.arch-links { position:absolute; z-index:1; inset:0; width:100%; height:100%; }
+.arch-links path { fill:none; stroke-width:2; stroke-linecap:round; stroke-dasharray:4 7; opacity:.86; }
+.arch-links circle { fill:#fff; stroke-width:2; }
+.arch-links .responsibility-link { stroke:var(--teal-deep); }
+.arch-links .interface-link { stroke:#317bb4; }
+.arch-links .scenario-link { stroke:#7660bd; }
+.arch-links .impact-link { stroke:#b66a19; }
+.arch-hub { position:absolute; z-index:3; top:50%; left:50%; display:grid; width:236px; height:144px; place-items:center; padding:15px; transform:translate(-50%,-50%); border:3px solid var(--teal-deep); border-radius:24px; color:#fff; background:linear-gradient(145deg,#123e62,#082942); text-align:center; box-shadow:0 18px 30px rgba(12,43,73,.2); }
+.arch-hub svg { width:38px; height:38px; fill:none; stroke:var(--teal); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.6; }
+.arch-hub small { display:block; color:var(--teal); font-size:10px; font-weight:900; letter-spacing:.15em; text-transform:uppercase; }
+.arch-hub b { display:block; margin-top:8px; font-size:18px; line-height:1.05; }
+.arch-node { position:absolute; z-index:2; display:grid; width:212px; min-height:96px; grid-template-columns:54px 1fr; align-items:center; padding:11px; border:1px solid rgba(0,141,128,.25); border-left:4px solid var(--teal-deep); border-radius:16px; background:rgba(255,255,255,.96); box-shadow:0 10px 18px rgba(12,43,73,.07); }
+.arch-node svg { width:36px; height:36px; padding:8px; border-radius:50%; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; background:var(--teal-soft); }
+.arch-node small { display:block; margin-bottom:3px; color:var(--teal-deep); font-size:9px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.arch-node b { display:block; color:var(--ink); font-size:16px; }
+.arch-node span { display:block; margin-top:5px; color:var(--muted); font-size:12px; line-height:1.2; }
+.arch-node.interface { border-color:#acd0ec; border-left-color:#317bb4; }
+.arch-node.interface svg { stroke:#317bb4; background:var(--blue-soft); }
+.arch-node.interface small { color:#317bb4; }
+.arch-node.scenario-node { border-color:#cfc2fb; border-left-color:#7660bd; }
+.arch-node.scenario-node svg { stroke:#7660bd; background:var(--purple-soft); }
+.arch-node.scenario-node small { color:#7660bd; }
+.arch-node.impact-node { border-color:#e6c675; border-left-color:#b66a19; }
+.arch-node.impact-node svg { stroke:#b66a19; background:var(--orange-soft); }
+.arch-node.impact-node small { color:#b66a19; }
+.arch-node.responsibility { top:78px; left:24px; }
+.arch-node.interface { top:78px; right:24px; }
+.arch-node.scenario-node { bottom:34px; left:24px; }
+.arch-node.impact-node { right:24px; bottom:34px; }
 
 /* Missing middle */
 .bridge { display:grid; grid-template-columns:1fr 1.12fr 1fr; gap:18px; align-items:stretch; margin-top:31px; }
@@ -136,15 +230,15 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .stake p { margin-top:15px; color:var(--muted); font-size:17px; line-height:1.37; }
 .stake strong { color:var(--ink); }
 
-/* Generic language to method */
+/* Generic language to methodology */
 .language-strip { display:grid; grid-template-columns:27% 11% 35% 11% 16%; align-items:center; margin-top:38px; }
-.language-block,.method-block { min-height:220px; padding:24px; border:1px solid var(--line); border-radius:16px; background:#fff; }
-.language-block h3,.method-block h3 { margin-top:14px; font-size:29px; }
-.language-block p,.method-block p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.34; }
+.language-block,.methodology-block { min-height:220px; padding:24px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.language-block h3,.methodology-block h3 { margin-top:14px; font-size:29px; }
+.language-block p,.methodology-block p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.34; }
 .language-arrow { color:var(--teal-deep); font-size:58px; font-weight:900; text-align:center; }
-.method-decisions { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
-.method-decisions div { padding:12px 10px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:var(--wash); font-size:15px; font-weight:850; text-align:center; }
-.method-block { border-color:#9bded5; background:var(--teal-soft); }
+.methodology-decisions { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+.methodology-decisions div { padding:12px 10px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:var(--wash); font-size:15px; font-weight:850; text-align:center; }
+.methodology-block { border-color:#9bded5; background:var(--teal-soft); }
 
 /* meMO split */
 .memo-split { display:grid; grid-template-columns:repeat(3,1fr); gap:17px; margin-top:31px; }
@@ -195,7 +289,7 @@ h3 { font-size:24px; line-height:1.1; letter-spacing:-.026em; }
 .ext-layer b { display:block; color:var(--ink); font-size:19px; }
 .ext-layer span { display:block; margin-top:5px; color:var(--muted); font-size:14px; }
 .ext-layer.core { border-color:#9bded5; background:var(--teal-soft); }
-.ext-layer.method { border-color:#acd0ec; background:var(--blue-soft); }
+.ext-layer.methodology-layer { border-color:#acd0ec; background:var(--blue-soft); }
 .ext-layer.project { border-color:#cfc2fb; background:var(--purple-soft); }
 .profiles { padding:21px; border:1px solid var(--line); border-radius:16px; background:#fff; }
 .profiles h3 { font-size:28px; }
@@ -259,7 +353,7 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
 .ui img { display:block; width:100%; height:315px; object-fit:cover; object-position:center top; }
 .ui-caption { padding:10px 13px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
 .ui-caption strong { color:var(--teal-deep); }
-.status { margin-top:14px; padding:11px 14px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:15px; font-weight:800; }
+.status { position:absolute; right:76px; bottom:70px; left:76px; padding:11px 14px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:15px; font-weight:800; }
 
 /* Scope */
 .scope { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:30px; }
@@ -280,29 +374,102 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
 .pilot-step b { display:block; margin-top:15px; color:var(--ink); font-size:21px; }
 .pilot-step span { display:block; margin-top:9px; color:var(--muted); font-size:14px; line-height:1.28; }
 
-/* v7: solution landscape and separable adoption */
-.landscape { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:30px; }
-.land { min-height:292px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
-.land .eyebrow { margin-bottom:16px; }
-.land h3 { font-size:28px; }
-.land p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.36; }
-.land .strength { margin-top:20px; padding-top:11px; border-top:1px solid var(--line); color:var(--ink); font-size:15px; font-weight:850; }
-.land .strength strong { color:var(--teal-deep); }
-.islands { display:grid; grid-template-columns:1fr 72px 1fr 72px 1fr; align-items:center; margin-top:32px; }
-.island { min-height:288px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
-.island h3 { margin-top:14px; font-size:27px; }
-.island p { margin-top:13px; color:var(--muted); font-size:16px; line-height:1.36; }
-.island .missing { margin-top:22px; padding:11px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:15px; font-weight:850; line-height:1.28; }
-.disconnect { color:var(--orange); font-size:40px; font-weight:900; text-align:center; }
-.needed { display:grid; grid-template-columns:28% 44% 28%; align-items:center; margin-top:24px; }
-.needed-side { display:grid; gap:12px; }
-.needed-side div { padding:13px; border:1px solid var(--line); border-radius:11px; color:var(--muted); background:#fff; font-size:15px; font-weight:800; text-align:center; }
-.needed-side b { display:block; margin-bottom:4px; color:var(--ink); font-size:17px; }
-.needed-core { display:grid; min-height:338px; place-items:center; padding:30px; border:3px solid var(--teal-deep); border-radius:50%; color:var(--ink); background:var(--teal-soft); text-align:center; }
-.needed-core h3 { font-size:35px; }
-.needed-core p { margin-top:11px; color:var(--muted); font-size:17px; line-height:1.33; }
-.components { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:31px; }
-.component { min-height:330px; padding:19px; border:1px solid var(--line); border-radius:15px; background:#fff; }
+/* v7: existing-tool reality and separable adoption */
+.tool-reality { margin-top:21px; }
+.source-strip { display:flex; align-items:center; gap:9px; }
+.source-strip b { margin-right:3px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.source-strip span { padding:6px 9px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:#fff; font-size:11px; font-weight:850; }
+.artifact-lanes { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:14px; }
+.artifact-lane { min-height:304px; overflow:hidden; border:1px solid var(--line); border-top:5px solid var(--teal-deep); border-radius:15px; background:#fff; box-shadow:0 8px 18px rgba(12,43,73,.04); }
+.artifact-lane:nth-child(2) { border-top-color:#7660bd; }
+.artifact-lane:nth-child(3) { border-top-color:#317bb4; }
+.lane-head { display:grid; grid-template-columns:61px 1fr; align-items:center; gap:9px; padding:15px 17px 12px; }
+.lane-icon { display:grid; width:51px; height:51px; place-items:center; border:1px solid #9bded5; border-radius:50%; color:var(--teal-deep); background:var(--teal-soft); }
+.artifact-lane:nth-child(2) .lane-icon { border-color:#cfc2fb; color:#7660bd; background:var(--purple-soft); }
+.artifact-lane:nth-child(3) .lane-icon { border-color:#acd0ec; color:#317bb4; background:var(--blue-soft); }
+.lane-icon svg { width:30px; height:30px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.lane-head small { display:block; color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.artifact-lane:nth-child(2) .lane-head small { color:#7660bd; }
+.artifact-lane:nth-child(3) .lane-head small { color:#317bb4; }
+.lane-head h3 { margin-top:5px; font-size:23px; }
+.lane-body { padding:0 17px 15px; }
+.lane-body p { color:var(--muted); font-size:14px; line-height:1.3; }
+.artifact-chips { display:flex; gap:6px; margin-top:14px; flex-wrap:wrap; }
+.artifact-chips span { padding:6px 8px; border:1px solid var(--line); border-radius:999px; color:var(--ink); background:var(--wash); font-size:11px; font-weight:850; }
+.lane-matrix { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:13px; padding-top:11px; border-top:1px solid var(--line); }
+.lane-side small { display:block; color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+.lane-side.gaps small { color:#a45c18; }
+.lane-side ul { display:grid; gap:7px; margin:8px 0 0; padding:0; list-style:none; }
+.lane-side li { position:relative; padding-left:15px; color:var(--muted); font-size:12px; font-weight:800; line-height:1.22; }
+.lane-side li:before { content:""; position:absolute; top:5px; left:0; width:7px; height:7px; border:2px solid var(--teal-deep); border-radius:50%; }
+.lane-side.gaps li:before { border-color:#d68931; }
+.friction-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+.friction { display:grid; min-height:70px; grid-template-columns:45px 1fr; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.friction svg { width:30px; height:30px; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.75; }
+.friction b { display:block; color:var(--ink); font-size:14px; }
+.friction span { display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.15; }
+.handoff { display:grid; grid-template-columns:1fr 38px 1.2fr 38px 1fr; align-items:center; margin-top:14px; padding:13px 15px; border:1px solid #e6c675; border-radius:13px; background:#fff8e7; }
+.handoff .handoff-arrow { color:#b66a19; font-size:29px; font-weight:900; text-align:center; }
+.handoff small { display:block; color:#a45c18; font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.handoff b { display:block; margin-top:5px; color:var(--ink); font-size:15px; line-height:1.2; }
+.handoff strong { color:#a45c18; }
+.gap-map { margin-top:26px; }
+.islands { display:grid; grid-template-columns:1fr 45px 1fr 45px 1fr; align-items:stretch; }
+.island { position:relative; min-height:260px; padding:19px; border:1px solid var(--line); border-top:5px solid var(--teal-deep); border-radius:16px; background:#fff; box-shadow:0 8px 18px rgba(12,43,73,.04); }
+.island:nth-child(3) { border-top-color:#7660bd; }
+.island:nth-child(5) { border-top-color:#317bb4; }
+.island-top { display:grid; grid-template-columns:52px 1fr; align-items:center; gap:10px; }
+.island-icon { display:grid; width:48px; height:48px; place-items:center; border:1px solid #9bded5; border-radius:50%; color:var(--teal-deep); background:var(--teal-soft); }
+.island:nth-child(3) .island-icon { border-color:#cfc2fb; color:#7660bd; background:var(--purple-soft); }
+.island:nth-child(5) .island-icon { border-color:#acd0ec; color:#317bb4; background:var(--blue-soft); }
+.island-icon svg { width:29px; height:29px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.island .eyebrow { font-size:11px; }
+.island h3 { margin-top:5px; font-size:23px; }
+.island p { margin-top:14px; color:var(--muted); font-size:14px; line-height:1.34; }
+.island .missing { margin-top:15px; padding:9px 10px; border-left:4px solid var(--orange); color:var(--ink); background:var(--orange-soft); font-size:13px; font-weight:850; line-height:1.25; }
+.disconnect { display:grid; place-items:center; color:var(--orange); font-size:33px; font-weight:900; text-align:center; }
+.friction-label { margin-top:14px; color:var(--teal-deep); font-size:12px; font-weight:900; letter-spacing:1.8px; text-transform:uppercase; }
+.adoption-friction { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:9px; }
+.friction-card { display:grid; min-height:64px; grid-template-columns:39px 1fr; align-items:center; gap:8px; padding:9px 11px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+.friction-card svg { width:28px; height:28px; fill:none; stroke:#a45c18; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.friction-card b { display:block; color:var(--ink); font-size:13px; }
+.friction-card span { display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.17; }
+.needed { position:relative; display:grid; grid-template-columns:24% 52% 24%; gap:24px; align-items:center; margin-top:26px; }
+.needed:before,.needed:after { content:""; position:absolute; z-index:4; top:50%; width:58px; height:18px; background:linear-gradient(90deg,#9bded5,var(--teal-deep)); clip-path:polygon(0 44%,76% 44%,76% 5%,100% 50%,76% 95%,76% 56%,0 56%); transform:translateY(-50%); }
+.needed:before { left:21%; }
+.needed:after { right:21%; }
+.needed-side { position:relative; z-index:2; display:grid; gap:12px; }
+.needed-node { display:grid; min-height:76px; grid-template-columns:48px 1fr; align-items:center; gap:11px; padding:11px 13px; border:1px solid var(--line); border-radius:13px; background:#fff; box-shadow:0 7px 14px rgba(12,43,73,.035); }
+.needed-node svg { width:38px; height:38px; padding:8px; border-radius:50%; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; background:var(--teal-soft); }
+.needed-node b { display:block; color:var(--ink); font-size:16px; }
+.needed-node span { display:block; margin-top:4px; color:var(--muted); font-size:12px; font-weight:750; line-height:1.17; }
+.needed-side.output .needed-node svg { stroke:#317bb4; background:var(--blue-soft); }
+.needed-core { position:relative; z-index:1; min-height:354px; overflow:hidden; border:2px solid var(--teal-deep); border-radius:24px; background:radial-gradient(circle at center,rgba(255,255,255,.96) 0 12%,rgba(255,255,255,.26) 36%,transparent 58%),linear-gradient(135deg,#e8fbf9,#d6f5f1); box-shadow:0 18px 32px rgba(12,43,73,.08); }
+.needed-core:before,.needed-core:after { content:""; position:absolute; top:50%; left:50%; border:1px solid rgba(0,141,128,.13); border-radius:50%; transform:translate(-50%,-50%); }
+.needed-core:before { width:350px; height:350px; }
+.needed-core:after { width:530px; height:530px; }
+.needed-core-title { position:absolute; top:18px; left:20px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:1.8px; text-transform:uppercase; }
+.needed-core svg.core-links { position:absolute; inset:0; width:100%; height:100%; }
+.needed-core .core-links path { fill:none; stroke:#75c9c0; stroke-width:2; stroke-dasharray:4 6; }
+.needed-hub { position:absolute; z-index:3; top:50%; left:50%; display:grid; width:226px; height:130px; place-items:center; padding:14px; transform:translate(-50%,-50%); border:3px solid var(--teal-deep); border-radius:22px; color:#fff; background:linear-gradient(145deg,#123e62,#082942); text-align:center; box-shadow:0 15px 26px rgba(12,43,73,.2); }
+.needed-hub svg { width:33px; height:33px; fill:none; stroke:var(--teal); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.needed-hub small { display:block; color:var(--teal); font-size:10px; font-weight:900; letter-spacing:1.4px; text-transform:uppercase; }
+.needed-hub b { display:block; margin-top:5px; font-size:19px; line-height:1.02; }
+.needed-pill { position:absolute; z-index:2; padding:8px 11px; border:1px solid rgba(0,141,128,.28); border-radius:999px; color:var(--ink); background:rgba(255,255,255,.94); font-size:12px; font-weight:850; box-shadow:0 6px 11px rgba(12,43,73,.045); }
+.needed-pill.responsibilities { top:76px; left:36px; }
+.needed-pill.interfaces { top:76px; right:36px; }
+.needed-pill.scenarios { bottom:48px; left:36px; }
+.needed-pill.impact-paths { right:36px; bottom:48px; }
+.needed-questions { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; }
+.needed-question { padding:12px 15px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.needed-question small { color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:1.4px; text-transform:uppercase; }
+.needed-question b { display:block; margin-top:6px; color:var(--ink); font-size:16px; }
+.memo-bridge { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:13px; margin-top:20px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
+.memo-bridge-line { position:relative; border-top:2px solid #9bded5; }
+.memo-bridge-line:after { content:""; position:absolute; top:-7px; right:-1px; border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:10px solid var(--teal-deep); }
+.components { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:13px; }
+.component { position:relative; min-height:330px; padding:19px; border:1px solid var(--line); border-radius:15px; background:#fff; }
+.component:not(:last-child):after { content:""; position:absolute; z-index:3; top:50%; right:-17px; width:12px; height:12px; border-top:3px solid var(--teal-deep); border-right:3px solid var(--teal-deep); transform:translateY(-50%) rotate(45deg); background:transparent; }
 .component:nth-child(1) { border-top:6px solid var(--teal-deep); }
 .component:nth-child(2) { border-top:6px solid var(--blue); }
 .component:nth-child(3) { border-top:6px solid var(--purple); }
@@ -311,6 +478,81 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
 .component h3 { margin-top:13px; font-size:27px; }
 .component p { margin-top:12px; color:var(--muted); font-size:15px; line-height:1.34; }
 .component .get { margin-top:18px; padding-top:10px; border-top:1px solid var(--line); color:var(--ink); font-size:14px; font-weight:850; line-height:1.3; }
+
+/* Ontology architecture layers */
+.ontology-layer-map { margin-top:22px; padding:18px 20px 20px; border:1px solid #b9d8e2; border-radius:18px; background:linear-gradient(145deg,#fff,#f6fbfd); box-shadow:0 13px 24px rgba(12,43,73,.055); }
+.ontology-map-head { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.ontology-map-head small { color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:1.7px; text-transform:uppercase; }
+.ontology-map-head span { color:var(--muted); font-size:12px; font-weight:800; }
+.ontology-spine { position:relative; display:grid; grid-template-columns:1fr 1.05fr 1.05fr; gap:22px; margin-top:17px; }
+.ontology-spine:before { content:""; position:absolute; top:47px; right:9%; left:9%; border-top:3px solid #9bded5; }
+.ontology-phase { position:relative; z-index:1; padding:12px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.ontology-phase h3 { display:flex; align-items:center; gap:8px; color:var(--ink); font-size:17px; }
+.ontology-phase h3:before { content:""; width:11px; height:11px; border:3px solid var(--teal-deep); border-radius:50%; background:#fff; }
+.ontology-phase p { margin-top:6px; color:var(--muted); font-size:12px; line-height:1.2; }
+.ontology-layer-row { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:15px; }
+.ontology-layer-row.two { grid-template-columns:repeat(2,1fr); }
+.ontology-layer { display:grid; min-height:64px; place-items:center; padding:8px 7px; border:1px solid #acd0ec; border-radius:10px; color:var(--ink); background:var(--blue-soft); font-size:13px; font-weight:850; line-height:1.1; text-align:center; }
+.ontology-layer.logical { border-color:#cfc2fb; background:var(--purple-soft); }
+.ontology-layer.realization { border-color:#9bded5; background:var(--teal-soft); }
+.ontology-cross-title { margin-top:16px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:1.7px; text-transform:uppercase; }
+.ontology-cross { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:8px; }
+.ontology-peer { display:flex; min-height:53px; align-items:center; justify-content:center; gap:8px; padding:9px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:#fff; font-size:13px; font-weight:850; text-align:center; }
+.ontology-peer svg { width:23px; height:23px; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.ontology-peer.behavior { border-color:#cfc2fb; background:var(--purple-soft); }
+.ontology-peer.constraints { border-color:#acd0ec; background:var(--blue-soft); }
+.ontology-peer.risk { border-color:#efc58e; background:var(--orange-soft); }
+.ontology-peer.cyber { border-color:#b9d8e2; background:#eef6fa; }
+.ontology-peer.assurance { border-color:#9bded5; background:var(--teal-soft); }
+.ontology-layer-caption { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; color:var(--muted); font-size:12px; font-weight:750; }
+.ontology-layer-caption strong { color:var(--teal-deep); }
+.ontology-dimension-title { display:flex; align-items:center; gap:13px; margin-top:15px; color:var(--teal-deep); font-size:11px; font-weight:900; letter-spacing:1.7px; text-transform:uppercase; }
+.ontology-dimension-title:after { content:""; flex:1; border-top:1px solid #9bded5; }
+.ontology-dimensions { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:9px; }
+.ontology-dimension { display:grid; min-height:60px; grid-template-columns:35px 1fr; align-items:center; gap:8px; padding:9px 11px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+.ontology-dimension svg { width:27px; height:27px; fill:none; stroke:var(--teal-deep); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.ontology-dimension b { display:block; color:var(--ink); font-size:13px; }
+.ontology-dimension span { display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.15; }
+.ontology-dimension.architecture { border-color:#9bded5; background:var(--teal-soft); }
+
+/* Rigorous ontology introduction */
+.ontology-definition { display:grid; grid-template-columns:56% 44%; gap:20px; margin-top:24px; }
+.ontology-definition-main { padding:20px; border:2px solid var(--teal-deep); border-radius:17px; background:var(--teal-soft); }
+.ontology-definition-main small,.ontology-distinction small { color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
+.ontology-definition-main h3 { margin-top:11px; font-size:28px; line-height:1.1; }
+.ontology-definition-main p { margin-top:12px; color:var(--muted); font-size:16px; line-height:1.35; }
+.ontology-formula { display:grid; grid-template-columns:1fr 28px 1fr 28px 1fr; align-items:center; gap:5px; margin-top:18px; }
+.ontology-term { min-height:99px; padding:13px 12px; border:1px solid rgba(0,141,128,.28); border-radius:11px; background:#fff; }
+.ontology-term b { display:block; color:var(--ink); font-size:16px; }
+.ontology-term span { display:block; margin-top:7px; color:var(--muted); font-size:12px; line-height:1.2; }
+.ontology-plus { color:var(--teal-deep); font-size:27px; font-weight:900; text-align:center; }
+.ontology-distinction { padding:18px; border:1px solid var(--line); border-radius:17px; background:#fff; }
+.ontology-not { display:grid; gap:9px; margin-top:13px; }
+.ontology-not div { display:grid; grid-template-columns:29px 1fr; align-items:center; gap:9px; padding:10px; border:1px solid var(--line); border-radius:9px; color:var(--ink); background:var(--wash); font-size:14px; font-weight:850; }
+.ontology-not div:before { content:"\00D7"; display:grid; width:24px; height:24px; place-items:center; border-radius:50%; color:#a45c18; background:var(--orange-soft); font-size:19px; font-weight:900; }
+.ontology-runtime { display:grid; grid-template-columns:24% 9% 29% 9% 29%; align-items:center; margin-top:17px; padding:14px; border:1px solid #acd0ec; border-radius:14px; background:var(--blue-soft); }
+.ontology-runtime div { padding:9px; border:1px solid rgba(67,142,208,.27); border-radius:9px; color:var(--ink); background:#fff; font-size:13px; font-weight:850; text-align:center; }
+.ontology-runtime span { color:#317bb4; font-size:28px; font-weight:900; text-align:center; }
+
+/* Backbone to ontology layers transition */
+.layer-bridge { display:grid; grid-template-columns:30% 11% 59%; align-items:center; gap:0; margin-top:25px; }
+.layer-bridge-source { padding:18px; border:1px solid #9bded5; border-radius:17px; background:var(--teal-soft); }
+.layer-bridge-source small,.layer-bridge-target small { color:var(--teal-deep); font-size:10px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
+.layer-bridge-source h3 { margin-top:9px; font-size:25px; }
+.layer-bridge-source p { margin-top:8px; color:var(--muted); font-size:14px; line-height:1.27; }
+.backbone-mini { display:grid; gap:8px; margin-top:16px; }
+.backbone-mini div { padding:10px; border:1px solid rgba(0,141,128,.24); border-radius:9px; color:var(--ink); background:#fff; font-size:14px; font-weight:850; text-align:center; }
+.layer-bridge-arrow { display:grid; place-items:center; color:var(--teal-deep); font-size:58px; font-weight:900; }
+.layer-bridge-arrow span { display:block; color:var(--muted); font-size:10px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; transform:rotate(-90deg); }
+.layer-bridge-target { padding:18px; border:1px solid var(--line); border-radius:17px; background:#fff; }
+.bridge-layer-group { margin-top:13px; }
+.bridge-layer-group b { display:block; color:var(--ink); font-size:15px; }
+.bridge-layer-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:7px; }
+.bridge-layer-row span { padding:8px 9px; border:1px solid #acd0ec; border-radius:8px; color:var(--ink); background:var(--blue-soft); font-size:12px; font-weight:850; }
+.bridge-layer-group.cross .bridge-layer-row span { border-color:#cfc2fb; background:var(--purple-soft); }
+.bridge-layer-group.evidence .bridge-layer-row span { border-color:#9bded5; background:var(--teal-soft); }
+.bridge-outcome { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; }
+.bridge-outcome div { padding:12px 14px; border:1px solid var(--line); border-radius:11px; color:var(--ink); background:#fff; font-size:14px; font-weight:850; text-align:center; }
 .contract { display:grid; grid-template-columns:42% 58%; gap:24px; align-items:center; margin-top:25px; }
 .contract-card { padding:23px; border:1px solid #9bded5; border-radius:17px; background:var(--teal-soft); }
 .contract-card h3 { margin-top:13px; font-size:34px; }
@@ -384,42 +626,49 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
     </aside>
   </section>
 
-  <section class="slide" id="slide-2" data-title="Devices became systems">
+  <section class="slide opening-slide" id="slide-2" data-title="Devices became software-intensive systems">
     <div class="chapter"><b>02</b> The systems problem</div>
     <div class="body">
       <div class="opening-grid">
         <div class="opening-copy">
-          <div class="eyebrow">Medical devices are becoming systems of systems</div>
-          <h2>The product is no longer only the <span>box.</span></h2>
-          <p>Software, connectivity, clinical workflow, updates, and AI-enabled functions expand the safety-relevant system boundary. Regulatory expectations are evolving alongside the technology.</p>
-          <div class="opening-question">How do we know the <span>whole system</span> is safe?</div>
+          <div class="eyebrow">The starting point</div>
+          <h2>Medical devices are becoming <span>software-intensive cyber-physical systems.</span></h2>
+          <p>More therapy behavior lives in software. Connectivity adds dependencies. Updates and AI-enabled functions introduce new forms of change after release.</p>
+          <div class="opening-question">Can the <span>safety argument</span> keep up?</div>
         </div>
-        <div class="boundary-map">
-          <div class="shell outer">
-            <div class="label">Clinical + lifecycle context</div>
-            <div class="chip workflow">Clinical workflow</div>
-            <div class="chip updates">Updates</div>
-            <div class="chip ai">AI + data</div>
+        <div class="complexity-map">
+          <div class="map-title">Safety-relevant complexity accumulates</div>
+          <div class="complexity-arrow"><span>More behavior, interactions, and change</span></div>
+          <div class="care-frame">
+            <div class="care-context"><strong>Clinical use context:</strong> care setting | user actions | workflow | foreseeable misuse</div>
+            <div class="complexity-stack">
+              <div class="complexity-surface">
+                <div class="complexity-upper">
+                  <div class="complexity-layer connected-layer"><b>Connected lifecycle</b><span>companion apps | cloud services | cybersecurity | updates</span></div>
+                  <div class="complexity-layer software-layer"><b>Software-defined behavior</b><span>therapy logic | modes | alarms | configuration</span></div>
+                </div>
+                <div class="ai-crosscut"><small>Cross-cutting</small><b>AI-enabled functions</b><span>data lineage<br>model version<br>monitoring<br>fallback</span></div>
+              </div>
+              <div class="complexity-layer physical-layer"><b>Physical device</b><span>sensing | actuation | embedded control</span></div>
+            </div>
           </div>
-          <div class="shell connected">
-            <div class="label">Connected ecosystem</div>
-            <div class="chip companion">Companion app</div>
-            <div class="chip cloud">Cloud service</div>
-          </div>
-          <div class="shell software">
-            <div class="label">Software-defined behavior</div>
-            <div class="chip logic">Therapy logic</div>
-            <div class="chip alarms">Alarms</div>
-          </div>
-          <div class="device"><b>Physical device</b><span>SENSE | DECIDE | ACT</span></div>
-          <div class="boundary-caption">Illustrative connected therapy device: capabilities expand dependencies and assumptions.</div>
+          <div class="complexity-caption">Each layer adds capability. Each layer also adds safety questions.</div>
         </div>
       </div>
+      <div class="opening-signals">
+        <div class="opening-signal"><small>AI is already in the field</small><b>&gt;1,000</b><span>AI-enabled devices authorized by FDA</span><em>FDA news release, January 6, 2025</em></div>
+        <div class="opening-signal"><small>AI expectations are lifecycle-oriented</small><b>Jan 2025</b><span>FDA issued draft guidance spanning design through ongoing monitoring</span><em>FDA AI-enabled device guidance announcement</em></div>
+        <div class="opening-signal"><small>A mobile-app defect reached therapy delivery</small><b>85,863</b><span>U.S. devices covered by one Class I software recall</span><em>FDA t:connect recall, August 28, 2024</em></div>
+        <div class="opening-signal"><small>The impact was not theoretical</small><b>224</b><span>reported injuries associated with that software problem</span><em>FDA t:connect recall, as of April 15, 2024</em></div>
+      </div>
+      <div class="opening-takeaway"><strong>The assurance problem is architectural:</strong> safety depends on interactions and change, not only on whether each component works in isolation.</div>
     </div>
     <aside class="notes">
-      <h3>Devices became systems</h3>
-      <p>The opening argument is engineering complexity, not a compliance requirement. A device increasingly participates in a broader software-defined and connected system. FDA also reflects this lifecycle context in its current February 2026 cybersecurity guidance and its January 2025 draft AI-enabled device software guidance, but regulation is supporting context rather than the premise of this talk.</p>
+      <h3>Devices became software-intensive systems</h3>
+      <p>The opening argument is engineering complexity, not merely an expanding product boundary and not a compliance requirement. More therapy behavior lives in software. Connected services add interfaces and dependencies. Post-release updates add lifecycle change. AI-enabled functions are cross-cutting: they introduce data, model, monitoring, and fallback concerns across software and connected behavior rather than forming a separate architectural layer. Clinical use context remains part of the safety argument. FDA also reflects this lifecycle context in its current February 2026 cybersecurity guidance and its January 2025 draft AI-enabled device software guidance, but regulation is supporting context rather than the premise of this talk.</p>
+      <p>The lower band uses recent FDA signals, not an aggregate incidence claim. In January 2025, FDA stated that it had authorized more than 1,000 AI-enabled devices and announced draft guidance spanning the total product lifecycle, including ongoing monitoring. In August 2024, FDA described a Class I recall for a t:connect mobile-app software problem used with the t:slim X2 insulin pump. The recall page lists 85,863 U.S. devices and 224 reported injuries as of April 15, 2024. Present these as examples of scale, lifecycle expectations, and software dependencies reaching therapy delivery.</p>
       <p>FDA context: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/cybersecurity-medical-devices-quality-management-system-considerations-and-content-premarket and https://www.fda.gov/regulatory-information/search-fda-guidance-documents/artificial-intelligence-enabled-device-software-functions-lifecycle-management-and-marketing</p>
+      <p>FDA signal sources: https://www.fda.gov/news-events/press-announcements/fda-issues-comprehensive-draft-guidance-developers-artificial-intelligence-enabled-medical-devices and https://www.fda.gov/medical-devices/medical-device-recalls-and-early-alerts/tandem-diabetes-care-inc-recalls-version-27-apple-ios-tconnect-mobile-app-used-conjunction-tslim-x2</p>
     </aside>
   </section>
 
@@ -427,19 +676,65 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
     <div class="chapter"><b>03</b> Problem 01 | emergent behavior</div>
     <div class="body">
       <h2>A component can be correct while the system is unsafe.</h2>
-      <p class="lede">Many safety-relevant failures emerge between components, modes, and clinical actions.</p>
-      <div class="flow">
-        <div class="step"><b>Sensor reading</b><span>Valid value during a mode transition</span></div>
-        <div class="step"><b>Control logic</b><span>Correct rule under an assumed state</span></div>
-        <div class="step"><b>State mismatch</b><span>Another component observes stale context</span></div>
-        <div class="step"><b>Late alarm</b><span>Clinical action occurs before notification</span></div>
-        <div class="step warn"><b>Unsafe outcome</b><span>No single code unit explains the chain</span></div>
+      <p class="lede">The code can run. The architecture can still contain a contradiction.</p>
+      <div class="scenario-grid">
+        <div class="scenario">
+          <div class="scenario-top">
+            <div class="scenario-kicker">Example 01 | competing control paths</div>
+            <div class="scenario-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 5h4v4"/><path d="M4 5l6 6"/><path d="M4 19h4v-4"/><path d="M4 19l6-6"/><path d="M10 12h9"/><path d="M16 9l3 3-3 3"/></svg>
+            </div>
+          </div>
+          <h3>Two valid corrections. One unsafe total dose.</h3>
+          <p>An automated controller and a clinician can both request a therapy correction.</p>
+          <div class="scenario-chain">
+            <div class="scenario-step" data-step="01">The controller schedules an automatic correction.</div>
+            <div class="scenario-step" data-step="02">A clinician requests a manual correction.</div>
+            <div class="scenario-step" data-step="03">Each command is valid when checked alone.</div>
+            <div class="scenario-step warn" data-step="04">Both reach the actuator. Possible patient harm: overdose.</div>
+          </div>
+          <div class="scenario-check"><strong>Architecture check:</strong> every delivery command must pass one cumulative-dose arbitration rule.</div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-top">
+            <div class="scenario-kicker">Example 02 | interface contract drift</div>
+            <div class="scenario-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 8h5v8H4"/><path d="M20 8h-5v8h5"/><path d="M9 12h6"/><path d="M12 9l3 3-3 3"/></svg>
+            </div>
+          </div>
+          <h3>The field still parses. Its meaning changed.</h3>
+          <p>A sensor service changes its pressure output from <code>mmHg</code> to <code>kPa</code>.</p>
+          <div class="scenario-chain">
+            <div class="scenario-step" data-step="01">The interface still sends a numeric value.</div>
+            <div class="scenario-step" data-step="02">The alarm service still receives the value.</div>
+            <div class="scenario-step" data-step="03">Its threshold still assumes <code>mmHg</code>.</div>
+            <div class="scenario-step warn" data-step="04">The threshold is wrong. Possible patient harm: dangerous pressure is missed.</div>
+          </div>
+          <div class="scenario-check"><strong>Architecture check:</strong> a unit change must invalidate downstream assumptions.</div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-top">
+            <div class="scenario-kicker">Example 03 | timing budget regression</div>
+            <div class="scenario-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l4 2"/><path d="M18 5l2-2"/></svg>
+            </div>
+          </div>
+          <h3>Each component works. The response is late.</h3>
+          <p>A signal-processing update improves accuracy but increases compute time from <code>80 ms</code> to <code>180 ms</code>.</p>
+          <div class="scenario-chain">
+            <div class="scenario-step" data-step="01">The sensor still produces valid samples.</div>
+            <div class="scenario-step" data-step="02">The algorithm still returns the right result.</div>
+            <div class="scenario-step" data-step="03">The control loop still runs.</div>
+            <div class="scenario-step warn" data-step="04">Response exceeds <code>250 ms</code>. Possible patient harm: therapy adjustment arrives late.</div>
+          </div>
+          <div class="scenario-check"><strong>Architecture check:</strong> a component latency increase must fail the allocated response-time budget.</div>
+        </div>
       </div>
-      <div class="message"><strong>Safety is a system property:</strong> structure, interfaces, modes, timing, and scenarios must be analyzed together.</div>
+      <div class="message"><strong>The engineering goal:</strong> make violated system contracts fail review early, like compile errors for architecture.</div>
     </div>
     <aside class="notes">
       <h3>Safety emerges across interactions</h3>
-      <p>This is an illustrative interaction chain, not a claim about a specific device. The point is that unit correctness is necessary but not sufficient. Safety analysis needs architecture and dynamic scenarios to explain composition.</p>
+      <p>These are illustrative engineering scenarios, not claims about a specific device. The first shows a composition failure: two locally valid delivery commands become unsafe without system-level arbitration and a cumulative-dose constraint. The second shows why syntax-level compatibility is insufficient: a value can still parse while its semantics have changed. The third shows a timing-budget regression: local correctness does not guarantee an acceptable end-to-end response. Each technical inconsistency can propagate to patient harm. meMO does not prove safety automatically. The ontology, methodology, and tooling make modeled contracts, assumptions, and missing consistency visible and checkable earlier.</p>
     </aside>
   </section>
 
@@ -448,24 +743,69 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
     <div class="body">
       <h2>Safety decisions are cross-functional. Knowledge is partial.</h2>
       <p class="lede">No single discipline holds the complete safety argument at implementation depth.</p>
-      <div class="converge">
-        <div class="lenses">
-          <div class="lens"><div class="who">Clinical + risk</div><div class="ask">What can harm the patient?</div></div>
-          <div class="lens"><div class="who">Systems</div><div class="ask">Where is behavior allocated?</div></div>
-          <div class="lens"><div class="who">Software + hardware</div><div class="ask">What actually changed?</div></div>
+      <div class="knowledge-map">
+        <div class="actor-stack">
+          <div class="actor">
+            <div class="actor-symbol"><div class="actor-circle"><svg viewBox="0 0 48 48"><path d="M24 23a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"/><path d="M11 40c1-8 5-12 13-12s12 4 13 12"/><path d="M37 13v10"/><path d="M32 18h10"/></svg></div></div>
+            <div class="actor-copy"><div class="actor-name">Clinical + risk</div><b>What could harm the patient?</b><span>use context | hazards | controls</span></div>
+          </div>
+          <div class="actor">
+            <div class="actor-symbol"><div class="actor-circle"><svg viewBox="0 0 48 48"><circle cx="24" cy="10" r="5"/><circle cx="11" cy="34" r="5"/><circle cx="37" cy="34" r="5"/><path d="M21 14 14 29"/><path d="m27 14 7 15"/><path d="M16 34h16"/></svg></div></div>
+            <div class="actor-copy"><div class="actor-name">Systems</div><b>Where is behavior allocated?</b><span>functions | modes | boundaries</span></div>
+          </div>
+          <div class="actor">
+            <div class="actor-symbol"><div class="actor-circle"><svg viewBox="0 0 48 48"><rect x="13" y="13" width="22" height="22" rx="3"/><path d="M20 20h8v8h-8z"/><path d="M18 7v6m6-6v6m6-6v6M18 35v6m6-6v6m6-6v6M7 18h6m-6 6h6m-6 6h6m22-12h6m-6 6h6m-6 6h6"/></svg></div></div>
+            <div class="actor-copy"><div class="actor-name">Software + hardware</div><b>What actually changed?</b><span>interfaces | code | tests</span></div>
+          </div>
         </div>
-        <div class="join">&rarr;</div>
-        <div class="architecture-card">
-          <div class="eyebrow">Shared analytical layer</div>
-          <h3>System and software architecture</h3>
-          <div class="arch-grid">
-            <div><b>Responsibilities</b><span>Who owns the behavior?</span></div>
-            <div><b>Interfaces</b><span>What crosses the boundary?</span></div>
-            <div><b>Scenarios</b><span>When does behavior emerge?</span></div>
-            <div><b>Impact paths</b><span>What must be reviewed?</span></div>
+        <div class="knowledge-flow">
+          <svg viewBox="0 0 48 48"><path d="M8 24h29"/><path d="m29 16 8 8-8 8"/></svg>
+          <span>Converge</span>
+        </div>
+        <div class="arch-map">
+          <div class="arch-map-title">Shared analytical layer</div>
+          <svg class="arch-links" viewBox="0 0 800 490" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <marker id="arch-arrow-teal" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="3"><path d="M0 0 7 3 0 6Z" fill="#008d80"/></marker>
+              <marker id="arch-arrow-blue" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="3"><path d="M0 0 7 3 0 6Z" fill="#317bb4"/></marker>
+              <marker id="arch-arrow-purple" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="3"><path d="M0 0 7 3 0 6Z" fill="#7660bd"/></marker>
+              <marker id="arch-arrow-orange" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="3"><path d="M0 0 7 3 0 6Z" fill="#b66a19"/></marker>
+            </defs>
+            <path class="responsibility-link" d="M343 215 C305 183 272 151 244 130" marker-end="url(#arch-arrow-teal)"/>
+            <path class="interface-link" d="M457 215 C495 183 528 151 556 130" marker-end="url(#arch-arrow-blue)"/>
+            <path class="scenario-link" d="M343 275 C305 307 272 374 244 402" marker-end="url(#arch-arrow-purple)"/>
+            <path class="impact-link" d="M457 275 C495 307 528 374 556 402" marker-end="url(#arch-arrow-orange)"/>
+            <circle class="responsibility-link" cx="343" cy="215" r="4"/>
+            <circle class="interface-link" cx="457" cy="215" r="4"/>
+            <circle class="scenario-link" cx="343" cy="275" r="4"/>
+            <circle class="impact-link" cx="457" cy="275" r="4"/>
+          </svg>
+          <div class="arch-hub">
+            <div>
+              <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="7"/><circle cx="24" cy="24" r="16"/><path d="M24 1v7m0 32v7M1 24h7m32 0h7M8 8l5 5m22 22 5 5M40 8l-5 5M13 35l-5 5"/></svg>
+              <small>Shared model</small>
+              <b>System + software<br>architecture</b>
+            </div>
+          </div>
+          <div class="arch-node responsibility">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="14" r="7"/><path d="M10 40c1-10 5-15 14-15s13 5 14 15"/></svg>
+            <div><small>Ownership</small><b>Responsibilities</b><span>Who owns behavior?</span></div>
+          </div>
+          <div class="arch-node interface">
+            <svg viewBox="0 0 48 48"><path d="M7 16h12v16H7"/><path d="M41 16H29v16h12"/><path d="M19 24h10"/></svg>
+            <div><small>Boundary</small><b>Interfaces</b><span>What crosses boundaries?</span></div>
+          </div>
+          <div class="arch-node scenario-node">
+            <svg viewBox="0 0 48 48"><circle cx="11" cy="24" r="5"/><circle cx="37" cy="12" r="5"/><circle cx="37" cy="36" r="5"/><path d="M16 23 32 14"/><path d="m16 25 16 9"/></svg>
+            <div><small>Behavior</small><b>Scenarios</b><span>How does behavior combine?</span></div>
+          </div>
+          <div class="arch-node impact-node">
+            <svg viewBox="0 0 48 48"><path d="M8 24h27"/><path d="m28 16 8 8-8 8"/><circle cx="9" cy="24" r="5"/><circle cx="39" cy="24" r="5"/></svg>
+            <div><small>Change</small><b>Impact paths</b><span>What does change reach?</span></div>
           </div>
         </div>
       </div>
+      <div class="message"><strong>Architecture is the meeting point:</strong> it lets each discipline reason across the slices it understands.</div>
     </div>
     <aside class="notes">
       <h3>Knowledge is partial</h3>
@@ -473,205 +813,288 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
     </aside>
   </section>
 
-  <section class="slide" id="slide-5" data-title="The analytical middle is missing">
-    <div class="chapter"><b>05</b> Problem 03 | the missing middle</div>
+  <section class="slide" id="slide-5" data-title="Existing solutions">
+    <div class="chapter"><b>05</b> Existing solutions</div>
     <div class="body">
-      <h2>Most teams have artifacts at both ends. The analytical middle is thin.</h2>
-      <p class="lede">Low-level detail and document traceability do not automatically produce system understanding.</p>
-      <div class="bridge">
-        <div class="bridge-card">
-          <div class="eyebrow">Code-first end</div>
-          <h3>Implementation detail</h3>
-          <p>Strong local reasoning, weak system-level visibility.</p>
-          <div class="bridge-items">
-            <div>Code and tests</div><div>Tickets and diffs</div><div>Component ownership</div>
+      <h2>Teams have tools. The knowledge is still fragmented.</h2>
+      <p class="lede">Each tool solves a real problem. The cost comes from adoption, handoffs, and keeping safety meaning synchronized across silos.</p>
+      <div class="tool-reality">
+        <div class="source-strip"><b>Existing landscape</b><span>lifecycle risk</span><span>system architecture</span><span>software change control</span></div>
+        <div class="artifact-lanes">
+          <div class="artifact-lane">
+            <div class="lane-head">
+              <div class="lane-icon"><svg viewBox="0 0 48 48"><path d="M15 7h15l7 7v27H15z"/><path d="M30 7v8h7"/><path d="M20 23h12m-12 6h12m-12 6h8"/></svg></div>
+              <div><small>QMS + ALM + records</small><h3>Control evidence</h3></div>
+            </div>
+            <div class="lane-body">
+              <p>Requirements, risk files, verification results, reviews, and approvals.</p>
+              <div class="lane-matrix">
+                <div class="lane-side"><small>Native ownership</small><ul><li>Controlled work products and approvals</li><li>Trace links and audit history</li></ul></div>
+                <div class="lane-side gaps"><small>Cross-repository dependency</small><ul><li>Architecture semantics behind the links</li><li>Change propagation from implementation</li></ul></div>
+              </div>
+            </div>
+          </div>
+          <div class="artifact-lane">
+            <div class="lane-head">
+              <div class="lane-icon"><svg viewBox="0 0 48 48"><circle cx="24" cy="9" r="5"/><circle cx="10" cy="35" r="5"/><circle cx="38" cy="35" r="5"/><path d="M21 14 13 30m14-16 8 16M15 35h18"/></svg></div>
+              <div><small>MBSE + SysML</small><h3>Represent the system</h3></div>
+            </div>
+            <div class="lane-body">
+              <p>Components, behavior, interfaces, scenarios, and engineering budgets.</p>
+              <div class="lane-matrix">
+                <div class="lane-side"><small>Native ownership</small><ul><li>System decomposition and behavior</li><li>Interfaces, allocations, and budgets</li></ul></div>
+                <div class="lane-side gaps"><small>Cross-repository dependency</small><ul><li>Released implementation baseline</li><li>Approved risk and evidence state</li></ul></div>
+              </div>
+            </div>
+          </div>
+          <div class="artifact-lane">
+            <div class="lane-head">
+              <div class="lane-icon"><svg viewBox="0 0 48 48"><circle cx="13" cy="11" r="5"/><circle cx="13" cy="37" r="5"/><circle cx="35" cy="24" r="5"/><path d="M13 16v16"/><path d="M18 11c13 0 17 4 17 8"/><path d="M18 37c13 0 17-4 17-8"/></svg></div>
+              <div><small>Code + Git + CI</small><h3>Detect implementation change</h3></div>
+            </div>
+            <div class="lane-body">
+              <p>Diffs, reviews, tests, builds, benchmarks, and reproducible baselines.</p>
+              <div class="lane-matrix">
+                <div class="lane-side"><small>Native ownership</small><ul><li>Implementation diff and baseline</li><li>Build, test, and benchmark outcomes</li></ul></div>
+                <div class="lane-side gaps"><small>Cross-repository dependency</small><ul><li>Clinical intent and risk controls</li><li>System impact beyond changed files</li></ul></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="bridge-card middle">
-          <div class="eyebrow">Missing analytical layer</div>
-          <h3>Architecture + behavior</h3>
-          <p>The place to reason about boundaries, allocations, interactions, and scenarios.</p>
-          <div class="bridge-items">
-            <div>Where does the control act?</div><div>Which interface carries the risk?</div><div>What behavior changes under fault?</div>
+        <div class="friction-strip">
+          <div class="friction"><svg viewBox="0 0 48 48"><path d="M24 7v34M7 24h34"/><circle cx="24" cy="24" r="16"/></svg><div><b>Adoption cost</b><span>New practices, conventions, training, and integration.</span></div></div>
+          <div class="friction"><svg viewBox="0 0 48 48"><path d="M7 13h12v12H7zm22 10h12v12H29z"/><path d="M19 19h7m-1 0 4 4"/><path d="M11 35h12"/><path d="M17 29v12"/></svg><div><b>Fragmented knowledge</b><span>Important context lives in different tools and teams.</span></div></div>
+          <div class="friction"><svg viewBox="0 0 48 48"><path d="M10 24h28"/><path d="m31 17 7 7-7 7"/><path d="M14 13 8 7m6 28-6 6"/><circle cx="15" cy="24" r="5"/></svg><div><b>Manual reconciliation</b><span>Engineers reconstruct impact paths during reviews.</span></div></div>
+        </div>
+      </div>
+      <div class="message"><strong>The problem is not another missing tool:</strong> it is the missing analytical backbone across the tools teams already use.</div>
+    </div>
+    <aside class="notes">
+      <h3>Existing solutions</h3>
+      <p>Start with respect for existing practice. ISO 14971 frames risk management across the medical-device life cycle. IEC 62304 defines software life-cycle processes. FDA guidance expects software validation, cybersecurity architecture and SBOM information, interoperability risk analysis, and risk-based evaluation of software modifications. Teams therefore already create many necessary artifacts. The problem is the handoff: after a code change, can the team compute the affected system behavior, controls, verification scope, and evidence freshness?</p>
+      <p>The matrix describes repository ownership boundaries, not product deficiencies. QMS and ALM platforms are authoritative for controlled work products, approvals, and trace records. MBSE environments are authoritative for architecture semantics when teams adopt them. Git and CI are authoritative for implementation diffs and automated outcomes. Each assurance decision depends on information owned in the other repositories. Integrations can move data, but the cross-layer semantics and impact paths still need an explicit model.</p>
+      <p>Keep this slide simple during the talk. The audience should leave with three practical costs: adding tools and methods is expensive; safety knowledge remains fragmented across disciplines and repositories; and engineers repeatedly reconstruct cross-layer impact paths during review. The latency example from the prior slide remains a useful verbal illustration if needed.</p>
+      <p>Primary sources: https://www.iso.org/standard/72704.html ; https://webstore.iec.ch/en/publication/3842 ; https://www.fda.gov/regulatory-information/search-fda-guidance-documents/general-principles-software-validation ; https://www.fda.gov/regulatory-information/search-fda-guidance-documents/cybersecurity-medical-devices-quality-system-considerations-and-content-premarket-submissions ; https://www.fda.gov/regulatory-information/search-fda-guidance-documents/deciding-when-submit-510k-software-change-existing-device ; https://www.fda.gov/regulatory-information/search-fda-guidance-documents/design-considerations-and-pre-market-submission-recommendations-interoperable-medical-devices</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-6" data-title="Where the gaps remain">
+    <div class="chapter"><b>06</b> The gaps remain</div>
+    <div class="body">
+      <h2>Closing the gap is technically possible. It is expensive to assemble.</h2>
+      <p class="lede">Teams need shared architecture semantics, but they also need a practical adoption path.</p>
+      <div class="gap-map">
+        <div class="islands">
+          <div class="island">
+            <div class="island-top"><div class="island-icon"><svg viewBox="0 0 48 48"><path d="M12 7h19l6 6v28H12z"/><path d="M31 7v7h6"/><path d="M18 22h13m-13 6h13m-13 6h9"/></svg></div><div><div class="eyebrow">Records boundary</div><h3>Trace links are not a system explanation</h3></div></div>
+            <p>Controlled records can show that artifacts relate. Impact analysis still needs the architecture semantics behind those links.</p>
+            <div class="missing">Need: typed allocations and impact paths</div>
+          </div>
+          <div class="disconnect">&times;</div>
+          <div class="island">
+            <div class="island-top"><div class="island-icon"><svg viewBox="0 0 48 48"><circle cx="24" cy="9" r="5"/><circle cx="10" cy="35" r="5"/><circle cx="38" cy="35" r="5"/><path d="M21 14 13 30m14-16 8 16M15 35h18"/></svg></div><div><div class="eyebrow">Modeling boundary</div><h3>SysML is a language, not a medical-device playbook</h3></div></div>
+            <p>Modeling environments are flexible by design. Teams still decide layers, viewpoints, rules, workflow, and evidence conventions.</p>
+            <div class="missing">Need: tailorable starter methodology</div>
+          </div>
+          <div class="disconnect">&times;</div>
+          <div class="island">
+            <div class="island-top"><div class="island-icon"><svg viewBox="0 0 48 48"><circle cx="13" cy="11" r="5"/><circle cx="13" cy="37" r="5"/><circle cx="35" cy="24" r="5"/><path d="M13 16v16"/><path d="M18 11c13 0 17 4 17 8"/><path d="M18 37c13 0 17-4 17-8"/></svg></div><div><div class="eyebrow">Change boundary</div><h3>Code feedback stops at repository context</h3></div></div>
+            <p>Git and CI make local change visible. System-level safety impact requires architecture and risk semantics from elsewhere.</p>
+            <div class="missing">Need: model-aware change propagation</div>
           </div>
         </div>
-        <div class="bridge-card">
-          <div class="eyebrow">Document-first end</div>
-          <h3>Traceability records</h3>
-          <p>Strong evidence inventory, weak semantic understanding.</p>
-          <div class="bridge-items">
-            <div>Requirements matrices</div><div>Risk spreadsheets</div><div>DHF documents</div>
+        <div class="friction-label">The adoption tax appears before the first useful analysis</div>
+        <div class="adoption-friction">
+          <div class="friction-card"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="M28 16c-2-2-8-2-8 2 0 6 10 3 10 9 0 4-7 5-11 2M24 11v26"/></svg><div><b>Tool + integration cost</b><span>Licenses, connectors, and migration effort.</span></div></div>
+          <div class="friction-card"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="M24 14v11l8 5"/><path d="M14 7 8 13m26-6 6 6"/></svg><div><b>MBSE setup time</b><span>Profiles, viewpoints, templates, and governance.</span></div></div>
+          <div class="friction-card"><svg viewBox="0 0 48 48"><path d="M8 13h32M8 24h32M8 35h32"/><circle cx="18" cy="13" r="4"/><circle cx="31" cy="24" r="4"/><circle cx="23" cy="35" r="4"/></svg><div><b>Methodology variation</b><span>Practices differ by product, team, and maturity.</span></div></div>
+          <div class="friction-card"><svg viewBox="0 0 48 48"><circle cx="18" cy="17" r="6"/><circle cx="33" cy="19" r="5"/><path d="M7 38c1-8 5-12 11-12s10 4 11 12M27 29c6-2 11 2 13 9"/></svg><div><b>Specialist skills</b><span>Teams need modeling fluency and domain judgment.</span></div></div>
+          <div class="friction-card"><svg viewBox="0 0 48 48"><path d="M12 31a14 14 0 1 1 4 5"/><path d="M12 40v-9h9"/><path d="M24 16v9l7 4"/></svg><div><b>Model maintenance</b><span>Stale models lose trust and stop being used.</span></div></div>
+          <div class="friction-card"><svg viewBox="0 0 48 48"><path d="M8 15h12v12H8zm20 6h12v12H28z"/><path d="M20 21h8M14 27v8h20v-2"/></svg><div><b>Cross-tool synchronization</b><span>Records, models, and code evolve on different cadences.</span></div></div>
+        </div>
+      </div>
+      <div class="message"><strong>The missing middle is architectural and practical:</strong> shared meaning must be lightweight enough to adopt and maintain.</div>
+    </div>
+    <aside class="notes">
+      <h3>Where the gaps remain</h3>
+      <p>Now name both parts of the problem. The architecture boundaries are real: controlled records, system models, and implementation repositories own different parts of the safety argument. The adoption barriers are also real: tool and integration costs, time to establish profiles and viewpoints, methodology variation across organizations and product lines, and the ongoing effort required to keep models synchronized with engineering change. Avoid implying that MBSE or ALM tools cannot solve these problems when configured well. The point is that many teams cannot afford to assemble and sustain a heavyweight solution before product work can benefit.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-7" data-title="What is needed">
+    <div class="chapter"><b>07</b> What is needed</div>
+    <div class="body">
+      <h2>Safety evidence needs an architecture backbone.</h2>
+      <p class="lede">Connect clinical intent, system behavior, and released evidence through one versioned analytical model.</p>
+      <div class="needed">
+        <div class="needed-side">
+          <div class="needed-node"><svg viewBox="0 0 48 48"><circle cx="24" cy="17" r="7"/><path d="M11 40c1-10 5-15 13-15s12 5 13 15"/></svg><div><b>Clinical context</b><span>intended use + assumptions</span></div></div>
+          <div class="needed-node"><svg viewBox="0 0 48 48"><path d="M24 7 40 37H8z"/><path d="M24 17v10m0 5v1"/></svg><div><b>Risk</b><span>hazards + controls</span></div></div>
+          <div class="needed-node"><svg viewBox="0 0 48 48"><circle cx="12" cy="24" r="5"/><circle cx="36" cy="12" r="5"/><circle cx="36" cy="36" r="5"/><path d="m17 22 14-8m-14 12 14 8"/></svg><div><b>Behavior</b><span>modes + scenarios</span></div></div>
+        </div>
+        <div class="needed-core">
+          <div class="needed-core-title">Shared analytical layer</div>
+          <svg class="core-links" viewBox="0 0 760 354" preserveAspectRatio="none"><path d="M112 92 C230 115 270 138 380 177"/><path d="M648 92 C530 115 490 138 380 177"/><path d="M112 288 C230 255 270 220 380 177"/><path d="M648 288 C530 255 490 220 380 177"/></svg>
+          <div class="needed-pill responsibilities">Responsibilities</div>
+          <div class="needed-pill interfaces">Interfaces</div>
+          <div class="needed-pill scenarios">Scenarios</div>
+          <div class="needed-pill impact-paths">Impact paths</div>
+          <div class="needed-hub"><div><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="8"/><circle cx="24" cy="24" r="16"/><path d="M24 4v4m0 32v4M4 24h4m32 0h4M10 10l3 3m22 22 3 3m0-28-3 3M13 35l-3 3"/></svg><small>Versioned model</small><b>System + software<br>architecture</b></div></div>
+        </div>
+        <div class="needed-side output">
+          <div class="needed-node"><svg viewBox="0 0 48 48"><path d="M14 7h17l6 6v28H14z"/><path d="M31 7v7h6M20 23h11m-11 6h11"/></svg><div><b>Requirements</b><span>what must hold</span></div></div>
+          <div class="needed-node"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="m16 24 6 6 11-13"/></svg><div><b>Verification</b><span>how it is checked</span></div></div>
+          <div class="needed-node"><svg viewBox="0 0 48 48"><path d="M12 11h24v26H12z"/><path d="M18 18h12m-12 6h12m-12 6h8"/></svg><div><b>Released baseline</b><span>what was shipped</span></div></div>
+        </div>
+      </div>
+      <div class="needed-questions">
+        <div class="needed-question"><small>Change analysis</small><b>What changed?</b></div>
+        <div class="needed-question"><small>Impact analysis</small><b>What can it affect?</b></div>
+        <div class="needed-question"><small>Assurance review</small><b>Which evidence must be revisited?</b></div>
+      </div>
+      <div class="message"><strong>The gap can be closed incrementally:</strong> begin with ontology layers that give the architecture backbone a shared structure.</div>
+    </div>
+    <aside class="notes">
+      <h3>What is needed</h3>
+      <p>This is the architecture thesis. The missing analytical layer is not another document store. It is a system and software architecture model that can connect clinical assumptions, risk controls, behavior, requirements, verification, and the released baseline. The model should make practical review questions easier to answer: what changed, what can it affect, and which evidence must be revisited? Transition to the next slide by saying that the backbone does not begin as a blank modeling canvas. The meMO ontology provides a layered starter structure.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-8" data-title="What ontology means">
+    <div class="chapter"><b>08</b> What ontology means</div>
+    <div class="body">
+      <h2>An ontology is an explicit domain model, not a vocabulary list.</h2>
+      <p class="lede">It defines the kinds of things that may exist, the semantics of their relationships, and invariants that must hold.</p>
+      <div class="ontology-definition">
+        <div class="ontology-definition-main">
+          <small>Working definition for this talk</small>
+          <h3>A versioned, tool-independent semantic contract for medical-device architecture.</h3>
+          <p>The ontology makes model statements interpretable by both reviewers and software. In meMO, it is expressed as portable SysML v2 content rather than hidden inside a proprietary database.</p>
+          <div class="ontology-formula">
+            <div class="ontology-term"><b>Domain kinds</b><span>Hazard, RiskControl, SoftwareComponent, VerificationCase</span></div>
+            <div class="ontology-plus">+</div>
+            <div class="ontology-term"><b>Relationship semantics</b><span>mitigates, allocates to, satisfies, verifies</span></div>
+            <div class="ontology-plus">+</div>
+            <div class="ontology-term"><b>Invariant constraints</b><span>conditions that remain true across projects</span></div>
           </div>
         </div>
+        <div class="ontology-distinction">
+          <small>Important boundary</small>
+          <div class="ontology-not">
+            <div>Not a glossary of agreed terms</div>
+            <div>Not a prescribed modeling workflow</div>
+            <div>Not a UI or diagramming tool</div>
+            <div>Not a replacement for engineering judgment</div>
+          </div>
+          <div class="ontology-runtime"><div>Ontology</div><span>&rarr;</span><div>Methodology selects a subset</div><span>&rarr;</span><div>Project instantiates the model</div></div>
+        </div>
       </div>
+      <div class="message"><strong>Why ontology matters:</strong> architecture statements become domain-precise, machine-interpretable, and checkable under change.</div>
     </div>
     <aside class="notes">
-      <h3>The analytical middle is missing</h3>
-      <p>This is the central argument for code-first teams and non-MBSE systems teams. More links are not enough. Teams need an architecture model that explains how safety-relevant behavior is realized and how it changes.</p>
+      <h3>What ontology means</h3>
+      <p>Define ontology rigorously before showing the meMO layers. For this talk, use a practical engineering definition: a versioned, tool-independent semantic contract for the medical-device architecture domain. It defines domain kinds, relationship semantics, and invariant constraints. Keep the boundary precise. The ontology is not a glossary, a methodology, a graphical editor, or a substitute for safety judgment. The methodology selects a practical subset of the ontology; a project instantiates that subset with product-specific model elements.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-6" data-title="Different scale, same gap">
-    <div class="chapter"><b>06</b> Different organizations | same gap</div>
+  <section class="slide" id="slide-9" data-title="From backbone to meMO layers">
+    <div class="chapter"><b>09</b> From backbone to <span class="memo">meMO</span> layers</div>
     <div class="body">
-      <h2>The pain changes with scale. The missing capability does not.</h2>
-      <div class="stakeholders">
-        <div class="stake"><div class="num">01</div><h3>Large manufacturers</h3><p>Architecture, risk, software, quality, and V&amp;V live across <strong>teams and tools.</strong></p></div>
-        <div class="stake"><div class="num">02</div><h3>Startups</h3><p>Need credible systems practice without a heavyweight MBSE rollout or a specialist modeling team.</p></div>
-        <div class="stake"><div class="num">03</div><h3>Reviewers</h3><p>Need an end-to-end explanation tied to the <strong>actual released baseline.</strong></p></div>
+      <h2><span class="memo">meMO</span> turns the backbone into a reusable layer map.</h2>
+      <p class="lede">The ontology organizes recurring architecture questions so teams do not begin with a blank modeling canvas.</p>
+      <div class="layer-bridge">
+        <div class="layer-bridge-source">
+          <small>Slide 07 | needed capability</small>
+          <h3>Architecture-centered evidence backbone</h3>
+          <p>Connect intent, system behavior, implementation, and released evidence.</p>
+          <div class="backbone-mini"><div>Clinical intent + risk</div><div>System + software architecture</div><div>Requirements + evidence</div></div>
+        </div>
+        <div class="layer-bridge-arrow"><div>&rarr;<span>organize</span></div></div>
+        <div class="layer-bridge-target">
+          <small>meMO ontology | reusable starter scaffold</small>
+          <div class="bridge-layer-group"><b>Architecture spine</b><div class="bridge-layer-row"><span>Context</span><span>Requirements</span><span>Functions</span><span>Logical design</span><span>Software</span><span>Hardware</span><span>Interfaces</span></div></div>
+          <div class="bridge-layer-group cross"><b>Cross-cutting peers</b><div class="bridge-layer-row"><span>Behavior</span><span>Constraints</span><span>Risk</span><span>Cybersecurity</span><span>Assurance</span></div></div>
+          <div class="bridge-layer-group evidence"><b>Evidence dimensions</b><div class="bridge-layer-row"><span>Compliance</span><span>Artifacts</span><span>Viewpoints</span><span>Rules</span></div></div>
+        </div>
       </div>
-      <div class="message"><strong>Shared need:</strong> an understandable architecture model that remains reviewable as the product changes.</div>
+      <div class="bridge-outcome"><div>Shared vocabulary</div><div>Repeatable architecture questions</div><div>Tailorable product practice</div></div>
+      <div class="message"><strong>The bridge is the ontology:</strong> it converts an abstract architecture goal into a practical, extensible scaffold.</div>
     </div>
     <aside class="notes">
-      <h3>Different scale, same gap</h3>
-      <p>Large companies struggle with fragmentation and handoffs. Startups struggle to establish a usable method without heavyweight tooling. Reviewers need defensible threads for the released baseline. The answer is not the same deployment model, but the architecture capability is shared.</p>
+      <h3>From backbone to meMO layers</h3>
+      <p>Connect the prior two slides explicitly. Slide 7 described the capability teams need. The ontology is the bridge from that abstract need to a reusable modeling structure. The meMO layers organize intent, logical design, realization, cross-cutting concerns, and evidence dimensions. The next slide expands the architecture layer map.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-7" data-title="A language is not a method">
-    <div class="chapter"><b>07</b> Why generic MBSE is not enough</div>
+  <section class="slide" id="slide-10" data-title="Introducing meMO">
+    <div class="chapter"><b>10</b> Introducing <span class="memo">meMO</span></div>
     <div class="body">
-      <h2>SysML is a language. Teams still need a usable method.</h2>
-      <p class="lede">Generic modeling capability leaves each team to invent the medical-device playbook.</p>
-      <div class="language-strip">
-        <div class="language-block">
-          <div class="eyebrow">Open modeling substrate</div>
-          <h3>SysML v2</h3>
-          <p>Textual notation, semantics, APIs, and interoperability direction.</p>
-        </div>
-        <div class="language-arrow">&rarr;</div>
-        <div class="method-decisions">
-          <div>Layers</div><div>Vocabulary</div><div>Viewpoints</div><div>Rules</div><div>Artifacts</div><div>Workflow</div>
-        </div>
-        <div class="language-arrow">&rarr;</div>
-        <div class="method-block">
-          <div class="eyebrow">Needed</div>
-          <h3>Starter method</h3>
-          <p>Lightweight, medical-device-oriented, and tailorable.</p>
-        </div>
-      </div>
-      <div class="message">Inspired by Arcadia-style separation of concerns, but designed to be <strong>lighter and non-prescriptive.</strong></div>
-    </div>
-    <aside class="notes">
-      <h3>A language is not a method</h3>
-      <p>Do not criticize SysML. It is the substrate. The adoption problem is that teams still spend substantial time deciding how to organize layers, views, viewpoints, rules, and evidence relationships for their context. meMO provides a medical-device starter method that remains tailorable.</p>
-    </aside>
-  </section>
-
-  <section class="slide" id="slide-8" data-title="What meMO is">
-    <div class="chapter"><b>08</b> Introducing <span class="memo">meMO</span></div>
-    <div class="body">
-      <h2><span class="memo">meMO</span> is an architecture-centered evidence backbone.</h2>
-      <p class="lede">A small medical-device method on top of open, text-first models.</p>
-      <div class="memo-split">
-        <div class="split">
-          <div class="n">01 | meaning</div>
-          <h3>Ontology</h3>
-          <p>Defines the concepts and relationships that make an assurance thread explicit.</p>
-          <ul><li>Typed elements</li><li>Typed links</li><li>Closure rules</li></ul>
-        </div>
-        <div class="split">
-          <div class="n">02 | organization</div>
-          <h3>Method</h3>
-          <p>Provides a practical architecture path and review viewpoints for medical-device teams.</p>
-          <ul><li>Architecture layers</li><li>Behavior scenarios</li><li>Tailorable scope</li></ul>
-        </div>
-        <div class="split">
-          <div class="n">03 | workflow</div>
-          <h3>Tools</h3>
-          <p>Turns versioned source models into checks, views, and evidence-oriented outputs.</p>
-          <ul><li>CLI + CI</li><li>Compiled views</li><li>Architect workbench</li></ul>
-        </div>
-      </div>
-    </div>
-    <aside class="notes">
-      <h3>What meMO is</h3>
-      <p>Introduce the split before low-level detail. The ontology gives shared meaning. The method organizes how teams model and review. The tools make the model practical in normal engineering workflows. meMO is architecture-centered: it is not a QMS replacement and not a generic diagram tool.</p>
-    </aside>
-  </section>
-
-  <section class="slide" id="slide-9" data-title="Architecture at the center">
-    <div class="chapter"><b>09</b> Architecture-centered reasoning</div>
-    <div class="body">
-      <h2>Architecture is the meeting point for the safety argument.</h2>
-      <p class="lede">Static structure and dynamic behavior must remain connected.</p>
-      <div class="hub-layout">
-        <div class="hub-side">
-          <div><b>Context</b>intended use + assumptions</div>
-          <div><b>Functions</b>what must happen</div>
-          <div><b>Realization</b>software + hardware</div>
-        </div>
-        <div class="hub">
-          <div class="hub-line top"></div><div class="hub-line bottom"></div><div class="hub-line left"></div><div class="hub-line right"></div>
-          <div class="hub-node context">Clinical context</div>
-          <div class="hub-node behavior">Behavior + scenarios</div>
-          <div class="hub-node assurance">Verification + evidence</div>
-          <div class="hub-node risk">Hazards + controls</div>
-          <div class="hub-center"><div><b>Architecture</b><span>stable design backbone</span></div></div>
-        </div>
-        <div class="hub-side">
-          <div><b>Responsibilities</b>where behavior lives</div>
-          <div><b>Interfaces</b>where assumptions meet</div>
-          <div><b>Baselines</b>what was released</div>
-        </div>
-      </div>
-    </div>
-    <aside class="notes">
-      <h3>Architecture at the center</h3>
-      <p>Architecture is not just a SAD document. It is the stable model that connects context, function, realization, behavior, risks, verification, and the released baseline. This is where meMO differs from traceability-only approaches.</p>
-    </aside>
-  </section>
-
-  <section class="slide" id="slide-10" data-title="Ontology follows reasoning">
-    <div class="chapter"><b>10</b> Ontology-backed</div>
-    <div class="body">
-      <h2>The ontology follows the engineering reasoning path.</h2>
-      <p class="lede">It gives names and obligations to the links teams already reason about.</p>
-      <div class="reasoning">
-        <div class="reason"><small>01</small><b>Context</b><span>intended use + assumptions</span></div>
-        <div class="reason"><small>02</small><b>Functions</b><span>what the system must do</span></div>
-        <div class="reason"><small>03</small><b>Architecture</b><span>who is responsible</span></div>
-        <div class="reason"><small>04</small><b>Behavior</b><span>modes + scenarios</span></div>
-        <div class="reason"><small>05</small><b>Risk</b><span>hazards + controls</span></div>
-        <div class="reason"><small>06</small><b>Assurance</b><span>verification + evidence</span></div>
-      </div>
-      <div class="message"><strong>One typed model.</strong> Different reviewers can project the view they need without losing the cross-links.</div>
-    </div>
-    <aside class="notes">
-      <h3>Ontology follows reasoning</h3>
-      <p>An ontology is not a taxonomy slide. It is a shared semantic contract. It defines typed elements, allowed relationships, and closure obligations so an end-to-end safety thread can be checked rather than merely linked.</p>
-    </aside>
-  </section>
-
-  <section class="slide" id="slide-11" data-title="Small core, extensible edges">
-    <div class="chapter"><b>11</b> Extensible by design</div>
-    <div class="body">
-      <h2>Keep the core small. Extend where variation belongs.</h2>
-      <p class="lede">Teams can start with a medical-device baseline and tailor it without inventing a new universe.</p>
-      <div class="extension">
-        <div class="layer-stack">
-          <div class="ext-layer"><b>L0 | SysML v2 substrate</b><span>Open textual modeling semantics and reusable helpers</span></div>
-          <div class="ext-layer core"><b>L1 | meMO ontology</b><span>Medical-device concepts, relationships, and invariant rules</span></div>
-          <div class="ext-layer method"><b>L2 | Methodology package</b><span>Selected layers, viewpoints, artifacts, workflow, and rule strengths</span></div>
-          <div class="ext-layer project"><b>L3 | Product model</b><span>Device-specific architecture, scenarios, risk threads, and evidence references</span></div>
-        </div>
-        <div class="profiles">
-          <div class="eyebrow">Extension examples</div>
-          <h3>Add depth only where needed</h3>
-          <div class="profile-grid">
-            <div>Cybersecurity</div><div>Alarms</div><div>Usability</div><div>AI + data</div><div>SOUP / SBOM</div><div>Product family</div>
+      <h2><span class="memo">meMO</span> ontology layers give the backbone a practical structure.</h2>
+      <p class="lede">Model the path from clinical context to implementation. Keep the safety-relevant concerns visible across every design decision.</p>
+      <div class="ontology-layer-map">
+        <div class="ontology-map-head"><small>Architecture spine | context to realization</small><span>Typed layers in the portable SysML v2 ontology</span></div>
+        <div class="ontology-spine">
+          <div class="ontology-phase">
+            <h3>Intent</h3><p>Why the system exists and what it must do.</p>
+            <div class="ontology-layer-row"><div class="ontology-layer">Context</div><div class="ontology-layer">Requirements</div><div class="ontology-layer">Functions</div></div>
+          </div>
+          <div class="ontology-phase">
+            <h3>Logical design</h3><p>How responsibilities and boundaries are organized.</p>
+            <div class="ontology-layer-row two"><div class="ontology-layer logical">Logical<br>structure</div><div class="ontology-layer logical">Logical<br>interfaces</div></div>
+          </div>
+          <div class="ontology-phase">
+            <h3>Realization</h3><p>Where the behavior is implemented.</p>
+            <div class="ontology-layer-row"><div class="ontology-layer realization">Software<br>structure</div><div class="ontology-layer realization">Hardware<br>structure</div><div class="ontology-layer realization">Physical<br>interfaces</div></div>
           </div>
         </div>
+        <div class="ontology-cross-title">Cross-cutting peers | reason across the spine</div>
+        <div class="ontology-cross">
+          <div class="ontology-peer behavior"><svg viewBox="0 0 48 48"><circle cx="12" cy="24" r="5"/><circle cx="36" cy="12" r="5"/><circle cx="36" cy="36" r="5"/><path d="m17 22 14-8m-14 12 14 8"/></svg>Behavior</div>
+          <div class="ontology-peer constraints"><svg viewBox="0 0 48 48"><path d="M11 11h26v26H11z"/><path d="m17 25 5 5 10-12"/></svg>Constraints</div>
+          <div class="ontology-peer risk"><svg viewBox="0 0 48 48"><path d="M24 7 40 37H8z"/><path d="M24 17v10m0 5v1"/></svg>Risk</div>
+          <div class="ontology-peer cyber"><svg viewBox="0 0 48 48"><path d="M24 6 38 12v10c0 10-6 16-14 20-8-4-14-10-14-20V12z"/><path d="M18 24h12m-6-6v12"/></svg>Cybersecurity</div>
+          <div class="ontology-peer assurance"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="m16 24 6 6 11-13"/></svg>Assurance</div>
+        </div>
+        <div class="ontology-layer-caption"><span><strong>Not a prescribed diagram:</strong> a typed starter scaffold for architecture reasoning.</span><span>Extend or tailor the visible layers for the product.</span></div>
       </div>
+      <div class="ontology-dimension-title">Architecture is the spine. The ontology also connects the evidence dimensions.</div>
+      <div class="ontology-dimensions">
+        <div class="ontology-dimension architecture"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="7"/><path d="M24 5v7m0 24v7M5 24h7m24 0h7M10 10l5 5m18 18 5 5m0-28-5 5M15 33l-5 5"/></svg><div><b>Architecture</b><span>layers, responsibilities, interfaces</span></div></div>
+        <div class="ontology-dimension"><svg viewBox="0 0 48 48"><path d="M14 7h20v34H14z"/><path d="M19 15h10m-10 7h10m-10 7h10"/></svg><div><b>Compliance</b><span>standards and regulatory context</span></div></div>
+        <div class="ontology-dimension"><svg viewBox="0 0 48 48"><path d="M10 13h11l4 5h13v20H10z"/><path d="M16 27h16"/></svg><div><b>Artifacts</b><span>DHF work products and evidence</span></div></div>
+        <div class="ontology-dimension"><svg viewBox="0 0 48 48"><path d="M5 24s7-11 19-11 19 11 19 11-7 11-19 11S5 24 5 24z"/><circle cx="24" cy="24" r="5"/></svg><div><b>Viewpoints</b><span>review perspectives for each concern</span></div></div>
+      </div>
+      <div class="message"><strong>The ontology supplies the shared map.</strong> The methodology decides which layers, viewpoints, and rules a product team uses.</div>
     </div>
     <aside class="notes">
-      <h3>Small core, extensible edges</h3>
-      <p>This is how meMO avoids becoming either generic or prescriptive. The ontology carries stable meaning. A methodology selects a usable subset and workflow. Product teams tailor the method and add profiles where their risk surface requires more depth.</p>
+      <h3>Introducing meMO</h3>
+      <p>Use this as the answer to the prior slide. The architecture backbone does not begin as a generic blank canvas. The meMO ontology provides a layered starter scaffold: context, requirements, and functions flow into logical structure and interfaces, then software, hardware, and physical interfaces. Behavior, constraints, risk, cybersecurity, and assurance remain cross-cutting peers. Architecture is one ontology dimension. The same ontology also groups compliance semantics, DHF artifacts, and review viewpoints, with relationships and invariant rules connecting the dimensions. This is ontology structure, not a claim that every product must show every layer. The methodology tailors the visible and enforceable subset.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-12" data-title="A safety thread becomes computable">
-    <div class="chapter"><b>12</b> A real thread | GPCA reference model</div>
+  <section class="slide" id="slide-11" data-title="Ontology specification">
+    <div class="chapter"><b>11</b> Component 01 | ontology specification</div>
+    <div class="body">
+      <h2>The ontology gives safety relationships explicit meaning.</h2>
+      <p class="lede">It is a tool-agnostic semantic contract, not a diagramming environment.</p>
+      <div class="contract">
+        <div class="contract-card"><div class="eyebrow">Adopt only the ontology</div><h3>Shared medical-device semantics</h3><p>Use the vocabulary and allowed relationships in SysML packages, another modeling tool, or an integration layer.</p></div>
+        <div class="contract-list">
+          <div><b>Typed elements</b><span>Hazard, risk control, requirement, architecture element, scenario, verification, evidence</span></div>
+          <div><b>Typed relationships</b><span>Mitigates, allocates to, acts in scenario, verifies, produces evidence</span></div>
+          <div><b>Invariant rules</b><span>Define what a complete, meaningful safety thread requires</span></div>
+        </div>
+      </div>
+      <div class="message"><strong>Ontology-only value:</strong> reduce semantic ambiguity across tools and teams without adopting meMO tools.</div>
+    </div>
+    <aside class="notes">
+      <h3>Ontology specification</h3>
+      <p>Be precise. The ontology specification defines domain meaning. It can be published and used independently of the CLI or Architect. Its value is semantic consistency: the team agrees what a hazard, control allocation, scenario anchor, verification obligation, and evidence link mean.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-12" data-title="Ontology in action">
+    <div class="chapter"><b>12</b> Ontology in action | GPCA reference model</div>
     <div class="body">
       <h2>A safety thread becomes more than a row in a spreadsheet.</h2>
       <p class="lede">The repository includes this inspectable GPCA lockout thread.</p>
@@ -683,52 +1106,210 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
         <div class="thread-node"><small>Guarantee</small><b>GP-002<br>Lockout prevents bolus</b><span>behavior property</span></div>
         <div class="thread-node verify"><small>Verification</small><b>VER-002<br>Verify lockout</b><span>acceptance criteria + evidence</span></div>
       </div>
-      <div class="message">The useful question is not only "is there a link?" It is <strong>"is the safety thread complete and meaningful?"</strong></div>
+      <div class="message">The question changes from <strong>"is there a link?"</strong> to <strong>"is the safety thread complete and meaningful?"</strong></div>
     </div>
     <aside class="notes">
-      <h3>A safety thread becomes computable</h3>
-      <p>This is repo-backed, not hypothetical. The GPCA example contains HZ-001, RC-001, REQ-025, SW-005, the GP-002 guarantee, VER-002, and produced evidence. The ontology tells us what each link means and which closure obligations to check.</p>
+      <h3>Ontology in action</h3>
+      <p>This thread is repo-backed: HZ-001, RC-001, REQ-025, SW-005, GP-002, VER-002, and evidence links exist in the GPCA reference model. The ontology adds meaning to the links and enables closure questions.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-13" data-title="Change impact becomes reviewable">
-    <div class="chapter"><b>13</b> Second-order effects</div>
+  <section class="slide" id="slide-13" data-title="Default methodology">
+    <div class="chapter"><b>13</b> Component 02 | default methodology</div>
     <div class="body">
-      <h2>A model lets us ask what a change could invalidate.</h2>
-      <p class="lede">Typed architecture links expose a reviewable blast radius across structure and behavior.</p>
-      <div class="impact">
-        <div class="change-card">
-          <div class="eyebrow">Changed element</div>
-          <h3>SW-005<br>Infusion manager</h3>
-          <p>A code or configuration change affects a Class C software responsibility.</p>
+      <h2>The methodology turns a broad ontology into a usable practice.</h2>
+      <p class="lede">SysML is a language. A methodology tells a team how to apply it in context.</p>
+      <div class="methodology">
+        <div class="methodology-card"><div class="eyebrow">meMO Default</div><h3>Medical-device starter methodology</h3><p>Arcadia-inspired separation of concerns, adapted to be lightweight, non-prescriptive, and tailorable.</p></div>
+        <div class="project-arrow">&rarr;</div>
+        <div class="scope-grid">
+          <div>Architecture layers</div><div>Compliance scope</div><div>Artifact set</div><div>Viewpoints</div><div>Workflow</div><div>Rule strengths</div>
         </div>
+      </div>
+      <div class="message"><strong>Methodology value:</strong> teams focus on the product instead of spending months inventing modeling conventions.</div>
+    </div>
+    <aside class="notes">
+      <h3>Default methodology</h3>
+      <p>Use the word methodology consistently. The ontology says what concepts mean. The methodology selects a practical subset, aliases, workflow, gates, artifact bindings, viewpoints, and rule strengths. This is the layer that addresses adoption friction.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-14" data-title="Tailor the methodology">
+    <div class="chapter"><b>14</b> Methodology tailoring | repo-backed example</div>
+    <div class="body">
+      <h2>Tailor the methodology. Do not fork the meaning.</h2>
+      <p class="lede">The repository includes a GPCA methodology package that extends the default by subtraction.</p>
+      <div class="extension">
+        <div class="layer-stack">
+          <div class="ext-layer core"><b>@memo/ontology</b><span>Shared medical-device meaning remains stable</span></div>
+          <div class="ext-layer methodology-layer"><b>@memo/methodology-default</b><span>Comprehensive architecture, compliance, artifacts, viewpoints, and workflow</span></div>
+          <div class="ext-layer project"><b>@memo/methodology-gpca</b><span>Non-networked prototype variant excludes cybersecurity and SOUP scope</span></div>
+        </div>
+        <div class="profiles">
+          <div class="eyebrow">Tailoring questions</div>
+          <h3>Select what the product needs</h3>
+          <div class="profile-grid"><div>Which layers?</div><div>Which standards?</div><div>Which artifacts?</div><div>Which viewpoints?</div><div>Which rules?</div><div>Which gates?</div></div>
+        </div>
+      </div>
+      <div class="message"><strong>Ontology stays stable.</strong> Methodology defines the visible and enforceable product-specific practice.</div>
+    </div>
+    <aside class="notes">
+      <h3>Tailor the methodology</h3>
+      <p>This is not theoretical. The repo includes @memo/methodology-gpca extending @memo/methodology-default. Its package description explicitly excludes cybersecurity and SOUP for the non-networked prototype variant. The key architecture principle is stable semantics with tailored methodology scope.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-15" data-title="CLI tools">
+    <div class="chapter"><b>15</b> Component 03 | CLI tools</div>
+    <div class="body">
+      <h2>The CLI makes the model part of the engineering feedback loop.</h2>
+      <p class="lede">Use text-first models with Git, pull requests, and CI. The UI is not required.</p>
+      <div class="code-flow">
+        <div class="code-step"><div class="icon">.sysml</div><b>Author</b><span>Architecture, behavior, and safety threads remain inspectable text.</span></div>
+        <div class="code-step"><div class="icon">git diff</div><b>Review</b><span>See model changes with software changes.</span></div>
+        <div class="code-step ci"><div class="icon">memo validate</div><b>Check</b><span>Evaluate ontology, methodology, and project rules.</span></div>
+        <div class="code-step"><div class="icon">memo build</div><b>Compile</b><span>Produce reviewable static output.</span></div>
+        <div class="code-step"><div class="icon">export</div><b>Exchange</b><span>Emit JSON, DOT, DHF views, OWL, or Sysand packages.</span></div>
+      </div>
+      <div class="message"><strong>CLI-only adoption:</strong> keep files local, add deterministic checks, and integrate gradually with existing toolchains.</div>
+    </div>
+    <aside class="notes">
+      <h3>CLI tools</h3>
+      <p>The CLI is a separate automation layer. A team can use it without Architect. Current repo-backed commands include validate, build, ontology show and exports, model exports, imports, DHF actions, and rules checks.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-16" data-title="CLI example">
+    <div class="chapter"><b>16</b> CLI example | current repository</div>
+    <div class="body">
+      <h2>Start with checks that answer engineering questions.</h2>
+      <p class="lede">The command line is useful before a full platform rollout.</p>
+      <div class="tools">
+        <div class="terminal">
+          <div class="terminal-head">meMO CLI | project directory</div>
+          <pre><span class="comment"># inspect resolved vocabulary</span>
+<span class="cmd">$ memo ontology show</span>
+
+<span class="comment"># evaluate closure conditions</span>
+<span class="cmd">$ memo validate --format json</span>
+
+<span class="comment"># explain a consistency rule</span>
+<span class="cmd">$ memo rules explain CR-MED-001</span>
+
+<span class="comment"># compile reviewable output</span>
+<span class="cmd">$ memo build --single-file</span></pre>
+        </div>
+        <div class="impact-map">
+          <div><b>What is missing?</b><span>incomplete controls, requirements, or verification links</span></div>
+          <div><b>What changed?</b><span>textual diff plus model-aware review</span></div>
+          <div><b>What must be rebuilt?</b><span>compiled views and evidence-oriented outputs</span></div>
+          <div><b>What remains portable?</b><span>open text, JSON, OWL, Sysand, and generated artifacts</span></div>
+        </div>
+      </div>
+      <div class="message"><strong>Start small:</strong> checks should answer review questions before they automate an enterprise workflow.</div>
+    </div>
+    <aside class="notes">
+      <h3>CLI example</h3>
+      <p>Show a small credible set of commands. Avoid turning the talk into a product demo. The important idea is that architecture checks can participate in the same feedback loop as software checks.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-17" data-title="meMO Architect">
+    <div class="chapter"><b>17</b> Component 04 | <span class="memo">meMO</span> Architect</div>
+    <div class="body">
+      <h2>Architect is an optional visual workbench over the same model.</h2>
+      <p class="lede">It helps reviewers navigate. It does not become a second source of truth.</p>
+      <div class="tools">
+        <div class="architecture-card">
+          <div class="eyebrow">Adopt Architect when visual navigation helps</div>
+          <h3>Thin workbench, shared semantics</h3>
+          <div class="arch-grid">
+            <div><b>Explore</b><span>browse layers and kinds</span></div>
+            <div><b>Inspect</b><span>follow typed relationships</span></div>
+            <div><b>Review</b><span>see scenarios and consistency</span></div>
+            <div><b>Project</b><span>navigate stakeholder views</span></div>
+          </div>
+        </div>
+        <div class="ui">
+          <img src="../../src/images/screenshots/ontology-viewer.png" alt="meMO Architect ontology workbench prototype">
+          <div class="ui-caption"><strong>Current prototype:</strong> the ontology workbench reads the same inspectable model used by the CLI.</div>
+        </div>
+      </div>
+      <div class="status">Architect is optional. SysML source, packages, and generated artifacts remain usable without the web UI.</div>
+    </div>
+    <aside class="notes">
+      <h3>meMO Architect</h3>
+      <p>Present Architect separately from the CLI. It is a visual workbench for navigation and review. The project architecture explicitly says the UI does not own truth. The source remains versioned text and rebuildable derived data.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-18" data-title="Stop at any layer">
+    <div class="chapter"><b>18</b> Incremental adoption</div>
+    <div class="body">
+      <h2>Adopt incrementally. Stop at the layer that delivers value.</h2>
+      <p class="lede">Each layer builds on the previous one, but no team must adopt the full stack.</p>
+      <div class="dependency">
+        <div class="dep"><small>Start here</small><h3>Ontology specification</h3><p>Shared meaning and exchange semantics.</p><div class="stop">Stop here: align teams and tools.</div></div>
+        <div class="dep"><small>Add practice</small><h3>Default methodology</h3><p>Tailorable medical-device modeling playbook.</p><div class="stop">Stop here: standardize reviews.</div></div>
+        <div class="dep"><small>Add automation</small><h3>CLI tools</h3><p>Validation, builds, exports, Git, and CI.</p><div class="stop">Stop here: automate checks.</div></div>
+        <div class="dep"><small>Add navigation</small><h3>meMO Architect</h3><p>Optional visual workbench over the same model.</p><div class="stop">Add when reviewers need it.</div></div>
+      </div>
+      <div class="message"><strong>Adoption is cumulative, not all-or-nothing:</strong> each additional layer must justify its cost.</div>
+    </div>
+    <aside class="notes">
+      <h3>Stop at any layer</h3>
+      <p>This is the explicit adoption slide the prior deck lacked. The ontology is independently useful. The methodology standardizes practice. The CLI adds automation. Architect adds visual navigation. Teams can stop when the next layer does not justify its cost.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-19" data-title="What each adoption path delivers">
+    <div class="chapter"><b>19</b> What teams get</div>
+    <div class="body">
+      <h2>Different adoption paths solve different problems.</h2>
+      <div class="adopt">
+        <div class="adopt-card"><h3>Ontology only</h3><p><strong>Get:</strong> shared vocabulary, typed relationships, and portable semantics across existing tools.</p></div>
+        <div class="adopt-card"><h3>Ontology + methodology</h3><p><strong>Get:</strong> a tailorable medical-device playbook with layers, viewpoints, artifacts, workflow, and rules.</p></div>
+        <div class="adopt-card"><h3>Add CLI tools</h3><p><strong>Get:</strong> local validation, reproducible outputs, Git review, and CI integration.</p></div>
+        <div class="adopt-card"><h3>Add Architect</h3><p><strong>Get:</strong> guided exploration and visual review over the same versioned model.</p></div>
+      </div>
+      <div class="message"><strong>No forced migration:</strong> meMO can overlay existing QMS, ALM, modeling, and test environments.</div>
+    </div>
+    <aside class="notes">
+      <h3>What each adoption path delivers</h3>
+      <p>Repeat the incremental message in concrete terms. The user asked for clarity on what a team gets if it adopts only the ontology. Make that first box the anchor. The stack is designed as an overlay, not a forced replacement.</p>
+    </aside>
+  </section>
+
+  <section class="slide" id="slide-20" data-title="Change impact">
+    <div class="chapter"><b>20</b> Second-order effects | GPCA thread</div>
+    <div class="body">
+      <h2>A typed model lets us ask what a change could invalidate.</h2>
+      <p class="lede">Architecture exposes a reviewable impact path across structure, behavior, risk, and verification.</p>
+      <div class="impact">
+        <div class="change-card"><div class="eyebrow">Changed element</div><h3>SW-005<br>Infusion manager</h3><p>A software or configuration change affects a Class C responsibility.</p></div>
         <div class="impact-arrow">&rarr;</div>
         <div class="impact-map">
           <div><b>Architecture</b><span>interfaces, timing, dependencies</span></div>
           <div><b>Behavior</b><span>modes, flows, lockout scenario</span></div>
-          <div><b>Risk controls</b><span>RC-001 implementation review</span></div>
+          <div><b>Risk control</b><span>RC-001 realization review</span></div>
           <div><b>Verification</b><span>VER-002 evidence freshness</span></div>
         </div>
       </div>
       <div class="message"><strong>meMO surfaces the review scope.</strong> Engineers still decide safety acceptability and re-verification depth.</div>
     </div>
     <aside class="notes">
-      <h3>Change impact becomes reviewable</h3>
-      <p>This is the second-level effect argument. A typed model can identify downstream responsibilities, scenarios, controls, and evidence that may need review. It does not make the safety decision. It makes the reasoning scope visible earlier.</p>
+      <h3>Change impact</h3>
+      <p>This slide returns to the original safety problem with a concrete model element. Typed links support blast-radius reasoning. They do not automate the safety decision. They expose what needs human review.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-14" data-title="Compile the reviewer view">
-    <div class="chapter"><b>14</b> Views are projections</div>
+  <section class="slide" id="slide-21" data-title="Views are projections">
+    <div class="chapter"><b>21</b> Views are projections</div>
     <div class="body">
       <h2>Model once. Project the view each reviewer needs.</h2>
       <p class="lede">Documents remain important, but they become compiled views of a shared model.</p>
       <div class="project-grid">
-        <div class="source-model">
-          <div class="eyebrow">Versioned source</div>
-          <h3>Architecture + ontology</h3>
-          <p>Typed model elements, stable identifiers, scenarios, controls, and evidence references.</p>
-        </div>
+        <div class="source-model"><div class="eyebrow">Versioned source</div><h3>Architecture + ontology</h3><p>Typed elements, stable identifiers, scenarios, controls, and evidence references.</p></div>
         <div class="project-arrow">&rarr;</div>
         <div class="views">
           <div class="view"><b>Architecture view</b><span>boundaries, interfaces, responsibilities</span></div>
@@ -740,112 +1321,74 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
       <div class="message"><strong>PDF is packaging, not source.</strong> Review artifacts can carry provenance and baseline identity.</div>
     </div>
     <aside class="notes">
-      <h3>Compile the reviewer view</h3>
-      <p>Documents do not disappear. They stop being disconnected sources of truth. A shared model can compile consistent reviewer views and evidence-oriented outputs tied to a versioned baseline.</p>
+      <h3>Views are projections</h3>
+      <p>Documents do not disappear. They become consistent projections tied to a versioned baseline. This is where the architecture-centered model improves evidence freshness without trying to replace document control.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-15" data-title="Architecture as code">
-    <div class="chapter"><b>15</b> Architecture as code</div>
+  <section class="slide" id="slide-22" data-title="How meMO answers the gaps">
+    <div class="chapter"><b>22</b> Close the loop</div>
     <div class="body">
-      <h2>Bring systems reasoning into normal engineering workflows.</h2>
-      <p class="lede">Text-first models make architecture diffable, reviewable, and automatable.</p>
-      <div class="code-flow">
-        <div class="code-step"><div class="icon">.sysml</div><b>Author</b><span>Model architecture, behavior, and safety threads in text.</span></div>
-        <div class="code-step"><div class="icon">git diff</div><b>Review</b><span>See semantic model changes alongside software changes.</span></div>
-        <div class="code-step ci"><div class="icon">memo validate</div><b>Check</b><span>Run syntax, semantics, and closure rules in CI.</span></div>
-        <div class="code-step"><div class="icon">memo build</div><b>Compile</b><span>Regenerate views and evidence-oriented outputs.</span></div>
-        <div class="code-step"><div class="icon">baseline</div><b>Release</b><span>Tie the explanation to the released version.</span></div>
-      </div>
-    </div>
-    <aside class="notes">
-      <h3>Architecture as code</h3>
-      <p>This is the wedge for code-first teams. meMO is SysML v2 text-first, Git-native, and compatible with pull-request and CI workflows. The aim is to make system architecture a living engineering asset rather than a periodically refreshed document.</p>
-    </aside>
-  </section>
-
-  <section class="slide" id="slide-16" data-title="Concrete implementation">
-    <div class="chapter"><b>16</b> A glimpse of the implementation</div>
-    <div class="body">
-      <h2>Two entry points. One versioned model.</h2>
-      <p class="lede">Code-first teams can start at the CLI. Reviewers can navigate through Architect.</p>
-      <div class="tools">
-        <div class="terminal">
-          <div class="terminal-head">meMO CLI | project directory</div>
-          <pre><span class="comment"># inspect resolved vocabulary</span>
-<span class="cmd">$ memo ontology show</span>
-
-<span class="comment"># evaluate closure conditions</span>
-<span class="cmd">$ memo validate --format json</span>
-
-<span class="comment"># compile reviewable output</span>
-<span class="cmd">$ memo build --single-file</span></pre>
+      <h2>Each meMO component addresses a specific gap.</h2>
+      <div class="solve-map">
+        <div class="solve-left">
+          <div><b>Semantic ambiguity</b><span>teams and tools use links differently</span></div>
+          <div><b>Methodology adoption friction</b><span>every program invents its own playbook</span></div>
+          <div><b>Late impact discovery</b><span>system effects appear at review time</span></div>
+          <div><b>Review navigation cost</b><span>stakeholders need different views</span></div>
         </div>
-        <div class="ui">
-          <img src="../../src/images/screenshots/ontology-viewer.png" alt="meMO Architect ontology workbench prototype">
-          <div class="ui-caption"><strong>meMO Architect:</strong> a visual workbench over the same inspectable model.</div>
+        <div class="solve-right">
+          <div><b>Ontology specification</b><span>typed meaning and invariant safety-thread obligations</span></div>
+          <div><b>Default methodology</b><span>tailorable layers, viewpoints, artifacts, workflow, and rule strengths</span></div>
+          <div><b>CLI tools</b><span>validation, diffs, builds, exports, Git, and CI feedback</span></div>
+          <div><b>meMO Architect</b><span>optional visual exploration over the same model</span></div>
         </div>
       </div>
-      <div class="status">Current repository: inspectable open prototype. Richer analysis, workbenches, and integrations remain roadmap work.</div>
+      <div class="message"><strong>The design is deliberate:</strong> each component exists to close one identified gap.</div>
     </div>
     <aside class="notes">
-      <h3>Concrete implementation</h3>
-      <p>Keep this grounded. The CLI commands and prototype Architect screenshot exist in the current repository. Present Architect as a visual workbench direction over the same source model, not as a finished product. The implementation ordering is SysML first, CLI second, UI last.</p>
+      <h3>How meMO answers the gaps</h3>
+      <p>This is the linear synthesis. Each component exists for a reason. Ontology handles semantic ambiguity. Methodology reduces adoption friction. CLI tools bring checks into feedback loops. Architect lowers navigation cost for visual reviewers.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-17" data-title="Clear boundaries">
-    <div class="chapter"><b>17</b> Clear boundaries</div>
+  <section class="slide" id="slide-23" data-title="Clear boundaries">
+    <div class="chapter"><b>23</b> Clear boundaries</div>
     <div class="body">
-      <h2>What <span class="memo">meMO</span> solves, and what it deliberately does not.</h2>
+      <h2>What <span class="memo">meMO</span> helps with, and what it deliberately does not.</h2>
       <div class="scope">
-        <div class="scope-col solve">
-          <h3>Helps teams do</h3>
-          <ul>
-            <li>Make architecture responsibilities and interfaces explicit</li>
-            <li>Connect risk controls to behavior and verification evidence</li>
-            <li>Detect incomplete threads and surface change-review scope</li>
-            <li>Compile consistent views from a versioned model</li>
-          </ul>
-        </div>
-        <div class="scope-col no">
-          <h3>Does not claim to</h3>
-          <ul>
-            <li>Certify compliance or decide safety acceptability</li>
-            <li>Replace expert judgment, a QMS, or specialized analysis tools</li>
-            <li>Require a proprietary modeling repository</li>
-            <li>Deliver every enterprise integration today</li>
-          </ul>
-        </div>
+        <div class="scope-col solve"><h3>Helps teams do</h3><ul><li>Make architecture responsibilities and interfaces explicit</li><li>Connect risk controls to behavior and verification evidence</li><li>Detect incomplete threads and surface change-review scope</li><li>Compile consistent views from a versioned model</li></ul></div>
+        <div class="scope-col no"><h3>Does not claim to</h3><ul><li>Certify compliance or decide safety acceptability</li><li>Replace expert judgment, a QMS, or specialized analysis tools</li><li>Require a proprietary modeling repository</li><li>Deliver every enterprise integration today</li></ul></div>
       </div>
+      <div class="message"><strong>Direction, not magic:</strong> meMO structures assurance work without replacing engineering judgment.</div>
     </div>
     <aside class="notes">
       <h3>Clear boundaries</h3>
-      <p>This slide is essential for credibility. meMO organizes and checks evidence semantics. It does not automate the safety decision, replace the QMS, claim tool qualification, or pretend that all integrations exist today.</p>
+      <p>Maintain credibility. meMO structures meaning, checks consistency, and supports review. It does not certify compliance, replace the QMS, replace specialized safety analyses, or claim all roadmap capabilities are complete.</p>
     </aside>
   </section>
 
-  <section class="slide" id="slide-18" data-title="Start with one thread">
-    <div class="chapter"><b>18</b> A practical starting point</div>
+  <section class="slide" id="slide-24" data-title="Start with one thread">
+    <div class="chapter"><b>24</b> A practical starting point</div>
     <div class="body">
       <h2>Do not start with a platform rollout. Start with one safety thread.</h2>
-      <p class="lede">The method is useful when the smallest pilot already improves a real engineering review.</p>
+      <p class="lede">Choose the smallest adoption layer that improves a real engineering review.</p>
       <div class="pilot">
         <div class="pilot-step"><small>01</small><b>Choose a hazard</b><span>Pick one meaningful control and its clinical context.</span></div>
         <div class="pilot-step"><small>02</small><b>Model the architecture</b><span>Name the responsible component, interface, and scenario.</span></div>
-        <div class="pilot-step"><small>03</small><b>Link the evidence</b><span>Add verification intent and acceptance criteria.</span></div>
-        <div class="pilot-step"><small>04</small><b>Review a change</b><span>Use the model to scope what must be reconsidered.</span></div>
+        <div class="pilot-step"><small>03</small><b>Select an adoption layer</b><span>Ontology, methodology, CLI, or Architect as needed.</span></div>
+        <div class="pilot-step"><small>04</small><b>Review a change</b><span>Use the model to ask what must be reconsidered.</span></div>
       </div>
       <div class="message"><strong>Success criterion:</strong> the next design review asks a better system-level question.</div>
     </div>
     <aside class="notes">
       <h3>Start with one thread</h3>
-      <p>This is implementable independently. Choose one safety-relevant thread, represent its architecture and scenario, link the control and verification intent, and then use a real change to test whether the model improves the review discussion.</p>
+      <p>End the body with an implementable invitation. Teams do not need to adopt every layer. Start with a real hazard-control thread and use the smallest useful layer to improve one review.</p>
     </aside>
   </section>
 
-  <section class="slide dark" id="slide-19" data-title="Close">
-    <div class="chapter"><b>19</b> Close</div>
+  <section class="slide dark" id="slide-25" data-title="Close">
+    <div class="chapter"><b>25</b> Close</div>
     <div class="close">
       <div class="eyebrow">Medical device architecture modeling as code</div>
       <h1>Make architecture the <span class="memo">computable backbone</span> of the safety argument.</h1>
@@ -858,7 +1401,7 @@ pre { margin:0; padding:17px; white-space:pre-wrap; color:var(--ink); font-famil
     </aside>
   </section>
 
-  <div class="counter" id="counter">1 / 19</div>
+  <div class="counter" id="counter">1 / 25</div>
   <button class="notes-button" id="notesButton" type="button">Notes [N]</button>
   <div class="controls">
     <button id="prev" type="button" aria-label="Previous slide">&larr;</button>

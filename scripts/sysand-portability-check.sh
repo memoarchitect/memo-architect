@@ -26,8 +26,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Projects to round-trip: each is an independent sysand project (has .project.json).
 PROJECTS=(
-  "ontology"
-  "ontology/methodology"
+  "vendor/memo-sysmlv2"
+  "vendor/memo-sysmlv2/methodology"
 )
 
 if ! command -v sysand >/dev/null 2>&1; then

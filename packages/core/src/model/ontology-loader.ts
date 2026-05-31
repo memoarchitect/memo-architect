@@ -377,7 +377,7 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
     const result: OntologyPackageInfo[] = [];
     const seen = new Set<string>();
 
-    // Gather all package directories from monorepo packages/ (walk upward like resolvePackageConfig)
+    // Gather all package directories from monorepo packages/ and vendor/ (walk upward like resolvePackageConfig)
     const candidates: string[] = [];
     let searchDir = resolve(projectRoot);
     while (true) {
@@ -389,7 +389,18 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
                     candidates.push(join(pkgsDir, entry.name));
                 }
             } catch { /* skip */ }
-            break; // Found a packages/ dir, stop walking up
+
+            const vendorPkgsDir = join(searchDir, 'vendor', 'memo-sysmlv2', 'packages');
+            if (existsSync(vendorPkgsDir)) {
+                try {
+                    for (const entry of readdirSync(vendorPkgsDir, { withFileTypes: true })) {
+                        if (!entry.isDirectory()) continue;
+                        candidates.push(join(vendorPkgsDir, entry.name));
+                    }
+                } catch { /* skip */ }
+            }
+
+            break;
         }
         const parent = dirname(searchDir);
         if (parent === searchDir) break;
@@ -784,6 +795,11 @@ function resolvePackageConfig(packageName: string, fromDir: string): string | un
         for (const configName of CONFIG_SEARCH_ORDER) {
             const candidate = resolve(dir, 'packages', shortName, configName);
             if (existsSync(candidate)) return candidate;
+        }
+
+        for (const configName of CONFIG_SEARCH_ORDER) {
+            const vendorCandidate = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', shortName, configName);
+            if (existsSync(vendorCandidate)) return vendorCandidate;
         }
 
         for (const configName of CONFIG_SEARCH_ORDER) {

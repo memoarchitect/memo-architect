@@ -1,0 +1,3 @@
+[submodule "vendor/memo-sysmlv2"]
+	path = vendor/memo-sysmlv2
+	url = git@gitlab.com:somesh_sandbox/memo-sysmlv2.git

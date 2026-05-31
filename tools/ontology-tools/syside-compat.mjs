@@ -18,7 +18,7 @@ import { join, relative, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectSysmlFiles, REPO_ROOT } from './sysml-reader.mjs';
 
-const ONTOLOGY_DIR = join(REPO_ROOT, 'ontology');
+const ONTOLOGY_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2');
 const GPCA_MODEL_DIR = join(REPO_ROOT, 'examples', 'gpca-pump', 'model');
 
 const COLORS = {
@@ -112,9 +112,12 @@ function checkC4DirectoryNamespaceMapping(entries) {
         const dirFromFile = dirname(e.relPath);
         const dirSegments = dirFromFile.split('/');
 
-        if (e.relPath.startsWith('ontology/')) {
+        const ONTOLOGY_PREFIX = 'vendor/memo-sysmlv2/';
+        if (e.relPath.startsWith(ONTOLOGY_PREFIX)) {
             const nsLayer = segments[1];
-            const dirLayer = dirSegments[1];
+            const innerPath = e.relPath.slice(ONTOLOGY_PREFIX.length);
+            const innerDirSegments = dirname(innerPath).split('/');
+            const dirLayer = innerDirSegments[0];
             if (dirLayer && nsLayer !== dirLayer && nsLayer !== 'library') {
                 errors.push(`Directory/namespace mismatch: ${e.relPath} declares ${e.qualifiedName} (expected dir segment "${nsLayer}", got "${dirLayer}")`);
             }
