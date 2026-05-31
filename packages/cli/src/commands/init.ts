@@ -25,11 +25,13 @@ export function discoverOntologies(fromDir: string): AvailableOntology[] {
     let dir = resolve(fromDir);
 
     while (true) {
-        const packagesDir = resolve(dir, 'packages');
-        if (existsSync(packagesDir)) {
-            scanOntologyDir(packagesDir, results);
-            if (results.length > 0) break;
+        // Content packages now live in the memo-sysmlv2 submodule; the local
+        // packages/ dir holds only the engine (core/cli/web). Scan both.
+        for (const rel of ['vendor/memo-sysmlv2/packages', 'packages']) {
+            const packagesDir = resolve(dir, rel);
+            if (existsSync(packagesDir)) scanOntologyDir(packagesDir, results);
         }
+        if (results.length > 0) break;
 
         const parent = dirname(dir);
         if (parent === dir) break;
@@ -372,7 +374,7 @@ function resolveArchetypeTemplate(archetype: ArchetypeInfo | undefined, fromDir:
 
     let dir = resolve(fromDir);
     while (true) {
-        const templateDir = resolve(dir, 'packages', 'medical-modeling-profile', 'templates', archetype.templateDir);
+        const templateDir = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', 'medical-modeling-profile', 'templates', archetype.templateDir);
         if (existsSync(templateDir)) {
             const starterPath = resolve(templateDir, 'starter.sysml');
             if (existsSync(starterPath)) return starterPath;

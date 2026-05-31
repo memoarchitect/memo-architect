@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const ARCHETYPES_FILE = join(__dirname, '../../../../ontology/methodology/memo/memo_archetypes.sysml');
+const ARCHETYPES_FILE = join(__dirname, '../../../../vendor/memo-sysmlv2/methodology/memo/memo_archetypes.sysml');
 
 const PART_INSTANCE_RE = /^\s*part\s+(\w+)\s*:\s*(\w+)\s*\{([\s\S]*?)\n\s*\}/gm;
 const ATTR_RE = /attribute\s+(\w+)\s*=\s*(?:"([^"]*)"|(\w+(?:::\w+)*)|(-?\d+(?:\.\d+)?)|(true|false))\s*;/g;

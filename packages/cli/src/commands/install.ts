@@ -8,10 +8,10 @@
 //
 // Adds the package to memo.package.yaml under `dependencies`.
 // Resolution order (handled by config-resolver):
-//   1. ontology/packages/<name>/  (git subtree workspace)
-//   2. packages/<name>/           (workspace)
-//   3. memo_packages/<name>/      (local installs)
-//   4. node_modules/<name>/       (npm installs)
+//   1. vendor/memo-sysmlv2/packages/<name>/  (git submodule)
+//   2. packages/<name>/                      (workspace)
+//   3. memo_packages/<name>/                 (local installs)
+//   4. node_modules/<name>/                  (npm installs)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve, basename, join } from 'node:path';

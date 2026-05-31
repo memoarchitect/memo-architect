@@ -1,9 +1,0 @@
-name: "@memo/medical-modeling-profile"
-version: "3.0.0"
-type: profile
-extends:
-  - "@memo/ontology-arch"
-  - "@memo/ontology-process"
-description: "Closure rules, viewpoints, and starter templates for medical device modeling (v12 two-ontology aligned)"
-license: "Apache-2.0"
-tags: ["medical-device", "iso-14971", "iec-62304", "iso-13485", "modeling-profile"]

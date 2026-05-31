@@ -129,17 +129,26 @@ const KERNEL_IMPORT_RE = new RegExp(
     'gm',
 );
 
-const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'ontology', 'base', 'stdlib');
+const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'base', 'stdlib');
+
+// The memo-sysmlv2 submodule carries its own tooling scaffold (per-package
+// dirs, installed deps, build output). Only the flattened ontology content
+// at the submodule root is linted; skip the rest to avoid false positives on
+// hyphenated package/dep directory names.
+const VENDOR_SKIP_SEGMENTS = new Set(['node_modules', '.git', 'output', 'packages', 'examples']);
+function isVendorContentFile(absPath) {
+    return !relative(REPO_ROOT, absPath).split('/').some((seg) => VENDOR_SKIP_SEGMENTS.has(seg));
+}
 
 function lintP5(failures) {
     const roots = [
-        join(REPO_ROOT, 'ontology'),
+        join(REPO_ROOT, 'vendor', 'memo-sysmlv2'),
         join(REPO_ROOT, 'feedback'),
         join(REPO_ROOT, 'examples'),
     ];
     for (const root of roots) {
         if (!existsSync(root)) continue;
-        const files = collectSysmlFiles(root);
+        const files = collectSysmlFiles(root).filter(isVendorContentFile);
         for (const f of files) {
             if (f.startsWith(STDLIB_WRAPPER_DIR)) continue;
             let text;
@@ -174,12 +183,12 @@ const ATTR_RE = /(?:^|\n)\s*attribute\s+(\w+)\s*(?::|;|=)/g;
 
 function lintP6(failures) {
     const roots = [
-        join(REPO_ROOT, 'ontology'),
+        join(REPO_ROOT, 'vendor', 'memo-sysmlv2'),
         join(REPO_ROOT, 'examples'),
     ];
     for (const root of roots) {
         if (!existsSync(root)) continue;
-        const files = collectSysmlFiles(root);
+        const files = collectSysmlFiles(root).filter(isVendorContentFile);
         for (const f of files) {
             const rel = relative(REPO_ROOT, f);
             const filename = basename(f, '.sysml');
@@ -234,11 +243,12 @@ function lintP6(failures) {
     }
 
     // P6-dir: snake_case directory segments under ontology/
-    const ontRoot = join(REPO_ROOT, 'ontology');
+    const ontRoot = join(REPO_ROOT, 'vendor', 'memo-sysmlv2');
     if (existsSync(ontRoot)) {
         const walkDirs = (dir) => {
             for (const entry of readdirSync(dir, { withFileTypes: true })) {
                 if (!entry.isDirectory()) continue;
+                if (VENDOR_SKIP_SEGMENTS.has(entry.name)) continue;
                 if (!SNAKE_CASE_RE.test(entry.name)) {
                     failures.push({
                         rule: 'P6-dir',

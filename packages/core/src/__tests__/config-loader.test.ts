@@ -135,7 +135,7 @@ layers:
 
 describe('loadConfig with real ontology package files', () => {
     it('ontology-arch loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-arch/memo.package.yaml');
+        const configPath = resolve(__dirname, '../../../../vendor/memo-sysmlv2/packages/ontology-arch/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have 11 layers from memo.rendering.yaml
@@ -155,7 +155,7 @@ describe('loadConfig with real ontology package files', () => {
     });
 
     it('ontology-process loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../ontology-process/memo.package.yaml');
+        const configPath = resolve(__dirname, '../../../../vendor/memo-sysmlv2/packages/ontology-process/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have standard-aligned layers

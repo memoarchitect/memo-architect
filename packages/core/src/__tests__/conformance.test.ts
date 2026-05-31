@@ -9,13 +9,21 @@ import { resolve, join, relative, dirname } from 'node:path';
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
 
-const ONTOLOGY_ROOT = resolve(__dirname, '../../../../ontology');
+const ONTOLOGY_ROOT = resolve(__dirname, '../../../../vendor/memo-sysmlv2');
+
+// When ONTOLOGY_ROOT is the memo-sysmlv2 submodule, only its flattened ontology
+// content is in scope. Skip the submodule's own scaffold: examples/gpca-pump
+// (the same reference model the monorepo carries under examples/, scanned
+// separately via GPCA_MODEL_DIR), per-package workspace dirs, installed deps,
+// build output, and git metadata.
+const VENDOR_SKIP_DIRS = new Set(['examples', 'packages', 'node_modules', 'output', '.git', '.turbo']);
 
 function collectSysmlFiles(dir: string): string[] {
     const files: string[] = [];
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name);
         if (entry.isDirectory()) {
+            if (VENDOR_SKIP_DIRS.has(entry.name)) continue;
             files.push(...collectSysmlFiles(full));
         } else if (entry.name.endsWith('.sysml')) {
             files.push(full);
@@ -269,14 +277,18 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
 
     it('C4: ontology directory segments match namespace segments', () => {
         const mismatches: string[] = [];
+        const ONTOLOGY_PREFIX = 'vendor/memo-sysmlv2/';
         for (const e of allEntries) {
-            if (!e.relPath.startsWith('ontology/')) continue;
+            if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;
             for (const leaf of e.leafPackages) {
                 const nsSegments = leaf.split('::');
                 if (nsSegments[0] !== 'memo') continue;
                 if (nsSegments[1] === 'library') continue;
-                const dirSegments = dirname(e.relPath).split('/');
-                const dirLayer = dirSegments[1];
+                const innerPath = e.relPath.slice(ONTOLOGY_PREFIX.length);
+                const dirSegments = dirname(innerPath).split('/');
+                const dirLayer = dirSegments[0];
+                // Root-level files (e.g. medical_device_library.sysml) have dirname "." — no layer dir to match.
+                if (dirLayer === '.') continue;
                 if (dirLayer && nsSegments[1] !== dirLayer) {
                     mismatches.push(`${e.relPath}: dir segment "${dirLayer}" vs namespace "${nsSegments[1]}"`);
                 }
@@ -456,10 +468,12 @@ describe('DD-6: naming + casing lint (ADR-1-12)', () => {
     });
 
     it('N4: ontology directory segments use snake_case', () => {
+        const ONTOLOGY_PREFIX = 'vendor/memo-sysmlv2/';
         const violations: string[] = [];
         for (const e of allEntries) {
-            if (!e.relPath.startsWith('ontology/')) continue;
-            const segments = e.relPath.split('/').slice(1, -1);
+            if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;
+            const innerPath = e.relPath.slice(ONTOLOGY_PREFIX.length);
+            const segments = dirname(innerPath).split('/').filter((s) => s && s !== '.');
             for (const seg of segments) {
                 if (!SNAKE_CASE_RE.test(seg)) {
                     violations.push(`${e.relPath}: directory segment "${seg}" is not snake_case`);

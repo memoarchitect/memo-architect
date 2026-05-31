@@ -22,10 +22,10 @@ importers:
         version: link:../core
       '@memo/ontology-arch':
         specifier: workspace:*
-        version: link:../ontology-arch
+        version: link:../../vendor/memo-sysmlv2/packages/ontology-arch
       '@memo/ontology-process':
         specifier: workspace:*
-        version: link:../ontology-process
+        version: link:../../vendor/memo-sysmlv2/packages/ontology-process
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -95,28 +95,6 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
 
-  packages/medical-modeling-profile:
-    dependencies:
-      '@memo/ontology-arch':
-        specifier: workspace:*
-        version: link:../ontology-arch
-      '@memo/ontology-process':
-        specifier: workspace:*
-        version: link:../ontology-process
-    devDependencies:
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
-      vitest:
-        specifier: ^2.1.0
-        version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
-
-  packages/methodology-default: {}
-
-  packages/ontology-arch: {}
-
-  packages/ontology-process: {}
-
   packages/web:
     dependencies:
       '@memo/core':
@@ -168,6 +146,23 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  vendor/memo-sysmlv2/packages/medical-modeling-profile:
+    dependencies:
+      '@memo/ontology-arch':
+        specifier: workspace:*
+        version: link:../ontology-arch
+      '@memo/ontology-process':
+        specifier: workspace:*
+        version: link:../ontology-process
+
+  vendor/memo-sysmlv2/packages/methodology-default: {}
+
+  vendor/memo-sysmlv2/packages/methodology-gpca: {}
+
+  vendor/memo-sysmlv2/packages/ontology-arch: {}
+
+  vendor/memo-sysmlv2/packages/ontology-process: {}
 
 packages:
 

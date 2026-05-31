@@ -74,14 +74,14 @@ function loadConfigChainInternal(configPath: string, seen: Set<string>): ConfigC
 
 function resolveParentConfigPath(packageName: string, fromDir: string): string | undefined {
     // Resolution order (per platform-strategy.md §6):
-    // 1. ontology/packages/<name>/ (git subtree workspace)
+    // 1. vendor/memo-sysmlv2/packages/<name>/ (git submodule)
     // 2. packages/<name>/          (workspace)
     // 3. memo_packages/<name>/     (local installs via `memo install`)
     // 4. node_modules/<name>/      (npm installs)
 
-    // Strategy 1: git subtree workspace (ontology/)
-    const subtreePath = resolveFromSubtreeWorkspace(packageName, fromDir);
-    if (subtreePath) return subtreePath;
+    // Strategy 1: vendor submodule (memo-sysmlv2)
+    const vendorPath = resolveFromVendor(packageName, fromDir);
+    if (vendorPath) return vendorPath;
 
     // Strategy 2: workspace packages (monorepo packages/)
     const wsPath = resolveFromWorkspace(packageName, fromDir);
@@ -113,14 +113,14 @@ function resolveFromNodeModules(packageName: string, fromDir: string): string | 
     return undefined;
 }
 
-function resolveFromSubtreeWorkspace(packageName: string, fromDir: string): string | undefined {
+function resolveFromVendor(packageName: string, fromDir: string): string | undefined {
     const shortName = packageName.replace(/^@[^/]+\//, '');
 
     let dir = resolve(fromDir);
     while (true) {
-        const subtreeDir = resolve(dir, 'ontology', 'packages', shortName);
+        const vendorDir = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', shortName);
         for (const configName of CONFIG_SEARCH_ORDER) {
-            const candidate = resolve(subtreeDir, configName);
+            const candidate = resolve(vendorDir, configName);
             if (existsSync(candidate)) return candidate;
         }
 
