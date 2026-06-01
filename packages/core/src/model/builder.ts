@@ -201,6 +201,13 @@ const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     // JJ-12: Composition + exchange allocation.
     Composes: { type: 'composes', inverse: 'composedBy' },
     AllocatesExchange: { type: 'allocatesExchangeTo', inverse: 'exchangeAllocatedFrom' },
+    // JJ-16: HAZOP + cross-cutting analysis↔ISO 14971 links.
+    ContributesToHazard: { type: 'contributesToHazard', inverse: 'hazardContributedBy' },
+    LeadsToHazard: { type: 'leadsToHazard', inverse: 'hazardLedToBy' },
+    IdentifiesHazard: { type: 'identifiesHazard', inverse: 'hazardIdentifiedBy' },
+    AnalyzedBy: { type: 'analyzedBy', inverse: 'analyzes' },
+    MitigatedByControl: { type: 'mitigatedByControl', inverse: 'controlMitigatesFailure' },
+    BrokenByControl: { type: 'brokenByControl', inverse: 'controlBreaksCutSet' },
 };
 
 /**
