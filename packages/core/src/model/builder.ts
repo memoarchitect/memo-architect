@@ -208,6 +208,14 @@ const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     AnalyzedBy: { type: 'analyzedBy', inverse: 'analyzes' },
     MitigatedByControl: { type: 'mitigatedByControl', inverse: 'controlMitigatesFailure' },
     BrokenByControl: { type: 'brokenByControl', inverse: 'controlBreaksCutSet' },
+    // JJ-17: Change management (ISO 13485 §7.3.9).
+    Changes: { type: 'changes', inverse: 'changedBy' },
+    // JJ-18: Usability testing (IEC 62366-1).
+    TestedByUsability: { type: 'testedByUsability', inverse: 'usabilityTests' },
+    // JJ-19: Post-market feedback (MDR Art. 83–86).
+    FeedsBackTo: { type: 'feedsBackTo', inverse: 'receivesFeedback' },
+    // JJ-20: Port→interface binding (M9).
+    BindsToInterface: { type: 'bindsToInterface', inverse: 'interfaceBoundBy' },
 };
 
 /**
