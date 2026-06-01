@@ -202,6 +202,29 @@ describe('buildMemoModel', () => {
         expect(model.relationshipsByType.get('mitigates')?.length).toBe(1);
     });
 
+    it('projects the JJ-1 DerivesInto verb link (parent → child requirement)', async () => {
+        const doc = await parseDoc(`
+            package TestPkg {
+                requirement parent1 : SystemRequirement { attribute redefines title = "P1"; }
+                requirement child1 : SoftwareRequirement { attribute redefines title = "C1"; }
+                part link1 : DerivesInto {
+                    attribute id = "L1";
+                    part parentRequirement = parent1;
+                    part childRequirement = child1;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], testConfig);
+
+        const rel = model.relationships.find(r => r.type === 'derivesinto');
+        expect(rel).toBeDefined();
+        expect(rel!.sourceId).toBe('parent1');
+        expect(rel!.targetId).toBe('child1');
+        expect(rel!.inverseType).toBe('derivedfrom');
+        expect(model.relationshipsByType.get('derivesinto')?.length).toBe(1);
+        expect(model.relationshipsByType.get('derivedfrom')?.length).toBe(1);
+    });
+
     it('accepts the subsetting (:>) binding form for *Link ends', async () => {
         const doc = await parseDoc(`
             package TestPkg {

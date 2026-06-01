@@ -167,6 +167,21 @@ const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     CyberRequirementDerivationLink: { type: 'mitigatedBy', inverse: 'mitigates' },
     CyberSafetyTraceLink: { type: 'impactsSafety' },
     TrustBoundaryCrossingLink: { type: 'crosses' },
+    // JJ-1: P1 regulatory verb relations.
+    DerivesInto: { type: 'derivesInto', inverse: 'derivedFrom' },
+    DeploysOnto: { type: 'deployedOnto', inverse: 'hosts' },
+    Validates: { type: 'validatedBy', inverse: 'validates' },
+    // JJ-4: SOUP dependency (IEC 62304 §8.1.2).
+    DependsOnSoup: { type: 'dependsOnSoup', inverse: 'soupConsumedBy' },
+    // JJ-5: Operational Analysis layer (ARCADIA OA).
+    Performs: { type: 'performs', inverse: 'performedBy' },
+    ContributesToCapability: { type: 'contributesToCapability', inverse: 'capabilityInvolves' },
+    SequencesStep: { type: 'sequencesStep', inverse: 'precededInScenarioBy' },
+    DerivesSystemNeed: { type: 'derivesSystemNeed', inverse: 'systemNeedDerivedFrom' },
+    // JJ-6: System Need / Functional analysis layer (ARCADIA SA).
+    RealizesCapability: { type: 'realizesCapability', inverse: 'capabilityRealizedBy' },
+    InvolvesFunction: { type: 'involvesFunction', inverse: 'functionInvolvedIn' },
+    RealizesScenario: { type: 'realizesScenario', inverse: 'scenarioRealizedBy' },
 };
 
 /**
