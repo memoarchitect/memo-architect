@@ -92,7 +92,7 @@ package memo {
                 part unsafeDoseCyberHazard : CyberHazard {
                     attribute id = "CHZ-001";
                     attribute name = "UnsafeTherapyConfigurationHazard";
-                    attribute hazardType = HazardTypeKind::overdose;
+                    attribute hazardType = HazardTypeKind::drugDeliveryError;
                     attribute foreseeable = true;
                     attribute securityImpact = "loss of configuration integrity";
                     attribute safetyImpact = "unsafe dose delivery";
@@ -118,7 +118,7 @@ package memo {
                     attribute id = "CMIT-001";
                     attribute name = "StrongServiceAuthenticationAndAudit";
                     attribute controlKind = RiskControlKind::protectiveMeasure;
-                    attribute implementationKind = "mutual authentication, role control, signed configuration updates, and audit logging";
+                    attribute implementationKind = RiskControlImplementationKind::softwareDesign;
                     attribute verificationStatus = "planned";
                     attribute controlCategory = CyberControlKind::authentication;
                     attribute defenseStrategy = "authenticate, authorize, audit";

@@ -182,6 +182,25 @@ const LINK_RELATION_MAP: Record<string, LinkRelation> = {
     RealizesCapability: { type: 'realizesCapability', inverse: 'capabilityRealizedBy' },
     InvolvesFunction: { type: 'involvesFunction', inverse: 'functionInvolvedIn' },
     RealizesScenario: { type: 'realizesScenario', inverse: 'scenarioRealizedBy' },
+    // JJ-7: Physical Architecture layer.
+    HostedBy: { type: 'hostedBy', inverse: 'hostsNode' },
+    RealizesComponentExchange: { type: 'realizesComponentExchange', inverse: 'componentExchangeRealizedBy' },
+    // JJ-8: FMEA package.
+    HasFailureMode: { type: 'hasFailureMode', inverse: 'failureModeOf' },
+    CausesEffect: { type: 'causesEffect', inverse: 'effectOf' },
+    CausedBy: { type: 'causedBy', inverse: 'causes' },
+    DetectedBy: { type: 'detectedBy', inverse: 'detects' },
+    AddressedByAction: { type: 'addressedByAction', inverse: 'actionAddresses' },
+    // JJ-9: FTA package.
+    InputToGate: { type: 'inputToGate', inverse: 'gateHasInput' },
+    ProducesEvent: { type: 'producesEvent', inverse: 'eventProducedBy' },
+    OriginatesFrom: { type: 'originatesFrom', inverse: 'originatesEvent' },
+    ContainsEvent: { type: 'containsEvent', inverse: 'eventInCutSet' },
+    // JJ-10: DesignDecision.
+    Decides: { type: 'decides', inverse: 'decidedBy' },
+    // JJ-12: Composition + exchange allocation.
+    Composes: { type: 'composes', inverse: 'composedBy' },
+    AllocatesExchange: { type: 'allocatesExchangeTo', inverse: 'exchangeAllocatedFrom' },
 };
 
 /**
