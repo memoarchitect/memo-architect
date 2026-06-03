@@ -56,3 +56,4 @@ site/
 *.egg-info/
 
 # Roadmap plans are tracked docs, not generated GitLab truth.
+.claude/settings.local.json
