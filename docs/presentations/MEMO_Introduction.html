@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meMO — Medical Engineering Modeling Ontology · Introduction</title>
+<style>
+:root{
+  --night:#061b31; --night-2:#0a3452; --ink:#082744; --muted:#5c7188;
+  --paper:#fbfcfd; --wash:#eef4f7; --line:#d8e2e9;
+  --teal:#00cdbb; --teal-deep:#008d80; --teal-soft:#e4faf7;
+  --blue:#438ed0; --blue-soft:#eaf4fd;
+  --purple:#8971dc; --purple-soft:#f0edff;
+  --orange:#ef9b51; --orange-soft:#fff3e8;
+  --red:#ea6b61; --red-soft:#fff0ef;
+  --green:#59b875; --green-soft:#edf9ef;
+  --code-bg:#06243d; --code-ink:#cfe8ff;
+  --shadow:0 24px 64px rgba(2,31,54,.20);
+  --radius:18px;
+}
+*{box-sizing:border-box;}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#cdd9de;}
+body{color:var(--ink);font-family:Inter,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+button{font:inherit;}
+h1,h2,h3,h4,p,ul{margin:0;}
+.app{display:grid;width:100%;height:100%;place-items:center;}
+.deck{position:relative;width:min(100vw,177.7778vh);height:min(56.25vw,100vh);overflow:hidden;background:var(--paper);box-shadow:var(--shadow);}
+
+/* progress + slide chrome */
+.progress{position:absolute;top:0;left:0;height:4px;width:0;z-index:30;background:linear-gradient(90deg,var(--teal-deep),var(--teal));transition:width .35s ease;}
+.brandmark{position:absolute;top:22px;right:28px;z-index:20;display:flex;align-items:center;gap:8px;color:var(--teal-deep);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;}
+.dark .brandmark{color:var(--teal);}
+.brandmark svg{width:22px;height:22px;}
+
+/* slides */
+.slide{position:absolute;inset:0;display:none;overflow:hidden;background:var(--paper);}
+.slide.active{display:block;animation:fade .45s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.slide.dark{color:#fff;background:radial-gradient(circle at 78% 32%,#0c496c 0,var(--night) 62%,#020e1b 100%);}
+.body{height:100%;padding:74px 72px 104px;display:flex;flex-direction:column;}
+.chapter{position:absolute;top:24px;left:72px;display:flex;align-items:center;gap:12px;color:var(--teal-deep);font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;z-index:5;}
+.chapter b{display:grid;width:34px;height:34px;place-items:center;border-radius:9px;color:#fff;background:var(--teal-deep);letter-spacing:0;font-size:14px;}
+.dark .chapter{color:var(--teal);} .dark .chapter b{color:var(--night);background:var(--teal);}
+h2{font-size:43px;line-height:1.04;letter-spacing:-.03em;max-width:1360px;}
+h2 span{color:var(--teal-deep);} .dark h2 span{color:var(--teal);}
+.lede{max-width:1120px;margin-top:12px;color:var(--muted);font-size:19px;line-height:1.34;}
+.dark .lede{color:rgba(255,255,255,.74);}
+.eyebrow{color:var(--teal-deep);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;}
+.memo{color:var(--teal-deep);font-weight:950;letter-spacing:-.04em;} .dark .memo{color:var(--teal);}
+.fill{flex:1;min-height:0;}
+.message{position:absolute;right:150px;bottom:42px;left:72px;padding:13px 16px;border-left:4px solid var(--teal-deep);color:var(--ink);background:var(--teal-soft);font-size:16px;font-weight:800;line-height:1.3;border-radius:0 10px 10px 0;}
+.message strong{color:var(--teal-deep);}
+.dark .message{color:#eafffb;background:rgba(0,205,187,.12);border-color:var(--teal);}
+.dark .message strong{color:var(--teal);}
+
+/* cover */
+.cover .body{justify-content:center;}
+.cover .mark{display:flex;align-items:center;gap:16px;margin-bottom:26px;}
+.cover .mark svg{width:62px;height:62px;}
+.cover h1{font-size:84px;line-height:.96;letter-spacing:-.05em;color:#fff;}
+.cover h1 span{color:var(--teal);}
+.cover .sub{margin-top:20px;max-width:880px;color:rgba(255,255,255,.8);font-size:23px;line-height:1.38;}
+.cover .pillline{margin-top:30px;display:flex;gap:10px;flex-wrap:wrap;}
+.cover .pillline span{padding:8px 15px;border:1px solid rgba(0,205,187,.45);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;letter-spacing:.04em;}
+.cover .speaker{margin-top:34px;color:#fff;font-size:14px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;}
+.cover .speaker em{color:var(--teal);font-style:normal;}
+
+/* act divider */
+.act .body{justify-content:center;}
+.act .kicker{color:var(--teal);font-size:15px;font-weight:900;letter-spacing:.28em;text-transform:uppercase;}
+.act h2{font-size:64px;margin-top:14px;color:#fff;max-width:1200px;}
+.act p{margin-top:18px;max-width:840px;color:rgba(255,255,255,.74);font-size:21px;line-height:1.4;}
+.act .actno{position:absolute;right:72px;bottom:60px;font-size:200px;font-weight:900;color:rgba(0,205,187,.10);letter-spacing:-.05em;line-height:1;}
+
+/* generic grids */
+.cols{display:grid;gap:18px;margin-top:20px;}
+.cols.fill,.horizons.fill{align-content:center;}
+.c2{grid-template-columns:1fr 1fr;} .c3{grid-template-columns:repeat(3,1fr);} .c4{grid-template-columns:repeat(4,1fr);}
+.card{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:18px 18px;}
+.card h3{font-size:18px;letter-spacing:-.02em;}
+.card p{margin-top:7px;color:var(--muted);font-size:14.5px;line-height:1.36;}
+.card .tag{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);}
+.card.t-red{border-color:#f3c9c6;background:var(--red-soft);} .card.t-red .tag{color:var(--red);}
+.card.t-teal{border-color:#bdeee8;background:var(--teal-soft);} .card.t-teal .tag{color:var(--teal-deep);}
+.card.t-blue{border-color:#cce2f6;background:var(--blue-soft);} .card.t-blue .tag{color:var(--blue);}
+.card.t-purple{border-color:#ddd5f6;background:var(--purple-soft);} .card.t-purple .tag{color:var(--purple);}
+.card.t-orange{border-color:#f7ddc2;background:var(--orange-soft);} .card.t-orange .tag{color:var(--orange);}
+.card.t-green{border-color:#cfeccf;background:var(--green-soft);} .card.t-green .tag{color:var(--green);}
+ul.ticks{margin-top:8px;padding-left:0;list-style:none;}
+ul.ticks li{position:relative;padding-left:22px;margin-top:7px;color:var(--muted);font-size:14.5px;line-height:1.32;}
+ul.ticks li:before{content:"";position:absolute;left:2px;top:7px;width:9px;height:9px;border-radius:3px;background:var(--teal);}
+
+/* stat row */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:auto 0;}
+.stat{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:20px;}
+.stat b{display:block;font-size:50px;line-height:1;letter-spacing:-.04em;color:var(--ink);}
+.stat .lab{margin-top:6px;font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-deep);}
+.stat p{margin-top:9px;color:var(--muted);font-size:13px;line-height:1.34;}
+
+/* story quote */
+.story .body{justify-content:center;}
+.story .q{max-width:1080px;font-size:38px;line-height:1.24;letter-spacing:-.02em;color:#fff;font-weight:600;}
+.story .q em{color:var(--teal);font-style:normal;}
+.story .by{margin-top:26px;color:rgba(255,255,255,.6);font-size:15px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+
+/* code */
+.code{border-radius:14px;background:var(--code-bg);color:var(--code-ink);overflow:hidden;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0;}
+.code .head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);font-size:12px;font-weight:800;letter-spacing:.04em;color:#9fd6ff;}
+.code .head .dot{width:9px;height:9px;border-radius:50%;background:#3a5876;}
+.code pre{margin:0;padding:14px 16px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;overflow:auto;white-space:pre;}
+.code .kw{color:#7fe7d6;} .code .ty{color:#ffc46b;} .code .st{color:#a8e08f;} .code .cm{color:#5f7d9c;font-style:italic;} .code .nm{color:#e6f3ff;} .code .at{color:#9fd6ff;}
+.code.term .ok{color:#86efac;} .code.term .err{color:#fca5a5;} .code.term .warn{color:#fcd34d;} .code.term .cmd{color:#7fe7d6;}
+
+/* thread */
+.thread{display:flex;align-items:stretch;gap:0;margin-top:22px;}
+.tnode{flex:1;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px 12px;position:relative;}
+.tnode small{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-deep);}
+.tnode b{display:block;margin-top:5px;font-size:15px;letter-spacing:-.02em;}
+.tnode span{display:block;margin-top:5px;color:var(--muted);font-size:12px;line-height:1.28;}
+.tnode.h{border-color:#f3c9c6;background:var(--red-soft);} .tnode.h small{color:var(--red);}
+.tnode.c{border-color:#bdeee8;background:var(--teal-soft);}
+.tnode.a{border-color:#ddd5f6;background:var(--purple-soft);} .tnode.a small{color:var(--purple);}
+.tnode.v{border-color:#cfeccf;background:var(--green-soft);} .tnode.v small{color:var(--green);}
+.tarrow{display:flex;align-items:center;color:var(--teal-deep);font-weight:900;font-size:18px;padding:0 4px;}
+
+/* layer grid */
+.layers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;}
+.layer{border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 13px;}
+.layer b{font-size:14px;letter-spacing:-.01em;font-family:"SF Mono",ui-monospace,monospace;color:var(--teal-deep);}
+.layer span{display:block;margin-top:4px;color:var(--muted);font-size:11.5px;line-height:1.28;}
+.layer.risk{background:var(--red-soft);border-color:#f3c9c6;} .layer.risk b{color:var(--red);}
+.layer.cyber{background:var(--orange-soft);border-color:#f7ddc2;} .layer.cyber b{color:var(--orange);}
+.layer.assure{background:var(--green-soft);border-color:#cfeccf;} .layer.assure b{color:var(--green);}
+
+/* link table */
+.ltable{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px;}
+.ltable th{text-align:left;padding:8px 12px;background:var(--wash);color:var(--teal-deep);font-size:11px;letter-spacing:.1em;text-transform:uppercase;border-bottom:2px solid var(--line);}
+.ltable td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.ltable td:first-child{font-weight:900;color:var(--ink);width:150px;}
+.ltable code{font-family:"SF Mono",ui-monospace,monospace;font-size:12.5px;color:var(--teal-deep);background:var(--teal-soft);padding:2px 6px;border-radius:5px;}
+
+/* horizon roadmap */
+.horizons{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px;}
+.horizon{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:18px;position:relative;overflow:hidden;}
+.horizon:before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:var(--teal);}
+.horizon.h1:before{background:var(--blue);} .horizon.h2:before{background:var(--purple);}
+.horizon .when{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.horizon h3{margin-top:5px;font-size:19px;letter-spacing:-.02em;}
+
+/* stack figure */
+.stack{display:flex;flex-direction:column;gap:9px;margin-top:6px;}
+.srow{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:#fff;display:flex;align-items:center;gap:14px;}
+.srow b{font-size:16px;letter-spacing:-.02em;} .srow span{color:var(--muted);font-size:13px;}
+.srow .n{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--teal-soft);color:var(--teal-deep);font-weight:900;font-size:14px;flex:none;}
+.srow.l1{background:var(--teal-soft);border-color:#bdeee8;}
+.srow.l2{background:var(--blue-soft);border-color:#cce2f6;} .srow.l2 .n{background:#d4e7fa;color:var(--blue);}
+.srow.l3{background:var(--purple-soft);border-color:#ddd5f6;} .srow.l3 .n{background:#e4dcfb;color:var(--purple);}
+.srow.l4{background:var(--orange-soft);border-color:#f7ddc2;} .srow.l4 .n{background:#f8e3cd;color:var(--orange);}
+
+/* two-pane code */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;min-height:0;}
+
+/* mini app mock */
+.mock{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;align-self:center;}
+.mock .bar{display:grid;grid-template-columns:150px 1fr;}
+.mock .sb{background:var(--night);color:#fff;padding:16px;font-weight:900;font-size:14px;line-height:1.5;}
+.mock .sb em{display:block;margin-top:10px;color:var(--teal);font-size:11.5px;font-weight:800;font-style:normal;line-height:1.9;}
+.mock .canvas{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mock .tile{border-radius:10px;padding:12px;font-weight:900;font-size:13px;}
+
+.notes{display:none;}
+
+/* nav */
+.nav{position:absolute;right:24px;bottom:18px;z-index:25;display:flex;align-items:center;gap:9px;padding:7px;border:1px solid rgba(8,39,68,.12);border-radius:999px;background:rgba(255,255,255,.82);backdrop-filter:blur(8px);}
+.nav button{width:32px;height:32px;border:0;border-radius:50%;background:var(--night-2);color:#fff;font-weight:900;cursor:pointer;}
+.nav button:hover{background:var(--teal-deep);}
+#counter{min-width:62px;text-align:center;color:var(--muted);font-size:12px;font-weight:900;}
+.dark .nav{background:rgba(6,27,49,.6);border-color:rgba(255,255,255,.16);}
+.dark #counter{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+<div class="app">
+<main class="deck" id="deck">
+<div class="progress" id="progress"></div>
+
+<!-- ============ 0 · COVER ============ -->
+<section class="slide dark cover active" data-title="meMO">
+  <div class="brandmark"><svg viewBox="0 0 44 40"><path d="M22 5c-6 0-10 3-10 8 0 2 1 4 3 5-2 1-3 3-3 5 0 4 4 7 10 7s10-3 10-7c0-2-1-4-3-5 2-1 3-3 3-5 0-5-4-8-10-8z" fill="none" stroke="#00cdbb" stroke-width="2.2"/><path d="M6 22h6l3-8 5 16 4-12 3 4h11" fill="none" stroke="#00cdbb" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>meMO</div>
+  <div class="body">
+    <div class="mark">
+      <svg viewBox="0 0 44 40"><path d="M22 4c-7 0-12 4-12 9 0 2 1 4 3 6-2 1-3 3-3 5 0 5 5 8 12 8s12-3 12-8c0-2-1-4-3-5 2-2 3-4 3-6 0-5-5-9-12-9z" fill="none" stroke="#00cdbb" stroke-width="2.4"/><path d="M5 22h6l3-9 5 18 4-13 3 4h12" fill="none" stroke="#00cdbb" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <div class="eyebrow" style="color:var(--teal)">Introduction · 2026</div>
+    </div>
+    <h1><span>meMO</span><br>Medical Engineering<br>Modeling Ontology</h1>
+    <p class="sub">A SysML&nbsp;v2-native ontology and toolchain that makes a medical device's safety evidence <strong style="color:#fff">resilient to change</strong> — typed, computable, and architecture-backed.</p>
+    <div class="pillline"><span>Ontology</span><span>Methodology</span><span>Tools</span><span>Architect</span></div>
+    <div class="speaker">Somesh Kashyap · <em>open source · SysML v2 · ISO 14971 · IEC 62304 · ISO/IEC/IEEE 42010</em></div>
+  </div>
+</section>
+
+<!-- ============ ACT 1 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 1 — The problem">
+  <div class="body">
+    <div class="kicker">Part One</div>
+    <h2>Safety evidence <span>decays under change</span>.</h2>
+    <p>Modern devices are software-defined systems. Their safety case lives across many tools — and quietly drifts out of alignment every time the design moves.</p>
+  </div>
+  <div class="actno">01</div>
+</section>
+
+<!-- ============ 1 · COMPLEXITY ============ -->
+<section class="slide" data-title="Software is becoming the medical device.">
+  <div class="chapter"><b>01</b> The shape of the problem</div>
+  <div class="body">
+    <h2>Software is becoming <span>the medical device</span>.</h2>
+    <p class="lede">Devices are now connected, configurable, workflow-driven cyber-physical systems. Safety is an emergent property of behavior and architecture — not of any single requirement.</p>
+    <div class="cols c4 fill">
+      <div class="card t-blue"><div class="tag">Connected</div><p>Cloud services, OTA updates, telemetry, fleet data — new failure and exposure paths.</p></div>
+      <div class="card t-teal"><div class="tag">Software behavior</div><p>Modes, alarms, configuration, UI workflows — where most hazards actually live.</p></div>
+      <div class="card t-purple"><div class="tag">AI / automation</div><p>Inference, assistance, model drift — added review and assurance burden.</p></div>
+      <div class="card t-orange"><div class="tag">Device platform</div><p>Sensors, actuators, real-time embedded control, hardware safety.</p></div>
+    </div>
+    <div class="message"><strong>Opening question:</strong> as software complexity grows, how do we keep safety <em>continuously</em> assured under change?</div>
+  </div>
+</section>
+
+<!-- ============ 2 · THE STORY ============ -->
+<section class="slide dark story" data-title="What evidence is still valid?">
+  <div class="chapter"><b>02</b> A familiar story</div>
+  <div class="body">
+    <p class="q">It is 11&nbsp;p.m. before an audit. An engineer changes one line in <em>REQ-145</em>. The next morning, no one in the room can answer the question that follows:<br><br>“<em>What evidence is still valid?</em>”</p>
+    <div class="by">A small change · a clean diff · a safety case that quietly stopped meaning what it said</div>
+  </div>
+</section>
+
+<!-- ============ 3 · DRIFT IS EXPENSIVE ============ -->
+<section class="slide" data-title="Drift is expensive — and quiet.">
+  <div class="chapter"><b>03</b> Why it matters</div>
+  <div class="body">
+    <h2>Drift is expensive — <span>and quiet</span>.</h2>
+    <p class="lede">Unverified change is the silent driver of recalls, rework, and audit findings. The cost is not the broken link — it is the doubt every broken link injects into the case.</p>
+    <div class="stats">
+      <div class="stat"><b>~21%</b><div class="lab">FDA recalls</div><p>Software &amp; traceability are flagged in roughly one-fifth of Class II/III recalls.</p></div>
+      <div class="stat"><b>~40%</b><div class="lab">Rework cost</div><p>Late requirement and risk rework absorbs 30–45% of typical V&amp;V budgets.</p></div>
+      <div class="stat"><b>Days</b><div class="lab">Audit time</div><p>Reconstructing a single broken trace before audit takes days, not minutes.</p></div>
+      <div class="stat"><b>↻</b><div class="lab">Lost confidence</div><p>Each silent break weakens the safety case the next reviewer reads.</p></div>
+    </div>
+    <div class="message"><strong>The underlying problem:</strong> loss of <em>evidence integrity under change</em> — claims, architecture, behavior, controls, and verification falling out of sync as the product evolves.</div>
+  </div>
+</section>
+
+<!-- ============ 4 · V-MODEL TRIGGERS ============ -->
+<section class="slide" data-title="Change-driven evidence gaps.">
+  <div class="chapter"><b>04</b> Where it breaks</div>
+  <div class="body">
+    <h2>Change is where the problem <span>becomes operational</span>.</h2>
+    <p class="lede">After a code or config change, teams must decide what to re-verify. They over-verify (cost) or under-verify (missed safety impact) — because the same triggers recur across the V-Model.</p>
+    <div class="cols c3 fill">
+      <div class="card t-red"><div class="tag">Allocation</div><h3>Paper controls</h3><p>Risk controls exist on paper but aren't anchored to a component, interface, or behavior step — hard to verify “where implemented”.</p></div>
+      <div class="card t-red"><div class="tag">Granularity</div><h3>Hand-wavy trace</h3><p>Hazards are high-level while design and tests are detailed; trace becomes ambiguous and easy to misinterpret.</p></div>
+      <div class="card t-red"><div class="tag">Emergence</div><h3>Coupling &amp; behavior</h3><p>Timing, modes, alarms, and faults interact to create hazards invisible from isolated requirements.</p></div>
+      <div class="card t-red"><div class="tag">Fragmentation</div><h3>Tool silos</h3><p>Different tools own risk, requirements, design, and tests; semantics aren't shared, so inconsistencies persist.</p></div>
+      <div class="card t-red"><div class="tag">Coverage</div><h3>Scenarios not first-class</h3><p>Edge cases and degraded modes live in prose; negative-scenario coverage can't be defended.</p></div>
+      <div class="card t-red"><div class="tag">Freshness</div><h3>Stale safety case</h3><p>Risk, intent, and verification diverge over time; change impact is assessed manually and late.</p></div>
+    </div>
+    <div class="message"><strong>Ten recurring triggers, one root cause:</strong> meaning between artifacts is implicit, so it cannot be checked when the design moves.</div>
+  </div>
+</section>
+
+<!-- ============ 5 · TRACE WITHOUT MEANING ============ -->
+<section class="slide" data-title="Traceability exists, but not enough meaning.">
+  <div class="chapter"><b>05</b> The semantic gap</div>
+  <div class="body">
+    <h2>Traceability exists — <span>but not enough meaning</span>.</h2>
+    <p class="lede">A matrix can say two items are connected. It rarely says <em>why</em>, <em>how</em>, <em>where implemented</em>, or whether the evidence is now stale.</p>
+    <div class="cols c3 fill">
+      <div class="card"><div class="tag">Trace row</div><h3>Requirement → Test</h3><p>The relationship exists, but the safety meaning lives outside the model.</p><p style="color:var(--red);font-weight:800;margin-top:10px;">Missing: why this test proves this safety claim.</p></div>
+      <div class="card"><div class="tag">Allocation</div><h3>Control → Architecture</h3><p>The control may not be allocated to a behavior, component, interface, or boundary.</p><p style="color:var(--red);font-weight:800;margin-top:10px;">Missing: where implemented and who owns it.</p></div>
+      <div class="card"><div class="tag">Freshness</div><h3>Evidence → Baseline</h3><p>Verification goes stale when assumptions, flows, or interfaces change.</p><p style="color:var(--red);font-weight:800;margin-top:10px;">Missing: deterministic re-review scope.</p></div>
+    </div>
+    <div class="message"><strong>The gap is semantic, not graphical.</strong> The goal is typed, checkable safety relationships — not more arrows.</div>
+  </div>
+</section>
+
+<!-- ============ 6 · WHAT AUDITORS ASK ============ -->
+<section class="slide" data-title="What reviewers actually ask.">
+  <div class="chapter"><b>06</b> The reviewer's question</div>
+  <div class="body">
+    <h2>Every review reduces to <span>one question</span>.</h2>
+    <p class="lede">“Is the device still safe after all the changes?” To answer it, reviewers ask for one complete safety thread, end-to-end.</p>
+    <div class="cols c2 fill">
+      <div class="card t-teal"><div class="tag">For each important hazard, show…</div>
+        <ul class="ticks">
+          <li>The risk control that reduces the risk.</li>
+          <li>Exactly where it is implemented — which component or interface is responsible.</li>
+          <li>The verification evidence that proves it works, with acceptance criteria.</li>
+          <li>The behavior it acts on — the flow, mode, alarm path, or edge-case scenario.</li>
+        </ul>
+      </div>
+      <div class="card t-blue"><div class="tag">And when something changes…</div>
+        <ul class="ticks">
+          <li>What changed, and what part of the system and safety case it impacts.</li>
+          <li>Why the proposed re-verification scope is sufficient — not excessive, not risky.</li>
+          <li>That the evidence corresponds to the exact released configuration.</li>
+          <li>The approvals tied to that specific baseline.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>The safety thread is the unit of assurance.</strong> If we can make <em>that</em> object typed and computable, the rest follows.</div>
+  </div>
+</section>
+
+<!-- ============ ACT 2 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 2 — The insight">
+  <div class="body">
+    <div class="kicker">Part Two</div>
+    <h2>Make the safety argument <span>source code</span>.</h2>
+    <p>Architecture is the natural backbone for the safety story. Treat it as code, and review questions become executable checks.</p>
+  </div>
+  <div class="actno">02</div>
+</section>
+
+<!-- ============ 7 · ARCH BACKBONE ============ -->
+<section class="slide" data-title="Architecture can connect the safety story.">
+  <div class="chapter"><b>07</b> The backbone</div>
+  <div class="body">
+    <h2>Architecture can <span>connect the safety story</span>.</h2>
+    <p class="lede">Architecture is the natural integration point between clinical intent, risk controls, requirements, behavior, interfaces, verification, and released evidence.</p>
+    <div class="cols c4 fill">
+      <div class="card t-purple"><div class="tag">Intent</div><h3>Use + assumptions</h3><p>What the device must do, for whom, in which setting.</p></div>
+      <div class="card t-red"><div class="tag">Risk</div><h3>Hazards + controls</h3><p>What must be prevented, and how it is mitigated.</p></div>
+      <div class="card t-teal"><div class="tag">Architecture</div><h3>The living backbone</h3><p>Responsibilities, interfaces, behavior, and change-impact paths.</p></div>
+      <div class="card t-green"><div class="tag">Evidence</div><h3>Verification + DHF</h3><p>What proves the claim for this released baseline.</p></div>
+    </div>
+    <div class="message"><strong>Architecture is not just a picture.</strong> It can become the computable backbone of safety assurance.</div>
+  </div>
+</section>
+
+<!-- ============ 8 · LEARN FROM DOMAINS ============ -->
+<section class="slide" data-title="Learn from architecture-centric domains.">
+  <div class="chapter"><b>08</b> Borrowed discipline</div>
+  <div class="body">
+    <h2>Medical can learn from <span>architecture-centric domains</span>.</h2>
+    <p class="lede">Aerospace and automotive have stronger traditions of views, allocation, interface contracts, and model-based reasoning. MEMO adapts them to medical realities — without the heavyweight cost.</p>
+    <div class="cols c3 fill">
+      <div class="card t-blue"><div class="tag">Aerospace</div><h3>Allocation chains</h3><p>Architecture and allocation connect mission, design, safety analysis (ARP4761), and verification evidence.</p></div>
+      <div class="card t-orange"><div class="tag">Automotive</div><h3>Platforms + contracts</h3><p>ISO 26262-style mechanisms standardize safety patterns, interfaces, and reuse.</p></div>
+      <div class="card t-teal"><div class="tag">Medical devices</div><h3>Process-rich, architecture-light</h3><p>Strong QMS and traceability, but variable architecture maturity and high MBSE setup cost.</p></div>
+    </div>
+    <div class="message"><strong>The goal is not heavyweight MBSE.</strong> It is architecture-centered discipline with code-first adoption friction.</div>
+  </div>
+</section>
+
+<!-- ============ 9 · WHAT'S NEEDED ============ -->
+<section class="slide" data-title="What is needed is a shared model.">
+  <div class="chapter"><b>09</b> The missing layer</div>
+  <div class="body">
+    <h2>What is needed is a <span>shared, code-first model</span>.</h2>
+    <p class="lede">A low-cost, versionable, architecture-backed model that carries engineering meaning across teams — and is checkable by rules.</p>
+    <div class="cols c3 fill">
+      <div class="card t-teal"><div class="tag">Input</div><h3>Text-first source</h3><ul class="ticks"><li>Diffable, reviewable, versioned in git.</li><li>An architecture backbone for risk, requirements, behavior, evidence.</li><li>A prefab methodology — not a blank canvas.</li></ul></div>
+      <div class="card t-blue"><div class="tag">Core</div><h3>Meaning + structure + rules</h3><ul class="ticks"><li>Typed entities and relationships.</li><li>Responsibilities, interfaces, scenarios.</li><li>Explicit change-impact paths.</li></ul></div>
+      <div class="card t-green"><div class="tag">Output</div><h3>Checked, generated views</h3><ul class="ticks"><li>Compiler-style warnings, errors, closure.</li><li>Viewpoints: risk, architecture, DHF, cyber.</li><li>Generated review and audit artifacts.</li></ul></div>
+    </div>
+    <div class="message"><strong>The goal:</strong> MBSE benefits with code-first adoption and far lower setup friction.</div>
+  </div>
+</section>
+
+<!-- ============ 10 · ARCH AS CODE ============ -->
+<section class="slide" data-title="What architecture-as-code looks like.">
+  <div class="chapter"><b>10</b> Architecture as code</div>
+  <div class="body">
+    <h2>The model is <span>source code for the safety argument</span>.</h2>
+    <p class="lede">A safety thread, expressed as SysML&nbsp;v2 text in the <span class="memo">memo::</span> namespace — diffable, identifiable, and machine-readable.</p>
+    <div class="duo fill">
+      <div class="code">
+        <div class="head"><span class="dot"></span>examples/gpca-pump/model/gpca_risk.sysml</div>
+<pre><span class="kw">part</span> <span class="nm">overdoseHazard</span> : <span class="ty">Hazard</span> {
+  <span class="at">attribute</span> id = <span class="st">"HZ-001"</span>;
+  <span class="at">attribute</span> hazardType = <span class="ty">HazardTypeKind</span>::drugDeliveryError;
+  <span class="at">attribute</span> severity   = <span class="ty">CriticalityKind</span>::catastrophic;
+}
+
+<span class="kw">part</span> <span class="nm">lockoutControl</span> : <span class="ty">RiskControl</span> {
+  <span class="at">attribute</span> id = <span class="st">"RC-001"</span>;
+  <span class="at">attribute</span> controlKind = <span class="ty">RiskControlKind</span>::inherentSafeDesign;
+}</pre>
+      </div>
+      <div class="code">
+        <div class="head"><span class="dot"></span>examples/gpca-pump/model/gpca_requirements.sysml</div>
+<pre><span class="kw">requirement</span> <span class="nm">reqLockout</span> : <span class="ty">SoftwareRequirement</span> {
+  <span class="at">attribute</span> id = <span class="st">"REQ-025"</span>;
+  <span class="at">attribute</span> statement =
+    <span class="st">"Ignore patient bolus requests that</span>
+<span class="st">     violate lockout or max bolus."</span>;
+  <span class="at">attribute</span> sourceKind =
+    <span class="ty">RequirementSourceKind</span>::risk;
+  <span class="at">attribute</span> safetyClass = <span class="ty">SafetyClassKind</span>::C;
+}</pre>
+      </div>
+    </div>
+    <div class="message"><strong>Stable identifiers · typed relationships · diffable evidence.</strong> The safety case now lives in normal engineering workflows.</div>
+  </div>
+</section>
+
+<!-- ============ 11 · COMPILE THE ARGUMENT ============ -->
+<section class="slide" data-title="Compile the safety argument.">
+  <div class="chapter"><b>11</b> Compile the argument</div>
+  <div class="body">
+    <h2>We compile code. We should <span>compile the safety argument</span>.</h2>
+    <p class="lede">Architecture review questions become executable checks. MEMO ships native KerML closure constraints traced to ISO&nbsp;14971, IEC&nbsp;62304, and ISO&nbsp;13485.</p>
+    <div class="duo fill">
+      <div class="code term">
+        <div class="head"><span class="dot"></span>terminal — closure &amp; consistency</div>
+<pre><span class="cmd">$ memo validate</span>
+
+<span class="err">CR-MED-001</span>  Hazard must have ≥1 risk control   <span class="cm">(ISO 14971)</span>
+            Missing mitigation: hazAirInLine
+
+<span class="err">CR-MED-003</span>  Risk control must be verified      <span class="cm">(ISO 14971 §7.4)</span>
+            Missing verification: rcDoorOpenAlarm
+
+<span class="warn">CR-MED-011</span>  SW requirement must derive from a
+            system requirement                <span class="cm">(IEC 62304)</span>
+
+<span class="ok">Result: 2 errors · 1 warning · safety thread HZ-001 closed</span></pre>
+      </div>
+      <div class="card t-teal" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="tag">Why it matters</div>
+        <ul class="ticks">
+          <li>Find gaps <strong>before</strong> design review or audit.</li>
+          <li>Make closure visible to software, systems, risk, and V&amp;V at once.</li>
+          <li>Run the rules in CI before merge or release.</li>
+          <li>Turn each change into a deterministic re-review scope.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>The memorable hook:</strong> safety evidence becomes something engineers can <em>validate</em>, like a build.</div>
+  </div>
+</section>
+
+<!-- ============ ACT 3 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 3 — Introducing meMO">
+  <div class="body">
+    <div class="kicker">Part Three</div>
+    <h2>Introducing <span>meMO</span>.</h2>
+    <p>An adoption stack — ontology, methodology, tools, and a visual architect — not one monolithic tool. Adopt the layer that delivers value now.</p>
+  </div>
+  <div class="actno">03</div>
+</section>
+
+<!-- ============ 12 · THE STACK ============ -->
+<section class="slide" data-title="meMO is an adoption stack.">
+  <div class="chapter"><b>12</b> The stack</div>
+  <div class="body">
+    <h2>Four layers, <span>adopt what you need</span>.</h2>
+    <p class="lede">Medical Engineering Modeling Ontology is a stack you can enter at any level — from a single text model up to a governed visual workbench.</p>
+    <div class="cols c4 fill">
+      <div class="card t-teal"><div class="tag">01 · Ontology</div><h3>Medical meaning</h3><p>A typed SysML&nbsp;v2 vocabulary for device elements and their safety relationships — not just arrows.</p></div>
+      <div class="card t-blue"><div class="tag">02 · Methodology</div><h3>A ramp, not a canvas</h3><p>Starter viewpoints, layers, rules, and gates so teams don't invent an MBSE method from scratch.</p></div>
+      <div class="card t-purple"><div class="tag">03 · Tools</div><h3>Executable assurance</h3><p>Parser, validator, CLI, import/export, DHF generation, and rule checks — CI-friendly.</p></div>
+      <div class="card t-orange"><div class="tag">04 · Architect</div><h3>Visual review</h3><p>Diagrams, traceability, ontology, DHF, and impact — over the same code-first model.</p></div>
+    </div>
+    <div class="message"><strong>Adopt the layer that gives value now.</strong> Expand as maturity grows.</div>
+  </div>
+</section>
+
+<!-- ============ 13 · BUILT ON PRACTICE ============ -->
+<section class="slide" data-title="Built on what you already practice.">
+  <div class="chapter"><b>13</b> Framing</div>
+  <div class="body">
+    <h2>Built on what you <span>already practice</span>.</h2>
+    <p class="lede">MEMO is not a new methodology. It is a SysML&nbsp;v2 ontology <em>underneath</em> the methodologies and standards your teams already use.</p>
+    <div class="cols c3 fill">
+      <div class="card t-blue"><div class="tag">ISO/IEC/IEEE 42010</div><h3>Concerns → Viewpoints → Views → Models</h3><p><code style="font-family:monospace">memo::viewpoints</code> + <code style="font-family:monospace">memo::views</code> supply the typed elements that views reference.</p></div>
+      <div class="card t-purple"><div class="tag">Arcadia-inspired</div><h3>Layered separation of concerns</h3><p>Operational → logical → physical → behavior, with risk and assurance modeled as peers — not after-thoughts.</p></div>
+      <div class="card t-teal"><div class="tag">SysML v2</div><h3>One coherent source</h3><p>All kinds, links, viewpoints, and methodology in one <code style="font-family:monospace">memo::</code> namespace, one release version.</p></div>
+    </div>
+    <div class="message"><strong>Position:</strong> MEMO sits between the standards (ISO&nbsp;14971, IEC&nbsp;62304, IEC&nbsp;81001-5-1) and the modeling tools — a domain ontology, not a tool stack.</div>
+  </div>
+</section>
+
+<!-- ============ 14 · THREE PILLARS ============ -->
+<section class="slide" data-title="Three pillars.">
+  <div class="chapter"><b>14</b> Three pillars</div>
+  <div class="body">
+    <h2>Three pillars, <span>each reviewer-checkable</span>.</h2>
+    <p class="lede">The framework is concrete: a published spec, a working tool, and worked examples anyone can inspect.</p>
+    <div class="cols c3 fill">
+      <div class="card t-teal"><div class="tag">Pillar 1</div><h3>Ontology specification</h3><ul class="ticks"><li>Minimal, medically grounded typed elements.</li><li>Allowed relationships + closure constraints.</li><li>Published as an open spec to reduce lock-in.</li></ul></div>
+      <div class="card t-purple"><div class="tag">Pillar 2</div><h3>Architect tool</h3><ul class="ticks"><li>Functional breakdown, allocation, trace threads.</li><li>Computed change impact + re-verification scope.</li><li>Deterministic artifact generation with provenance.</li></ul></div>
+      <div class="card t-blue"><div class="tag">Pillar 3</div><h3>Reference architectures</h3><ul class="ticks"><li>Reusable Class B/C patterns and safety boundaries.</li><li>End-to-end worked safety threads.</li><li>Open reference packages over time.</li></ul></div>
+    </div>
+    <div class="message"><strong>Open by design:</strong> ontology, core tool, and reference packages are open source — to enable transparency and community validation.</div>
+  </div>
+</section>
+
+<!-- ============ ACT 4 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 4 — The ontology">
+  <div class="body">
+    <div class="kicker">Part Four</div>
+    <h2>Inside the <span>memo::</span> ontology.</h2>
+    <p>One namespace, one release. A small core, eighteen architecture layers, typed semantic links, and a methodology that shapes how it all gets applied.</p>
+  </div>
+  <div class="actno">04</div>
+</section>
+
+<!-- ============ 15 · ONE NAMESPACE ============ -->
+<section class="slide" data-title="One namespace. One release.">
+  <div class="chapter"><b>15</b> Package shape</div>
+  <div class="body">
+    <h2>One namespace. One release. <span>memo::</span></h2>
+    <p class="lede">MEMO ships as a single SysML&nbsp;v2 package — <code style="font-family:monospace">memo::medical_device_library</code> — versioned 1.0.0. Layers are sub-packages, not separate libraries.</p>
+    <div class="duo fill">
+      <div class="code">
+        <div class="head"><span class="dot"></span>medical_device_library.sysml</div>
+<pre><span class="kw">package</span> <span class="nm">memo</span> {
+ <span class="kw">package</span> <span class="nm">medical_device_library</span> {
+  <span class="kw">public import</span> memo::core::*;            <span class="cm">// bases, enums, links</span>
+  <span class="kw">public import</span> memo::manifest::release::*;
+
+  <span class="kw">public import</span> memo::architecture::context::*;
+  <span class="kw">public import</span> memo::architecture::requirements::*;
+  <span class="kw">public import</span> memo::architecture::behavior::*;
+  <span class="kw">public import</span> memo::architecture::risk::*;
+  <span class="kw">public import</span> memo::architecture::cybersecurity::*;
+  <span class="kw">public import</span> memo::architecture::assurance::*;
+  <span class="cm">// … viewpoints, views, compliance, methodology</span>
+ }
+}</pre>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+        <div class="card t-teal"><div class="tag">Single namespace</div><p><code style="font-family:monospace">memo::</code> spans every layer. Imports are short and predictable.</p></div>
+        <div class="card t-blue"><div class="tag">Single release · 1.0.0</div><p>One version covers core, architecture, methodology, viewpoints, views, and compliance.</p></div>
+        <div class="card t-purple"><div class="tag">Layers ≠ libraries</div><p>Architecture sub-packages are layers; viewpoints and views are first-class libraries.</p></div>
+      </div>
+    </div>
+    <div class="message"><strong>The ontology is the source of truth.</strong> Methodology guides how it is applied — without owning it.</div>
+  </div>
+</section>
+
+<!-- ============ 16 · TOP STRUCTURE ============ -->
+<section class="slide" data-title="Sub-packages under memo::">
+  <div class="chapter"><b>16</b> Top-level structure</div>
+  <div class="body">
+    <h2>Focused sub-packages under <span>memo::</span></h2>
+    <p class="lede">Each sub-package is a focused library. Architecture is itself decomposed into eighteen ontology layers.</p>
+    <div class="stack fill" style="justify-content:center;">
+      <div class="srow l1"><span class="n">C</span><div><b>memo::core</b> <span>· abstract bases · enumerations · semantic links</span></div></div>
+      <div class="srow l2"><span class="n">A</span><div><b>memo::architecture</b> <span>· 18 ontology layers — what the device is</span></div></div>
+      <div class="srow l3"><span class="n">M</span><div><b>memo::methodology</b> <span>· core · profiles · viewpoints · rules · patterns · workflow · gates</span></div></div>
+      <div class="srow"><span class="n">V</span><div><b>memo::viewpoints · memo::views</b> <span>· selection intent + model-driven content</span></div></div>
+      <div class="srow l4"><span class="n">K</span><div><b>memo::compliance</b> <span>· controlled artifacts · change · post-market · document views</span></div></div>
+      <div class="srow"><span class="n">G</span><div><b>memo::examples::gpca</b> <span>· worked example — GPCA infusion pump</span></div></div>
+    </div>
+    <div class="message"><strong>Compliance and examples are libraries too</strong> — the same machinery models the ontology, the method, and a real device.</div>
+  </div>
+</section>
+
+<!-- ============ 17 · CORE ============ -->
+<section class="slide" data-title="memo::core — bases, enums, links.">
+  <div class="chapter"><b>17</b> memo::core</div>
+  <div class="body">
+    <h2>A small core: <span>bases, enums, links</span>.</h2>
+    <p class="lede">The whole ontology specializes a handful of abstract bases. Enumerations encode categorical attributes; links carry typed semantics.</p>
+    <div class="duo fill">
+      <div class="code">
+        <div class="head"><span class="dot"></span>core/memo_common.sysml</div>
+<pre><span class="kw">part def</span> <span class="ty">IdentifiedElement</span> {
+  <span class="at">attribute</span> id : <span class="ty">String</span>;
+  <span class="at">attribute</span> name : <span class="ty">String</span>;
+  <span class="at">attribute</span> description : <span class="ty">String</span>;
+}
+<span class="kw">part def</span> <span class="ty">TraceableElement</span> :> <span class="ty">IdentifiedElement</span> {
+  <span class="at">attribute</span> rationale : <span class="ty">String</span>;
+  <span class="at">attribute</span> sourceReference : <span class="ty">String</span>;
+}
+<span class="kw">part def</span> <span class="ty">ArchitectureElement</span> :> <span class="ty">TraceableElement</span>;
+<span class="kw">part def</span> <span class="ty">VerifiableElement</span>   :> <span class="ty">TraceableElement</span>;
+<span class="kw">part def</span> <span class="ty">EvidenceElement</span>     :> <span class="ty">TraceableElement</span>;</pre>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+        <div class="card t-blue"><div class="tag">57 enumerations</div><p><code style="font-family:monospace">ConcernKind · SafetyClassKind · HazardTypeKind · RiskControlKind · ThreatCategoryKind · AudienceKind · WorkflowStageKind …</code></p></div>
+        <div class="card t-purple"><div class="tag">Semantic links</div><p><code style="font-family:monospace">SemanticLink</code> → <code style="font-family:monospace">RequirementSatisfactionLink</code>, <code style="font-family:monospace">VerificationLink</code>, <code style="font-family:monospace">FunctionAllocationLink</code>, and more.</p></div>
+        <div class="card t-teal"><div class="tag">Specialize, don't edit</div><p>Every domain element <code style="font-family:monospace">:&gt;</code> specializes a base. Add kinds; never fork the core.</p></div>
+      </div>
+    </div>
+    <div class="message"><strong>Categorical meaning is enumerated, structural meaning is typed.</strong> That is what makes the model checkable.</div>
+  </div>
+</section>
+
+<!-- ============ 18 · 18 LAYERS ============ -->
+<section class="slide" data-title="Ontology layers under memo::architecture.">
+  <div class="chapter"><b>18</b> Architecture layers</div>
+  <div class="body">
+    <h2>Eighteen ontology layers under <span>memo::architecture</span>.</h2>
+    <p class="lede">Each layer is a sub-package. They progress from intent and need toward solution and evidence — risk and cybersecurity are peers, not bolt-ons.</p>
+    <div class="layers fill" style="align-content:center;">
+      <div class="layer"><b>context</b><span>Actor, UseContext</span></div>
+      <div class="layer"><b>operational</b><span>operational entities &amp; chains</span></div>
+      <div class="layer"><b>requirements</b><span>Stakeholder / System / SW / HW reqs</span></div>
+      <div class="layer"><b>functions</b><span>LogicalFunction, LogicalFlow</span></div>
+      <div class="layer"><b>behavior</b><span>modes, transitions, contracts</span></div>
+      <div class="layer"><b>logical_structure</b><span>LogicalComponent</span></div>
+      <div class="layer"><b>logical_interfaces</b><span>LogicalInterface</span></div>
+      <div class="layer"><b>software_structure</b><span>SoftwareComponent (WCET, period)</span></div>
+      <div class="layer"><b>hardware_structure</b><span>HardwareAssembly</span></div>
+      <div class="layer"><b>physical_interfaces</b><span>PhysicalInterface, PortBinding</span></div>
+      <div class="layer"><b>system / physical</b><span>system + deployment</span></div>
+      <div class="layer"><b>constraints</b><span>timing, resource, env</span></div>
+      <div class="layer risk"><b>risk</b><span>Hazard, RiskControl, residual</span></div>
+      <div class="layer cyber"><b>cybersecurity</b><span>Asset, Threat, Vulnerability</span></div>
+      <div class="layer assure"><b>assurance</b><span>VerificationCase, Evidence</span></div>
+      <div class="layer"><b>analysis</b><span>quality-attribute analysis</span></div>
+      <div class="layer"><b>decisions</b><span>design decisions &amp; rationale</span></div>
+      <div class="layer"><b>+ extensions</b><span>your own md profiles</span></div>
+    </div>
+    <div class="message"><strong>Cybersecurity is a peer to safety</strong> — modeled as an ontology layer that feeds the same requirement and verification machinery.</div>
+  </div>
+</section>
+
+<!-- ============ 19 · RISK + CYBER PEERS ============ -->
+<section class="slide" data-title="Safety and security as peers.">
+  <div class="chapter"><b>19</b> Risk &amp; security</div>
+  <div class="body">
+    <h2>Safety and security as <span>peer layers</span>.</h2>
+    <p class="lede">A hazard chain on one side, a threat chain on the other — both feed the same <code style="font-family:monospace">RequirementDriver</code> / <code style="font-family:monospace">VerifiableElement</code> contract.</p>
+    <div class="duo fill">
+      <div class="code">
+        <div class="head"><span class="dot"></span>architecture/memo_risk.sysml</div>
+<pre><span class="kw">part def</span> <span class="ty">Hazard</span> :> <span class="ty">TraceableElement</span> {
+  <span class="at">attribute</span> hazardType : <span class="ty">HazardTypeKind</span>;
+  <span class="at">attribute</span> foreseeable : <span class="ty">Boolean</span>;
+}
+<span class="kw">part def</span> <span class="ty">RiskControl</span> :> <span class="ty">VerifiableElement</span> {
+  <span class="at">attribute</span> controlKind : <span class="ty">RiskControlKind</span>;
+}
+<span class="kw">part def</span> <span class="ty">RiskAfterMitigation</span> :> <span class="ty">Risk</span> {
+  <span class="at">attribute</span> residualAcceptability : <span class="ty">String</span>;
+}</pre>
+      </div>
+      <div class="code">
+        <div class="head"><span class="dot"></span>architecture/memo_cybersecurity.sysml</div>
+<pre><span class="kw">part def</span> <span class="ty">CybersecurityAsset</span> :> <span class="ty">ArchitectureElement</span> {
+  <span class="at">attribute</span> assetKind : <span class="ty">AssetKind</span>;
+  <span class="at">attribute</span> safetyRelevant : <span class="ty">Boolean</span>;
+}
+<span class="kw">part def</span> <span class="ty">Threat</span> :> <span class="ty">RequirementDriver</span> {
+  <span class="at">attribute</span> threatCategory : <span class="ty">ThreatCategoryKind</span>;
+  <span class="at">attribute</span> attackVector : <span class="ty">String</span>;
+}
+<span class="cm">// Threat :> RequirementDriver — exactly like Risk.</span></pre>
+      </div>
+    </div>
+    <div class="message"><strong>Why peers:</strong> because <code style="font-family:monospace">Threat</code> drives requirements just like <code style="font-family:monospace">Risk</code> does, the same downstream machinery generates security requirements and verification.</div>
+  </div>
+</section>
+
+<!-- ============ 20 · SEMANTIC LINKS ============ -->
+<section class="slide" data-title="Typed semantic links carry roles.">
+  <div class="chapter"><b>20</b> Semantic links</div>
+  <div class="body">
+    <h2>Links carry <span>roles</span> — not just direction.</h2>
+    <p class="lede">Every link is a <code style="font-family:monospace">SemanticLink</code> subtype with named part roles and a link status. The linker checks the element kind on each end.</p>
+    <table class="ltable">
+      <tr><th>Domain</th><th>Link kinds</th></tr>
+      <tr><td>Requirement</td><td><code>RequirementSourceLink</code> · <code>RequirementSatisfactionLink</code></td></tr>
+      <tr><td>Function</td><td><code>FunctionAllocationLink</code> — function ↔ allocated element</td></tr>
+      <tr><td>Interface</td><td><code>InterfaceRealizationLink</code> · <code>TrustBoundaryCrossingLink</code></td></tr>
+      <tr><td>Verification</td><td><code>VerificationLink</code> · <code>EvidenceProductionLink</code> · <code>DocumentInclusionLink</code></td></tr>
+      <tr><td>Risk</td><td><code>RiskTraceLink</code> (initiates · leadsTo · canCause · resultsIn · aggregates)</td></tr>
+      <tr><td>Cyber</td><td><code>AssetThreatLink</code> · <code>ThreatVulnerabilityLink</code> · <code>CyberSafetyTraceLink</code></td></tr>
+    </table>
+    <div class="message"><strong>Traceability is data, not a matrix.</strong> The RMF view, V&amp;V matrix, and impact analysis all read the same <code style="font-family:monospace">SemanticLink</code> instances.</div>
+  </div>
+</section>
+
+<!-- ============ 21 · METHODOLOGY + VIEWS ============ -->
+<section class="slide" data-title="Methodology, viewpoints, views.">
+  <div class="chapter"><b>21</b> Method &amp; views</div>
+  <div class="body">
+    <h2>Methodology shapes <span>how the ontology is applied</span>.</h2>
+    <p class="lede">Definitions select rigor, viewpoints, rules, patterns, and gates. Viewpoints declare intent (ISO 42010); views bind that intent to selected content.</p>
+    <div class="cols c2 fill">
+      <div class="card t-purple" style="display:flex;flex-direction:column;">
+        <div class="tag">memo::methodology</div>
+        <ul class="ticks">
+          <li><strong>core</strong> — MethodologyDefinition · ResolvedMethodology · ProjectMethodBinding</li>
+          <li><strong>profiles</strong> — light · balanced · formal rigor instances</li>
+          <li><strong>rules</strong> — ViewRule (required · recommended · forbidden)</li>
+          <li><strong>patterns · workflow · gates</strong> — recurring shapes, stage sequencing, ReviewGate exit criteria</li>
+        </ul>
+      </div>
+      <div class="card t-blue" style="display:flex;flex-direction:column;">
+        <div class="tag">memo::viewpoints + memo::views</div>
+        <ul class="ticks">
+          <li><strong>Viewpoint</strong> = intent: audience, stage, allowed element &amp; relationship kinds.</li>
+          <li><strong>View</strong> = bound content: a <code style="font-family:monospace">ViewSelectionQuery</code> over layers and concerns.</li>
+          <li>First-class libraries — not buried under methodology or compliance.</li>
+          <li>Default viewpoints per audience and workflow stage.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>Separation of concerns:</strong> intent and content are distinct, so the same model serves the safety, architecture, V&amp;V, and regulatory reviewers.</div>
+  </div>
+</section>
+
+<!-- ============ 22 · EXTEND ============ -->
+<section class="slide" data-title="Extend through methodology profiles.">
+  <div class="chapter"><b>22</b> Extension</div>
+  <div class="body">
+    <h2>Extend through <span>methodology profiles</span>.</h2>
+    <p class="lede">Pick rigor, pick viewpoints, author rules, bind to a project, add your own domain kinds. The core ontology stays unchanged.</p>
+    <div class="stack fill" style="justify-content:center;">
+      <div class="srow l1"><span class="n">1</span><div><b>Pick rigor</b> <span>· <code style="font-family:monospace">MethodRigorKind = lightweight | balanced | formal</code></span></div></div>
+      <div class="srow l2"><span class="n">2</span><div><b>Pick viewpoints</b> <span>· <code style="font-family:monospace">audience = safetyEngineer · stage = risk</code></span></div></div>
+      <div class="srow l3"><span class="n">3</span><div><b>Author rules</b> <span>· <code style="font-family:monospace">ViewRule · elementTypeName = "Hazard" · strength = required</code></span></div></div>
+      <div class="srow l4"><span class="n">4</span><div><b>Bind to project</b> <span>· <code style="font-family:monospace">ProjectMethodBinding · projectName = "GPCA Pump"</code></span></div></div>
+      <div class="srow"><span class="n">5</span><div><b>Add domain kinds</b> <span>· <code style="font-family:monospace">part def InfusionMode :&gt; ModeState { … }</code> in your own package</span></div></div>
+    </div>
+    <div class="message"><strong>The rule:</strong> add packages and methodology profiles — don't edit core. Methodology guides without owning viewpoints.</div>
+  </div>
+</section>
+
+<!-- ============ ACT 5 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 5 — Proof">
+  <div class="body">
+    <div class="kicker">Part Five</div>
+    <h2>Proof: <span>GPCA</span> &amp; the toolchain.</h2>
+    <p>A complete public-domain worked example, one closed safety thread of real instances, and the CLI + Architect that read the same model.</p>
+  </div>
+  <div class="actno">05</div>
+</section>
+
+<!-- ============ 23 · MEET GPCA ============ -->
+<section class="slide" data-title="Meet GPCA.">
+  <div class="chapter"><b>23</b> Worked example</div>
+  <div class="body">
+    <h2>Meet GPCA — <span>memo::examples::gpca</span></h2>
+    <p class="lede">A Generic Patient-Controlled Analgesia infusion pump — the public-domain U. Minnesota CriSys benchmark, IEC 62304 Class C.</p>
+    <div class="cols c2 fill">
+      <div class="card t-teal" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="tag">Why GPCA</div>
+        <ul class="ticks">
+          <li>University of Minnesota CriSys benchmark, public REQ catalogue (REQ 1–86).</li>
+          <li>IEC 62304 Class C software with a full ISO 14971 hazard chain.</li>
+          <li>Cited across FDA, NIH, and INCOSE literature.</li>
+          <li>Real instances in the repo — not pseudo-code.</li>
+        </ul>
+      </div>
+      <div class="card t-blue" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="tag">What is modeled</div>
+        <ul class="ticks">
+          <li>Stakeholders, intended use, needs &amp; software requirements.</li>
+          <li>Hierarchical mode machine — OFF · IDLE · PAUSED · BASAL · SQUARE · PBOLUS; per-subsystem function decomposition.</li>
+          <li>SW components (Top_Level_Mode, Alarm, Infusion_Manager …) with period / deadline / WCET.</li>
+          <li>Hazard chain + lockout control + benefit-risk eval; STRIDE threat model; AGREE-like &amp; LTL properties.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>One model, every layer:</strong> requirements, architecture, interfaces, behavior, risk, cyber, verification, trace, and document views.</div>
+  </div>
+</section>
+
+<!-- ============ 24 · THE THREAD ============ -->
+<section class="slide" data-title="The safety thread is the hero object.">
+  <div class="chapter"><b>24</b> The hero object</div>
+  <div class="body">
+    <h2>The safety thread becomes the <span>hero object</span>.</h2>
+    <p class="lede">One closed thread in GPCA — every node typed, every edge a <code style="font-family:monospace">SemanticLink</code> with status. The RMF view, V&amp;V matrix, and impact analysis all read it.</p>
+    <div class="thread" style="margin:auto 0;">
+      <div class="tnode h"><small>Hazard</small><b>HZ-001<br>Overdose</b><span>drug delivery error · catastrophic</span></div>
+      <div class="tarrow">→</div>
+      <div class="tnode"><small>Requirement</small><b>REQ-025<br>Ignore bolus</b><span>SW requirement · source = risk</span></div>
+      <div class="tarrow">→</div>
+      <div class="tnode a"><small>Component</small><b>SW-005<br>Infusion_Manager</b><span>responsible · Class C</span></div>
+      <div class="tarrow">→</div>
+      <div class="tnode c"><small>Risk control</small><b>RC-001<br>Lockout</b><span>inherent safe design</span></div>
+      <div class="tarrow">→</div>
+      <div class="tnode v"><small>Verification</small><b>VER-002<br>Verify lockout</b><span>test · acceptance criteria</span></div>
+      <div class="tarrow">→</div>
+      <div class="tnode v"><small>Evidence</small><b>EVD-001<br>Lockout evidence</b><span>tied to baseline</span></div>
+    </div>
+    <div class="message"><strong>Need → Requirement → Component → Control → Verification → Evidence → Document.</strong> A spreadsheet row becomes an inspectable, computable object.</div>
+  </div>
+</section>
+
+<!-- ============ 25 · TOOLS ============ -->
+<section class="slide" data-title="meMO Tools make assurance executable.">
+  <div class="chapter"><b>25</b> Tools</div>
+  <div class="body">
+    <h2>meMO Tools make assurance <span>executable</span>.</h2>
+    <p class="lede">A Turbo monorepo: a Langium-based core engine and a Commander CLI that parse text-first models into a semantic graph and run the rules.</p>
+    <div class="duo fill">
+      <div class="code term">
+        <div class="head"><span class="dot"></span>packages — core engine + CLI</div>
+<pre><span class="cmd">packages/core</span>
+  parser · semantic graph · rule engine
+  impact · DSM · DHF · importers
+
+<span class="cmd">packages/cli   (memo)</span>
+  validate · dev · build · export · import
+  ontology · dhf · ask · generate · req
+
+<span class="cmd">$ cd examples/gpca-pump && memo dev</span>
+  → live model + validation at localhost</pre>
+      </div>
+      <div class="card t-purple" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="tag">What the tools provide</div>
+        <ul class="ticks">
+          <li>Parse text-first SysML&nbsp;v2 into a semantic graph.</li>
+          <li>Run native KerML closure &amp; consistency checks.</li>
+          <li>Import / export across model and evidence formats (Enterprise Architect, Cameo, OWL, CSV).</li>
+          <li>Generate DHF artifacts; CI-friendly validation before review or release.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>Compliance becomes compiler-like:</strong> errors, warnings, completeness, and change feedback in the engineering loop.</div>
+  </div>
+</section>
+
+<!-- ============ 26 · ARCHITECT ============ -->
+<section class="slide" data-title="meMO Architect is visual review.">
+  <div class="chapter"><b>26</b> Architect</div>
+  <div class="body">
+    <h2>meMO Architect — <span>visual review over the same model</span>.</h2>
+    <p class="lede">A React web app with six modes lets non-coders review diagrams, traceability, ontology, DHF, and impact — without editing raw files.</p>
+    <div class="duo fill">
+      <div class="mock">
+        <div class="bar">
+          <div class="sb">MEMO<br>Architect<em>Catalog<br>Diagram<br>Action&nbsp;flow<br>DSM<br>Scenario<br>Ontology</em></div>
+          <div class="canvas">
+            <div class="tile" style="background:var(--teal-soft);color:var(--teal-deep);">Ontology viewer</div>
+            <div class="tile" style="background:var(--blue-soft);color:var(--blue);">Traceability</div>
+            <div class="tile" style="background:var(--purple-soft);color:var(--purple);">Diagrams</div>
+            <div class="tile" style="background:var(--orange-soft);color:var(--orange);">DHF workbench</div>
+          </div>
+        </div>
+      </div>
+      <div class="card t-orange" style="display:flex;flex-direction:column;justify-content:center;">
+        <div class="tag">Same source of truth</div>
+        <ul class="ticks">
+          <li>Model explorer and element detail views.</li>
+          <li>Architecture, behavior, risk, requirements, and interface diagrams (ReactFlow + ELK).</li>
+          <li>Traceability matrix, DSM, scenario walk-through, and impact analysis.</li>
+          <li>DHF review with completeness dashboards.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="message"><strong>Architect is not a separate island.</strong> It is visual review over the same code-first model.</div>
+  </div>
+</section>
+
+<!-- ============ ACT 6 DIVIDER ============ -->
+<section class="slide dark act" data-title="Act 6 — Adoption">
+  <div class="body">
+    <div class="kicker">Part Six</div>
+    <h2>Adopt the <span>backbone</span> first.</h2>
+    <p>An adoption-first roadmap: prove the unified model, then compile compliance, then grow the ecosystem — never the other way around.</p>
+  </div>
+  <div class="actno">06</div>
+</section>
+
+<!-- ============ 27 · ADOPTION ============ -->
+<section class="slide" data-title="Three horizons, one trajectory.">
+  <div class="chapter"><b>27</b> Roadmap</div>
+  <div class="body">
+    <h2>Three horizons, <span>one trajectory</span>.</h2>
+    <p class="lede">Earn trust, then grow scope. MEMO is built incrementally in small, testable slices — no big-bang platform rewrite.</p>
+    <div class="horizons fill">
+      <div class="horizon"><div class="when">Now · 2026</div><h3>Prove the backbone</h3><ul class="ticks"><li>Open <code style="font-family:monospace">memo::</code> package 1.0.0 (core, architecture, methodology, viewpoints, views, compliance).</li><li>GPCA worked example as proof artifact.</li><li>SysML&nbsp;v2 source, CLI + viewer.</li></ul></div>
+      <div class="horizon h1"><div class="when">H1 · 2026–27</div><h3>Compile compliance</h3><ul class="ticks"><li>Auto-compiled DocumentBackedView (RMF, SDD, V&amp;V) from one model.</li><li>Typed-link impact analysis &amp; stale-evidence detection.</li><li>Extra layers (AI/ML, alarms, usability); PLM/ALM export adapters.</li></ul></div>
+      <div class="horizon h2"><div class="when">H2 · 2027 +</div><h3>Ecosystem &amp; assurance</h3><ul class="ticks"><li>Device-specific methodology profiles.</li><li>Auditor-readable assurance cases.</li><li>Cross-domain bridges to ARP4761 / ISO 26262 patterns; community-governed evolution.</li></ul></div>
+    </div>
+    <div class="message"><strong>Start lightweight.</strong> Prove value on one safety thread, then expand — text + CLI for startups, Architect + governance for enterprises.</div>
+  </div>
+</section>
+
+<!-- ============ 28 · CLOSE ============ -->
+<section class="slide dark story" data-title="Adopt the semantic backbone.">
+  <div class="brandmark"><svg viewBox="0 0 44 40"><path d="M22 5c-6 0-10 3-10 8 0 2 1 4 3 5-2 1-3 3-3 5 0 4 4 7 10 7s10-3 10-7c0-2-1-4-3-5 2-1 3-3 3-5 0-5-4-8-10-8z" fill="none" stroke="#00cdbb" stroke-width="2.2"/><path d="M6 22h6l3-8 5 16 4-12 3 4h11" fill="none" stroke="#00cdbb" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>meMO</div>
+  <div class="body">
+    <div class="kicker" style="color:var(--teal)">The takeaway</div>
+    <p class="q" style="margin-top:14px;">Documents remain necessary. But the safety story should be <em>modeled, checked, and kept current</em> — typed, architecture-backed, and computable.</p>
+    <div class="pillline" style="margin-top:30px;display:flex;gap:10px;flex-wrap:wrap;">
+      <span style="padding:8px 15px;border:1px solid rgba(0,205,187,.45);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;">Faster changes, lower risk</span>
+      <span style="padding:8px 15px;border:1px solid rgba(0,205,187,.45);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;">Stronger cases for regulators</span>
+      <span style="padding:8px 15px;border:1px solid rgba(0,205,187,.45);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;">Better quality, less rework</span>
+    </div>
+    <div class="by" style="margin-top:30px;">memo:: 1.0.0 · open source · SysML v2 · ISO 14971 · IEC 62304 · ISO/IEC/IEEE 42010</div>
+  </div>
+</section>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous">←</button>
+  <div id="counter">1 / 1</div>
+  <button id="next" aria-label="Next">→</button>
+</div>
+</main>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const counter=document.getElementById('counter');
+const progress=document.getElementById('progress');
+let current=0;
+function show(i){
+  slides[current].classList.remove('active');
+  current=(i+slides.length)%slides.length;
+  slides[current].classList.add('active');
+  counter.textContent=(current+1)+' / '+slides.length;
+  progress.style.width=((current)/(slides.length-1)*100)+'%';
+}
+document.getElementById('next').onclick=()=>show(current+1);
+document.getElementById('prev').onclick=()=>show(current-1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(current+1);}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(current-1);}
+  if(e.key==='Home')show(0);
+  if(e.key==='End')show(slides.length-1);
+  if(e.key==='f'||e.key==='F'){const d=document.getElementById('deck');if(!document.fullscreenElement){(d.requestFullscreen||d.webkitRequestFullscreen).call(d);}else{document.exitFullscreen();}}
+});
+show(0);
+</script>
+</body>
+</html>
