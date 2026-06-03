@@ -14,6 +14,7 @@ import { resolve, dirname, join, basename } from 'node:path';
 import { KindRegistry } from './kind-registry.js';
 import { RelationshipRegistry } from './relationship-registry.js';
 import { parseFiles } from './parser-utils.js';
+import { VENDOR_ONTOLOGY_PACKAGES_DIR } from './paths.js';
 import type { BuilderRegistries } from './builder.js';
 
 // ─── Ontology Package Metadata (Phase C2) ────────────────────────────────────
@@ -390,7 +391,7 @@ export function getPackageMetadata(projectRoot: string): OntologyPackageInfo[] {
                 }
             } catch { /* skip */ }
 
-            const vendorPkgsDir = join(searchDir, 'vendor', 'memo-sysmlv2', 'packages');
+            const vendorPkgsDir = join(searchDir, VENDOR_ONTOLOGY_PACKAGES_DIR);
             if (existsSync(vendorPkgsDir)) {
                 try {
                     for (const entry of readdirSync(vendorPkgsDir, { withFileTypes: true })) {
@@ -798,7 +799,7 @@ function resolvePackageConfig(packageName: string, fromDir: string): string | un
         }
 
         for (const configName of CONFIG_SEARCH_ORDER) {
-            const vendorCandidate = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', shortName, configName);
+            const vendorCandidate = resolve(dir, VENDOR_ONTOLOGY_PACKAGES_DIR, shortName, configName);
             if (existsSync(vendorCandidate)) return vendorCandidate;
         }
 
