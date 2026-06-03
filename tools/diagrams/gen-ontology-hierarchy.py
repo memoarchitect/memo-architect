@@ -108,7 +108,8 @@ def build_tab(spec):
         bid = f"b{i}_{spec['id']}"
         band_ids.append(bid)
         band_style = (f'swimlane;startSize=30;html=1;fontStyle=1;align=left;'
-                      f'fillColor={bf};strokeColor={st};fontSize=13;swimlaneFillColor={bf};spacingLeft=8;')
+                      f'fillColor={bf};strokeColor={st};fontSize=13;fontColor=#1f2933;'
+                      f'swimlaneFillColor={bf};spacingLeft=8;')
         p.vertex(bid, CONTENT_X, y, CONTENT_W, band_h, '<b>' + tier['name'] + '</b>', band_style)
         # inner nodes (children, relative geometry)
         nodes = tier['nodes']
@@ -127,7 +128,7 @@ def build_tab(spec):
             inid = f'{bid}_n{j}'
             inner_ids.append(inid)
             nstyle = (f'rounded=1;whiteSpace=wrap;html=1;fillColor={nf};strokeColor={st};'
-                      f'fontSize=12;align=center;verticalAlign=middle;spacing=6;')
+                      f'fontSize=12;fontColor=#1f2933;align=center;verticalAlign=middle;spacing=6;')
             p.vertex(inid, int(nx), ny, nw, nh, val, nstyle, parent=bid)
             nx += nw + ngap
         # intra-tier sequence arrows
@@ -146,14 +147,14 @@ def build_tab(spec):
         p.edge(eid, band_ids[i], band_ids[i + 1], conn,
                'endArrow=block;endFill=1;html=1;edgeStyle=orthogonalEdgeStyle;rounded=1;'
                'exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#444444;fontSize=11;'
-               'fontStyle=1;labelBackgroundColor=#ffffff;')
+               'fontStyle=1;fontColor=#1f2933;labelBackgroundColor=#ffffff;')
 
     if note:
         nf2, st2, _ = PAL['note']
         p.vertex('note_' + spec['id'], CONTENT_X, BAND_BOTTOM - 84, CONTENT_W, 74,
                  "<b>Note</b>&nbsp;&nbsp;<font style='font-size:12px'>" + note + '</font>',
                  f'rounded=1;whiteSpace=wrap;html=1;fillColor={nf2};strokeColor={st2};'
-                 f'fontSize=12;align=left;verticalAlign=middle;spacing=10;')
+                 f'fontSize=12;fontColor=#1f2933;align=left;verticalAlign=middle;spacing=10;')
     return p
 
 
