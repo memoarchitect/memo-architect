@@ -5,11 +5,12 @@ import { createMemoSysMLServices } from '../language/memo-sysml-module.js';
 import type { Model } from '../language/generated/ast.js';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, join, relative, dirname } from 'node:path';
+import { VENDOR_ONTOLOGY_DIR } from '../model/paths.js';
 
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
 
-const ONTOLOGY_ROOT = resolve(__dirname, '../../../../vendor/memo-sysmlv2');
+const ONTOLOGY_ROOT = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_DIR);
 
 // When ONTOLOGY_ROOT is the memo-sysmlv2 submodule, only its flattened ontology
 // content is in scope. Skip the submodule's own scaffold: examples/gpca-pump
@@ -277,7 +278,7 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
 
     it('C4: ontology directory segments match namespace segments', () => {
         const mismatches: string[] = [];
-        const ONTOLOGY_PREFIX = 'vendor/memo-sysmlv2/';
+        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_DIR}/`;
         for (const e of allEntries) {
             if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;
             for (const leaf of e.leafPackages) {
@@ -468,7 +469,7 @@ describe('DD-6: naming + casing lint (ADR-1-12)', () => {
     });
 
     it('N4: ontology directory segments use snake_case', () => {
-        const ONTOLOGY_PREFIX = 'vendor/memo-sysmlv2/';
+        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_DIR}/`;
         const violations: string[] = [];
         for (const e of allEntries) {
             if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;

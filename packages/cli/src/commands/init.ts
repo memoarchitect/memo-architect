@@ -2,7 +2,7 @@ import { resolve, dirname } from 'node:path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, cpSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 import chalk from 'chalk';
-import { findConfigFile } from '@memo/core';
+import { findConfigFile, VENDOR_ONTOLOGY_PACKAGES_DIR } from '@memo/core';
 import { createLockFile } from '../lock.js';
 import { loadArchetypes, findArchetype, deviceClassArchetypes, profileArchetypes, type ArchetypeInfo } from './archetype-loader.js';
 import { runWizard, regulatoryComment } from './init-wizard.js';
@@ -27,7 +27,7 @@ export function discoverOntologies(fromDir: string): AvailableOntology[] {
     while (true) {
         // Content packages now live in the memo-sysmlv2 submodule; the local
         // packages/ dir holds only the engine (core/cli/web). Scan both.
-        for (const rel of ['vendor/memo-sysmlv2/packages', 'packages']) {
+        for (const rel of [VENDOR_ONTOLOGY_PACKAGES_DIR, 'packages']) {
             const packagesDir = resolve(dir, rel);
             if (existsSync(packagesDir)) scanOntologyDir(packagesDir, results);
         }
@@ -374,7 +374,7 @@ function resolveArchetypeTemplate(archetype: ArchetypeInfo | undefined, fromDir:
 
     let dir = resolve(fromDir);
     while (true) {
-        const templateDir = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', 'medical-modeling-profile', 'templates', archetype.templateDir);
+        const templateDir = resolve(dir, VENDOR_ONTOLOGY_PACKAGES_DIR, 'medical-modeling-profile', 'templates', archetype.templateDir);
         if (existsSync(templateDir)) {
             const starterPath = resolve(templateDir, 'starter.sysml');
             if (existsSync(starterPath)) return starterPath;

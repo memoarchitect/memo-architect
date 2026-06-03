@@ -8,7 +8,7 @@
 import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import type { MEMOConfig } from '@memo/core';
-import { loadConfig, resolveConfig } from '@memo/core';
+import { loadConfig, resolveConfig, VENDOR_ONTOLOGY_PACKAGES_DIR } from '@memo/core';
 
 /** Ordered list of config filenames to search for (new format first, then legacy) */
 const CONFIG_SEARCH_ORDER = [
@@ -118,7 +118,7 @@ function resolveFromVendor(packageName: string, fromDir: string): string | undef
 
     let dir = resolve(fromDir);
     while (true) {
-        const vendorDir = resolve(dir, 'vendor', 'memo-sysmlv2', 'packages', shortName);
+        const vendorDir = resolve(dir, VENDOR_ONTOLOGY_PACKAGES_DIR, shortName);
         for (const configName of CONFIG_SEARCH_ORDER) {
             const candidate = resolve(vendorDir, configName);
             if (existsSync(candidate)) return candidate;
