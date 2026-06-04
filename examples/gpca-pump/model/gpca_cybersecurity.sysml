@@ -152,97 +152,27 @@ package memo {
                     attribute status = "planned";
                 }
 
-                part lnkAssetThreat : AssetThreatLink {
-                    attribute id = "CYL-001";
-                    attribute name = "TherapyConfigThreatLink";
-                    attribute threatRole = "targeted asset";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part protectedAsset :> therapyConfigurationAsset;
-                    part realizedThreat :> unauthorizedConfigChangeThreat;
-                }
+                connection : ThreatenedBy connect protectedAsset ::> therapyConfigurationAsset to realizedThreat ::> unauthorizedConfigChangeThreat;
 
-                part lnkLogAssetThreat : AssetThreatLink {
-                    attribute id = "CYL-010";
-                    attribute name = "EventLogThreatLink";
-                    attribute threatRole = "targeted asset";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part protectedAsset :> patientEventLogAsset;
-                    part realizedThreat :> eventLogTamperingThreat;
-                }
+                connection : ThreatenedBy connect protectedAsset ::> patientEventLogAsset to realizedThreat ::> eventLogTamperingThreat;
 
-                part lnkThreatVulnerability : ThreatVulnerabilityLink {
-                    attribute id = "CYL-002";
-                    attribute name = "ThreatWeakAuthLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part realizedThreat :> unauthorizedConfigChangeThreat;
-                    part enablingVulnerability :> weakServiceAuthentication;
-                }
+                connection : Exploits connect realizedThreat ::> unauthorizedConfigChangeThreat to enablingVulnerability ::> weakServiceAuthentication;
 
-                part lnkThreatScenario : ThreatScenarioLink {
-                    attribute id = "CYL-003";
-                    attribute name = "ThreatScenarioLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part realizedThreat :> unauthorizedConfigChangeThreat;
-                    part scenario :> tamperedConfigurationScenario;
-                }
+                connection : RealizedByScenario connect realizedThreat ::> unauthorizedConfigChangeThreat to scenario ::> tamperedConfigurationScenario;
 
-                part lnkVulnerabilityMitigation : VulnerabilityMitigationLink {
-                    attribute id = "CYL-004";
-                    attribute name = "WeakAuthMitigationLink";
-                    attribute linkStatus = LinkStatusKind::planned;
-                    part enablingVulnerability :> weakServiceAuthentication;
-                    part mitigation :> strongServiceAuthentication;
-                }
+                connection : MitigatesVulnerability connect enablingVulnerability ::> weakServiceAuthentication to mitigation ::> strongServiceAuthentication;
 
-                part lnkThreatRequirement : CyberRequirementDerivationLink {
-                    attribute id = "CYL-005";
-                    attribute name = "ThreatRequirementLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part sourceThreatOrRisk :> unauthorizedConfigChangeThreat;
-                    part targetRequirement :> reqAuthenticatedServiceAccess;
-                }
+                connection : DerivesCyberRequirement connect sourceThreatOrRisk ::> unauthorizedConfigChangeThreat to targetRequirement ::> reqAuthenticatedServiceAccess;
 
-                part lnkLogThreatRequirement : CyberRequirementDerivationLink {
-                    attribute id = "CYL-011";
-                    attribute name = "LogThreatRequirementLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part sourceThreatOrRisk :> eventLogTamperingThreat;
-                    part targetRequirement :> reqAuthenticatedServiceAccess;
-                }
+                connection : DerivesCyberRequirement connect sourceThreatOrRisk ::> eventLogTamperingThreat to targetRequirement ::> reqAuthenticatedServiceAccess;
 
-                part lnkCyberSafety : CyberSafetyTraceLink {
-                    attribute id = "CYL-006";
-                    attribute name = "CyberToSafetyRiskLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    attribute tracePurpose = "Cyber hazard contributes to existing overdose safety chain.";
-                    part cyberElement :> configurationTamperingRisk;
-                    part safetyElement :> riskBefore;
-                }
+                connection : ImpactsSafety connect cyberElement ::> configurationTamperingRisk to safetyElement ::> riskBefore;
 
-                part lnkBoundaryCrossing : TrustBoundaryCrossingLink {
-                    attribute id = "CYL-007";
-                    attribute name = "MaintenanceBoundaryCrossingLink";
-                    attribute linkStatus = LinkStatusKind::active;
-                    attribute crossingKind = InterfaceKind::network;
-                    part boundary :> maintenancePortBoundary;
-                    part crossingItem :> therapyConfigurationAsset;
-                }
+                connection : CrossesTrustBoundary connect boundary ::> maintenancePortBoundary to crossingItem ::> therapyConfigurationAsset;
 
-                part lnkCyberVerification : VerificationLink {
-                    attribute id = "CYL-008";
-                    attribute name = "SecurityRequirementVerificationLink";
-                    attribute linkStatus = LinkStatusKind::planned;
-                    part verificationTarget :> reqAuthenticatedServiceAccess;
-                    part verificationCase :> vcAuthenticatedServiceAccess;
-                }
+                connection : VerifiedBy connect verificationTarget ::> reqAuthenticatedServiceAccess to verificationCase ::> vcAuthenticatedServiceAccess;
 
-                part lnkCyberMitigationEvidence : EvidenceProductionLink {
-                    attribute id = "CYL-009";
-                    attribute name = "MitigationEvidenceLink";
-                    attribute linkStatus = LinkStatusKind::planned;
-                    part producer :> vcAuthenticatedServiceAccess;
-                    part producedEvidence :> evidenceLockout;
-                }
+                connection : ProducesEvidence connect producer ::> vcAuthenticatedServiceAccess to producedEvidence ::> evidenceLockout;
             }
         }
     }

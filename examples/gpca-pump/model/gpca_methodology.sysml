@@ -8,13 +8,7 @@ package memo {
                 private import memo::examples::gpca::requirements::*;
                 private import memo::examples::gpca::architecture::*;
 
-                part gpcaResolvedMethodologyBinding : MethodologyBindingLink {
-                    attribute id = "MLINK-001";
-                    attribute name = "GPCAUsesGPCAMethodology";
-                    attribute linkStatus = LinkStatusKind::active;
-                    part boundModelElement = tlm;
-                    part resolvedMethodology = gpcaMethodResolved;
-                }
+                connection : ResolvesToMethodology connect boundModelElement ::> tlm to resolvedMethodology ::> gpcaMethodResolved;
             }
         }
     }
