@@ -78,13 +78,6 @@ export interface MemoRelationship {
     targetId: string;
     /** Target end name from connection usage, e.g. "hazard" */
     targetEnd: string;
-    /**
-     * Optional inverse navigation name. When set, the relationship is also
-     * navigable under this name (e.g. a "satisfiedBy" edge is reachable via
-     * "satisfies" from the other end). Used by semantic *Link projection so a
-     * single edge serves rules that navigate it from either direction.
-     */
-    inverseType?: string;
     /** Source file path (relative) */
     file: string;
     /** Item type being transported (for flow relationships) */
@@ -228,12 +221,6 @@ export function dtoToModel(dto: MemoModelDTO): MemoModel {
     for (const rel of relationships) {
         if (!relationshipsByType.has(rel.type)) relationshipsByType.set(rel.type, []);
         relationshipsByType.get(rel.type)!.push(rel);
-        // Inverse navigation name (e.g. "satisfies" for a "satisfiedBy" edge) is a
-        // navigable segment too, so register it as a known relationship type.
-        if (rel.inverseType) {
-            if (!relationshipsByType.has(rel.inverseType)) relationshipsByType.set(rel.inverseType, []);
-            relationshipsByType.get(rel.inverseType)!.push(rel);
-        }
         if (!outgoing.has(rel.sourceId)) outgoing.set(rel.sourceId, []);
         outgoing.get(rel.sourceId)!.push(rel);
         if (!incoming.has(rel.targetId)) incoming.set(rel.targetId, []);

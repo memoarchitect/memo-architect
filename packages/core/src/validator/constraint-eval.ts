@@ -335,16 +335,31 @@ function resolveFeature(start: MemoElement, segments: string[], model: MemoModel
     return val;
 }
 
-/** Elements related to `subject` by a relationship of `relType`, in either direction. */
+/**
+ * Elements related to `subject` by a relationship of `relType`, in either direction.
+ *
+ * Navigation is bidirectional by the relation's single forward name on purpose:
+ * a rule reaches the edge from either endpoint under one name (e.g. a Hazard
+ * satisfies `mitigatesHazard->size() >= 1` via the incoming scan, even though the
+ * edge is authored riskControl → hazard). This is load-bearing for the rule packs;
+ * do not make the bare name forward-only.
+ *
+ * There is deliberately no per-edge inverse name: an inverse reading is the same
+ * fact viewed from the other end, not a distinct relation. If a reflexive relation
+ * ever needs its two readings separated (e.g. `derivesInto` ancestors vs
+ * descendants), add it as an *additive* directional token plus a `reverseName` on
+ * the relation type in the registry — keeping the bare name bidirectional — rather
+ * than reviving a stored inverse field.
+ */
 function navigate(subject: MemoElement, relType: string, model: MemoModel): MemoElement[] {
     const out: MemoElement[] = [];
-    // A relationship matches the requested name by its forward type or its
-    // inverse name; in either case we return the element at the opposite end.
+    // A relationship matches the requested name by its (forward) type; we then
+    // return the element at the opposite end, scanning both directions so the
+    // single forward name is navigable from either endpoint.
     // Case-insensitive: relationshipsByType is keyed by camelCase rel.type
     // (e.g. "verifiedBy"), but nav segments arrive lowercased.
     const want = relType.toLowerCase();
-    const matches = (rel: { type: string; inverseType?: string }) =>
-        rel.type.toLowerCase() === want || (rel.inverseType?.toLowerCase() === want);
+    const matches = (rel: { type: string }) => rel.type.toLowerCase() === want;
     for (const rel of model.outgoing.get(subject.id) ?? []) {
         if (matches(rel)) {
             const e = model.elements.get(rel.targetId);
