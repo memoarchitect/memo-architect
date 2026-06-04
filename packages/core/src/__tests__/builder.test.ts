@@ -158,7 +158,7 @@ describe('buildMemoModel', () => {
             package TestPkg {
                 requirement req1 : SystemRequirement { attribute redefines title = "R1"; }
                 part sw1 : Software { attribute redefines name = "SW1"; }
-                part link1 : RequirementSatisfactionLink {
+                part link1 : SatisfiedBy {
                     attribute id = "L1";
                     part requirement = req1;
                     part satisfyingElement = sw1;
@@ -275,7 +275,7 @@ describe('buildMemoModel', () => {
         const doc = await parseDoc(`
             package TestPkg {
                 requirement req1 : SystemRequirement { attribute redefines title = "R1"; }
-                part link1 : RequirementSatisfactionLink {
+                part link1 : SatisfiedBy {
                     attribute id = "L1";
                     part requirement = req1;
                     part satisfyingElement = missingElement;

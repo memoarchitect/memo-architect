@@ -117,7 +117,7 @@ interface DeferredAllocate {
 interface DeferredLink {
     /** Element id of the link usage itself */
     linkId: string;
-    /** Resolved link kind, e.g. "RequirementSatisfactionLink" */
+    /** Resolved link kind, e.g. "SatisfiedBy" */
     linkKind: string;
     /** Bound reference ends in document order (first = source, second = target) */
     ends: Array<{ role: string; ref: string }>;
@@ -147,8 +147,8 @@ interface LinkRelation {
  * names, an `inverse` alias makes the single edge reachable both ways.
  */
 const LINK_RELATION_MAP: Record<string, LinkRelation> = {
-    RequirementSourceLink: { type: 'traceTo' },
-    RequirementSatisfactionLink: { type: 'satisfiedBy', inverse: 'satisfies' },
+    DerivesFrom: { type: 'traceTo' },
+    SatisfiedBy: { type: 'satisfiedBy', inverse: 'satisfies' },
     HazardMitigationLink: { type: 'mitigatedBy', inverse: 'mitigates' },
     FunctionAllocationLink: { type: 'allocatedTo' },
     InterfaceRealizationLink: { type: 'realizedBy' },
