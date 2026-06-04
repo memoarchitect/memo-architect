@@ -34,10 +34,10 @@ h1,h2,h3,h4,p,ul{margin:0;}
 
 /* slides */
 .slide{position:absolute;inset:0;display:none;overflow:hidden;background:var(--paper);}
-.slide.active{display:block;animation:fade .45s ease;}
-@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.slide.active{display:block;animation:fade .4s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
 .slide.dark{color:#fff;background:radial-gradient(circle at 78% 32%,#0c496c 0,var(--night) 62%,#020e1b 100%);}
-.body{height:100%;padding:70px 64px 96px;display:flex;flex-direction:column;}
+.body{height:100%;padding:70px 64px 92px;display:flex;flex-direction:column;}
 .chapter{position:absolute;top:22px;left:64px;display:flex;align-items:center;gap:12px;color:var(--teal-deep);font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;z-index:5;}
 .chapter b{display:grid;width:32px;height:32px;place-items:center;border-radius:9px;color:#fff;background:var(--teal-deep);letter-spacing:0;font-size:14px;}
 .dark .chapter{color:var(--teal);} .dark .chapter b{color:var(--night);background:var(--teal);}
@@ -48,7 +48,7 @@ h2 span{color:var(--teal-deep);} .dark h2 span{color:var(--teal);}
 .eyebrow{color:var(--teal-deep);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;}
 .memo{color:var(--teal-deep);font-weight:950;letter-spacing:-.04em;} .dark .memo{color:var(--teal);}
 .fill{flex:1;min-height:0;}
-.message{position:absolute;right:140px;bottom:38px;left:64px;padding:12px 15px;border-left:4px solid var(--teal-deep);color:var(--ink);background:var(--teal-soft);font-size:15.5px;font-weight:800;line-height:1.28;border-radius:0 10px 10px 0;}
+.message{position:absolute;right:140px;bottom:36px;left:64px;padding:12px 15px;border-left:4px solid var(--teal-deep);color:var(--ink);background:var(--teal-soft);font-size:15.5px;font-weight:800;line-height:1.28;border-radius:0 10px 10px 0;}
 .message strong{color:var(--teal-deep);} .message em{font-style:normal;color:var(--teal-deep);}
 .dark .message{color:#eafffb;background:rgba(0,205,187,.12);border-color:var(--teal);}
 .dark .message strong{color:var(--teal);}
@@ -80,21 +80,25 @@ h2 span{color:var(--teal-deep);} .dark h2 span{color:var(--teal);}
 .card h3{font-size:18px;letter-spacing:-.02em;}
 .card p{margin-top:7px;color:var(--muted);font-size:14px;line-height:1.34;}
 .card .tag{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);}
-.card .geti{margin-top:13px;padding:9px 11px;border-radius:9px;background:var(--wash);color:var(--ink);font-size:12.5px;font-weight:800;line-height:1.28;}
-.card.t-red{border-color:#f3c9c6;background:var(--red-soft);} .card.t-red .tag{color:var(--red);}
-.card.t-teal{border-color:#bdeee8;background:var(--teal-soft);} .card.t-teal .tag{color:var(--teal-deep);} .card.t-teal .geti{background:#fff;}
-.card.t-blue{border-color:#cce2f6;background:var(--blue-soft);} .card.t-blue .tag{color:var(--blue);} .card.t-blue .geti{background:#fff;}
-.card.t-purple{border-color:#ddd5f6;background:var(--purple-soft);} .card.t-purple .tag{color:var(--purple);} .card.t-purple .geti{background:#fff;}
-.card.t-orange{border-color:#f7ddc2;background:var(--orange-soft);} .card.t-orange .tag{color:var(--orange);} .card.t-orange .geti{background:#fff;}
-.card.t-green{border-color:#cfeccf;background:var(--green-soft);} .card.t-green .tag{color:var(--green);} .card.t-green .geti{background:#fff;}
+.card.t-teal{border-color:#bdeee8;background:var(--teal-soft);} .card.t-teal .tag{color:var(--teal-deep);}
+.card.t-blue{border-color:#cce2f6;background:var(--blue-soft);} .card.t-blue .tag{color:var(--blue);}
+.card.t-purple{border-color:#ddd5f6;background:var(--purple-soft);} .card.t-purple .tag{color:var(--purple);}
+.card.t-orange{border-color:#f7ddc2;background:var(--orange-soft);} .card.t-orange .tag{color:var(--orange);}
 ul.ticks{margin-top:8px;padding-left:0;list-style:none;}
-ul.ticks li{position:relative;padding-left:21px;margin-top:7px;color:var(--muted);font-size:14px;line-height:1.3;}
+ul.ticks li{position:relative;padding-left:21px;margin-top:8px;color:var(--muted);font-size:14.5px;line-height:1.32;}
 ul.ticks li:before{content:"";position:absolute;left:2px;top:7px;width:9px;height:9px;border-radius:3px;background:var(--teal);}
 ul.ticks li strong{color:var(--ink);}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
-.chips span{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--wash);font-size:12px;font-weight:850;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.chips span{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--wash);font-size:13px;font-weight:800;}
 
-/* ===== complexity map (slide 1) ===== */
+/* layer signpost bar */
+.layerbar{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:2px 0 4px;}
+.layerbar div{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);font-size:14px;font-weight:850;}
+.layerbar .ln{display:grid;place-items:center;width:23px;height:23px;border-radius:7px;background:var(--wash);color:var(--muted);font-size:11px;font-weight:900;flex:none;}
+.layerbar div.on{border-color:var(--teal-deep);background:var(--teal-soft);color:var(--ink);box-shadow:0 6px 16px rgba(0,141,128,.12);}
+.layerbar .on .ln{background:var(--teal-deep);color:#fff;}
+
+/* ===== complexity map ===== */
 .opening-grid{display:grid;grid-template-columns:43% 57%;gap:24px;align-items:center;margin-top:16px;}
 .opening-question{color:var(--ink);font-size:30px;font-weight:900;letter-spacing:-.035em;line-height:1.08;}
 .opening-question span{color:var(--teal-deep);}
@@ -127,141 +131,96 @@ ul.ticks li strong{color:var(--ink);}
 .care-context{position:absolute;top:10px;left:12px;color:var(--ink);font-size:12px;font-weight:800;line-height:1.2;}
 .care-context strong{color:var(--teal-deep);}
 
-/* ===== artifact lanes + friction (slide 2) ===== */
-.artifact-lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:18px;}
-.artifact-lane{overflow:hidden;border:1px solid var(--line);border-top:5px solid var(--teal-deep);border-radius:15px;background:#fff;box-shadow:0 8px 18px rgba(12,43,73,.04);}
+/* ===== artifact lanes (fragmented + missing meaning) ===== */
+.artifact-lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;}
+.artifact-lane{overflow:hidden;border:1px solid var(--line);border-top:5px solid var(--teal-deep);border-radius:16px;background:#fff;box-shadow:0 8px 18px rgba(12,43,73,.04);display:flex;flex-direction:column;}
 .artifact-lane:nth-child(2){border-top-color:#7660bd;}
 .artifact-lane:nth-child(3){border-top-color:#317bb4;}
-.lane-head{display:grid;grid-template-columns:54px 1fr;align-items:center;gap:10px;padding:15px 16px 11px;}
+.lane-head{display:grid;grid-template-columns:54px 1fr;align-items:center;gap:11px;padding:16px 18px 12px;}
 .lane-icon{display:grid;width:46px;height:46px;place-items:center;border:1px solid #9bded5;border-radius:50%;font-size:23px;background:var(--teal-soft);}
 .artifact-lane:nth-child(2) .lane-icon{border-color:#cfc2fb;background:var(--purple-soft);}
 .artifact-lane:nth-child(3) .lane-icon{border-color:#acd0ec;background:var(--blue-soft);}
 .lane-head small{display:block;color:var(--teal-deep);font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;}
 .artifact-lane:nth-child(2) .lane-head small{color:#7660bd;}
 .artifact-lane:nth-child(3) .lane-head small{color:#317bb4;}
-.lane-head h3{margin-top:4px;font-size:21px;}
-.lane-body{padding:0 16px 16px;}
-.lane-body p{color:var(--muted);font-size:13.5px;line-height:1.3;}
+.lane-head h3{margin-top:4px;font-size:22px;}
+.lane-body{padding:0 18px 18px;display:flex;flex-direction:column;flex:1;}
+.lane-body p{color:var(--muted);font-size:14px;line-height:1.32;}
 .artifact-chips{display:flex;gap:6px;margin-top:13px;flex-wrap:wrap;}
 .artifact-chips span{padding:6px 9px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--wash);font-size:11px;font-weight:850;}
-.friction-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;}
-.friction{display:grid;grid-template-columns:40px 1fr;align-items:center;gap:9px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;}
-.friction .fic{font-size:24px;}
-.friction b{display:block;color:var(--ink);font-size:14px;}
-.friction span{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.18;}
+.lane-missing{margin-top:auto;padding-top:14px;}
+.lane-missing div{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border-left:4px solid var(--orange);background:var(--orange-soft);border-radius:0 9px 9px 0;color:var(--ink);font-size:12.5px;font-weight:800;line-height:1.25;}
+.lane-missing b{color:#a45c18;}
 
-/* ===== islands (slide 3) ===== */
-.islands{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:stretch;margin-top:8px;}
-.island{position:relative;padding:18px;border:1px solid var(--line);border-top:5px solid var(--teal-deep);border-radius:16px;background:#fff;box-shadow:0 8px 18px rgba(12,43,73,.04);}
-.island:nth-child(3){border-top-color:#7660bd;}
-.island:nth-child(5){border-top-color:#317bb4;}
-.island-top{display:grid;grid-template-columns:48px 1fr;align-items:center;gap:10px;}
-.island-icon{display:grid;width:44px;height:44px;place-items:center;border:1px solid #9bded5;border-radius:50%;font-size:22px;background:var(--teal-soft);}
-.island:nth-child(3) .island-icon{border-color:#cfc2fb;background:var(--purple-soft);}
-.island:nth-child(5) .island-icon{border-color:#acd0ec;background:var(--blue-soft);}
-.island .eyebrow{font-size:10.5px;}
-.island h3{margin-top:4px;font-size:21px;}
-.island p{margin-top:13px;color:var(--muted);font-size:13.5px;line-height:1.34;}
-.island .missing{margin-top:14px;padding:9px 10px;border-left:4px solid var(--orange);color:var(--ink);background:var(--orange-soft);font-size:12.5px;font-weight:850;line-height:1.25;}
-.disconnect{display:grid;place-items:center;color:var(--orange);font-size:30px;font-weight:900;text-align:center;}
+/* ===== spine (architecture connects) ===== */
+.spine{margin-top:20px;}
+.spine-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.spine-item{position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 11px;text-align:center;}
+.spine-item small{color:var(--muted);font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;}
+.spine-item b{display:block;margin-top:6px;font-size:15px;letter-spacing:-.02em;}
+.spine-item:after{content:"";position:absolute;left:50%;bottom:-16px;width:2px;height:16px;background:#bcd3da;transform:translateX(-50%);}
+.spine-bar{margin-top:16px;border-radius:16px;background:linear-gradient(135deg,#123e62,#082942);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 16px 30px rgba(12,43,73,.16);}
+.spine-bar .sl{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);}
+.spine-bar .st b{font-size:24px;letter-spacing:-.02em;display:block;margin-top:5px;}
+.spine-bar .facets{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:560px;}
+.spine-bar .facets span{padding:8px 13px;border:1px solid rgba(0,205,187,.4);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;}
 
-/* ===== knowledge map / backbone hub (slide 4) ===== */
-.knowledge-map{display:grid;grid-template-columns:37% 7% 56%;min-height:412px;margin-top:14px;align-items:stretch;}
-.actor-stack{display:grid;gap:13px;align-content:center;}
-.actor{display:grid;grid-template-columns:84px 1fr;overflow:hidden;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 8px 18px rgba(12,43,73,.035);}
-.actor-symbol{display:grid;place-items:center;background:var(--wash);}
-.actor-circle{display:grid;width:58px;height:58px;place-items:center;border:1px solid #9bded5;border-radius:50%;font-size:26px;background:var(--teal-soft);}
-.actor:nth-child(1){border-left:4px solid #e2a635;} .actor:nth-child(1) .actor-circle{border-color:#e6c675;background:var(--orange-soft);}
-.actor:nth-child(2){border-left:4px solid #8b78cb;} .actor:nth-child(2) .actor-circle{border-color:#cfc2fb;background:var(--purple-soft);}
-.actor:nth-child(3){border-left:4px solid #66a9db;} .actor:nth-child(3) .actor-circle{border-color:#acd0ec;background:var(--blue-soft);}
-.actor-copy{display:flex;padding:11px 14px;flex-direction:column;justify-content:center;}
-.actor-copy .actor-name{color:var(--teal-deep);font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;}
-.actor-copy b{display:block;margin-top:5px;color:var(--ink);font-size:17px;line-height:1.12;}
-.actor-copy span{display:block;margin-top:6px;color:var(--muted);font-size:12px;font-weight:800;line-height:1.18;}
-.knowledge-flow{position:relative;display:grid;place-items:center;}
-.knowledge-flow:before{content:"";position:absolute;top:42px;bottom:42px;left:50%;border-left:1px dashed #9bded5;}
-.knowledge-flow b{position:relative;display:grid;width:44px;height:44px;place-items:center;border:1px solid #9bded5;border-radius:50%;color:var(--teal-deep);background:#fff;font-size:20px;}
-.arch-map{position:relative;overflow:hidden;border:1px solid #9bded5;border-radius:18px;background:radial-gradient(circle at center,rgba(255,255,255,.9) 0 15%,rgba(255,255,255,.18) 31%,transparent 52%),linear-gradient(135deg,#ebfbf9,#daf5f1);}
-.arch-map:before,.arch-map:after{content:"";position:absolute;top:50%;left:50%;border:1px solid rgba(0,141,128,.11);border-radius:50%;transform:translate(-50%,-50%);}
-.arch-map:before{width:300px;height:300px;} .arch-map:after{width:430px;height:430px;}
-.arch-map-title{position:absolute;top:17px;left:19px;padding:6px 10px;border:1px solid rgba(0,141,128,.18);border-radius:999px;color:var(--teal-deep);background:rgba(255,255,255,.6);font-size:10px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;}
-.arch-hub{position:absolute;z-index:3;top:50%;left:50%;display:grid;width:210px;height:124px;place-items:center;padding:14px;transform:translate(-50%,-50%);border:3px solid var(--teal-deep);border-radius:22px;color:#fff;background:linear-gradient(145deg,#123e62,#082942);text-align:center;box-shadow:0 18px 30px rgba(12,43,73,.2);}
-.arch-hub small{display:block;color:var(--teal);font-size:9.5px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;}
-.arch-hub b{display:block;margin-top:7px;font-size:17px;line-height:1.05;}
-.arch-node{position:absolute;z-index:2;width:198px;padding:11px 13px;border:1px solid rgba(0,141,128,.25);border-left:4px solid var(--teal-deep);border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 10px 18px rgba(12,43,73,.07);}
-.arch-node small{display:block;margin-bottom:3px;color:var(--teal-deep);font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;}
-.arch-node b{display:block;color:var(--ink);font-size:15px;}
-.arch-node span{display:block;margin-top:4px;color:var(--muted);font-size:11.5px;line-height:1.2;}
-.arch-node.interface{border-color:#acd0ec;border-left-color:#317bb4;} .arch-node.interface small{color:#317bb4;}
-.arch-node.scenario-node{border-color:#cfc2fb;border-left-color:#7660bd;} .arch-node.scenario-node small{color:#7660bd;}
-.arch-node.impact-node{border-color:#e6c675;border-left-color:#b66a19;} .arch-node.impact-node small{color:#b66a19;}
-.arch-node.responsibility{top:46px;left:18px;}
-.arch-node.interface{top:46px;right:18px;}
-.arch-node.scenario-node{bottom:28px;left:18px;}
-.arch-node.impact-node{right:18px;bottom:28px;}
+/* ===== industry domains (image cards) ===== */
+.domain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;}
+.domain-card{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 10px 26px rgba(12,43,73,.06);}
+.domain-img{position:relative;height:138px;}
+.domain-img svg{width:100%;height:100%;display:block;}
+.domain-badge{position:absolute;left:22px;bottom:-24px;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--teal-deep);color:#fff;font-size:25px;border:3px solid #fff;box-shadow:0 8px 18px rgba(12,43,73,.2);}
+.domain-body{padding:34px 22px 20px;display:flex;flex-direction:column;flex:1;}
+.domain-body h3{font-size:24px;text-align:center;letter-spacing:-.02em;}
+.domain-std{margin-top:12px;color:var(--teal-deep);font-weight:900;font-size:15px;}
+.domain-points{margin-top:9px;display:grid;gap:7px;}
+.domain-points div{color:var(--ink);font-size:14.5px;font-weight:600;}
+.domain-foot{margin-top:16px;display:flex;align-items:center;gap:16px;padding:14px 20px;border:1px solid var(--line);border-radius:14px;background:var(--wash);}
+.domain-foot .fa{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--teal-deep);color:#fff;font-size:18px;font-weight:900;flex:none;}
+.domain-foot b{font-size:19px;color:var(--ink);letter-spacing:-.01em;}
 
-/* ===== stakeholders + handoff (slide 5) ===== */
-.stakeholders{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;}
-.stake{padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
-.stake:nth-child(1){border-top:6px solid var(--blue);}
-.stake:nth-child(2){border-top:6px solid var(--orange);}
-.stake:nth-child(3){border-top:6px solid var(--teal-deep);}
-.stake .num{font-size:30px;}
-.stake h3{margin-top:12px;font-size:24px;}
-.stake p{margin-top:12px;color:var(--muted);font-size:14.5px;line-height:1.36;}
-.stake strong{color:var(--ink);}
-.handoff{display:grid;grid-template-columns:1fr 36px 1.25fr 36px 1fr;align-items:center;margin-top:16px;padding:13px 16px;border:1px solid #e6c675;border-radius:13px;background:#fff8e7;}
-.handoff .handoff-arrow{color:#b66a19;font-size:26px;font-weight:900;text-align:center;}
-.handoff small{display:block;color:#a45c18;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;}
-.handoff b{display:block;margin-top:5px;color:var(--ink);font-size:15px;line-height:1.2;}
-.handoff strong{color:#a45c18;}
+/* ===== compare (enterprise vs startup) ===== */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+.cmp{border:1px solid var(--line);border-radius:18px;background:#fff;padding:20px;}
+.cmp.ent{border-top:6px solid var(--blue);} .cmp.st{border-top:6px solid var(--teal-deep);}
+.cmp .n{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;}
+.cmp h3{margin-top:6px;font-size:24px;letter-spacing:-.02em;}
+.cmp-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+.cmp-two .lab{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-deep);}
+.cmp-two .gaps .lab{color:#a45c18;}
+.cmp-two ul{margin-top:8px;padding:0;list-style:none;display:grid;gap:7px;}
+.cmp-two li{position:relative;padding-left:16px;color:var(--ink);font-size:13.5px;font-weight:700;line-height:1.25;}
+.cmp-two li:before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--teal-deep);}
+.cmp-two .gaps li:before{background:#d68931;}
+.blocker{margin-top:14px;display:flex;align-items:center;gap:16px;padding:15px 20px;border:1px solid #f3c9c6;border-radius:14px;background:var(--red-soft);}
+.blocker .bi{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#fff;border:1px solid #f3c9c6;font-size:22px;flex:none;}
+.blocker b{color:#b34a42;font-size:16px;} .blocker span{display:block;margin-top:3px;color:var(--ink);font-size:14px;font-weight:600;}
 
-/* ===== memo split (slide 6) ===== */
-.split-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:16px;}
-.split{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:18px;display:flex;flex-direction:column;}
-.split:nth-child(1){border-top:6px solid var(--blue);}
-.split:nth-child(2){border-top:6px solid var(--teal-deep);}
-.split:nth-child(3){border-top:6px solid var(--orange);}
-.split .n{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;}
-.split h3{margin-top:7px;font-size:23px;letter-spacing:-.02em;}
-.split p{margin-top:9px;color:var(--muted);font-size:13.5px;line-height:1.34;}
-.split ul{display:grid;gap:7px;margin:14px 0 0;padding:0;list-style:none;}
-.split li{position:relative;padding:7px 0 0 16px;border-top:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:800;}
-.split li:before{content:"";position:absolute;left:0;top:14px;width:7px;height:7px;border-radius:50%;background:var(--red);}
+/* ===== need flow (input -> model -> output) ===== */
+.needflow{display:grid;grid-template-columns:1fr 40px 1.15fr 40px 1fr;align-items:center;gap:12px;margin-top:18px;}
+.need-col{display:grid;gap:11px;}
+.nc{border:1px solid var(--line);border-radius:13px;background:#fff;padding:13px 15px;display:flex;align-items:center;gap:12px;}
+.nc .ni{font-size:22px;flex:none;}
+.nc b{display:block;font-size:15px;letter-spacing:-.01em;} .nc span{display:block;margin-top:2px;color:var(--muted);font-size:12px;line-height:1.2;}
+.need-arrow{color:var(--teal-deep);font-size:30px;font-weight:900;text-align:center;}
+.need-mid{border:2px solid var(--teal-deep);border-radius:20px;background:linear-gradient(135deg,#e8fbf9,#d6f5f1);padding:22px 20px;text-align:center;box-shadow:0 16px 30px rgba(12,43,73,.08);}
+.need-mid small{color:var(--teal-deep);font-weight:900;font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
+.need-mid b{display:block;margin-top:9px;font-size:24px;letter-spacing:-.025em;}
+.need-mid .chips{justify-content:center;margin-top:14px;} .need-mid .chips span{background:#fff;border-color:#bdeee8;}
 
-/* ===== needed hub (slide 7) ===== */
-.needed{position:relative;display:grid;grid-template-columns:25% 50% 25%;gap:22px;align-items:center;margin-top:16px;}
-.needed:before,.needed:after{content:"";position:absolute;z-index:4;top:50%;width:50px;height:16px;background:linear-gradient(90deg,#9bded5,var(--teal-deep));clip-path:polygon(0 44%,76% 44%,76% 5%,100% 50%,76% 95%,76% 56%,0 56%);transform:translateY(-50%);}
-.needed:before{left:22%;} .needed:after{right:22%;}
-.needed-side{position:relative;z-index:2;display:grid;gap:11px;}
-.needed-node{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line);border-radius:13px;background:#fff;box-shadow:0 7px 14px rgba(12,43,73,.035);}
-.needed-node .nic{font-size:22px;}
-.needed-node b{display:block;color:var(--ink);font-size:15px;}
-.needed-node span{display:block;margin-top:3px;color:var(--muted);font-size:11.5px;font-weight:750;line-height:1.15;}
-.needed-core{position:relative;z-index:1;min-height:330px;overflow:hidden;border:2px solid var(--teal-deep);border-radius:24px;background:radial-gradient(circle at center,rgba(255,255,255,.96) 0 12%,rgba(255,255,255,.26) 36%,transparent 58%),linear-gradient(135deg,#e8fbf9,#d6f5f1);box-shadow:0 18px 32px rgba(12,43,73,.08);}
-.needed-core:before,.needed-core:after{content:"";position:absolute;top:50%;left:50%;border:1px solid rgba(0,141,128,.13);border-radius:50%;transform:translate(-50%,-50%);}
-.needed-core:before{width:320px;height:320px;} .needed-core:after{width:480px;height:480px;}
-.needed-core-title{position:absolute;top:16px;left:18px;color:var(--teal-deep);font-size:10.5px;font-weight:900;letter-spacing:1.6px;text-transform:uppercase;}
-.needed-hub{position:absolute;z-index:3;top:50%;left:50%;display:grid;width:218px;height:124px;place-items:center;padding:14px;transform:translate(-50%,-50%);border:3px solid var(--teal-deep);border-radius:22px;color:#fff;background:linear-gradient(145deg,#123e62,#082942);text-align:center;box-shadow:0 15px 26px rgba(12,43,73,.2);}
-.needed-hub small{display:block;color:var(--teal);font-size:9.5px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;}
-.needed-hub b{display:block;margin-top:5px;font-size:17px;line-height:1.05;}
-.needed-pill{position:absolute;z-index:2;padding:8px 11px;border:1px solid rgba(0,141,128,.28);border-radius:999px;color:var(--ink);background:rgba(255,255,255,.94);font-size:11.5px;font-weight:850;box-shadow:0 6px 11px rgba(12,43,73,.045);}
-.needed-pill.responsibilities{top:54px;left:30px;} .needed-pill.interfaces{top:54px;right:30px;}
-.needed-pill.scenarios{bottom:40px;left:30px;} .needed-pill.impact-paths{right:30px;bottom:40px;}
-
-/* ===== components (slide 8 — introducing meMO) ===== */
-.components{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:16px;}
-.component{position:relative;padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff;display:flex;flex-direction:column;}
+/* ===== components (introducing meMO) ===== */
+.components{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:18px;}
+.component{position:relative;padding:26px 18px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;}
 .component:not(:last-child):after{content:"";position:absolute;z-index:3;top:50%;right:-15px;width:11px;height:11px;border-top:3px solid var(--teal-deep);border-right:3px solid var(--teal-deep);transform:translateY(-50%) rotate(45deg);}
-.component:nth-child(1){border-top:6px solid var(--teal-deep);}
-.component:nth-child(2){border-top:6px solid var(--blue);}
-.component:nth-child(3){border-top:6px solid var(--purple);}
-.component:nth-child(4){border-top:6px solid var(--orange);}
-.component .ci{font-size:28px;}
-.component small{display:block;margin-top:10px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;}
-.component h3{margin-top:6px;font-size:24px;}
-.component p{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.32;}
-.component .get{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);color:var(--ink);font-size:13.5px;font-weight:850;line-height:1.28;}
+.component .ci{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;font-size:34px;background:var(--teal-soft);border:1px solid #bdeee8;box-shadow:0 10px 22px rgba(0,141,128,.12);}
+.component:nth-child(2) .ci{background:var(--blue-soft);border-color:#cce2f6;}
+.component:nth-child(3) .ci{background:var(--purple-soft);border-color:#ddd5f6;}
+.component:nth-child(4) .ci{background:var(--orange-soft);border-color:#f7ddc2;}
+.component small{display:block;margin-top:15px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;}
+.component h3{margin-top:6px;font-size:23px;letter-spacing:-.02em;}
+.component p{margin-top:10px;color:var(--muted);font-size:13.5px;line-height:1.32;}
+.component .get{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--teal-deep);font-size:13px;font-weight:850;line-height:1.28;width:100%;}
 
 /* code */
 .code{border-radius:14px;background:var(--code-bg);color:var(--code-ink);overflow:hidden;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0;}
@@ -299,14 +258,6 @@ ul.ticks li strong{color:var(--ink);}
 .ltable td:first-child{font-weight:900;color:var(--ink);width:150px;}
 .ltable code{font-family:"SF Mono",ui-monospace,monospace;font-size:12px;color:var(--teal-deep);background:var(--teal-soft);padding:2px 6px;border-radius:5px;}
 
-/* horizons */
-.horizons{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;}
-.horizon{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:18px;position:relative;overflow:hidden;}
-.horizon:before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:var(--teal);}
-.horizon.h1:before{background:var(--blue);} .horizon.h2:before{background:var(--purple);}
-.horizon .when{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
-.horizon h3{margin-top:5px;font-size:19px;letter-spacing:-.02em;}
-
 /* stack figure */
 .stack{display:flex;flex-direction:column;gap:9px;}
 .srow{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:#fff;display:flex;align-items:center;gap:14px;}
@@ -317,21 +268,8 @@ ul.ticks li strong{color:var(--ink);}
 .srow.l3{background:var(--purple-soft);border-color:#ddd5f6;} .srow.l3 .n{background:#e4dcfb;color:var(--purple);}
 .srow.l4{background:var(--orange-soft);border-color:#f7ddc2;} .srow.l4 .n{background:#f8e3cd;color:var(--orange);}
 
-/* duo / pilot / scope / mock */
+/* duo / mock */
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;min-height:0;}
-.pilot{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:16px;}
-.pilot-step{position:relative;padding:15px 14px;border:1px solid var(--line);background:#fff;}
-.pilot-step:first-child{border-radius:13px 0 0 13px;}
-.pilot-step:last-child{border-radius:0 13px 13px 0;}
-.pilot-step + .pilot-step:before{content:"\203A";position:absolute;z-index:2;top:30px;left:-9px;color:var(--teal-deep);font-size:30px;}
-.pilot-step small{color:var(--teal-deep);font-size:11px;font-weight:900;letter-spacing:.12em;}
-.pilot-step b{display:block;margin-top:9px;font-size:17px;letter-spacing:-.02em;}
-.pilot-step span{display:block;margin-top:7px;color:var(--muted);font-size:12.5px;line-height:1.3;}
-.scope{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:14px;}
-.scope-col{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:17px;}
-.scope-col.solve{border-color:#bdeee8;background:var(--teal-soft);}
-.scope-col.alt{border-color:#cce2f6;background:var(--blue-soft);}
-.scope-col h3{font-size:18px;letter-spacing:-.02em;}
 .mock{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;align-self:center;}
 .mock .bar{display:grid;grid-template-columns:150px 1fr;}
 .mock .sb{background:var(--night);color:#fff;padding:16px;font-weight:900;font-size:14px;line-height:1.5;}
@@ -374,15 +312,15 @@ ul.ticks li strong{color:var(--ink);}
 <section class="slide dark act" data-title="Act 1 — The problem">
   <div class="body">
     <div class="kicker">Part One</div>
-    <h2>Complexity is rising. <span>Safety must keep up</span>.</h2>
-    <p>Medical devices became software-intensive systems. Their safety story is spread across documents that are traced — but not always meaningful — and it drifts as the design moves.</p>
+    <h2>Safety evidence <span>drifts under change</span>.</h2>
+    <p>Medical devices became software-intensive systems. Their safety case is spread across documents that are traced but not always meaningful — and it loses alignment as the design evolves.</p>
   </div>
   <div class="actno">01</div>
 </section>
 
 <!-- 1 · COMPLEXITY -->
 <section class="slide" data-title="Software is becoming the medical device.">
-  <div class="chapter"><b>01</b> Rising complexity</div>
+  <div class="chapter"><b>01</b> Device complexity</div>
   <div class="body">
     <h2>Software is becoming <span>the medical device</span>.</h2>
     <p class="lede">Connected, configurable, workflow-driven cyber-physical systems. Safety is now an emergent property of behavior and architecture — not of any single requirement.</p>
@@ -414,256 +352,260 @@ ul.ticks li strong{color:var(--ink);}
         </div>
       </div>
     </div>
-    <div class="message"><strong>Opening question:</strong> as software complexity grows, how do we keep safety <em>continuously</em> assured under change?</div>
+    <div class="message"><strong>The question:</strong> as software complexity grows, how do we keep safety <em>continuously</em> assured under change?</div>
   </div>
 </section>
 
-<!-- 2 · FRAGMENTED -->
-<section class="slide" data-title="Medical development is fragmented.">
-  <div class="chapter"><b>02</b> Fragmented &amp; document-heavy</div>
+<!-- 2 · FRAGMENTED + NO MEANING (combined) -->
+<section class="slide" data-title="Fragmented teams, traced but not meaningful.">
+  <div class="chapter"><b>02</b> Fragmented evidence</div>
   <div class="body">
-    <h2>Medical development is still <span>fragmented</span>.</h2>
-    <p class="lede">Specialized teams. A document-heavy process. Artifacts are traced — but the <em>meaning</em> across them is often implicit.</p>
+    <h2>Traced across silos — <span>but not meaningful</span>.</h2>
+    <p class="lede">Specialized teams and a document-heavy process. Artifacts are linked, but the links rarely say <em>why</em>, <em>where implemented</em>, or whether the evidence is still valid.</p>
     <div class="artifact-lanes fill" style="align-content:center;">
       <div class="artifact-lane">
         <div class="lane-head"><div class="lane-icon">📋</div><div><small>Artifact island</small><h3>Requirements</h3></div></div>
-        <div class="lane-body"><p>Requirements are traced, but the link rarely explains safety meaning, allocation, or staleness.</p>
+        <div class="lane-body">
+          <p>Traced to tests, but the link does not carry the safety claim it is meant to support.</p>
           <div class="artifact-chips"><span>User needs</span><span>System reqs</span><span>Software reqs</span></div>
+          <div class="lane-missing"><div><b>Missing:</b>&nbsp;why this test proves this claim.</div></div>
         </div>
       </div>
       <div class="artifact-lane">
         <div class="lane-head"><div class="lane-icon">⚠️</div><div><small>Artifact island</small><h3>Risk</h3></div></div>
-        <div class="lane-body"><p>Hazards, controls, and residual risk live in separate files and review rituals.</p>
+        <div class="lane-body">
+          <p>Hazards and controls live in separate files; controls are not anchored to the design.</p>
           <div class="artifact-chips"><span>Hazards</span><span>Harms</span><span>Controls</span></div>
+          <div class="lane-missing"><div><b>Missing:</b>&nbsp;where the control is implemented.</div></div>
         </div>
       </div>
       <div class="artifact-lane">
         <div class="lane-head"><div class="lane-icon">✅</div><div><small>Artifact island</small><h3>Verification</h3></div></div>
-        <div class="lane-body"><p>Evidence proves something — but not always the exact safety claim in today's baseline.</p>
+        <div class="lane-body">
+          <p>Evidence proves something — but not always the claim in today's released baseline.</p>
           <div class="artifact-chips"><span>Tests</span><span>Results</span><span>DHF</span></div>
+          <div class="lane-missing"><div><b>Missing:</b>&nbsp;a deterministic re-review scope.</div></div>
         </div>
       </div>
     </div>
-    <div class="friction-strip">
-      <div class="friction"><span class="fic">🏛️</span><div><b>Architecture is document-only</b><span>pictures age faster than the design</span></div></div>
-      <div class="friction"><span class="fic">🔗</span><div><b>Trace links lack semantics</b><span>“linked” does not mean “complete”</span></div></div>
-      <div class="friction"><span class="fic">🕒</span><div><b>Evidence freshness is manual</b><span>impact is reconstructed late</span></div></div>
-    </div>
-    <div class="message"><strong>The issue is not a lack of documents.</strong> It is keeping the relationships between them meaningful, complete, and current.</div>
+    <div class="message"><strong>The issue is not a lack of documents.</strong> It is missing, checkable <em>meaning</em> between them — “linked” does not mean “complete”.</div>
   </div>
 </section>
 
-<!-- 3 · TRACE WITHOUT MEANING -->
-<section class="slide" data-title="Traceability exists, but not enough meaning.">
-  <div class="chapter"><b>03</b> The semantic gap</div>
+<!-- 3 · ARCHITECTURE CONNECTS (spine, problem-framed) -->
+<section class="slide" data-title="Architecture is the connective layer.">
+  <div class="chapter"><b>03</b> The connective layer</div>
   <div class="body">
-    <h2>Traceability exists — <span>but not enough meaning</span>.</h2>
-    <p class="lede">A matrix can say two items are linked. It rarely says <em>why</em>, <em>where implemented</em>, or whether the evidence is now stale.</p>
-    <div class="islands fill" style="align-content:center;">
-      <div class="island">
-        <div class="island-top"><div class="island-icon">🔗</div><div><div class="eyebrow">Trace row</div><h3>Requirement → Test</h3></div></div>
-        <p>The relationship exists, but the safety meaning lives outside the model.</p>
-        <div class="missing">Missing: why this test proves this safety claim.</div>
+    <h2>Architecture is where these threads <span>should meet</span>.</h2>
+    <p class="lede">The lifecycle artifacts already form one chain. Today they sit in silos; the architecture is the natural backbone that could connect them — if it were made explicit and computable.</p>
+    <div class="spine fill" style="align-content:center;">
+      <div class="spine-row">
+        <div class="spine-item"><small>Intent</small><b>Use &amp; assumptions</b></div>
+        <div class="spine-item"><small>Risk</small><b>Hazards &amp; controls</b></div>
+        <div class="spine-item"><small>Need</small><b>Requirements</b></div>
+        <div class="spine-item"><small>Behavior</small><b>Flows &amp; modes</b></div>
+        <div class="spine-item"><small>V&amp;V</small><b>Verification</b></div>
+        <div class="spine-item"><small>Proof</small><b>Evidence</b></div>
       </div>
-      <div class="disconnect">?</div>
-      <div class="island">
-        <div class="island-top"><div class="island-icon">📍</div><div><div class="eyebrow">Allocation</div><h3>Control → Architecture</h3></div></div>
-        <p>The control may not be allocated to a behavior, component, interface, or boundary.</p>
-        <div class="missing">Missing: where implemented and who owns it.</div>
-      </div>
-      <div class="disconnect">?</div>
-      <div class="island">
-        <div class="island-top"><div class="island-icon">🕒</div><div><div class="eyebrow">Freshness</div><h3>Evidence → Baseline</h3></div></div>
-        <p>Verification goes stale when assumptions, flows, or interfaces change.</p>
-        <div class="missing">Missing: a deterministic re-review scope.</div>
+      <div class="spine-bar">
+        <div class="st"><div class="sl">The connective backbone</div><b>Architecture</b></div>
+        <div class="facets"><span>Responsibilities</span><span>Interface contracts</span><span>Behavioral flows</span><span>Change impact</span></div>
       </div>
     </div>
-    <div class="message"><strong>The gap is semantic, not graphical.</strong> The goal is typed, checkable safety relationships — not more arrows.</div>
+    <div class="message"><strong>The gap is structural:</strong> without an explicit architecture spine, the chain from intent to evidence cannot be checked when the design changes.</div>
   </div>
 </section>
 
-<!-- 4 · ARCHITECTURE CONNECTS -->
-<section class="slide" data-title="Architecture can connect the safety story.">
-  <div class="chapter"><b>04</b> The backbone</div>
+<!-- 4 · INDUSTRY DOMAINS (images) -->
+<section class="slide" data-title="Other safety-critical domains solved this.">
+  <div class="chapter"><b>04</b> Industry context</div>
   <div class="body">
-    <h2>Architecture can <span>connect the safety story</span>.</h2>
-    <p class="lede">Architecture is the natural backbone between clinical intent, risk controls, requirements, behavior, interfaces, verification, and released evidence.</p>
-    <div class="knowledge-map fill">
-      <div class="actor-stack">
-        <div class="actor"><div class="actor-symbol"><div class="actor-circle">🎯</div></div><div class="actor-copy"><div class="actor-name">Intent</div><b>Use + assumptions</b><span>what the device must do</span></div></div>
-        <div class="actor"><div class="actor-symbol"><div class="actor-circle">⚠️</div></div><div class="actor-copy"><div class="actor-name">Risk</div><b>Hazards + controls</b><span>what must be prevented</span></div></div>
-        <div class="actor"><div class="actor-symbol"><div class="actor-circle">✅</div></div><div class="actor-copy"><div class="actor-name">Evidence</div><b>Verification + DHF</b><span>what proves the baseline</span></div></div>
+    <h2>Other safety-critical domains <span>already solved this</span>.</h2>
+    <p class="lede">Aerospace and automotive lean on a shared semantic backbone — typed models, structured safety cases, and tool-integrated traces. Medical has the standards, but less architecture maturity.</p>
+    <div class="domain-grid fill" style="align-content:center;">
+      <div class="domain-card">
+        <div class="domain-img">
+          <svg viewBox="0 0 420 138" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd0ec"/><stop offset="1" stop-color="#e7f3fb"/></linearGradient></defs><rect width="420" height="138" fill="url(#gA)"/><circle cx="350" cy="34" r="24" fill="#fff" opacity="0.5"/><path d="M-10,128 L150,92 L430,116 L430,138 L-10,138 Z" fill="#cfdae1"/><g fill="#0a3452" transform="translate(135 22) rotate(33)"><ellipse cx="64" cy="48" rx="11" ry="46"/><path d="M54,52 L8,74 L54,40 Z"/><path d="M74,52 L120,74 L74,40 Z"/><path d="M58,90 L64,108 L70,90 Z"/><circle cx="64" cy="8" r="7"/></g><path d="M120,30 q44,-10 80,4" stroke="#fff" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/></svg>
+          <div class="domain-badge">✈</div>
+        </div>
+        <div class="domain-body">
+          <h3>Aerospace</h3>
+          <div class="domain-std">ARP4754A / ARP4761</div>
+          <div class="domain-points"><div>Formal safety models</div><div>Mature trace practices</div></div>
+        </div>
       </div>
-      <div class="knowledge-flow"><b>→</b></div>
-      <div class="arch-map">
-        <div class="arch-map-title">Architecture-centered backbone</div>
-        <div class="arch-hub"><small>Living model</small><b>Architecture<br>backbone</b></div>
-        <div class="arch-node responsibility"><small>Responsibility</small><b>Ownership</b><span>who implements the control</span></div>
-        <div class="arch-node interface"><small>Interfaces</small><b>Contracts</b><span>ports · units · timing · assumptions</span></div>
-        <div class="arch-node scenario-node"><small>Scenarios</small><b>Behavior</b><span>nominal + off-nominal flows</span></div>
-        <div class="arch-node impact-node"><small>Impact</small><b>Change</b><span>affected claims and evidence</span></div>
+      <div class="domain-card">
+        <div class="domain-img">
+          <svg viewBox="0 0 420 138" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9d6de"/><stop offset="1" stop-color="#eef3f6"/></linearGradient></defs><rect width="420" height="138" fill="url(#gB)"/><rect x="0" y="104" width="420" height="34" fill="#aeb9c0"/><rect x="60" y="118" width="60" height="5" rx="2" fill="#e7eef1"/><rect x="300" y="118" width="60" height="5" rx="2" fill="#e7eef1"/><g><rect x="118" y="52" width="184" height="54" rx="20" fill="#3a4a55"/><path d="M150,54 Q160,28 210,28 Q260,28 270,54 Z" fill="#46596a"/><path d="M163,52 Q172,37 210,37 Q248,37 257,52 Z" fill="#bcd8ea"/><rect x="124" y="74" width="26" height="16" rx="6" fill="#ffe08a"/><rect x="270" y="74" width="26" height="16" rx="6" fill="#ffe08a"/><circle cx="156" cy="106" r="19" fill="#1c2730"/><circle cx="156" cy="106" r="8" fill="#62737d"/><circle cx="264" cy="106" r="19" fill="#1c2730"/><circle cx="264" cy="106" r="8" fill="#62737d"/></g></svg>
+          <div class="domain-badge">🚗</div>
+        </div>
+        <div class="domain-body">
+          <h3>Automotive</h3>
+          <div class="domain-std">ISO 26262</div>
+          <div class="domain-points"><div>Structured safety cases</div><div>Tool-integrated traces</div></div>
+        </div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-img">
+          <svg viewBox="0 0 420 138" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="gM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dbe7ec"/><stop offset="1" stop-color="#f2f6f8"/></linearGradient></defs><rect width="420" height="138" fill="url(#gM)"/><rect x="0" y="112" width="420" height="26" fill="#d3dee3"/><rect x="132" y="24" width="156" height="96" rx="12" fill="#2b3a44"/><rect x="144" y="36" width="132" height="62" rx="6" fill="#08160f"/><polyline points="152,72 174,72 184,50 198,94 212,58 226,72 268,72" fill="none" stroke="#46e08a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="160" cy="110" r="4" fill="#46e08a"/><rect x="246" y="44" width="22" height="9" rx="2" fill="#ffd24a"/><rect x="246" y="58" width="16" height="7" rx="2" fill="#7fc4e6"/><rect x="300" y="40" width="42" height="70" rx="8" fill="#3a4a55"/><rect x="308" y="48" width="26" height="20" rx="3" fill="#0c1a22"/></svg>
+          <div class="domain-badge">🩺</div>
+        </div>
+        <div class="domain-body">
+          <h3>Medical devices</h3>
+          <div class="domain-std">ISO 14971 / 13485</div>
+          <div class="domain-points"><div>Risk &amp; usability traces</div><div>Regulatory alignment</div></div>
+        </div>
       </div>
     </div>
-    <div class="message"><strong>Architecture is not just a picture.</strong> It can become the computable backbone of safety assurance.</div>
+    <div class="domain-foot"><div class="fa">→</div><b>Different domains, same lesson: semantics enable trust.</b></div>
+  </div>
+</section>
+
+<!-- 5 · ENTERPRISE VS STARTUP -->
+<section class="slide" data-title="Startups and enterprises are blocked differently.">
+  <div class="chapter"><b>05</b> Adoption barriers</div>
+  <div class="body">
+    <h2>The barrier differs by <span>organization</span>.</h2>
+    <p class="lede">Enterprises and startups bring opposite strengths — and hit the same wall: tooling and method-setup cost.</p>
+    <div class="compare fill" style="align-content:center;">
+      <div class="cmp ent">
+        <div class="n">Enterprise</div><h3>Mature process, fragmented</h3>
+        <div class="cmp-two">
+          <div><div class="lab">Strengths</div><ul><li>Formal evidence</li><li>Compliance experience</li><li>Review culture</li></ul></div>
+          <div class="gaps"><div class="lab">Gaps</div><ul><li>Tool silos &amp; handoffs</li><li>Slow change impact</li><li>Document drift</li></ul></div>
+        </div>
+      </div>
+      <div class="cmp st">
+        <div class="n">Startup</div><h3>Fast iteration, thin process</h3>
+        <div class="cmp-two">
+          <div><div class="lab">Strengths</div><ul><li>Code-first iteration</li><li>Direct ownership</li><li>Little bureaucracy</li></ul></div>
+          <div class="gaps"><div class="lab">Gaps</div><ul><li>Immature risk analysis</li><li>Implicit architecture</li><li>Limited tool budget</li></ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="blocker"><div class="bi">💸</div><div><b>The shared blocker: tooling and setup cost</b><span>MBSE / QMS / ALM suites are expensive; organizing viewpoints and method setup take real effort, and versioning stays painful — even inside large organizations.</span></div></div>
+  </div>
+</section>
+
+<!-- 6 · WHAT IS NEEDED -->
+<section class="slide" data-title="What is needed is a shared model.">
+  <div class="chapter"><b>06</b> Requirements</div>
+  <div class="body">
+    <h2>One model everyone can <span>refer to and work on</span>.</h2>
+    <p class="lede">Low cost of adoption. A prefab architecture and methodology so teams can start immediately. Compiler-style checks for compliance, and document export — the benefits of MBSE without the setup tax.</p>
+    <div class="needflow fill" style="align-content:center;">
+      <div class="need-col">
+        <div class="nc"><span class="ni">📄</span><div><b>Text-first source</b><span>diffable · reviewable · versioned</span></div></div>
+        <div class="nc"><span class="ni">🏛️</span><div><b>Architecture backbone</b><span>risk · requirements · behavior · evidence</span></div></div>
+        <div class="nc"><span class="ni">🧭</span><div><b>Prefab methodology</b><span>start from a working structure</span></div></div>
+      </div>
+      <div class="need-arrow">→</div>
+      <div class="need-mid">
+        <small>One shared model</small>
+        <b>Meaning + structure + rules</b>
+        <div class="chips"><span>Responsibilities</span><span>Interfaces</span><span>Scenarios</span><span>Impact paths</span></div>
+      </div>
+      <div class="need-arrow">→</div>
+      <div class="need-col">
+        <div class="nc"><span class="ni">✅</span><div><b>Checks for compliance</b><span>warnings · errors · closure</span></div></div>
+        <div class="nc"><span class="ni">👁️</span><div><b>Viewpoints</b><span>risk · architecture · DHF · cyber</span></div></div>
+        <div class="nc"><span class="ni">📤</span><div><b>Document export</b><span>generated review artifacts</span></div></div>
+      </div>
+    </div>
+    <div class="message"><strong>That shared model is meMO</strong> — MBSE benefits with code-first adoption and far lower setup friction.</div>
   </div>
 </section>
 
 <!-- ============ ACT 2 ============ -->
-<section class="slide dark act" data-title="Act 2 — Why it is hard">
+<section class="slide dark act" data-title="Act 2 — Introducing meMO">
   <div class="body">
     <div class="kicker">Part Two</div>
-    <h2>Why is it <span>still hard</span>?</h2>
-    <p>Other industries already lean on architecture. Medical doesn't — and the reasons differ for enterprises and startups. Both hit the same tooling wall.</p>
+    <h2>Introducing <span>meMO</span>.</h2>
+    <p>Medical Engineering Modeling Ontology — four layers you can adopt independently: an ontology, a methodology, a toolchain, and a visual architect.</p>
   </div>
   <div class="actno">02</div>
 </section>
 
-<!-- 5 · DOMAINS -->
-<section class="slide" data-title="Learn from architecture-centric domains.">
-  <div class="chapter"><b>05</b> Borrowed discipline</div>
-  <div class="body">
-    <h2>Aerospace and automotive are <span>more mature</span>.</h2>
-    <p class="lede">They have strong traditions of architecture, allocation, interface contracts, and model-based reasoning. Medical has strong process — but low architecture and MBSE adoption.</p>
-    <div class="stakeholders fill" style="align-content:center;">
-      <div class="stake"><div class="num">✈️</div><h3>Aerospace</h3><p><strong>Architecture + allocation chains</strong> connect mission, system design, safety analysis (ARP4761), and verification evidence.</p></div>
-      <div class="stake"><div class="num">🚗</div><h3>Automotive</h3><p><strong>Platforms + contracts</strong> standardize safety mechanisms, interfaces, reuse, and product-line reasoning (ISO 26262).</p></div>
-      <div class="stake"><div class="num">🏥</div><h3>Medical devices</h3><p><strong>Strong process, light architecture.</strong> Mature QMS and traceability, but MBSE setup cost and method work stay high.</p></div>
-    </div>
-    <div class="handoff">
-      <div><small>Medical has</small><b>process, documents, traceability</b></div>
-      <div class="handoff-arrow">→</div>
-      <div><small>What is often missing</small><b><strong>architecture</strong> as the living integration mechanism</b></div>
-      <div class="handoff-arrow">→</div>
-      <div><small>What it needs</small><b>low-friction adoption</b></div>
-    </div>
-    <div class="message"><strong>The goal is not heavyweight MBSE.</strong> It is architecture-centered discipline with code-first adoption friction.</div>
-  </div>
-</section>
-
-<!-- 6 · ENTERPRISE VS STARTUP -->
-<section class="slide" data-title="Startups and enterprises struggle differently.">
-  <div class="chapter"><b>06</b> The adoption bottleneck</div>
-  <div class="body">
-    <h2>Startups and enterprises <span>struggle differently</span>.</h2>
-    <p class="lede">Different strengths, the same wall: tooling cost and method-setup effort block adoption — even inside large organizations.</p>
-    <div class="split-grid fill" style="align-content:center;">
-      <div class="split"><div class="n">Enterprise</div><h3>Mature, but slow</h3><p>Formal evidence and review culture — fragmented across tools.</p><ul><li>Tool silos and handoffs</li><li>Slow, manual change impact</li><li>Document drift between baselines</li></ul></div>
-      <div class="split"><div class="n">Startup</div><h3>Fast, but thin</h3><p>Code-first iteration and direct ownership — weak on process.</p><ul><li>Immature risk analysis</li><li>Implicit, undocumented architecture</li><li>Limited tooling budget</li></ul></div>
-      <div class="split"><div class="n">Common blocker</div><h3>Tooling cost</h3><p>MBSE / QMS / ALM suites are expensive — even big orgs feel it.</p><ul><li>Organizing viewpoints = a lot of work</li><li>Method setup before any value</li><li>Versioning &amp; diffing still painful</li></ul></div>
-    </div>
-    <div class="message"><strong>Enterprises need speed and integration. Startups need safety discipline</strong> — neither can afford an enterprise tool-and-method tax to get it.</div>
-  </div>
-</section>
-
-<!-- 7 · WHAT IS NEEDED -->
-<section class="slide" data-title="What is needed is a shared model.">
-  <div class="chapter"><b>07</b> The missing layer</div>
-  <div class="body">
-    <h2>What is needed is a <span>shared model</span>.</h2>
-    <p class="lede">One model everyone refers to and works on — low cost of adoption, a prefab architecture + methodology so people can jump in, compiler-style checks for compliance, and document export. MBSE benefits, without the MBSE tax.</p>
-    <div class="needed fill">
-      <div class="needed-side">
-        <div class="needed-node"><span class="nic">📄</span><div><b>Text-first source</b><span>diffable · reviewable · versioned</span></div></div>
-        <div class="needed-node"><span class="nic">🏛️</span><div><b>Architecture backbone</b><span>risk · requirements · behavior · evidence</span></div></div>
-        <div class="needed-node"><span class="nic">🧭</span><div><b>Prefab methodology</b><span>a starter scaffold, not a blank canvas</span></div></div>
-      </div>
-      <div class="needed-core">
-        <div class="needed-core-title">Shared source of truth</div>
-        <div class="needed-hub"><small>one model</small><b>Meaning + structure + rules</b></div>
-        <div class="needed-pill responsibilities">Responsibilities</div>
-        <div class="needed-pill interfaces">Interfaces</div>
-        <div class="needed-pill scenarios">Scenarios</div>
-        <div class="needed-pill impact-paths">Impact paths</div>
-      </div>
-      <div class="needed-side">
-        <div class="needed-node"><span class="nic">✅</span><div><b>Compiler checks</b><span>warnings · errors · closure for compliance</span></div></div>
-        <div class="needed-node"><span class="nic">👁️</span><div><b>Viewpoints</b><span>risk · architecture · DHF · cyber</span></div></div>
-        <div class="needed-node"><span class="nic">📤</span><div><b>Document export</b><span>generated review artifacts</span></div></div>
-      </div>
-    </div>
-    <div class="message"><strong>The goal:</strong> MBSE benefits with code-first adoption and far lower setup friction. That shared model is meMO.</div>
-  </div>
-</section>
-
-<!-- ============ ACT 3 ============ -->
-<section class="slide dark act" data-title="Act 3 — Introducing meMO">
-  <div class="body">
-    <div class="kicker">Part Three</div>
-    <h2>Introducing <span>meMO</span>.</h2>
-    <p>Medical Engineering Modeling Ontology — an adoption stack of four layers. Adopt the one that delivers value now; each stands on the one before it.</p>
-  </div>
-  <div class="actno">03</div>
-</section>
-
-<!-- 8 · INTRODUCING meMO -->
+<!-- 7 · INTRODUCING meMO -->
 <section class="slide" data-title="Introducing meMO.">
-  <div class="chapter"><b>08</b> The stack</div>
+  <div class="chapter"><b>07</b> The stack</div>
   <div class="body">
     <h2>Four layers, <span>adopt what you need</span>.</h2>
-    <p class="lede">meMO is not one monolithic tool — it is a stack you can enter at any level, from a single text model up to a governed visual workbench.</p>
+    <p class="lede">meMO is not one monolithic tool. It is a stack you can enter at any level — from a single text model up to a governed visual workbench. The next four slides take each layer in turn.</p>
     <div class="components fill" style="align-content:center;">
-      <div class="component"><div class="ci">🧩</div><small>01 · Ontology</small><h3>Medical meaning</h3><p>A typed SysML&nbsp;v2 vocabulary for device elements and their safety relationships.</p><div class="get">Typed safety relationships, not just arrows.</div></div>
-      <div class="component"><div class="ci">🧭</div><small>02 · Methodology</small><h3>A ramp, not a canvas</h3><p>Starter viewpoints, layers, rules, and gates so teams don't invent a method from scratch.</p><div class="get">A guided ramp instead of a blank MBSE canvas.</div></div>
-      <div class="component"><div class="ci">⚙️</div><small>03 · Tools</small><h3>Executable assurance</h3><p>Parser, validator, CLI, import/export, DHF generation, and rule checks.</p><div class="get">Architecture &amp; compliance feedback loops.</div></div>
-      <div class="component"><div class="ci">🖥️</div><small>04 · Architect</small><h3>Visual review</h3><p>Diagrams, traceability, ontology, DHF, and impact — over the same model.</p><div class="get">Review without leaving the code-first source.</div></div>
+      <div class="component"><div class="ci">🧩</div><small>Layer 01 · Ontology</small><h3>Ontology</h3><p>Typed SysML&nbsp;v2 elements and links for hazards, controls, requirements, and evidence.</p><div class="get">Defines what each element means.</div></div>
+      <div class="component"><div class="ci">📐</div><small>Layer 02 · Methodology</small><h3>Methodology</h3><p>Predefined viewpoints, rules, workflow stages, and review gates.</p><div class="get">A working structure to start from.</div></div>
+      <div class="component"><div class="ci">⚙️</div><small>Layer 03 · Tools</small><h3>Tools</h3><p>Parser, validator, and CLI that check the model and generate documents.</p><div class="get">Runs in CI like a build.</div></div>
+      <div class="component"><div class="ci">🖥️</div><small>Layer 04 · Architect</small><h3>Architect</h3><p>A web app for diagrams, traceability, DSM, and DHF review.</p><div class="get">Review without editing files.</div></div>
     </div>
     <div class="message"><strong>Adopt the layer that gives value now.</strong> Expand as maturity grows — the model underneath stays the same.</div>
   </div>
 </section>
 
-<!-- 9 · meMO ONTOLOGY -->
+<!-- 8 · meMO ONTOLOGY -->
 <section class="slide" data-title="meMO Ontology.">
-  <div class="chapter"><b>09</b> Layer 01 · Ontology</div>
+  <div class="chapter"><b>08</b> meMO · Ontology</div>
   <div class="body">
-    <h2>meMO Ontology — <span>typed medical meaning</span>.</h2>
-    <p class="lede">A minimal, medically grounded vocabulary so evidence relationships carry typed meaning — published as an open SysML&nbsp;v2 spec, one <code style="font-family:monospace">memo::</code> namespace, version 1.0.0.</p>
+    <div class="layerbar">
+      <div class="on"><span class="ln">01</span>Ontology</div>
+      <div><span class="ln">02</span>Methodology</div>
+      <div><span class="ln">03</span>Tools</div>
+      <div><span class="ln">04</span>Architect</div>
+    </div>
+    <h2>Ontology — <span>typed medical meaning</span>.</h2>
+    <p class="lede">A minimal, medically grounded SysML&nbsp;v2 vocabulary, published as an open spec in one <code style="font-family:monospace">memo::</code> namespace, version 1.0.0.</p>
     <div class="cols c2 fill">
       <div class="card t-teal" style="justify-content:center;">
-        <div class="tag">What it defines</div>
-        <ul class="ticks">
-          <li><strong>Typed elements</strong> — Intended Use, Hazards &amp; Harms, Risk Controls, Requirements, Architecture, Behavior, Verification.</li>
-          <li><strong>Typed relationships</strong> — semantic links with roles, not free-form arrows.</li>
-          <li><strong>Closure constraints</strong> — completeness rules (CR-MED-*) traced to ISO 14971 / IEC 62304.</li>
-          <li><strong>18 architecture layers</strong> — risk and cybersecurity modeled as peers.</li>
-        </ul>
-        <div class="chips"><span>Hazard</span><span>RiskControl</span><span>Requirement</span><span>VerificationCase</span><span>Evidence</span><span>SemanticLink</span></div>
+        <div class="tag">Typed elements</div>
+        <p style="margin-top:8px">Every safety-relevant thing is a typed part with regulator-relevant attributes.</p>
+        <div class="chips"><span>Intended&nbsp;Use</span><span>Hazard</span><span>Harm</span><span>RiskControl</span><span>Requirement</span><span>Architecture</span><span>Behavior</span><span>VerificationCase</span><span>Evidence</span></div>
       </div>
       <div class="card t-blue" style="justify-content:center;">
-        <div class="tag">Why it matters</div>
+        <div class="tag">Typed links &amp; rules</div>
         <ul class="ticks">
-          <li>Evidence relationships become <strong>checkable</strong>, not just visible.</li>
-          <li>Stable identifiers + controlled vocabulary across tools and teams.</li>
-          <li>Tool-agnostic and open — reduces lock-in, enables independent review.</li>
-          <li>Aligned to ISO/IEC/IEEE 42010 (viewpoints) and Arcadia-style layering.</li>
+          <li><strong>Semantic links</strong> carry roles, not free-form arrows.</li>
+          <li><strong>Closure rules</strong> (CR-MED-*) traced to ISO 14971 and IEC 62304.</li>
+          <li><strong>18 architecture layers</strong>, with risk and cybersecurity as peers.</li>
         </ul>
-        <div class="geti" style="background:var(--wash)">The ontology is the source of truth — everything else projects from it.</div>
       </div>
     </div>
     <div class="message"><strong>A safety thread becomes a typed object</strong> — hazard → control → allocation → verification → evidence — that rules can check.</div>
   </div>
 </section>
 
-<!-- 10 · meMO METHODOLOGY -->
+<!-- 9 · meMO METHODOLOGY -->
 <section class="slide" data-title="meMO Methodology.">
-  <div class="chapter"><b>10</b> Layer 02 · Methodology</div>
+  <div class="chapter"><b>09</b> meMO · Methodology</div>
   <div class="body">
-    <h2>meMO Methodology — <span>a ramp onto the ontology</span>.</h2>
-    <p class="lede">Instead of asking every team to invent a medical-device MBSE method, meMO ships a prefab practice: pick rigor, pick viewpoints, author rules, bind to a project.</p>
-    <div class="cols c4 fill">
-      <div class="card t-purple"><div class="tag">Rigor profiles</div><p>Lightweight · balanced · formal — <code style="font-family:monospace">MethodRigorKind</code> sets how much the method demands.</p></div>
-      <div class="card t-blue"><div class="tag">Viewpoints (ISO 42010)</div><p>Default viewpoints per audience and workflow stage; views bind intent to content.</p></div>
-      <div class="card t-teal"><div class="tag">Rules &amp; gates</div><p><code style="font-family:monospace">ViewRule</code> (required / recommended / forbidden), workflow stages, and ReviewGate exit criteria.</p></div>
-      <div class="card t-orange"><div class="tag">Project binding</div><p><code style="font-family:monospace">ProjectMethodBinding</code> pins a resolved method to a project — patterns included.</p></div>
+    <div class="layerbar">
+      <div><span class="ln">01</span>Ontology</div>
+      <div class="on"><span class="ln">02</span>Methodology</div>
+      <div><span class="ln">03</span>Tools</div>
+      <div><span class="ln">04</span>Architect</div>
     </div>
-    <div class="message"><strong>Methodology is the ramp.</strong> It reduces the blank-canvas problem and the cost of adopting architecture-centered assurance.</div>
+    <h2>Methodology — <span>predefined practice</span>.</h2>
+    <p class="lede">So teams start from a working structure rather than an empty model: pick a rigor level, use default viewpoints, apply rules, and bind the method to a project.</p>
+    <div class="cols c4 fill">
+      <div class="card t-purple"><div class="tag">Rigor profiles</div><p><code style="font-family:monospace">MethodRigorKind</code> — lightweight, balanced, or formal — sets how much the method requires.</p></div>
+      <div class="card t-blue"><div class="tag">Viewpoints (ISO 42010)</div><p>Default viewpoints per audience and workflow stage; views bind that intent to content.</p></div>
+      <div class="card t-teal"><div class="tag">Rules &amp; gates</div><p><code style="font-family:monospace">ViewRule</code> (required / recommended / forbidden), workflow stages, and ReviewGate exit criteria.</p></div>
+      <div class="card t-orange"><div class="tag">Project binding</div><p><code style="font-family:monospace">ProjectMethodBinding</code> pins a resolved method, with reusable modeling patterns.</p></div>
+    </div>
+    <div class="message"><strong>The methodology is editable and extendable</strong> — it guides how the ontology is applied without changing the ontology.</div>
   </div>
 </section>
 
-<!-- 11 · meMO TOOLS -->
+<!-- 10 · meMO TOOLS -->
 <section class="slide" data-title="meMO Tools.">
-  <div class="chapter"><b>11</b> Layer 03 · Tools</div>
+  <div class="chapter"><b>10</b> meMO · Tools</div>
   <div class="body">
-    <h2>meMO Tools — <span>a compiler for compliance</span>.</h2>
+    <div class="layerbar">
+      <div><span class="ln">01</span>Ontology</div>
+      <div><span class="ln">02</span>Methodology</div>
+      <div class="on"><span class="ln">03</span>Tools</div>
+      <div><span class="ln">04</span>Architect</div>
+    </div>
+    <h2>Tools — <span>a compiler for compliance</span>.</h2>
     <p class="lede">A Turbo monorepo: a Langium-based core engine and a Commander CLI parse text-first models into a semantic graph and run the rules.</p>
     <div class="duo fill">
       <div class="code term">
@@ -680,12 +622,12 @@ ul.ticks li strong{color:var(--ink);}
   → live model + validation at localhost</pre>
       </div>
       <div class="card t-purple" style="justify-content:center;">
-        <div class="tag">Features</div>
+        <div class="tag">What the tools do</div>
         <ul class="ticks">
           <li>Parse text-first SysML&nbsp;v2 into a semantic graph.</li>
-          <li>Native KerML closure &amp; consistency checks — errors, warnings, completeness.</li>
+          <li>Run native KerML closure &amp; consistency checks — errors, warnings, completeness.</li>
           <li>Import / export: Enterprise Architect, Cameo, OWL, CSV.</li>
-          <li>Deterministic DHF generation; CI-friendly validation before review or release.</li>
+          <li>Generate DHF artifacts; validate in CI before review or release.</li>
         </ul>
       </div>
     </div>
@@ -693,12 +635,18 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 12 · meMO ARCHITECT -->
+<!-- 11 · meMO ARCHITECT -->
 <section class="slide" data-title="meMO Architect.">
-  <div class="chapter"><b>12</b> Layer 04 · Architect</div>
+  <div class="chapter"><b>11</b> meMO · Architect</div>
   <div class="body">
-    <h2>meMO Architect — <span>visual review over the same model</span>.</h2>
-    <p class="lede">A React web app with six modes lets non-coders review the model — without editing raw files. It is a view onto the code-first source, not a separate island.</p>
+    <div class="layerbar">
+      <div><span class="ln">01</span>Ontology</div>
+      <div><span class="ln">02</span>Methodology</div>
+      <div><span class="ln">03</span>Tools</div>
+      <div class="on"><span class="ln">04</span>Architect</div>
+    </div>
+    <h2>Architect — <span>a web app over the same model</span>.</h2>
+    <p class="lede">A React web app with six modes lets non-coders review the model without editing raw files. It is a view onto the code-first source, not a separate copy.</p>
     <div class="duo fill">
       <div class="mock">
         <div class="bar">
@@ -712,11 +660,11 @@ ul.ticks li strong{color:var(--ink);}
         </div>
       </div>
       <div class="card t-orange" style="justify-content:center;">
-        <div class="tag">Features</div>
+        <div class="tag">Six modes</div>
         <ul class="ticks">
-          <li>Six modes — Catalog, Diagram, Action flow, DSM, Scenario, Ontology.</li>
+          <li>Catalog, Diagram, Action flow, DSM, Scenario, Ontology.</li>
           <li>Architecture, behavior, risk, and interface diagrams (ReactFlow + ELK).</li>
-          <li>Traceability matrix, DSM, scenario walk-through, impact analysis.</li>
+          <li>Traceability matrix, DSM, and impact analysis.</li>
           <li>DHF workbench with completeness dashboards.</li>
         </ul>
       </div>
@@ -725,18 +673,18 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- ============ ACT 4 ============ -->
-<section class="slide dark act" data-title="Act 4 — Under the hood">
+<!-- ============ ACT 3 ============ -->
+<section class="slide dark act" data-title="Act 3 — The ontology in detail">
   <div class="body">
-    <div class="kicker">Part Four</div>
-    <h2>Under the hood: <span>memo::</span></h2>
-    <p>Now the details. Top-down: one namespace, its sub-packages, the architecture layers — then the typed definitions, links, and extension model that make it checkable.</p>
+    <div class="kicker">Part Three</div>
+    <h2>The ontology <span>in detail</span>.</h2>
+    <p>Top-down: one namespace, its sub-packages, the architecture layers — then the typed definitions, links, and extension model that make it checkable.</p>
   </div>
-  <div class="actno">04</div>
+  <div class="actno">03</div>
 </section>
 
 <section class="slide" data-title="One namespace. One release.">
-  <div class="chapter"><b>13</b> Package shape</div>
+  <div class="chapter"><b>12</b> Package shape</div>
   <div class="body">
     <h2>One namespace. One release. <span>memo::</span></h2>
     <p class="lede">At the top of the hierarchy: a single SysML&nbsp;v2 package — <code style="font-family:monospace">memo::medical_device_library</code> — versioned 1.0.0. Layers are sub-packages, not separate libraries.</p>
@@ -769,7 +717,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Sub-packages under memo::">
-  <div class="chapter"><b>14</b> Top-level structure</div>
+  <div class="chapter"><b>13</b> Top-level structure</div>
   <div class="body">
     <h2>Focused sub-packages under <span>memo::</span></h2>
     <p class="lede">One level down: each sub-package is a focused library. Architecture is itself decomposed into eighteen ontology layers.</p>
@@ -786,7 +734,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Ontology layers under memo::architecture.">
-  <div class="chapter"><b>15</b> Architecture layers</div>
+  <div class="chapter"><b>14</b> Architecture layers</div>
   <div class="body">
     <h2>Eighteen ontology layers under <span>memo::architecture</span>.</h2>
     <p class="lede">The deepest structural level: each layer is a sub-package, progressing from intent and need toward solution and evidence. Risk and cybersecurity are peers, not bolt-ons.</p>
@@ -808,14 +756,14 @@ ul.ticks li strong{color:var(--ink);}
       <div class="layer assure"><b>assurance</b><span>VerificationCase, Evidence</span></div>
       <div class="layer"><b>analysis</b><span>quality-attribute analysis</span></div>
       <div class="layer"><b>decisions</b><span>design decisions &amp; rationale</span></div>
-      <div class="layer"><b>+ extensions</b><span>your own md profiles</span></div>
+      <div class="layer"><b>+ extensions</b><span>your own profiles</span></div>
     </div>
     <div class="message"><strong>Cybersecurity is a peer to safety</strong> — modeled as an ontology layer that feeds the same requirement and verification machinery.</div>
   </div>
 </section>
 
 <section class="slide" data-title="memo::core — bases, enums, links.">
-  <div class="chapter"><b>16</b> memo::core</div>
+  <div class="chapter"><b>15</b> memo::core</div>
   <div class="body">
     <h2>A small core: <span>bases, enums, links</span>.</h2>
     <p class="lede">The whole ontology specializes a handful of abstract bases. Enumerations encode categorical attributes; links carry typed semantics.</p>
@@ -846,7 +794,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Safety and security as peers.">
-  <div class="chapter"><b>17</b> Risk &amp; security</div>
+  <div class="chapter"><b>16</b> Risk &amp; security</div>
   <div class="body">
     <h2>Safety and security as <span>peer layers</span>.</h2>
     <p class="lede">A hazard chain on one side, a threat chain on the other — both feed the same <code style="font-family:monospace">RequirementDriver</code> / <code style="font-family:monospace">VerifiableElement</code> contract.</p>
@@ -882,7 +830,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Typed semantic links carry roles.">
-  <div class="chapter"><b>18</b> Semantic links</div>
+  <div class="chapter"><b>17</b> Semantic links</div>
   <div class="body">
     <h2>Links carry <span>roles</span> — not just direction.</h2>
     <p class="lede">Every link is a <code style="font-family:monospace">SemanticLink</code> subtype with named part roles and a link status. The linker checks the element kind on each end.</p>
@@ -900,7 +848,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Extend through methodology profiles.">
-  <div class="chapter"><b>19</b> Extension</div>
+  <div class="chapter"><b>18</b> Extension</div>
   <div class="body">
     <h2>Extend through <span>methodology profiles</span>.</h2>
     <p class="lede">Pick rigor, pick viewpoints, author rules, bind to a project, add your own domain kinds. The core ontology stays unchanged.</p>
@@ -911,22 +859,22 @@ ul.ticks li strong{color:var(--ink);}
       <div class="srow l4"><span class="n">4</span><div><b>Bind to project</b> <span>· <code style="font-family:monospace">ProjectMethodBinding · projectName = "GPCA Pump"</code></span></div></div>
       <div class="srow"><span class="n">5</span><div><b>Add domain kinds</b> <span>· <code style="font-family:monospace">part def InfusionMode :&gt; ModeState { … }</code> in your own package</span></div></div>
     </div>
-    <div class="message"><strong>The rule:</strong> add packages and methodology profiles — don't edit core. Methodology guides without owning viewpoints.</div>
+    <div class="message"><strong>The rule:</strong> add packages and methodology profiles — don't edit core.</div>
   </div>
 </section>
 
-<!-- ============ ACT 5 ============ -->
-<section class="slide dark act" data-title="Act 5 — Proven on GPCA">
+<!-- ============ ACT 4 ============ -->
+<section class="slide dark act" data-title="Act 4 — A worked example">
   <div class="body">
-    <div class="kicker">Part Five</div>
-    <h2>Proven on <span>GPCA</span>.</h2>
-    <p>A complete public-domain worked example: its safety thread as real SysML text, validated by the compiler, then visualized as one inspectable object.</p>
+    <div class="kicker">Part Four</div>
+    <h2>A worked example: <span>GPCA</span>.</h2>
+    <p>A complete public-domain infusion pump: its safety thread as real SysML text, validated by the compiler, then shown as one inspectable object.</p>
   </div>
-  <div class="actno">05</div>
+  <div class="actno">04</div>
 </section>
 
 <section class="slide" data-title="Meet GPCA.">
-  <div class="chapter"><b>20</b> Worked example</div>
+  <div class="chapter"><b>19</b> Worked example</div>
   <div class="body">
     <h2>Meet GPCA — <span>memo::examples::gpca</span></h2>
     <p class="lede">A Generic Patient-Controlled Analgesia infusion pump — the public-domain U. Minnesota CriSys benchmark, IEC 62304 Class C.</p>
@@ -955,7 +903,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="The safety thread as code.">
-  <div class="chapter"><b>21</b> Architecture as code</div>
+  <div class="chapter"><b>20</b> Architecture as code</div>
   <div class="body">
     <h2>The GPCA safety thread, as <span>source code</span>.</h2>
     <p class="lede">Expressed as SysML&nbsp;v2 text in the <span class="memo">memo::</span> namespace — diffable, identifiable, machine-readable.</p>
@@ -991,7 +939,7 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <section class="slide" data-title="Compile the safety argument.">
-  <div class="chapter"><b>22</b> Compile the argument</div>
+  <div class="chapter"><b>21</b> Compile the argument</div>
   <div class="body">
     <h2>We compile code. We should <span>compile the safety argument</span>.</h2>
     <p class="lede">Architecture review questions become executable checks. meMO ships native KerML closure constraints traced to ISO&nbsp;14971, IEC&nbsp;62304, and ISO&nbsp;13485.</p>
@@ -1021,15 +969,15 @@ ul.ticks li strong{color:var(--ink);}
         </ul>
       </div>
     </div>
-    <div class="message"><strong>The memorable hook:</strong> safety evidence becomes something engineers can <em>validate</em>, like a build.</div>
+    <div class="message"><strong>Compliance becomes a build step:</strong> safety evidence becomes something engineers can validate.</div>
   </div>
 </section>
 
-<section class="slide" data-title="The safety thread is the hero object.">
-  <div class="chapter"><b>23</b> The hero object</div>
+<section class="slide" data-title="One closed safety thread.">
+  <div class="chapter"><b>22</b> A closed thread</div>
   <div class="body">
-    <h2>The safety thread becomes the <span>hero object</span>.</h2>
-    <p class="lede">One closed thread in GPCA — every node typed, every edge a <code style="font-family:monospace">SemanticLink</code> with status. The RMF view, V&amp;V matrix, and impact analysis all read it.</p>
+    <h2>One closed safety thread, <span>end to end</span>.</h2>
+    <p class="lede">Every node is typed; every edge is a <code style="font-family:monospace">SemanticLink</code> with status. The RMF view, V&amp;V matrix, and impact analysis all read the same thread.</p>
     <div class="thread" style="margin:auto 0;">
       <div class="tnode h"><small>Hazard</small><b>HZ-001<br>Overdose</b><span>drug delivery error · catastrophic</span></div>
       <div class="tarrow">→</div>
@@ -1047,57 +995,14 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- ============ ACT 6 ============ -->
-<section class="slide dark act" data-title="Act 6 — Adoption">
-  <div class="body">
-    <div class="kicker">Part Six</div>
-    <h2>Adopt the <span>backbone</span> first.</h2>
-    <p>Stop at any layer. Prove value on one safety thread, then grow — startups and enterprises take different paths up the same stack.</p>
-  </div>
-  <div class="actno">06</div>
-</section>
-
-<section class="slide" data-title="Adopt at the layer that delivers value.">
-  <div class="chapter"><b>24</b> Adoption paths</div>
-  <div class="body">
-    <h2>Adopt at the layer that <span>delivers value</span>.</h2>
-    <p class="lede">No big-bang rollout. Start with one safety thread and one validation loop, then expand — the model underneath never changes.</p>
-    <div class="pilot">
-      <div class="pilot-step"><small>01</small><b>Start small</b><span>One safety thread, one device slice, one text model.</span></div>
-      <div class="pilot-step"><small>02</small><b>Validate</b><span>Run <code style="font-family:monospace">memo validate</code>; surface missing closure.</span></div>
-      <div class="pilot-step"><small>03</small><b>Review</b><span>Generate architecture, risk, evidence, and DHF views.</span></div>
-      <div class="pilot-step"><small>04</small><b>Scale</b><span>Add methodology packages, Architect, importers, governance.</span></div>
-    </div>
-    <div class="scope">
-      <div class="scope-col solve"><h3>Startup path</h3><ul class="ticks"><li>Text model + CLI validation in CI.</li><li>Generated review views from day one.</li><li>Avoid traceability debt early — no enterprise tool tax.</li></ul></div>
-      <div class="scope-col alt"><h3>Enterprise path</h3><ul class="ticks"><li>Architect + importers over existing tools.</li><li>Ontology packages, profiles, and governance gates.</li><li>Overlay QMS/ALM rather than replace it.</li></ul></div>
-    </div>
-    <div class="message"><strong>Start lightweight.</strong> Prove value on one safety thread, then expand to the layer each team is ready for.</div>
-  </div>
-</section>
-
-<section class="slide" data-title="Three horizons, one trajectory.">
-  <div class="chapter"><b>25</b> Roadmap</div>
-  <div class="body">
-    <h2>Three horizons, <span>one trajectory</span>.</h2>
-    <p class="lede">Earn trust, then grow scope. meMO is built incrementally in small, testable slices — no big-bang platform rewrite.</p>
-    <div class="horizons fill">
-      <div class="horizon"><div class="when">Now · 2026</div><h3>Prove the backbone</h3><ul class="ticks"><li>Open <code style="font-family:monospace">memo::</code> package 1.0.0 (core, architecture, methodology, viewpoints, views, compliance).</li><li>GPCA worked example as proof artifact.</li><li>SysML&nbsp;v2 source, CLI + viewer.</li></ul></div>
-      <div class="horizon h1"><div class="when">H1 · 2026–27</div><h3>Compile compliance</h3><ul class="ticks"><li>Auto-compiled DocumentBackedView (RMF, SDD, V&amp;V) from one model.</li><li>Typed-link impact analysis &amp; stale-evidence detection.</li><li>Extra layers (AI/ML, alarms, usability); PLM/ALM export adapters.</li></ul></div>
-      <div class="horizon h2"><div class="when">H2 · 2027 +</div><h3>Ecosystem &amp; assurance</h3><ul class="ticks"><li>Device-specific methodology profiles.</li><li>Auditor-readable assurance cases.</li><li>Cross-domain bridges to ARP4761 / ISO 26262; community-governed evolution.</li></ul></div>
-    </div>
-    <div class="message"><strong>Sequence:</strong> unified model first, then compliance outputs, then ecosystem — never the other way around.</div>
-  </div>
-</section>
-
 <!-- ============ CLOSE ============ -->
-<section class="slide dark cover" data-title="Adopt the semantic backbone." style="background:radial-gradient(circle at 78% 32%,#0c496c 0,var(--night) 62%,#020e1b 100%);">
+<section class="slide dark cover" data-title="Model it. Check it. Keep it current." style="background:radial-gradient(circle at 78% 32%,#0c496c 0,var(--night) 62%,#020e1b 100%);">
   <div class="brandmark"><svg viewBox="0 0 44 40"><path d="M22 5c-6 0-10 3-10 8 0 2 1 4 3 5-2 1-3 3-3 5 0 4 4 7 10 7s10-3 10-7c0-2-1-4-3-5 2-1 3-3 3-5 0-5-4-8-10-8z" fill="none" stroke="#00cdbb" stroke-width="2.2"/><path d="M6 22h6l3-8 5 16 4-12 3 4h11" fill="none" stroke="#00cdbb" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>meMO</div>
   <div class="body">
     <div class="eyebrow" style="color:var(--teal)">The takeaway</div>
     <h1 style="font-size:54px;margin-top:14px;">Model it. <span>Check it.</span><br>Keep it current.</h1>
     <p class="sub" style="max-width:1000px;">Documents remain necessary — but the safety story should be typed, architecture-backed, and computable, not reconstructed before every audit.</p>
-    <div class="pillline"><span>Faster changes, lower risk</span><span>Stronger cases for regulators</span><span>Better quality, less rework</span></div>
+    <div class="pillline"><span>Faster changes, lower risk</span><span>Stronger cases for regulators</span><span>Less rework</span></div>
     <div class="speaker">memo:: 1.0.0 · <em>open source · SysML v2 · ISO 14971 · IEC 62304 · ISO/IEC/IEEE 42010</em></div>
   </div>
 </section>
