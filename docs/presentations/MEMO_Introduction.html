@@ -93,14 +93,30 @@ ul.ticks li strong{color:var(--ink);}
 .chips span{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--wash);font-size:13px;font-weight:800;}
 .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;}
 
-/* gap cards (what medical lacks) */
+/* gap cards */
 .gapcard .ti{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#fff;border:1px solid #f3c9c6;color:#c0564d;font-size:22px;margin-bottom:12px;}
 
-/* layer rail */
-.rail{display:flex;align-items:center;gap:5px;margin:2px 0 8px;flex-wrap:wrap;}
-.rail span{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:850;}
-.rail span.on{background:var(--teal-deep);color:#fff;border-color:var(--teal-deep);box-shadow:0 6px 14px rgba(0,141,128,.18);}
-.rail i{color:#bcd3da;font-style:normal;font-size:11px;}
+/* barrier strip */
+.barrier{display:grid;grid-template-columns:1fr 1fr 1.25fr;margin-top:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+.bseg{padding:14px 18px;border-left:1px solid var(--line);background:#fff;}
+.bseg:first-child{border-left:0;}
+.bseg .bk{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.bseg b{display:block;margin-top:4px;font-size:16px;color:var(--ink);letter-spacing:-.01em;}
+.bseg span{display:block;margin-top:3px;color:var(--muted);font-size:13px;line-height:1.25;}
+.bseg.cost{background:var(--red-soft);border-left-color:#f3c9c6;}
+.bseg.cost .bk{color:#c0564d;} .bseg.cost b{color:#b34a42;}
+
+/* orbit (architecture core) */
+.orbit{position:relative;}
+.orbit-svg{position:absolute;inset:0;width:100%;height:100%;z-index:0;}
+.orbit-svg line{stroke:#b3ccd6;stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-dasharray:3 5;}
+.onode{position:absolute;z-index:1;transform:translate(-50%,-50%);width:184px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 14px;text-align:center;box-shadow:0 10px 20px rgba(12,43,73,.07);}
+.onode small{display:block;color:var(--teal-deep);font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;}
+.onode b{display:block;margin-top:4px;font-size:15px;letter-spacing:-.02em;}
+.ocore{position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:198px;height:198px;border-radius:50%;background:radial-gradient(circle at 50% 32%,#0e4f72,#082942);color:#fff;text-align:center;border:5px solid var(--teal);box-shadow:0 20px 44px rgba(12,43,73,.28);padding:10px;}
+.ocore small{color:var(--teal);font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;}
+.ocore b{display:block;margin-top:6px;font-size:25px;letter-spacing:-.02em;}
+.ocore span{display:block;margin-top:7px;color:rgba(255,255,255,.72);font-size:10.5px;line-height:1.3;max-width:150px;}
 
 /* complexity map */
 .opening-grid{display:grid;grid-template-columns:43% 57%;gap:24px;align-items:center;margin-top:16px;}
@@ -135,7 +151,7 @@ ul.ticks li strong{color:var(--ink);}
 .care-context{position:absolute;top:10px;left:12px;color:var(--ink);font-size:12px;font-weight:800;line-height:1.2;}
 .care-context strong{color:var(--teal-deep);}
 
-/* artifact lanes */
+/* artifact lanes (floating icon) */
 .artifact-lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;}
 .artifact-lane{position:relative;overflow:visible;border:1px solid var(--line);border-top:5px solid var(--teal-deep);border-radius:16px;background:#fff;box-shadow:0 8px 18px rgba(12,43,73,.04);display:flex;flex-direction:column;margin-top:52px;}
 .artifact-lane:nth-child(2){border-top-color:#7660bd;}
@@ -151,19 +167,6 @@ ul.ticks li strong{color:var(--ink);}
 .lane-missing{margin-top:auto;padding-top:14px;}
 .lane-missing div{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border-left:4px solid var(--orange);background:var(--orange-soft);border-radius:0 9px 9px 0;color:var(--ink);font-size:12.5px;font-weight:800;line-height:1.25;text-align:left;}
 .lane-missing b{color:#a45c18;}
-
-/* spine */
-.spine{margin-top:20px;}
-.spine-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
-.spine-item{position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 11px;text-align:center;}
-.spine-item small{color:var(--muted);font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;}
-.spine-item b{display:block;margin-top:6px;font-size:15px;letter-spacing:-.02em;}
-.spine-item:after{content:"";position:absolute;left:50%;bottom:-16px;width:2px;height:16px;background:#bcd3da;transform:translateX(-50%);}
-.spine-bar{margin-top:16px;border-radius:16px;background:linear-gradient(135deg,#123e62,#082942);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 16px 30px rgba(12,43,73,.16);}
-.spine-bar .sl{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);}
-.spine-bar .st b{font-size:24px;letter-spacing:-.02em;display:block;margin-top:5px;}
-.spine-bar .facets{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:560px;}
-.spine-bar .facets span{padding:8px 13px;border:1px solid rgba(0,205,187,.4);border-radius:999px;color:var(--teal);font-size:13px;font-weight:800;}
 
 /* domains */
 .domain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;}
@@ -181,24 +184,7 @@ ul.ticks li strong{color:var(--ink);}
 .domain-foot .fa{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--teal-deep);color:#fff;font-size:18px;font-weight:900;flex:none;}
 .domain-foot b{font-size:19px;color:var(--ink);letter-spacing:-.01em;}
 
-/* compare */
-.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
-.cmp{border:1px solid var(--line);border-radius:18px;background:#fff;padding:20px;}
-.cmp.ent{border-top:6px solid var(--blue);} .cmp.st{border-top:6px solid var(--teal-deep);}
-.cmp .n{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;}
-.cmp h3{margin-top:6px;font-size:24px;letter-spacing:-.02em;}
-.cmp-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
-.cmp-two .lab{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-deep);}
-.cmp-two .gaps .lab{color:#a45c18;}
-.cmp-two ul{margin-top:8px;padding:0;list-style:none;display:grid;gap:7px;}
-.cmp-two li{position:relative;padding-left:16px;color:var(--ink);font-size:13.5px;font-weight:700;line-height:1.25;}
-.cmp-two li:before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--teal-deep);}
-.cmp-two .gaps li:before{background:#d68931;}
-.blocker{margin-top:14px;display:flex;align-items:center;gap:16px;padding:15px 20px;border:1px solid #f3c9c6;border-radius:14px;background:var(--red-soft);}
-.blocker .bi{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#fff;border:1px solid #f3c9c6;color:#b34a42;font-size:22px;flex:none;}
-.blocker b{color:#b34a42;font-size:16px;} .blocker span{display:block;margin-top:3px;color:var(--ink);font-size:14px;font-weight:600;}
-
-/* components */
+/* components (floating icon) */
 .components{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:18px;}
 .component{position:relative;overflow:visible;padding:62px 18px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:56px;}
 .component:not(:last-child):after{content:"";position:absolute;z-index:3;top:55%;right:-15px;width:11px;height:11px;border-top:3px solid var(--teal-deep);border-right:3px solid var(--teal-deep);transform:translateY(-50%) rotate(45deg);}
@@ -214,6 +200,12 @@ ul.ticks li strong{color:var(--ink);}
 .layerbar .ln{display:grid;place-items:center;width:23px;height:23px;border-radius:7px;background:var(--wash);color:var(--muted);font-size:11px;font-weight:900;flex:none;}
 .layerbar div.on{border-color:var(--teal-deep);background:var(--teal-soft);color:var(--ink);box-shadow:0 6px 16px rgba(0,141,128,.12);}
 .layerbar .on .ln{background:var(--teal-deep);color:#fff;}
+
+/* layer rail */
+.rail{display:flex;align-items:center;gap:5px;margin:2px 0 8px;flex-wrap:wrap;}
+.rail span{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:850;}
+.rail span.on{background:var(--teal-deep);color:#fff;border-color:var(--teal-deep);box-shadow:0 6px 14px rgba(0,141,128,.18);}
+.rail i{color:#bcd3da;font-style:normal;font-size:11px;}
 
 /* code */
 .code{border-radius:14px;background:var(--code-bg);color:var(--code-ink);overflow:hidden;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0;}
@@ -313,11 +305,11 @@ ul.ticks li strong{color:var(--ink);}
 </section>
 
 <!-- 1 · COMPLEXITY -->
-<section class="slide" data-title="Software is becoming the medical device.">
+<section class="slide" data-title="Medical devices are becoming complex.">
   <div class="chapter"><b>01</b> Device complexity</div>
   <div class="body">
-    <h2>Software is becoming <span>the medical device</span>.</h2>
-    <p class="lede">Connected, configurable, workflow-driven cyber-physical systems. Safety is now an emergent property of behavior and architecture — not of any single requirement.</p>
+    <h2>Medical devices are becoming <span>complex</span>.</h2>
+    <p class="lede">Connected, configurable, software-defined cyber-physical systems. Safety is now an emergent property of behavior and architecture — not of any single requirement.</p>
     <div class="opening-grid fill">
       <div>
         <div class="opening-question">As complexity accumulates,<br>how do we ensure <span>safety under change?</span></div>
@@ -346,11 +338,11 @@ ul.ticks li strong{color:var(--ink);}
         </div>
       </div>
     </div>
-    <div class="message"><strong>The question:</strong> as software complexity grows, how do we keep safety <em>continuously</em> assured under change?</div>
+    <div class="message"><strong>The question:</strong> as complexity grows, how do we keep safety <em>continuously</em> assured under change?</div>
   </div>
 </section>
 
-<!-- 2 · FRAGMENTED + NO MEANING -->
+<!-- 2 · FRAGMENTED -->
 <section class="slide" data-title="Fragmented teams, traced but not meaningful.">
   <div class="chapter"><b>02</b> Fragmented evidence</div>
   <div class="body">
@@ -431,67 +423,49 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 4 · WHAT MEDICAL LACKS (new) -->
-<section class="slide" data-title="What medical devices still lack.">
+<!-- 4 · THE GAP (combined: what medical lacks + adoption barrier) -->
+<section class="slide" data-title="What medical devices lack — and why.">
   <div class="chapter"><b>04</b> The gap</div>
   <div class="body">
-    <h2>What medical devices <span>still lack</span>.</h2>
-    <p class="lede">Medical has mature standards (ISO 14971, IEC 62304) and process — but not the architecture-centered semantic backbone the other domains rely on.</p>
-    <div class="cols c4 fill">
+    <h2>Medical has the standards — <span>not the model</span>.</h2>
+    <p class="lede">Mature standards (ISO 14971, IEC 62304) and process, but not the architecture-centered model the other domains rely on — and the tooling to get there is costly for everyone.</p>
+    <div class="cols c4" style="margin-top:auto">
       <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></div><div class="tag">Documents, not a model</div><p>Architecture lives as block diagrams that age — not a queryable, versioned model.</p></div>
-      <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.2-8.5 4.2L3.5 7.7z"/><path d="M3.5 12l8.5 4.2 8.5-4.2"/></svg></div><div class="tag">Low MBSE adoption</div><p>Heavyweight tools and months of setup keep model-based methods out of reach.</p></div>
-      <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><circle cx="6.5" cy="12" r="3"/><circle cx="17.5" cy="12" r="3"/><path d="M9.7 12h1.3M13 12h1.3"/></svg></div><div class="tag">No shared semantics</div><p>Risk, design, and V&amp;V don't share typed meaning — links are free-form and unchecked.</p></div>
+      <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.2-8.5 4.2L3.5 7.7z"/><path d="M3.5 12l8.5 4.2 8.5-4.2"/></svg></div><div class="tag">Low MBSE adoption</div><p>Heavyweight tools and long setup keep model-based methods out of reach.</p></div>
+      <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><circle cx="6.5" cy="12" r="3"/><circle cx="17.5" cy="12" r="3"/><path d="M9.7 12h1.3M13 12h1.3"/></svg></div><div class="tag">No shared semantics</div><p>Risk, design, and V&amp;V don't share typed meaning — links go unchecked.</p></div>
       <div class="card t-red gapcard"><div class="ti"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v8l5 3"/><circle cx="12" cy="12" r="8.5"/></svg></div><div class="tag">Manual change impact</div><p>Re-verification scope is guessed by hand, so evidence drifts between releases.</p></div>
     </div>
-    <div class="message"><strong>Medical has the standards and the process</strong> — what it lacks is a low-cost, architecture-centered model that ties them together.</div>
-  </div>
-</section>
-
-<!-- 5 · ENTERPRISE VS STARTUP -->
-<section class="slide" data-title="Why adoption stalls.">
-  <div class="chapter"><b>05</b> Adoption barriers</div>
-  <div class="body">
-    <h2>And adoption <span>stalls on cost</span>.</h2>
-    <p class="lede">Enterprises and startups bring opposite strengths — and hit the same wall: the cost of tooling and method setup.</p>
-    <div class="compare fill" style="align-content:center;">
-      <div class="cmp ent">
-        <div class="n">Enterprise</div><h3>Mature process, fragmented</h3>
-        <div class="cmp-two">
-          <div><div class="lab">Strengths</div><ul><li>Formal evidence</li><li>Compliance experience</li><li>Review culture</li></ul></div>
-          <div class="gaps"><div class="lab">Gaps</div><ul><li>Tool silos &amp; handoffs</li><li>Slow change impact</li><li>Document drift</li></ul></div>
-        </div>
-      </div>
-      <div class="cmp st">
-        <div class="n">Startup</div><h3>Fast iteration, thin process</h3>
-        <div class="cmp-two">
-          <div><div class="lab">Strengths</div><ul><li>Code-first iteration</li><li>Direct ownership</li><li>Little bureaucracy</li></ul></div>
-          <div class="gaps"><div class="lab">Gaps</div><ul><li>Immature risk analysis</li><li>Implicit architecture</li><li>Limited tool budget</li></ul></div>
-        </div>
-      </div>
+    <div class="barrier" style="margin-bottom:auto">
+      <div class="bseg"><div class="bk">Enterprise</div><b>Mature, but fragmented</b><span>formal evidence &amp; review culture — yet siloed and slow</span></div>
+      <div class="bseg"><div class="bk">Startup</div><b>Fast, but thin</b><span>code-first iteration — yet weak on risk process</span></div>
+      <div class="bseg cost"><div class="bk">Shared blocker</div><b>Tooling &amp; setup cost</b><span>MBSE / QMS / ALM suites are expensive — even for big organizations</span></div>
     </div>
-    <div class="blocker"><div class="bi"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10"/><path d="M14.6 9.2c-.6-.8-1.6-1.2-2.6-1.2-1.5 0-2.6.8-2.6 1.9 0 2.7 5.4 1.4 5.4 4.2 0 1.2-1.2 2-2.8 2-1.1 0-2.2-.4-2.8-1.3"/></svg></div><div><b>The shared blocker: tooling and setup cost</b><span>MBSE / QMS / ALM suites are expensive; organizing viewpoints and method setup take real effort, and versioning stays painful — even inside large organizations.</span></div></div>
+    <div class="message"><strong>What it lacks is a low-cost, architecture-centered model</strong> that ties standards, process, and design together.</div>
   </div>
 </section>
 
-<!-- 6 · ARCHITECTURE BACKBONE (the answer) -->
-<section class="slide" data-title="Architecture is the connective backbone.">
-  <div class="chapter"><b>06</b> The answer</div>
+<!-- 5 · ARCHITECTURE AT THE CORE (radial) -->
+<section class="slide" data-title="Architecture at the core.">
+  <div class="chapter"><b>05</b> The answer</div>
   <div class="body">
-    <h2>Architecture is the <span>connective backbone</span>.</h2>
-    <p class="lede">The lifecycle artifacts already form one chain. Make the architecture an explicit, computable spine, and intent, risk, behavior, and evidence connect — and stay checkable under change.</p>
-    <div class="spine fill" style="align-content:center;">
-      <div class="spine-row">
-        <div class="spine-item"><small>Intent</small><b>Use &amp; assumptions</b></div>
-        <div class="spine-item"><small>Risk</small><b>Hazards &amp; controls</b></div>
-        <div class="spine-item"><small>Need</small><b>Requirements</b></div>
-        <div class="spine-item"><small>Behavior</small><b>Flows &amp; modes</b></div>
-        <div class="spine-item"><small>V&amp;V</small><b>Verification</b></div>
-        <div class="spine-item"><small>Proof</small><b>Evidence</b></div>
-      </div>
-      <div class="spine-bar">
-        <div class="st"><div class="sl">The connective backbone</div><b>Architecture</b></div>
-        <div class="facets"><span>Responsibilities</span><span>Interface contracts</span><span>Behavioral flows</span><span>Change impact</span></div>
-      </div>
+    <h2>Put architecture <span>at the core</span>.</h2>
+    <p class="lede">Make the architecture the computable center: intent, risk, requirements, behavior, verification, and evidence all connect through it — and stay checkable as the design changes.</p>
+    <div class="orbit fill">
+      <svg class="orbit-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="50" y1="50" x2="50" y2="9"/>
+        <line x1="50" y1="50" x2="85" y2="27"/>
+        <line x1="50" y1="50" x2="85" y2="73"/>
+        <line x1="50" y1="50" x2="50" y2="91"/>
+        <line x1="50" y1="50" x2="15" y2="73"/>
+        <line x1="50" y1="50" x2="15" y2="27"/>
+      </svg>
+      <div class="ocore"><small>Living model</small><b>Architecture</b><span>responsibilities · interfaces · behavior · impact</span></div>
+      <div class="onode" style="top:9%;left:50%"><small>Intent</small><b>Use &amp; assumptions</b></div>
+      <div class="onode" style="top:27%;left:85%"><small>Risk</small><b>Hazards &amp; controls</b></div>
+      <div class="onode" style="top:73%;left:85%"><small>Need</small><b>Requirements</b></div>
+      <div class="onode" style="top:91%;left:50%"><small>Behavior</small><b>Flows &amp; modes</b></div>
+      <div class="onode" style="top:73%;left:15%"><small>V&amp;V</small><b>Verification</b></div>
+      <div class="onode" style="top:27%;left:15%"><small>Proof</small><b>Evidence</b></div>
     </div>
     <div class="message"><strong>This is the idea meMO operationalizes</strong> — a low-cost, architecture-centered model where the whole chain is typed and checkable.</div>
   </div>
@@ -507,9 +481,9 @@ ul.ticks li strong{color:var(--ink);}
   <div class="actno">02</div>
 </section>
 
-<!-- 7 · INTRODUCING meMO -->
+<!-- 6 · INTRODUCING meMO -->
 <section class="slide" data-title="Introducing meMO.">
-  <div class="chapter"><b>07</b> The stack</div>
+  <div class="chapter"><b>06</b> The stack</div>
   <div class="body">
     <h2>Four layers, <span>adopt what you need</span>.</h2>
     <p class="lede">meMO is not one monolithic tool. It is a stack you can enter at any level — from a single text model up to a governed visual workbench. The next four slides take each layer in turn.</p>
@@ -523,9 +497,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 8 · meMO ONTOLOGY -->
+<!-- 7 · meMO ONTOLOGY -->
 <section class="slide" data-title="meMO Ontology.">
-  <div class="chapter"><b>08</b> meMO · Ontology</div>
+  <div class="chapter"><b>07</b> meMO · Ontology</div>
   <div class="body">
     <div class="layerbar">
       <div class="on"><span class="ln">01</span>Ontology</div>
@@ -554,9 +528,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 9 · meMO METHODOLOGY -->
+<!-- 8 · meMO METHODOLOGY -->
 <section class="slide" data-title="meMO Methodology.">
-  <div class="chapter"><b>09</b> meMO · Methodology</div>
+  <div class="chapter"><b>08</b> meMO · Methodology</div>
   <div class="body">
     <div class="layerbar">
       <div><span class="ln">01</span>Ontology</div>
@@ -576,9 +550,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 10 · meMO TOOLS -->
+<!-- 9 · meMO TOOLS -->
 <section class="slide" data-title="meMO Tools.">
-  <div class="chapter"><b>10</b> meMO · Tools</div>
+  <div class="chapter"><b>09</b> meMO · Tools</div>
   <div class="body">
     <div class="layerbar">
       <div><span class="ln">01</span>Ontology</div>
@@ -616,9 +590,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 11 · meMO ARCHITECT -->
+<!-- 10 · meMO ARCHITECT -->
 <section class="slide" data-title="meMO Architect.">
-  <div class="chapter"><b>11</b> meMO · Architect</div>
+  <div class="chapter"><b>10</b> meMO · Architect</div>
   <div class="body">
     <div class="layerbar">
       <div><span class="ln">01</span>Ontology</div>
@@ -664,9 +638,9 @@ ul.ticks li strong{color:var(--ink);}
   <div class="actno">03</div>
 </section>
 
-<!-- 12 · NAMESPACE + SUB-PACKAGES -->
+<!-- 11 · NAMESPACE + SUB-PACKAGES -->
 <section class="slide" data-title="One namespace. One release.">
-  <div class="chapter"><b>12</b> Package shape</div>
+  <div class="chapter"><b>11</b> Package shape</div>
   <div class="body">
     <h2>One namespace, one release: <span>memo::</span></h2>
     <p class="lede">The ontology ships as a single SysML&nbsp;v2 package — <code style="font-family:monospace">memo::medical_device_library</code>, version 1.0.0. Each sub-package is a focused library.</p>
@@ -695,9 +669,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 13 · LAYER MAP -->
+<!-- 12 · LAYER MAP -->
 <section class="slide" data-title="Eighteen layers under memo::architecture.">
-  <div class="chapter"><b>13</b> The layer map</div>
+  <div class="chapter"><b>12</b> The layer map</div>
   <div class="body">
     <h2>Eighteen ontology layers, <span>intent to evidence</span>.</h2>
     <p class="lede">Each layer is a sub-package. They progress from intent and need toward solution and evidence — risk and cybersecurity sit as peers, not bolt-ons. We drill into three next.</p>
@@ -725,9 +699,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 14 · LAYER · REQUIREMENTS -->
+<!-- 13 · LAYER · REQUIREMENTS -->
 <section class="slide" data-title="Layer · Requirements.">
-  <div class="chapter"><b>14</b> Layer · Requirements</div>
+  <div class="chapter"><b>13</b> Layer · Requirements</div>
   <div class="body">
     <div class="rail"><span>Context</span><i>›</i><span class="on">Requirements</span><i>›</i><span>Functions</span><i>›</i><span>Behavior</span><i>›</i><span>Structure</span><i>›</i><span>Risk</span><i>›</i><span>Security</span><i>›</i><span>Verification</span></div>
     <h2>Requirements — <span>needs become typed obligations</span>.</h2>
@@ -763,9 +737,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 15 · LAYER · RISK -->
+<!-- 14 · LAYER · RISK -->
 <section class="slide" data-title="Layer · Risk &amp; safety.">
-  <div class="chapter"><b>15</b> Layer · Risk &amp; safety</div>
+  <div class="chapter"><b>14</b> Layer · Risk &amp; safety</div>
   <div class="body">
     <div class="rail"><span>Context</span><i>›</i><span>Requirements</span><i>›</i><span>Functions</span><i>›</i><span>Behavior</span><i>›</i><span>Structure</span><i>›</i><span class="on">Risk</span><i>›</i><span>Security</span><i>›</i><span>Verification</span></div>
     <h2>Risk — <span>hazard, control, residual</span>.</h2>
@@ -801,9 +775,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 16 · LAYER · ASSURANCE -->
+<!-- 15 · LAYER · ASSURANCE -->
 <section class="slide" data-title="Layer · Assurance.">
-  <div class="chapter"><b>16</b> Layer · Assurance</div>
+  <div class="chapter"><b>15</b> Layer · Assurance</div>
   <div class="body">
     <div class="rail"><span>Context</span><i>›</i><span>Requirements</span><i>›</i><span>Functions</span><i>›</i><span>Behavior</span><i>›</i><span>Structure</span><i>›</i><span>Risk</span><i>›</i><span>Security</span><i>›</i><span class="on">Verification</span></div>
     <h2>Assurance — <span>cases, tests, evidence</span>.</h2>
@@ -839,9 +813,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 17 · SEMANTIC LINKS -->
+<!-- 16 · SEMANTIC LINKS -->
 <section class="slide" data-title="Typed semantic links connect the layers.">
-  <div class="chapter"><b>17</b> Connecting the layers</div>
+  <div class="chapter"><b>16</b> Connecting the layers</div>
   <div class="body">
     <h2>Typed links <span>connect the layers</span>.</h2>
     <p class="lede">Layers don't connect by free-form arrows. Every link is a <code style="font-family:monospace">SemanticLink</code> subtype with named roles and a status — the linker checks the element kind on each end.</p>
@@ -858,9 +832,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 18 · COMPILE -->
+<!-- 17 · COMPILE -->
 <section class="slide" data-title="Compile the safety argument.">
-  <div class="chapter"><b>18</b> Compile the argument</div>
+  <div class="chapter"><b>17</b> Compile the argument</div>
   <div class="body">
     <h2>We compile code. We should <span>compile the safety argument</span>.</h2>
     <p class="lede">With everything typed and linked, review questions become executable checks — native KerML closure constraints traced to ISO&nbsp;14971, IEC&nbsp;62304, and ISO&nbsp;13485.</p>
@@ -894,9 +868,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 19 · CLOSED THREAD -->
+<!-- 18 · CLOSED THREAD -->
 <section class="slide" data-title="One closed safety thread.">
-  <div class="chapter"><b>19</b> A closed thread</div>
+  <div class="chapter"><b>18</b> A closed thread</div>
   <div class="body">
     <h2>The layers compose into <span>one closed thread</span>.</h2>
     <p class="lede">The instances from the last three layers, linked end to end. Every node is typed; every edge is a <code style="font-family:monospace">SemanticLink</code> with status.</p>
@@ -917,9 +891,9 @@ ul.ticks li strong{color:var(--ink);}
   </div>
 </section>
 
-<!-- 20 · EXTEND -->
+<!-- 19 · EXTEND -->
 <section class="slide" data-title="Extend through methodology profiles.">
-  <div class="chapter"><b>20</b> Extension</div>
+  <div class="chapter"><b>19</b> Extension</div>
   <div class="body">
     <h2>Extend through <span>methodology profiles</span>.</h2>
     <p class="lede">Pick rigor, pick viewpoints, author rules, bind to a project, add your own domain kinds. The core ontology stays unchanged.</p>
