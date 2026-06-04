@@ -298,6 +298,14 @@ function evalNode(node: Node, env: Env, model: MemoModel): Value {
     }
 }
 
+/** True if `seg` names a relationship type, compared case-insensitively (keys are camelCase). */
+function isRelType(model: MemoModel, seg: string): boolean {
+    if (model.relationshipsByType.has(seg)) return true;
+    const low = seg.toLowerCase();
+    for (const k of model.relationshipsByType.keys()) if (k.toLowerCase() === low) return true;
+    return false;
+}
+
 /** Resolve a feature chain starting from `start`. See navigation semantics in header. */
 function resolveFeature(start: MemoElement, segments: string[], model: MemoModel): Value {
     let val: Value = start;
@@ -308,7 +316,7 @@ function resolveFeature(start: MemoElement, segments: string[], model: MemoModel
                 const key = segments[++k];
                 if (key === undefined) throw new Error("'attributes' must be followed by an attribute key");
                 val = val.attributes[key] ?? '';
-            } else if (model.relationshipsByType.has(seg.toLowerCase())) {
+            } else if (isRelType(model, seg)) {
                 val = navigate(val, seg.toLowerCase(), model);
             } else if (TYPED_FIELDS.has(seg)) {
                 val = (val as unknown as Record<string, string | undefined>)[seg] ?? '';
@@ -316,7 +324,7 @@ function resolveFeature(start: MemoElement, segments: string[], model: MemoModel
                 val = val.attributes[seg] ?? '';
             }
         } else if (Array.isArray(val)) {
-            if (!model.relationshipsByType.has(seg.toLowerCase())) {
+            if (!isRelType(model, seg)) {
                 throw new Error(`Cannot resolve attribute '${seg}' on a collection; only relationship navigation chains across collections`);
             }
             val = val.flatMap(e => navigate(e, seg.toLowerCase(), model));
@@ -332,8 +340,11 @@ function navigate(subject: MemoElement, relType: string, model: MemoModel): Memo
     const out: MemoElement[] = [];
     // A relationship matches the requested name by its forward type or its
     // inverse name; in either case we return the element at the opposite end.
+    // Case-insensitive: relationshipsByType is keyed by camelCase rel.type
+    // (e.g. "verifiedBy"), but nav segments arrive lowercased.
+    const want = relType.toLowerCase();
     const matches = (rel: { type: string; inverseType?: string }) =>
-        rel.type === relType || rel.inverseType === relType;
+        rel.type.toLowerCase() === want || (rel.inverseType?.toLowerCase() === want);
     for (const rel of model.outgoing.get(subject.id) ?? []) {
         if (matches(rel)) {
             const e = model.elements.get(rel.targetId);

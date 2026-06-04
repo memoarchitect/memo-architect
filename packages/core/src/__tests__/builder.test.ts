@@ -179,12 +179,12 @@ describe('buildMemoModel', () => {
         expect(model.relationshipsByType.get('satisfies')?.length).toBe(1);
     });
 
-    it('projects HazardMitigationLink so a hazard is navigable via mitigates', async () => {
+    it('projects MitigatesHazard so a hazard is navigable via mitigates', async () => {
         const doc = await parseDoc(`
             package TestPkg {
                 requirement haz1 : Hazard { attribute redefines title = "H1"; }
                 requirement rc1 : RiskControl { attribute redefines title = "RC1"; }
-                part link1 : HazardMitigationLink {
+                part link1 : MitigatesHazard {
                     attribute id = "L1";
                     part riskControl = rc1;
                     part mitigatedHazard = haz1;
@@ -230,7 +230,7 @@ describe('buildMemoModel', () => {
             package TestPkg {
                 part fn1 : Actor { attribute redefines name = "Fn"; }
                 part el1 : Software { attribute redefines name = "El"; }
-                part link1 : FunctionAllocationLink {
+                part link1 : AllocatedTo {
                     attribute id = "L1";
                     part function :> fn1;
                     part allocatedElement :> el1;
@@ -245,18 +245,18 @@ describe('buildMemoModel', () => {
         expect(rel!.targetId).toBe('el1');
     });
 
-    it('refines RiskTraceLink type from its riskRole attribute', async () => {
+    it('refines TracesRisk type from its riskRole attribute', async () => {
         const doc = await parseDoc(`
             package TestPkg {
                 requirement risk1 : Hazard { attribute redefines title = "Risk"; }
                 requirement matrix1 : Hazard { attribute redefines title = "Matrix"; }
-                part link1 : RiskTraceLink {
+                part link1 : TracesRisk {
                     attribute id = "L1";
                     attribute riskRole = "assessedAgainst";
                     part sourceRiskElement = risk1;
                     part targetRiskElement = matrix1;
                 }
-                part link2 : RiskTraceLink {
+                part link2 : TracesRisk {
                     attribute id = "L2";
                     attribute riskRole = "leadsTo";
                     part sourceRiskElement = risk1;
