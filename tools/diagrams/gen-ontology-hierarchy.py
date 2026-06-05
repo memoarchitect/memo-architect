@@ -224,6 +224,32 @@ TABS = [
         ],
     },
     {
+        'id': 'ontology-metamodel', 'name': '03b-high-level-metamodel', 'num': '03b',
+        'title': 'High-Level Metamodel — Packages, Methods, and Examples',
+        'sub': 'A more useful mental model for memo-sysmlv2: ontology packages define reusable meaning; methodology selects what a project uses.',
+        'note': 'Grounded in vendor/memo-sysmlv2: base/methodology.sysml defines MethodologyScope include/exclude fields; methodology/memo includes all supported layers, standards, artifacts, and viewpoint types; methodology/gpca derives from it and subtracts cybersecurity + SOUP.',
+        'tiers': [
+            {'name': 'Layer 0 — language helpers', 'pal': 'base', 'conn': 'gives typing and traceability to  ▼', 'nodes': [
+                ('base/', 'portable helper definitions · dimensions · semantics · methodology scope helpers · rule base helpers'),
+                ('core/', 'common roots · TraceableElement · enumerations · SemanticLink and typed relationship vocabulary')]},
+            {'name': 'Layer 1 — reusable medical-device ontology', 'pal': 'arch', 'conn': 'is projected and constrained by  ▼', 'nodes': [
+                ('architecture/', 'the Arcadia-inspired modeling backbone: context · operational · requirements · functions · logical · software · hardware · physical · behavior · risk · assurance'),
+                ('architecture add-ons', 'cybersecurity · SOUP · analysis · constraints · decisions sit beside the backbone and can be selected or excluded'),
+                ('compliance/ + artifacts/', 'elements that model standards, controlled records, RMF/DHF content, change, and post-market evidence')]},
+            {'name': 'Layer 2 — default presentation and standards views', 'pal': 'view', 'conn': 'selected by  ▼', 'nodes': [
+                ('viewpoints/', 'default ISO 42010-style viewpoints and selection intent: risk, software architecture, cybersecurity, operational / clinical'),
+                ('views/', 'diagram and document-backed projections of the architecture and compliance graph'),
+                ('rules/', 'closure, coverage, cross-layer, lifecycle, and quantitative checks over the selected graph')]},
+            {'name': 'Methodology — the project recipe', 'pal': 'method', 'conn': 'is derived / resolved into  ▼', 'nodes': [
+                ('What it is technically', 'SysML methodology definitions, scopes, profiles, workflows, gates, patterns, rules, and DHF bindings'),
+                ('What it chooses', 'which architecture layers to model · which viewpoints / views to use · which standards and artifacts to comply with'),
+                ('How teams tailor', 'default includes all supported scope; derived methods pick a subset with included* fields and excludedKind')]},
+            {'name': 'Example / project — proves the tailoring', 'pal': 'assure', 'nodes': [
+                ('GPCA lightweight methodology', 'extends MedicalDeviceLightDefault · keeps core device layers · excludes cybersecurity concepts and SOUPComponent for a non-networked prototype'),
+                ('GPCA project model', 'defines concrete pump instances against that resolved method: requirements · architecture · behavior · risk · verification · trace · document views')]},
+        ],
+    },
+    {
         'id': 'extension-model', 'name': '04-apply-and-extend', 'num': '04',
         'title': 'Apply First. Extend Only When Needed.',
         'sub': 'Most projects select a methodology and instantiate the canonical ontology. New domain packages are an explicit, optional variation point.',
