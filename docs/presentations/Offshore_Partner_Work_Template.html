@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offshore Partner Statement of Work Alignment Template</title>
+<style>
+:root{
+  --ink:#102339;
+  --muted:#5f7284;
+  --paper:#fbfcfd;
+  --wash:#eef4f7;
+  --line:#d6e0e7;
+  --navy:#061b31;
+  --teal:#00b9aa;
+  --teal-soft:#e5faf7;
+  --blue:#438ed0;
+  --blue-soft:#eaf4fd;
+  --orange:#ef9b51;
+  --orange-soft:#fff3e8;
+  --red:#d86a62;
+  --red-soft:#fff0ef;
+  --green:#59a96a;
+  --green-soft:#edf8ef;
+  --purple:#806bd8;
+  --purple-soft:#f0edff;
+  --shadow:0 24px 70px rgba(8,39,68,.22);
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#cbd8df;color:var(--ink);font-family:Inter,"Helvetica Neue",Arial,sans-serif}
+h1,h2,h3,p,ul{margin:0}
+button{font:inherit}
+.app{width:100%;height:100%;display:grid;place-items:center}
+.deck{position:relative;width:min(100vw,177.7778vh);height:min(56.25vw,100vh);background:var(--paper);overflow:hidden;box-shadow:var(--shadow)}
+.slide{position:absolute;inset:0;display:none;background:var(--paper);overflow:hidden}
+.slide.active{display:block}
+.slide.dark{color:#fff;background:#06243d}
+.body{height:100%;padding:68px 70px 82px;display:flex;flex-direction:column}
+.brand{position:absolute;right:34px;top:26px;color:var(--teal);font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.chapter{position:absolute;left:70px;top:28px;display:flex;align-items:center;gap:10px;color:var(--teal);font-size:12px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.chapter b{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--teal);color:var(--navy);letter-spacing:0}
+.slide:not(.dark) .chapter{color:#00897e}.slide:not(.dark) .chapter b{color:#fff;background:#00897e}
+h1{font-size:58px;line-height:1.02;letter-spacing:-.035em;max-width:1180px}
+h2{font-size:38px;line-height:1.05;letter-spacing:-.025em;max-width:1320px}
+h1 span,h2 span{color:var(--teal)}
+.slide:not(.dark) h1 span,.slide:not(.dark) h2 span{color:#00897e}
+.lede{margin-top:12px;color:var(--muted);font-size:19px;line-height:1.34;max-width:1180px}
+.dark .lede{color:rgba(255,255,255,.76)}
+.fill{flex:1;min-height:0}
+.cover .body{justify-content:center}
+.cover .kicker{margin-bottom:20px;color:var(--teal);font-size:14px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
+.cover .meta{margin-top:34px;display:flex;gap:10px;flex-wrap:wrap}
+.cover .meta span{padding:9px 14px;border:1px solid rgba(0,185,170,.5);border-radius:999px;color:var(--teal);font-size:13px;font-weight:850}
+.grid{display:grid;gap:16px;margin-top:22px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:repeat(4,1fr)}
+.card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:18px;display:flex;flex-direction:column;min-height:0}
+.card h3{font-size:19px;letter-spacing:-.02em}
+.card p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.34}
+.tag{display:inline-block;margin-bottom:8px;color:#00897e;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.teal{background:var(--teal-soft);border-color:#bdeee8}.blue{background:var(--blue-soft);border-color:#c9dff4}.orange{background:var(--orange-soft);border-color:#f5dbc0}.green{background:var(--green-soft);border-color:#ccebcf}.purple{background:var(--purple-soft);border-color:#d9d0f6}.red{background:var(--red-soft);border-color:#f2c9c5}
+ul.clean{list-style:none;padding:0;margin-top:10px}
+ul.clean li{position:relative;padding-left:18px;margin-top:8px;color:var(--muted);font-size:14px;line-height:1.28}
+ul.clean li:before{content:"";position:absolute;left:0;top:7px;width:8px;height:8px;border-radius:2px;background:var(--teal)}
+ul.clean strong{color:var(--ink)}
+.footer-note{position:absolute;left:70px;right:70px;bottom:32px;padding:11px 14px;border-left:4px solid #00897e;background:var(--teal-soft);color:var(--ink);border-radius:0 8px 8px 0;font-size:14px;font-weight:750;line-height:1.3}
+.dark .footer-note{background:rgba(0,185,170,.12);color:#eafffb;border-color:var(--teal)}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:26px;align-items:stretch}
+.step{position:relative;border:1px solid var(--line);border-radius:10px;background:#fff;padding:16px 14px}
+.step:after{content:"";position:absolute;top:50%;right:-10px;width:10px;height:2px;background:#9bb5c4}
+.step:last-child:after{display:none}
+.step small{color:#00897e;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.step b{display:block;margin-top:7px;font-size:18px}
+.step span{display:block;margin-top:7px;color:var(--muted);font-size:12.5px;line-height:1.28}
+.table{margin-top:18px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.row{display:grid;grid-template-columns:1.05fr 1.2fr 1.05fr 1fr 1.05fr}
+.row.matrix{grid-template-columns:1.35fr .75fr .75fr .75fr .75fr .75fr}
+.row.res{grid-template-columns:1.1fr .55fr 1fr 1.45fr 1.45fr}
+.row.metric{grid-template-columns:1.15fr .9fr 1fr 1fr 1fr}
+.row.mile{grid-template-columns:.75fr 1.2fr 1.25fr 1fr 1.1fr}
+.row.agree{grid-template-columns:1.05fr 1.25fr 1.25fr 1.05fr 1fr}
+.row.issue{grid-template-columns:1fr 1.1fr 1.15fr 1fr 1fr}
+.cell{padding:12px 13px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13px;line-height:1.25;color:var(--muted)}
+.cell:last-child{border-right:0}
+.row:last-child .cell{border-bottom:0}
+.head .cell{background:#092844;color:#fff;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.cell strong{color:var(--ink)}
+.head .cell strong{color:#fff}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:24px;border-radius:7px;background:var(--wash);color:var(--ink);font-size:12px;font-weight:900}
+.raci{font-weight:900;color:#00897e}
+.split{display:grid;grid-template-columns:36% 64%;gap:22px;align-items:stretch;margin-top:20px}
+.bigbox{display:flex;flex-direction:column;justify-content:space-between;border:1px solid #bdeee8;border-radius:12px;background:var(--teal-soft);padding:22px}
+.bigbox b{font-size:30px;line-height:1.04;letter-spacing:-.03em}
+.bigbox span{color:var(--muted);font-size:15px;line-height:1.35}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.kpi{border:1px solid var(--line);border-radius:10px;background:#fff;padding:16px}
+.kpi b{display:block;font-size:30px;letter-spacing:-.04em;color:#00897e}
+.kpi span{display:block;margin-top:4px;color:var(--muted);font-size:12.5px;line-height:1.24}
+.workcard{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.workhead{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:20px;background:#092844;color:#fff}
+.workhead h3{font-size:28px;letter-spacing:-.03em}.workhead span{color:var(--teal);font-weight:900}
+.workbody{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.workbody div{padding:18px;border-right:1px solid var(--line)}
+.workbody div:last-child{border-right:0}
+.workbody small{color:#00897e;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.workbody p{margin-top:8px;color:var(--muted);font-size:14px;line-height:1.34}
+.decision-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+.decision{border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;min-height:112px}
+.decision small{display:block;color:#00897e;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.decision b{display:block;margin-top:8px;font-size:18px;line-height:1.1}
+.decision span{display:block;margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.25}
+.agreement-box{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:20px;display:grid;grid-template-columns:32% 68%;overflow:hidden}
+.agreement-box .label{padding:20px;background:#092844;color:#fff}
+.agreement-box .label b{display:block;font-size:24px;line-height:1.05}
+.agreement-box .label span{display:block;margin-top:10px;color:rgba(255,255,255,.72);font-size:13px;line-height:1.3}
+.agreement-box .fields{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.field{padding:14px 16px;border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
+.field:nth-last-child(-n+2){border-bottom:0}
+.field small{display:block;color:#00897e;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.field span{display:block;margin-top:8px;color:var(--muted);font-size:14px;line-height:1.3}
+.nav{position:absolute;right:28px;bottom:24px;display:flex;align-items:center;gap:8px;z-index:30}
+.nav button{border:1px solid rgba(255,255,255,.35);background:rgba(6,27,49,.85);color:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
+.nav span{min-width:54px;text-align:center;color:#fff;background:rgba(6,27,49,.78);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:800}
+.progress{position:absolute;left:0;top:0;height:4px;background:var(--teal);width:0;z-index:40;transition:width .2s ease}
+@media print{
+  html,body{overflow:visible;background:#fff}
+  .app{display:block}
+  .deck{width:13.333in;height:7.5in;box-shadow:none;overflow:visible}
+  .slide{position:relative;display:block;page-break-after:always;width:13.333in;height:7.5in}
+  .nav,.progress{display:none}
+}
+
+.simple-hero{margin-top:30px;display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:stretch}
+.statement{border:1px solid #bdeee8;background:var(--teal-soft);border-radius:14px;padding:26px;display:flex;flex-direction:column;justify-content:space-between;min-height:300px}
+.statement b{font-size:34px;line-height:1.02;letter-spacing:-.03em}.statement span{display:block;margin-top:16px;color:var(--muted);font-size:16px;line-height:1.35}
+.mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.mini{border:1px solid var(--line);border-radius:12px;background:#fff;padding:18px;min-height:135px}.mini small{display:block;color:#00897e;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.mini b{display:block;margin-top:9px;font-size:23px;line-height:1.05}.mini span{display:block;margin-top:9px;color:var(--muted);font-size:13.5px;line-height:1.28}
+.item-hero{margin-top:24px;display:grid;grid-template-columns:34% 66%;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;min-height:430px}.item-name{background:#092844;color:#fff;padding:30px;display:flex;flex-direction:column;justify-content:space-between}.item-name small{color:var(--teal);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.item-name b{display:block;margin-top:10px;font-size:44px;line-height:.98;letter-spacing:-.04em}.item-name span{color:rgba(255,255,255,.72);font-size:14px;line-height:1.35}.item-detail{display:grid;grid-template-columns:repeat(2,1fr)}.item-detail .mini{border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0}.item-detail .mini:nth-child(2n){border-right:0}.item-detail .mini:nth-last-child(-n+2){border-bottom:0}
+.metric-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px}.metric{border:1px solid var(--line);border-radius:12px;background:#fff;padding:18px}.metric b{font-size:34px;color:#00897e;letter-spacing:-.04em}.metric span{display:block;margin-top:6px;color:var(--muted);font-size:13px;line-height:1.25}
+.clean-line{margin-top:24px;border-top:1px solid var(--line);padding-top:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.clean-line div{font-size:15px;color:var(--muted);line-height:1.3}.clean-line strong{display:block;color:var(--ink);font-size:17px;margin-bottom:5px}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="deck">
+    <div class="progress" id="progress"></div>
+
+    <section class="slide dark cover active">
+      <div class="brand">Medical Device Co. · internal</div>
+      <div class="body">
+        <div class="kicker">Offshore Partner Agreement</div>
+        <h1><span>SOUP</span> + cybersecurity work package.</h1>
+        <p class="lede">A simple agreement deck for what the offshore partner will do, what we will review, and what stays internal.</p>
+        <div class="meta">
+          <span>SOUP</span>
+          <span>Cybersecurity</span>
+          <span>Review gates</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>01</b> Agreement Shape</div>
+      <div class="brand">simple SOW</div>
+      <div class="body">
+        <h2>Two work items. <span>One review rhythm.</span></h2>
+        <p class="lede">The partner prepares analysis and evidence. We retain final technical, risk, regulatory, and release decisions.</p>
+        <div class="simple-hero fill">
+          <div class="statement">
+            <div><b>Useful offshore work, bounded by clear acceptance.</b><span>Every deliverable has a source, owner, review gate, and explicit non-delegated decisions.</span></div>
+            <span><strong>Not delegated:</strong> risk acceptance · vulnerability acceptance · regulatory interpretation · supplier approval · release decisions.</span>
+          </div>
+          <div class="mini-grid">
+            <div class="mini"><small>Item 1</small><b>SOUP</b><span>Register, SBOM reconciliation, anomalies, supplier evidence gaps.</span></div>
+            <div class="mini"><small>Item 2</small><b>Cybersecurity</b><span>Threat model support, vulnerability triage, control mapping.</span></div>
+            <div class="mini"><small>Cadence</small><b>Weekly gate</b><span>Sample first, then batch review, then final acceptance.</span></div>
+            <div class="mini"><small>Owner</small><b>Internal sign-off</b><span>Partner recommends. Internal owner accepts or rejects.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>02</b> SOUP</div>
+      <div class="brand">work item</div>
+      <div class="body">
+        <h2>SOUP work item: <span>make the inventory review-ready.</span></h2>
+        <div class="item-hero fill">
+          <div class="item-name"><div><small>Work item</small><b>SOUP</b></div><span>Software of unknown provenance, SBOM, anomalies, and supplier evidence.</span></div>
+          <div class="item-detail">
+            <div class="mini"><small>Partner does</small><b>Complete the register</b><span>Component, version, supplier, use, location, license, source link.</span></div>
+            <div class="mini"><small>Partner does</small><b>Reconcile SBOM</b><span>Match SBOM items to SOUP list and flag mismatches.</span></div>
+            <div class="mini"><small>Deliverables</small><b>3 outputs</b><span>SOUP register · anomaly table · supplier evidence gap list.</span></div>
+            <div class="mini"><small>We decide</small><b>Acceptability</b><span>Risk relevance, supplier acceptability, release impact.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>03</b> SOUP Acceptance</div>
+      <div class="brand">work item</div>
+      <div class="body">
+        <h2>SOUP acceptance is <span>row-level and evidence-based.</span></h2>
+        <div class="metric-strip">
+          <div class="metric"><b>45</b><span>SOUP components reconciled to SBOM.</span></div>
+          <div class="metric"><b>100%</b><span>Required register fields populated.</span></div>
+          <div class="metric"><b>0</b><span>Unowned high-priority gaps at final review.</span></div>
+          <div class="metric"><b>2</b><span>Max review cycles before escalation.</span></div>
+        </div>
+        <div class="clean-line fill">
+          <div><strong>Sample gate</strong>10 SOUP rows reviewed before full production.</div>
+          <div><strong>Acceptance gate</strong>All blocking comments closed or owned.</div>
+          <div><strong>Archive</strong>Final register and evidence list stored in QMS work folder.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>04</b> Cybersecurity</div>
+      <div class="brand">work item</div>
+      <div class="body">
+        <h2>Cybersecurity work item: <span>prepare the analysis package.</span></h2>
+        <div class="item-hero fill">
+          <div class="item-name"><div><small>Work item</small><b>Cyber</b></div><span>Threat model support, vulnerability triage, and control mapping.</span></div>
+          <div class="item-detail">
+            <div class="mini"><small>Partner does</small><b>Map assets</b><span>Assets, trust boundaries, assumptions, threat scenarios.</span></div>
+            <div class="mini"><small>Partner does</small><b>Triage findings</b><span>Severity, exploitability, affected component, proposed next action.</span></div>
+            <div class="mini"><small>Deliverables</small><b>3 outputs</b><span>Threat worksheet · vulnerability table · control/gap map.</span></div>
+            <div class="mini"><small>We decide</small><b>Risk posture</b><span>Residual risk, vulnerability acceptance, release impact.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>05</b> Cyber Acceptance</div>
+      <div class="brand">work item</div>
+      <div class="body">
+        <h2>Cybersecurity acceptance is <span>clarity, ownership, and trace.</span></h2>
+        <div class="metric-strip">
+          <div class="metric"><b>12</b><span>Assets reviewed and mapped.</span></div>
+          <div class="metric"><b>20</b><span>Threat scenarios drafted or updated.</span></div>
+          <div class="metric"><b>30</b><span>Vulnerability findings triaged.</span></div>
+          <div class="metric"><b>0</b><span>High/critical findings without owner.</span></div>
+        </div>
+        <div class="clean-line fill">
+          <div><strong>Sample gate</strong>5 assets, 5 threats, 10 vulnerability rows.</div>
+          <div><strong>Acceptance gate</strong>Each open security question has an internal owner.</div>
+          <div><strong>Archive</strong>Threat worksheet, triage table, and evidence links stored together.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="chapter"><b>06</b> Governance</div>
+      <div class="brand">review rhythm</div>
+      <div class="body">
+        <h2>Simple review rhythm. <span>No hidden scope creep.</span></h2>
+        <div class="flow">
+          <div class="step"><small>0</small><b>Kickoff</b><span>Inputs, access, owner, templates.</span></div>
+          <div class="step"><small>1</small><b>Sample</b><span>Small batch proves method.</span></div>
+          <div class="step"><small>2</small><b>Weekly</b><span>Review defects and decisions.</span></div>
+          <div class="step"><small>3</small><b>Final</b><span>Accept or rework.</span></div>
+          <div class="step"><small>4</small><b>Archive</b><span>Evidence package stored.</span></div>
+        </div>
+        <div class="clean-line fill">
+          <div><strong>Partner owns</strong>Preparation, completeness, evidence links, issue log.</div>
+          <div><strong>Internal owns</strong>Risk decisions, regulatory position, final acceptance.</div>
+          <div><strong>Change control</strong>New product, new release, added standard, or new deliverable needs approval.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="nav">
+      <button id="prev">Prev</button>
+      <span id="count">1 / 7</span>
+      <button id="next">Next</button>
+    </div>
+  </main>
+</div>
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const count=document.getElementById('count');
+const progress=document.getElementById('progress');
+let idx=0;
+function show(i){
+  idx=(i+slides.length)%slides.length;
+  slides.forEach((s,n)=>s.classList.toggle('active',n===idx));
+  count.textContent=`${idx+1} / ${slides.length}`;
+  progress.style.width=`${((idx+1)/slides.length)*100}%`;
+}
+document.getElementById('prev').addEventListener('click',()=>show(idx-1));
+document.getElementById('next').addEventListener('click',()=>show(idx+1));
+window.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(idx+1)}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(idx-1)}
+});
+show(0);
+</script>
+</body>
+</html>
