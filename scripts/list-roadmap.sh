@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO_ENC="somesh_sandbox%2Fmemo"
+REPO_ENC="somesh_sandbox%2Fmemo-architect"
 CMD="${1:-all}"
 
 fetch() {
