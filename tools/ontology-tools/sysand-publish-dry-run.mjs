@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const ONTOLOGY_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2');
+const ONTOLOGY_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src');
 
 const COLORS = {
     red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -47,7 +47,7 @@ const PACKAGES = [
         version: '0.1.0',
         level: 'L1',
         description: 'MEMO medical device ontology — architecture layers, compliance, risk, viewpoints, and relationships.',
-        dirs: ['architecture', 'compliance', 'manifest', 'viewpoints', 'views'],
+        dirs: ['architecture', 'compliance', 'viewpoints', 'views'],
         rootFiles: ['medical_device_library.sysml'],
         usage: ['kinds', 'relationships', 'viewpoints'],
         dependencies: ['urn:kpar:memo-sysml-base'],

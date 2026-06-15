@@ -2,6 +2,12 @@
 
 Per ADR-1-17 three-repo split: `memo-sysmlv2` / `memo-cli` / `memo-architect`.
 
+> **Path note (2026-06):** the `memo-sysmlv2` content paths below (`ontology/`,
+> `ontology/methodology/`, etc.) predate the submodule extraction and the later
+> `src/` reorganization. All SysML content now lives under `src/`, with the
+> directory tree mirroring the `memo::` namespace (see the submodule README and
+> `platform.md` §10). The repo-assignment intent is unchanged; only the paths moved.
+
 ## Repo Assignment
 
 ### memo-sysmlv2 (pure SysML v2 content, no TypeScript)
