@@ -474,7 +474,7 @@ export function OntologyBrowserTab() {
                                                 const pd = k.derivesFrom ? (depthMap.get(k.derivesFrom) ?? 0) : 0;
                                                 depthMap.set(k.name, k.derivesFrom ? pd + 1 : 0);
                                             }
-                                            return sortedKinds.map(kind => {
+                                            const renderKind = (kind: typeof sortedKinds[number]) => {
                                             const isKindSelected = selectedKind === kind.name;
                                             const depth = depthMap.get(kind.name) ?? 0;
                                             const isRoot = depth === 0;
@@ -514,7 +514,33 @@ export function OntologyBrowserTab() {
                                                     )}
                                                 </div>
                                             );
-                                        });
+                                            };
+                                            // Partition kinds by namespace sub-group (mirrors src/<layer>/<group>/),
+                                            // preserving parent-first order. Sub-headers show only when a layer
+                                            // spans more than one group (e.g. architecture → context, risk, …).
+                                            const groupOrder: string[] = [];
+                                            const byGroup = new Map<string, typeof sortedKinds>();
+                                            for (const k of sortedKinds) {
+                                                const g = k.group ?? '';
+                                                if (!byGroup.has(g)) { byGroup.set(g, []); groupOrder.push(g); }
+                                                byGroup.get(g)!.push(k);
+                                            }
+                                            if (groupOrder.filter(g => g !== '').length <= 1) {
+                                                return sortedKinds.map(renderKind);
+                                            }
+                                            return groupOrder.map(g => (
+                                                <div key={`grp:${layerKey}:${g || '_root'}`}>
+                                                    {g && (
+                                                        <div className="px-3 py-0.5 flex items-center gap-1.5" style={{ margin: '0 4px 0 30px' }}>
+                                                            <span className="capitalize truncate" style={{ color: COLOR.faint, fontSize: FONT.explorer.kind, letterSpacing: '0.02em' }}>
+                                                                {g.replace(/_/g, ' ')}
+                                                            </span>
+                                                            <span style={{ color: COLOR.faint, fontSize: '10px' }}>{byGroup.get(g)!.length}</span>
+                                                        </div>
+                                                    )}
+                                                    {byGroup.get(g)!.map(renderKind)}
+                                                </div>
+                                            ));
                                         })()}
                                     </div>
                                 );
