@@ -64,7 +64,9 @@ export interface OntologyKindInfo {
     derivesFrom?: string;
     derivedBy?: string[];
     relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
-    /** Compliance standard (e.g. "iso-14971"), set for kinds under compliance/<standard>/ */
+    /** Namespace sub-group: the first directory under the layer (e.g. "context", "risk", "iso14971"). */
+    group?: string;
+    /** Compliance standard (e.g. "iso14971"), set for kinds under compliance/<standard>/ */
     standard?: string;
 }
 
@@ -175,13 +177,17 @@ export function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
 
             for (const filePath of collectSysmlFiles(layerDir)) {
                 const { kinds } = parseConstructsInFile(filePath);
-                // For compliance layer, the first subdirectory is the standard
-                let standard: string | undefined;
-                if (layerId === 'compliance') {
-                    const rel = filePath.replace(/\\/g, '/').substring(layerDir.replace(/\\/g, '/').length + 1);
-                    const firstSeg = rel.split('/')[0];
-                    if (firstSeg && !firstSeg.endsWith('.sysml')) standard = firstSeg;
-                }
+                // The on-disk tree mirrors the memo:: namespace, so the first
+                // sub-directory under a layer is the namespace sub-group
+                // (e.g. architecture/<context|risk|…>/, compliance/<iso14971|…>/).
+                const rel = filePath.replace(/\\/g, '/').substring(layerDir.replace(/\\/g, '/').length + 1);
+                const firstSeg = rel.split('/')[0];
+                const group = firstSeg && !firstSeg.endsWith('.sysml') ? firstSeg : undefined;
+                // A compliance sub-group that names a regulatory standard also
+                // surfaces as `standard` (the rest — artifacts, change, … — do not).
+                const standard = layerId === 'compliance' && group && /^(iso|iec|fda|en|astm|ul|nist|cfr|mdr)/i.test(group)
+                    ? group
+                    : undefined;
                 for (const k of kinds) {
                     allParsedKinds.push({ ...k, layer: layerId });
                     layerKinds.push({
@@ -193,6 +199,7 @@ export function buildLayers(sysmlDir: string): OntologyLayerInfo[] {
                         viewpoints: [],
                         description: k.description,
                         derivesFrom: k.derivesFrom,
+                        group,
                         standard,
                     });
                 }
