@@ -60,20 +60,20 @@ pnpm run dev          # Start dev server (packages/cli: memo dev)
 ```bash
 ./scripts/list-roadmap.sh next
 ```
-Returns the next-eligible open story (lowest title-prefix). To execute that story, fetch its body with `glab issue view <iid> -R somesh_sandbox/memo`. GitLab is the only source of truth — no local roadmap files.
+Returns the next-eligible open story (lowest title-prefix). To execute that story, fetch its body with `glab issue view <iid> -R somesh_sandbox/memo-architect`. GitLab is the only source of truth — no local roadmap files.
 
 ## Executing Milestones
 
 When asked to "execute" a milestone or phase, follow this protocol:
 
 1. **Identify story:** `./scripts/list-roadmap.sh next` (or the explicit story id given by the user).
-2. **Read story body:** `glab issue view <iid> -R somesh_sandbox/memo`. Read the parent epic issue if the story references it.
+2. **Read story body:** `glab issue view <iid> -R somesh_sandbox/memo-architect`. Read the parent epic issue if the story references it.
 3. **Read context:** This file (`CLAUDE.md`) — project overview, tech stack, decisions.
 4. **Verify baseline:** `pnpm run build && pnpm run test`
 5. **Work on the user's currently checked-out branch** — trunk-based; do not create feature branches.
 6. **Execute:** Follow story scope from the GitLab issue description. Read all affected files before modifying. Run tests after each logical change.
 7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/gpca-pump && memo dev`.
-8. **Close issues:** After completing work for an issue, close it: `glab issue close -R somesh_sandbox/memo <number>`
+8. **Close issues:** After completing work for an issue, close it: `glab issue close -R somesh_sandbox/memo-architect <number>`
 9. **Commit:** Reference the phase and issue number (e.g., `Phase A: fix product title (#81)`)
 
 **Do NOT:** attempt multiple milestones per session, modify files outside scope, add improvements beyond scope, create feature branches, push without being asked.
@@ -90,7 +90,7 @@ Tests must track feature lifecycle:
 
 ## GitLab Project Management — Single Source of Truth
 
-**Remote:** `git@gitlab.com:somesh_sandbox/memo.git`
+**Remote:** `git@gitlab.com:somesh_sandbox/memo-architect.git`
 
 ### IMPORTANT: GitLab is the authoritative source for all planning
 
@@ -100,7 +100,7 @@ Tests must track feature lifecycle:
 
 ### `glab` CLI — use this, NOT the GitLab web API
 
-`glab` (v1.89.0) is installed at `/usr/local/bin/glab`. Always use `--project somesh_sandbox/memo` or `-R somesh_sandbox/memo`.
+`glab` (v1.89.0) is installed at `/usr/local/bin/glab`. Always use `--project somesh_sandbox/memo-architect` or `-R somesh_sandbox/memo-architect`.
 
 ```bash
 # Roadmap (live from GitLab)
@@ -112,10 +112,10 @@ Tests must track feature lifecycle:
 ./scripts/list-roadmap.sh closed       # recently closed roadmap items
 
 # Issues
-glab issue view <iid> -R somesh_sandbox/memo
-glab issue list -R somesh_sandbox/memo --per-page 100
-glab issue create -R somesh_sandbox/memo --title "..." --label "bug"
-glab issue close -R somesh_sandbox/memo <number>
+glab issue view <iid> -R somesh_sandbox/memo-architect
+glab issue list -R somesh_sandbox/memo-architect --per-page 100
+glab issue create -R somesh_sandbox/memo-architect --title "..." --label "bug"
+glab issue close -R somesh_sandbox/memo-architect <number>
 ```
 
 ### Issue Labels
