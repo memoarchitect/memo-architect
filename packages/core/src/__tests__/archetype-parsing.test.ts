@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { VENDOR_ONTOLOGY_DIR } from '../model/paths.js';
+import { VENDOR_ONTOLOGY_SRC_DIR } from '../model/paths.js';
 
-const ARCHETYPES_FILE = join(__dirname, '../../../..', VENDOR_ONTOLOGY_DIR, 'methodology/memo/memo_archetypes.sysml');
+const ARCHETYPES_FILE = join(__dirname, '../../../..', VENDOR_ONTOLOGY_SRC_DIR, 'methodology/memo/memo_archetypes.sysml');
 
 const PART_INSTANCE_RE = /^\s*part\s+(\w+)\s*:\s*(\w+)\s*\{([\s\S]*?)\n\s*\}/gm;
 const ATTR_RE = /attribute\s+(\w+)\s*=\s*(?:"([^"]*)"|(\w+(?:::\w+)*)|(-?\d+(?:\.\d+)?)|(true|false))\s*;/g;

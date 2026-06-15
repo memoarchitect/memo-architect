@@ -5,12 +5,12 @@ import { createMemoSysMLServices } from '../language/memo-sysml-module.js';
 import type { Model } from '../language/generated/ast.js';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, join, relative, dirname } from 'node:path';
-import { VENDOR_ONTOLOGY_DIR } from '../model/paths.js';
+import { VENDOR_ONTOLOGY_SRC_DIR } from '../model/paths.js';
 
 const services = createMemoSysMLServices({ ...EmptyFileSystem }).MemoSysML;
 const parse = parseHelper<Model>(services);
 
-const ONTOLOGY_ROOT = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_DIR);
+const ONTOLOGY_ROOT = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_SRC_DIR);
 
 // When ONTOLOGY_ROOT is the memo-sysmlv2 submodule, only its flattened ontology
 // content is in scope. Skip the submodule's own scaffold: examples/gpca-pump
@@ -278,7 +278,7 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
 
     it('C4: ontology directory segments match namespace segments', () => {
         const mismatches: string[] = [];
-        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_DIR}/`;
+        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_SRC_DIR}/`;
         for (const e of allEntries) {
             if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;
             for (const leaf of e.leafPackages) {
@@ -309,7 +309,7 @@ describe('DD-4: Syside compatibility — structural invariants', () => {
 describe('DD-5: sysand publish dry-run — publishable packages', () => {
     const PACKAGE_MAP: { name: string; level: string; dirs: string[]; rootFiles?: string[] }[] = [
         { name: '@memo/sysml-base', level: 'L0', dirs: ['base', 'core'] },
-        { name: '@memo/ontology', level: 'L1', dirs: ['architecture', 'compliance', 'manifest', 'viewpoints', 'views'], rootFiles: ['medical_device_library.sysml'] },
+        { name: '@memo/ontology', level: 'L1', dirs: ['architecture', 'compliance', 'viewpoints', 'views'], rootFiles: ['medical_device_library.sysml'] },
         { name: '@memo/methodology-default', level: 'L2', dirs: ['methodology'] },
     ];
 
@@ -469,7 +469,7 @@ describe('DD-6: naming + casing lint (ADR-1-12)', () => {
     });
 
     it('N4: ontology directory segments use snake_case', () => {
-        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_DIR}/`;
+        const ONTOLOGY_PREFIX = `${VENDOR_ONTOLOGY_SRC_DIR}/`;
         const violations: string[] = [];
         for (const e of allEntries) {
             if (!e.relPath.startsWith(ONTOLOGY_PREFIX)) continue;

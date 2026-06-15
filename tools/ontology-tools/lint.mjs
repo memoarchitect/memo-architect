@@ -129,7 +129,7 @@ const KERNEL_IMPORT_RE = new RegExp(
     'gm',
 );
 
-const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'base', 'stdlib');
+const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'base', 'stdlib');
 
 // The memo-sysmlv2 submodule carries its own tooling scaffold (per-package
 // dirs, installed deps, build output). Only the flattened ontology content

@@ -381,18 +381,18 @@ Three repos, split along dependency lines — see [ADR-1-17](../decisions/adr/AD
 
 ```
 memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)
-  ontology/
-    base/                           L0 helpers (@memo/sysml-base)
-    architecture/
-    compliance/
-    artifacts/
-    viewpoints/
-    views/
-    relationships/
+  src/                              all .sysml content; directory tree mirrors the memo:: namespace
+    medical_device_library.sysml    public import surface
+    base/                           L0 helpers (@memo/sysml-base) + stdlib/ KerML wrapper
+    core/                           common/ enumerations/ relationships/
+    architecture/                   one folder per layer: context/ … risk/ cybersecurity/ assurance/ …
+    compliance/                     artifacts/ change/ document_views/ postmarket/ iso14971/
+    viewpoints/  views/             core/ + default_viewpoints/ ; core/ + document_views/
+    artifacts/                      artifact kinds
     rules/                          native constraint def / requirement def (Epic EE)
-  methodology/
-    default/*.sysml                 L2 methodology library
-    gpca/*.sysml
+    methodology/                    nested sysand project: memo/ (default) + gpca/
+    examples/gpca-pump/             reference model
+  packages/                         thin @memo/* manifests (sysmlDir points into src/)
   .project.json + sysand-lock.toml  ships as a sysand package; SysIDE/SysON/sysand consumable
         ▲ data-dependency (versioned sysand artifact)
 memo-cli/                           (L3 engine + CLI)
