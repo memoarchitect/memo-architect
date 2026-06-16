@@ -544,7 +544,7 @@ export function findOntologyPackageDirs(configPath: string): string[] {
 
     // 0. (Phase C) If project pins a `methodology:`, resolve it and walk its
     // extends chain. The methodology package brings in its own SysML and
-    // chain-pulls the kinds ontology (e.g. @memo/ontology-arch).
+    // chain-pulls the kinds ontology (e.g. @memo/ontology).
     try {
         const content = readFileSync(configPath, 'utf-8');
         const methodologyMatch = content.match(/^methodology:\s*"?([^"\s#]+)"?/m);
@@ -704,10 +704,9 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
     try {
         const content = readFileSync(resolvedPath, 'utf-8');
         // Handle both single-string extends and array extends in YAML:
-        //   extends: "@memo/ontology-arch"
+        //   extends: "@memo/ontology"
         //   extends:
-        //     - "@memo/ontology-arch"
-        //     - "@memo/ontology-process"
+        //     - "@memo/ontology"
         const singleMatch = content.match(/^extends:\s*"?(@memo\/[\w-]+)"?/m);
         if (singleMatch) {
             extendsPackages = [singleMatch[1]];
@@ -752,9 +751,9 @@ function walkExtendsChain(configPath: string, dirs: string[], seen: Set<string>)
     }
 
     // If this is an ontology that doesn't declare extends,
-    // fall back to ontology-arch as the foundational sibling package.
+    // fall back to the sibling @memo/ontology package.
     if (projectType === 'ontology' && extendsPackages.length === 0) {
-        const archDir = resolve(packageDir, '../ontology-arch');
+        const archDir = resolve(packageDir, '../ontology');
         const archSysml = resolve(archDir, 'sysml');
         const archConfigKey = resolve(archDir, 'memo.package.yaml');
         if (existsSync(archSysml) && !seen.has(archConfigKey)) {
@@ -851,7 +850,7 @@ export async function loadOntologyRegistries(configPath: string): Promise<Ontolo
     // Collect all SysML files from all ontology packages (honor sysmlDir override).
     // Dedupe by absolute path — methodology and base ontology pkgs may have
     // overlapping sysmlDirs (e.g. methodology points at ontology/methodology/memo
-    // while ontology-arch points at ontology/).
+    // while @memo/ontology points at src/).
     const sysmlSet = new Set<string>();
     for (const pkgDir of ontologyDirs) {
         let sysmlDir = resolve(pkgDir, 'sysml');

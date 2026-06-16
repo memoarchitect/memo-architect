@@ -411,10 +411,7 @@ function resolveImportPackage(ontology: string, available: AvailableOntology[]):
     let current: AvailableOntology | undefined = ont;
     while (current && !visited.has(current.name)) {
         visited.add(current.name);
-        if (current.name === '@memo/ontology-process' || current.extends === '@memo/ontology-process') {
-            return 'MEMO_Ontology_Arch';
-        }
-        if (current.name === '@memo/ontology-arch' && !current.extends) {
+        if (current.name === '@memo/ontology' && !current.extends) {
             return 'MEMO_Ontology_Arch';
         }
         current = current.extends ? available.find(o => o.name === current!.extends) : undefined;

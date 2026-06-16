@@ -2,14 +2,16 @@
 
 **Status:** Accepted
 **Date:** 2026-05-02
-**Supersedes:** [ADR-1-6](ADR-1-6-ontology-core-medical-split.md), [ADR-1-10](ADR-1-10-two-ontology-collapse.md)
+**Supersedes:** earlier multi-ontology layouts (now pruned from the decision log)
 **Reference:** [platform.md](../../architecture/platform.md)
 
 ---
 
 ## Context
 
-Prior ADRs split medical-device kinds across multiple packages: first into core/medical/extensions (ADR-1-6), then into `ontology-arch` + `ontology-process` (ADR-1-10). Both decisions kept ontology and methodology fused — package boundaries doubled as scope boundaries. Result: cross-package edits for any change touching both arch and compliance, brittle dependency graph, no clean way to tailor scope per project without forking ontology packages.
+Earlier exploratory layouts split medical-device kinds across multiple packages — first into core/medical/extensions, then into an `ontology-arch` + `ontology-process` pair. Both kept ontology and methodology fused, so package boundaries doubled as scope boundaries: cross-package edits for any change touching both architecture and compliance, a brittle dependency graph, and no clean way to tailor scope per project without forking ontology packages.
+
+This ADR is now fully realized on disk: one `memo::` namespace, one `src/` tree (directory = namespace), and a single `@memo/ontology` package. The `ontology-process` shell was removed and `ontology-arch` renamed to `@memo/ontology`.
 
 ## Decision
 

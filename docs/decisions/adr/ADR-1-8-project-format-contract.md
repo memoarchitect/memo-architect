@@ -116,7 +116,7 @@ packages/ontology-medical/
       requirement.sysml   ← requirement def SystemRequirement { }
 ```
 
-The directory path determines the CoSMA layer (`sysml/risk/` → risk layer). This is the **Apollo-11 pattern** — see ADR-1-3.
+The directory path determines the CoSMA layer (`sysml/risk/` → risk layer): the directory tree mirrors the `memo::` namespace, so the layer is read from the path. (The content layout is documented in [platform.md](../../architecture/platform.md).)
 
 ---
 
@@ -137,7 +137,7 @@ Device projects are intentionally **configuration-light**: they declare a profil
 
 ## Superseded
 
-This ADR supersedes the device-project portion of **ADR-1-5** (which documented an outdated TypeScript `MEMOConfig` interface and an incorrect `.memo/config.yaml` path). ADR-1-5 is updated to refer here.
+This ADR is the authoritative device-project format contract. It replaced an earlier exploratory config design (an outdated TypeScript `MEMOConfig` interface and a `.memo/config.yaml` path) that has since been pruned from the decision log.
 
 The decomposed package format was introduced during Phase 7–8 rearchitecture and is documented in `docs/architecture/reference/platform-strategy.md`.
 
