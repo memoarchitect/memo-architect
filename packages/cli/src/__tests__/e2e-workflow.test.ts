@@ -82,16 +82,16 @@ describe('E2E: memo init → validate → export', () => {
 
     it('memo init --ontology selects a different ontology', () => {
         // Run from REPO_ROOT so ontology packages are discoverable
-        const output = run(`init ${join(tmpDir, 'test-core-device')} --ontology @memo/ontology-arch`, REPO_ROOT);
+        const output = run(`init ${join(tmpDir, 'test-core-device')} --ontology @memo/ontology`, REPO_ROOT);
 
         expect(output).toContain('Creating MEMO project');
         expect(output).toContain('Project created');
 
         const projectDir = join(tmpDir, 'test-core-device');
         const config = readFileSync(join(projectDir, 'memo.package.yaml'), 'utf-8');
-        expect(config).toContain('extends: "@memo/ontology-arch"');
+        expect(config).toContain('extends: "@memo/ontology"');
 
-        // SysML should import the arch ontology
+        // SysML should import the ontology
         const sysml = readFileSync(join(projectDir, 'model', `test-core-device.sysml`), 'utf-8');
         expect(sysml).toContain('import MEMO_Ontology_Arch::*');
 
@@ -112,8 +112,7 @@ describe('E2E: memo init → validate → export', () => {
     it('memo init --list-ontologies shows available packages', () => {
         // Run from REPO_ROOT so packages are discoverable
         const output = run('init --list-ontologies', REPO_ROOT);
-        expect(output).toContain('@memo/ontology-arch');
-        expect(output).toContain('@memo/ontology-process');
+        expect(output).toContain('@memo/ontology');
         expect(output).toContain('@memo/medical-modeling-profile');
         expect(output).toContain('(default)');
     });
@@ -228,9 +227,8 @@ package LockTest {
         expect(lock).toContain('version:');
         expect(lock).toContain('lockedAt:');
         expect(lock).toContain('packages:');
-        // Should have all 3 ontology packages in the chain
-        expect(lock).toContain('@memo/ontology-arch');
-        expect(lock).toContain('@memo/ontology-process');
+        // Should have the ontology packages in the chain
+        expect(lock).toContain('@memo/ontology');
         expect(lock).toContain('@memo/medical-modeling-profile');
     });
 
@@ -378,7 +376,7 @@ describe('E2E: memo install', () => {
 name: "@test/fake-ontology"
 version: "1.0.0"
 type: ontology
-extends: "@memo/ontology-arch"
+extends: "@memo/ontology"
 description: "Fake ontology for testing memo install"
 `);
 
@@ -535,19 +533,12 @@ describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
 });
 
 describe('DD-5: sysand publish --dry-run', () => {
-    it('memo sysand publish --dry-run succeeds for ontology-arch', () => {
-        const pkgDir = join(REPO_ROOT, VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology-arch');
-        const output = run('sysand publish --dry-run --package @memo/ontology-arch', pkgDir);
+    it('memo sysand publish --dry-run succeeds for ontology', () => {
+        const pkgDir = join(REPO_ROOT, VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology');
+        const output = run('sysand publish --dry-run --package @memo/ontology', pkgDir);
         expect(output).toContain('PASS');
         expect(output).toContain('.kpar');
         expect(output).toContain('All packages pass dry-run');
-    });
-
-    it('memo sysand publish --dry-run reports failure for package with no SysML files', () => {
-        const pkgDir = join(REPO_ROOT, VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology-process');
-        const { stdout, exitCode } = runMayFail('sysand publish --dry-run', pkgDir);
-        expect(stdout).toContain('No .sysml files found');
-        expect(exitCode).not.toBe(0);
     });
 
     it('memo sysand publish --dry-run fails gracefully outside a project', () => {

@@ -20,12 +20,9 @@ importers:
       '@memo/core':
         specifier: workspace:*
         version: link:../core
-      '@memo/ontology-arch':
+      '@memo/ontology':
         specifier: workspace:*
-        version: link:../../vendor/memo-sysmlv2/packages/ontology-arch
-      '@memo/ontology-process':
-        specifier: workspace:*
-        version: link:../../vendor/memo-sysmlv2/packages/ontology-process
+        version: link:../../vendor/memo-sysmlv2/packages/ontology
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -149,20 +146,15 @@ importers:
 
   vendor/memo-sysmlv2/packages/medical-modeling-profile:
     dependencies:
-      '@memo/ontology-arch':
+      '@memo/ontology':
         specifier: workspace:*
-        version: link:../ontology-arch
-      '@memo/ontology-process':
-        specifier: workspace:*
-        version: link:../ontology-process
+        version: link:../ontology
 
   vendor/memo-sysmlv2/packages/methodology-default: {}
 
   vendor/memo-sysmlv2/packages/methodology-gpca: {}
 
-  vendor/memo-sysmlv2/packages/ontology-arch: {}
-
-  vendor/memo-sysmlv2/packages/ontology-process: {}
+  vendor/memo-sysmlv2/packages/ontology: {}
 
 packages:
 

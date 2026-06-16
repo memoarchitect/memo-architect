@@ -135,8 +135,8 @@ layers:
 // ─── Integration: real ontology packages ────────────────────────────────────
 
 describe('loadConfig with real ontology package files', () => {
-    it('ontology-arch loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology-arch/memo.package.yaml');
+    it('ontology loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
+        const configPath = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology/memo.package.yaml');
         const config = loadConfig(configPath);
 
         // Should have 11 layers from memo.rendering.yaml
@@ -151,22 +151,8 @@ describe('loadConfig with real ontology package files', () => {
         expect(layerIds).toContain('safety');
 
         // Verify identity from memo.package.yaml
-        expect(config.projectName).toBe('@memo/ontology-arch');
+        expect(config.projectName).toBe('@memo/ontology');
         expect(config.projectType).toBe('ontology');
-    });
-
-    it('ontology-process loads rendering layers from memo.package.yaml + memo.rendering.yaml', () => {
-        const configPath = resolve(__dirname, '../../../..', VENDOR_ONTOLOGY_PACKAGES_DIR, 'ontology-process/memo.package.yaml');
-        const config = loadConfig(configPath);
-
-        // Should have standard-aligned layers
-        const layerIds = config.architectureLayers!.map(l => l.id);
-        expect(layerIds).toContain('iso-14971');
-        expect(layerIds).toContain('iec-62304');
-        expect(layerIds).toContain('iso-13485');
-
-        // Verify extends chain
-        expect(config.extends).toBe('@memo/ontology-arch');
     });
 
 });

@@ -27,7 +27,7 @@ renders a "zoom in" button automatically.
 | L2a | `view of memo.core` | `memo.core` | `@memo/core` components — parser, builder, rule engine, DHF, LLM |
 | L2b | `view of memo.cli` | `memo.cli` | `@memo/cli` components — dev server, file watcher, persistor, commands |
 | L2c | `view of memo.web` | `memo.web` | `@memo/web` components — model store, ws client, canvas, dashboards |
-| L2d | `view of memo.ont` | `memo.ont` | Two-ontology backbone: `ontology-arch` + `ontology-process` + `medical-modeling-profile` |
+| L2d | `view of memo.ont` | `memo.ont` | Ontology backbone: `@memo/ontology` + `medical-modeling-profile` |
 | L3 | `view of memo.core.wsProtocol` | `wsProtocol` | All WebSocket message types (Server→Client and Client→Server) |
 | L3 | `view of memo.cli.persistor` | `persistor` | Element edit round-trip — browser → server → .sysml → re-parse → broadcast |
 

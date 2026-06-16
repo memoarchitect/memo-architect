@@ -31,7 +31,7 @@ describe('resolveLayerFromPath', () => {
     });
 
     it('handles full paths with /sysml/ segment', () => {
-        expect(resolveLayerFromPath('/some/project/packages/ontology-arch/sysml/software/software.sysml')).toBe('software');
+        expect(resolveLayerFromPath('/some/project/packages/ontology/sysml/software/software.sysml')).toBe('software');
     });
 
     it('returns unknown for files directly under sysml/', () => {
@@ -155,77 +155,5 @@ describe('KindRegistry', () => {
         const registry = new KindRegistry();
         registry.register({ name: 'Hazard', label: 'Hazard', layer: 'safety', sysmlConstruct: 'part def' });
         expect(registry.getComplianceGroups()).toHaveLength(0);
-    });
-});
-
-// ─── KindRegistry Integration: ontology-arch ─────────────────────────────────────
-
-// SKIP: ontology-arch/sysml deleted in c22b2e3 (moved to top-level ontology/).
-describe.skip('KindRegistry integration with ontology-arch', () => {
-    let registry: KindRegistry;
-
-    beforeAll(async () => {
-        const coreDir = resolve(__dirname, '../../../ontology-arch/sysml');
-        const sysmlFiles = getSysmlFiles(coreDir);
-
-        const result = await parseFiles(sysmlFiles, resolve(__dirname, '../../../ontology-arch'));
-        expect(result.errors).toHaveLength(0);
-
-        registry = new KindRegistry();
-        registry.populateFromDocuments(result.documents);
-    });
-
-    it('discovers kinds from ontology-arch SysML files', () => {
-        // ontology-arch has ~40+ kinds across 11 layers
-        expect(registry.size).toBeGreaterThan(30);
-    });
-
-    it('resolves operational kinds correctly', () => {
-        const system = registry.getKind('System');
-        expect(system).toBeDefined();
-        expect(system!.layer).toBe('operational');
-        expect(system!.sysmlConstruct).toBe('part def');
-
-        const actor = registry.getKind('Actor');
-        expect(actor).toBeDefined();
-        expect(actor!.layer).toBe('operational');
-    });
-
-    it('resolves verification-layer kinds correctly', () => {
-        const req = registry.getKind('Requirement');
-        expect(req).toBeDefined();
-        expect(req!.layer).toBe('verification');
-        expect(req!.sysmlConstruct).toBe('part def');
-    });
-
-    it('resolves functional-layer kinds correctly', () => {
-        const fn = registry.getKind('Function');
-        expect(fn).toBeDefined();
-        expect(fn!.layer).toBe('functional');
-        expect(fn!.sysmlConstruct).toBe('part def');
-    });
-
-    it('resolves software-layer kinds correctly', () => {
-        const sw = registry.getKind('SoftwareComponent');
-        expect(sw).toBeDefined();
-        expect(sw!.layer).toBe('software');
-    });
-
-    it('resolves logical-layer kinds correctly', () => {
-        const lc = registry.getKind('LogicalComponent');
-        expect(lc).toBeDefined();
-        expect(lc!.layer).toBe('logical');
-    });
-
-    it('tracks specialization (superType)', () => {
-        const envCtx = registry.getKind('EnvironmentContext');
-        expect(envCtx).toBeDefined();
-        expect(envCtx!.superType).toBe('System');
-    });
-
-    it('connection defs are NOT registered as kinds', () => {
-        // Connection defs (e.g. TraceTo, Aggregation) should not be in KindRegistry
-        expect(registry.has('TraceTo')).toBe(false);
-        expect(registry.has('Aggregation')).toBe(false);
     });
 });
