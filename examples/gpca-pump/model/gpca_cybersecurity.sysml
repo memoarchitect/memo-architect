@@ -42,7 +42,7 @@ package memo {
                     attribute name = "MaintenancePortBoundary";
                     attribute boundaryType = "service-access";
                     attribute crossingDescription = "Boundary between service tooling and therapy controller runtime.";
-                    attribute boundaryLayer = "physical_interfaces";
+                    attribute boundaryLayer = "interfaces";
                 }
 
                 part unauthorizedConfigChangeThreat : Threat {
