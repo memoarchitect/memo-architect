@@ -22,8 +22,8 @@ package memo {
                     part selectionQuery {
                         attribute id = "QRY-LOG-001";
                         attribute name = "GPCA_LogicalArchitectureQuery";
-                        attribute includeElementKinds = {"LogicalComponent", "LogicalInterface", "Function"};
-                        attribute includeLayers = {"functions", "logical_structure", "logical_interfaces"};
+                        attribute includeElementKinds = {"LogicalComponent", "Interface", "Function"};
+                        attribute includeLayers = {"functions", "logical_structure", "interfaces"};
                         attribute selectionExpression = "product == 'GPCA' and concern contains therapy control";
                         attribute rationaleText = "Auto-populate the GPCA logical architecture view from the core product model.";
                     }
