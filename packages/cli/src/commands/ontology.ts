@@ -9,11 +9,87 @@
 
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { basename, dirname, extname, relative, resolve } from 'node:path';
+import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 import chalk from 'chalk';
 import type { MEMOConfig } from '@memo/core';
 import { findConfigFile, loadOntologyRegistries, exportToOwlTurtle, exportToOwlXml } from '@memo/core';
 import { loadAndResolveConfig, loadConfigChain, type ConfigChainEntry } from '../server/config-resolver.js';
+
+// ─── memo ontology add-kind ──────────────────────────────────────────────────
+
+export function ontologyAddKindCommand(name: string, options: { layer: string; output?: string }): void { // sync — no async needed
+    const cwd = process.cwd();
+
+    // Validate kind name: must be a valid PascalCase identifier
+    if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
+        console.error(chalk.red(`❌ Kind name "${name}" must be a PascalCase identifier (e.g. MyKind).`));
+        process.exit(1);
+    }
+
+    // Validate layer: only word chars and slashes
+    const layer = options.layer.trim();
+    if (!/^[A-Za-z][A-Za-z0-9_/]*$/.test(layer)) {
+        console.error(chalk.red(`❌ Layer "${layer}" must be alphanumeric (e.g. requirements or architecture/requirements).`));
+        process.exit(1);
+    }
+
+    // Derive package namespace segment from layer path (last segment)
+    const layerSegments = layer.split('/');
+    const packageSegment = layerSegments[layerSegments.length - 1];
+
+    // Derive outer namespace from config if available, else 'local'
+    let namespace = 'local';
+    const configPath = findConfigFile(cwd);
+    if (configPath) {
+        try {
+            const cfg = loadAndResolveConfig(configPath);
+            if (cfg?.ontologyMetadata?.id) namespace = cfg.ontologyMetadata.id.replace(/^@[^/]+\//, '').replace(/[^A-Za-z0-9_]/g, '_');
+            else if (cfg?.projectName) namespace = (cfg.projectName as string).replace(/[^A-Za-z0-9_]/g, '_');
+        } catch {
+            // ignore — fall back to 'local'
+        }
+    }
+
+    // Build output path
+    const outputDir = options.output
+        ? resolve(cwd, options.output)
+        : resolve(cwd, 'ontology', layer);
+    const fileName = `${name}.sysml`;
+    const outputPath = join(outputDir, fileName);
+
+    if (existsSync(outputPath)) {
+        console.error(chalk.yellow(`⚠  ${outputPath} already exists. Delete it first to regenerate.`));
+        process.exit(1);
+    }
+
+    mkdirSync(outputDir, { recursive: true });
+
+    // Build package nesting from layer path segments
+    const openPkgs = layerSegments.map((seg, i) => `${'    '.repeat(i + 1)}package ${seg} {`).join('\n');
+    const closePkgs = layerSegments.map((_, i) => `${'    '.repeat(layerSegments.length - i)}}`)  .join('\n');
+    const indent = '    '.repeat(layerSegments.length + 1);
+
+    const content = [
+        `package ${namespace} {`,
+        openPkgs,
+        `${indent}private import memo::core::common::*;`,
+        `${indent}private import memo::core::enumerations::*;`,
+        '',
+        `${indent}part def ${name} specializes TraceableElement {`,
+        `${indent}    attribute doc : String;`,
+        `${indent}}`,
+        closePkgs,
+        '}',
+        '',
+    ].join('\n');
+
+    writeFileSync(outputPath, content, 'utf-8');
+
+    console.log(chalk.bold(`\n◎ MEMO Ontology — add-kind\n`));
+    console.log(chalk.cyan(`  Kind:  `) + name);
+    console.log(chalk.cyan(`  Layer: `) + layer);
+    console.log(chalk.green(`\n✅ Written to ${relative(cwd, outputPath)}\n`));
+}
 
 export async function ontologyShowCommand(): Promise<void> {
     const cwd = process.cwd();

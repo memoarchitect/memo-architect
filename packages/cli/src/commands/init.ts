@@ -1,4 +1,5 @@
 import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, cpSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 import chalk from 'chalk';
@@ -139,6 +140,34 @@ export function discoverExamples(fromDir: string): AvailableExample[] {
         const parent = dirname(dir);
         if (parent === dir) break;
         dir = parent;
+    }
+
+    // Fallback: check the vendor submodule examples path relative to the CLI package
+    if (results.length === 0) {
+        const cliDir = dirname(fileURLToPath(import.meta.url));
+        const submoduleExamples = resolve(cliDir, '../../../../vendor/memo-sysmlv2/src/examples');
+        if (existsSync(submoduleExamples)) {
+            try {
+                const entries = readdirSync(submoduleExamples, { withFileTypes: true });
+                for (const entry of entries) {
+                    if (!entry.isDirectory()) continue;
+                    const configPath = resolve(submoduleExamples, entry.name, 'memo.config.yaml');
+                    if (!existsSync(configPath)) continue;
+                    try {
+                        const raw = readFileSync(configPath, 'utf-8');
+                        const parsed = parseYaml(raw);
+                        const firstLine = raw.split('\n')[0] ?? '';
+                        const description = firstLine.startsWith('#') ? firstLine.replace(/^#\s*/, '') : '';
+                        results.push({
+                            id: entry.name,
+                            name: parsed?.projectName ?? entry.name,
+                            description,
+                            path: resolve(submoduleExamples, entry.name),
+                        });
+                    } catch { /* skip malformed */ }
+                }
+            } catch { /* skip unreadable */ }
+        }
     }
 
     return results;

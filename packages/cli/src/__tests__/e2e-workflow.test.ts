@@ -727,3 +727,52 @@ describe('E2E: memo round-trip', () => {
         expect(report.tool).toBe('syson');
     });
 });
+
+describe('I-1: memo ontology add-kind', () => {
+    let tmpDir: string;
+
+    beforeAll(() => {
+        tmpDir = mkdtempSync(join(tmpdir(), 'memo-add-kind-'));
+    });
+
+    afterAll(() => {
+        rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('writes a parser-valid .sysml file for a simple layer', () => {
+        run('ontology add-kind MyHazard --layer risk', tmpDir);
+        const outPath = join(tmpDir, 'ontology', 'risk', 'MyHazard.sysml');
+        expect(existsSync(outPath)).toBe(true);
+        const content = readFileSync(outPath, 'utf-8');
+        expect(content).toContain('part def MyHazard specializes TraceableElement');
+        expect(content).toContain('package risk {');
+        expect(content).toContain('private import memo::core::common::*;');
+    });
+
+    it('supports nested layer paths', () => {
+        run('ontology add-kind SafetyControl --layer architecture/risk', tmpDir);
+        const outPath = join(tmpDir, 'ontology', 'architecture', 'risk', 'SafetyControl.sysml');
+        expect(existsSync(outPath)).toBe(true);
+        const content = readFileSync(outPath, 'utf-8');
+        expect(content).toContain('package architecture {');
+        expect(content).toContain('package risk {');
+        expect(content).toContain('part def SafetyControl specializes TraceableElement');
+    });
+
+    it('rejects non-PascalCase kind names', () => {
+        const result = runMayFail('ontology add-kind lowercase --layer risk', tmpDir);
+        expect(result.exitCode).not.toBe(0);
+    });
+
+    it('refuses to overwrite an existing file', () => {
+        // MyHazard.sysml already exists from the first test — second call must fail
+        const result = runMayFail('ontology add-kind MyHazard --layer risk', tmpDir);
+        expect(result.exitCode).not.toBe(0);
+    });
+
+    it('does not write any YAML or JSON files', () => {
+        const entries = readdirSync(join(tmpDir, 'ontology', 'risk'));
+        const nonSysml = entries.filter(f => !f.endsWith('.sysml'));
+        expect(nonSysml).toHaveLength(0);
+    });
+});
