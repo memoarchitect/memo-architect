@@ -36,6 +36,7 @@ const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
 const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
+const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -92,6 +93,8 @@ function UnifiedCanvas() {
                 return <ReviewDashboard />;
             case 'workflow-wizard':
                 return <WorkflowWizard />;
+            case 'import':
+                return <ImportView />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;

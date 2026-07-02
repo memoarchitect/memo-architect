@@ -15,7 +15,7 @@
     "docs:serve": "pdm run docs-serve",
     "docs:build": "pdm run docs-build",
     "memo": "node packages/cli/lib/bin/memo.js",
-    "example:dev": "cd examples/infusion-pump && node ../../packages/cli/lib/bin/memo.js dev --port 3000",
+    "example:dev": "cd vendor/memo-sysmlv2/src/examples/gpca-pump && node ../../../../../packages/cli/lib/bin/memo.js dev --port 3000",
     "setup": "pnpm install && pnpm run build && pdm install",
     "roadmap": "bash scripts/list-roadmap.sh next",
     "roadmap:all": "bash scripts/list-roadmap.sh all",

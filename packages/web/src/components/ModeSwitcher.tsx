@@ -14,6 +14,7 @@ const NAV_MODES = [
     { id: 'dhf', label: 'DHF', icon: '⊞' },
     { id: 'scenario', label: 'Scenarios', icon: '▶' },
     { id: 'ontology', label: 'Ontology', icon: '◉' },
+    { id: 'import', label: 'Import', icon: '↓' },
 ] as const;
 
 type NavModeId = typeof NAV_MODES[number]['id'];
@@ -144,6 +145,7 @@ export function ModeSwitcher() {
         if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
         if (activeView.type === 'scenario-editor') return 'scenario';
         if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') return 'ontology';
+        if (activeView.type === 'import') return 'import';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
         if (activeView.type === 'dashboard') return 'dashboard';
@@ -187,6 +189,10 @@ export function ModeSwitcher() {
                 break;
             case 'ontology':
                 setActiveView({ type: 'ontology' });
+                navigate('/');
+                break;
+            case 'import':
+                setActiveView({ type: 'import' });
                 navigate('/');
                 break;
         }

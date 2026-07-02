@@ -344,6 +344,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
 function resolveWebPackage(cwd: string): string {
     const tryPaths = [
         resolve(cwd, '../../packages/web'),
+        resolve(cwd, '../../../../../packages/web'),
         resolve(cwd, '../web'),
         resolve(cwd, 'node_modules/@memo/web'),
     ];

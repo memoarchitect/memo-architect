@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
-import { FONT } from '../styles/tokens';
 
 // Modes that have a left sidebar explorer
 const EXPLORER_MODES = new Set(['catalog', 'diagram', 'dhf']);
@@ -13,8 +12,6 @@ export function WorkbenchToolbar() {
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const activeMode = useModelStore(s => s.activeMode);
     const navigate = useNavigate();
-    const setBulkImportOpen = useModelStore(s => s.setBulkImportOpen);
-    const connected = useModelStore(s => s.connected);
 
     const showToggle = EXPLORER_MODES.has(activeMode);
 
@@ -61,26 +58,6 @@ export function WorkbenchToolbar() {
             </button>
 
             <div className="flex-1" />
-
-            {/* Import CSV button — only enabled when connected to dev server */}
-            <button
-                onClick={() => setBulkImportOpen(true)}
-                disabled={!connected}
-                title={connected ? 'Bulk import elements from CSV' : 'Connect to dev server to import'}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '4px 12px', borderRadius: 6,
-                    background: connected ? 'rgba(45,212,168,0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${connected ? 'rgba(45,212,168,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                    color: connected ? '#2DD4A8' : 'rgba(255,255,255,0.25)',
-                    fontSize: FONT.xs, cursor: connected ? 'pointer' : 'not-allowed',
-                    transition: 'all 150ms',
-                }}
-                onMouseEnter={e => { if (connected) e.currentTarget.style.background = 'rgba(45,212,168,0.2)'; }}
-                onMouseLeave={e => { if (connected) e.currentTarget.style.background = 'rgba(45,212,168,0.12)'; }}
-            >
-                ↓ Import CSV
-            </button>
 
             <img
                 src="/logo.png"
