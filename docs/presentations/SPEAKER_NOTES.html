@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meMO — Speaker Notes (9 min)</title>
+<style>
+:root { --navy: #0b1e2d; --teal: #2dd4a8; --teal-deep: #168c72; --muted: #5c7188; --warn: #ef9b51; --over: #e05d6f; --paper: #f8fafb; }
+* { box-sizing: border-box; margin: 0; }
+body { font-family: Nunito, Inter, sans-serif; background: #e8ecf0; color: #1a2a3a; line-height: 1.5; }
+
+.controls { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; background: var(--navy); color: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.3); flex-wrap: wrap; }
+.controls-left { display: flex; align-items: center; gap: 10px; }
+.controls h1 { font-size: 0.9rem; font-weight: 900; }
+.controls h1 span { color: var(--teal); }
+.btn { padding: 6px 14px; border: none; border-radius: 6px; font-family: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
+.btn-start { background: var(--teal); color: var(--navy); }
+.btn-start:hover { background: #25c49a; }
+.btn-start.running { background: var(--over); color: #fff; }
+.btn-connect { background: #438ed0; color: #fff; }
+.btn-connect:hover { background: #3578b5; }
+.btn-connect.connected { background: var(--teal-deep); }
+.btn-next { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.btn-next:hover { background: rgba(255,255,255,0.15); }
+.btn-reset { background: none; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); font-size: 0.74rem; padding: 5px 10px; }
+.timer-display { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 900; color: var(--teal); min-width: 70px; text-align: center; }
+.timer-display.warn { color: var(--warn); }
+.timer-display.over { color: var(--over); }
+.progress-info { text-align: right; font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.3; }
+.progress-info strong { color: var(--teal); font-size: 0.8rem; }
+.sync-status { font-size: 0.68rem; color: rgba(255,255,255,0.35); }
+.sync-status.live { color: var(--teal); }
+
+.global-progress { position: sticky; top: 52px; z-index: 19; height: 3px; background: rgba(0,0,0,0.2); }
+.global-progress-bar { height: 100%; background: var(--teal); transition: width 0.3s, background 0.3s; }
+.global-progress-bar.warn { background: var(--warn); }
+.global-progress-bar.over { background: var(--over); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 16px 80px; }
+
+.slide { margin-bottom: 14px; border: 2px solid #d0d8e0; border-radius: 10px; background: #fff; overflow: hidden; transition: all 0.3s; opacity: 0.45; transform: scale(0.98); }
+.slide.active { opacity: 1; transform: scale(1); border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,168,0.2), 0 6px 20px rgba(0,0,0,0.08); }
+.slide.done { opacity: 0.3; transform: scale(0.97); }
+.slide.upcoming { opacity: 0.65; }
+.slide.warn-time { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(239,155,81,0.25); }
+.slide.over-time { border-color: var(--over); animation: pulse-red 1s ease-in-out infinite; }
+@keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 3px rgba(224,93,111,0.2); } 50% { box-shadow: 0 0 0 6px rgba(224,93,111,0.35); } }
+.not-started .slide { opacity: 1; transform: scale(1); }
+
+.slide-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--navy); color: #fff; transition: background 0.3s; }
+.slide.active .slide-header { background: linear-gradient(135deg, #0f3550 0%, var(--navy) 100%); }
+.slide.warn-time .slide-header { background: #5a3400; }
+.slide.over-time .slide-header { background: #5a1020; }
+.slide-header h2 { font-size: 0.84rem; font-weight: 800; }
+.slide-header .time-info { display: flex; align-items: center; gap: 8px; }
+.time-badge { background: rgba(45,212,168,0.15); color: var(--teal); padding: 3px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; }
+.slide-elapsed { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.4); min-width: 36px; text-align: right; }
+.slide.active .slide-elapsed { color: var(--teal); }
+.slide.warn-time .slide-elapsed { color: var(--warn); }
+.slide.over-time .slide-elapsed { color: var(--over); }
+.slide-header.star h2::before { content: "⭐ "; }
+
+.slide-body { display: flex; gap: 16px; padding: 12px 16px; min-height: 90px; }
+.slide-preview { flex: 0 0 320px; height: 180px; border: 1px solid #e0e6ec; border-radius: 6px; overflow: hidden; background: #000; position: relative; }
+.slide-preview iframe { width: 1280px; height: 720px; border: none; transform: scale(0.25); transform-origin: top left; pointer-events: none; }
+.slide-preview .preview-num { position: absolute; bottom: 4px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+.slide-notes { flex: 1; min-width: 0; }
+.slide-notes blockquote { margin: 0 0 8px; padding: 6px 12px; border-left: 3px solid var(--teal); background: #f0fdf9; color: var(--teal-deep); font-size: 0.82rem; font-style: italic; border-radius: 0 4px 4px 0; }
+.slide-notes ul { padding-left: 18px; }
+.slide-notes li { margin-bottom: 4px; font-size: 0.84rem; color: #2a3a4a; }
+.slide-notes li strong { color: var(--navy); }
+.slide-notes code { background: #eef4f7; padding: 1px 5px; border-radius: 3px; font-size: 0.78rem; }
+
+.divider { margin: 16px 0 6px; padding: 6px 16px; text-align: center; color: var(--muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px dashed #c0cad4; }
+
+.kb-hint { position: fixed; bottom: 12px; right: 12px; background: var(--navy); color: rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 6px; font-size: 0.66rem; font-weight: 700; z-index: 30; line-height: 1.6; }
+.kb-hint kbd { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 3px; color: var(--teal); }
+
+@media (max-width: 800px) {
+  .slide-body { flex-direction: column; }
+  .slide-preview { flex: none; width: 100%; height: 160px; }
+  .slide-preview iframe { transform: scale(0.22); }
+}
+@media print { .controls, .global-progress, .kb-hint { display: none; } .slide { opacity: 1 !important; transform: none !important; break-inside: avoid; } body { background: #fff; } }
+</style>
+</head>
+<body class="not-started">
+
+<div class="controls">
+  <div class="controls-left">
+    <h1><span>meMO</span> Timer</h1>
+    <button class="btn btn-connect" id="connectBtn" onclick="connectPresentation()">🔗 Connect to Slides</button>
+    <button class="btn btn-start" id="startBtn" onclick="toggleTimer()">▶ Start</button>
+    <button class="btn btn-next" id="nextBtn" onclick="manualNext()">Next →</button>
+    <button class="btn btn-reset" onclick="resetTimer()">Reset</button>
+    <span class="sync-status" id="syncStatus">not connected</span>
+  </div>
+  <div class="timer-display" id="globalTimer">0:00</div>
+  <div class="progress-info">
+    <strong id="slideCounter">0 / 34</strong><br>
+    <span id="slideLabel">Press Start</span>
+  </div>
+</div>
+<div class="global-progress"><div class="global-progress-bar" id="globalBar" style="width:0%"></div></div>
+
+<div class="container" id="slideContainer"></div>
+
+<div class="kb-hint">
+  <kbd>Space</kbd> / <kbd>→</kbd> next &nbsp; <kbd>S</kbd> start/pause &nbsp; <kbd>R</kbd> reset<br>
+  Auto-syncs when presentation is connected
+</div>
+
+<script>
+const PRES_URL = 'MEMO_Introduction.html';
+
+// Slide data: n=display number, ri=reveal.js index, title, time in seconds, star=key slide, points=talking points (what to SAY)
+const SLIDES = [
+  {n:1, ri:0, title:"Title", time:15,
+   points:["\"Hi, I'm Somesh — I build safety-critical medical device software. This is meMO.\""]},
+
+  {n:2, ri:1, title:"About Me", time:20,
+   points:["Don't narrate the resume — gesture at the devices","\"These four devices taught me that architecture is where safety arguments live or die.\""]},
+
+  {n:3, ri:2, title:"Agenda", time:10,
+   points:["<strong>Don't read the list.</strong> Just say:","\"We'll start with why this problem exists, then I'll show you what meMO does about it.\""]},
+
+  {n:0, section:"Part 1 — The Problem"},
+
+  {n:4, ri:3, title:"Section divider", time:10,
+   points:["\"Here's the thing nobody likes to say out loud: our safety evidence drifts every time the design changes.\""]},
+
+  {n:5, ri:4, title:"Device complexity", time:25,
+   points:["\"Think about what a medical device is today — it's not a scalpel. It's a connected, configurable, software-defined system.\"","\"And unlike a car or a plane, med devices are wildly diverse. A sleep app, a knee robot, a cardiac ablation system — same standard, completely different safety problems. That makes this uniquely hard to harmonize.\"","Land on: \"So as this complexity accumulates — how do we keep safety assured under change?\""]},
+
+  {n:6, ri:5, title:"Fragmented evidence", time:25,
+   points:["Point to each island: \"Requirements talk to tests. Risk talks to controls. Verification talks to evidence. But they don't talk to <em>each other</em>.\"","\"The test is linked to a requirement — but not to the behavior it's supposed to verify. That's the gap.\"","Land: \"The problem isn't too few documents. It's that the links can't be checked for meaning.\""]},
+
+  {n:7, ri:6, title:"Industry context", time:15,
+   points:["Gesture across the three columns — don't explain each","\"Aerospace and automotive anchored their safety cases in architecture. Medical has strong standards — but the architecture model is still missing.\"","\"And our domain is far more diverse — from wellness apps to Class III implants. One standard can't prescribe one architecture approach.\""]},
+
+  {n:8, ri:7, title:"The gap", time:20,
+   points:["Don't read the list. Scan and land on the bottom:","\"What's missing is a shared ontology — one model that connects design, risk, cyber, verification, and evidence. That's the gap meMO fills.\""]},
+
+  {n:9, ri:8, title:"Code-first debt", time:15,
+   points:["\"I'm not anti-code. Code is how we build. But code can't be your architecture document — not for a safety-critical device.\"","\"The goal is not less code — it's better <em>assurance</em> around the code.\""]},
+
+  {n:10, ri:9, title:"Shared model", time:15,
+   points:["\"What we need is a model that's text-first, versioned, diffable — with architecture as the backbone.\"","\"That's what meMO is. Let me show you.\""]},
+
+  {n:0, section:"Part 2 — Introducing meMO"},
+
+  {n:11, ri:10, title:"Section divider", time:5,
+   points:["Advance quickly — the title speaks"]},
+
+  {n:12, ri:11, title:"What meMO is", time:25,
+   points:["Point left: \"SysML v2 gives us the language — packages, parts, requirements, interfaces.\"","Point right: \"meMO specializes that into medical-device meaning — hazards, risk controls, evidence, closure rules.\"","\"The result: design review questions become model queries, not meeting archaeology.\""]},
+
+  {n:13, ri:12, title:"Semantic layer", time:15,
+   points:["Say one line per row — don't elaborate:","\"Typed elements. Typed relationships. Closure rules. That's the semantic layer for regulated medical systems.\""]},
+
+  {n:14, ri:13, title:"The stack", time:20, star:true,
+   points:["Walk top to bottom, one breath each:","\"Ontology — what things mean. Methodology — how to use them. Both released.\"","\"Tools and Architect — parse, check, visualize. Both work in progress.\"","\"You adopt what you need. Today I'll focus on ontology and methodology.\""]},
+
+  {n:15, ri:14, title:"Ontology detail", time:15,
+   points:["\"The ontology gives every safety-relevant thing a type — not a free-text label, a <em>type</em>.\"","\"And it organizes architecture into 18 layers, inspired by Arcadia, with risk and cybersecurity as first-class peers — not afterthoughts.\""]},
+
+  {n:16, ri:15, title:"Methodology detail", time:15,
+   points:["\"So teams don't start with an empty model. They start with a working structure.\"","\"Resolve scope by safety class, pick viewpoints, bind to your project — and the core ontology stays untouched.\""]},
+
+  {n:17, ri:16, title:"Tools detail", time:10,
+   points:["\"This is where it becomes a build step. <code>memo validate</code> in your CI pipeline.\"","\"Still work in progress — but the architecture is there.\""]},
+
+  {n:18, ri:17, title:"Architect detail", time:10,
+   points:["\"For people who don't want to edit SysML text. Same model, six different views. It reads the source — never forks it.\"","\"Work in progress.\""]},
+
+  {n:0, section:"Part 3 — The Ontology"},
+
+  {n:19, ri:18, title:"Section divider", time:5,
+   points:["\"Let me show you what's inside.\""]},
+
+  {n:20, ri:19, title:"Ontology hierarchy", time:10,
+   points:["\"The mental model is deliberately small. Core at the center, architecture around it, methodology on top, your extensions outside.\"","\"One rule: extend by packages. Don't expand the core.\""]},
+
+  {n:21, ri:20, title:"Package shape", time:20, star:true,
+   points:["Walk the colored bars — <strong>name and purpose only, don't read descriptions:</strong>","\"Core gives you the types. Architecture gives you the 18 layers. Methodology tells you how to use them.\"","\"Viewpoints, views, compliance — those are your outputs. And GPCA is a worked example.\""]},
+
+  {n:22, ri:21, title:"Block map", time:10,
+   points:["\"Same thing as a block diagram. One namespace, nested packages, Arcadia-inspired groupings.\"","Advance — don't explain each block"]},
+
+  {n:23, ri:22, title:"Typed links", time:20, star:true,
+   points:["\"This is maybe the most important idea. Layers don't connect with free-form arrows. Every link is a typed connection.\"","\"The name IS the verb. SatisfiedBy. MitigatesHazard. VerifiedBy. ProducesEvidence.\"","\"Because it's data — not a spreadsheet — the RMF view, V&V matrix, and impact analysis all read the same connections.\""]},
+
+  {n:0, section:"Part 4 — Methodology"},
+
+  {n:24, ri:23, title:"Section divider", time:5,
+   points:["\"How do teams actually use this?\""]},
+
+  {n:25, ri:24, title:"Methodology profiles", time:15,
+   points:["\"Five steps — resolve your scope, pick viewpoints, write rules, bind to your project, add your own kinds.\"","\"And the key part: the released ontology never changes. Your extensions live in your namespace.\""]},
+
+  {n:0, section:"Part 5 — GPCA Example"},
+
+  {n:26, ri:25, title:"Section divider", time:5,
+   points:["\"Let me make this concrete.\""]},
+
+  {n:27, ri:26, title:"GPCA intro", time:15,
+   points:["\"GPCA is a public-domain infusion pump benchmark. Class C software. Real enough to be interesting, small enough to show end to end.\"","\"We model one safety thread through it.\""]},
+
+  {n:28, ri:27, title:"Closed thread overview", time:15,
+   points:["Trace left to right with your hand:","\"Clinical need… becomes a requirement… satisfied by architecture… controlled… verified… evidenced… shown in a view.\"","\"That whole chain — typed and checkable.\""]},
+
+  {n:29, ri:28, title:"Compile the argument", time:25, star:true,
+   points:["<strong>⏱ This is your moment — slow down and let the terminal speak.</strong>","Point to each line: \"Hazard without a control. Control without verification. Risk not assessed.\"","\"Two errors. One warning. Thread HZ-001 closed.\"","Pause, then: <strong>\"We compile code every day. We should compile the safety argument too.\"</strong>"]},
+
+  {n:30, ri:29, title:"A closed thread", time:15,
+   points:["Trace the chain visually: \"Hazard → Requirement → Component → Control → Verification → Evidence.\"","\"Every node typed. Every edge is a semantic link. Change impact is computed, not remembered.\""]},
+
+  {n:0, section:"Part 6 — Adoption & Close"},
+
+  {n:31, ri:30, title:"Section divider", time:5,
+   points:["\"So how do you start?\""]},
+
+  {n:32, ri:31, title:"Adoption suggestions", time:15,
+   points:["\"Pick one product slice. Model one thread. Prove it answers a question nobody could answer before.\"","\"Don't try to model everything. Don't buy tooling first. Start with meaning.\""]},
+
+  {n:33, ri:32, title:"Adoption patterns", time:10,
+   points:["\"Whether you're a startup or an enterprise — there's an entry path. Each role comes in through their concern.\""]},
+
+  {n:34, ri:33, title:"Takeaway", time:15, star:true,
+   quote:"Create. Compile. Assure.",
+   points:["\"Author the model. Compile the checks. Keep the safety case assured as the design changes.\"","<strong>Stop talking. Let the slide land.</strong>"]},
+];
+
+// ── Build slide HTML ──
+const container = document.getElementById('slideContainer');
+let slideEls = [];  // only real slides (not section dividers)
+let riToIdx = {};   // reveal index → slideEls index, for sync
+
+SLIDES.forEach((s, i) => {
+  if (s.section) {
+    const d = document.createElement('div');
+    d.className = 'divider';
+    d.textContent = s.section;
+    container.appendChild(d);
+    return;
+  }
+  const el = document.createElement('div');
+  el.className = 'slide';
+  const idx = slideEls.length;
+  el.id = 'slide-' + idx;
+  const hdrCls = s.star ? 'slide-header star' : 'slide-header';
+  let notes = '';
+  if (s.quote) notes += '<blockquote>' + s.quote + '</blockquote>';
+  if (s.points) notes += '<ul>' + s.points.map(p => '<li>' + p + '</li>').join('') + '</ul>';
+  const previewSrc = PRES_URL + '#/' + s.ri;
+  el.innerHTML =
+    '<div class="' + hdrCls + '">' +
+      '<h2>Slide ' + s.n + ' — ' + s.title + '</h2>' +
+      '<div class="time-info"><span class="time-badge">' + s.time + 's</span><span class="slide-elapsed"></span></div>' +
+    '</div>' +
+    '<div class="slide-body">' +
+      '<div class="slide-preview"><iframe data-src="' + previewSrc + '" loading="lazy" style="width:1280px;height:720px;border:none;transform:scale(0.25);transform-origin:top left;pointer-events:none;"></iframe><span class="preview-num">#' + s.n + '</span></div>' +
+      '<div class="slide-notes">' + notes + '</div>' +
+    '</div>';
+  container.appendChild(el);
+  riToIdx[s.ri] = idx;
+  slideEls.push({el, data: s});
+});
+
+// Lazy-load iframes when they scroll near viewport
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const iframe = entry.target.querySelector('iframe[data-src]');
+      if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+    }
+  });
+}, { rootMargin: '400px' });
+slideEls.forEach(s => observer.observe(s.el));
+
+// ── Timer state ──
+let running = false, globalStart = 0, globalElapsed = 0, currentSlideIdx = 0, slideStart = 0, slideElapsed = 0, intervalId = null;
+const TOTAL_TIME = 9 * 60;
+
+function fmt(sec) { const m = Math.floor(sec/60); const s = Math.floor(sec%60); return m + ':' + String(s).padStart(2,'0'); }
+
+function goToSlide(idx) {
+  if (idx < 0 || idx >= slideEls.length) return;
+  currentSlideIdx = idx;
+  slideStart = performance.now();
+  slideElapsed = 0;
+  slideEls.forEach(s => { s.el.querySelector('.slide-elapsed').textContent = ''; });
+  const iframe = slideEls[idx].el.querySelector('iframe[data-src]');
+  if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+  updateUI();
+  slideEls[idx].el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateUI() {
+  const now = performance.now();
+  if (running) { globalElapsed = (now - globalStart)/1000; slideElapsed = (now - slideStart)/1000; }
+  const timerEl = document.getElementById('globalTimer');
+  timerEl.textContent = fmt(globalElapsed);
+  timerEl.className = 'timer-display' + (globalElapsed > TOTAL_TIME ? ' over' : globalElapsed > TOTAL_TIME*0.85 ? ' warn' : '');
+  const bar = document.getElementById('globalBar');
+  bar.style.width = Math.min(100, (globalElapsed/TOTAL_TIME)*100) + '%';
+  bar.className = 'global-progress-bar' + (globalElapsed > TOTAL_TIME ? ' over' : globalElapsed > TOTAL_TIME*0.85 ? ' warn' : '');
+  document.getElementById('slideCounter').textContent = (currentSlideIdx+1) + ' / ' + slideEls.length;
+  const cur = slideEls[currentSlideIdx];
+  if (cur) document.getElementById('slideLabel').textContent = 'Slide ' + cur.data.n + ' — ' + cur.data.title;
+  slideEls.forEach((s,i) => {
+    const el = s.el;
+    el.classList.remove('active','done','upcoming','warn-time','over-time');
+    if (i < currentSlideIdx) { el.classList.add('done'); }
+    else if (i === currentSlideIdx) {
+      el.classList.add('active');
+      const elapsedEl = el.querySelector('.slide-elapsed');
+      if (running) {
+        elapsedEl.textContent = fmt(slideElapsed);
+        if (slideElapsed > s.data.time) el.classList.add('over-time');
+        else if (slideElapsed > s.data.time * 0.7) el.classList.add('warn-time');
+      }
+    } else { el.classList.add('upcoming'); }
+  });
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('startBtn');
+  document.body.classList.remove('not-started');
+  if (!running) {
+    running = true;
+    const now = performance.now();
+    if (globalElapsed === 0) { globalStart = now; slideStart = now; }
+    else { globalStart = now - globalElapsed*1000; slideStart = now - slideElapsed*1000; }
+    intervalId = setInterval(updateUI, 200);
+    btn.textContent = '⏸ Pause'; btn.classList.add('running');
+  } else {
+    running = false; clearInterval(intervalId);
+    btn.textContent = '▶ Resume'; btn.classList.remove('running');
+  }
+  updateUI();
+}
+
+function manualNext() {
+  document.body.classList.remove('not-started');
+  goToSlide(currentSlideIdx + 1);
+}
+
+function resetTimer() {
+  running = false; clearInterval(intervalId);
+  globalElapsed = 0; slideElapsed = 0; currentSlideIdx = 0;
+  document.getElementById('startBtn').textContent = '▶ Start';
+  document.getElementById('startBtn').classList.remove('running');
+  document.getElementById('slideLabel').textContent = 'Press Start';
+  document.body.classList.add('not-started');
+  slideEls.forEach(s => { s.el.querySelector('.slide-elapsed').textContent = ''; });
+  updateUI(); window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── Presentation sync via localStorage ──
+// The presentation writes {index, time} to localStorage('memo-slide') on every slide change.
+// This page listens for the 'storage' event — fires automatically in other same-origin windows.
+
+let syncConnected = false;
+
+function connectPresentation() {
+  const btn = document.getElementById('connectBtn');
+  const status = document.getElementById('syncStatus');
+
+  if (!syncConnected) {
+    // Snapshot current localStorage timestamp so we ignore stale values
+    try {
+      const existing = localStorage.getItem('memo-slide');
+      if (existing) lastSeenTime = JSON.parse(existing).time || 0;
+    } catch(e) {}
+    lastSyncedRi = -1;
+
+    window.addEventListener('storage', onSlideChange);
+    syncConnected = true;
+    btn.textContent = '✓ Listening';
+    btn.classList.add('connected');
+    status.textContent = '● waiting — advance a slide';
+    status.classList.add('live');
+
+    // Also open the presentation if not already open
+    window.open(PRES_URL, 'meMO_Presentation');
+  }
+}
+
+let lastSyncedRi = -1;  // track last synced reveal index
+let lastSeenTime = 0;
+
+function handleSyncedSlide(ri) {
+  if (!(ri in riToIdx)) return;
+  const isActualChange = ri !== lastSyncedRi;
+  if (!isActualChange) return;
+  lastSyncedRi = ri;
+  document.body.classList.remove('not-started');
+  goToSlide(riToIdx[ri]);
+  document.getElementById('syncStatus').textContent = '● synced — slide ' + (ri + 1);
+  // Auto-start timer only on a real advance (not initial load / refocus)
+  if (!running && globalElapsed === 0 && ri > 0) toggleTimer();
+}
+
+function onSlideChange(e) {
+  if (e.key !== 'memo-slide') return;
+  try { handleSyncedSlide(JSON.parse(e.newValue).index); } catch(err) {}
+}
+
+// Fallback: poll localStorage every 300ms in case 'storage' events
+// don't fire (some browsers treat file:// as different origins per file)
+setInterval(() => {
+  if (!syncConnected) return;
+  try {
+    const raw = localStorage.getItem('memo-slide');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.time > lastSeenTime) {
+      lastSeenTime = data.time;
+      handleSyncedSlide(data.index);
+    }
+  } catch(e) {}
+}, 300);
+
+// Keyboard shortcuts (only when NOT typing in an input)
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); manualNext(); }
+  if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleTimer(); }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); resetTimer(); }
+});
+</script>
+</body>
+</html>
