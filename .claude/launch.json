@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "memo-dev",
-      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": ["../../packages/cli/lib/bin/memo.js", "dev", "--no-open", "-p", "3000"],
       "port": 3000,
       "cwd": "examples/gpca-pump"
@@ -14,6 +14,20 @@
       "runtimeArgs": ["-m", "http.server", "4599"],
       "port": 4599,
       "cwd": "docs/presentations"
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8200", "-d", "/Users/poojakashyap/sandbox/github/memoarchitect.github.io"],
+      "port": 8200,
+      "cwd": "."
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "/Users/poojakashyap/Library/Python/3.9/bin/mkdocs",
+      "runtimeArgs": ["serve", "-a", "localhost:8100", "-f", "/Users/poojakashyap/sandbox/github/memo/mkdocs.yml"],
+      "port": 8100,
+      "cwd": "."
     }
   ]
 }
