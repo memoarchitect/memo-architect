@@ -1,9 +1,0 @@
-# GPCA Infusion Pump — submission-grade reference model
-# Based on University of Minnesota CriSys GPCA project
-projectName: gpca-pump
-projectType: device
-
-# Phase H: project pins the GPCA-specific methodology.
-# @memo/methodology-gpca extends @memo/methodology-default and subtracts
-# cybersecurity and SOUP for the non-networked prototype variant.
-methodology: "@memo/methodology-gpca@^1.0"

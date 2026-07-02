@@ -33,9 +33,9 @@ Existing MBSE tools are either too complex (Cameo, Enterprise Architect — mont
 pnpm install
 pnpm run build
 
-# Run the infusion-pump example with live reload
+# Run the gpca-pump example with live reload
 pnpm example:dev
-# → opens http://localhost:3000 with the primary infusion-pump reference model
+# → opens http://localhost:3000 with the GPCA pump reference model
 ```
 
 ### CLI Usage
@@ -142,9 +142,8 @@ memo/
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-├── examples/
-│   ├── infusion-pump/              — Primary infusion-device reference model
-│   └── irrigation-pump/            — Second medical reference model for pressure-control workflows
+├── vendor/
+│   └── memo-sysmlv2/src/examples/gpca-pump/  — GPCA infusion pump reference model (500+ elements)
 ├── ontology/                       — Canonical SysML ontology source
 └── docs/                           — MkDocs documentation site
 ```
@@ -186,12 +185,9 @@ pnpm run type-check   # TypeScript type checking
 # Run the example project (from the repo root)
 pnpm example:dev
 
-# Or validate both medical reference models directly
-cd examples/infusion-pump
-node ../../packages/cli/lib/bin/memo.js validate
-
-cd ../irrigation-pump
-node ../../packages/cli/lib/bin/memo.js validate
+# Or validate the reference model directly
+cd vendor/memo-sysmlv2/src/examples/gpca-pump
+node ../../../../../packages/cli/lib/bin/memo.js validate
 ```
 
 ## Roadmap

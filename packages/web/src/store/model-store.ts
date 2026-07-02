@@ -66,6 +66,7 @@ export type ActiveView =
     | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
+    | { type: 'import' }
     | { type: 'welcome' };
 
 /** A DHF document created by the user in the DHF Workbench */
@@ -318,7 +319,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     selectedDiagramId: null,
     searchTerm: '',
     sidebarCollapsed: false,
-    propertiesPanelCollapsed: false,
+    propertiesPanelCollapsed: true,
     hiddenLayers: new Set<string>(),
     ontologyGroupBy: 'layer' as GroupBy,
     collapsedGroups: new Set<string>(),
