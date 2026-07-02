@@ -32,6 +32,7 @@ import {
     ontologyShowCommand,
     ontologyExportOwlCommand,
     ontologyExportSysandCommand,
+    ontologyAddKindCommand,
 } from '../commands/ontology.js';
 import { importCsvCommand, importRelCsvCommand, importTemplateCommand, importDiffCommand } from '../commands/import.js';
 import { importEaCommand, importCameoCommand } from '../commands/import-ea.js';
@@ -208,6 +209,15 @@ ontologyExportCmd
     .option('-o, --output <dir>', 'Output directory path')
     .action(async (options: { output?: string }) => {
         await ontologyExportSysandCommand(options);
+    });
+
+ontologyCmd
+    .command('add-kind <name>')
+    .description('Write a new SysML kind definition file into the local ontology folder')
+    .requiredOption('-l, --layer <layer>', 'Ontology layer path (e.g. requirements, architecture/risk)')
+    .option('-o, --output <dir>', 'Override output directory (default: ontology/<layer>)')
+    .action((name: string, options: { layer: string; output?: string }) => {
+        ontologyAddKindCommand(name, options);
     });
 
 // ─── memo import ──────────────────────────────────────────────────────────
