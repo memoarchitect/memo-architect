@@ -32,7 +32,7 @@ Pre-checks before any code change:
 Execute:
 - Stay strictly within the story's acceptance criterion. No scope creep.
 - Run tests after each logical change.
-- For Wave 1 SysML edits: imports go through memo::base::stdlib::* only (per ADR-1-13). Filenames are snake_case (per ADR-1-12). Standard SysML v2 syntax only — no Langium-only shorthand.
+- For Wave 1 SysML edits: imports go through memo::core::stdlib::* only (per ADR-1-13). Filenames are snake_case (per ADR-1-12). Standard SysML v2 syntax only — no Langium-only shorthand.
 
 Verify:
 - `pnpm run build && pnpm run test`

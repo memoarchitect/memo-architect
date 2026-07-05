@@ -49,7 +49,7 @@ close_milestone_by_title() {
 #         B..L assumed already in place from #320–#366). ---
 declare -A EPIC_DESC=(
   [A]="Methodology UI IA — Methodology tab primary, Ontology hidden (Wave 4)"
-  [B]="L0 helpers — memo::base::* dimension defs + stdlib wrapper (Wave 1)"
+  [B]="L0 helpers — memo::core::* dimension defs + stdlib wrapper (Wave 1)"
   [C]="Architecture sublayers — memo::ontology::architecture::<layer>::* (Wave 1)"
   [D]="Compliance dimension — memo::ontology::compliance::<standard>::* (Wave 1)"
   [E]="Artifact kinds — concrete DHF document kinds (Wave 1)"
@@ -482,7 +482,7 @@ Medical-device modeling only. Automotive (ISO 26262) and aerospace (DO-178C) are
 - Start Wave 2 work until Wave 1 gate clears.
 - Add UI work to Wave 1 / 2 / 3 epics.
 - Author ontology content directly in YAML (use SysML).
-- Import standard library symbols outside `memo::base::stdlib::*` (per ADR-1-13).
+- Import standard library symbols outside `memo::core::stdlib::*` (per ADR-1-13).
 EOF
 )
 

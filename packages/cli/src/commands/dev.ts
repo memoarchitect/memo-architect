@@ -12,7 +12,7 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor, deriveModelViews } from '@memo/core';
 import type { BuilderRegistries, RestartRequiredMessage, MethodologyDescriptor } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
@@ -187,14 +187,19 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
             `${validation.violations.length} violations, ${completeness.overall}% complete`
         ));
 
-        const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({
+        const viewpoints: ViewpointDTO[] = config.viewpoints?.map(vp => ({
             id: vp.id,
             label: vp.label,
             visibleKinds: vp.visibleKinds,
             visibleRelationships: vp.visibleRelationships,
             visibleLayers: vp.visibleLayers,
             supportedDiagramTypes: vp.supportedDiagramTypes,
-        }));
+        })) ?? [];
+
+        // Views modelled in SysML (DiagramView/DocumentView usages) surface as
+        // viewpoint-grouped auto diagrams alongside config-defined viewpoints.
+        const derivedViews = deriveModelViews(model, ontologyRegistries?.kindRegistry);
+        viewpoints.push(...derivedViews.viewpoints);
 
         const diagrams: DiagramDTO[] = [];
         for (const [layerId, layerElements] of model.elementsByLayer.entries()) {
@@ -210,6 +215,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 elementIds: layerElements.map(e => e.id),
             });
         }
+        diagrams.push(...derivedViews.diagrams);
         if (config.viewpoints) {
             for (const vp of config.viewpoints) {
                 if (vp.diagrams) {

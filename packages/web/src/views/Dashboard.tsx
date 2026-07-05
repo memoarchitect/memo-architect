@@ -34,7 +34,7 @@ interface DashboardStats {
     systemCount: number;
     testCount: number;
     mitigatesCount: number;
-    tracesCount: number;
+    verificationLinkCount: number;
     // Diagrams
     diagramCount: number;
     // Project name
@@ -61,19 +61,43 @@ function computeDashboardStats(model: MemoModelDTO, violations: number, complete
         totalRelationships: model.relationships.length,
         violations,
         completenessPercent,
-        riskCount: layerCounts['risk'] || 0,
+        riskCount: (layerCounts['risk'] || 0) + (layerCounts['analysis'] || 0),
         requirementsCount: layerCounts['requirements'] || 0,
-        architectureCount: (layerCounts['logical'] || 0) + (layerCounts['physical'] || 0) + (layerCounts['functional'] || 0),
-        verificationCount: layerCounts['verification'] || 0,
+        // Architecture spans both the legacy Apollo-11 layer names and the
+        // memo ontology layer directories (src/architecture/<layer>/)
+        architectureCount: [
+            'logical', 'physical', 'functional',
+            'logical_structure', 'software_structure', 'hardware_structure',
+            'functions', 'interfaces', 'system', 'context', 'operational', 'behavior',
+        ].reduce((sum, l) => sum + (layerCounts[l] || 0), 0),
+        verificationCount: (layerCounts['verification'] || 0) + (layerCounts['assurance'] || 0),
         hazardCount: kindLower['hazard'] || 0,
-        requirementCount: (kindLower['systemrequirement'] || 0) + (kindLower['requirement'] || 0),
+        // All ontology requirement defs: Requirement, SystemRequirement,
+        // SoftwareRequirement, HardwareRequirement, SecurityRequirement
+        requirementCount: Object.entries(kindLower)
+            .filter(([k]) => k.endsWith('requirement'))
+            .reduce((sum, [, n]) => sum + n, 0),
         riskControlCount: kindLower['riskcontrol'] || 0,
-        systemCount: (kindLower['system'] || 0) + (kindLower['subsystem'] || 0),
-        testCount: kindLower['test'] || 0,
-        mitigatesCount: relTypeCounts['mitigates'] || 0,
-        tracesCount: (relTypeCounts['satisfies'] || 0) + (relTypeCounts['refines'] || 0) + (relTypeCounts['traces'] || 0),
+        systemCount: (kindLower['system'] || 0) + (kindLower['subsystem'] || 0)
+            + (kindLower['softwaresystem'] || 0) + (kindLower['logicalcomponent'] || 0)
+            + (kindLower['hardwareassembly'] || 0) + (kindLower['softwarecomponent'] || 0)
+            + (kindLower['processingnode'] || 0),
+        // Ontology verification kinds (VerificationCase, ValidationCase,
+        // TestArtifact) plus the legacy "Test" kind
+        testCount: (kindLower['verificationcase'] || 0) + (kindLower['validationcase'] || 0)
+            + (kindLower['testartifact'] || 0) + (kindLower['test'] || 0),
+        // Relationship names vary between legacy ("mitigates") and ontology
+        // ("MitigatesHazard", "MitigatedByControl") conventions
+        mitigatesCount: Object.entries(relTypeCounts)
+            .filter(([t]) => t.startsWith('mitigat'))
+            .reduce((sum, [, n]) => sum + n, 0),
+        // Verification traceability: VerifiedBy, Validates, TestedByUsability
+        // (ontology) or legacy "verifies"
+        verificationLinkCount: Object.entries(relTypeCounts)
+            .filter(([t]) => t.startsWith('verif') || t.startsWith('validate') || t === 'testedbyusability')
+            .reduce((sum, [, n]) => sum + n, 0),
         diagramCount: model.diagrams?.length ?? 0,
-        projectName: (model as any).projectName || (model as any).name || 'My Device Project',
+        projectName: model.metadata?.projectName || (model as any).projectName || (model as any).name || 'My Device Project',
     };
 }
 
@@ -115,7 +139,7 @@ function computeNextAction(stats: DashboardStats): NextAction {
         return {
             icon: '🔗',
             title: 'Connect hazards to risk controls',
-            description: `You have ${stats.hazardCount} hazard(s) but no Mitigates relationships. Connect hazards to risk controls to complete the ISO 14971 chain.`,
+            description: `You have ${stats.hazardCount} hazard(s) but no MitigatesHazard relationships. Connect hazards to risk controls to complete the ISO 14971 chain.`,
             urgency: 'high',
         };
     }
@@ -123,7 +147,7 @@ function computeNextAction(stats: DashboardStats): NextAction {
         return {
             icon: '🏗️',
             title: 'Define your system architecture',
-            description: 'No System or Subsystem elements found. Add an architecture layer to ground your requirements and risk analysis.',
+            description: 'No architecture components found (SoftwareSystem, LogicalComponent, HardwareAssembly, …). Add an architecture layer to ground your requirements and risk analysis.',
             urgency: 'medium',
         };
     }
@@ -131,15 +155,15 @@ function computeNextAction(stats: DashboardStats): NextAction {
         return {
             icon: '🧪',
             title: 'Add verification tests',
-            description: `${stats.requirementCount} requirement(s) have no verification tests yet. Add Tests and link them to requirements.`,
+            description: `${stats.requirementCount} requirement(s) have no verification tests yet. Add VerificationCases and link them to requirements with VerifiedBy.`,
             urgency: 'medium',
         };
     }
-    if (stats.tracesCount === 0 && stats.testCount > 0) {
+    if (stats.verificationLinkCount === 0 && stats.testCount > 0) {
         return {
             icon: '↔️',
             title: 'Link tests to requirements',
-            description: 'Tests exist but no traceability links found. Open the Traceability Matrix to connect tests to their requirements.',
+            description: 'Verification cases exist but no VerifiedBy links found. Open the Traceability Matrix to connect tests to their requirements.',
             urgency: 'medium',
         };
     }
@@ -259,7 +283,8 @@ export function Dashboard() {
 
     const violationCount = validation?.violations?.length ?? 0;
     const completenessPercent = useMemo(() => {
-        if (!completeness?.layers) return 0;
+        if (typeof completeness?.overall === 'number') return Math.round(completeness.overall);
+        if (!completeness?.layers || completeness.layers.length === 0) return 0;
         const avg = completeness.layers.reduce((sum: number, l: any) => sum + (l.completeness || 0), 0) / completeness.layers.length;
         return Math.round(avg);
     }, [completeness]);

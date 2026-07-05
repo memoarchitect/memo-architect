@@ -25,7 +25,11 @@ export interface LayoutResult {
 
 export async function computeLayout(
     model: MemoModelDTO,
-    options?: { viewpointFilter?: (el: MemoElement) => boolean }
+    options?: {
+        viewpointFilter?: (el: MemoElement) => boolean;
+        /** Relationship types declared by the view; when given, only these are drawn */
+        relationshipTypes?: string[];
+    }
 ): Promise<LayoutResult> {
     const elements = Object.values(model.elements);
     const visibleElements = options?.viewpointFilter
@@ -34,8 +38,13 @@ export async function computeLayout(
 
     const visibleIds = new Set(visibleElements.map(e => e.id));
 
+    const declaredRelTypes = options?.relationshipTypes?.length
+        ? new Set(options.relationshipTypes.map(t => t.toLowerCase()))
+        : undefined;
+
     const visibleRelationships = model.relationships.filter(
         r => visibleIds.has(r.sourceId) && visibleIds.has(r.targetId)
+            && (!declaredRelTypes || declaredRelTypes.has(r.type.toLowerCase()))
     );
 
     // Choose direction based on element count — vertical for smaller sets,
@@ -47,8 +56,10 @@ export async function computeLayout(
     const nodeSpacing = n > 40 ? '24' : n > 20 ? '32' : '40';
     const layerSpacing = n > 40 ? '60' : n > 20 ? '80' : '100';
 
-    // Estimate node width from name length for better layout
-    const nodeWidth = (el: MemoElement) => Math.max(el.name.length * 7.5 + 48, 130);
+    // Estimate node width from the longer of name and kind label so long kind
+    // tags (e.g. HARDWAREASSEMBLY) don't overflow the box
+    const nodeWidth = (el: MemoElement) =>
+        Math.max(el.name.length * 7.5 + 48, el.kind.length * 6.8 + 48, 130);
     const nodeHeight = 52;
 
     // Build ELK graph — flat layout with relationship-driven layering
@@ -67,6 +78,10 @@ export async function computeLayout(
             // Wrap long chains to prevent extreme width/height
             'elk.layered.wrapping.strategy': 'MULTI_EDGE',
             'elk.layered.wrapping.additionalEdgeSpacing': '16',
+            // Pack disconnected islands into a compact block instead of a strip
+            'elk.separateConnectedComponents': 'true',
+            'elk.spacing.componentComponent': '56',
+            'elk.aspectRatio': '1.6',
             'elk.padding': '[top=20, left=20, bottom=20, right=20]',
         },
         children: visibleElements.map(el => ({
@@ -105,14 +120,18 @@ export async function computeLayout(
     // Convert to ReactFlow edges — styled by relationship type
     const edges: Edge[] = visibleRelationships.map((rel, i) => {
         const relColor = REL_COLORS[rel.type] || '#9CA3AF';
+        const typeLower = rel.type.toLowerCase();
         const isFlow = rel.type === 'flow';
         const isSuccession = rel.type === 'succession';
-        const isDecomp = rel.type === 'composedOf' || rel.type === 'decomposedBy' || rel.type === 'aggregation';
+        const isDecomp = typeLower === 'composedof' || typeLower === 'decomposedby'
+            || typeLower === 'aggregation' || typeLower === 'composes';
         return {
             id: `e-${i}`,
             source: rel.sourceId,
             target: rel.targetId,
-            label: rel.type,
+            // Structural edges are self-explanatory from the arrow — dropping
+            // their repeated labels is what keeps dense trees readable
+            label: isDecomp ? undefined : rel.type,
             type: isSuccession ? 'smoothstep' : 'default',
             animated: isFlow,
             style: {

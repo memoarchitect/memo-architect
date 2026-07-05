@@ -2,6 +2,12 @@
 //
 // Registry of 18 regulated document types for medical device Design History File.
 // Each document type has a unique ID, title, standard references, and section defs.
+//
+// Terminology note: "DHF" is the FDA's legacy QSR term (21 CFR 820.30(j)). Under
+// QMSR (effective Feb 2026), which incorporates ISO 13485:2016 by reference, the
+// equivalent record is the "design and development file" (ISO 13485 §7.3.10) —
+// the regulation text no longer says "DHF". Kept as "DHF" here since that's still
+// the term practitioners and eQMS tooling use; not a functional distinction.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** A section within a DHF document template */
@@ -339,6 +345,26 @@ export function getAllDocumentIds(): string[] {
 
 const ARTIFACT_KIND_TO_DHF: Record<string, string> = {
     RiskManagementPlan: 'rmp',
+    RequirementsSpecification: 'dip',
+    SystemArchitectureDescription: 'sad',
+    SoftwareDesignDescription: 'sds',
+    HazardAnalysisReport: 'har',
+    RequirementsTraceabilityMatrix: 'rtm',
+    TestProtocol: 'vvp',
+    TestReport: 'vvr',
+    EvidenceRecord: 'dhf-index',
+    CybersecurityAssessmentReport: 'cybersecurity',
+    ThreatModelReport: 'cybersecurity',
+    UsabilityEngineeringReport: 'uer',
+    ClinicalSafetyReport: 'csr',
+    FailureModeEffectsAnalysisReport: 'fmea',
+    SoupList: 'soup',
+    DesignInputPlan: 'dip',
+    DesignOutputPlan: 'dop',
+    SoftwareDevelopmentPlan: 'sdp',
+    LabelingSpecification: 'labeling',
+    DesignHistoryFileIndex: 'dhf-index',
+    DesignChangeLog: 'change-log',
 };
 
 /**

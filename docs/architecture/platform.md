@@ -53,7 +53,7 @@ L0 is the only layer that is repo-private helpers. L1 and L2 are publishable pac
 ## 3. Dimensions and how kinds attach to them
 
 ```sysml
-package memo::base::dimensions {
+package memo::core::dimensions {
     enum def DimensionKind { enum architecture; enum compliance; enum artifact; enum viewpoint; }
 
     part def ElementKind :> TraceableElement {
@@ -193,7 +193,7 @@ Forks `@memo/methodology-default`. Demonstrates:
 
 ```sysml
 package memo::methodology::default::scope {
-    private import memo::base::*;
+    private import memo::core::*;
 
     part defaultLayerSet : MethodologyLayerSet {
         attribute layers = {
@@ -243,8 +243,10 @@ package memo::methodology::default::scope {
 
 ### 5.4 GPCA tailoring
 
+GPCA's methodology now lives under `src/examples/gpca-pump/methodology/` — self-contained within the example, extending the shared default methodology rather than living under `memo::methodology::*` directly.
+
 ```sysml
-package memo::methodology::gpca::scope {
+package memo::examples::gpca::methodology_scope {
     private import memo::methodology::default::scope::*;
 
     part gpcaScope : MethodologyScope {

@@ -6,6 +6,10 @@
 
 ---
 
+> **Update (2026-07):** following the `src/base` → `src/core` merge (see [ADR-1-12](ADR-1-12-namespace-canonicalization.md)), the wrapper lives at `memo::core::stdlib::*`. All `memo::base::stdlib::*` references below are historical; the wrapper's design and lint rule are unchanged.
+
+---
+
 ## Context
 
 The SysML v2 standard library (`ScalarValues`, `BaseFunctions`, `Collections`, etc.) is referenced under different qualified-name roots across the OMG pilot release, SysON, SysIDE, and Sysand `.kpar` resolution. Hardcoding any one form in 200+ ontology files locks MEMO to one implementation and forces a project-wide codemod every time a tool revs.

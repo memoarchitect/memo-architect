@@ -34,7 +34,7 @@ function collectSysmlFiles(dir: string): string[] {
 }
 
 const EXAMPLES_ROOT = resolve(__dirname, '../../../../examples');
-const STDLIB_WRAPPER_DIR = resolve(ONTOLOGY_ROOT, 'base', 'stdlib');
+const STDLIB_WRAPPER_DIR = resolve(ONTOLOGY_ROOT, 'core', 'stdlib');
 
 const KERNEL_LIBRARY_PACKAGES = [
     'ScalarValues', 'BaseFunctions', 'Collections',
@@ -107,7 +107,7 @@ describe('DD-2: no kernel-path standard library imports outside stdlib wrapper (
             KERNEL_IMPORT_RE.lastIndex = 0;
             while ((m = KERNEL_IMPORT_RE.exec(source)) !== null) {
                 const line = source.slice(0, m.index).split('\n').length;
-                violations.push(`line ${line}: import of '${m[1]}' — use memo::base::stdlib::* instead`);
+                violations.push(`line ${line}: import of '${m[1]}' — use memo::core::stdlib::* instead`);
             }
             if (violations.length > 0) {
                 throw new Error(

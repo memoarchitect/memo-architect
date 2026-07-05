@@ -448,7 +448,7 @@ description: "Another fake ontology"
 });
 
 describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
-    const GPCA_DIR = join(REPO_ROOT, 'examples', 'gpca-pump');
+    const GPCA_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'examples', 'gpca-pump');
     let extractDir: string;
 
     function collectSysmlFiles(dir: string): string[] {
@@ -489,7 +489,11 @@ describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
 
     it('manifest lists all source SysML files', () => {
         const manifest = JSON.parse(readFileSync(join(extractDir, 'manifest.json'), 'utf-8'));
-        const sourceFiles = collectSysmlFiles(join(GPCA_DIR, 'model'));
+        // The kpar packs every source dir of the project (model/ + methodology/).
+        const sourceFiles = [
+            ...collectSysmlFiles(join(GPCA_DIR, 'model')),
+            ...collectSysmlFiles(join(GPCA_DIR, 'methodology')),
+        ];
         const manifestSysml = (manifest.files as string[]).filter((f: string) => f.endsWith('.sysml'));
 
         expect(manifest.format).toBe('kpar');

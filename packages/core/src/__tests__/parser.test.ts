@@ -512,7 +512,7 @@ describe('Architecture fixture: view and presentation syntax', () => {
     it('parses view def with scalar presentationKind fallback entries', async () => {
         const model = await parseValid(`
             package risk_management {
-                import memo::base::stdlib::*;
+                import memo::core::stdlib::*;
 
                 view def RiskMatrixView :> DiagramView {
                     attribute presentationKind = PresentationKind::riskTable;
@@ -531,7 +531,7 @@ describe('Architecture fixture: view and presentation syntax', () => {
     it('parses private import visibility modifiers', async () => {
         const model = await parseValid(`
             package risk_management {
-                private import memo::base::stdlib::*;
+                private import memo::core::stdlib::*;
             }
         `);
         const pkg = model.members[0] as PackageDeclaration;

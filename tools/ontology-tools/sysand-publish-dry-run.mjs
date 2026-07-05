@@ -1,7 +1,7 @@
 // ─── Sysand Publish Dry-Run ─────────────────────────────────────────────────
 //
 // Simulates `sysand publish --dry-run` for MEMO's three publishable packages:
-//   - @memo/sysml-base       (L0: ontology/base + ontology/core)
+//   - @memo/sysml-base       (L0: ontology/core)
 //   - @memo/ontology          (L1: ontology/architecture + compliance + manifest + viewpoints + views + root)
 //   - @memo/methodology-default (L2: ontology/methodology)
 //
@@ -37,7 +37,7 @@ const PACKAGES = [
         version: '0.1.0',
         level: 'L0',
         description: 'MEMO SysML v2 base helpers — common types, enumerations, dimensions, methodology scope definitions.',
-        dirs: ['base', 'core'],
+        dirs: ['core'],
         usage: ['kinds', 'enumerations', 'dimensions'],
         dependencies: [],
         license: 'Apache-2.0',
@@ -47,7 +47,7 @@ const PACKAGES = [
         version: '0.1.0',
         level: 'L1',
         description: 'MEMO medical device ontology — architecture layers, compliance, risk, viewpoints, and relationships.',
-        dirs: ['architecture', 'compliance', 'viewpoints', 'views'],
+        dirs: ['architecture', 'compliance', 'viewpoints'],
         rootFiles: ['medical_device_library.sysml'],
         usage: ['kinds', 'relationships', 'viewpoints'],
         dependencies: ['urn:kpar:memo-sysml-base'],
