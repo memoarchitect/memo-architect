@@ -227,8 +227,22 @@ export function buildMemoModel(
         }
     }
 
-    // Phase 4: Validate relationship end types (warnings only)
+    // Phase 4: Validate relationship end types (warnings only).
+    // A kind conforms to an end type if it equals it or specializes it
+    // (transitively) — e.g. HardwareAssembly conforms to ArchitectureElement.
     if (registries?.relationshipRegistry) {
+        const conformsTo = (kind: string, expected: string): boolean => {
+            let current: string | undefined = kind;
+            const seen = new Set<string>();
+            while (current && !seen.has(current)) {
+                if (current === expected) return true;
+                seen.add(current);
+                current = registries.kindRegistry?.getKind(current)?.superType;
+            }
+            // Legacy fallback when the kind hierarchy is unknown to the registry
+            return kind.endsWith(expected);
+        };
+
         for (const rel of relationships) {
             const regEntry = registries.relationshipRegistry.getRelType(rel.type);
             if (!regEntry || regEntry.ends.length === 0) continue;
@@ -245,8 +259,7 @@ export function buildMemoModel(
                 const el = endIndex === 0 ? sourceEl : targetEl;
                 if (!el) continue;
 
-                // Check if element kind matches the expected type
-                if (el.kind !== end.type && !el.kind.endsWith(end.type)) {
+                if (!conformsTo(el.kind, end.type)) {
                     errors.push({
                         message: `[well-formedness] Relationship "${rel.type}" expects ${end.name} to be ${end.type}, but found ${el.kind}`,
                         file: rel.file ?? '',
@@ -391,6 +404,23 @@ function extractUsage(
 
     const attributes = extractAttributes(usage.body);
     const doc = extractDocComment(usage.body);
+
+    // Nested part members: capture reference bindings (`part viewpoint :> vp;`)
+    // and one level of nested part bodies (`part selectionQuery { ... }`) as
+    // plain / prefixed attributes, so SysML-modelled views expose their
+    // viewpoint binding and selection-query metadata to consumers.
+    for (const member of usage.body || []) {
+        if ((member as any).$type !== 'PartMember') continue;
+        const pm = member as any;
+        if (pm.boundRef && pm.name) {
+            attributes[pm.name] = pm.boundRef;
+        } else if (pm.body && pm.name) {
+            const nested = extractAttributes(pm.body);
+            for (const [k, v] of Object.entries(nested)) {
+                attributes[`${pm.name}.${k}`] = v;
+            }
+        }
+    }
 
     // Human-readable name: prefer "attribute redefines name" over usage name
     const displayName = attributes['name'] || attributes['title'] || id;
@@ -833,6 +863,12 @@ function extractAttributeValue(value: any): string {
             return (value as BooleanValue).value;
         case 'EnumValue':
             return (value as EnumValue).enumRef;
+        case 'SetLiteral':
+            // { A, B, "c" } → "A, B, c" — keeps attributes flat and readable
+            return ((value.elements ?? []) as any[])
+                .map(el => el.value ?? (el.stringValue ?? '').replace(/^"|"$/g, ''))
+                .filter((s: string) => s.length > 0)
+                .join(', ');
         default:
             return String(value);
     }

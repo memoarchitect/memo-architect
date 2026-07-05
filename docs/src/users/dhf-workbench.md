@@ -2,6 +2,8 @@
 
 The MEMO DHF Workbench provides a centralized, model-driven environment for generating and managing regulated documentation for medical device development.
 
+> **Terminology note:** "DHF" comes from the FDA's legacy Quality System Regulation (21 CFR 820.30(j)). FDA's QMSR (Quality Management System Regulation, effective February 2026) replaces most of Part 820 by incorporating ISO 13485:2016 by reference, and ISO 13485 §7.3.10 calls the equivalent record the **"design and development file"** rather than "DHF." MEMO keeps "DHF" as the primary term throughout the UI and codebase because it remains the term practitioners and eQMS tooling use day to day — but be aware the current regulation text itself says "design and development file."
+
 ![DHF Dashboard](../images/screenshots/dhf-dashboard.png)
 *The DHF Dashboard showing completeness metrics across 18 document types.*
 

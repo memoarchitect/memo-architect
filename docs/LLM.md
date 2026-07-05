@@ -8,8 +8,8 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
 2. [architecture/platform.md](architecture/platform.md) for the canonical architecture.
 3. [decisions/index.md](decisions/index.md) for accepted and superseded ADRs. Pay special attention to:
    - **ADR-1-11** — single canonical `@memo/ontology`.
-   - **ADR-1-12** — namespace canonicalization (`memo::base::*`, `memo::ontology::*`, `memo::methodology::*`); snake_case filenames; SysON / SysIDE / Sysand interop binding.
-   - **ADR-1-13** — standard library import wrapper at `memo::base::stdlib::*`. Ontology + methodology files MUST NOT import kernel paths directly.
+   - **ADR-1-12** — namespace canonicalization (`memo::core::*`, `memo::ontology::*`, `memo::methodology::*`); snake_case filenames; SysON / SysIDE / Sysand interop binding.
+   - **ADR-1-13** — standard library import wrapper at `memo::core::stdlib::*`. Ontology + methodology files MUST NOT import kernel paths directly.
    - **ADR-1-14** — medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*`. Automotive and aerospace are out of scope.
 4. [design/sysmlv2-rulebook.md](design/sysmlv2-rulebook.md) before editing `.sysml`.
 5. GitLab issue [#367 "Roadmap Overview"](https://gitlab.com/somesh_sandbox/memo/-/issues/367) for the wave plan and epic index. Local `docs/roadmap/epic-*.md` and `docs/roadmap/index.md` have been removed — GitLab is the sole source of truth for roadmap content.
@@ -91,5 +91,5 @@ A reusable prompt template lives at [roadmap/story-prompt.md](roadmap/story-prom
 - New ADRs increment the highest existing number; supersede instead of rewriting.
 - Avoid duplicate plan files. Prefer updating the canonical doc and linking from indexes.
 - Standard SysML v2 conformance is binding (per ADR-1-12). Do not introduce Langium-only shorthand outside the grammar package itself.
-- Standard library symbols MUST be imported via `memo::base::stdlib::*` (per ADR-1-13).
+- Standard library symbols MUST be imported via `memo::core::stdlib::*` (per ADR-1-13).
 - Filenames are snake_case; hyphens forbidden in path segments (per ADR-1-12).

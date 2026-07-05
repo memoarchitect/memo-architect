@@ -7,6 +7,10 @@
 
 ---
 
+> **Update (2026-07):** `src/base/*` was merged into `src/core/*`. Every `memo::base::*` reference below (L0 helpers, `memo::base::stdlib::*`, etc.) now resolves as `memo::core::*`. The three-segment scheme and directory-mirrors-namespace rule this ADR establishes are otherwise unchanged; this note documents the root-segment rename in place rather than rewriting the historical decision text below.
+
+---
+
 ## Context
 
 The existing repository contains conflicting namespace conventions:

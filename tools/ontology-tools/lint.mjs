@@ -2,7 +2,7 @@
 //
 // Enforces P1 (no empty subclasses), P2 (no duplicate simple names across
 // packages without an `:>` link), P5 (no kernel-path standard library
-// imports outside memo::base::stdlib::* — ADR-1-13), and P6 (naming/casing
+// imports outside memo::core::stdlib::* — ADR-1-13), and P6 (naming/casing
 // conventions per ADR-1-12: PascalCase defs, camelCase attributes, snake_case
 // filenames).
 //
@@ -112,7 +112,7 @@ function lintP4(failures, warnings) {
 }
 
 // SysML v2 standard library package names that must only be imported via
-// the memo::base::stdlib::* wrapper (ADR-1-13).
+// the memo::core::stdlib::* wrapper (ADR-1-13).
 const KERNEL_LIBRARY_PACKAGES = [
     'ScalarValues', 'BaseFunctions', 'Collections',
     'ISQBase', 'ISQ', 'SI', 'USCustomary',
@@ -129,7 +129,7 @@ const KERNEL_IMPORT_RE = new RegExp(
     'gm',
 );
 
-const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'base', 'stdlib');
+const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'core', 'stdlib');
 
 // The memo-sysmlv2 submodule carries its own tooling scaffold (per-package
 // dirs, installed deps, build output). Only the flattened ontology content
@@ -161,7 +161,7 @@ function lintP5(failures) {
                     rule: 'P5',
                     file: relative(REPO_ROOT, f),
                     line,
-                    message: `Kernel-path import of '${m[1]}' — use memo::base::stdlib::* instead (ADR-1-13).`,
+                    message: `Kernel-path import of '${m[1]}' — use memo::core::stdlib::* instead (ADR-1-13).`,
                 });
             }
         }

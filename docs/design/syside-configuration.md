@@ -46,7 +46,7 @@ Automated checks: `node tools/ontology-tools/syside-compat.mjs` (standalone) and
 
 ## Standard library imports
 
-MEMO wraps SysML v2 standard library imports behind `memo::base::stdlib::*` (ADR-1-13). Syside's `std` setting points to its bundled standard library by default. The wrapper absorbs path differences between Syside, SysON, and Sysand — ontology files never import kernel packages directly.
+MEMO wraps SysML v2 standard library imports behind `memo::core::stdlib::*` (ADR-1-13). Syside's `std` setting points to its bundled standard library by default. The wrapper absorbs path differences between Syside, SysON, and Sysand — ontology files never import kernel packages directly.
 
 ## Resolution modes
 

@@ -33,7 +33,7 @@ View/template files may use `view def` directly.
 Until the grammar deliberately supports import visibility modifiers, production files parsed by `packages/core` MUST use bare imports:
 
 ```sysml
-import memo::base::stdlib::*;
+import memo::core::stdlib::*;
 ```
 
 This is a parser fallback only. ADR-1-12 remains the standard-tool target, and the architecture still treats imports as private by default unless a file is an intentional re-export boundary.

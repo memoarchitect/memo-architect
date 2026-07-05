@@ -362,10 +362,20 @@ Specialization:
 // ─── Qualified name (data type rule → returns string) ────────────────────────
 
 QualifiedName returns string:
-    QualifiedNameSegment ('::' QualifiedNameSegment)*;
+    QualifiedNameSegment ('::' QualifiedNameTailSegment)*;
 
 QualifiedNameSegment returns string:
     ID | 'library';
+
+// Non-first segments may be keywords so enum literals declared via
+// EnumLiteralName (e.g. DirectionKind::in, UseErrorCategoryKind::action)
+// are referenceable in attribute values. The first segment stays strict to
+// avoid ambiguity with usage prefixes at statement start.
+QualifiedNameTailSegment returns string:
+    QualifiedNameSegment
+    | 'in' | 'out' | 'inout' | 'part' | 'requirement' | 'action' | 'item' | 'port'
+    | 'interface' | 'connection' | 'attribute' | 'constraint' | 'enum' | 'view' | 'viewpoint'
+    | 'ref' | 'import' | 'package' | 'flow' | 'first' | 'allocate' | 'private' | 'public';
 
 // Allow keywords as identifiers in member/feature contexts
 MemberName returns string:

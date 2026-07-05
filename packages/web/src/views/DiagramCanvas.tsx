@@ -412,10 +412,11 @@ function DiagramCanvasInner() {
             }
         } else {
             // Standard diagram — check for sidecar
+            const relationshipTypes = selectedDiagram?.relationshipTypes;
             if (currentLayout && Object.keys(currentLayout.nodes).length > 0) {
                 // Build "skeleton" nodes with kind/layer metadata, then overlay sidecar positions
                 setIsLayouting(true);
-                computeLayout(model, { viewpointFilter }).then(({ nodes: n, edges: e }) => {
+                computeLayout(model, { viewpointFilter, relationshipTypes }).then(({ nodes: n, edges: e }) => {
                     const withSidecar = buildNodesFromSidecar(n, currentLayout);
                     setNodes(applyInteractiveData(withSidecar));
                     setEdges(e);
@@ -427,7 +428,7 @@ function DiagramCanvasInner() {
                 });
             } else {
                 setIsLayouting(true);
-                computeLayout(model, { viewpointFilter }).then(({ nodes: n, edges: e }) => {
+                computeLayout(model, { viewpointFilter, relationshipTypes }).then(({ nodes: n, edges: e }) => {
                     setNodes(applyInteractiveData(n));
                     setEdges(e);
                     setIsLayouting(false);
@@ -996,12 +997,26 @@ function DiagramCanvasInner() {
                         className="absolute inset-0 flex items-center justify-center pointer-events-none"
                         style={{ zIndex: 1 }}
                     >
-                        <div className="text-center" style={{ opacity: 0.4 }}>
-                            <div style={{ fontSize: '32px', marginBottom: 8 }}>🖱️</div>
-                            <div style={{ fontSize: FONT.sm, color: '#6B7280' }}>
-                                Drag from palette or double-click to create elements
+                        {selectedDiagram.auto && selectedDiagram.elementIds?.length === 0 ? (
+                            <div className="text-center" style={{ maxWidth: 420 }}>
+                                <div style={{ fontSize: '32px', marginBottom: 8 }}>🔍</div>
+                                <div style={{ fontSize: FONT.sm, color: '#374151', fontWeight: 600, marginBottom: 4 }}>
+                                    This view selects no elements
+                                </div>
+                                <div style={{ fontSize: FONT.xs, color: '#6B7280', lineHeight: 1.6 }}>
+                                    The view is auto-populated from its selectionQuery in the model.
+                                    Add includeElementKinds / includeLayers to its SysML definition,
+                                    or link elements to it with IncludedIn relationships.
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="text-center" style={{ opacity: 0.4 }}>
+                                <div style={{ fontSize: '32px', marginBottom: 8 }}>🖱️</div>
+                                <div style={{ fontSize: FONT.sm, color: '#6B7280' }}>
+                                    Drag from palette or double-click to create elements
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

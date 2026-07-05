@@ -9,11 +9,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { resolve, dirname, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, createWriteStream, statSync, existsSync } from 'node:fs';
 import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, deriveModelViews } from '@memo/core';
+import type { BuilderRegistries, DiagramDTO } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
 import type { ViewpointDTO, ArchLayerDTO } from '@memo/core';
@@ -56,21 +58,29 @@ export async function buildCommand(options: {
     const config = loadAndResolveConfig(configPath);
     console.log(chalk.gray(`  Project: ${config.projectName}`));
 
-    // 2. Parse + build model
+    // 2. Parse + build model (ontology registries give kind/layer resolution,
+    //    matching `memo dev` and `memo validate`)
     console.log(chalk.gray('  Building model...'));
+    let ontologyRegistries: BuilderRegistries | undefined;
+    try {
+        const loadResult = await loadOntologyRegistries(configPath);
+        if (loadResult.fileCount > 0) ontologyRegistries = loadResult.registries;
+    } catch {
+        // build still works without registries, with reduced kind resolution
+    }
     const sysmlFiles = findSysmlFiles(cwd);
     const { documents, errors } = await parseFiles(sysmlFiles, cwd + '/');
-    const model = buildMemoModel(documents, config, errors);
+    const model = buildMemoModel(documents, config, errors, ontologyRegistries);
     const validation = validateModel(model);
     const completeness = computeCompleteness(model, validation, config);
 
-    const viewpoints: ViewpointDTO[] | undefined = config.viewpoints?.map(vp => ({
+    const viewpoints: ViewpointDTO[] = config.viewpoints?.map(vp => ({
         id: vp.id,
         label: vp.label,
         visibleKinds: vp.visibleKinds,
         visibleRelationships: vp.visibleRelationships,
         visibleLayers: vp.visibleLayers,
-    }));
+    })) ?? [];
 
     const architectureLayers: ArchLayerDTO[] | undefined = config.architectureLayers?.map(cl => ({
         id: cl.id,
@@ -78,7 +88,26 @@ export async function buildCommand(options: {
         color: cl.color,
     }));
 
-    const dto = modelToDTO(model, { viewpoints, architectureLayers });
+    // Per-layer auto diagrams + SysML-modelled views, same as `memo dev`
+    const diagrams: DiagramDTO[] = [];
+    for (const [layerId, layerElements] of model.elementsByLayer.entries()) {
+        if (layerElements.length === 0) continue;
+        const label = layerId.charAt(0).toUpperCase() + layerId.slice(1);
+        diagrams.push({
+            id: `diag-layer-${layerId}`,
+            name: `${label} Layer`,
+            diagramType: 'bdd',
+            viewpointId: '__model',
+            auto: true,
+            description: `${label} architecture layer — ${layerElements.length} elements`,
+            elementIds: layerElements.map(e => e.id),
+        });
+    }
+    const derivedViews = deriveModelViews(model, ontologyRegistries?.kindRegistry);
+    viewpoints.push(...derivedViews.viewpoints);
+    diagrams.push(...derivedViews.diagrams);
+
+    const dto = modelToDTO(model, { viewpoints, architectureLayers, diagrams });
 
     console.log(chalk.cyan(
         `  ${model.elements.size} elements, ${model.relationships.length} relationships, ` +
@@ -149,10 +178,14 @@ export async function buildCommand(options: {
 }
 
 function resolveWebDist(cwd: string): string | undefined {
+    const cliDir = dirname(fileURLToPath(import.meta.url));
     const tryPaths = [
         resolve(cwd, '../../packages/web/dist'),
         resolve(cwd, '../web/dist'),
         resolve(cwd, 'node_modules/@memo/web/dist'),
+        // Monorepo-relative fallback so projects outside packages/../examples
+        // (e.g. the vendor submodule reference model) can still build.
+        resolve(cliDir, '../../../web/dist'),
     ];
 
     for (const p of tryPaths) {

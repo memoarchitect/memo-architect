@@ -64,6 +64,25 @@ export function computeCompleteness(
         });
     }
 
+    // Include model layers not declared in config (e.g. layers derived from
+    // the ontology directory structure when the project configures none)
+    const configuredLayers = new Set((config.architectureLayers || []).map(l => l.id));
+    for (const [layerId, layerElements] of model.elementsByLayer.entries()) {
+        if (configuredLayers.has(layerId) || layerId === 'unknown' || layerElements.length === 0) continue;
+        const total = layerElements.length;
+        const complete = layerElements.filter(e => !elementsWithErrors.has(e.id)).length;
+        totalElements += total;
+        completeElements += complete;
+        layers.push({
+            layerId,
+            layerLabel: layerId.charAt(0).toUpperCase() + layerId.slice(1).replace(/_/g, ' '),
+            layerColor: '#7A9BAA',
+            totalElements: total,
+            completeElements: complete,
+            percentage: total > 0 ? Math.round((complete / total) * 100) : 100,
+        });
+    }
+
     // Include elements in unknown layers
     const unknownElements = model.elementsByLayer.get('unknown') || [];
     totalElements += unknownElements.length;

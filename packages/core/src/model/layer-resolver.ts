@@ -23,23 +23,33 @@ export function resolveLayerFromPath(filePath: string): string {
     const normalized = filePath.replace(/\\/g, '/');
 
     // Handle both "sysml/..." (relative) and ".../sysml/..." (absolute)
-    let afterSysml: string;
+    let afterSysml: string | undefined;
     const slashSysmlIndex = normalized.indexOf('/sysml/');
     if (slashSysmlIndex !== -1) {
         afterSysml = normalized.substring(slashSysmlIndex + 7);
     } else if (normalized.startsWith('sysml/')) {
         afterSysml = normalized.substring(6);
-    } else {
-        return 'unknown';
-    }
-    const layerDir = afterSysml.split('/')[0];
-
-    if (!layerDir || layerDir.endsWith('.sysml')) {
-        // File is directly under sysml/ (e.g. index.sysml) — no layer
-        return 'unknown';
     }
 
-    return layerDir === 'relationships' ? 'crosscutting' : layerDir;
+    if (afterSysml !== undefined) {
+        const layerDir = afterSysml.split('/')[0];
+        if (!layerDir || layerDir.endsWith('.sysml')) {
+            // File is directly under sysml/ (e.g. index.sysml) — no layer
+            return 'unknown';
+        }
+        return layerDir === 'relationships' ? 'crosscutting' : layerDir;
+    }
+
+    // Vendored ontology convention: content mirrors the memo:: namespace under
+    // a src/ root (e.g. vendor/memo-sysmlv2/src/architecture/risk/memo_risk.sysml).
+    // For architecture/<layer>/ the layer is the subdirectory; other top-level
+    // groups (viewpoints, compliance, core, ...) are themselves the layer.
+    const archMatch = normalized.match(/\/src\/architecture\/([^/]+)\//);
+    if (archMatch && !archMatch[1].endsWith('.sysml')) return archMatch[1];
+    const groupMatch = normalized.match(/\/src\/(viewpoints|compliance|core|methodology|artifacts|rules)\//);
+    if (groupMatch) return groupMatch[1];
+
+    return 'unknown';
 }
 
 /**
@@ -61,7 +71,9 @@ export function resolveStandardFromPath(filePath: string): string | undefined {
     } else if (normalized.startsWith('sysml/')) {
         afterSysml = normalized.substring(6);
     } else {
-        return undefined;
+        // Vendored ontology convention: src/compliance/<standard>/<file>.sysml
+        const m = normalized.match(/\/src\/compliance\/([^/]+)\/[^/]+\.sysml$/);
+        return m ? m[1] : undefined;
     }
 
     const parts = afterSysml.split('/');

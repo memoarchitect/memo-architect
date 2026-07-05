@@ -30,6 +30,7 @@ export * from './model/parser-utils.js';
 export * from './model/builder.js';
 export * from './model/layer-resolver.js';
 export * from './model/kind-registry.js';
+export * from './model/view-deriver.js';
 export * from './model/relationship-registry.js';
 export * from './model/ontology-loader.js';
 export * from './model/methodology-loader.js';
