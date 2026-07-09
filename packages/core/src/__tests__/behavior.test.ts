@@ -638,6 +638,25 @@ describe('Behavior validation', () => {
         expect(bv001).toHaveLength(0);
     });
 
+    it('BV-001/BV-002: composite actions with nested steps are exempt', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                part sw : Subsystem;
+                action def DoWork { out result : Data; }
+                action process {
+                    action work : DoWork;
+                    first start then work then done;
+                }
+                allocate work to sw;
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+        const violations = validateBehavior(model);
+        // 'process' is allocated and connected through its nested step
+        const wrapper = violations.filter(v => v.elementName === 'process');
+        expect(wrapper).toHaveLength(0);
+    });
+
     it('BV-002: warns on orphan action (no flow/succession)', async () => {
         const doc = await parseDoc(`
             package Test {

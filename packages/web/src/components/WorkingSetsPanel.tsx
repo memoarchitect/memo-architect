@@ -63,7 +63,6 @@ export function WorkingSetsPanel() {
             case 'diagram': return 'Diagram';
             case 'dsm': return 'DSM';
             case 'traceability': return 'Trace Matrix';
-            case 'actionflow': return 'Action Flow';
             case 'ontology': return 'Ontology';
             case 'scenario-editor': return 'Scenarios';
             case 'model-diff': return 'Diff';

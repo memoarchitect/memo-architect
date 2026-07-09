@@ -149,3 +149,48 @@ function ActionFlowNodeInner({ data }: NodeProps) {
 }
 
 export const ActionFlowNode = memo(ActionFlowNodeInner);
+
+// ─── Swimlane background node (Action Flow template, KK-4) ───────────────────
+
+export interface ActionFlowLaneData {
+    label: string;
+    color: string;
+}
+
+function ActionFlowLaneNodeInner({ data }: NodeProps) {
+    const d = data as unknown as ActionFlowLaneData;
+    return (
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                boxSizing: 'border-box',
+                background: `${d.color}08`,
+                border: `1px solid ${d.color}30`,
+                borderLeft: `3px solid ${d.color}`,
+                borderRadius: RADIUS.md,
+                pointerEvents: 'none',
+                display: 'flex',
+            }}
+        >
+            <div
+                style={{
+                    writingMode: 'vertical-rl',
+                    transform: 'rotate(180deg)',
+                    padding: '10px 6px',
+                    fontSize: FONT.xs,
+                    fontWeight: 700,
+                    color: d.color,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    alignSelf: 'center',
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                {d.label}
+            </div>
+        </div>
+    );
+}
+
+export const ActionFlowLaneNode = memo(ActionFlowLaneNodeInner);

@@ -19,7 +19,6 @@ import { ElementCollectionPage } from './views/ElementCollectionPage';
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
 const DiagramEditor = lazy(() => import('./views/DiagramEditor').then(m => ({ default: m.DiagramEditor })));
 const DiagramCanvas = lazy(() => import('./views/DiagramCanvas').then(m => ({ default: m.DiagramCanvas })));
-const ActionFlowDiagram = lazy(() => import('./views/ActionFlowDiagram').then(m => ({ default: m.ActionFlowDiagram })));
 const DSMView = lazy(() => import('./views/DSMView').then(m => ({ default: m.DSMView })));
 const OntologyViewer = lazy(() => import('./views/ontology/OntologyViewer').then(m => ({ default: m.OntologyViewer })));
 const TraceabilityMatrix = lazy(() => import('./views/TraceabilityMatrix').then(m => ({ default: m.TraceabilityMatrix })));
@@ -57,8 +56,6 @@ function UnifiedCanvas() {
         switch (activeView.type) {
             case 'diagram':
                 return <DiagramEditor diagramId={activeView.diagramId} />;
-            case 'actionflow':
-                return <ActionFlowDiagram />;
             case 'dsm':
                 return <DSMView />;
             case 'traceability':

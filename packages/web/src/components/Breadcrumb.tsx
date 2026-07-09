@@ -54,10 +54,6 @@ export function Breadcrumb() {
             crumbs.push({ label: 'Tools' });
             crumbs.push({ label: 'Traceability Matrix' });
             break;
-        case 'actionflow':
-            crumbs.push({ label: 'Diagrams' });
-            crumbs.push({ label: 'Action Flow' });
-            break;
         case 'ontology':
             crumbs.push({ label: 'Tools' });
             crumbs.push({ label: 'Ontology' });

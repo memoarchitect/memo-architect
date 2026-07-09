@@ -44,8 +44,10 @@ import {
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import { computeInterconnectionLayout } from './templates/interconnection-view';
+import { computeActionFlowViewLayout } from './templates/actionflow-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
+import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -246,6 +248,8 @@ function DiagramCanvasInner() {
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
+    // Action Flow template (KK-4): swimlane banding toggle
+    const [swimlanesOn, setSwimlanesOn] = useState(true);
 
     // Decomposition state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
@@ -256,6 +260,7 @@ function DiagramCanvasInner() {
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
+        setSwimlanesOn(true);
         setExpandedNodes(new Set());
         positionCacheRef.current.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -265,6 +270,8 @@ function DiagramCanvasInner() {
     const nodeTypes = useMemo(() => ({
         decompositionNode: DecompositionNode,
         interconnectionNode: InterconnectionNode,
+        actionFlowNode: ActionFlowNode,
+        actionFlowLane: ActionFlowLaneNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -458,6 +465,14 @@ function DiagramCanvasInner() {
                 viewpointFilter,
                 relationshipTypes: selectedDiagram?.relationshipTypes,
             }).then(r => apply(r, false)).catch(fail('Interconnection'));
+        } else if (viewKind === 'actionflow') {
+            // Action Flow template (KK-4): actions with parameter ports,
+            // item flows, successions, optional swimlanes
+            setIsLayouting(true);
+            computeActionFlowViewLayout(model, {
+                viewpointFilter,
+                swimlanes: swimlanesOn,
+            }).then(r => apply(r, false)).catch(fail('Action flow'));
         } else if (isGeneralTemplate && generalMode !== 'graph') {
             // General template (KK-2) tree/containment modes
             setIsLayouting(true);
@@ -481,7 +496,8 @@ function DiagramCanvasInner() {
 
         return () => { cancelled = true; };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
-        viewKind, isGeneralTemplate, generalMode, selectedDiagram?.relationshipTypes,
+        viewKind, isGeneralTemplate, generalMode, swimlanesOn,
+        selectedDiagram?.relationshipTypes,
         expandedNodes, nodeDirections, toggleExpand, toggleDirection, currentLayout,
         buildNodesFromSidecar, applyInteractiveData]);
 
@@ -926,6 +942,25 @@ function DiagramCanvasInner() {
                                 <button onClick={collapseAll} className="px-2 py-0.5 text-xs font-medium rounded"
                                     style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
                                     Collapse All
+                                </button>
+                            </>
+                        )}
+
+                        {/* Action Flow template swimlane toggle (KK-4) */}
+                        {viewKind === 'actionflow' && (
+                            <>
+                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                <button
+                                    onClick={() => setSwimlanesOn(s => !s)}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{
+                                        background: swimlanesOn ? '#1B3A4B' : '#F7F7F5',
+                                        color: swimlanesOn ? '#FFFFFF' : '#6B7280',
+                                        border: '1px solid #E5E5E0',
+                                    }}
+                                    title="Toggle allocation swimlanes"
+                                >
+                                    Lanes
                                 </button>
                             </>
                         )}
