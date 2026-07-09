@@ -11,8 +11,9 @@ import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } f
 import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import type { ActionFlowNodeData } from './ActionFlowNode';
+import { pickCompartmentEntries } from './templates/composition-tree';
 
-const elk = new ELK({
+export const elk = new ELK({
     workerFactory: (_url: string) => new Worker(
         new URL('elkjs/lib/elk-worker.min.js', import.meta.url)
     ),
@@ -29,6 +30,8 @@ export async function computeLayout(
         viewpointFilter?: (el: MemoElement) => boolean;
         /** Relationship types declared by the view; when given, only these are drawn */
         relationshipTypes?: string[];
+        /** Render attribute compartments on nodes (General view template) */
+        compartments?: boolean;
     }
 ): Promise<LayoutResult> {
     const elements = Object.values(model.elements);
@@ -58,9 +61,15 @@ export async function computeLayout(
 
     // Estimate node width from the longer of name and kind label so long kind
     // tags (e.g. HARDWAREASSEMBLY) don't overflow the box
+    const compartmentsByEl = options?.compartments
+        ? new Map(visibleElements.map(el => [el.id, pickCompartmentEntries(el)]))
+        : undefined;
     const nodeWidth = (el: MemoElement) =>
         Math.max(el.name.length * 7.5 + 48, el.kind.length * 6.8 + 48, 130);
-    const nodeHeight = 52;
+    const nodeHeight = (el: MemoElement) => {
+        const entries = compartmentsByEl?.get(el.id);
+        return 52 + (entries?.length ? entries.length * 15 + 10 : 0);
+    };
 
     // Build ELK graph — flat layout with relationship-driven layering
     const elkGraph = {
@@ -87,7 +96,7 @@ export async function computeLayout(
         children: visibleElements.map(el => ({
             id: el.id,
             width: nodeWidth(el),
-            height: nodeHeight,
+            height: nodeHeight(el),
         })),
         edges: visibleRelationships.map((rel, i) => ({
             id: `e-${i}`,
@@ -103,6 +112,7 @@ export async function computeLayout(
     const nodes: Node[] = (layouted.children || []).map(child => {
         const el = model.elements[child.id];
         const color = LAYER_COLORS[el?.layer] || '#666';
+        const compartments = compartmentsByEl?.get(child.id);
         return {
             id: child.id,
             type: 'diagramNode',
@@ -113,6 +123,7 @@ export async function computeLayout(
                 layer: el?.layer ?? '',
                 construct: el?.construct,
                 color,
+                ...(compartments?.length ? { compartments } : {}),
             },
         };
     });
@@ -467,9 +478,11 @@ export async function computeDecompositionLayout(
             onToggleExpand: (id: string) => void;
             onToggleDirection: (id: string) => void;
         };
+        /** Prebuilt hierarchy (view-kind templates); defaults to the structural tree */
+        tree?: DecompositionTree;
     }
 ): Promise<LayoutResult> {
-    const tree = buildDecompositionTree(model);
+    const tree = options.tree ?? buildDecompositionTree(model);
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
 
     const visibleIds = new Set<string>();
@@ -561,9 +574,11 @@ export function computeContainmentLayout(
     options: {
         expandedNodes: Set<string>;
         callbacks: { onToggleExpand: (id: string) => void };
+        /** Prebuilt hierarchy (view-kind templates); defaults to the structural tree */
+        tree?: DecompositionTree;
     }
 ): LayoutResult {
-    const tree = buildDecompositionTree(model);
+    const tree = options.tree ?? buildDecompositionTree(model);
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
 
     const allNodes: Node[] = [];
@@ -655,7 +670,22 @@ export function computeContainmentLayout(
         curX += result.width + 40;
     }
 
-    return { nodes: allNodes, edges: [] };
+    // ReactFlow resolves parentId against nodes earlier in the array, but the
+    // recursion above emits children before their container — reorder so every
+    // parent precedes its children or nesting silently breaks
+    const byId = new Map(allNodes.map(n => [n.id, n]));
+    const ordered: Node[] = [];
+    const emitted = new Set<string>();
+    const emit = (n: Node) => {
+        if (emitted.has(n.id)) return;
+        const parent = n.parentId ? byId.get(n.parentId) : undefined;
+        if (parent) emit(parent);
+        emitted.add(n.id);
+        ordered.push(n);
+    };
+    for (const n of allNodes) emit(n);
+
+    return { nodes: ordered, edges: [] };
 }
 
 // ─── Functional Breakdown Structure (FBS) Layout ────────────────────────────

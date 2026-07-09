@@ -136,9 +136,9 @@ const gpcaViewConfig: MEMOConfig = {
 };
 
 describe('KK-1 acceptance: GPCA views', () => {
-    it('all 25 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
+    it('all 26 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
         const files = readdirSync(GPCA_VIEWS_DIR).filter(f => f.endsWith('.sysml'));
-        expect(files).toHaveLength(25);
+        expect(files).toHaveLength(26);
 
         const docs: ParsedDocument[] = [];
         for (const f of files) {
@@ -147,19 +147,20 @@ describe('KK-1 acceptance: GPCA views', () => {
         const model = buildMemoModel(docs, gpcaViewConfig);
         const { diagrams } = deriveModelViews(model);
 
-        expect(diagrams).toHaveLength(25);
+        expect(diagrams).toHaveLength(26);
         for (const d of diagrams) {
             expect(d.viewKind, `GPCA view "${d.name}" must resolve to a spec view kind`).toBeDefined();
             expect(isViewKind(d.viewKind!), `"${d.viewKind}" is not a spec view kind`).toBe(true);
         }
         expect(validateViews(model)).toHaveLength(0);
 
-        // Kind distribution locks the KK-1 recategorization: 14 diagram views
-        // mapped explicitly + 11 document-backed views resolving to browser
+        // Kind distribution locks the KK-1 recategorization (14 diagram views
+        // mapped explicitly + 11 document-backed views resolving to browser)
+        // plus the KK-2 decomposition template view
         const counts: Record<string, number> = {};
         for (const d of diagrams) counts[d.viewKind!] = (counts[d.viewKind!] ?? 0) + 1;
         expect(counts).toEqual({
-            general: 9,
+            general: 10,
             interconnection: 1,
             statetransition: 1,
             sequence: 1,
@@ -167,6 +168,31 @@ describe('KK-1 acceptance: GPCA views', () => {
             browser: 11,
         });
     });
+});
+
+// ─── KK-2 acceptance: template views ship with the GPCA example ──────────────
+
+describe('KK-2 acceptance: GPCA template views', () => {
+    async function deriveGpcaViews() {
+        const files = readdirSync(GPCA_VIEWS_DIR).filter(f => f.endsWith('.sysml'));
+        const docs: ParsedDocument[] = [];
+        for (const f of files) {
+            docs.push(await parseDoc(readFileSync(join(GPCA_VIEWS_DIR, f), 'utf-8'), f));
+        }
+        const model = buildMemoModel(docs, gpcaViewConfig);
+        return deriveModelViews(model).diagrams;
+    }
+
+    it('KK-2: ships a General view whose layoutHint drives the template mode', async () => {
+        const diagrams = await deriveGpcaViews();
+        const decomp = diagrams.find(d => d.name === 'GPCA System Decomposition View');
+        expect(decomp).toBeDefined();
+        expect(decomp!.viewKind).toBe('general');
+        // The renderer honors this presentation hint as the initial mode
+        expect(decomp!.properties?.layoutHint).toBe('containment');
+        expect(decomp!.relationshipTypes).toContain('Composes');
+    });
+
 });
 
 // ─── KK-1: validator flags unmapped diagram types ───────────────────────────
