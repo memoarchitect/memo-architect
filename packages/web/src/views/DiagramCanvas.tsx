@@ -43,7 +43,9 @@ import {
     computeGeneralViewLayout, resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
+import { computeInterconnectionLayout } from './templates/interconnection-view';
 import { DecompositionNode } from './DecompositionNode';
+import { InterconnectionNode } from './InterconnectionNode';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -262,6 +264,7 @@ function DiagramCanvasInner() {
     // Custom node types
     const nodeTypes = useMemo(() => ({
         decompositionNode: DecompositionNode,
+        interconnectionNode: InterconnectionNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -447,6 +450,14 @@ function DiagramCanvasInner() {
                     callbacks: { onToggleExpand: toggleExpand },
                 }));
             }
+        } else if (viewKind === 'interconnection') {
+            // Interconnection template (KK-3): parts with boundary ports,
+            // typed connectors, nested containment
+            setIsLayouting(true);
+            computeInterconnectionLayout(model, {
+                viewpointFilter,
+                relationshipTypes: selectedDiagram?.relationshipTypes,
+            }).then(r => apply(r, false)).catch(fail('Interconnection'));
         } else if (isGeneralTemplate && generalMode !== 'graph') {
             // General template (KK-2) tree/containment modes
             setIsLayouting(true);
