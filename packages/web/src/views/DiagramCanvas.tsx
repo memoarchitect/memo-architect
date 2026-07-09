@@ -52,6 +52,7 @@ import { InterconnectionNode } from './InterconnectionNode';
 import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
+import { GridView } from './GridView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -425,6 +426,8 @@ function DiagramCanvasInner() {
 
     useEffect(() => {
         if (!model) return;
+        // Grid and Browser kinds render their own non-canvas surface
+        if (viewKind === 'grid' || viewKind === 'browser') return;
 
         // Guard against stale async completions: a slower earlier layout must
         // not overwrite the result of the branch this effect run selected
@@ -867,6 +870,18 @@ function DiagramCanvasInner() {
         setEdges(prev => prev.map(e => e.id === edgeId
             ? { ...e, label: e.label ? '' : edgeId.split('_')[3] ?? '' } : e));
     }, [setEdges]);
+
+    // ─── Non-canvas view kinds (KK-7 Grid) ─────────────────────────────────────
+
+    if (selectedDiagram && model && viewKind === 'grid') {
+        return (
+            <GridView
+                diagram={selectedDiagram}
+                model={model}
+                viewpointFilter={viewpointFilter}
+            />
+        );
+    }
 
     // ─── Empty state ───────────────────────────────────────────────────────────
 
