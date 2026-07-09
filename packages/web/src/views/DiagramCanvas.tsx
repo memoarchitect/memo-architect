@@ -53,6 +53,7 @@ import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
 import { GridView } from './GridView';
+import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -871,11 +872,20 @@ function DiagramCanvasInner() {
             ? { ...e, label: e.label ? '' : edgeId.split('_')[3] ?? '' } : e));
     }, [setEdges]);
 
-    // ─── Non-canvas view kinds (KK-7 Grid) ─────────────────────────────────────
+    // ─── Non-canvas view kinds (KK-7 Grid, KK-8 Browser) ───────────────────────
 
     if (selectedDiagram && model && viewKind === 'grid') {
         return (
             <GridView
+                diagram={selectedDiagram}
+                model={model}
+                viewpointFilter={viewpointFilter}
+            />
+        );
+    }
+    if (selectedDiagram && model && viewKind === 'browser') {
+        return (
+            <BrowserView
                 diagram={selectedDiagram}
                 model={model}
                 viewpointFilter={viewpointFilter}
