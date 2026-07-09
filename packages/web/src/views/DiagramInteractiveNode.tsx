@@ -12,6 +12,7 @@
 import { memo, useCallback, useState, useRef } from 'react';
 import { Handle, Position, NodeResizer, type NodeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
+import type { CompartmentEntry } from './templates/composition-tree';
 
 export interface DiagramInteractiveNodeData extends Record<string, unknown> {
     label: string;
@@ -21,6 +22,8 @@ export interface DiagramInteractiveNodeData extends Record<string, unknown> {
     color: string;          // layer color
     bgColor?: string;       // sidecar color override for background
     isNew?: boolean;        // optimistic — not yet confirmed by server
+    /** Attribute compartment rows (General view template) */
+    compartments?: CompartmentEntry[];
     onContextMenu?: (e: React.MouseEvent, nodeId: string) => void;
     onInlineEdit?: (nodeId: string, newName: string) => void;
 }
@@ -142,6 +145,29 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                     <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: 2 }}>saving…</div>
                 )}
             </div>
+
+            {/* Attribute compartment (General view template) */}
+            {!!d.compartments?.length && (
+                <div style={{
+                    borderTop: '1px solid #EDEDEA',
+                    padding: '5px 12px 7px',
+                    userSelect: 'none',
+                }}>
+                    {d.compartments.map(entry => (
+                        <div key={entry.key} style={{
+                            display: 'flex', gap: 6, alignItems: 'baseline',
+                            fontSize: '10px', lineHeight: '15px',
+                            whiteSpace: 'nowrap', overflow: 'hidden',
+                        }}>
+                            <span style={{ color: '#9CA3AF' }}>{entry.key}</span>
+                            <span style={{
+                                color: '#4B5563', fontWeight: 500,
+                                overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>{entry.value}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Connection handles — always present, opacity controlled by hover/select */}
             <Handle type="target" position={Position.Top}    style={{ ...handleStyle, top: -5 }} />

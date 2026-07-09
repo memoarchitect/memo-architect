@@ -29,16 +29,20 @@ import '@xyflow/react/dist/style.css';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RFAny = any;
 
-import type { MemoElement, DiagramLayout } from '@memo/core';
+import type { MemoElement, DiagramLayout, ViewKind } from '@memo/core';
 import { computeImpact } from '@memo/core/lib/analysis/impact.js';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { sendElementCreate, sendAddRelationship, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
-import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
+import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
     computeFBSLayout, buildDecompositionTree, buildFunctionalTree,
 } from './layout';
+import {
+    computeGeneralViewLayout, resolveGeneralMode, buildGeneralViewTree,
+    GENERAL_VIEW_MODES, type GeneralViewMode,
+} from './templates/general-view';
 import { DecompositionNode } from './DecompositionNode';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
@@ -232,11 +236,28 @@ function DiagramCanvasInner() {
     const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
 
+    // Spec view kind (Epic KK): every diagram resolves to one of the 8 kinds
+    const viewKind: ViewKind | undefined = selectedDiagram
+        ? ((selectedDiagram.viewKind as ViewKind | undefined) ?? diagramMeta?.viewKind ?? 'general')
+        : undefined;
+    const viewKindMeta = viewKind ? VIEW_KIND_META[viewKind] : null;
+    // General template mode — legacy layoutStyle diagrams keep their own controls
+    const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
+    const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
+
     // Decomposition state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
     const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+
+    // Fresh per-diagram state: honor the view's declared layoutHint
+    useEffect(() => {
+        setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
+        setExpandedNodes(new Set());
+        positionCacheRef.current.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDiagramId]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -249,56 +270,6 @@ function DiagramCanvasInner() {
 
     const miniMapNodeColor = useCallback((node: any) =>
         node.data?.color || node.data?.layerColor || '#ccc', []);
-
-    // ─── Decomp callbacks ──────────────────────────────────────────────────────
-
-    const toggleExpand = useCallback((nodeId: string) => {
-        setExpandedNodes(prev => {
-            const next = new Set(prev);
-            if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
-            return next;
-        });
-    }, []);
-
-    const toggleDirection = useCallback((nodeId: string) => {
-        if (model) {
-            const tree = isFBSDiagram ? buildFunctionalTree(model) : buildDecompositionTree(model);
-            const clearDescendants = (id: string) => {
-                positionCacheRef.current.delete(id);
-                for (const cid of (tree.childrenMap.get(id) || [])) clearDescendants(cid);
-            };
-            clearDescendants(nodeId);
-        }
-        setNodeDirections(prev => {
-            const next = new Map(prev);
-            const current = next.get(nodeId) || 'vertical';
-            next.set(nodeId, current === 'vertical' ? 'horizontal' : 'vertical');
-            return next;
-        });
-    }, [model, isFBSDiagram]);
-
-    const expandAll = useCallback(() => {
-        if (!model) return;
-        const tree = isFBSDiagram ? buildFunctionalTree(model) : buildDecompositionTree(model);
-        const allIds = new Set<string>();
-        const collectAll = (id: string) => {
-            allIds.add(id);
-            for (const cid of (tree.childrenMap.get(id) || [])) {
-                if (tree.elements.has(cid)) collectAll(cid);
-            }
-        };
-        for (const rootId of tree.roots) {
-            if (tree.elements.has(rootId)) collectAll(rootId);
-        }
-        setExpandedNodes(allIds);
-    }, [model, isFBSDiagram]);
-
-    const collapseAll = useCallback(() => setExpandedNodes(new Set()), []);
-
-    const resetLayout = useCallback(() => {
-        positionCacheRef.current.clear();
-        setLayoutVersion(v => v + 1);
-    }, []);
 
     // ─── Viewpoint filter ──────────────────────────────────────────────────────
 
@@ -327,6 +298,65 @@ function DiagramCanvasInner() {
             return true;
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
+
+    // ─── Decomp callbacks ──────────────────────────────────────────────────────
+    // Tree source: legacy layoutStyle diagrams keep their kind-scoped trees;
+    // the General template derives its tree from the view's own selection.
+
+    const buildActiveTree = useCallback(() => {
+        if (!model) return undefined;
+        if (isFBSDiagram) return buildFunctionalTree(model);
+        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter);
+        return buildDecompositionTree(model);
+    }, [model, isFBSDiagram, isGeneralTemplate, viewpointFilter]);
+
+    const toggleExpand = useCallback((nodeId: string) => {
+        setExpandedNodes(prev => {
+            const next = new Set(prev);
+            if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+            return next;
+        });
+    }, []);
+
+    const toggleDirection = useCallback((nodeId: string) => {
+        const tree = buildActiveTree();
+        if (tree) {
+            const clearDescendants = (id: string) => {
+                positionCacheRef.current.delete(id);
+                for (const cid of (tree.childrenMap.get(id) || [])) clearDescendants(cid);
+            };
+            clearDescendants(nodeId);
+        }
+        setNodeDirections(prev => {
+            const next = new Map(prev);
+            const current = next.get(nodeId) || 'vertical';
+            next.set(nodeId, current === 'vertical' ? 'horizontal' : 'vertical');
+            return next;
+        });
+    }, [buildActiveTree]);
+
+    const expandAll = useCallback(() => {
+        const tree = buildActiveTree();
+        if (!tree) return;
+        const allIds = new Set<string>();
+        const collectAll = (id: string) => {
+            allIds.add(id);
+            for (const cid of (tree.childrenMap.get(id) || [])) {
+                if (tree.elements.has(cid)) collectAll(cid);
+            }
+        };
+        for (const rootId of tree.roots) {
+            if (tree.elements.has(rootId)) collectAll(rootId);
+        }
+        setExpandedNodes(allIds);
+    }, [buildActiveTree]);
+
+    const collapseAll = useCallback(() => setExpandedNodes(new Set()), []);
+
+    const resetLayout = useCallback(() => {
+        positionCacheRef.current.clear();
+        setLayoutVersion(v => v + 1);
+    }, []);
 
     // ─── Apply interactive node data (context menu + inline edit callbacks) ───
 
@@ -378,68 +408,69 @@ function DiagramCanvasInner() {
     useEffect(() => {
         if (!model) return;
 
+        // Guard against stale async completions: a slower earlier layout must
+        // not overwrite the result of the branch this effect run selected
+        // (e.g. graph ELK resolving after a sync containment layout)
+        let cancelled = false;
+        const apply = (
+            { nodes: n, edges: e }: { nodes: FlowNode[]; edges: FlowEdge[] },
+            interactive = true,
+        ) => {
+            if (cancelled) return;
+            setNodes(interactive ? applyInteractiveData(n) : n);
+            setEdges(e);
+            setIsLayouting(false);
+            setLayoutVersion(v => v + 1);
+        };
+        const fail = (label: string) => (err: unknown) => {
+            if (cancelled) return;
+            console.error(`${label} layout error:`, err);
+            setIsLayouting(false);
+        };
+
         if (isFBSDiagram) {
             setIsLayouting(true);
             computeFBSLayout(model, {
                 expandedNodes, nodeDirections,
                 callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
-            }).then(({ nodes: n, edges: e }) => {
-                setNodes(applyInteractiveData(n));
-                setEdges(e);
-                setIsLayouting(false);
-                setLayoutVersion(v => v + 1);
-            }).catch(err => { console.error('FBS layout error:', err); setIsLayouting(false); });
+            }).then(r => apply(r)).catch(fail('FBS'));
         } else if (isDecompDiagram) {
             if (layoutStyle === 'decomposition') {
                 setIsLayouting(true);
                 computeDecompositionLayout(model, {
                     expandedNodes, nodeDirections,
                     callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
-                }).then(({ nodes: n, edges: e }) => {
-                    setNodes(applyInteractiveData(n));
-                    setEdges(e);
-                    setIsLayouting(false);
-                    setLayoutVersion(v => v + 1);
-                }).catch(err => { console.error('Layout error:', err); setIsLayouting(false); });
+                }).then(r => apply(r)).catch(fail('Decomposition'));
             } else {
-                const result = computeContainmentLayout(model, {
+                apply(computeContainmentLayout(model, {
                     expandedNodes,
                     callbacks: { onToggleExpand: toggleExpand },
-                });
-                setNodes(applyInteractiveData(result.nodes));
-                setEdges(result.edges);
-                setLayoutVersion(v => v + 1);
+                }));
             }
+        } else if (isGeneralTemplate && generalMode !== 'graph') {
+            // General template (KK-2) tree/containment modes
+            setIsLayouting(true);
+            computeGeneralViewLayout(model, {
+                mode: generalMode,
+                viewpointFilter,
+                expandedNodes, nodeDirections,
+                callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+            }).then(r => apply(r)).catch(fail('General template'));
         } else {
-            // Standard diagram — check for sidecar
+            // Standard diagram / General template graph mode — check for sidecar
             const relationshipTypes = selectedDiagram?.relationshipTypes;
-            if (currentLayout && Object.keys(currentLayout.nodes).length > 0) {
-                // Build "skeleton" nodes with kind/layer metadata, then overlay sidecar positions
-                setIsLayouting(true);
-                computeLayout(model, { viewpointFilter, relationshipTypes }).then(({ nodes: n, edges: e }) => {
-                    const withSidecar = buildNodesFromSidecar(n, currentLayout);
-                    setNodes(applyInteractiveData(withSidecar));
-                    setEdges(e);
-                    setIsLayouting(false);
-                    setLayoutVersion(v => v + 1);
-                }).catch(err => {
-                    console.error('Layout error:', err);
-                    setIsLayouting(false);
-                });
-            } else {
-                setIsLayouting(true);
-                computeLayout(model, { viewpointFilter, relationshipTypes }).then(({ nodes: n, edges: e }) => {
-                    setNodes(applyInteractiveData(n));
-                    setEdges(e);
-                    setIsLayouting(false);
-                    setLayoutVersion(v => v + 1);
-                }).catch(err => {
-                    console.error('Layout error:', err);
-                    setIsLayouting(false);
-                });
-            }
+            const compartments = isGeneralTemplate;
+            const overlaySidecar = currentLayout && Object.keys(currentLayout.nodes).length > 0;
+            setIsLayouting(true);
+            computeLayout(model, { viewpointFilter, relationshipTypes, compartments }).then(({ nodes: n, edges: e }) => {
+                // Overlay sidecar positions onto the skeleton nodes when present
+                apply({ nodes: overlaySidecar ? buildNodesFromSidecar(n, currentLayout!) : n, edges: e });
+            }).catch(fail('Standard'));
         }
+
+        return () => { cancelled = true; };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
+        viewKind, isGeneralTemplate, generalMode, selectedDiagram?.relationshipTypes,
         expandedNodes, nodeDirections, toggleExpand, toggleDirection, currentLayout,
         buildNodesFromSidecar, applyInteractiveData]);
 
@@ -846,10 +877,11 @@ function DiagramCanvasInner() {
                         className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
                         style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                     >
-                        {diagramMeta && (
+                        {viewKindMeta && (
                             <span className="px-1.5 py-0.5 rounded font-semibold"
-                                style={{ background: diagramMeta.color + '20', color: diagramMeta.color, fontSize: FONT.badge }}>
-                                {diagramMeta.code}
+                                style={{ background: viewKindMeta.color + '20', color: viewKindMeta.color, fontSize: FONT.badge }}
+                                title={`${viewKindMeta.fullName}${diagramMeta ? ` · ${diagramMeta.fullName}` : ''}`}>
+                                {viewKindMeta.label}
                             </span>
                         )}
                         <span className="font-medium" style={{ color: '#1a1a1a' }}>{selectedDiagram.name}</span>
@@ -884,6 +916,41 @@ function DiagramCanvasInner() {
                                     style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
                                     Collapse All
                                 </button>
+                            </>
+                        )}
+
+                        {/* General template mode switcher (KK-2) */}
+                        {isGeneralTemplate && (
+                            <>
+                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
+                                    {GENERAL_VIEW_MODES.map(m => (
+                                        <button key={m}
+                                            onClick={() => { setGeneralMode(m); positionCacheRef.current.clear(); }}
+                                            className="px-2 py-0.5 text-xs font-medium capitalize"
+                                            style={{
+                                                background: generalMode === m ? '#1B3A4B' : '#FFFFFF',
+                                                color: generalMode === m ? '#FFFFFF' : '#6B7280',
+                                            }}
+                                            title={m === 'graph' ? 'Relationship graph with compartments'
+                                                : m === 'tree' ? 'Decomposition tree with expand/collapse'
+                                                : 'Nested containment blocks'}>
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                                {generalMode !== 'graph' && (
+                                    <>
+                                        <button onClick={expandAll} className="px-2 py-0.5 text-xs font-medium rounded"
+                                            style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
+                                            Expand All
+                                        </button>
+                                        <button onClick={collapseAll} className="px-2 py-0.5 text-xs font-medium rounded"
+                                            style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
+                                            Collapse All
+                                        </button>
+                                    </>
+                                )}
                             </>
                         )}
 
