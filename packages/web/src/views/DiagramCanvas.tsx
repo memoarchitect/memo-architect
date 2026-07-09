@@ -46,10 +46,12 @@ import {
 import { computeInterconnectionLayout } from './templates/interconnection-view';
 import { computeActionFlowViewLayout } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
+import { computeSequenceLayout } from './templates/sequence-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
+import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -275,6 +277,9 @@ function DiagramCanvasInner() {
         actionFlowNode: ActionFlowNode,
         actionFlowLane: ActionFlowLaneNode,
         stateNode: StateNode,
+        seqLifeline: SeqLifelineNode,
+        seqSection: SeqSectionNode,
+        seqOccurrence: SeqOccurrenceNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -482,6 +487,9 @@ function DiagramCanvasInner() {
             setIsLayouting(true);
             computeStateTransitionLayout(model, { viewpointFilter })
                 .then(r => apply(r, false)).catch(fail('State transition'));
+        } else if (viewKind === 'sequence') {
+            // Sequence template (KK-6): lifelines, chronological messages
+            apply(computeSequenceLayout(model, { viewpointFilter }), false);
         } else if (isGeneralTemplate && generalMode !== 'graph') {
             // General template (KK-2) tree/containment modes
             setIsLayouting(true);
