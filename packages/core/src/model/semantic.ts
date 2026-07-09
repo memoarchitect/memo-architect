@@ -138,6 +138,8 @@ export interface DiagramDTO {
     id: string;
     name: string;
     diagramType: string;
+    /** SysML v2 spec view kind (one of the 8 standard kinds, see view-kinds.ts) */
+    viewKind?: string;
     viewpointId: string;
     auto: boolean;
     description?: string;

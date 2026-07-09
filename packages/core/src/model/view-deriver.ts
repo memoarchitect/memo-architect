@@ -15,6 +15,7 @@
 
 import type { MemoModel, MemoElement, ViewpointDTO, DiagramDTO } from './semantic.js';
 import type { KindRegistry } from './kind-registry.js';
+import { resolveViewKind } from './view-kinds.js';
 
 /** Kinds whose instances are treated as model-defined views. */
 function isViewElement(el: MemoElement, kindRegistry?: KindRegistry): boolean {
@@ -135,14 +136,20 @@ export function deriveModelViews(model: MemoModel, kindRegistry?: KindRegistry):
         // Presentation hints declared on the view — the renderer stays dumb and
         // just honors them
         const properties: Record<string, string> = {};
-        for (const hint of ['layoutHint', 'styleHint', 'viewKind', 'presentationKind'] as const) {
+        for (const hint of ['layoutHint', 'styleHint', 'presentationKind'] as const) {
             if (el.attributes[hint]) properties[hint] = el.attributes[hint];
         }
+
+        // Every view resolves to exactly one of the 8 spec view kinds: an
+        // explicit `viewKind` declaration wins, else the legacy diagramType
+        // key maps; document-backed views (no diagramType) become browser.
+        const viewKind = resolveViewKind(el.attributes['viewKind'], el.attributes['diagramType']);
 
         diagrams.push({
             id: `view-${el.id}`,
             name: el.attributes['title'] || el.name,
             diagramType: el.attributes['diagramType'] || 'bdd',
+            viewKind,
             viewpointId: vpId,
             auto: true,
             description: el.attributes['shortDescription'] || el.doc,

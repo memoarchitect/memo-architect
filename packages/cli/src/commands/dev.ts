@@ -12,7 +12,7 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor, deriveModelViews } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor, deriveModelViews, resolveViewKind } from '@memo/core';
 import type { BuilderRegistries, RestartRequiredMessage, MethodologyDescriptor } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
@@ -209,6 +209,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 id: `diag-layer-${layerId}`,
                 name: `${label} Layer`,
                 diagramType: 'bdd',
+                viewKind: 'general',
                 viewpointId: '__model',
                 auto: true,
                 description: `${label} architecture layer — ${layerElements.length} elements`,
@@ -224,6 +225,7 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                             id: d.id,
                             name: d.name,
                             diagramType: d.diagramType,
+                            viewKind: resolveViewKind(undefined, d.diagramType),
                             viewpointId: d.viewpointId,
                             auto: d.auto,
                             description: d.description,

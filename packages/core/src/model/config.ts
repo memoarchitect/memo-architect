@@ -65,8 +65,10 @@ export interface KindDefinition {
     defaultAttributes?: Record<string, string>;
 }
 
-/** SysML v2 diagram type classification */
-export type DiagramType = 'bdd' | 'ibd' | 'req' | 'ucd' | 'act' | 'afd' | 'pkg' | 'par' | 'risk';
+/** Legacy diagram type keys — each maps to exactly one SysML v2 view kind (see view-kinds.ts) */
+export type DiagramType =
+    | 'bdd' | 'ibd' | 'req' | 'ucd' | 'act' | 'afd' | 'pkg' | 'par' | 'risk'
+    | 'stm' | 'seq' | 'fmea' | 'alloc' | 'threat-model';
 
 /** Diagram definition — a named, typed view within a viewpoint */
 export interface DiagramDefinition {

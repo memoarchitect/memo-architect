@@ -7,5 +7,6 @@ export * from './package-registry.js';
 export * from './layer-resolver.js';
 export * from './kind-registry.js';
 export * from './view-deriver.js';
+export * from './view-kinds.js';
 export * from './relationship-registry.js';
 export * from './ontology-loader.js';
