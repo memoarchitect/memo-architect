@@ -97,6 +97,7 @@ export async function buildCommand(options: {
             id: `diag-layer-${layerId}`,
             name: `${label} Layer`,
             diagramType: 'bdd',
+            viewKind: 'general',
             viewpointId: '__model',
             auto: true,
             description: `${label} architecture layer — ${layerElements.length} elements`,

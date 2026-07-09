@@ -12,6 +12,7 @@ import type { Violation, ValidationResult } from './types.js';
 import type { CompiledConstraint } from './constraint-eval.js';
 import { evaluateConstraintNode } from './constraint-eval.js';
 import { validateBehavior } from './behavior-validator.js';
+import { validateViews } from './view-validator.js';
 
 /**
  * Full model validation: native constraints + structural checks.
@@ -26,6 +27,7 @@ export function validateModel(
     nativeConstraints: CompiledConstraint[] = []
 ): ValidationResult {
     const behaviorViolations = validateBehavior(model);
+    const viewViolations = validateViews(model);
 
     const nativeViolations: Violation[] = [];
     let nativePassed = 0;
@@ -36,8 +38,8 @@ export function validateModel(
     }
 
     return {
-        violations: [...behaviorViolations, ...nativeViolations],
-        rulesEvaluated: 3 + nativeConstraints.length,
+        violations: [...behaviorViolations, ...viewViolations, ...nativeViolations],
+        rulesEvaluated: 5 + nativeConstraints.length,
         rulesPassed: nativePassed,
         timestamp: Date.now(),
     };

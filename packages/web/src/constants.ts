@@ -3,6 +3,8 @@
 // Single source of truth for architecture layer colors and design tokens.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { ViewKind } from '@memo/core';
+
 export const LAYER_COLORS: Record<string, string> = {
     business: '#8E44AD',
     requirements: '#4A90D9',
@@ -166,28 +168,56 @@ export const VALID_ONTOLOGY_KINDS: Set<string> = new Set(Object.keys(KIND_TO_GRO
 /** All valid ontology kinds sorted alphabetically (for dropdowns) */
 export const VALID_ONTOLOGY_KINDS_SORTED: string[] = [...VALID_ONTOLOGY_KINDS].sort();
 
+// ─── SysML v2 View Kind Metadata ────────────────────────────────────────────
+// The eight standard spec view kinds — every diagram resolves to exactly one
+// (Epic KK). The canonical diagramType → viewKind mapping lives in
+// @memo/core (view-kinds.ts).
+
+export interface ViewKindMeta {
+    label: string;
+    fullName: string;
+    color: string;
+}
+
+export const VIEW_KIND_META: Record<ViewKind, ViewKindMeta> = {
+    general:         { label: 'GEN',  fullName: 'General View',          color: '#7B68EE' },
+    interconnection: { label: 'INT',  fullName: 'Interconnection View',  color: '#1ABC9C' },
+    actionflow:      { label: 'ACT',  fullName: 'Action Flow View',      color: '#F39C12' },
+    statetransition: { label: 'STM',  fullName: 'State Transition View', color: '#FF6B6B' },
+    sequence:        { label: 'SEQ',  fullName: 'Sequence View',         color: '#3498DB' },
+    grid:            { label: 'GRID', fullName: 'Grid View',             color: '#2ECC71' },
+    browser:         { label: 'BRW',  fullName: 'Browser View',          color: '#95A5A6' },
+    geometry:        { label: 'GEO',  fullName: 'Geometry View',         color: '#8E44AD' },
+};
+
 // ─── Diagram Type Metadata ──────────────────────────────────────────────────
-// SysML v2 diagram type labels and colors for UI badges.
-// Diagram instances now come from config viewpoints (via model DTO),
-// not from this file.
+// Legacy diagram type labels and colors for UI badges. Each key carries the
+// spec view kind it resolves to. Diagram instances now come from config
+// viewpoints (via model DTO), not from this file.
 
 export interface DiagramTypeMeta {
     code: string;
     label: string;
     fullName: string;
     color: string;
+    viewKind: ViewKind;
 }
 
 export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
-    bdd:  { code: 'BDD',  label: 'BDD',  fullName: 'Block Definition Diagram', color: '#7B68EE' },
-    ibd:  { code: 'IBD',  label: 'IBD',  fullName: 'Internal Block Diagram',   color: '#1ABC9C' },
-    req:  { code: 'REQ',  label: 'REQ',  fullName: 'Requirements Diagram',     color: '#4A90D9' },
-    ucd:  { code: 'UCD',  label: 'UCD',  fullName: 'Use Case Diagram',         color: '#E67E22' },
-    act:  { code: 'ACT',  label: 'ACT',  fullName: 'Activity Diagram',         color: '#F39C12' },
-    afd:  { code: 'AFD',  label: 'AFD',  fullName: 'Action Flow Diagram',      color: '#FF6B6B' },
-    pkg:  { code: 'PKG',  label: 'PKG',  fullName: 'Package Diagram',          color: '#95A5A6' },
-    par:  { code: 'PAR',  label: 'PAR',  fullName: 'Parametric Diagram',       color: '#2ECC71' },
-    risk: { code: 'RISK', label: 'RISK', fullName: 'Risk Diagram',             color: '#E74C3C' },
+    bdd:  { code: 'BDD',  label: 'BDD',  fullName: 'Block Definition Diagram', color: '#7B68EE', viewKind: 'general' },
+    ibd:  { code: 'IBD',  label: 'IBD',  fullName: 'Internal Block Diagram',   color: '#1ABC9C', viewKind: 'interconnection' },
+    req:  { code: 'REQ',  label: 'REQ',  fullName: 'Requirements Diagram',     color: '#4A90D9', viewKind: 'general' },
+    ucd:  { code: 'UCD',  label: 'UCD',  fullName: 'Use Case Diagram',         color: '#E67E22', viewKind: 'general' },
+    act:  { code: 'ACT',  label: 'ACT',  fullName: 'Activity Diagram',         color: '#F39C12', viewKind: 'actionflow' },
+    afd:  { code: 'AFD',  label: 'AFD',  fullName: 'Action Flow Diagram',      color: '#FF6B6B', viewKind: 'actionflow' },
+    pkg:  { code: 'PKG',  label: 'PKG',  fullName: 'Package Diagram',          color: '#95A5A6', viewKind: 'general' },
+    par:  { code: 'PAR',  label: 'PAR',  fullName: 'Parametric Diagram',       color: '#2ECC71', viewKind: 'interconnection' },
+    risk: { code: 'RISK', label: 'RISK', fullName: 'Risk Diagram',             color: '#E74C3C', viewKind: 'general' },
+    stm:  { code: 'STM',  label: 'STM',  fullName: 'State Transition Diagram', color: '#FF6B6B', viewKind: 'statetransition' },
+    seq:  { code: 'SEQ',  label: 'SEQ',  fullName: 'Sequence Diagram',         color: '#3498DB', viewKind: 'sequence' },
+    fmea: { code: 'FMEA', label: 'FMEA', fullName: 'FMEA Matrix',              color: '#E74C3C', viewKind: 'grid' },
+    alloc: { code: 'ALLOC', label: 'ALLOC', fullName: 'Allocation Matrix',     color: '#E67E22', viewKind: 'grid' },
+    'threat-model': { code: 'THREAT', label: 'THREAT', fullName: 'Threat Model Diagram', color: '#C0392B', viewKind: 'general' },
 };
 
 // ─── Containment Depth Colors ────────────────────────────────────────────────
