@@ -1,5 +1,6 @@
 import { useModelStore, getDiagram } from '../store/model-store';
-import { DIAGRAM_TYPE_META } from '../constants';
+import type { ViewKind } from '@memo/core';
+import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { useNavigate } from 'react-router-dom';
 
 export function Breadcrumb() {
@@ -21,8 +22,11 @@ export function Breadcrumb() {
                     ? 'Model Viewpoint'
                     : model?.viewpoints?.find(v => v.id === diagram.viewpointId)?.label || diagram.viewpointId;
                 crumbs.push({ label: vpLabel });
-                const meta = DIAGRAM_TYPE_META[diagram.diagramType];
-                crumbs.push({ label: `${meta?.code || diagram.diagramType}: ${diagram.name}` });
+                // Spec view kind label wins over the legacy diagramType code
+                const kindMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
+                const typeMeta = DIAGRAM_TYPE_META[diagram.diagramType];
+                const code = kindMeta?.label ?? typeMeta?.code ?? diagram.diagramType;
+                crumbs.push({ label: `${code}: ${diagram.name}` });
             }
             break;
         }
