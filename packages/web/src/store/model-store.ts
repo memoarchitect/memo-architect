@@ -42,13 +42,12 @@ function migrateLegacyViewpoints(): ViewpointDTO[] {
 export const FOLDER_ATTR = '_folder';
 
 /** @deprecated Legacy 6-mode type — kept for backward compat during transition */
-export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'actionflow' | 'dsm' | 'dhf';
+export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf';
 
 /** Active view in the unified canvas */
 export type ActiveView =
     | { type: 'diagram'; diagramId: string }
     | { type: 'element-detail'; elementId: string }
-    | { type: 'actionflow' }
     | { type: 'dsm' }
     | { type: 'ontology' }
     | { type: 'ontology-detail'; packageName: string; layerId?: string }

@@ -136,9 +136,9 @@ const gpcaViewConfig: MEMOConfig = {
 };
 
 describe('KK-1 acceptance: GPCA views', () => {
-    it('all 27 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
+    it('all 28 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
         const files = readdirSync(GPCA_VIEWS_DIR).filter(f => f.endsWith('.sysml'));
-        expect(files).toHaveLength(27);
+        expect(files).toHaveLength(28);
 
         const docs: ParsedDocument[] = [];
         for (const f of files) {
@@ -147,7 +147,7 @@ describe('KK-1 acceptance: GPCA views', () => {
         const model = buildMemoModel(docs, gpcaViewConfig);
         const { diagrams } = deriveModelViews(model);
 
-        expect(diagrams).toHaveLength(27);
+        expect(diagrams).toHaveLength(28);
         for (const d of diagrams) {
             expect(d.viewKind, `GPCA view "${d.name}" must resolve to a spec view kind`).toBeDefined();
             expect(isViewKind(d.viewKind!), `"${d.viewKind}" is not a spec view kind`).toBe(true);
@@ -156,12 +156,13 @@ describe('KK-1 acceptance: GPCA views', () => {
 
         // Kind distribution locks the KK-1 recategorization (14 diagram views
         // mapped explicitly + 11 document-backed views resolving to browser)
-        // plus the KK-2 decomposition and KK-3 interconnect template views
+        // plus the KK-2..KK-4 template views
         const counts: Record<string, number> = {};
         for (const d of diagrams) counts[d.viewKind!] = (counts[d.viewKind!] ?? 0) + 1;
         expect(counts).toEqual({
             general: 10,
             interconnection: 2,
+            actionflow: 1,
             statetransition: 1,
             sequence: 1,
             grid: 2,
@@ -202,6 +203,14 @@ describe('KK-2/KK-3 acceptance: GPCA template views', () => {
             expect.arrayContaining(['ExchangesWith', 'Composes'])
         );
         expect(interconnect!.diagramType).toBe('ibd');
+    });
+
+    it('KK-4: ships an Action Flow view selecting the infusion delivery actions', async () => {
+        const diagrams = await deriveGpcaViews();
+        const actionFlow = diagrams.find(d => d.name === 'GPCA Infusion Delivery Action Flow');
+        expect(actionFlow).toBeDefined();
+        expect(actionFlow!.viewKind).toBe('actionflow');
+        expect(actionFlow!.diagramType).toBe('afd');
     });
 });
 

@@ -55,7 +55,6 @@ export function CommandPalette() {
         result.push(
             { id: 'tool:dsm', label: 'DSM', sublabel: 'Design Structure Matrix', kind: 'tool', action: () => setActiveView({ type: 'dsm' }) },
             { id: 'tool:traceability', label: 'Traceability Matrix', sublabel: 'N\u00d7N trace matrix with presets', kind: 'tool', action: () => setActiveView({ type: 'traceability' }) },
-            { id: 'tool:actionflow', label: 'Action Flow', sublabel: 'Action Flow Diagram', kind: 'tool', action: () => setActiveView({ type: 'actionflow' }) },
             { id: 'tool:ontology', label: 'Ontology', sublabel: 'Ontology Viewer', kind: 'tool', action: () => setActiveView({ type: 'ontology' }) },
         );
 

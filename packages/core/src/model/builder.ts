@@ -586,14 +586,17 @@ function extractActionUsage(
     const id = usage.name;
     const typeName = usage.type;
 
-    // Dual-mode resolution: registry first, then config fallback
+    // Dual-mode resolution: registry first, then config fallback. A type
+    // that resolves without a real layer is a model-local action def, not an
+    // ontology kind — the usage stays an ActionUsage on the behavior layer
+    // (the def reference is kept in the actionType attribute below).
     let kind = 'ActionUsage';
     let layer = 'behavior';
     if (typeName) {
         const { kindDef, resolvedKind } = resolveKindDef(typeName, config, registries);
-        if (kindDef) {
+        if (kindDef && kindDef.layer && kindDef.layer !== 'unknown') {
             kind = resolvedKind;
-            layer = kindDef.layer || 'behavior';
+            layer = kindDef.layer;
         }
     }
 

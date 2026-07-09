@@ -31,7 +31,16 @@ export function validateBehavior(model: MemoModel): Violation[] {
         }
     }
 
+    // Composite actions (those with nested action steps) are allocated and
+    // connected through their children — exempt from BV-001/BV-002
+    const compositeIds = new Set<string>();
+    for (const el of model.elements.values()) {
+        if (el.parentAction) compositeIds.add(el.parentAction);
+    }
+
     for (const action of actionUsages) {
+        if (compositeIds.has(action.id)) continue;
+
         // 1. Unallocated action usage
         if (!action.allocatedTo) {
             violations.push({
