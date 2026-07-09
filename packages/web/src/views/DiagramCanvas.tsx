@@ -45,9 +45,11 @@ import {
 } from './templates/general-view';
 import { computeInterconnectionLayout } from './templates/interconnection-view';
 import { computeActionFlowViewLayout } from './templates/actionflow-view';
+import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
+import { StateNode } from './StateNode';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
@@ -272,6 +274,7 @@ function DiagramCanvasInner() {
         interconnectionNode: InterconnectionNode,
         actionFlowNode: ActionFlowNode,
         actionFlowLane: ActionFlowLaneNode,
+        stateNode: StateNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -473,6 +476,12 @@ function DiagramCanvasInner() {
                 viewpointFilter,
                 swimlanes: swimlanesOn,
             }).then(r => apply(r, false)).catch(fail('Action flow'));
+        } else if (viewKind === 'statetransition') {
+            // State Transition template (KK-5): nested states, transition
+            // edges with trigger [guard] labels
+            setIsLayouting(true);
+            computeStateTransitionLayout(model, { viewpointFilter })
+                .then(r => apply(r, false)).catch(fail('State transition'));
         } else if (isGeneralTemplate && generalMode !== 'graph') {
             // General template (KK-2) tree/containment modes
             setIsLayouting(true);
