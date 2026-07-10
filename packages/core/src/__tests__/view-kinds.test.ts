@@ -59,6 +59,14 @@ describe('KK-1: view-kind taxonomy', () => {
         }
     });
 
+    it('KK-9: geometry is reachable only by explicit declaration (ADR-1-19)', () => {
+        // The renderer is deferred; no legacy diagramType may silently map to
+        // geometry. Adding such a mapping must be a deliberate ADR revisit.
+        expect(Object.values(DIAGRAM_TYPE_TO_VIEW_KIND)).not.toContain('geometry');
+        expect(resolveViewKind('DiagramViewKind::geometry', undefined)).toBe('geometry');
+        expect(resolveViewKind('DiagramViewKind::geometry', 'bdd')).toBe('geometry');
+    });
+
     it('normalizes qualified enum references', () => {
         expect(normalizeViewKind('DiagramViewKind::statetransition')).toBe('statetransition');
         expect(normalizeViewKind('general')).toBe('general');

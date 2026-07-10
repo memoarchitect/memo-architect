@@ -6,6 +6,7 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-19](adr/ADR-1-19-geometry-view-deferred.md) | Accepted | Geometry view kind deferred — no renderer until the ontology carries geometric data; kind stays in the taxonomy, reachable only by explicit declaration, rendered as a deferred placeholder |
 | [ADR-1-18](adr/ADR-1-18-kerml-expression-subset.md) | Accepted | Closed KerML boolean expression subset (navigation, collection ops, comparison/boolean/arithmetic, literals) for native `require/assert constraint { … }` bodies; grammar runs ahead of evaluator (EE-2 fills deferred forms) |
 | [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Three-repo split `memo-sysmlv2` (pure content) / `memo-cli` (engine) / `memo-architect` (web); supersedes the four-repo layout in platform.md §10 |
 | [ADR-1-16](adr/ADR-1-16-view-presentation-syntax-fallbacks.md) | Accepted | View/template files use simple `view def`, bare imports, and repeated scalar `presentationKind` assignments until grammar support expands |
