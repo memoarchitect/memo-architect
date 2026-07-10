@@ -144,9 +144,9 @@ const gpcaViewConfig: MEMOConfig = {
 };
 
 describe('KK-1 acceptance: GPCA views', () => {
-    it('all 29 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
+    it('all 26 GPCA views resolve to exactly one of the 8 spec view kinds, with no validation warnings', async () => {
         const files = readdirSync(GPCA_VIEWS_DIR).filter(f => f.endsWith('.sysml'));
-        expect(files).toHaveLength(29);
+        expect(files).toHaveLength(26);
 
         const docs: ParsedDocument[] = [];
         for (const f of files) {
@@ -155,26 +155,27 @@ describe('KK-1 acceptance: GPCA views', () => {
         const model = buildMemoModel(docs, gpcaViewConfig);
         const { diagrams } = deriveModelViews(model);
 
-        expect(diagrams).toHaveLength(29);
+        expect(diagrams).toHaveLength(26);
         for (const d of diagrams) {
             expect(d.viewKind, `GPCA view "${d.name}" must resolve to a spec view kind`).toBeDefined();
             expect(isViewKind(d.viewKind!), `"${d.viewKind}" is not a spec view kind`).toBe(true);
         }
         expect(validateViews(model)).toHaveLength(0);
 
-        // Kind distribution locks the KK-1 recategorization (14 diagram views
-        // mapped explicitly + 11 document-backed views resolving to browser)
-        // plus the KK-2..KK-8 template views
+        // Kind distribution locks the template consolidation: every diagram
+        // view maps explicitly onto a KK-2..KK-8 template kind (tabular and
+        // matrix views on grid), and the 9 document-backed views resolve to
+        // browser alongside the declared Function Browser view
         const counts: Record<string, number> = {};
         for (const d of diagrams) counts[d.viewKind!] = (counts[d.viewKind!] ?? 0) + 1;
         expect(counts).toEqual({
-            general: 10,
+            general: 6,
             interconnection: 2,
             actionflow: 1,
             statetransition: 1,
             sequence: 1,
-            grid: 2,
-            browser: 12,
+            grid: 5,
+            browser: 10,
         });
     });
 });
