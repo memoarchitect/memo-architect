@@ -625,7 +625,46 @@ function buildKindToLayerIdMap(
 }
 
 /**
- * Group model elements by ontology layer for the Model Explorer tree.
+ * Build kind-name → namespace sub-group map from selected ontology packages
+ * (e.g. Hazard → "risk" from architecture/risk/). Kinds declared directly
+ * under a layer directory carry no sub-group.
+ */
+function buildKindToSubGroupMap(
+    availableOntologies: OntologyPackageInfo[],
+    selectedOntologies: Set<string>,
+): Record<string, string | undefined> {
+    const map: Record<string, string | undefined> = {};
+    for (const pkg of availableOntologies) {
+        if (!selectedOntologies.has(pkg.name)) continue;
+        for (const layer of pkg.layers) {
+            for (const kind of layer.kinds) {
+                map[kind.name] = kind.group;
+            }
+        }
+    }
+    return map;
+}
+
+/** "hardware_structure" → "Hardware Structure" */
+function subGroupLabel(id: string): string {
+    return id
+        .split(/[_-]/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
+/** One namespace sub-group inside a layer group (e.g. Risk inside Architecture). */
+export interface ExplorerSubGroup {
+    /** Sub-group id ('' for kinds sitting directly under the layer). */
+    id: string;
+    label: string;
+    color: string;
+    kinds: Map<string, TreeNode[]>;
+}
+
+/**
+ * Group model elements by ontology layer, then by namespace sub-group, for
+ * the Model Explorer tree (e.g. Architecture → Risk → Hazard → elements).
  * Elements whose kind no selected ontology declares fall back to their own
  * layer field; whatever remains lands in "Undefined — Not in Ontology".
  * Exported for tests.
@@ -635,13 +674,14 @@ export function computeExplorerGroupTree(
     searchTerm: string,
     availableOntologies: OntologyPackageInfo[],
     selectedOntologies: Set<string>,
-): { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] {
+): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
     // Derive groups and kind→layer map from the currently selected ontology packages.
     // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
     const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'methodology', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
+    const kindToSubGroup = buildKindToSubGroupMap(availableOntologies, selectedOntologies);
     // Builder-synthesized kinds for native SysML constructs (action def /
     // action / item def) exist in no ontology package — group them under
     // their builder-assigned layer instead of "Undefined — Not in Ontology".
@@ -655,7 +695,27 @@ export function computeExplorerGroupTree(
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
-    const groups: { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] = [];
+    /** Bucket kind → elements into sub-groups, building each kind's tree. */
+    const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string): ExplorerSubGroup[] => {
+        const buckets = new Map<string, Map<string, TreeNode[]>>();
+        for (const [kind, els] of kindMap.entries()) {
+            // Ontology namespace sub-group; synthesized/fallback kinds group
+            // under the elements' own layer when it adds information
+            const sub = kindToSubGroup[kind] ?? '';
+            if (!buckets.has(sub)) buckets.set(sub, new Map());
+            buckets.get(sub)!.set(kind, buildTree(els));
+        }
+        return [...buckets.entries()]
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([id, kinds]) => ({
+                id,
+                label: id ? subGroupLabel(id) : '',
+                color: id ? ((LAYER_COLORS as Record<string, string>)[id] ?? groupColor) : groupColor,
+                kinds,
+            }));
+    };
+
+    const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
     for (const lg of layerGroups) {
         const kindMap = new Map<string, MemoElement[]>();
@@ -668,9 +728,7 @@ export function computeExplorerGroupTree(
             kindMap.get(el.kind)!.push(el);
         }
         if (kindMap.size > 0) {
-            const treeMap = new Map<string, TreeNode[]>();
-            for (const [kind, els] of kindMap.entries()) treeMap.set(kind, buildTree(els));
-            groups.push({ group: lg, kinds: treeMap });
+            groups.push({ group: lg, subGroups: toSubGroups(kindMap, lg.color) });
         }
     }
 
@@ -685,11 +743,10 @@ export function computeExplorerGroupTree(
         uncategorizedMap.get(el.kind)!.push(el);
     }
     if (uncategorizedMap.size > 0) {
-        const treeMap = new Map<string, TreeNode[]>();
-        for (const [kind, els] of uncategorizedMap.entries()) treeMap.set(kind, buildTree(els));
+        const undefColor = '#F59E0B';
         groups.push({
-            group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: '#F59E0B', kinds: [] },
-            kinds: treeMap,
+            group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: undefColor, kinds: [] },
+            subGroups: toSubGroups(uncategorizedMap, undefColor),
         });
     }
 
@@ -818,8 +875,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 else countElements(n.children);
             }
         };
-        for (const { kinds } of groupTree) {
-            for (const nodes of kinds.values()) countElements(nodes);
+        for (const { subGroups } of groupTree) {
+            for (const sub of subGroups) {
+                for (const nodes of sub.kinds.values()) countElements(nodes);
+            }
         }
         return ids;
     }, [groupTree]);
@@ -858,7 +917,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
             )}
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-                {groupTree.map(({ group, kinds }) => {
+                {groupTree.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
                     const isExpanded = expanded.has(groupKey);
                     const isUndefinedGroup = group.id === 'undefined';
@@ -867,7 +926,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     const countElements = (nodes: TreeNode[]): number =>
                         nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
 
-                    const totalCount = Array.from(kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+                    const countSubGroup = (sub: ExplorerSubGroup): number =>
+                        Array.from(sub.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+
+                    const totalCount = subGroups.reduce((sum, sub) => sum + countSubGroup(sub), 0);
 
                     return (
                         <div key={group.id} className="mb-0.5">
@@ -909,9 +971,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 </span>
                             </div>
 
-                            {/* ── Kind sub-groups ── */}
-                            {isExpanded && Array.from(kinds.entries()).map(([kind, nodes]) => {
-                                const kindKey = `k:${group.id}:${kind}`;
+                            {/* ── Kind folders (shared by root kinds and sub-groups) ── */}
+                            {(() => {
+                            const renderKind = (kind: string, nodes: TreeNode[], subId: string) => {
+                                const kindKey = `k:${group.id}:${subId ? subId + ':' : ''}${kind}`;
                                 const isKindExpanded = expanded.has(kindKey);
 
                                 // Find layer color for this kind from the first element found
@@ -1010,7 +1073,58 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                         )}
                                     </div>
                                 );
-                            })}
+                            };
+
+                            if (!isExpanded) return null;
+                            return subGroups.map(sub => {
+                                // Kinds sitting directly under the layer render flat
+                                if (!sub.id) {
+                                    return (
+                                        <div key="__root">
+                                            {Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, ''))}
+                                        </div>
+                                    );
+                                }
+                                const subKey = `sg:${group.id}:${sub.id}`;
+                                const isSubExpanded = expanded.has(subKey);
+                                const subCount = countSubGroup(sub);
+                                return (
+                                    <div key={sub.id} style={{ marginLeft: '16px' }}>
+                                        {/* ── Namespace sub-group header (e.g. Risk within Architecture) ── */}
+                                        <div
+                                            className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                                            style={{ borderRadius: '4px', margin: '0 4px' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            onClick={() => toggleExpand(subKey)}
+                                        >
+                                            <ChevronIcon expanded={isSubExpanded} size={13} color={sub.color} />
+                                            <FolderIcon open={isSubExpanded} color={sub.color} />
+                                            <span
+                                                className="font-semibold flex-1 truncate"
+                                                style={{ color: COLOR.primary, fontSize: FONT.explorer.kind }}
+                                            >
+                                                {sub.label}
+                                            </span>
+                                            <span
+                                                className="px-1.5 py-0.5 rounded-full"
+                                                style={{
+                                                    background: sub.color + '25',
+                                                    color: sub.color,
+                                                    fontSize: FONT.explorer.count,
+                                                    fontWeight: 600,
+                                                    minWidth: '20px',
+                                                    textAlign: 'center',
+                                                }}
+                                            >
+                                                {subCount}
+                                            </span>
+                                        </div>
+                                        {isSubExpanded && Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, sub.id))}
+                                    </div>
+                                );
+                            });
+                            })()}
                         </div>
                     );
                 })}

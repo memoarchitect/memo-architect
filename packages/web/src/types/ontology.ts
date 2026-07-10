@@ -44,6 +44,8 @@ export interface OntologyKindInfo {
     derivesFrom?: string;      // supertype kind name
     derivedBy?: string[];      // kinds that specialize this one
     relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
+    group?: string;            // namespace sub-group: first directory under the layer (e.g. "risk")
+    standard?: string;         // compliance standard (e.g. "iso14971") for kinds under compliance/<standard>/
 }
 
 export interface OntologySaveResult {
