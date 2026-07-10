@@ -14,7 +14,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, createWrit
 import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, deriveModelViews } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, deriveModelViews, deriveSampleDiagrams } from '@memo/core';
 import type { BuilderRegistries, DiagramDTO } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
@@ -104,6 +104,7 @@ export async function buildCommand(options: {
             elementIds: layerElements.map(e => e.id),
         });
     }
+    diagrams.push(...deriveSampleDiagrams(model));
     const derivedViews = deriveModelViews(model, ontologyRegistries?.kindRegistry);
     viewpoints.push(...derivedViews.viewpoints);
     diagrams.push(...derivedViews.diagrams);

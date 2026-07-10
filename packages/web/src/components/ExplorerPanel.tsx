@@ -1290,7 +1290,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
-    const autoModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto));
+    const isSample = (d: DiagramDTO) => d.id.startsWith('diag-sample-');
+    const sampleModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto && isSample(d)));
+    const autoModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto && !isSample(d)));
     const userModelDiags = filterDiagrams(modelDiagrams.filter(d => !d.auto));
 
     const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
@@ -1368,6 +1370,14 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
                 {expandedVps.has('__model') && (
                     <div style={{ marginLeft: '16px' }}>
+                        {/* One sample per view-kind template — collapsed by default */}
+                        {sampleModelDiags.length > 0 && (
+                            <CollapsibleSection label="Samples" count={sampleModelDiags.length} defaultOpen={false}>
+                                <div style={{ marginLeft: '12px' }}>
+                                    {renderDiagramList(sampleModelDiags, '__model')}
+                                </div>
+                            </CollapsibleSection>
+                        )}
                         {/* Auto-generated diagrams — collapsed by default */}
                         {autoModelDiags.length > 0 && (
                             <CollapsibleSection label="Generated" count={autoModelDiags.length} defaultOpen={false}>
