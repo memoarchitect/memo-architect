@@ -8,7 +8,7 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
@@ -565,6 +565,7 @@ const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 function buildLayerGroupsFromOntologies(
     availableOntologies: OntologyPackageInfo[],
     selectedOntologies: Set<string>,
+    fallbackLayerIds: Iterable<string> = [],
 ): LayerGroup[] {
     const layerMap = new Map<string, LayerGroup>();
     for (const pkg of availableOntologies) {
@@ -584,6 +585,18 @@ function buildLayerGroupsFromOntologies(
                     if (!existing.kinds.includes(k.name)) existing.kinds.push(k.name);
                 }
             }
+        }
+    }
+    // Layers carried only by builder-synthesized elements (no ontology package
+    // declares them) still get a group so their elements categorize cleanly.
+    for (const id of fallbackLayerIds) {
+        if (!layerMap.has(id)) {
+            layerMap.set(id, {
+                id,
+                label: LAYER_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1),
+                color: (LAYER_COLORS as Record<string, string>)[id] ?? '#6B7280',
+                kinds: [],
+            });
         }
     }
     // Sort by LAYER_ORDER, then alphabetically for unknown layers
@@ -609,6 +622,78 @@ function buildKindToLayerIdMap(
         }
     }
     return map;
+}
+
+/**
+ * Group model elements by ontology layer for the Model Explorer tree.
+ * Elements whose kind no selected ontology declares fall back to their own
+ * layer field; whatever remains lands in "Undefined — Not in Ontology".
+ * Exported for tests.
+ */
+export function computeExplorerGroupTree(
+    elements: MemoElement[],
+    searchTerm: string,
+    availableOntologies: OntologyPackageInfo[],
+    selectedOntologies: Set<string>,
+): { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] {
+    const lower = searchTerm.toLowerCase();
+
+    // Derive groups and kind→layer map from the currently selected ontology packages.
+    // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
+    const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'methodology', 'manifest']);
+    const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
+    // Builder-synthesized kinds for native SysML constructs (action def /
+    // action / item def) exist in no ontology package — group them under
+    // their builder-assigned layer instead of "Undefined — Not in Ontology".
+    const synthesizedLayerIds = new Set<string>();
+    for (const el of elements) {
+        if (BUILDER_SYNTHESIZED_KINDS.has(el.kind) && !kindToLayerId[el.kind]) {
+            synthesizedLayerIds.add(el.layer);
+        }
+    }
+    const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies, synthesizedLayerIds)
+        .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
+    const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
+
+    const groups: { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] = [];
+
+    for (const lg of layerGroups) {
+        const kindMap = new Map<string, MemoElement[]>();
+        for (const el of elements) {
+            // Prefer ontology-defined layer; fall back to element's own layer field
+            const layerId = kindToLayerId[el.kind] ?? el.layer;
+            if (layerId !== lg.id) continue;
+            if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
+            if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
+            kindMap.get(el.kind)!.push(el);
+        }
+        if (kindMap.size > 0) {
+            const treeMap = new Map<string, TreeNode[]>();
+            for (const [kind, els] of kindMap.entries()) treeMap.set(kind, buildTree(els));
+            groups.push({ group: lg, kinds: treeMap });
+        }
+    }
+
+    // Elements whose layer isn't in any selected ontology → "Not in Ontology"
+    const uncategorizedMap = new Map<string, MemoElement[]>();
+    for (const el of elements) {
+        const layerId = kindToLayerId[el.kind] ?? el.layer;
+        if (knownLayerIds.has(layerId)) continue;
+        if (NON_ELEMENT_LAYERS.has(layerId)) continue;
+        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
+        if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
+        uncategorizedMap.get(el.kind)!.push(el);
+    }
+    if (uncategorizedMap.size > 0) {
+        const treeMap = new Map<string, TreeNode[]>();
+        for (const [kind, els] of uncategorizedMap.entries()) treeMap.set(kind, buildTree(els));
+        groups.push({
+            group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: '#F59E0B', kinds: [] },
+            kinds: treeMap,
+        });
+    }
+
+    return groups;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -663,59 +748,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, []);
 
     // Build group tree from selected ontology layers (dynamic — not hardcoded SEMANTIC_GROUPS)
-    const groupTree = useMemo(() => {
-        if (!model) return [];
-        const elements = Object.values(model.elements);
-        const lower = searchTerm.toLowerCase();
-
-        // Derive groups and kind→layer map from the currently selected ontology packages.
-        // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
-        const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'methodology', 'manifest']);
-        const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies)
-            .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
-        const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
-        const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
-
-        const groups: { group: LayerGroup; kinds: Map<string, TreeNode[]> }[] = [];
-
-        for (const lg of layerGroups) {
-            const kindMap = new Map<string, MemoElement[]>();
-            for (const el of elements) {
-                // Prefer ontology-defined layer; fall back to element's own layer field
-                const layerId = kindToLayerId[el.kind] ?? el.layer;
-                if (layerId !== lg.id) continue;
-                if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-                if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
-                kindMap.get(el.kind)!.push(el);
-            }
-            if (kindMap.size > 0) {
-                const treeMap = new Map<string, TreeNode[]>();
-                for (const [kind, els] of kindMap.entries()) treeMap.set(kind, buildTree(els));
-                groups.push({ group: lg, kinds: treeMap });
-            }
-        }
-
-        // Elements whose layer isn't in any selected ontology → "Not in Ontology"
-        const uncategorizedMap = new Map<string, MemoElement[]>();
-        for (const el of elements) {
-            const layerId = kindToLayerId[el.kind] ?? el.layer;
-            if (knownLayerIds.has(layerId)) continue;
-            if (NON_ELEMENT_LAYERS.has(layerId)) continue;
-            if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-            if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
-            uncategorizedMap.get(el.kind)!.push(el);
-        }
-        if (uncategorizedMap.size > 0) {
-            const treeMap = new Map<string, TreeNode[]>();
-            for (const [kind, els] of uncategorizedMap.entries()) treeMap.set(kind, buildTree(els));
-            groups.push({
-                group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: '#F59E0B', kinds: [] },
-                kinds: treeMap,
-            });
-        }
-
-        return groups;
-    }, [model, searchTerm, availableOntologies, selectedOntologies]);
+    const groupTree = useMemo(
+        () => model ? computeExplorerGroupTree(Object.values(model.elements), searchTerm, availableOntologies, selectedOntologies) : [],
+        [model, searchTerm, availableOntologies, selectedOntologies],
+    );
 
     // ─── DnD Handlers ───
 
