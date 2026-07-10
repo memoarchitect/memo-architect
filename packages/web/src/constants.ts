@@ -168,6 +168,17 @@ export const VALID_ONTOLOGY_KINDS: Set<string> = new Set(Object.keys(KIND_TO_GRO
 /** All valid ontology kinds sorted alphabetically (for dropdowns) */
 export const VALID_ONTOLOGY_KINDS_SORTED: string[] = [...VALID_ONTOLOGY_KINDS].sort();
 
+/**
+ * Kinds the model builder synthesizes for native SysML v2 constructs
+ * (`action def`, `action`, `item def`), each carrying a builder-assigned
+ * layer. Per rulebook B1 behavior is modeled with native actions, so these
+ * kinds are deliberately absent from the ontology packages — the explorer
+ * groups them by the element's own layer instead of "Not in Ontology".
+ */
+export const BUILDER_SYNTHESIZED_KINDS: Set<string> = new Set([
+    'ActionDefinition', 'ActionUsage', 'ItemDefinition',
+]);
+
 // ─── SysML v2 View Kind Metadata ────────────────────────────────────────────
 // The eight standard spec view kinds — every diagram resolves to exactly one
 // (Epic KK). The canonical diagramType → viewKind mapping lives in
