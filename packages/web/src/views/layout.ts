@@ -116,8 +116,18 @@ export async function computeLayout(
         })),
     };
 
-    // Run ELK layout
-    const layouted = await elk.layout(elkGraph);
+    // Run ELK layout. The MULTI_EDGE wrapping scanline throws
+    // "Invalid hitboxes for scanline constraint calculation" on some large
+    // graphs (whole-model layouts) — retry without wrapping when ELK fails.
+    let layouted: Awaited<ReturnType<typeof elk.layout>>;
+    try {
+        layouted = await elk.layout(elkGraph);
+    } catch (err) {
+        console.warn('ELK layout failed, retrying without edge wrapping:', err);
+        delete (elkGraph.layoutOptions as Record<string, string>)['elk.layered.wrapping.strategy'];
+        delete (elkGraph.layoutOptions as Record<string, string>)['elk.layered.wrapping.additionalEdgeSpacing'];
+        layouted = await elk.layout(elkGraph);
+    }
 
     // Convert to ReactFlow nodes — use 'diagramNode' type for interactive features
     const nodes: Node[] = (layouted.children || []).map(child => {
