@@ -49,6 +49,7 @@ import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
+import { InterconnectionEdge } from './InterconnectionEdge';
 import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
@@ -194,6 +195,8 @@ function DiagramCanvasInner() {
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutVersion, setLayoutVersion] = useState(0);
+    // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
+    const [relayoutNonce, setRelayoutNonce] = useState(0);
     const [paletteCollapsed, setPaletteCollapsed] = useState(true);
     const [snapEnabled, setSnapEnabled] = useState(true);
 
@@ -254,6 +257,15 @@ function DiagramCanvasInner() {
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
+    // A view may restrict its presentation modes (e.g. the BDD sample is a
+    // strict tree — no graph) via properties.modes = "tree,containment"
+    const declaredModes = selectedDiagram?.properties?.modes;
+    const allowedGeneralModes = useMemo(() => {
+        if (!declaredModes) return GENERAL_VIEW_MODES;
+        const wanted = new Set(declaredModes.split(',').map(s => s.trim()));
+        const filtered = GENERAL_VIEW_MODES.filter(m => wanted.has(m));
+        return filtered.length ? filtered : GENERAL_VIEW_MODES;
+    }, [declaredModes]);
     // Action Flow template (KK-4): swimlane banding toggle
     const [swimlanesOn, setSwimlanesOn] = useState(true);
 
@@ -286,6 +298,10 @@ function DiagramCanvasInner() {
         decisionNode: DecisionNode,
         forkNode: ForkNode,
         startEndNode: StartEndNode,
+    }), []);
+
+    const edgeTypes = useMemo(() => ({
+        interconnectionEdge: InterconnectionEdge,
     }), []);
 
     const miniMapNodeColor = useCallback((node: any) =>
@@ -375,7 +391,7 @@ function DiagramCanvasInner() {
 
     const resetLayout = useCallback(() => {
         positionCacheRef.current.clear();
-        setLayoutVersion(v => v + 1);
+        setRelayoutNonce(n => n + 1);
     }, []);
 
     // ─── Apply interactive node data (context menu + inline edit callbacks) ───
@@ -463,6 +479,7 @@ function DiagramCanvasInner() {
                 computeDecompositionLayout(model, {
                     expandedNodes, nodeDirections,
                     callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+                    positionCache: positionCacheRef.current,
                 }).then(r => apply(r)).catch(fail('Decomposition'));
             } else {
                 apply(computeContainmentLayout(model, {
@@ -503,6 +520,7 @@ function DiagramCanvasInner() {
                 viewpointFilter,
                 expandedNodes, nodeDirections,
                 callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+                positionCache: positionCacheRef.current,
             }).then(r => apply(r)).catch(fail('General template'));
         } else {
             // Standard diagram / General template graph mode — check for sidecar
@@ -518,7 +536,7 @@ function DiagramCanvasInner() {
 
         return () => { cancelled = true; };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
-        viewKind, isGeneralTemplate, generalMode, swimlanesOn,
+        viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes,
         expandedNodes, nodeDirections, toggleExpand, toggleDirection, currentLayout,
         buildNodesFromSidecar, applyInteractiveData]);
@@ -1038,7 +1056,7 @@ function DiagramCanvasInner() {
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
-                                    {GENERAL_VIEW_MODES.map(m => (
+                                    {allowedGeneralModes.map(m => (
                                         <button key={m}
                                             onClick={() => { setGeneralMode(m); positionCacheRef.current.clear(); }}
                                             className="px-2 py-0.5 text-xs font-medium capitalize"
@@ -1063,6 +1081,13 @@ function DiagramCanvasInner() {
                                             style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
                                             Collapse All
                                         </button>
+                                        {generalMode === 'tree' && (
+                                            <button onClick={resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
+                                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                                title="Re-layout the tree from scratch">
+                                                ↻ Reset
+                                            </button>
+                                        )}
                                     </>
                                 )}
                             </>
@@ -1093,6 +1118,13 @@ function DiagramCanvasInner() {
                                     style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
                                     Collapse All
                                 </button>
+                                {layoutStyle === 'decomposition' && (
+                                    <button onClick={resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
+                                        style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                        title="Re-layout the tree from scratch">
+                                        ↻ Reset
+                                    </button>
+                                )}
                             </>
                         )}
 
@@ -1217,6 +1249,7 @@ function DiagramCanvasInner() {
                     nodes={nodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
                     onNodesChange={onNodesChangeWithResize}
                     onEdgesChange={onEdgesChange}
                     onNodeClick={onNodeClick}

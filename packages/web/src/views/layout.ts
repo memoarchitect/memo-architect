@@ -489,6 +489,22 @@ export async function computeTreeLayout(
 }
 
 // ─── Interactive Decomposition Layout (tree with expand/collapse) ────────────
+//
+// Manual recursive layout (memo-sysmlv4 parity) instead of ELK: each node
+// places its own children — below it (vertical) or in a column to its right
+// (horizontal) — using recursively computed subtree extents. Positions are
+// cached across re-layouts so expanding one node never moves the others;
+// toggling a node's direction clears its descendants' cache entries.
+
+const TREE_NODE_HEIGHT = 64;
+const TREE_H_GAP = 100;          // horizontal gap between sibling subtrees (V mode)
+const TREE_V_GAP = 110;          // vertical rank gap parent → children (V mode)
+const TREE_HMODE_OFFSET = 300;   // children column offset right of parent (H mode)
+const TREE_HMODE_V_GAP = 44;     // vertical gap between stacked children (H mode)
+
+function treeNodeWidth(el: MemoElement): number {
+    return Math.max(el.name.length * 8 + 80, 220);
+}
 
 export async function computeDecompositionLayout(
     model: MemoModelDTO,
@@ -501,85 +517,117 @@ export async function computeDecompositionLayout(
         };
         /** Prebuilt hierarchy (view-kind templates); defaults to the structural tree */
         tree?: DecompositionTree;
+        /** Sticky positions across re-layouts (canvas-owned); optional */
+        positionCache?: Map<string, { x: number; y: number }>;
     }
 ): Promise<LayoutResult> {
     const tree = options.tree ?? buildDecompositionTree(model);
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
 
-    const visibleIds = new Set<string>();
-    const visibleEdges: { parentId: string; childId: string }[] = [];
+    const cache = options.positionCache ?? new Map<string, { x: number; y: number }>();
+    const direction = (id: string) => options.nodeDirections.get(id) || 'vertical';
+    const childrenOf = (id: string) =>
+        (tree.childrenMap.get(id) || []).filter(cid => tree.elements.has(cid));
 
-    function collectVisible(id: string) {
-        if (!tree.elements.has(id)) return;
-        visibleIds.add(id);
-        if (options.expandedNodes.has(id)) {
-            for (const childId of (tree.childrenMap.get(id) || [])) {
-                if (tree.elements.has(childId)) {
-                    visibleEdges.push({ parentId: id, childId });
-                    collectVisible(childId);
-                }
-            }
+    // Subtree extent given current expansion + per-node direction
+    const dims = (id: string): { width: number; height: number } => {
+        const el = tree.elements.get(id)!;
+        const w = treeNodeWidth(el);
+        const kids = childrenOf(id);
+        if (!options.expandedNodes.has(id) || kids.length === 0) {
+            return { width: w, height: TREE_NODE_HEIGHT };
         }
-    }
-    for (const rootId of tree.roots) collectVisible(rootId);
-
-    const elkGraph = {
-        id: 'root',
-        layoutOptions: {
-            'elk.algorithm': 'mrtree',
-            'elk.direction': 'DOWN',
-            'elk.spacing.nodeNode': '40',
-            'elk.mrtree.searchOrder': 'DFS',
-        },
-        children: [...visibleIds].map(id => {
-            const el = tree.elements.get(id)!;
-            return { id, width: Math.max(el.name.length * 8 + 80, 220), height: 56 };
-        }),
-        edges: visibleEdges.map((e, i) => ({
-            id: `de-${i}`, sources: [e.parentId], targets: [e.childId],
-        })),
+        const kd = kids.map(dims);
+        if (direction(id) === 'vertical') {
+            const totalW = kd.reduce((s, d) => s + d.width, 0) + (kd.length - 1) * TREE_H_GAP;
+            const maxH = Math.max(...kd.map(d => d.height));
+            return { width: Math.max(w, totalW), height: TREE_NODE_HEIGHT + TREE_V_GAP + maxH };
+        }
+        const maxW = Math.max(...kd.map(d => d.width));
+        const totalH = kd.reduce((s, d) => s + d.height, 0) + (kd.length - 1) * TREE_HMODE_V_GAP;
+        return { width: w + TREE_HMODE_OFFSET + maxW, height: Math.max(TREE_NODE_HEIGHT, totalH) };
     };
 
-    const layouted = await elk.layout(elkGraph);
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    const compColor = REL_COLORS['composedOf'] || '#8E44AD';
 
-    const nodes: Node[] = (layouted.children || []).map(child => {
-        const el = tree.elements.get(child.id)!;
-        const color = LAYER_COLORS[el.layer] || '#666';
-        const childCount = (tree.childrenMap.get(child.id) || []).length;
-        const direction = options.nodeDirections.get(child.id) || 'vertical';
+    const place = (id: string, parentId: string | null, centerX: number, centerY: number) => {
+        const el = tree.elements.get(id)!;
+        const w = treeNodeWidth(el);
+        const kids = childrenOf(id);
+        const isExpanded = options.expandedNodes.has(id);
+
+        // Cached position wins so already-placed nodes never jump
+        let pos = cache.get(id);
+        if (!pos) {
+            pos = { x: centerX - w / 2, y: centerY - TREE_NODE_HEIGHT / 2 };
+            cache.set(id, pos);
+        }
 
         const nodeData: DecompositionNodeData = {
-            element: el, layerColor: color,
-            isExpanded: options.expandedNodes.has(child.id),
-            hasChildren: childCount > 0, childCount, direction,
-            onToggleExpand: () => options.callbacks.onToggleExpand(child.id),
-            onToggleDirection: () => options.callbacks.onToggleDirection(child.id),
+            element: el, layerColor: LAYER_COLORS[el.layer] || '#666',
+            isExpanded, hasChildren: kids.length > 0, childCount: kids.length,
+            direction: direction(id),
+            onToggleExpand: () => options.callbacks.onToggleExpand(id),
+            onToggleDirection: () => options.callbacks.onToggleDirection(id),
             showDirectionButton: true, label: el.name,
         };
-
-        return {
-            id: child.id, type: 'decompositionNode',
-            position: { x: child.x || 0, y: child.y || 0 },
+        nodes.push({
+            id, type: 'decompositionNode',
+            position: { x: pos.x, y: pos.y },
             data: nodeData as any,
-        };
-    });
+            style: { width: w, height: TREE_NODE_HEIGHT },
+        });
 
-    const edges: Edge[] = visibleEdges.map((e, i) => {
-        const parentDir = options.nodeDirections.get(e.parentId) || 'vertical';
-        return {
-            id: `decomp-e-${i}`, source: e.parentId, target: e.childId,
-            sourceHandle: parentDir === 'vertical' ? 'bottom' : 'right',
-            targetHandle: parentDir === 'vertical' ? 'top' : 'left',
-            type: 'default',
-            style: { stroke: REL_COLORS['composedOf'] || '#8E44AD', strokeWidth: EDGE.defaultWidth },
-            markerEnd: {
-                type: 'arrowclosed' as any,
-                color: REL_COLORS['composedOf'] || '#8E44AD',
-                width: EDGE.arrowSize,
-                height: EDGE.arrowSize,
-            },
-        };
-    });
+        if (parentId) {
+            const parentDir = direction(parentId);
+            edges.push({
+                id: `decomp-${parentId}-${id}`, source: parentId, target: id,
+                sourceHandle: parentDir === 'vertical' ? 'bottom' : 'right',
+                targetHandle: parentDir === 'vertical' ? 'top' : 'left',
+                type: 'smoothstep',
+                style: { stroke: compColor, strokeWidth: EDGE.defaultWidth },
+                markerEnd: {
+                    type: 'arrowclosed' as any,
+                    color: compColor,
+                    width: EDGE.arrowSize,
+                    height: EDGE.arrowSize,
+                },
+            });
+        }
+
+        if (!isExpanded || kids.length === 0) return;
+        const kd = kids.map(dims);
+
+        if (direction(id) === 'vertical') {
+            // Children spread horizontally below the parent
+            const totalW = kd.reduce((s, d) => s + d.width, 0) + (kd.length - 1) * TREE_H_GAP;
+            let childX = pos.x + w / 2 - totalW / 2;
+            const childCenterY = pos.y + TREE_NODE_HEIGHT + TREE_V_GAP + TREE_NODE_HEIGHT / 2;
+            kids.forEach((cid, i) => {
+                place(cid, id, childX + kd[i].width / 2, childCenterY);
+                childX += kd[i].width + TREE_H_GAP;
+            });
+        } else {
+            // Children stacked in a compact column to the right
+            const childX = pos.x + w + TREE_HMODE_OFFSET;
+            let childY = pos.y + TREE_NODE_HEIGHT + 20;
+            kids.forEach((cid, i) => {
+                const cel = tree.elements.get(cid)!;
+                place(cid, id, childX + treeNodeWidth(cel) / 2, childY + TREE_NODE_HEIGHT / 2);
+                childY += kd[i].height + TREE_HMODE_V_GAP;
+            });
+        }
+    };
+
+    let cursorX = 0;
+    for (const rootId of tree.roots) {
+        if (!tree.elements.has(rootId)) continue;
+        const d = dims(rootId);
+        place(rootId, null, cursorX + d.width / 2, 100);
+        cursorX += d.width + TREE_H_GAP * 2;
+    }
 
     return { nodes, edges };
 }
