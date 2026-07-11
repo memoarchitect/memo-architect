@@ -144,6 +144,7 @@ export interface ModelState {
     activeView: ActiveView;
     explorerTab: ExplorerTab;
     selectedElementId: string | null;
+    selectedRelationshipId: string | null;
     selectedElementIds: Set<string>;
     recentlyVisited: string[];
     selectedViewpointId: string | null;
@@ -205,6 +206,8 @@ export interface ModelState {
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
     selectElement: (id: string | null) => void;
+    inspectElement: (id: string | null) => void;
+    inspectRelationship: (id: string | null) => void;
     toggleElementSelection: (id: string) => void;
     selectAllElements: (ids: string[]) => void;
     clearElementSelection: () => void;
@@ -312,6 +315,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     activeView: { type: 'welcome' } as ActiveView,
     explorerTab: 'model' as ExplorerTab,
     selectedElementId: null,
+    selectedRelationshipId: null,
     selectedElementIds: new Set<string>(),
     recentlyVisited: [],
     selectedViewpointId: null,
@@ -464,6 +468,21 @@ export const useModelStore = create<ModelState>((set, get) => ({
             set({ selectedElementId: id });
         }
     },
+    // Diagram selection updates the side properties browser without replacing
+    // the active diagram with the full-page element detail route.
+    inspectElement: (id) => set((s) => ({
+        selectedElementId: id,
+        selectedRelationshipId: null,
+        propertiesPanelCollapsed: id ? false : s.propertiesPanelCollapsed,
+        recentlyVisited: id
+            ? [id, ...s.recentlyVisited.filter(x => x !== id)].slice(0, 20)
+            : s.recentlyVisited,
+    })),
+    inspectRelationship: (id) => set({
+        selectedRelationshipId: id,
+        selectedElementId: null,
+        propertiesPanelCollapsed: id ? false : get().propertiesPanelCollapsed,
+    }),
     toggleElementSelection: (id) => set((s) => {
         const next = new Set(s.selectedElementIds);
         if (next.has(id)) next.delete(id);

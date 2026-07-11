@@ -23,6 +23,10 @@ export interface ActionFlowNodeData {
     layerColor: string;
     inPorts: string[];
     outPorts: string[];
+    hasChildren?: boolean;
+    isExpanded?: boolean;
+    onToggleExpand?: () => void;
+    flowDirection?: 'horizontal' | 'vertical';
 }
 
 function ActionFlowNodeInner({ data }: NodeProps) {
@@ -38,7 +42,7 @@ function ActionFlowNodeInner({ data }: NodeProps) {
                 background: '#374151', border: '2px solid #374151',
                 boxShadow: SHADOW.sm,
             }}>
-                <Handle type="source" position={Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
             </div>
         );
     }
@@ -53,7 +57,7 @@ function ActionFlowNodeInner({ data }: NodeProps) {
                 boxShadow: SHADOW.sm,
             }}>
                 <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} />
-                <Handle type="target" position={Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
             </div>
         );
     }
@@ -69,12 +73,11 @@ function ActionFlowNodeInner({ data }: NodeProps) {
             onMouseLeave={() => setHovered(false)}
             style={{
                 background: '#FFFFFF',
-                border: `2px solid ${color}`,
-                borderRadius: RADIUS.lg,
+                border: `1.5px solid ${color}`,
+                borderRadius: 3,
                 minWidth: '140px',
-                boxShadow: hovered ? SHADOW.hover : SHADOW.md,
-                transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
-                transition: `box-shadow 200ms ease, transform 200ms ease`,
+                boxShadow: hovered ? `0 0 0 2px ${color}22` : 'none',
+                transition: 'box-shadow 150ms ease',
                 overflow: 'hidden',
             }}
         >
@@ -84,12 +87,25 @@ function ActionFlowNodeInner({ data }: NodeProps) {
                 fontSize: FONT.md,
                 fontWeight: 600,
                 color: '#1a1a1a',
-                background: `linear-gradient(180deg, ${color}14 0%, ${color}08 100%)`,
+                background: `${color}0D`,
                 borderBottom: bodyHeight > 0 ? '1px solid #E5E5E0' : 'none',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
             }}>
                 {label}
+                {d.hasChildren && d.onToggleExpand && (
+                    <button
+                        aria-label={d.isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+                        onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
+                        style={{
+                            float: 'right', marginLeft: 8, width: 18, height: 18, padding: 0,
+                            border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
+                            color, fontSize: 13, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                        }}
+                    >
+                        {d.isExpanded ? '−' : '+'}
+                    </button>
+                )}
             </div>
 
             {/* Ports section */}
@@ -140,9 +156,9 @@ function ActionFlowNodeInner({ data }: NodeProps) {
             )}
 
             {/* Handles for edges */}
-            <Handle type="target" position={Position.Left}
+            <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
                 style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
-            <Handle type="source" position={Position.Right}
+            <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
                 style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
         </div>
     );
@@ -155,10 +171,12 @@ export const ActionFlowNode = memo(ActionFlowNodeInner);
 export interface ActionFlowLaneData {
     label: string;
     color: string;
+    orientation?: 'row' | 'column';
 }
 
 function ActionFlowLaneNodeInner({ data }: NodeProps) {
     const d = data as unknown as ActionFlowLaneData;
+    const column = d.orientation === 'column';
     return (
         <div
             style={{
@@ -167,7 +185,8 @@ function ActionFlowLaneNodeInner({ data }: NodeProps) {
                 boxSizing: 'border-box',
                 background: `${d.color}08`,
                 border: `1px solid ${d.color}30`,
-                borderLeft: `3px solid ${d.color}`,
+                borderLeft: column ? `1px solid ${d.color}30` : `3px solid ${d.color}`,
+                borderTop: column ? `3px solid ${d.color}` : `1px solid ${d.color}30`,
                 borderRadius: RADIUS.md,
                 pointerEvents: 'none',
                 display: 'flex',
@@ -175,15 +194,17 @@ function ActionFlowLaneNodeInner({ data }: NodeProps) {
         >
             <div
                 style={{
-                    writingMode: 'vertical-rl',
-                    transform: 'rotate(180deg)',
-                    padding: '10px 6px',
+                    writingMode: column ? 'horizontal-tb' : 'vertical-rl',
+                    transform: column ? undefined : 'rotate(180deg)',
+                    padding: column ? '7px 10px' : '10px 6px',
                     fontSize: FONT.xs,
                     fontWeight: 700,
                     color: d.color,
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
-                    alignSelf: 'center',
+                    alignSelf: column ? 'flex-start' : 'center',
+                    width: column ? '100%' : undefined,
+                    textAlign: column ? 'center' : undefined,
                     whiteSpace: 'nowrap',
                 }}
             >

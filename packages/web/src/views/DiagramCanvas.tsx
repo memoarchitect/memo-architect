@@ -79,6 +79,20 @@ const RF_PRO_OPTIONS = { hideAttribution: true } as const;
 const SNAP_GRID: [number, number] = [20, 20];
 const LAYOUT_DEBOUNCE_MS = 500;
 const UNDO_STACK_DEPTH = 50;
+const LAYOUT_TIMEOUT_MS = 8_000;
+
+function boundedLayout<T>(promise: Promise<T>, label: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(
+            () => reject(new Error(`${label} layout exceeded ${LAYOUT_TIMEOUT_MS / 1000}s`)),
+            LAYOUT_TIMEOUT_MS,
+        );
+        promise.then(
+            value => { window.clearTimeout(timer); resolve(value); },
+            error => { window.clearTimeout(timer); reject(error); },
+        );
+    });
+}
 
 // ─── Typed aliases to avoid DOM Node collision ───────────────────────────────
 type FlowNode = RFNode<Record<string, RFAny>>;
@@ -180,6 +194,8 @@ function DiagramCanvasInner() {
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const selectElement = useModelStore(s => s.selectElement);
+    const inspectElement = useModelStore(s => s.inspectElement);
+    const inspectRelationship = useModelStore(s => s.inspectRelationship);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
@@ -194,11 +210,18 @@ function DiagramCanvasInner() {
     const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const [isLayouting, setIsLayouting] = useState(false);
+    const [layoutError, setLayoutError] = useState<string | null>(null);
     const [layoutVersion, setLayoutVersion] = useState(0);
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
     const [relayoutNonce, setRelayoutNonce] = useState(0);
     const [paletteCollapsed, setPaletteCollapsed] = useState(true);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    const [gridVisible, setGridVisible] = useState(true);
+    const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
+    const [flowFiltersOpen, setFlowFiltersOpen] = useState(false);
+    const [visibleActionFlowKinds, setVisibleActionFlowKinds] = useState<Set<'control' | 'data' | 'energy' | 'material'>>(
+        new Set(['control', 'data', 'energy', 'material']),
+    );
 
     // Quick create popup state
     const [quickCreate, setQuickCreate] = useState<{
@@ -272,6 +295,9 @@ function DiagramCanvasInner() {
     // Decomposition state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+    const [collapsedInterconnectionNodes, setCollapsedInterconnectionNodes] = useState<Set<string>>(new Set());
+    const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
+    const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
     const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
     const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
@@ -279,10 +305,15 @@ function DiagramCanvasInner() {
     useEffect(() => {
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
         setSwimlanesOn(true);
-        setExpandedNodes(new Set());
+        const expandedHint = selectedDiagram?.properties?.styleHint?.startsWith('expanded:')
+            ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
+            : [];
+        setExpandedNodes(new Set(expandedHint));
+        setCollapsedInterconnectionNodes(new Set());
+        setExpandedActionNodes(new Set());
+        setFocusedActionId(null);
         positionCacheRef.current.clear();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedDiagramId]);
+    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -349,6 +380,22 @@ function DiagramCanvasInner() {
     const toggleExpand = useCallback((nodeId: string) => {
         setExpandedNodes(prev => {
             const next = new Set(prev);
+            if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+            return next;
+        });
+    }, []);
+
+    const toggleInterconnectionCollapse = useCallback((nodeId: string) => {
+        setCollapsedInterconnectionNodes(previous => {
+            const next = new Set(previous);
+            if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+            return next;
+        });
+    }, []);
+
+    const toggleActionExpand = useCallback((nodeId: string) => {
+        setExpandedActionNodes(previous => {
+            const next = new Set(previous);
             if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
             return next;
         });
@@ -465,22 +512,30 @@ function DiagramCanvasInner() {
             if (cancelled) return;
             console.error(`${label} layout error:`, err);
             setIsLayouting(false);
+            setLayoutError(`${label} layout could not be completed. Try resetting the layout or reducing the visible hierarchy.`);
+        };
+        const run = (
+            label: string,
+            promise: Promise<{ nodes: FlowNode[]; edges: FlowEdge[] }>,
+            interactive = true,
+        ) => {
+            setIsLayouting(true);
+            setLayoutError(null);
+            boundedLayout(promise, label).then(r => apply(r, interactive)).catch(fail(label));
         };
 
         if (isFBSDiagram) {
-            setIsLayouting(true);
-            computeFBSLayout(model, {
+            run('FBS', computeFBSLayout(model, {
                 expandedNodes, nodeDirections,
                 callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
-            }).then(r => apply(r)).catch(fail('FBS'));
+            }));
         } else if (isDecompDiagram) {
             if (layoutStyle === 'decomposition') {
-                setIsLayouting(true);
-                computeDecompositionLayout(model, {
+                run('Decomposition', computeDecompositionLayout(model, {
                     expandedNodes, nodeDirections,
                     callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
                     positionCache: positionCacheRef.current,
-                }).then(r => apply(r)).catch(fail('Decomposition'));
+                }));
             } else {
                 apply(computeContainmentLayout(model, {
                     expandedNodes,
@@ -490,45 +545,48 @@ function DiagramCanvasInner() {
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,
             // typed connectors, nested containment
-            setIsLayouting(true);
-            computeInterconnectionLayout(model, {
+            run('Interconnection', computeInterconnectionLayout(model, {
                 viewpointFilter,
                 relationshipTypes: selectedDiagram?.relationshipTypes,
-            }).then(r => apply(r, false)).catch(fail('Interconnection'));
+                collapsedNodes: collapsedInterconnectionNodes,
+                onToggleCollapse: toggleInterconnectionCollapse,
+            }), false);
         } else if (viewKind === 'actionflow') {
             // Action Flow template (KK-4): actions with parameter ports,
             // item flows, successions, optional swimlanes
-            setIsLayouting(true);
-            computeActionFlowViewLayout(model, {
+            run('Action flow', computeActionFlowViewLayout(model, {
                 viewpointFilter,
                 swimlanes: swimlanesOn,
-            }).then(r => apply(r, false)).catch(fail('Action flow'));
+                expandedActionIds: expandedActionNodes,
+                onToggleAction: toggleActionExpand,
+                focusActionId: focusedActionId ?? undefined,
+                visibleFlowKinds: visibleActionFlowKinds,
+                direction: actionFlowDirection,
+            }), false);
         } else if (viewKind === 'statetransition') {
             // State Transition template (KK-5): nested states, transition
             // edges with trigger [guard] labels
-            setIsLayouting(true);
-            computeStateTransitionLayout(model, { viewpointFilter })
-                .then(r => apply(r, false)).catch(fail('State transition'));
+            run('State transition', computeStateTransitionLayout(model, { viewpointFilter }), false);
         } else if (viewKind === 'sequence') {
             // Sequence template (KK-6): lifelines, chronological messages
             apply(computeSequenceLayout(model, { viewpointFilter }), false);
         } else if (isGeneralTemplate && generalMode !== 'graph') {
             // General template (KK-2) tree/containment modes
-            setIsLayouting(true);
-            computeGeneralViewLayout(model, {
+            run('General', computeGeneralViewLayout(model, {
                 mode: generalMode,
                 viewpointFilter,
                 expandedNodes, nodeDirections,
                 callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
                 positionCache: positionCacheRef.current,
-            }).then(r => apply(r)).catch(fail('General template'));
+            }));
         } else {
             // Standard diagram / General template graph mode — check for sidecar
             const relationshipTypes = selectedDiagram?.relationshipTypes;
             const compartments = isGeneralTemplate;
             const overlaySidecar = currentLayout && Object.keys(currentLayout.nodes).length > 0;
             setIsLayouting(true);
-            computeLayout(model, { viewpointFilter, relationshipTypes, compartments }).then(({ nodes: n, edges: e }) => {
+            setLayoutError(null);
+            boundedLayout(computeLayout(model, { viewpointFilter, relationshipTypes, compartments }), 'Standard').then(({ nodes: n, edges: e }) => {
                 // Overlay sidecar positions onto the skeleton nodes when present
                 apply({ nodes: overlaySidecar ? buildNodesFromSidecar(n, currentLayout!) : n, edges: e });
             }).catch(fail('Standard'));
@@ -538,7 +596,8 @@ function DiagramCanvasInner() {
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes,
-        expandedNodes, nodeDirections, toggleExpand, toggleDirection, currentLayout,
+        expandedNodes, collapsedInterconnectionNodes, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, nodeDirections,
+        toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, currentLayout,
         buildNodesFromSidecar, applyInteractiveData]);
 
     // Re-fit after layout
@@ -835,18 +894,43 @@ function DiagramCanvasInner() {
     }, []);
 
     const onNodeClick = useCallback((_: RFAny, node: FlowNode) => {
-        selectElement(node.id);
-    }, [selectElement]);
+        if (node.id.startsWith('__') || node.id.includes('__start') || node.id.includes('__done')) return;
+        inspectElement(node.id);
+        if (selectedDiagramId) setActiveView({ type: 'diagram', diagramId: selectedDiagramId });
+    }, [inspectElement, selectedDiagramId, setActiveView]);
+
+    const onNodeDoubleClick = useCallback((event: RFAny, node: FlowNode) => {
+        event?.stopPropagation?.();
+        if (viewKind !== 'actionflow') return;
+        const hasChildren = Object.values(model?.elements ?? {}).some(el => el.parentAction === node.id);
+        if (!hasChildren) return;
+        setFocusedActionId(node.id);
+        setExpandedActionNodes(new Set());
+        inspectElement(null);
+    }, [viewKind, model?.elements, inspectElement]);
 
     const onPaneClick = useCallback(() => {
         selectElement(null);
+        inspectRelationship(null);
         setNodeCtx(null);
         setEdgeCtx(null);
         setNodes(prev => prev.map(n => ({
             ...n,
             style: { ...n.style, opacity: 1, boxShadow: undefined },
         })));
-    }, [selectElement, setNodes]);
+    }, [selectElement, inspectRelationship, setNodes]);
+
+    const onEdgeClick = useCallback((event: RFAny, edge: FlowEdge) => {
+        event?.stopPropagation?.();
+        // Most renderer edges retain their model relationship id. State
+        // transitions are modelled as transition elements, so they use the
+        // same inspector surface through the element fallback.
+        if (model?.relationships.some(relationship => relationship.id === edge.id)) {
+            inspectRelationship(edge.id);
+        } else if (model?.elements[edge.id]) {
+            inspectElement(edge.id);
+        }
+    }, [model, inspectElement, inspectRelationship]);
 
     // ─── Node context menu actions ─────────────────────────────────────────────
 
@@ -987,7 +1071,7 @@ function DiagramCanvasInner() {
                 {/* Diagram header */}
                 {selectedDiagram && (
                     <div
-                        className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+                        className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs relative"
                         style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                     >
                         {viewKindMeta && (
@@ -1005,14 +1089,17 @@ function DiagramCanvasInner() {
                         {/* Snap toggle */}
                         <span style={{ color: '#E5E5E0' }}>|</span>
                         <button
-                            onClick={() => setSnapEnabled(s => !s)}
+                            onClick={() => {
+                                setGridVisible(visible => !visible);
+                                setSnapEnabled(visible => !visible);
+                            }}
                             className="px-2 py-0.5 text-xs font-medium rounded"
                             style={{
-                                background: snapEnabled ? '#1B3A4B' : '#F7F7F5',
-                                color: snapEnabled ? '#FFFFFF' : '#6B7280',
+                                background: gridVisible ? '#1B3A4B' : '#F7F7F5',
+                                color: gridVisible ? '#FFFFFF' : '#6B7280',
                                 border: '1px solid #E5E5E0',
                             }}
-                            title="Toggle snap to grid (⌘⇧G)"
+                            title="Show or hide the canvas grid and snapping (⌘⇧G)"
                         >
                             Grid
                         </button>
@@ -1047,6 +1134,118 @@ function DiagramCanvasInner() {
                                     title="Toggle allocation swimlanes"
                                 >
                                     Lanes
+                                </button>
+                                <button
+                                    onClick={() => setActionFlowDirection(direction => direction === 'horizontal' ? 'vertical' : 'horizontal')}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                    title="Toggle the action-flow reading direction"
+                                >
+                                    {actionFlowDirection === 'horizontal' ? 'Horizontal' : 'Vertical'}
+                                </button>
+                                <button
+                                    onClick={() => setExpandedActionNodes(new Set(
+                                        Object.values(model?.elements ?? {})
+                                            .map(element => element.parentAction)
+                                            .filter((id): id is string => Boolean(id)),
+                                    ))}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                >
+                                    Expand All
+                                </button>
+                                <button
+                                    onClick={() => setExpandedActionNodes(new Set())}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                >
+                                    Collapse All
+                                </button>
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setFlowFiltersOpen(open => !open)}
+                                        className="px-2 py-0.5 text-xs font-medium rounded"
+                                        style={{ background: flowFiltersOpen ? '#1B3A4B' : '#F7F7F5', color: flowFiltersOpen ? '#FFFFFF' : '#374151', border: '1px solid #E5E5E0' }}
+                                        title="Choose which modeled connection categories are visible"
+                                        aria-expanded={flowFiltersOpen}
+                                    >
+                                        Flows · {visibleActionFlowKinds.size}/4
+                                    </button>
+                                    {flowFiltersOpen && (
+                                        <div
+                                            className="absolute top-full right-0 mt-2 p-3 rounded-lg"
+                                            style={{ width: 264, background: '#FFFFFF', border: '1px solid #D1D5DB', boxShadow: '0 8px 24px rgba(0,0,0,0.14)', zIndex: 30 }}
+                                        >
+                                            <div style={{ color: '#1F2937', fontWeight: 700, fontSize: FONT.xs }}>Show connection categories</div>
+                                            <div style={{ color: '#6B7280', fontSize: FONT.xs, lineHeight: 1.4, marginTop: 3, marginBottom: 8 }}>
+                                                Changes this diagram view only; the SysML model is not modified.
+                                            </div>
+                                            {(['control', 'data', 'energy', 'material'] as const).map(kind => {
+                                                const shown = visibleActionFlowKinds.has(kind);
+                                                const color = kind === 'control' ? '#4B5563' : kind === 'data' ? '#3498DB' : kind === 'energy' ? '#D97706' : '#16A34A';
+                                                return (
+                                                    <button
+                                                        key={kind}
+                                                        role="switch"
+                                                        aria-checked={shown}
+                                                        onClick={() => setVisibleActionFlowKinds(previous => {
+                                                            const next = new Set(previous);
+                                                            if (next.has(kind)) next.delete(kind); else next.add(kind);
+                                                            return next;
+                                                        })}
+                                                        className="w-full flex items-center justify-between px-1 py-1.5 rounded"
+                                                        style={{ color: '#374151', textTransform: 'capitalize' }}
+                                                        title={`${shown ? 'Hide' : 'Show'} ${kind} connections`}
+                                                    >
+                                                        <span className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: '50%', background: color }} />{kind}</span>
+                                                        <span aria-hidden="true" style={{ width: 32, height: 18, borderRadius: 9, background: shown ? '#2563EB' : '#D1D5DB', padding: 2, transition: 'background 160ms ease' }}>
+                                                            <span style={{ display: 'block', width: 14, height: 14, borderRadius: '50%', background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.22)', transform: shown ? 'translateX(14px)' : 'translateX(0)', transition: 'transform 160ms ease' }} />
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                                {focusedActionId && (
+                                    <>
+                                        <span style={{ color: '#E5E5E0' }}>|</span>
+                                        <button
+                                            onClick={() => setFocusedActionId(null)}
+                                            className="px-2 py-0.5 text-xs font-medium rounded"
+                                            style={{ background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #9CA3AF' }}
+                                            title="Return to the parent action flow"
+                                        >
+                                            ← Back to parent
+                                        </button>
+                                        <span style={{ color: '#6B7280', fontSize: FONT.xs }}>
+                                            {model?.elements[focusedActionId]?.name ?? focusedActionId}
+                                        </span>
+                                    </>
+                                )}
+                            </>
+                        )}
+
+                        {viewKind === 'interconnection' && (
+                            <>
+                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                <button
+                                    onClick={() => setCollapsedInterconnectionNodes(new Set())}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                >
+                                    Expand All
+                                </button>
+                                <button
+                                    onClick={() => setCollapsedInterconnectionNodes(new Set(
+                                        model?.relationships
+                                            .filter(r => ['composes', 'composedof', 'aggregation', 'decomposedby'].includes(r.type.toLowerCase()))
+                                            .map(r => r.sourceId) ?? [],
+                                    ))}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
+                                >
+                                    Collapse All
                                 </button>
                             </>
                         )}
@@ -1204,6 +1403,58 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {layoutError && !isLayouting && (
+                    <div
+                        role="alert"
+                        className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-3 py-2"
+                        style={{
+                            maxWidth: 620, background: '#FFFDF7', color: '#5F4300',
+                            border: '1px solid #E7C35A', borderRadius: 4,
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)', fontSize: FONT.xs,
+                        }}
+                    >
+                        <span>{layoutError}</span>
+                        <button
+                            onClick={resetLayout}
+                            style={{
+                                border: '1px solid #B58A12', borderRadius: 3, background: '#FFFFFF',
+                                color: '#5F4300', padding: '3px 8px', fontWeight: 700, whiteSpace: 'nowrap',
+                            }}
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
+
+                {viewKind === 'actionflow' && (
+                    <div
+                        aria-label="Action flow legend"
+                        className="absolute right-3 bottom-3 z-10 flex items-center gap-4 px-3 py-2"
+                        style={{
+                            background: 'rgba(255,255,255,0.96)', border: '1px solid #D1D5DB',
+                            borderRadius: 3, color: '#374151', fontSize: FONT.xs,
+                        }}
+                    >
+                        <span style={{ fontWeight: 700 }}>Legend</span>
+                        {visibleActionFlowKinds.has('control') && <span className="flex items-center gap-1.5">
+                            <span style={{ width: 24, height: 0, borderTop: '2px solid #4B5563' }} />
+                            Control flow
+                        </span>}
+                        {visibleActionFlowKinds.has('data') && <span className="flex items-center gap-1.5">
+                            <span style={{ width: 24, height: 0, borderTop: '2.5px solid #3498DB' }} />
+                            Object flow
+                        </span>}
+                        {visibleActionFlowKinds.has('energy') && <span className="flex items-center gap-1.5">
+                            <span style={{ width: 24, height: 0, borderTop: '2.5px solid #D97706' }} />
+                            Energy flow
+                        </span>}
+                        {visibleActionFlowKinds.has('material') && <span className="flex items-center gap-1.5">
+                            <span style={{ width: 24, height: 0, borderTop: '2.5px solid #16A34A' }} />
+                            Material flow
+                        </span>}
+                    </div>
+                )}
+
                 {/* Hint for empty diagram */}
                 {!isLayouting && nodes.length === 0 && selectedDiagram && (
                     <div
@@ -1253,6 +1504,8 @@ function DiagramCanvasInner() {
                     onNodesChange={onNodesChangeWithResize}
                     onEdgesChange={onEdgesChange}
                     onNodeClick={onNodeClick}
+                    onNodeDoubleClick={onNodeDoubleClick}
+                    onEdgeClick={onEdgeClick}
                     onPaneClick={onPaneClick}
                     onNodeDragStop={onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
@@ -1274,13 +1527,15 @@ function DiagramCanvasInner() {
                     proOptions={RF_PRO_OPTIONS}
                     style={RF_STYLE}
                 >
-                    <Background color="#DEDED8" gap={20} size={1} />
+                    {gridVisible && <Background color="#DEDED8" gap={20} size={1} />}
                     <Controls />
-                    <MiniMap
-                        style={MINIMAP_STYLE}
-                        nodeColor={miniMapNodeColor}
-                        maskColor="rgba(247, 247, 245, 0.7)"
-                    />
+                    {nodes.length > 20 && (
+                        <MiniMap
+                            style={MINIMAP_STYLE}
+                            nodeColor={miniMapNodeColor}
+                            maskColor="rgba(247, 247, 245, 0.7)"
+                        />
+                    )}
                 </ReactFlow>
             </div>
 

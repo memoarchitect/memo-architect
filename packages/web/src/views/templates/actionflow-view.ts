@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO } from '@memo/core';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/core';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
@@ -24,13 +24,37 @@ import type { ActionFlowNodeData } from '../ActionFlowNode';
 export function collectActionFlowActions(
     model: MemoModelDTO,
     viewpointFilter?: (el: MemoElement) => boolean,
+    expandedActionIds: ReadonlySet<string> = new Set(),
+    focusActionId?: string,
 ): MemoElement[] {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
     const actions = visible.filter(el =>
         el.construct === 'action' || el.kind === 'ActionUsage' || el.kind === 'ActionDefinition');
     const nested = actions.filter(el => el.parentAction);
-    return nested.length > 0 ? nested : actions;
+    if (nested.length === 0) return actions;
+
+    const actionById = new Map(actions.map(action => [action.id, action]));
+    const projected: MemoElement[] = [];
+    const include = (action: MemoElement) => {
+        const children = actions.filter(candidate => candidate.parentAction === action.id);
+        if (expandedActionIds.has(action.id) && children.length > 0) {
+            for (const child of children) include(child);
+            return;
+        }
+        projected.push(action);
+    };
+    if (focusActionId) {
+        for (const child of actions.filter(action => action.parentAction === focusActionId)) include(child);
+        return projected;
+    }
+    // A top-level composite is a wrapper for the view. Start with its direct
+    // actions, then reveal deeper children only when their composite expands.
+    for (const action of nested) {
+        const parent = action.parentAction ? actionById.get(action.parentAction) : undefined;
+        if (!parent?.parentAction) include(action);
+    }
+    return projected;
 }
 
 /**
@@ -103,6 +127,7 @@ const ALLOC_BADGE_HEIGHT = 20;
 const LANE_PADDING = 36;
 const LANE_GAP = 16;
 const LANE_LABEL_WIDTH = 120;
+const LANE_LABEL_HEIGHT = 32;
 
 function actionNodeSize(el: MemoElement, ports: { inPorts: string[]; outPorts: string[] }) {
     const portCount = Math.max(ports.inPorts.length, ports.outPorts.length, 0);
@@ -118,31 +143,95 @@ export interface ActionFlowViewOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     /** Band the layout into per-allocation swimlanes (default on with ≥2 lanes) */
     swimlanes?: boolean;
+    expandedActionIds?: ReadonlySet<string>;
+    onToggleAction?: (id: string) => void;
+    focusActionId?: string;
+    /** Left-to-right or top-to-bottom reading direction for the flow. */
+    direction?: 'horizontal' | 'vertical';
+    /** Visible connection categories. Omit to render all flow categories. */
+    visibleFlowKinds?: ReadonlySet<ActionFlowKind>;
 }
+
+export type ActionFlowKind = 'control' | 'data' | 'energy' | 'material';
+
+/**
+ * Keep flow rendering and the connection inspector in the same practical
+ * engineering vocabulary. A flow item without an explicit energy/material
+ * cue is information/data by default.
+ */
+export function classifyFlowItem(flowItem?: string): Exclude<ActionFlowKind, 'control'> {
+    const item = flowItem ?? '';
+    if (/energy|power|voltage|current|thermal|heat/i.test(item)) return 'energy';
+    if (/material|fluid|gas|liquid|batch|consumable/i.test(item)) return 'material';
+    return 'data';
+}
+
+const FLOW_COLORS: Record<ActionFlowKind, string> = {
+    control: '#4B5563',
+    data: '#3498DB',
+    energy: '#D97706',
+    material: '#16A34A',
+};
 
 export async function computeActionFlowViewLayout(
     model: MemoModelDTO,
     options?: ActionFlowViewOptions,
 ): Promise<LayoutResult> {
-    const actions = collectActionFlowActions(model, options?.viewpointFilter);
+    const actions = collectActionFlowActions(
+        model,
+        options?.viewpointFilter,
+        options?.expandedActionIds,
+        options?.focusActionId,
+    );
     if (actions.length === 0) return { nodes: [], edges: [] };
 
     const actionIds = new Set(actions.map(a => a.id));
     const { laneOf, lanes } = assignLanes(actions, model);
+    const direction = options?.direction ?? 'horizontal';
     const swimlanes = (options?.swimlanes ?? true) && lanes.length >= 2;
 
     // ── Pseudo start/done nodes (builder convention: <parent>__start/__done) ──
-    const succRels = model.relationships.filter(r => r.type === 'succession');
-    const flowRels = model.relationships.filter(r => r.type === 'flow');
+    const rawSuccRels = model.relationships.filter(r => r.type === 'succession');
+    const rawFlowRels = model.relationships.filter(r => r.type === 'flow');
+    const expandedBoundaries = new Map<string, { first: string; last: string }>();
+    for (const compositeId of options?.expandedActionIds ?? []) {
+        const children = Object.values(model.elements).filter(el => el.parentAction === compositeId);
+        if (children.length === 0) continue;
+        const first = rawSuccRels.find(rel => rel.sourceId === `${compositeId}__start`)?.targetId
+            ?? children[0].id;
+        const last = rawSuccRels.find(rel => rel.targetId === `${compositeId}__done`)?.sourceId
+            ?? children[children.length - 1].id;
+        expandedBoundaries.set(compositeId, { first, last });
+    }
+    const projectRelationships = (rels: MemoRelationship[]) => rels.map(rel => ({
+        ...rel,
+        sourceId: expandedBoundaries.get(rel.sourceId)?.last ?? rel.sourceId,
+        targetId: expandedBoundaries.get(rel.targetId)?.first ?? rel.targetId,
+    }));
+    const succRels = projectRelationships(rawSuccRels);
+    const flowRels = projectRelationships(rawFlowRels);
     const pseudoIds = new Set<string>();
     for (const rel of succRels) {
-        if (rel.sourceId.endsWith('__start') && actionIds.has(rel.targetId)) pseudoIds.add(rel.sourceId);
-        if (rel.targetId.endsWith('__done') && actionIds.has(rel.sourceId)) pseudoIds.add(rel.targetId);
+        const startOwner = rel.sourceId.endsWith('__start') ? rel.sourceId.slice(0, -'__start'.length) : undefined;
+        const doneOwner = rel.targetId.endsWith('__done') ? rel.targetId.slice(0, -'__done'.length) : undefined;
+        if (startOwner && !expandedBoundaries.has(startOwner) && actionIds.has(rel.targetId)) pseudoIds.add(rel.sourceId);
+        if (doneOwner && !expandedBoundaries.has(doneOwner) && actionIds.has(rel.sourceId)) pseudoIds.add(rel.targetId);
     }
 
     const graphIds = new Set([...actionIds, ...pseudoIds]);
-    const visibleFlows = flowRels.filter(r => graphIds.has(r.sourceId) && graphIds.has(r.targetId));
-    const visibleSuccs = succRels.filter(r => graphIds.has(r.sourceId) && graphIds.has(r.targetId));
+    const visibleFlows = flowRels.filter(r =>
+        graphIds.has(r.sourceId) && graphIds.has(r.targetId)
+        && (!options?.visibleFlowKinds || options.visibleFlowKinds.has(classifyFlowItem(r.flowItem))),
+    );
+    const visibleFlowPairs = new Set(visibleFlows.map(r => `${r.sourceId}\u0000${r.targetId}`));
+    // When an object flow and succession connect the same actions, render the
+    // object flow once. Two parallel arrows communicate no extra information
+    // and were being read as contradictory behavior.
+    const visibleSuccs = succRels.filter(r =>
+        graphIds.has(r.sourceId) && graphIds.has(r.targetId)
+        && (!options?.visibleFlowKinds || options.visibleFlowKinds.has('control'))
+        && !visibleFlowPairs.has(`${r.sourceId}\u0000${r.targetId}`)
+    );
 
     // ── ELK layered left-to-right layout ──
     const portsByAction = new Map(actions.map(el => [el.id, actionPortNames(el, model)]));
@@ -150,7 +239,7 @@ export async function computeActionFlowViewLayout(
         id: 'root',
         layoutOptions: {
             'elk.algorithm': 'layered',
-            'elk.direction': 'RIGHT',
+            'elk.direction': direction === 'vertical' ? 'DOWN' : 'RIGHT',
             'elk.spacing.nodeNode': '40',
             'elk.layered.spacing.nodeNodeBetweenLayers': '80',
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
@@ -179,10 +268,10 @@ export async function computeActionFlowViewLayout(
         }]),
     );
 
-    // ── Swimlane banding: keep ELK x, re-band y per allocation lane ──
+    // ── Swimlane banding: rows for horizontal flow, columns for vertical flow ──
     const laneColor = new Map(lanes.map(l => [l.id, l.color]));
     const laneNodes: Node[] = [];
-    if (swimlanes) {
+    if (swimlanes && direction === 'horizontal') {
         // Order lanes by their actions' mean ELK y so banding follows the layout
         const laneY = new Map<string, number[]>();
         for (const el of actions) {
@@ -227,7 +316,7 @@ export async function computeActionFlowViewLayout(
                 id: `__lane_${lane.id}`,
                 type: 'actionFlowLane',
                 position: { x: minX - LANE_LABEL_WIDTH, y: bandTop },
-                data: { label: lane.label, color: lane.color },
+                data: { label: lane.label, color: lane.color, orientation: 'row' },
                 style: {
                     width: (maxX - minX) + LANE_LABEL_WIDTH + LANE_PADDING,
                     height: bandHeight,
@@ -244,6 +333,51 @@ export async function computeActionFlowViewLayout(
             const p = positions.get(id);
             if (p) positions.set(id, { ...p, y: (bandTop - LANE_GAP) / 2 - p.height / 2 });
         }
+    } else if (swimlanes) {
+        // Keep the temporal order that ELK established top-to-bottom, while
+        // making each allocation a proper vertical lane column.
+        let minY = Infinity;
+        let maxY = -Infinity;
+        for (const el of actions) {
+            const p = positions.get(el.id)!;
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y + p.height);
+        }
+
+        let columnLeft = 0;
+        for (const lane of lanes) {
+            const members = actions
+                .filter(el => laneOf.get(el.id) === lane.id)
+                .sort((a, b) => positions.get(a.id)!.y - positions.get(b.id)!.y
+                    || positions.get(a.id)!.x - positions.get(b.id)!.x);
+            const widestMember = Math.max(...members.map(el => positions.get(el.id)!.width));
+            const columnWidth = widestMember + LANE_PADDING * 2;
+            for (const el of members) {
+                const p = positions.get(el.id)!;
+                positions.set(el.id, { ...p, x: columnLeft + (columnWidth - p.width) / 2 });
+            }
+            laneNodes.push({
+                id: `__lane_${lane.id}`,
+                type: 'actionFlowLane',
+                position: { x: columnLeft, y: minY - LANE_LABEL_HEIGHT },
+                data: { label: lane.label, color: lane.color, orientation: 'column' },
+                style: {
+                    width: columnWidth,
+                    height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING,
+                },
+                draggable: false,
+                selectable: false,
+                zIndex: -1,
+            });
+            columnLeft += columnWidth + LANE_GAP;
+        }
+
+        // Center start/done above and below the columns.
+        const laneWidth = columnLeft - LANE_GAP;
+        for (const id of pseudoIds) {
+            const p = positions.get(id);
+            if (p) positions.set(id, { ...p, x: (laneWidth - p.width) / 2 });
+        }
     }
 
     // ── ReactFlow nodes ──
@@ -256,6 +390,7 @@ export async function computeActionFlowViewLayout(
             nodeType: isStart ? 'start' : 'done',
             laneColor: '#374151', layerColor: '#374151',
             inPorts: [], outPorts: [],
+            flowDirection: direction,
         };
         nodes.push({
             id, type: 'actionFlowNode',
@@ -280,6 +415,12 @@ export async function computeActionFlowViewLayout(
             layerColor: LAYER_COLORS[el.layer] || '#FF6B6B',
             inPorts: ports.inPorts,
             outPorts: ports.outPorts,
+            hasChildren: Object.values(model.elements).some(child => child.parentAction === el.id),
+            isExpanded: options?.expandedActionIds?.has(el.id) ?? false,
+            onToggleExpand: options?.onToggleAction
+                ? () => options.onToggleAction!(el.id)
+                : undefined,
+            flowDirection: direction,
         };
         nodes.push({
             id: el.id, type: 'actionFlowNode',
@@ -291,6 +432,8 @@ export async function computeActionFlowViewLayout(
     // ── Edges: item flows (labeled, animated) + successions (control) ──
     const edges: Edge[] = [];
     for (const rel of visibleFlows) {
+        const flowKind = classifyFlowItem(rel.flowItem);
+        const flowColor = FLOW_COLORS[flowKind];
         const isSignalOrInfo = rel.flowItem
             ? /signal|error|status|code|report|alarm|response|command|data|reading/i.test(rel.flowItem)
             : false;
@@ -298,24 +441,27 @@ export async function computeActionFlowViewLayout(
             id: rel.id,
             source: rel.sourceId,
             target: rel.targetId,
-            label: rel.flowItem || '',
+            // Parameter names are already printed at the pins. Repeating the
+            // item name on short connectors makes compact flows unreadable.
+            label: undefined,
             type: 'default',
-            animated: true,
+            animated: false,
             style: {
-                stroke: '#3498DB',
+                stroke: flowColor,
                 strokeWidth: EDGE.flowWidth,
                 strokeDasharray: isSignalOrInfo ? '6 3' : undefined,
             },
-            labelStyle: { fontSize: FONT.badge, fill: '#4A90D9', fontWeight: 600 },
+            labelStyle: { fontSize: FONT.badge, fill: flowColor, fontWeight: 600 },
             labelBgStyle: EDGE.labelBgStyle,
             labelBgPadding: EDGE.labelBgPadding,
             labelBgBorderRadius: EDGE.labelBgRadius,
             markerEnd: {
                 type: 'arrowclosed' as never,
-                color: '#3498DB',
+                color: flowColor,
                 width: EDGE.arrowSize,
                 height: EDGE.arrowSize,
             },
+            data: { flowCategory: flowKind, flowItem: rel.flowItem },
         });
     }
     for (const rel of visibleSuccs) {
@@ -325,8 +471,9 @@ export async function computeActionFlowViewLayout(
             target: rel.targetId,
             type: 'smoothstep',
             animated: false,
-            style: { stroke: '#D1D5DB', strokeWidth: EDGE.successionWidth, strokeDasharray: '4 4' },
-            markerEnd: { type: 'arrowclosed' as never, color: '#D1D5DB', width: 12, height: 12 },
+            style: { stroke: FLOW_COLORS.control, strokeWidth: 1.5 },
+            markerEnd: { type: 'arrowclosed' as never, color: FLOW_COLORS.control, width: 12, height: 12 },
+            data: { flowCategory: 'control' satisfies ActionFlowKind },
         });
     }
 

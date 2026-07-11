@@ -69,6 +69,9 @@ export interface InterconnectionOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     /** Relationship types declared by the view; when given, only these are drawn */
     relationshipTypes?: string[];
+    /** Parts whose descendants are hidden while the boundary remains visible. */
+    collapsedNodes?: ReadonlySet<string>;
+    onToggleCollapse?: (id: string) => void;
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
@@ -100,8 +103,9 @@ export async function computeInterconnectionLayout(
     if (partEls.length === 0) return { nodes: [], edges: [] };
 
     const tree = buildCompositionTree(partEls, model.relationships);
-    const childrenOf = (id: string) =>
-        (tree.childrenMap.get(id) ?? []).filter(cid => tree.elements.has(cid));
+    const childrenOf = (id: string) => options?.collapsedNodes?.has(id)
+        ? []
+        : (tree.childrenMap.get(id) ?? []).filter(cid => tree.elements.has(cid));
 
     // ── Port ownership: builder-set owner wins, else a composition edge ──
     const portOwner = new Map<string, string>();
@@ -413,6 +417,7 @@ export async function computeInterconnectionLayout(
         const l = layouts.get(partId)!;
         const color = LAYER_COLORS[el.layer] || '#666';
         const pos = relPos ?? rootPos.get(partId)!;
+        const hasChildren = (tree.childrenMap.get(partId) ?? []).some(cid => tree.elements.has(cid));
         const isContainer = l.childPos.size > 0;
         nodes.push({
             id: partId,
@@ -426,6 +431,11 @@ export async function computeInterconnectionLayout(
                 color,
                 isContainer,
                 isFrame: !parentId && isContainer,
+                hasChildren,
+                isCollapsed: options?.collapsedNodes?.has(partId) ?? false,
+                onToggleCollapse: options?.onToggleCollapse
+                    ? () => options.onToggleCollapse!(partId)
+                    : undefined,
                 ports: portInfoByOwner.get(partId) ?? [],
             },
             style: { width: l.width, height: l.height },
@@ -438,11 +448,12 @@ export async function computeInterconnectionLayout(
     // ELK-routed connectors render their orthogonal waypoints via the
     // 'interconnectionEdge' type; anything ELK didn't route (cross-container
     // spans) falls back to a port-anchored smoothstep.
-    const edges: Edge[] = connectors.map((rel, i) => {
+    const edges: Edge[] = connectors.flatMap((rel, i) => {
         const sourceIsPort = portEls.has(rel.sourceId);
         const targetIsPort = portEls.has(rel.targetId);
         const source = sourceIsPort ? portOwner.get(rel.sourceId)! : rel.sourceId;
         const target = targetIsPort ? portOwner.get(rel.targetId)! : rel.targetId;
+        if (!absRect.has(source) || !absRect.has(target)) return [];
         const relColor = REL_COLORS[rel.type] || '#6B7280';
         // Labeled flows per the diagram quality bar: prefer the transported
         // item; fall back to the connector type except for the ubiquitous
@@ -450,8 +461,8 @@ export async function computeInterconnectionLayout(
         const label = rel.flowItem
             || (rel.type.toLowerCase() === 'exchangeswith' ? undefined : rel.type);
         const route = absRoutes.get(i);
-        return {
-            id: `ic-e-${i}`,
+        return [{
+            id: rel.id || `ic-e-${i}`,
             source,
             target,
             ...(sourceIsPort ? { sourceHandle: rel.sourceId } : {}),
@@ -472,7 +483,7 @@ export async function computeInterconnectionLayout(
                 width: EDGE.arrowSize,
                 height: EDGE.arrowSize,
             },
-        };
+        }];
     });
 
     return { nodes, edges };

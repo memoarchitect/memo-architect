@@ -249,7 +249,9 @@ export async function computeStateTransitionLayout(
 
     // ── Transition edges ──
     const edges: Edge[] = resolved.map((t, i) => ({
-        id: `st-e-${i}`,
+        // A transition is a first-class SysML model element, so preserve its
+        // id to let an edge click open the transition's properties.
+        id: t.element.id || `st-e-${i}`,
         source: t.sourceId,
         target: t.targetId,
         type: 'smoothstep',

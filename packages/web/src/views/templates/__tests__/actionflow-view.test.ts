@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/core';
 import {
     collectActionFlowActions, actionPortNames, assignLanes, UNALLOCATED_LANE,
+    classifyFlowItem,
 } from '../actionflow-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -50,6 +51,33 @@ describe('collectActionFlowActions', () => {
         const actions = collectActionFlowActions(m, e => e.id === 'inView');
         expect(actions.map(a => a.id)).toEqual(['inView']);
     });
+
+    it('reveals grandchildren only when their composite action is expanded', () => {
+        const m = model([
+            el('pipeline'),
+            el('process', { parentAction: 'pipeline' }),
+            el('finish', { parentAction: 'pipeline' }),
+            el('stepA', { parentAction: 'process' }),
+            el('stepB', { parentAction: 'process' }),
+        ]);
+
+        expect(collectActionFlowActions(m).map(a => a.id)).toEqual(['process', 'finish']);
+        expect(collectActionFlowActions(m, undefined, new Set(['process'])).map(a => a.id))
+            .toEqual(['stepA', 'stepB', 'finish']);
+    });
+
+    it('projects only direct children when a composite action is focused', () => {
+        const m = model([
+            el('pipeline'),
+            el('process', { parentAction: 'pipeline' }),
+            el('finish', { parentAction: 'pipeline' }),
+            el('stepA', { parentAction: 'process' }),
+            el('stepB', { parentAction: 'process' }),
+        ]);
+
+        expect(collectActionFlowActions(m, undefined, new Set(), 'process').map(a => a.id))
+            .toEqual(['stepA', 'stepB']);
+    });
 });
 
 describe('actionPortNames', () => {
@@ -92,5 +120,13 @@ describe('assignLanes', () => {
         expect(lanes.map(l => l.label)).toEqual(['InfusionManager', UNALLOCATED_LANE]);
         // Stable distinct colors per lane
         expect(new Set(lanes.map(l => l.color)).size).toBe(2);
+    });
+});
+
+describe('classifyFlowItem', () => {
+    it('classifies data, energy, and material flows for renderer visibility', () => {
+        expect(classifyFlowItem('ClinicalDataPacket')).toBe('data');
+        expect(classifyFlowItem('BatteryEnergy')).toBe('energy');
+        expect(classifyFlowItem('MedicationMaterialBatch')).toBe('material');
     });
 });

@@ -12,7 +12,7 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor, deriveModelViews, deriveSampleDiagrams, resolveViewKind } from '@memo/core';
+import { findConfigFile, parseFiles, buildMemoModel, modelToDTO, loadOntologyRegistries, getPackageMetadata, loadMethodologyDescriptor, deriveModelViews, resolveViewKind } from '@memo/core';
 import type { BuilderRegistries, RestartRequiredMessage, MethodologyDescriptor } from '@memo/core';
 import { validateModel } from '@memo/core';
 import { computeCompleteness } from '@memo/core';
@@ -216,7 +216,6 @@ export async function devCommand(options: { port?: number; open?: boolean }): Pr
                 elementIds: layerElements.map(e => e.id),
             });
         }
-        diagrams.push(...deriveSampleDiagrams(model));
         diagrams.push(...derivedViews.diagrams);
         if (config.viewpoints) {
             for (const vp of config.viewpoints) {
