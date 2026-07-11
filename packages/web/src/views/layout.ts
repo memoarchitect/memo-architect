@@ -110,7 +110,7 @@ export async function computeLayout(
             height: nodeHeight(el),
         })),
         edges: visibleRelationships.map((rel, i) => ({
-            id: `e-${i}`,
+            id: rel.id || `e-${i}`,
             sources: [rel.sourceId],
             targets: [rel.targetId],
         })),
@@ -158,7 +158,7 @@ export async function computeLayout(
         const isDecomp = typeLower === 'composedof' || typeLower === 'decomposedby'
             || typeLower === 'aggregation' || typeLower === 'composes';
         return {
-            id: `e-${i}`,
+            id: rel.id || `e-${i}`,
             source: rel.sourceId,
             target: rel.targetId,
             // Structural edges are self-explanatory from the arrow — dropping
@@ -899,4 +899,3 @@ export async function computeFBSLayout(
 
     return { nodes, edges };
 }
-

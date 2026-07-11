@@ -259,7 +259,9 @@ export function App() {
     const activeView = useModelStore(s => s.activeView);
     const selectedElementIds = useModelStore(s => s.selectedElementIds);
     const { pathname } = useLocation();
-    const isCatalogRoute = pathname.startsWith('/catalog') || pathname.startsWith('/diagrams');
+    // Diagram routes still use the workbench's right-hand properties browser.
+    // Only catalog pages are self-contained full-page routes.
+    const isCatalogRoute = pathname.startsWith('/catalog');
     const activeMode = useModelStore(s => s.activeMode);
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);

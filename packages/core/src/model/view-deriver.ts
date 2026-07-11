@@ -77,7 +77,7 @@ export function resolveViewElementIds(
         }
     }
     for (const rel of model.incoming.get(view.id) ?? []) {
-        if (rel.type === 'IncludedIn' && rel.sourceId !== view.id) ids.add(rel.sourceId);
+        if (rel.type.toLowerCase() === 'includedin' && rel.sourceId !== view.id) ids.add(rel.sourceId);
     }
     return [...ids];
 }
@@ -106,11 +106,15 @@ export function deriveModelViews(model: MemoModel, kindRegistry?: KindRegistry):
     for (const el of model.elements.values()) {
         if (!isViewElement(el, kindRegistry)) continue;
 
+        // Explicit renderer samples live in the `samples` SysML package and
+        // are surfaced by the existing Model Viewpoint > Samples section.
+        const isRendererSample = el.package?.split('::').includes('samples') ?? false;
+
         // Views without a viewpoint binding are typically document-backed
         // (RMF, SDD, DHF index, ...) — group them under "Document Views".
         const vpRef = el.attributes['viewpoint'] || 'documentViewsViewpoint';
-        const vpId = `vp-${vpRef}`;
-        if (!viewpointsById.has(vpId)) {
+        const vpId = isRendererSample ? '__model' : `vp-${vpRef}`;
+        if (!isRendererSample && !viewpointsById.has(vpId)) {
             viewpointsById.set(vpId, {
                 id: vpId,
                 label: vpRef === 'documentViewsViewpoint' ? 'Document Views' : `${viewpointLabel(vpRef)} Viewpoint`,
@@ -119,18 +123,20 @@ export function deriveModelViews(model: MemoModel, kindRegistry?: KindRegistry):
                 visibleLayers: [],
             });
         }
-        const vp = viewpointsById.get(vpId)!;
+        const vp = viewpointsById.get(vpId);
 
         const queryKinds = splitList(el.attributes['selectionQuery.includeElementKinds']);
-        for (const k of queryKinds) {
-            if (!vp.visibleKinds.includes(k)) vp.visibleKinds.push(k);
-        }
-        for (const l of splitList(el.attributes['selectionQuery.includeLayers'])) {
-            if (!vp.visibleLayers.includes(l)) vp.visibleLayers.push(l);
-        }
         const queryRels = splitList(el.attributes['selectionQuery.includeRelationshipKinds']);
-        for (const r of queryRels) {
-            if (!vp.visibleRelationships.includes(r)) vp.visibleRelationships.push(r);
+        if (vp) {
+            for (const k of queryKinds) {
+                if (!vp.visibleKinds.includes(k)) vp.visibleKinds.push(k);
+            }
+            for (const l of splitList(el.attributes['selectionQuery.includeLayers'])) {
+                if (!vp.visibleLayers.includes(l)) vp.visibleLayers.push(l);
+            }
+            for (const r of queryRels) {
+                if (!vp.visibleRelationships.includes(r)) vp.visibleRelationships.push(r);
+            }
         }
 
         // Presentation hints declared on the view — the renderer stays dumb and
@@ -146,7 +152,7 @@ export function deriveModelViews(model: MemoModel, kindRegistry?: KindRegistry):
         const viewKind = resolveViewKind(el.attributes['viewKind'], el.attributes['diagramType']);
 
         diagrams.push({
-            id: `view-${el.id}`,
+            id: isRendererSample ? `diag-sample-${el.id}` : `view-${el.id}`,
             name: el.attributes['title'] || el.name,
             diagramType: el.attributes['diagramType'] || 'bdd',
             viewKind,

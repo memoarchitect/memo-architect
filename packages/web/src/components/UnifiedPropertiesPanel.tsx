@@ -479,11 +479,57 @@ function ElementProperties() {
     );
 }
 
+function RelationshipProperties() {
+    const model = useModelStore(s => s.model);
+    const relationshipId = useModelStore(s => s.selectedRelationshipId);
+    if (!model || !relationshipId) return null;
+    const relationship = model.relationships.find(rel => rel.id === relationshipId);
+    if (!relationship) return null;
+    const source = model.elements[relationship.sourceId];
+    const target = model.elements[relationship.targetId];
+    const isFlow = relationship.type === 'flow';
+    const item = relationship.flowItem;
+    const category = item && /energy|power|voltage|current/i.test(item) ? 'Energy'
+        : item && /material|fluid|gas|batch/i.test(item) ? 'Material'
+        : isFlow ? 'Data' : 'Control';
+    const categoryColor = category === 'Energy' ? '#D97706'
+        : category === 'Material' ? '#16A34A'
+        : category === 'Data' ? '#3498DB'
+        : '#4B5563';
+    return (
+        <>
+            <div className="p-4" style={{ borderBottom: '1px solid #EDEDEA', borderLeft: `3px solid ${categoryColor}` }}>
+                <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>Connection</div>
+                <div className="mt-1 text-xs" style={{ color: '#6B7280' }}>{source?.name ?? relationship.sourceId} → {target?.name ?? relationship.targetId}</div>
+                <div className="mt-2 flex gap-2">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: categoryColor + '18', color: categoryColor }}>{category} flow</span>
+                    <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: '#F3F4F6', color: '#374151' }}>{relationship.type}</span>
+                </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+                <Section title="Involved item" defaultOpen>
+                    <div className="text-xs" style={{ color: '#374151' }}>{item ?? 'No transported item is modeled for this connection.'}</div>
+                </Section>
+                <Section title="Endpoints" defaultOpen>
+                    <div className="space-y-2 text-xs">
+                        <div><span style={{ color: '#6B7280' }}>Source</span><div style={{ color: '#1a1a1a', fontWeight: 500 }}>{source?.name ?? relationship.sourceId}</div></div>
+                        <div><span style={{ color: '#6B7280' }}>Target</span><div style={{ color: '#1a1a1a', fontWeight: 500 }}>{target?.name ?? relationship.targetId}</div></div>
+                    </div>
+                </Section>
+                <Section title="Traceability" defaultOpen={false}>
+                    <div className="text-xs" style={{ color: '#6B7280' }}>{relationship.file || 'Model relationship'}</div>
+                </Section>
+            </div>
+        </>
+    );
+}
+
 // ─── Main Panel ─────────────────────────────────────────────────────────────
 
 export function UnifiedPropertiesPanel() {
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const activeView = useModelStore(s => s.activeView);
+    const selectedRelationshipId = useModelStore(s => s.selectedRelationshipId);
     const propertiesPanelCollapsed = useModelStore(s => s.propertiesPanelCollapsed);
     const togglePropertiesPanel = useModelStore(s => s.togglePropertiesPanel);
 
@@ -506,7 +552,7 @@ export function UnifiedPropertiesPanel() {
         );
     }
 
-    const showDiagramProps = activeView.type === 'diagram' && !selectedElementId;
+    const showDiagramProps = activeView.type === 'diagram' && !selectedElementId && !selectedRelationshipId;
     const showElementProps = !!selectedElementId;
 
     return (
@@ -525,7 +571,9 @@ export function UnifiedPropertiesPanel() {
                 </button>
             </div>
 
-            {showElementProps ? (
+            {selectedRelationshipId ? (
+                <RelationshipProperties />
+            ) : showElementProps ? (
                 <ElementProperties />
             ) : showDiagramProps ? (
                 <DiagramProperties />

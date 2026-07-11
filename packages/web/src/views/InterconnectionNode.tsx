@@ -9,7 +9,7 @@
 
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { FONT, RADIUS, SHADOW } from '../styles/tokens';
+import { FONT, SHADOW } from '../styles/tokens';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import { INTERCONNECTION_PORT_SIZE } from './templates/interconnection-view';
 
@@ -21,6 +21,9 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     isContainer: boolean;
     /** Root container: rendered as the IBD context frame */
     isFrame?: boolean;
+    hasChildren?: boolean;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
     /** Ports straddling this part's boundary */
     ports: PortInfo[];
 }
@@ -114,7 +117,7 @@ const defaultHandleStyle: React.CSSProperties = {
 
 function InterconnectionNodeInner({ data, selected }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
-    const { label, kind, color, isContainer, isFrame, ports } = d;
+    const { label, kind, color, isContainer, isFrame, ports, hasChildren, isCollapsed, onToggleCollapse } = d;
 
     return (
         <div
@@ -132,8 +135,8 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
                     borderRight: '1px solid #E5E5E0',
                     borderBottom: '1px solid #E5E5E0',
                 }),
-                borderRadius: isFrame ? 6 : isContainer ? RADIUS.lg : RADIUS.md,
-                boxShadow: selected ? SHADOW.selected : isContainer ? 'none' : SHADOW.md,
+                borderRadius: isFrame ? 2 : isContainer ? 3 : 2,
+                boxShadow: selected ? SHADOW.selected : 'none',
                 position: 'relative',
             }}
         >
@@ -156,7 +159,7 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
                     background: color + '14',
                     borderRight: `1.5px solid ${color}55`,
                     borderBottom: `1.5px solid ${color}55`,
-                    borderRadius: '5px 0 14px 0',
+                    borderRadius: '1px 0 3px 0',
                     maxWidth: '70%',
                 }}>
                     <span style={{ fontSize: FONT.md, fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap' }}>
@@ -168,6 +171,19 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
                     }}>
                         {kind}
                     </span>
+                    {hasChildren && onToggleCollapse && (
+                        <button
+                            aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
+                            onClick={event => { event.stopPropagation(); onToggleCollapse(); }}
+                            style={{
+                                width: 18, height: 18, padding: 0, borderRadius: 2,
+                                border: `1px solid ${color}88`, background: '#FFFFFF', color,
+                                fontSize: 13, lineHeight: '16px', cursor: 'pointer', fontWeight: 700,
+                            }}
+                        >
+                            {isCollapsed ? '+' : '−'}
+                        </button>
+                    )}
                 </div>
             ) : (
                 <>
@@ -186,8 +202,22 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                         }}>
-                            {label}
+                        {label}
                         </span>
+                        {hasChildren && onToggleCollapse && (
+                            <button
+                                aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
+                                onClick={event => { event.stopPropagation(); onToggleCollapse(); }}
+                                style={{
+                                    marginLeft: 'auto', width: 18, height: 18, padding: 0,
+                                    borderRadius: 2, border: `1px solid ${color}88`,
+                                    background: '#FFFFFF', color, fontSize: 13, lineHeight: '16px',
+                                    cursor: 'pointer', fontWeight: 700, flexShrink: 0,
+                                }}
+                            >
+                                {isCollapsed ? '+' : '−'}
+                            </button>
+                        )}
                     </div>
                     <div style={{
                         padding: isContainer ? '1px 14px 0' : '1px 14px 8px',

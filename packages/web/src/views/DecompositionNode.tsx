@@ -5,10 +5,10 @@
 // depth-based background tinting, drop shadows, and hover lift.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { MemoElement } from '@memo/core';
-import { SHADOW, RADIUS, FONT } from '../styles/tokens';
+import { FONT } from '../styles/tokens';
 
 export interface DecompositionNodeData {
     element: MemoElement;
@@ -32,29 +32,21 @@ function DecompositionNodeInner({ data }: NodeProps) {
         direction, onToggleExpand, onToggleDirection, showDirectionButton,
         depthBgColor, isContainer,
     } = d;
-    const [hovered, setHovered] = useState(false);
-
     const dirLabel = direction === 'vertical' ? 'V' : 'H';
     const isExpandedContainer = isContainer && isExpanded;
 
     return (
         <div
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
             style={{
-                background: isExpandedContainer
-                    ? `linear-gradient(180deg, ${depthBgColor || 'transparent'}, ${depthBgColor || 'transparent'})`
-                    : '#FFFFFF',
+                background: isExpandedContainer ? (depthBgColor || '#FAFAF9') : '#FFFFFF',
                 borderLeft: isExpandedContainer ? `2px solid ${layerColor}40` : `3px solid ${layerColor}`,
                 borderTop: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
                 borderRight: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
                 borderBottom: `1px solid ${isExpandedContainer ? layerColor + '30' : '#E5E5E0'}`,
-                borderRadius: isExpandedContainer ? RADIUS.lg : RADIUS.md,
+                borderRadius: 3,
                 padding: isExpandedContainer ? '0' : '8px 12px',
                 minWidth: isExpandedContainer ? undefined : '200px',
-                boxShadow: isExpandedContainer ? 'none' : (hovered ? SHADOW.hover : SHADOW.md),
-                transform: isExpandedContainer ? 'none' : (hovered ? 'translateY(-1px)' : 'translateY(0)'),
-                transition: 'box-shadow 200ms ease, transform 200ms ease',
+                boxShadow: 'none',
                 width: '100%',
                 height: '100%',
                 boxSizing: 'border-box' as const,
@@ -80,9 +72,9 @@ function DecompositionNodeInner({ data }: NodeProps) {
                         style={{
                             width: '20px',
                             height: '20px',
-                            borderRadius: '50%',
-                            border: `1.5px solid ${layerColor}`,
-                            background: isExpanded ? layerColor + '20' : 'transparent',
+                            borderRadius: 2,
+                            border: `1px solid ${layerColor}`,
+                            background: isExpanded ? layerColor + '12' : '#FFFFFF',
                             color: layerColor,
                             fontSize: FONT.md,
                             fontWeight: 700,
@@ -128,15 +120,6 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     </button>
                 )}
 
-                {/* Layer color dot */}
-                <span style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: layerColor,
-                    flexShrink: 0,
-                }} />
-
                 {/* Element name */}
                 <span style={{
                     fontSize: FONT.md,
@@ -168,7 +151,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                             color: '#6B7280',
                             background: '#F0F0ED',
                             padding: '1px 5px',
-                            borderRadius: '8px',
+                            borderRadius: 2,
                             fontWeight: 600,
                         }}>
                             {childCount} parts{!isExpanded ? ' (collapsed)' : ''}
