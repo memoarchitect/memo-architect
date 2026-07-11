@@ -1,9 +1,10 @@
 // ─── InterconnectionNode ─────────────────────────────────────────────────────
 //
 // Custom ReactFlow node for the Interconnection view template (KK-3).
-// Renders a part as a box (leaf) or container (nested containment), with
-// its ports pinned on the boundary at the ELK-computed positions. Each port
-// carries paired source/target handles so typed connectors anchor to it.
+// Renders a part as a box (leaf), a nested container, or the diagram's
+// context frame (root container), with its ports straddling the boundary
+// at the template-computed positions. Each port carries paired
+// source/target handles so typed connectors anchor to it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { memo } from 'react';
@@ -18,10 +19,10 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     layer: string;
     color: string;
     isContainer: boolean;
-    /** Ports pinned on this part's boundary */
+    /** Root container: rendered as the IBD context frame */
+    isFrame?: boolean;
+    /** Ports straddling this part's boundary */
     ports: PortInfo[];
-    /** Port element without a visible owner, rendered as a free chip */
-    isFreePort?: boolean;
 }
 
 const SIDE_TO_POSITION: Record<PortSide, Position> = {
@@ -46,16 +47,17 @@ function portGlyph(direction: PortInfo['direction'], side: PortSide): string {
 
 function BoundaryPort({ port, color }: { port: PortInfo; color: string }) {
     const size = INTERCONNECTION_PORT_SIZE;
-    const labelOffset = size + 4;
+    const labelOffset = size + 6;
+    // Label sits inside the owner, next to the port (Altova convention)
     const labelStyle: React.CSSProperties = {
         position: 'absolute',
-        fontSize: '8px',
+        fontSize: '9px',
         fontWeight: 600,
-        color: '#6B7280',
+        color: '#374151',
         whiteSpace: 'nowrap',
         pointerEvents: 'none',
-        ...(port.side === 'left' ? { left: labelOffset, top: 2 }
-            : port.side === 'right' ? { right: labelOffset, top: 2 }
+        ...(port.side === 'left' ? { left: labelOffset, top: 1 }
+            : port.side === 'right' ? { right: labelOffset, top: 1 }
             : port.side === 'top' ? { top: labelOffset, left: '50%', transform: 'translateX(-50%)' }
             : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)' }),
     };
@@ -70,13 +72,15 @@ function BoundaryPort({ port, color }: { port: PortInfo; color: string }) {
                 height: size,
                 background: '#FFFFFF',
                 border: `1.5px solid ${color}`,
-                borderRadius: 3,
+                borderRadius: 2,
+                boxShadow: SHADOW.sm,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '8px',
+                fontWeight: 700,
                 color,
-                zIndex: 2,
+                zIndex: 3,
             }}
             title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
         >
@@ -110,29 +114,7 @@ const defaultHandleStyle: React.CSSProperties = {
 
 function InterconnectionNodeInner({ data, selected }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
-    const { label, kind, color, isContainer, ports, isFreePort } = d;
-
-    if (isFreePort) {
-        return (
-            <div
-                style={{
-                    padding: '3px 8px',
-                    background: '#FFFFFF',
-                    border: `1.5px solid ${color}`,
-                    borderRadius: 4,
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    boxShadow: SHADOW.sm,
-                }}
-                title={kind}
-            >
-                <Handle type="target" position={Position.Left} style={defaultHandleStyle} />
-                {label}
-                <Handle type="source" position={Position.Right} style={defaultHandleStyle} />
-            </div>
-        );
-    }
+    const { label, kind, color, isContainer, isFrame, ports } = d;
 
     return (
         <div
@@ -140,15 +122,17 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
                 width: '100%',
                 height: '100%',
                 boxSizing: 'border-box',
-                background: isContainer ? color + '08' : '#FFFFFF',
-                border: isContainer ? `1.5px solid ${color}55` : undefined,
-                borderLeft: isContainer ? `1.5px solid ${color}55` : `3px solid ${color}`,
+                background: isFrame ? '#FFFFFF'
+                    : isContainer ? color + '06'
+                    : '#FFFFFF',
+                border: isContainer ? `1.5px solid ${isFrame ? color : color + '66'}` : undefined,
                 ...(isContainer ? {} : {
+                    borderLeft: `3px solid ${color}`,
                     borderTop: '1px solid #E5E5E0',
                     borderRight: '1px solid #E5E5E0',
                     borderBottom: '1px solid #E5E5E0',
                 }),
-                borderRadius: isContainer ? RADIUS.lg : RADIUS.md,
+                borderRadius: isFrame ? 6 : isContainer ? RADIUS.lg : RADIUS.md,
                 boxShadow: selected ? SHADOW.selected : isContainer ? 'none' : SHADOW.md,
                 position: 'relative',
             }}
@@ -159,37 +143,64 @@ function InterconnectionNodeInner({ data, selected }: NodeProps) {
             <Handle type="target" position={Position.Left} id="left" style={defaultHandleStyle} />
             <Handle type="source" position={Position.Right} id="right" style={defaultHandleStyle} />
 
-            {/* Header */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 8,
-                padding: isContainer ? '10px 14px' : '9px 14px 2px',
-                overflow: 'hidden',
-            }}>
-                <span style={{
-                    fontSize: FONT.md,
-                    fontWeight: 600,
-                    color: isContainer ? color : '#1a1a1a',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+            {/* Header: frame gets the SysML corner tab, others an inline header */}
+            {isFrame ? (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 8,
+                    padding: '7px 18px 7px 12px',
+                    background: color + '14',
+                    borderRight: `1.5px solid ${color}55`,
+                    borderBottom: `1.5px solid ${color}55`,
+                    borderRadius: '5px 0 14px 0',
+                    maxWidth: '70%',
                 }}>
-                    {label}
-                </span>
-            </div>
-            <div style={{
-                padding: isContainer ? '0 14px' : '0 14px 8px',
-                fontSize: '9px',
-                fontWeight: 700,
-                color: color,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                position: isContainer ? 'absolute' : undefined,
-                top: isContainer ? 28 : undefined,
-            }}>
-                {kind}
-            </div>
+                    <span style={{ fontSize: FONT.md, fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap' }}>
+                        {label}
+                    </span>
+                    <span style={{
+                        fontSize: '9px', fontWeight: 700, color,
+                        textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                    }}>
+                        {kind}
+                    </span>
+                </div>
+            ) : (
+                <>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: 8,
+                        padding: isContainer ? '10px 14px 0' : '10px 14px 2px',
+                        overflow: 'hidden',
+                    }}>
+                        <span style={{
+                            fontSize: FONT.md,
+                            fontWeight: 600,
+                            color: isContainer ? color : '#1a1a1a',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}>
+                            {label}
+                        </span>
+                    </div>
+                    <div style={{
+                        padding: isContainer ? '1px 14px 0' : '1px 14px 8px',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                    }}>
+                        {kind}
+                    </div>
+                </>
+            )}
 
             {/* Boundary ports */}
             {ports.map(p => <BoundaryPort key={p.id} port={p} color={color} />)}

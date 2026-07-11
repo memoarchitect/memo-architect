@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { deriveSampleDiagrams, SAMPLE_DIAGRAM_ID_PREFIX } from '../model/sample-diagrams.js';
 import type { MemoModel, MemoElement, MemoRelationship } from '../model/semantic.js';
 
-function el(id: string, kind: string, layer: string, construct = 'part', attributes: Record<string, string> = {}): MemoElement {
-    return { id, name: id, kind, construct, layer, file: 'test.sysml', attributes } as MemoElement;
+function el(
+    id: string, kind: string, layer: string, construct = 'part',
+    attributes: Record<string, string> = {}, owner?: string,
+): MemoElement {
+    return { id, name: id, kind, construct, layer, file: 'test.sysml', attributes, owner } as MemoElement;
 }
 
 function rel(type: string, sourceId: string, targetId: string): MemoRelationship {
@@ -32,9 +35,15 @@ function makeModel(elements: MemoElement[], relationships: MemoRelationship[]): 
 
 const RICH_MODEL = makeModel(
     [
-        // risk layer: dense relationships → general sample source
-        el('h1', 'Hazard', 'risk'), el('h2', 'Hazard', 'risk'),
-        el('c1', 'RiskControl', 'risk'), el('c2', 'RiskControl', 'risk'),
+        // composition forest → general (BDD) sample
+        el('sys', 'Subsystem', 'system'),
+        el('p1', 'Subsystem', 'system'), el('p2', 'Subsystem', 'system'),
+        el('p3', 'Subsystem', 'system'),
+        el('leaf1', 'Subsystem', 'system'),
+        // boundary port owned by the context part → interconnection sample
+        el('port1', 'FlowPort', 'interfaces', 'port', {}, 'sys'),
+        // a second, smaller tree — forest keeps multiple roots
+        el('rig', 'Subsystem', 'system'), el('rigArm', 'Subsystem', 'system'),
         // actions + items → actionflow
         el('a1', 'ActionDefinition', 'behavior', 'action'),
         el('a2', 'ActionUsage', 'behavior', 'action'),
@@ -48,19 +57,20 @@ const RICH_MODEL = makeModel(
         el('st2', 'ScenarioStep', 'operational', 'part', { stepOrder: '2' }),
         el('st3', 'ScenarioStep', 'operational', 'part', { stepOrder: '3' }),
         el('chain1', 'FunctionalChain', 'operational'),
-        // parts + ports exchanging → interconnection
-        el('p1', 'Subsystem', 'system'), el('p2', 'Subsystem', 'system'),
-        el('p3', 'Subsystem', 'system'),
-        el('port1', 'FlowPort', 'interfaces', 'port'),
         // requirements: largest kind cohort → grid
         el('r1', 'SystemRequirement', 'requirements'), el('r2', 'SystemRequirement', 'requirements'),
         el('r3', 'SystemRequirement', 'requirements'), el('r4', 'SystemRequirement', 'requirements'),
-        el('r5', 'SystemRequirement', 'requirements'),
+        el('r5', 'SystemRequirement', 'requirements'), el('r6', 'SystemRequirement', 'requirements'),
+        el('r7', 'SystemRequirement', 'requirements'), el('r8', 'SystemRequirement', 'requirements'),
     ],
     [
-        rel('MitigatesHazard', 'c1', 'h1'), rel('MitigatesHazard', 'c2', 'h2'),
-        rel('MitigatesHazard', 'c1', 'h2'),
+        // strict tree: sys → {p1, p2, p3}, p1 → leaf1; second root rig → rigArm
+        rel('composedOf', 'sys', 'p1'), rel('composedOf', 'sys', 'p2'),
+        rel('composedOf', 'sys', 'p3'), rel('composedOf', 'p1', 'leaf1'),
+        rel('composedOf', 'rig', 'rigArm'),
+        // flows inside sys: parts exchanging with each other and the boundary port
         rel('ExchangesWith', 'p1', 'p2'), rel('ExchangesWith', 'p2', 'p3'),
+        rel('ExchangesWith', 'port1', 'p1'),
         rel('IncludesStep', 'chain1', 'st1'), rel('IncludesStep', 'chain1', 'st2'),
         rel('IncludesStep', 'chain1', 'st3'),
     ],
@@ -72,7 +82,7 @@ describe('deriveSampleDiagrams', () => {
 
     it('emits one sample per renderable view kind, under the model viewpoint', () => {
         expect([...byKind.keys()].sort()).toEqual([
-            'actionflow', 'browser', 'general', 'grid', 'interconnection', 'sequence', 'statetransition',
+            'actionflow', 'general', 'grid', 'interconnection', 'sequence', 'statetransition',
         ]);
         for (const s of samples) {
             expect(s.id.startsWith(SAMPLE_DIAGRAM_ID_PREFIX)).toBe(true);
@@ -82,9 +92,24 @@ describe('deriveSampleDiagrams', () => {
         }
     });
 
-    it('general sample selects the most relationship-dense layer', () => {
-        const ids = byKind.get('general')!.elementIds!;
-        expect(ids).toEqual(expect.arrayContaining(['h1', 'h2', 'c1', 'c2']));
+    it('does not emit a browser sample — the catalog owns that presentation', () => {
+        expect(byKind.has('browser')).toBe(false);
+    });
+
+    it('general sample is the strict composition forest, largest tree first, opening as a tree', () => {
+        const s = byKind.get('general')!;
+        // DFS order: sys subtree (5) before the rig subtree (2); nothing else
+        expect(s.elementIds).toEqual(['sys', 'p1', 'leaf1', 'p2', 'p3', 'rig', 'rigArm']);
+        expect(s.properties?.layoutHint).toBe('tree');
+        expect(s.properties?.modes).toBe('tree,containment');
+    });
+
+    it('interconnection sample selects one context block: its parts, owned ports, and connector types', () => {
+        const s = byKind.get('interconnection')!;
+        // context (sys) leads; family = descendants + owned port; no unrelated elements
+        expect(s.elementIds![0]).toBe('sys');
+        expect([...s.elementIds!].sort()).toEqual(['leaf1', 'p1', 'p2', 'p3', 'port1', 'sys']);
+        expect(s.relationshipTypes).toEqual(['ExchangesWith']);
     });
 
     it('actionflow sample selects actions and items', () => {
@@ -99,14 +124,8 @@ describe('deriveSampleDiagrams', () => {
         expect(byKind.get('sequence')!.elementIds!.sort()).toEqual(['chain1', 'st1', 'st2', 'st3']);
     });
 
-    it('interconnection sample selects exchange endpoints, ports, and declares connector types', () => {
-        const s = byKind.get('interconnection')!;
-        expect(s.elementIds).toEqual(expect.arrayContaining(['p1', 'p2', 'p3', 'port1']));
-        expect(s.relationshipTypes).toEqual(expect.arrayContaining(['ExchangesWith', 'Composes']));
-    });
-
     it('grid sample selects the largest kind cohort', () => {
-        expect(byKind.get('grid')!.elementIds!.sort()).toEqual(['r1', 'r2', 'r3', 'r4', 'r5']);
+        expect(byKind.get('grid')!.elementIds!.sort()).toEqual(['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']);
     });
 
     it('omits samples the model cannot demonstrate', () => {

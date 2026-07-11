@@ -64,6 +64,8 @@ export interface GeneralViewOptions {
         onToggleExpand: (id: string) => void;
         onToggleDirection: (id: string) => void;
     };
+    /** Sticky tree positions across re-layouts (canvas-owned) */
+    positionCache?: Map<string, { x: number; y: number }>;
 }
 
 /** One standard layout entry point for the General view kind. */
@@ -86,6 +88,7 @@ export async function computeGeneralViewLayout(
             nodeDirections: options.nodeDirections,
             callbacks: options.callbacks,
             tree,
+            positionCache: options.positionCache,
         });
     }
     return computeContainmentLayout(model, {
