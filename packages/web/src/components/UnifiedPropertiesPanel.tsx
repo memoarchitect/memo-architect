@@ -541,7 +541,9 @@ export function UnifiedPropertiesPanel() {
                 onClick={togglePropertiesPanel}
                 title="Expand properties"
             >
-                <div className="py-3" style={{ color: '#9CA3AF', fontSize: '14px' }}>{'\u25C2'}</div>
+                <div className="flex items-center justify-center mt-2" style={{
+                    color: '#6B7280', fontSize: '20px', width: '32px', height: '32px', borderRadius: '6px',
+                }}>{'\u25C2'}</div>
                 <div style={{
                     writingMode: 'vertical-rl', textOrientation: 'mixed',
                     color: '#6B7280', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em',
@@ -562,10 +564,14 @@ export function UnifiedPropertiesPanel() {
                 <button
                     onClick={togglePropertiesPanel}
                     className="flex items-center justify-center"
-                    style={{ color: '#9CA3AF', fontSize: '12px', width: '20px', height: '20px', borderRadius: '4px' }}
+                    style={{
+                        color: '#6B7280', fontSize: '20px', lineHeight: 1,
+                        width: '32px', height: '32px', borderRadius: '6px',
+                    }}
                     onMouseEnter={e => e.currentTarget.style.color = '#374151'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#9CA3AF'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
                     title="Collapse properties"
+                    aria-label="Collapse properties"
                 >
                     {'\u25B8'}
                 </button>

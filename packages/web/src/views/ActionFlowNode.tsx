@@ -29,7 +29,7 @@ export interface ActionFlowNodeData {
     flowDirection?: 'horizontal' | 'vertical';
 }
 
-function ActionFlowNodeInner({ data }: NodeProps) {
+function ActionFlowNodeInner({ data, selected }: NodeProps) {
     const d = data as unknown as ActionFlowNodeData;
     const { nodeType, label, laneColor, layerColor, inPorts, outPorts } = d;
     const [hovered, setHovered] = useState(false);
@@ -97,7 +97,9 @@ function ActionFlowNodeInner({ data }: NodeProps) {
                 border: `1.5px solid ${color}`,
                 borderRadius: 3,
                 minWidth: '140px',
-                boxShadow: hovered ? `0 0 0 2px ${color}22` : 'none',
+                boxShadow: selected
+                    ? '0 0 0 3px #2DD4A8, 0 4px 12px rgba(45, 212, 168, 0.35)'
+                    : hovered ? `0 0 0 2px ${color}22` : 'none',
                 transition: 'box-shadow 150ms ease',
                 overflow: 'hidden',
             }}
@@ -193,9 +195,10 @@ export interface ActionFlowLaneData {
     label: string;
     color: string;
     orientation?: 'row' | 'column';
+    inspectElementId?: string;
 }
 
-function ActionFlowLaneNodeInner({ data }: NodeProps) {
+function ActionFlowLaneNodeInner({ data, selected }: NodeProps) {
     const d = data as unknown as ActionFlowLaneData;
     const column = d.orientation === 'column';
     return (
@@ -205,11 +208,12 @@ function ActionFlowLaneNodeInner({ data }: NodeProps) {
                 height: '100%',
                 boxSizing: 'border-box',
                 background: `${d.color}08`,
-                border: `1px solid ${d.color}30`,
-                borderLeft: column ? `1px solid ${d.color}30` : `3px solid ${d.color}`,
-                borderTop: column ? `3px solid ${d.color}` : `1px solid ${d.color}30`,
+                border: selected ? '3px solid #2DD4A8' : `1px solid ${d.color}30`,
+                borderLeft: selected ? '3px solid #2DD4A8' : column ? `1px solid ${d.color}30` : `3px solid ${d.color}`,
+                borderTop: selected ? '3px solid #2DD4A8' : column ? `3px solid ${d.color}` : `1px solid ${d.color}30`,
                 borderRadius: RADIUS.md,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
+                cursor: d.inspectElementId ? 'pointer' : 'default',
                 display: 'flex',
             }}
         >

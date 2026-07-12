@@ -48,6 +48,8 @@ export const DIAGRAM_TYPE_TO_VIEW_KIND: Record<string, ViewKind> = {
     par: 'interconnection',
     act: 'actionflow',
     afd: 'actionflow',
+    ofd: 'actionflow',
+    ffd: 'actionflow',
     stm: 'statetransition',
     seq: 'sequence',
     fmea: 'grid',

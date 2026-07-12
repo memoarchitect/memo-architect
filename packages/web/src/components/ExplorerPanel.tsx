@@ -8,7 +8,7 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
@@ -1136,8 +1136,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
 // ─── View Explorer ───────────────────────────────────────────────────────────
 
-function DiagramTypeBadge({ diagramType }: { diagramType: string }) {
-    const meta = DIAGRAM_TYPE_META[diagramType];
+function DiagramTypeBadge({ diagram }: { diagram: DiagramDTO }) {
+    const resolvedType = ['afd', 'ofd', 'ffd'].includes(diagram.diagramType.toLowerCase())
+        ? resolveActionFlowDiagramType(diagram)
+        : diagram.diagramType;
+    const meta = DIAGRAM_TYPE_META[resolvedType];
     if (!meta) return null;
     return (
         <span className="px-1.5 py-0.5 rounded font-semibold"
@@ -1491,7 +1494,7 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
             onClick={onSelect}
             title={[meta?.fullName, diag.description].filter(Boolean).join(' \u2014 ')}
         >
-            <DiagramTypeBadge diagramType={diag.diagramType} />
+            <DiagramTypeBadge diagram={diag} />
             {diag.auto && (
                 <span className="px-1 py-0.5 rounded"
                     style={{ background: '#F0F0ED', color: COLOR.faint, fontSize: FONT.badge, fontWeight: 600 }}>
@@ -2172,4 +2175,3 @@ export function ExplorerPanel() {
         </div>
     );
 }
-

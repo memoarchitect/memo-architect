@@ -221,6 +221,8 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     ucd:  { code: 'UCD',  label: 'UCD',  fullName: 'Use Case Diagram',         color: '#E67E22', viewKind: 'general' },
     act:  { code: 'ACT',  label: 'ACT',  fullName: 'Activity Diagram',         color: '#F39C12', viewKind: 'actionflow' },
     afd:  { code: 'AFD',  label: 'AFD',  fullName: 'Action Flow Diagram',      color: '#FF6B6B', viewKind: 'actionflow' },
+    ofd:  { code: 'OFD',  label: 'OFD',  fullName: 'Operational Flow Diagram', color: '#F39C12', viewKind: 'actionflow' },
+    ffd:  { code: 'FFD',  label: 'FFD',  fullName: 'Functional Flow Diagram',  color: '#F39C12', viewKind: 'actionflow' },
     pkg:  { code: 'PKG',  label: 'PKG',  fullName: 'Package Diagram',          color: '#95A5A6', viewKind: 'general' },
     par:  { code: 'PAR',  label: 'PAR',  fullName: 'Parametric Diagram',       color: '#2ECC71', viewKind: 'interconnection' },
     risk: { code: 'RISK', label: 'RISK', fullName: 'Risk Diagram',             color: '#E74C3C', viewKind: 'general' },
@@ -230,6 +232,17 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     alloc: { code: 'ALLOC', label: 'ALLOC', fullName: 'Allocation Matrix',     color: '#E67E22', viewKind: 'grid' },
     'threat-model': { code: 'THREAT', label: 'THREAT', fullName: 'Threat Model Diagram', color: '#C0392B', viewKind: 'general' },
 };
+
+export type ActionFlowDiagramType = 'afd' | 'ofd' | 'ffd';
+
+/** One canonical resolver used by both the explorer badge and canvas header. */
+export function resolveActionFlowDiagramType(
+    diagram: { diagramType: string },
+): ActionFlowDiagramType {
+    const declared = diagram.diagramType.trim().toLowerCase();
+    if (declared === 'ofd' || declared === 'ffd') return declared;
+    return 'afd';
+}
 
 // ─── Containment Depth Colors ────────────────────────────────────────────────
 // Background tints for nested containment diagram levels.

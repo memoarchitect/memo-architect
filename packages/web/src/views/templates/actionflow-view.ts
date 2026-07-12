@@ -13,6 +13,7 @@ import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
+import { COMPOSITION_REL_TYPES } from './composition-tree';
 
 /**
  * Fork/join control nodes (builder kinds `ForkNode` / `JoinNode`). They flow
@@ -21,6 +22,21 @@ import type { ActionFlowNodeData } from '../ActionFlowNode';
  */
 export function isControlNode(el: MemoElement): boolean {
     return el.kind === 'ForkNode' || el.kind === 'JoinNode';
+}
+
+/** Behavioral steps with no modeled flow or succession connection. */
+export function findFloatingActions(
+    actions: MemoElement[],
+    model: MemoModelDTO,
+): MemoElement[] {
+    const actionIds = new Set(actions.filter(action => !isControlNode(action)).map(action => action.id));
+    const connected = new Set<string>();
+    for (const relationship of model.relationships) {
+        if (relationship.type !== 'flow' && relationship.type !== 'succession') continue;
+        if (actionIds.has(relationship.sourceId)) connected.add(relationship.sourceId);
+        if (actionIds.has(relationship.targetId)) connected.add(relationship.targetId);
+    }
+    return actions.filter(action => !isControlNode(action) && !connected.has(action.id));
 }
 
 // ─── Element collection ──────────────────────────────────────────────────────
@@ -77,7 +93,7 @@ export function actionPortNames(
 ): { inPorts: string[]; outPorts: string[] } {
     const typeRef = el.attributes['actionType'];
     const def = typeRef ? model.elements[typeRef] : undefined;
-    const params = (def?.kind === 'ActionDefinition' ? def.parameters : el.parameters) ?? [];
+    const params = (def?.construct === 'action' ? def.parameters : el.parameters) ?? [];
     return {
         inPorts: params.filter(p => p.direction === 'in' || p.direction === 'inout').map(p => p.name),
         outPorts: params.filter(p => p.direction === 'out' || p.direction === 'inout').map(p => p.name),
@@ -92,11 +108,65 @@ const LANE_COLORS = [
 ];
 
 export const UNALLOCATED_LANE = 'Unallocated';
+export const UNSTAGED_LANE = 'Unstaged';
+export type ActionFlowLaneGrouping = 'allocation' | 'stage';
+export type ActionFlowDisplayLevel = 'all' | number;
+
+/** Resolve an allocated element to the ancestor displayed at a requested level. */
+export function displayElementAtLevel(
+    elementId: string,
+    model: MemoModelDTO,
+    requestedLevel: ActionFlowDisplayLevel = 'all',
+): { id: string; level: number } {
+    const parentOf = new Map<string, string>();
+    for (const rel of model.relationships) {
+        if (COMPOSITION_REL_TYPES.has(rel.type) && !parentOf.has(rel.targetId)) {
+            parentOf.set(rel.targetId, rel.sourceId);
+        }
+    }
+    const lineage = [elementId];
+    const visited = new Set(lineage);
+    let current = elementId;
+    while (parentOf.has(current)) {
+        const parent = parentOf.get(current)!;
+        if (visited.has(parent)) break;
+        lineage.unshift(parent);
+        visited.add(parent);
+        current = parent;
+    }
+    if (requestedLevel === 'all') return { id: elementId, level: lineage.length };
+    const index = Math.min(Math.max(requestedLevel, 1), lineage.length) - 1;
+    return { id: lineage[index], level: index + 1 };
+}
+
+export function displayNameAtLevel(
+    elementId: string,
+    model: MemoModelDTO,
+    requestedLevel: ActionFlowDisplayLevel = 'all',
+): string {
+    const resolvedId = displayElementAtLevel(elementId, model, requestedLevel).id;
+    return model.elements[resolvedId]?.name ?? resolvedId;
+}
+
+/** Levels that every displayed responsibility target can resolve to. */
+export function commonDisplayLevels(
+    elementIds: Iterable<string>,
+    model: MemoModelDTO,
+): number[] {
+    const depths = [...new Set(elementIds)].map(id => displayElementAtLevel(id, model).level);
+    if (depths.length === 0) return [];
+    const commonDepth = Math.min(...depths);
+    // With roots only, selecting L1 is identical to All levels, so there is
+    // no meaningful hierarchy control to show.
+    if (commonDepth <= 1) return [];
+    return Array.from({ length: commonDepth }, (_, index) => index + 1);
+}
 
 export interface LaneInfo {
     id: string;
     label: string;
     color: string;
+    inspectElementId?: string;
 }
 
 /**
@@ -106,6 +176,8 @@ export interface LaneInfo {
 export function assignLanes(
     actions: MemoElement[],
     model: MemoModelDTO,
+    grouping: ActionFlowLaneGrouping = 'allocation',
+    displayLevel: ActionFlowDisplayLevel = 'all',
 ): { laneOf: Map<string, string>; lanes: LaneInfo[] } {
     const laneOf = new Map<string, string>();
     const lanes: LaneInfo[] = [];
@@ -113,15 +185,24 @@ export function assignLanes(
     for (const el of actions) {
         // Fork/join bars sit between lanes; they never define one of their own.
         if (isControlNode(el)) continue;
-        const laneId = el.allocatedTo || UNALLOCATED_LANE;
+        const allocatedLane = el.allocatedTo
+            ? displayElementAtLevel(el.allocatedTo, model, displayLevel).id
+            : UNALLOCATED_LANE;
+        const laneId = grouping === 'stage'
+            ? (el.attributes['stage'] || el.attributes['phase'] || UNSTAGED_LANE)
+            : allocatedLane;
         laneOf.set(el.id, laneId);
         if (!seen.has(laneId)) {
             const lane: LaneInfo = {
                 id: laneId,
-                label: laneId === UNALLOCATED_LANE
-                    ? UNALLOCATED_LANE
-                    : (model.elements[laneId]?.name ?? laneId),
+                label: grouping === 'allocation' && laneId !== UNALLOCATED_LANE
+                    ? (model.elements[laneId]?.name ?? laneId)
+                    : laneId,
                 color: LANE_COLORS[seen.size % LANE_COLORS.length],
+                inspectElementId: grouping === 'allocation' && laneId !== UNALLOCATED_LANE
+                    ? laneId
+                    : Object.values(model.elements).find(candidate => candidate.id === laneId || candidate.name === laneId)?.id
+                        ?? el.id,
             };
             seen.set(laneId, lane);
             lanes.push(lane);
@@ -165,8 +246,12 @@ function nodeSize(
 
 export interface ActionFlowViewOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
-    /** Band the layout into per-allocation swimlanes (default on with ≥2 lanes) */
+    /** Band the layout into responsibility/stage lanes, including a single resolved lane. */
     swimlanes?: boolean;
+    /** Group/highlight actions by performer/component or modeled stage. */
+    laneGrouping?: ActionFlowLaneGrouping;
+    /** Presentation only: group/display the modeled target at L1/L2/L3 ancestry. */
+    displayLevel?: ActionFlowDisplayLevel;
     expandedActionIds?: ReadonlySet<string>;
     onToggleAction?: (id: string) => void;
     focusActionId?: string;
@@ -210,9 +295,12 @@ export async function computeActionFlowViewLayout(
     if (actions.length === 0) return { nodes: [], edges: [] };
 
     const actionIds = new Set(actions.map(a => a.id));
-    const { laneOf, lanes } = assignLanes(actions, model);
+    const { laneOf, lanes } = assignLanes(actions, model, options?.laneGrouping, options?.displayLevel);
     const direction = options?.direction ?? 'horizontal';
-    const swimlanes = (options?.swimlanes ?? true) && lanes.length >= 2;
+    // A selected display level can legitimately roll every responsibility up
+    // to one common system. Keep that single lane visible instead of dropping
+    // the contextual background when the level changes.
+    const swimlanes = (options?.swimlanes ?? true) && lanes.length >= 1;
 
     // ── Pseudo start/done nodes (builder convention: <parent>__start/__done) ──
     const rawSuccRels = model.relationships.filter(r => r.type === 'succession');
@@ -321,14 +409,17 @@ export async function computeActionFlowViewLayout(
         let bandTop = 0;
         for (const lane of orderedLanes) {
             const members = actions.filter(el => laneOf.get(el.id) === lane.id);
-            // Stack lane members that ELK put in the same column
+            // Preserve ELK's branch separation inside the lane. Flattening all
+            // members onto one centerline made fork edges cross intervening
+            // actions and visually attach to the wrong step.
             members.sort((a, b) => positions.get(a.id)!.x - positions.get(b.id)!.x
                 || positions.get(a.id)!.y - positions.get(b.id)!.y);
+            const originalTop = Math.min(...members.map(el => positions.get(el.id)!.y));
             let bandHeight = 0;
             const usedRanges: { x0: number; x1: number; bottom: number }[] = [];
             for (const el of members) {
                 const p = positions.get(el.id)!;
-                let y = bandTop + LANE_PADDING;
+                let y = bandTop + LANE_PADDING + (p.y - originalTop);
                 for (const r of usedRanges) {
                     if (p.x < r.x1 && p.x + p.width > r.x0) y = Math.max(y, r.bottom + 16);
                 }
@@ -341,7 +432,7 @@ export async function computeActionFlowViewLayout(
                 id: `__lane_${lane.id}`,
                 type: 'actionFlowLane',
                 position: { x: minX - LANE_LABEL_WIDTH, y: bandTop },
-                data: { label: lane.label, color: lane.color, orientation: 'row' },
+                data: { label: lane.label, color: lane.color, orientation: 'row', inspectElementId: lane.inspectElementId },
                 style: {
                     width: (maxX - minX) + LANE_LABEL_WIDTH + LANE_PADDING,
                     height: bandHeight,
@@ -353,11 +444,6 @@ export async function computeActionFlowViewLayout(
             bandTop += bandHeight + LANE_GAP;
         }
 
-        // Center pseudo start/done across the full band stack
-        for (const id of pseudoIds) {
-            const p = positions.get(id);
-            if (p) positions.set(id, { ...p, y: (bandTop - LANE_GAP) / 2 - p.height / 2 });
-        }
     } else if (swimlanes) {
         // Keep the temporal order that ELK established top-to-bottom, while
         // making each allocation a proper vertical lane column.
@@ -385,7 +471,7 @@ export async function computeActionFlowViewLayout(
                 id: `__lane_${lane.id}`,
                 type: 'actionFlowLane',
                 position: { x: columnLeft, y: minY - LANE_LABEL_HEIGHT },
-                data: { label: lane.label, color: lane.color, orientation: 'column' },
+                data: { label: lane.label, color: lane.color, orientation: 'column', inspectElementId: lane.inspectElementId },
                 style: {
                     width: columnWidth,
                     height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING,
@@ -397,12 +483,6 @@ export async function computeActionFlowViewLayout(
             columnLeft += columnWidth + LANE_GAP;
         }
 
-        // Center start/done above and below the columns.
-        const laneWidth = columnLeft - LANE_GAP;
-        for (const id of pseudoIds) {
-            const p = positions.get(id);
-            if (p) positions.set(id, { ...p, x: (laneWidth - p.width) / 2 });
-        }
     }
 
     // ── Center fork/join bars on the cross-axis mean of their neighbors ──
@@ -426,6 +506,46 @@ export async function computeActionFlowViewLayout(
             positions.set(ctrl.id, direction === 'vertical'
                 ? { ...p, x: mean - p.width / 2 }
                 : { ...p, y: mean - p.height / 2 });
+        }
+    }
+
+    // Start/done are boundary nodes, not lane members. Align each one to the
+    // center of the action or control node it actually connects to; centering
+    // against the entire lane stack placed them on arbitrary lane boundaries.
+    for (const id of pseudoIds) {
+        const p = positions.get(id);
+        if (!p) continue;
+        const centers: number[] = [];
+        for (const rel of visibleSuccs) {
+            const other = rel.sourceId === id ? rel.targetId
+                : rel.targetId === id ? rel.sourceId : undefined;
+            if (!other) continue;
+            const op = positions.get(other);
+            if (op) centers.push(direction === 'vertical' ? op.x + op.width / 2 : op.y + op.height / 2);
+        }
+        if (centers.length === 0) continue;
+        const mean = centers.reduce((sum, center) => sum + center, 0) / centers.length;
+        const actionRects = actions
+            .filter(action => !isControlNode(action))
+            .map(action => positions.get(action.id))
+            .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
+        const isStart = id.endsWith('__start');
+        if (direction === 'vertical') {
+            const minY = Math.min(...actionRects.map(rect => rect.y));
+            const maxY = Math.max(...actionRects.map(rect => rect.y + rect.height));
+            positions.set(id, {
+                ...p,
+                x: mean - p.width / 2,
+                y: isStart ? minY - p.height - LANE_LABEL_HEIGHT - 16 : maxY + 24,
+            });
+        } else {
+            const minX = Math.min(...actionRects.map(rect => rect.x));
+            const maxX = Math.max(...actionRects.map(rect => rect.x + rect.width));
+            positions.set(id, {
+                ...p,
+                x: isStart ? minX - p.width - 24 : maxX + 24,
+                y: mean - p.height / 2,
+            });
         }
     }
 
@@ -471,7 +591,7 @@ export async function computeActionFlowViewLayout(
         const ports = portsByAction.get(el.id)!;
         const laneId = laneOf.get(el.id)!;
         const allocatedName = el.allocatedTo
-            ? (model.elements[el.allocatedTo]?.name ?? el.allocatedTo)
+            ? displayNameAtLevel(el.allocatedTo, model, options?.displayLevel)
             : undefined;
         const data: ActionFlowNodeData = {
             element: el,
@@ -512,7 +632,7 @@ export async function computeActionFlowViewLayout(
             // Parameter names are already printed at the pins. Repeating the
             // item name on short connectors makes compact flows unreadable.
             label: undefined,
-            type: 'default',
+            type: 'smoothstep',
             animated: false,
             style: {
                 stroke: flowColor,

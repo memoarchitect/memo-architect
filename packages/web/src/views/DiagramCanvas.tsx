@@ -33,7 +33,7 @@ import type { MemoElement, DiagramLayout, ViewKind } from '@memo/core';
 import { computeImpact } from '@memo/core/lib/analysis/impact.js';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { sendElementCreate, sendAddRelationship, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
-import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
+import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
@@ -44,7 +44,7 @@ import {
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import { computeInterconnectionLayout } from './templates/interconnection-view';
-import { computeActionFlowViewLayout } from './templates/actionflow-view';
+import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
 import { DecompositionNode } from './DecompositionNode';
@@ -222,6 +222,8 @@ function DiagramCanvasInner() {
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(true);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
+    const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>('allocation');
+    const [actionFlowDisplayLevel, setActionFlowDisplayLevel] = useState<ActionFlowDisplayLevel>('all');
     const [flowFiltersOpen, setFlowFiltersOpen] = useState(false);
     const [visibleActionFlowKinds, setVisibleActionFlowKinds] = useState<Set<'control' | 'data' | 'energy' | 'material'>>(
         new Set(['control', 'data', 'energy', 'material']),
@@ -295,6 +297,33 @@ function DiagramCanvasInner() {
     }, [declaredModes]);
     // Action Flow template (KK-4): swimlane banding toggle
     const [swimlanesOn, setSwimlanesOn] = useState(true);
+    const actionFlowDisplayLevels = useMemo(() => {
+        if (!model || !selectedDiagram) return [];
+        const included = new Set(selectedDiagram.elementIds);
+        const targets = Object.values(model.elements)
+            .filter(element => included.has(element.id) && element.allocatedTo)
+            .map(element => element.allocatedTo!);
+        return commonDisplayLevels(targets, model);
+    }, [model, selectedDiagram]);
+    const actionFlowPresentation = useMemo(() => {
+        if (!model || !selectedDiagram) return 'Activity Diagram';
+        const resolvedType = resolveActionFlowDiagramType(selectedDiagram);
+        return DIAGRAM_TYPE_META[resolvedType].fullName;
+    }, [model, selectedDiagram]);
+    const actionFlowHasStages = useMemo(() => {
+        if (!model || !selectedDiagram) return false;
+        const included = new Set(selectedDiagram.elementIds);
+        return Object.values(model.elements).some(element =>
+            included.has(element.id) && Boolean(element.attributes['stage'] || element.attributes['phase']),
+        );
+    }, [model, selectedDiagram]);
+    const floatingActions = useMemo(() => {
+        if (!model || !selectedDiagram || viewKind !== 'actionflow') return [];
+        const actions = selectedDiagram.elementIds
+            .map(id => model.elements[id])
+            .filter((element): element is MemoElement => Boolean(element) && element.construct === 'action');
+        return findFloatingActions(actions, model);
+    }, [model, selectedDiagram, viewKind]);
 
     // Decomposition state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
@@ -309,6 +338,8 @@ function DiagramCanvasInner() {
     useEffect(() => {
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
         setSwimlanesOn(true);
+        setActionFlowLaneGrouping('allocation');
+        setActionFlowDisplayLevel('all');
         const expandedHint = selectedDiagram?.properties?.styleHint?.startsWith('expanded:')
             ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
             : [];
@@ -564,6 +595,8 @@ function DiagramCanvasInner() {
             run('Action flow', computeActionFlowViewLayout(model, {
                 viewpointFilter,
                 swimlanes: swimlanesOn,
+                laneGrouping: actionFlowLaneGrouping,
+                displayLevel: actionFlowDisplayLevel,
                 expandedActionIds: expandedActionNodes,
                 onToggleAction: toggleActionExpand,
                 focusActionId: focusedActionId ?? undefined,
@@ -605,7 +638,7 @@ function DiagramCanvasInner() {
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes,
-        expandedNodes, collapsedInterconnectionNodes, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, currentLayout,
         buildNodesFromSidecar, applyInteractiveData]);
 
@@ -620,17 +653,23 @@ function DiagramCanvasInner() {
 
     // Highlight selected element
     useEffect(() => {
-        if (!selectedElementId) return;
-        setNodes(prev => prev.map(n => ({
-            ...n,
-            style: {
-                ...n.style,
-                boxShadow: n.id === selectedElementId
+        setNodes(prev => prev.map(n => {
+            const laneTarget = n.type === 'actionFlowLane'
+                ? (n.data as { inspectElementId?: string }).inspectElementId
+                : undefined;
+            const selected = Boolean(selectedElementId) && (n.id === selectedElementId || laneTarget === selectedElementId);
+            return {
+                ...n,
+                selected,
+                style: {
+                    ...n.style,
+                    boxShadow: selected
                     ? '0 0 0 2px #2DD4A8, 0 4px 12px rgba(45, 212, 168, 0.3)'
                     : undefined,
-                opacity: selectedElementId ? (n.id === selectedElementId ? 1 : 0.5) : 1,
-            },
-        })));
+                    opacity: selectedElementId ? (selected ? 1 : 0.5) : 1,
+                },
+            };
+        }));
     }, [selectedElementId, setNodes]);
 
     // Focus Mode (#22): filter graph to N-hop neighbors using computeImpact
@@ -903,8 +942,11 @@ function DiagramCanvasInner() {
     }, []);
 
     const onNodeClick = useCallback((_: RFAny, node: FlowNode) => {
-        if (node.id.startsWith('__') || node.id.includes('__start') || node.id.includes('__done')) return;
-        inspectElement(node.id);
+        const laneTarget = node.type === 'actionFlowLane'
+            ? (node.data as { inspectElementId?: string }).inspectElementId
+            : undefined;
+        if (!laneTarget && (node.id.startsWith('__') || node.id.includes('__start') || node.id.includes('__done'))) return;
+        inspectElement(laneTarget ?? node.id);
         if (selectedDiagramId) setActiveView({ type: 'diagram', diagramId: selectedDiagramId });
     }, [inspectElement, selectedDiagramId, setActiveView]);
 
@@ -1068,6 +1110,7 @@ function DiagramCanvasInner() {
             <DiagramPalette
                 collapsed={paletteCollapsed}
                 onToggleCollapse={() => setPaletteCollapsed(!paletteCollapsed)}
+                elementIds={selectedDiagram?.elementIds}
                 eligibleKinds={selectedDiagram?.viewpointId && model?.viewpoints
                     ? new Set(
                         model.viewpoints.find(v => v.id === selectedDiagram.viewpointId)?.visibleKinds ?? []
@@ -1087,7 +1130,7 @@ function DiagramCanvasInner() {
                             <span className="px-1.5 py-0.5 rounded font-semibold"
                                 style={{ background: viewKindMeta.color + '20', color: viewKindMeta.color, fontSize: FONT.badge }}
                                 title={`${viewKindMeta.fullName}${diagramMeta ? ` · ${diagramMeta.fullName}` : ''}`}>
-                                {viewKindMeta.label}
+                                {viewKind === 'actionflow' ? actionFlowPresentation : viewKindMeta.label}
                             </span>
                         )}
                         <span className="font-medium" style={{ color: '#1a1a1a' }}>{selectedDiagram.name}</span>
@@ -1099,10 +1142,14 @@ function DiagramCanvasInner() {
                         <ToolbarSep />
                         <IconToggle
                             icon={<Icon.grid />}
+                            label="Grid"
                             active={gridVisible}
                             onClick={() => {
-                                setGridVisible(visible => !visible);
-                                setSnapEnabled(visible => !visible);
+                                setGridVisible(visible => {
+                                    const next = !visible;
+                                    setSnapEnabled(next);
+                                    return next;
+                                });
                             }}
                             title="Show or hide the canvas grid and snapping (⌘⇧G)"
                         />
@@ -1132,6 +1179,28 @@ function DiagramCanvasInner() {
                                     onClick={() => setSwimlanesOn(s => !s)}
                                     title="Toggle allocation swimlanes"
                                 />
+                                {swimlanesOn && actionFlowHasStages && (
+                                    <IconToggle
+                                        icon={<Icon.lanes />}
+                                        label="Stage"
+                                        active={actionFlowLaneGrouping === 'stage'}
+                                        onClick={() => setActionFlowLaneGrouping(current => current === 'stage' ? 'allocation' : 'stage')}
+                                        title="Group this flow by its modeled stages"
+                                    />
+                                )}
+                                {swimlanesOn && actionFlowLaneGrouping === 'allocation' && actionFlowDisplayLevels.length > 0 && (
+                                    <select
+                                        aria-label="Display hierarchy level"
+                                        title="Display responsibility lanes at a hierarchy level; the SysML allocation is unchanged"
+                                        value={actionFlowDisplayLevel}
+                                        onChange={event => setActionFlowDisplayLevel(event.target.value === 'all' ? 'all' : Number(event.target.value))}
+                                        className="text-xs font-semibold rounded-lg px-2 py-1"
+                                        style={{ color: '#5B6470', background: '#FFFFFF', border: '1px solid #E2E1DB' }}
+                                    >
+                                        <option value="all">All levels</option>
+                                        {actionFlowDisplayLevels.map(level => <option key={level} value={level}>L{level}</option>)}
+                                    </select>
+                                )}
 
                                 <ToolbarSep />
 
@@ -1429,6 +1498,30 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {floatingActions.length > 0 && !isLayouting && (
+                    <div
+                        role="alert"
+                        className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-2"
+                        style={{
+                            maxWidth: 720, background: '#FEF2F2', color: '#991B1B',
+                            border: '1px solid #FCA5A5', borderRadius: 4,
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)', fontSize: FONT.xs,
+                        }}
+                    >
+                        <span style={{ fontWeight: 700 }}>Diagram error:</span>{' '}
+                        {floatingActions.length} floating {floatingActions.length === 1 ? 'action has' : 'actions have'} no flow or succession connection:{' '}
+                        {floatingActions.map((action, index) => (
+                            <span key={action.id}>
+                                {index > 0 && ', '}
+                                <button onClick={() => inspectElement(action.id)}
+                                    style={{ color: '#991B1B', textDecoration: 'underline', fontWeight: 700 }}>
+                                    {action.name}
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 {viewKind === 'actionflow' && (
                     <div
                         aria-label="Action flow legend"
@@ -1530,7 +1623,7 @@ function DiagramCanvasInner() {
                     proOptions={RF_PRO_OPTIONS}
                     style={RF_STYLE}
                 >
-                    {gridVisible && <Background color="#DEDED8" gap={20} size={1} />}
+                    {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <Controls />
                     {nodes.length > 20 && (
                         <MiniMap
