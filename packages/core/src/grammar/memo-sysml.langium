@@ -210,7 +210,20 @@ ActionParameterMember:
 // Composite actions contain nested actions, flow connections, successions
 
 ActionUsageBodyMember:
-    ActionUsage | FlowConnectionUsage | SuccessionUsage | UsageBodyMember;
+    ActionUsage | ControlNodeUsage | FlowConnectionUsage | SuccessionUsage | UsageBodyMember;
+
+// ─── Behavior: Control nodes (fork / join) ──────────────────────────────────
+// SysML v2 activity control nodes. A `fork` splits one incoming control flow
+// into concurrent outgoing flows; a `join` synchronizes concurrent flows back
+// into a single flow. They carry no parameters — ordering and the branches
+// they split/merge are expressed by the surrounding succession usages that
+// reference the node by name.
+//   fork parallelPrep;
+//   first verify then parallelPrep;
+//   first parallelPrep then prime;
+//   first parallelPrep then selfTest;
+ControlNodeUsage:
+    controlKind=('fork' | 'join') name=ID ';';
 
 // ─── Behavior: Flow connection usage ────────────────────────────────────────
 // Syntax: flow of ItemType from source.port to target.port ;

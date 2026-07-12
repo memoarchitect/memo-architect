@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/core';
 import {
     collectActionFlowActions, actionPortNames, assignLanes, UNALLOCATED_LANE,
-    classifyFlowItem,
+    classifyFlowItem, isControlNode,
 } from '../actionflow-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -128,5 +128,35 @@ describe('classifyFlowItem', () => {
         expect(classifyFlowItem('ClinicalDataPacket')).toBe('data');
         expect(classifyFlowItem('BatteryEnergy')).toBe('energy');
         expect(classifyFlowItem('MedicationMaterialBatch')).toBe('material');
+    });
+});
+
+describe('control nodes (fork/join)', () => {
+    it('identifies fork and join builder kinds', () => {
+        expect(isControlNode(el('f', { kind: 'ForkNode' }))).toBe(true);
+        expect(isControlNode(el('j', { kind: 'JoinNode' }))).toBe(true);
+        expect(isControlNode(el('a', { kind: 'ActionUsage' }))).toBe(false);
+    });
+
+    it('are collected into the flow like actions', () => {
+        const m = model([
+            el('flow'),
+            el('verify', { parentAction: 'flow' }),
+            el('splitPrep', { parentAction: 'flow', kind: 'ForkNode', attributes: { controlKind: 'fork' } }),
+            el('prime', { parentAction: 'flow' }),
+        ]);
+        expect(collectActionFlowActions(m).map(a => a.id).sort())
+            .toEqual(['prime', 'splitPrep', 'verify']);
+    });
+
+    it('never define a swimlane of their own', () => {
+        const target = el('nurse', { kind: 'Actor', construct: 'part', name: 'Nurse' });
+        const verify = el('verify', { allocatedTo: 'nurse' });
+        const fork = el('splitPrep', { kind: 'ForkNode' });
+        const { laneOf, lanes } = assignLanes([verify, fork], model([target, verify, fork]));
+        expect(laneOf.get('verify')).toBe('nurse');
+        expect(laneOf.has('splitPrep')).toBe(false);
+        // No spurious "Unallocated" lane created for the fork bar
+        expect(lanes.map(l => l.label)).toEqual(['Nurse']);
     });
 });

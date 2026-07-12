@@ -26,8 +26,50 @@ function getElk(): ELK {
     return elkInstance;
 }
 
+/** Drop the worker so the next layout spawns a fresh one (used after a wedge). */
+function resetElk(): void {
+    try { (elkInstance as unknown as { terminateWorker?: () => void })?.terminateWorker?.(); } catch { /* ignore */ }
+    elkInstance = undefined;
+}
+
+// elkjs drives a single Web Worker that processes one job at a time. Firing
+// `layout()` again before the previous call resolves races the worker — under
+// React StrictMode's double-invoked effects and rapid diagram switches this
+// leaves a request whose reply never arrives, so the caller waits out the full
+// layout timeout (the "Computing layout…" hang). Serialize every layout through
+// one promise chain so at most one job is in flight.
+//
+// Each job is independently time-bounded: a wedged worker (some graphs make
+// elkjs throw internally and never reply) rejects after ELK_JOB_TIMEOUT_MS and
+// is discarded so the *next* job gets a fresh worker — a single bad layout can
+// neither hang the UI nor poison the queue behind it.
+const ELK_JOB_TIMEOUT_MS = 5000;
+let layoutChain: Promise<unknown> = Promise.resolve();
+
+function runBoundedLayout(graph: Parameters<ELK['layout']>[0]): ReturnType<ELK['layout']> {
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            resetElk(); // worker is likely wedged — replace it for the next job
+            reject(new Error(`ELK layout timed out after ${ELK_JOB_TIMEOUT_MS / 1000}s`));
+        }, ELK_JOB_TIMEOUT_MS);
+        getElk().layout(graph).then(
+            value => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
+            error => { if (!settled) { settled = true; clearTimeout(timer); reject(error); } },
+        );
+    }) as ReturnType<ELK['layout']>;
+}
+
 export const elk = {
-    layout: (graph: Parameters<ELK['layout']>[0]) => getElk().layout(graph),
+    layout: (graph: Parameters<ELK['layout']>[0]) => {
+        // Run after the previous job settles (success OR failure), never before.
+        const result = layoutChain.then(() => runBoundedLayout(graph), () => runBoundedLayout(graph));
+        // Advance the chain on settle without leaking rejections.
+        layoutChain = result.then(() => undefined, () => undefined);
+        return result;
+    },
 };
 
 export interface LayoutResult {

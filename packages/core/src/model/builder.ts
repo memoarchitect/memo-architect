@@ -49,6 +49,7 @@ import type {
     FlowConnectionUsage,
     SuccessionUsage,
     AllocateUsage,
+    ControlNodeUsage,
 } from '../language/generated/ast.js';
 import type { MEMOConfig, KindDefinition } from './config.js';
 import type {
@@ -652,8 +653,45 @@ function extractActionUsage(
                     parentActionId: id,
                 });
                 break;
+            case 'ControlNodeUsage':
+                extractControlNode(
+                    member as ControlNodeUsage, filePath, packageName,
+                    elements, registry, id,
+                );
+                break;
         }
     }
+}
+
+/**
+ * Extract a fork/join control node. Modeled as a behavior-layer element with
+ * `construct: 'action'` so it participates in succession ordering and swimlane
+ * layout like any other flow step, but carries a distinct kind
+ * (`ForkNode` / `JoinNode`) and a `controlKind` attribute so renderers draw it
+ * as a synchronization bar rather than an action card.
+ */
+function extractControlNode(
+    node: ControlNodeUsage,
+    filePath: string,
+    packageName: string,
+    elements: Map<string, MemoElement>,
+    registry: PackageRegistry,
+    parentActionId: string,
+): void {
+    const id = node.name;
+    const kind = node.controlKind === 'fork' ? 'ForkNode' : 'JoinNode';
+    elements.set(id, {
+        id,
+        name: node.controlKind,
+        kind,
+        construct: 'action',
+        layer: 'behavior',
+        file: filePath,
+        package: packageName || undefined,
+        attributes: { controlKind: node.controlKind },
+        parentAction: parentActionId,
+    });
+    registry.registerElement(id, packageName);
 }
 
 function resolveConnection(

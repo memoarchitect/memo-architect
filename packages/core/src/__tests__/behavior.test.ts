@@ -214,6 +214,34 @@ describe('Behavior grammar: allocate usage', () => {
     });
 });
 
+describe('Behavior grammar: fork/join control nodes', () => {
+    it('parses fork and join inside an action, wired by successions', async () => {
+        const doc = await parse(`
+            package Test {
+                action prepare {
+                    action verify : VerifyAction;
+                    fork splitPrep;
+                    action primePump : PrimeAction;
+                    action selfTest : TestAction;
+                    join syncPrep;
+                    action program : ProgramAction;
+
+                    first start then verify;
+                    first verify then splitPrep;
+                    first splitPrep then primePump;
+                    first splitPrep then selfTest;
+                    first primePump then syncPrep;
+                    first selfTest then syncPrep;
+                    first syncPrep then program;
+                    first program then done;
+                }
+            }
+        `);
+        expect(doc.parseResult.lexerErrors).toHaveLength(0);
+        expect(doc.parseResult.parserErrors).toHaveLength(0);
+    });
+});
+
 // ─── Full Example Parsing ──────────────────────────────────────────────────
 
 describe('Behavior grammar: full infusion pump example', () => {
@@ -388,6 +416,50 @@ describe('Behavior builder: composite action usage', () => {
         expect(el).toBeDefined();
         expect(el!.kind).toBe('SystemFunction');
         expect(el!.layer).toBe('functional');
+    });
+});
+
+describe('Behavior builder: fork/join control nodes', () => {
+    it('extracts fork/join as behavior-layer elements and wires successions through them', async () => {
+        const doc = await parseDoc(`
+            package Test {
+                action prepare {
+                    action verify : VerifyAction;
+                    fork splitPrep;
+                    action primePump : PrimeAction;
+                    action selfTest : TestAction;
+                    join syncPrep;
+
+                    first verify then splitPrep;
+                    first splitPrep then primePump;
+                    first splitPrep then selfTest;
+                    first primePump then syncPrep;
+                    first selfTest then syncPrep;
+                }
+            }
+        `);
+        const model = buildMemoModel([doc], behaviorConfig);
+
+        // Control nodes become behavior-layer action-construct elements
+        const fork = model.elements.get('splitPrep');
+        expect(fork).toBeDefined();
+        expect(fork!.kind).toBe('ForkNode');
+        expect(fork!.construct).toBe('action');
+        expect(fork!.layer).toBe('behavior');
+        expect(fork!.attributes['controlKind']).toBe('fork');
+        expect(fork!.parentAction).toBe('prepare');
+
+        const join = model.elements.get('syncPrep');
+        expect(join).toBeDefined();
+        expect(join!.kind).toBe('JoinNode');
+        expect(join!.attributes['controlKind']).toBe('join');
+
+        // Successions reference the control nodes by id
+        const succ = model.relationships.filter(r => r.type === 'succession');
+        expect(succ).toContainEqual(expect.objectContaining({ sourceId: 'splitPrep', targetId: 'primePump' }));
+        expect(succ).toContainEqual(expect.objectContaining({ sourceId: 'splitPrep', targetId: 'selfTest' }));
+        expect(succ).toContainEqual(expect.objectContaining({ sourceId: 'primePump', targetId: 'syncPrep' }));
+        expect(succ).toContainEqual(expect.objectContaining({ sourceId: 'selfTest', targetId: 'syncPrep' }));
     });
 });
 

@@ -16,7 +16,7 @@ import { SHADOW, RADIUS, FONT } from '../styles/tokens';
 export interface ActionFlowNodeData {
     element?: MemoElement;
     label: string;
-    nodeType: 'action' | 'start' | 'done';
+    nodeType: 'action' | 'start' | 'done' | 'fork' | 'join';
     parameters?: ActionParameter[];
     allocatedTo?: string;
     laneColor: string;
@@ -58,6 +58,27 @@ function ActionFlowNodeInner({ data }: NodeProps) {
             }}>
                 <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} />
                 <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+            </div>
+        );
+    }
+
+    // Fork / join: a solid synchronization bar. One incoming + many outgoing
+    // (fork) or many incoming + one outgoing (join); ReactFlow lets multiple
+    // edges share a single handle, so the bar reads as a UML control node.
+    if (nodeType === 'fork' || nodeType === 'join') {
+        const vertical = d.flowDirection === 'vertical';
+        return (
+            <div
+                title={nodeType === 'fork' ? 'Fork — split into concurrent flows' : 'Join — synchronize concurrent flows'}
+                style={{
+                    width: '100%', height: '100%',
+                    background: '#374151', borderRadius: 3, boxShadow: SHADOW.sm,
+                }}
+            >
+                <Handle type="target" position={vertical ? Position.Top : Position.Left}
+                    style={{ background: '#374151', width: 6, height: 6, border: 'none' }} />
+                <Handle type="source" position={vertical ? Position.Bottom : Position.Right}
+                    style={{ background: '#374151', width: 6, height: 6, border: 'none' }} />
             </div>
         );
     }

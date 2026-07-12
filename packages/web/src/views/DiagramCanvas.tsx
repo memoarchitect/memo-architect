@@ -60,6 +60,7 @@ import { DiagramPalette } from './DiagramPalette';
 import { RelationshipPicker } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
+import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,9 @@ const SNAP_GRID: [number, number] = [20, 20];
 const LAYOUT_DEBOUNCE_MS = 500;
 const UNDO_STACK_DEPTH = 50;
 const LAYOUT_TIMEOUT_MS = 8_000;
+// Coalesce rapid diagram switches: only the diagram you land on lays out,
+// instead of queuing an ELK job for every one you skimmed past.
+const LAYOUT_SWITCH_DEBOUNCE_MS = 90;
 
 function boundedLayout<T>(promise: Promise<T>, label: string): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -524,6 +528,9 @@ function DiagramCanvasInner() {
             boundedLayout(promise, label).then(r => apply(r, interactive)).catch(fail(label));
         };
 
+        // Debounce so skimming through diagrams doesn't queue an ELK job per
+        // one skipped past — only the diagram you settle on gets laid out.
+        const dispatch = () => {
         if (isFBSDiagram) {
             run('FBS', computeFBSLayout(model, {
                 expandedNodes, nodeDirections,
@@ -591,8 +598,10 @@ function DiagramCanvasInner() {
                 apply({ nodes: overlaySidecar ? buildNodesFromSidecar(n, currentLayout!) : n, edges: e });
             }).catch(fail('Standard'));
         }
+        };
 
-        return () => { cancelled = true; };
+        const timer = window.setTimeout(dispatch, LAYOUT_SWITCH_DEBOUNCE_MS);
+        return () => { cancelled = true; window.clearTimeout(timer); };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes,
@@ -1087,22 +1096,16 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* Snap toggle */}
-                        <span style={{ color: '#E5E5E0' }}>|</span>
-                        <button
+                        <ToolbarSep />
+                        <IconToggle
+                            icon={<Icon.grid />}
+                            active={gridVisible}
                             onClick={() => {
                                 setGridVisible(visible => !visible);
                                 setSnapEnabled(visible => !visible);
                             }}
-                            className="px-2 py-0.5 text-xs font-medium rounded"
-                            style={{
-                                background: gridVisible ? '#1B3A4B' : '#F7F7F5',
-                                color: gridVisible ? '#FFFFFF' : '#6B7280',
-                                border: '1px solid #E5E5E0',
-                            }}
                             title="Show or hide the canvas grid and snapping (⌘⇧G)"
-                        >
-                            Grid
-                        </button>
+                        />
 
                         {/* FBS controls */}
                         {isFBSDiagram && (
@@ -1119,58 +1122,60 @@ function DiagramCanvasInner() {
                             </>
                         )}
 
-                        {/* Action Flow template swimlane toggle (KK-4) */}
+                        {/* Action Flow template controls (KK-4) — iOS-style grouped toolbar */}
                         {viewKind === 'actionflow' && (
                             <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                <button
+                                {/* Display toggles: grid (above) + swimlanes read as one group */}
+                                <IconToggle
+                                    icon={<Icon.lanes />}
+                                    active={swimlanesOn}
                                     onClick={() => setSwimlanesOn(s => !s)}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{
-                                        background: swimlanesOn ? '#1B3A4B' : '#F7F7F5',
-                                        color: swimlanesOn ? '#FFFFFF' : '#6B7280',
-                                        border: '1px solid #E5E5E0',
-                                    }}
                                     title="Toggle allocation swimlanes"
-                                >
-                                    Lanes
-                                </button>
-                                <button
-                                    onClick={() => setActionFlowDirection(direction => direction === 'horizontal' ? 'vertical' : 'horizontal')}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                    title="Toggle the action-flow reading direction"
-                                >
-                                    {actionFlowDirection === 'horizontal' ? 'Horizontal' : 'Vertical'}
-                                </button>
-                                <button
-                                    onClick={() => setExpandedActionNodes(new Set(
-                                        Object.values(model?.elements ?? {})
-                                            .map(element => element.parentAction)
-                                            .filter((id): id is string => Boolean(id)),
-                                    ))}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                >
-                                    Expand All
-                                </button>
-                                <button
-                                    onClick={() => setExpandedActionNodes(new Set())}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                >
-                                    Collapse All
-                                </button>
+                                />
+
+                                <ToolbarSep />
+
+                                {/* Reading direction — segmented control */}
+                                <Segmented
+                                    value={actionFlowDirection}
+                                    onChange={setActionFlowDirection}
+                                    options={[
+                                        { value: 'horizontal', icon: <Icon.arrowRight />, title: 'Left-to-right flow' },
+                                        { value: 'vertical', icon: <Icon.arrowDown />, title: 'Top-to-bottom flow' },
+                                    ]}
+                                />
+
+                                <ToolbarSep />
+
+                                {/* Tree state — clustered expand / collapse */}
+                                <ToolbarCluster>
+                                    <IconButton
+                                        icon={<Icon.expand />}
+                                        title="Expand all sub-actions"
+                                        onClick={() => setExpandedActionNodes(new Set(
+                                            Object.values(model?.elements ?? {})
+                                                .map(element => element.parentAction)
+                                                .filter((id): id is string => Boolean(id)),
+                                        ))}
+                                    />
+                                    <IconButton
+                                        icon={<Icon.collapse />}
+                                        title="Collapse all sub-actions"
+                                        onClick={() => setExpandedActionNodes(new Set())}
+                                    />
+                                </ToolbarCluster>
+
+                                <ToolbarSep />
+
+                                {/* Connection filter */}
                                 <div style={{ position: 'relative' }}>
-                                    <button
+                                    <IconToggle
+                                        icon={<Icon.filter />}
+                                        active={flowFiltersOpen}
+                                        badge={`${visibleActionFlowKinds.size}/4`}
                                         onClick={() => setFlowFiltersOpen(open => !open)}
-                                        className="px-2 py-0.5 text-xs font-medium rounded"
-                                        style={{ background: flowFiltersOpen ? '#1B3A4B' : '#F7F7F5', color: flowFiltersOpen ? '#FFFFFF' : '#374151', border: '1px solid #E5E5E0' }}
                                         title="Choose which modeled connection categories are visible"
-                                        aria-expanded={flowFiltersOpen}
-                                    >
-                                        Flows · {visibleActionFlowKinds.size}/4
-                                    </button>
+                                    />
                                     {flowFiltersOpen && (
                                         <div
                                             className="absolute top-full right-0 mt-2 p-3 rounded-lg"
@@ -1209,15 +1214,13 @@ function DiagramCanvasInner() {
                                 </div>
                                 {focusedActionId && (
                                     <>
-                                        <span style={{ color: '#E5E5E0' }}>|</span>
-                                        <button
+                                        <ToolbarSep />
+                                        <IconToggle
+                                            icon={<Icon.back />}
+                                            label="Parent"
                                             onClick={() => setFocusedActionId(null)}
-                                            className="px-2 py-0.5 text-xs font-medium rounded"
-                                            style={{ background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #9CA3AF' }}
                                             title="Return to the parent action flow"
-                                        >
-                                            ← Back to parent
-                                        </button>
+                                        />
                                         <span style={{ color: '#6B7280', fontSize: FONT.xs }}>
                                             {model?.elements[focusedActionId]?.name ?? focusedActionId}
                                         </span>
