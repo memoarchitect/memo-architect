@@ -50,13 +50,18 @@ describe('KK-1: view-kind taxonomy', () => {
     it('maps every legacy diagramType key to exactly one spec view kind', () => {
         const legacyKeys = [
             'bdd', 'ibd', 'req', 'ucd', 'act', 'afd', 'pkg', 'par', 'risk',
-            'stm', 'seq', 'fmea', 'alloc', 'threat-model',
+            'stm', 'seq', 'fmea', 'alloc', 'threat-model', 'ofd', 'ffd',
         ];
         for (const key of legacyKeys) {
             const kind = DIAGRAM_TYPE_TO_VIEW_KIND[key];
             expect(kind, `diagramType "${key}" must map to a view kind`).toBeDefined();
             expect(isViewKind(kind)).toBe(true);
         }
+    });
+
+    it('maps operational and functional flows to the activity-flow base renderer', () => {
+        expect(resolveViewKind(undefined, 'ofd')).toBe('actionflow');
+        expect(resolveViewKind(undefined, 'ffd')).toBe('actionflow');
     });
 
     it('KK-9: geometry is reachable only by explicit declaration (ADR-1-19)', () => {
@@ -177,6 +182,25 @@ describe('KK-1 acceptance: GPCA views', () => {
             grid: 5,
             browser: 10,
         });
+    });
+});
+
+describe('action-flow sample subtypes', () => {
+    it('derives the three explicitly declared diagram types without collapsing them', async () => {
+        const samplesDir = resolve(GPCA_VIEWS_DIR, '../samples');
+        const files = ['action-flow.sysml', 'functional-flow.sysml', 'op-behaviour.sysml'];
+        const docs: ParsedDocument[] = [];
+        for (const file of files) {
+            docs.push(await parseDoc(readFileSync(join(samplesDir, file), 'utf-8'), file));
+        }
+        const model = buildMemoModel(docs, gpcaViewConfig);
+        const { diagrams } = deriveModelViews(model);
+        const byId = new Map(diagrams.map(diagram => [diagram.id, diagram]));
+
+        expect(byId.get('diag-sample-sampleActionFlowView')?.diagramType).toBe('afd');
+        expect(byId.get('diag-sample-fxDeliveryView')?.diagramType).toBe('ffd');
+        expect(byId.get('diag-sample-opSetupView')?.diagramType).toBe('ofd');
+        expect(diagrams.every(diagram => diagram.viewKind === 'actionflow')).toBe(true);
     });
 });
 

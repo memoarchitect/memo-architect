@@ -482,15 +482,17 @@ function extractActionDefinition(
     const attributes = extractAttributes(bodyMembers);
     const doc = extractDocComment(bodyMembers);
 
+    const behaviorKind = actionDef.behaviorKind ?? 'action';
     const element: MemoElement = {
         id,
         name: id,
-        kind: 'ActionDefinition',
+        kind: behaviorKind === 'operator' ? 'OperatorDefinition'
+            : behaviorKind === 'function' ? 'FunctionDefinition' : 'ActionDefinition',
         construct: 'action',
         layer: 'behavior',
         file: filePath,
         package: packageName || undefined,
-        attributes,
+        attributes: { ...attributes, behaviorKind },
         doc,
         parameters: parameters.length > 0 ? parameters : undefined,
     };
@@ -591,7 +593,9 @@ function extractActionUsage(
     // that resolves without a real layer is a model-local action def, not an
     // ontology kind — the usage stays an ActionUsage on the behavior layer
     // (the def reference is kept in the actionType attribute below).
-    let kind = 'ActionUsage';
+    const behaviorKind = usage.behaviorKind ?? 'action';
+    let kind = behaviorKind === 'operator' ? 'OperatorUsage'
+        : behaviorKind === 'function' ? 'FunctionUsage' : 'ActionUsage';
     let layer = 'behavior';
     if (typeName) {
         const { kindDef, resolvedKind } = resolveKindDef(typeName, config, registries);
@@ -603,6 +607,7 @@ function extractActionUsage(
 
     const bodyMembers = usage.body || [];
     const attributes = extractAttributes(bodyMembers);
+    attributes['behaviorKind'] = behaviorKind;
     const doc = extractDocComment(bodyMembers);
     const displayName = attributes['name'] || attributes['title'] || id;
 

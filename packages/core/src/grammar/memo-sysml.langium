@@ -98,7 +98,7 @@ RequirementDefinition:
     ('{' body+=DefinitionBodyMember* '}' | ';');
 
 ActionDefinition:
-    'action' 'def' name=ID specialization=Specialization?
+    behaviorKind=('action' | 'operator' | 'function') 'def' name=ID specialization=Specialization?
     ('{' body+=ActionDefBodyMember* '}' | ';');
 
 ItemDefinition:
@@ -180,7 +180,7 @@ RequirementUsage:
 // ActionUsage supports both typed (action name : Type;) and composite
 // (action name { nested-actions, flows, successions }) forms.
 ActionUsage:
-    'action' name=ID (':' type=QualifiedName)?
+    behaviorKind=('action' | 'operator' | 'function') name=ID (':' type=QualifiedName)?
     ('{' body+=ActionUsageBodyMember* '}' | ';');
 
 PortUsage:

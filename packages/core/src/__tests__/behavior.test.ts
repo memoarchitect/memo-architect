@@ -57,6 +57,21 @@ describe('Behavior grammar: item def', () => {
 });
 
 describe('Behavior grammar: action def with parameters', () => {
+    it('accepts operator and function behavior keywords', async () => {
+        const doc = await parse(`
+            package Behaviors {
+                operator def PreparePatient;
+                function def RegulateFlow;
+                operator preparePatient : PreparePatient;
+                function regulateFlow : RegulateFlow;
+            }
+        `);
+        expect(doc.parseResult.parserErrors).toHaveLength(0);
+        const model = buildMemoModel([{ document: doc, filePath: 'behaviors.sysml' }], behaviorConfig);
+        expect(model.elements.get('preparePatient')?.kind).toBe('OperatorUsage');
+        expect(model.elements.get('regulateFlow')?.kind).toBe('FunctionUsage');
+    });
+
     it('parses action def with out parameter', async () => {
         const doc = await parse(`
             package Test {
