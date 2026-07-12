@@ -14,6 +14,15 @@ import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
 
+/**
+ * Fork/join control nodes (builder kinds `ForkNode` / `JoinNode`). They flow
+ * through the graph like actions but render as synchronization bars and never
+ * form their own swimlane.
+ */
+export function isControlNode(el: MemoElement): boolean {
+    return el.kind === 'ForkNode' || el.kind === 'JoinNode';
+}
+
 // ─── Element collection ──────────────────────────────────────────────────────
 
 /**
@@ -102,6 +111,8 @@ export function assignLanes(
     const lanes: LaneInfo[] = [];
     const seen = new Map<string, LaneInfo>();
     for (const el of actions) {
+        // Fork/join bars sit between lanes; they never define one of their own.
+        if (isControlNode(el)) continue;
         const laneId = el.allocatedTo || UNALLOCATED_LANE;
         laneOf.set(el.id, laneId);
         if (!seen.has(laneId)) {
@@ -129,7 +140,20 @@ const LANE_GAP = 16;
 const LANE_LABEL_WIDTH = 120;
 const LANE_LABEL_HEIGHT = 32;
 
-function actionNodeSize(el: MemoElement, ports: { inPorts: string[]; outPorts: string[] }) {
+const CONTROL_BAR_LONG = 64;
+const CONTROL_BAR_THICK = 10;
+
+function nodeSize(
+    el: MemoElement,
+    ports: { inPorts: string[]; outPorts: string[] },
+    direction: 'horizontal' | 'vertical',
+) {
+    if (isControlNode(el)) {
+        // A bar drawn perpendicular to the reading direction.
+        return direction === 'vertical'
+            ? { width: CONTROL_BAR_LONG, height: CONTROL_BAR_THICK }
+            : { width: CONTROL_BAR_THICK, height: CONTROL_BAR_LONG };
+    }
     const portCount = Math.max(ports.inPorts.length, ports.outPorts.length, 0);
     const bodyHeight = portCount * PORT_ROW_HEIGHT;
     return {
@@ -250,7 +274,7 @@ export async function computeActionFlowViewLayout(
         },
         children: [
             ...[...pseudoIds].map(id => ({ id, width: 28, height: 28 })),
-            ...actions.map(el => ({ id: el.id, ...actionNodeSize(el, portsByAction.get(el.id)!) })),
+            ...actions.map(el => ({ id: el.id, ...nodeSize(el, portsByAction.get(el.id)!, direction) })),
         ],
         edges: [...visibleFlows, ...visibleSuccs].map((rel, i) => ({
             id: `afe-${i}`,
@@ -275,6 +299,7 @@ export async function computeActionFlowViewLayout(
         // Order lanes by their actions' mean ELK y so banding follows the layout
         const laneY = new Map<string, number[]>();
         for (const el of actions) {
+            if (isControlNode(el)) continue;
             const p = positions.get(el.id)!;
             const laneId = laneOf.get(el.id)!;
             if (!laneY.has(laneId)) laneY.set(laneId, []);
@@ -380,6 +405,30 @@ export async function computeActionFlowViewLayout(
         }
     }
 
+    // ── Center fork/join bars on the cross-axis mean of their neighbors ──
+    // Banding fixes each action's lane position; a control bar then slides to
+    // the midpoint of the steps it splits/merges so it straddles those lanes.
+    const controlNodes = actions.filter(isControlNode);
+    if (controlNodes.length > 0) {
+        for (const ctrl of controlNodes) {
+            const p = positions.get(ctrl.id)!;
+            const centers: number[] = [];
+            for (const rel of [...visibleSuccs, ...visibleFlows]) {
+                const other = rel.sourceId === ctrl.id ? rel.targetId
+                    : rel.targetId === ctrl.id ? rel.sourceId : undefined;
+                if (other === undefined) continue;
+                const op = positions.get(other);
+                if (!op) continue;
+                centers.push(direction === 'vertical' ? op.x + op.width / 2 : op.y + op.height / 2);
+            }
+            if (centers.length === 0) continue;
+            const mean = centers.reduce((s, v) => s + v, 0) / centers.length;
+            positions.set(ctrl.id, direction === 'vertical'
+                ? { ...p, x: mean - p.width / 2 }
+                : { ...p, y: mean - p.height / 2 });
+        }
+    }
+
     // ── ReactFlow nodes ──
     const nodes: Node[] = [...laneNodes];
     for (const id of pseudoIds) {
@@ -400,6 +449,25 @@ export async function computeActionFlowViewLayout(
     }
     for (const el of actions) {
         const p = positions.get(el.id)!;
+        // Fork/join bars: no ports, no lane badge, drawn as a solid bar sized
+        // by the ELK node box (thin across, long along the perpendicular axis).
+        if (isControlNode(el)) {
+            const controlData: ActionFlowNodeData = {
+                element: el,
+                label: el.name,
+                nodeType: el.kind === 'ForkNode' ? 'fork' : 'join',
+                laneColor: '#374151', layerColor: '#374151',
+                inPorts: [], outPorts: [],
+                flowDirection: direction,
+            };
+            nodes.push({
+                id: el.id, type: 'actionFlowNode',
+                position: { x: p.x, y: p.y },
+                style: { width: p.width, height: p.height },
+                data: controlData as unknown as Record<string, unknown>,
+            });
+            continue;
+        }
         const ports = portsByAction.get(el.id)!;
         const laneId = laneOf.get(el.id)!;
         const allocatedName = el.allocatedTo
