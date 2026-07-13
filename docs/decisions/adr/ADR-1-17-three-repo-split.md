@@ -1,6 +1,6 @@
 # ADR-1-17: Three-Repo Split — memo-sysmlv2 / memo-cli / memo-architect
 
-**Status:** Accepted
+**Status:** Implemented (first cut executed 2026-07-12)
 **Date:** 2026-05-29
 **Supersedes:** the four-repo layout in [platform.md §10](../../architecture/platform.md#10-repo-layout-final-state) (`memo-base` / `memo-ontology` / `memo-methodologies` / `memo-architect`)
 **Reference:** [ADR-1-12](ADR-1-12-namespace-canonicalization.md), [ADR-1-14](ADR-1-14-extension-package-policy.md), [platform.md](../../architecture/platform.md); GitLab Epics EE (#497), J (#356), FF (#504), GG (#505), HH (#506)
@@ -48,6 +48,30 @@ Key facts:
 - ADR-1-14 (out-of-tree `@memo/ext-*` extensions) is unaffected — extensions remain separate repos.
 - ADR-1-12 namespace scheme (`memo::{base,ontology,methodology}::*`) is unaffected — namespaces are package-path strings, independent of repo grouping. The three conceptual layers still exist; they just live together in `memo-sysmlv2`.
 - Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
+
+## Implementation (2026-07-12)
+
+The first cut was executed with **`memo-tools`** as the engine repo name (not
+`memo-cli` — it also carries `tools/` ontology tooling and the VS Code extension):
+
+| ADR name | Actual repo | GitLab (private, canonical) | GitHub (public mirror, `memoarchitect` org) |
+|---|---|---|---|
+| memo-sysmlv2 | `memo` | `somesh_sandbox/memo` | `memoarchitect/memo` |
+| memo-cli | `memo-tools` | `somesh_sandbox/memo-tools` | `memoarchitect/memo-tools` |
+| memo-architect | `memo-architect` / `memo-webapp` | `somesh_sandbox/memo-webapp` | `memoarchitect/memo-architect` |
+
+Public naming follows the meMO four-layer stack (Ontology + Methodology →
+`memo`; Tools → `memo-tools`; Architect → `memo-architect`). Cut mechanics:
+
+- Split repos are **squashed snapshots** of monorepo commit `a973127`; full
+  history stays in the monorepo, which remains the working checkout for now.
+- `memo-tools` carries `vendor/memo-sysmlv2` as a git submodule — pinned to
+  GitLab `memo@e5afe1d` in the GitLab variant, to the public mirror commit in
+  the GitHub variant.
+- `@memo/web` consumes `@memo/core` via a `file:` dep on a sibling
+  `memo-tools` checkout until `@memo/core` is published.
+- `memo build` (static site export, incl. `--kpar`) requires a built
+  `@memo/web`; the DD-3 e2e suite skips where the web app is absent.
 
 ## Out of scope
 

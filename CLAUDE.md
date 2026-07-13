@@ -38,11 +38,18 @@ packages/
   core/                      — Langium grammar, parser, model builder, validator, serializers
   cli/                       — CLI commands (init, dev, validate, export, import, ontology)
   web/                       — React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
-examples/
-  gpca-pump/                 — Reference medical device model (GPCA pump, 500+ elements)
-ontology/                    — Canonical SysML ontology source
+tools/                       — ontology lint/diagram tooling, ontology viewer, VS Code extension
+vendor/
+  memo-sysmlv2/              — git submodule: canonical SysML ontology + methodology + examples
+                               (GPCA reference model lives at src/examples/gpca-pump — canonical copy)
 docs/                        — Documentation source, decisions, roadmap snapshots, generated baselines
 ```
+
+**Three-repo split (ADR-1-17, cut 2026-07-12):** squashed split repos exist —
+`memo-tools` (core+cli+tools, gitlab `somesh_sandbox/memo-tools`, github `memoarchitect/memo-tools`)
+and `memo-architect` (web, gitlab `somesh_sandbox/memo-webapp`, github `memoarchitect/memo-architect`);
+the canonical content repo `memo` is mirrored publicly at `memoarchitect/memo`.
+This monorepo remains the working checkout; the split repos are release cuts.
 
 See `docs/architecture/platform.md` for canonical ontology and methodology layout.
 
