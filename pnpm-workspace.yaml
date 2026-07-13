@@ -1,4 +1,4 @@
 packages:
   - "packages/*"
-  - "vendor/memo-sysmlv2/packages/*"
-  - "examples/*"
+  - "vendor/memo-tools/packages/*"
+  - "vendor/memo-tools/vendor/memo-sysmlv2/packages/*"

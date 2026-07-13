@@ -15,88 +15,11 @@ importers:
         specifier: ~5.5.0
         version: 5.5.4
 
-  packages/cli:
-    dependencies:
-      '@memo/core':
-        specifier: workspace:*
-        version: link:../core
-      '@memo/ontology':
-        specifier: workspace:*
-        version: link:../../vendor/memo-sysmlv2/packages/ontology
-      chalk:
-        specifier: ^5.3.0
-        version: 5.6.2
-      chokidar:
-        specifier: ^4.0.0
-        version: 4.0.3
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      glob:
-        specifier: ^11.0.0
-        version: 11.1.0
-      open:
-        specifier: ^10.1.0
-        version: 10.2.0
-      ora:
-        specifier: ^8.1.0
-        version: 8.2.0
-      ws:
-        specifier: ^8.18.0
-        version: 8.19.0
-      yaml:
-        specifier: ^2.5.0
-        version: 2.8.2
-    devDependencies:
-      '@types/ws':
-        specifier: ^8.5.0
-        version: 8.18.1
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
-      vite:
-        specifier: ^6.0.0
-        version: 6.4.1(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
-      vitest:
-        specifier: ^2.1.0
-        version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
-
-  packages/core:
-    dependencies:
-      langium:
-        specifier: ^3.3.0
-        version: 3.5.0
-      uuid:
-        specifier: ^10.0.0
-        version: 10.0.0
-      vscode-languageserver:
-        specifier: ^9.0.1
-        version: 9.0.1
-      vscode-languageserver-textdocument:
-        specifier: ^1.0.12
-        version: 1.0.12
-      yaml:
-        specifier: ^2.5.0
-        version: 2.8.2
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: ^2.1.0
-        version: 2.1.9(vitest@2.1.9(@types/node@25.3.5)(lightningcss@1.31.1))
-      langium-cli:
-        specifier: ^3.3.0
-        version: 3.5.2
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
-      vitest:
-        specifier: ^2.1.0
-        version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
-
   packages/web:
     dependencies:
       '@memo/core':
         specifier: workspace:*
-        version: link:../core
+        version: link:../../vendor/memo-tools/packages/core
       '@xyflow/react':
         specifier: ^12.3.0
         version: 12.10.1(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -147,17 +70,94 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
 
-  vendor/memo-sysmlv2/packages/medical-modeling-profile:
+  vendor/memo-tools/packages/cli:
+    dependencies:
+      '@memo/core':
+        specifier: workspace:*
+        version: link:../core
+      '@memo/ontology':
+        specifier: workspace:*
+        version: link:../../vendor/memo-sysmlv2/packages/ontology
+      chalk:
+        specifier: ^5.3.0
+        version: 5.6.2
+      chokidar:
+        specifier: ^4.0.0
+        version: 4.0.3
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+      glob:
+        specifier: ^11.0.0
+        version: 11.1.0
+      open:
+        specifier: ^10.1.0
+        version: 10.2.0
+      ora:
+        specifier: ^8.1.0
+        version: 8.2.0
+      ws:
+        specifier: ^8.18.0
+        version: 8.19.0
+      yaml:
+        specifier: ^2.5.0
+        version: 2.8.2
+    devDependencies:
+      '@types/ws':
+        specifier: ^8.5.0
+        version: 8.18.1
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.1(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
+
+  vendor/memo-tools/packages/core:
+    dependencies:
+      langium:
+        specifier: ^3.3.0
+        version: 3.5.0
+      uuid:
+        specifier: ^10.0.0
+        version: 10.0.0
+      vscode-languageserver:
+        specifier: ^9.0.1
+        version: 9.0.1
+      vscode-languageserver-textdocument:
+        specifier: ^1.0.12
+        version: 1.0.12
+      yaml:
+        specifier: ^2.5.0
+        version: 2.8.2
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^2.1.0
+        version: 2.1.9(vitest@2.1.9(@types/node@25.3.5)(lightningcss@1.31.1))
+      langium-cli:
+        specifier: ^3.3.0
+        version: 3.5.2
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.3.5)(lightningcss@1.31.1)
+
+  vendor/memo-tools/vendor/memo-sysmlv2/packages/medical-modeling-profile:
     dependencies:
       '@memo/ontology':
         specifier: workspace:*
         version: link:../ontology
 
-  vendor/memo-sysmlv2/packages/methodology-default: {}
+  vendor/memo-tools/vendor/memo-sysmlv2/packages/methodology-default: {}
 
-  vendor/memo-sysmlv2/packages/methodology-gpca: {}
+  vendor/memo-tools/vendor/memo-sysmlv2/packages/methodology-gpca: {}
 
-  vendor/memo-sysmlv2/packages/ontology: {}
+  vendor/memo-tools/vendor/memo-sysmlv2/packages/ontology: {}
 
 packages:
 
