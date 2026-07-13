@@ -50,10 +50,10 @@ pnpm memo init my-pump          # Scaffold a new project
 pnpm memo export json           # Export model as JSON
 
 # Or invoke the CLI directly with node
-node packages/cli/lib/bin/memo.js dev --port 3000
+node vendor/memo-tools/packages/cli/lib/bin/memo.js dev --port 3000
 ```
 
-> **Note:** `npx memo` does not work in this monorepo because the CLI package
+> **Note:** `npx memo` does not work in this workspace because the CLI package
 > is a workspace dependency, not globally installed. Use `pnpm memo` instead.
 
 ## CLI Commands
@@ -134,7 +134,7 @@ node packages/cli/lib/bin/memo.js dev --port 3000
 - **Properties panel** — element details, relationships, and validation guidance
 - **Gap bar** — actionable violations with click-to-select
 
-## Monorepo Structure
+## Repo Structure
 
 ```
 memo/
@@ -143,19 +143,17 @@ memo/
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
 ├── vendor/
-│   └── memo-sysmlv2/               — git submodule: canonical ontology + methodology + examples
-│       └── src/examples/gpca-pump/ — GPCA infusion pump reference model (canonical copy)
-├── tools/                          — ontology tooling, viewer, VS Code extension
+│   └── memo-tools/                 — git submodule: engine (@memo/core + @memo/cli) + tooling
+│       └── vendor/memo-sysmlv2/    — nested submodule: canonical ontology + methodology + examples
 └── docs/                           — MkDocs documentation site
 ```
 
 The canonical ontology and methodology layout is documented in [`docs/architecture/platform.md`](docs/architecture/platform.md).
 
-**Split repos (ADR-1-17, cut 2026-07-12):** the engine ships from
-[`memo-tools`](https://github.com/memoarchitect/memo-tools) and the web app from
-[`memo-architect`](https://github.com/memoarchitect/memo-architect); the ontology is
-publicly mirrored at [`memoarchitect/memo`](https://github.com/memoarchitect/memo).
-This monorepo remains the working checkout.
+**This repo is the webapp** — Layer 04 (Architect) of the three-repo meMO stack
+(ADR-1-17): ontology [`memo`](https://github.com/memoarchitect/memo) ◄ engine
+[`memo-tools`](https://github.com/memoarchitect/memo-tools) ◄ webapp `memo-architect`
+(this repo), each consumed by the next as a git submodule.
 
 ## Architecture
 
@@ -172,7 +170,7 @@ This monorepo remains the working checkout.
 
 | Layer | Technology |
 |-------|-----------|
-| Monorepo | Turborepo + pnpm |
+| Workspace | Turborepo + pnpm (submodule package globs) |
 | Parser + LSP | Langium (SysML v2 subset grammar) |
 | CLI | Commander.js |
 | Dev server | Vite + chokidar + WebSocket |
@@ -193,8 +191,8 @@ pnpm run type-check   # TypeScript type checking
 pnpm example:dev
 
 # Or validate the reference model directly
-cd vendor/memo-sysmlv2/src/examples/gpca-pump
-node ../../../../../packages/cli/lib/bin/memo.js validate
+cd vendor/memo-tools/vendor/memo-sysmlv2/src/examples/gpca-pump
+node ../../../../../packages/cli/lib/bin/memo.js validate  # cli resolves inside memo-tools
 ```
 
 ## Roadmap

@@ -1,22 +1,16 @@
-# Monorepo Structure
+# Repo Structure (memo-architect)
 
-MEMO development uses a single pnpm/Turborepo workspace for tool code and documentation, with the canonical ontology consumed as the `vendor/memo-sysmlv2` git submodule. The three-repo split ([../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12), [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)) was cut on 2026-07-12 — `memo-tools` (engine) and `memo-architect` (web) exist as squashed split repos on GitLab and GitHub — but this monorepo remains the working checkout; package removal here is a separate follow-up decision.
+This repo is the **memo-architect webapp** (Layer 04). The three-repo split ([../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12), [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)) is fully executed: the ontology lives in `memo`, the engine in `memo-tools`, and this repo consumes them through the `vendor/memo-tools` submodule (which nests `vendor/memo-sysmlv2`). The pnpm workspace globs the submodule packages, so `@memo/core`/`@memo/cli`/`@memo/ontology` resolve as normal workspace members.
 
 ## Current Working Tree
 
 ```text
 memo/
 ├── packages/
-│   ├── core/                 # @memo/core: parser, model builder, registries, validation
-│   ├── cli/                  # @memo/cli: commands, dev server, file watching
-│   └── web/                  # @memo/web: React application (split target: memo-architect)
+│   └── web/                  # @memo/web: React application
 ├── vendor/
-│   └── memo-sysmlv2/         # git submodule: canonical ontology + methodology + examples
-│       └── src/examples/gpca-pump/   # GPCA reference model (canonical copy)
-├── tools/
-│   ├── ontology-tools/       # lint and diagram helper scripts
-│   ├── ontology-viewer/      # standalone read-only ontology viewer
-│   └── vscode-extension/     # VS Code language support and snippets
+│   └── memo-tools/           # git submodule: engine (@memo/core + @memo/cli) + tooling
+│       └── vendor/memo-sysmlv2/      # nested submodule: ontology + methodology + examples
 ├── docs/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
@@ -31,9 +25,9 @@ memo/
 
 ## Workspace Scope
 
-`pnpm-workspace.yaml` intentionally includes consumable packages and examples, not every folder under `tools/`. Most tools are scripts or standalone utilities rather than workspace packages.
+`pnpm-workspace.yaml` includes `packages/*` plus the submodule package globs (`vendor/memo-tools/packages/*`, `vendor/memo-tools/vendor/memo-sysmlv2/packages/*`).
 
-The canonical ontology lives in the `vendor/memo-sysmlv2` submodule (`src/` mirrors the `memo::` namespace). Publishable package boundaries are:
+The canonical ontology lives in the nested `vendor/memo-tools/vendor/memo-sysmlv2` submodule (`src/` mirrors the `memo::` namespace). Publishable package boundaries are:
 
 | Boundary | Purpose |
 |---|---|
