@@ -398,7 +398,7 @@ MemberName returns string:
 FeatureName returns string:
     ID | 'part' | 'requirement' | 'action' | 'item' | 'port' | 'interface'
     | 'connection' | 'flow' | 'view' | 'viewpoint' | 'attribute' | 'constraint'
-    | 'ref' | 'allocate' | 'end' | 'enum';
+    | 'ref' | 'allocate' | 'end' | 'enum' | 'function' | 'operator';
 
 // ─── Hidden terminals (skipped by lexer) ─────────────────────────────────────
 
