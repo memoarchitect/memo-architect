@@ -389,7 +389,7 @@ Actual repos (public naming follows the meMO four-layer stack):
 | `memo-tools` (engine, née memo-cli) | 03 Tools | `somesh_sandbox/memo-tools` | `memoarchitect/memo-tools` |
 | `memo-architect` (web UI) | 04 Architect | `somesh_sandbox/memo-architect` (this repo) | `memoarchitect/memo-architect` |
 
-This repo (`somesh_sandbox/memo-architect`) is the webapp: the ontology was stripped into `memo`, the engine into `memo-tools` (2026-07-12), each consumed back through submodules (`vendor/memo-tools` → nested `vendor/memo-sysmlv2`). The GitHub org `memoarchitect` carries public squashed mirrors under the same names.
+This repo (`somesh_sandbox/memo-architect`) is the webapp: the ontology was stripped into `memo`, the engine into `memo-tools` (2026-07-12), each consumed back through submodules (`memo-tools` → nested `memo-tools/memo`). The GitHub org `memoarchitect` carries public squashed mirrors under the same names.
 
 ```
 memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)
@@ -411,7 +411,7 @@ memo-tools/                         (L3 engine + CLI; ADR name: memo-cli)
   packages/core/                    Langium grammar, parser, builder, validator, KerML evaluator
   packages/cli/
   tools/                            ontology lint/diagram tooling, viewer, VS Code extension
-  vendor/memo-sysmlv2/              git submodule → canonical content
+  memo-tools/memo/              git submodule → canonical content
         ▲ build-dep (core types) + runtime WebSocket (dev server, versioned protocol)
 memo-architect/                     (L3 tool UI)
   packages/web/

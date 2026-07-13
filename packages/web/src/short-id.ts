@@ -2,7 +2,7 @@
 //
 // Duplicates kindToPrefix / prefixToFamily from @memo/core so the web bundle
 // never imports runtime code from core (core uses node:fs which can't run in
-// a browser). Keep in sync with vendor/memo-tools/packages/core/src/model/short-id.ts.
+// a browser). Keep in sync with memo-tools/packages/core/src/model/short-id.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KIND_PREFIX_OVERRIDES: Record<string, string> = {

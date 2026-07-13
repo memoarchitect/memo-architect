@@ -1,6 +1,6 @@
 # Repo Structure (memo-architect)
 
-This repo is the **memo-architect webapp** (Layer 04). The three-repo split ([../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12), [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)) is fully executed: the ontology lives in `memo`, the engine in `memo-tools`, and this repo consumes them through the `vendor/memo-tools` submodule (which nests `vendor/memo-sysmlv2`). The pnpm workspace globs the submodule packages, so `@memo/core`/`@memo/cli`/`@memo/ontology` resolve as normal workspace members.
+This repo is the **memo-architect webapp** (Layer 04). The three-repo split ([../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12), [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)) is fully executed: the ontology lives in `memo`, the engine in `memo-tools`, and this repo consumes them through the `memo-tools` submodule (which nests `memo-tools/memo`). The pnpm workspace globs the submodule packages, so `@memo/core`/`@memo/cli`/`@memo/ontology` resolve as normal workspace members.
 
 ## Current Working Tree
 
@@ -8,9 +8,8 @@ This repo is the **memo-architect webapp** (Layer 04). The three-repo split ([..
 memo/
 ├── packages/
 │   └── web/                  # @memo/web: React application
-├── vendor/
-│   └── memo-tools/           # git submodule: engine (@memo/core + @memo/cli) + tooling
-│       └── vendor/memo-sysmlv2/      # nested submodule: ontology + methodology + examples
+├── memo-tools/                  # git submodule: engine (@memo/core + @memo/cli) + tooling
+│   └── memo/                   # nested submodule: ontology + methodology + examples
 ├── docs/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
@@ -25,9 +24,9 @@ memo/
 
 ## Workspace Scope
 
-`pnpm-workspace.yaml` includes `packages/*` plus the submodule package globs (`vendor/memo-tools/packages/*`, `vendor/memo-tools/vendor/memo-sysmlv2/packages/*`).
+`pnpm-workspace.yaml` includes `packages/*` plus the submodule package globs (`memo-tools/packages/*`, `memo-tools/memo/packages/*`).
 
-The canonical ontology lives in the nested `vendor/memo-tools/vendor/memo-sysmlv2` submodule (`src/` mirrors the `memo::` namespace). Publishable package boundaries are:
+The canonical ontology lives in the nested `memo-tools/memo` submodule (`src/` mirrors the `memo::` namespace). Publishable package boundaries are:
 
 | Boundary | Purpose |
 |---|---|

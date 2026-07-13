@@ -36,11 +36,10 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 ```
 packages/
   web/                       — @memo/web: React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
-vendor/
-  memo-tools/                — git submodule → somesh_sandbox/memo-tools: @memo/core (parser/engine),
-                               @memo/cli (memo CLI), ontology tooling, VS Code extension
-    vendor/memo-sysmlv2/     — nested submodule → somesh_sandbox/memo: canonical ontology + methodology
-                               + examples (GPCA reference model at src/examples/gpca-pump)
+memo-tools/                   — git submodule → somesh_sandbox/memo-tools: @memo/core (parser/engine),
+                                @memo/cli (memo CLI), ontology tooling, VS Code extension
+  memo/                       — nested submodule → somesh_sandbox/memo: canonical ontology + methodology
+                                + examples (GPCA reference model at src/examples/gpca-pump)
 docs/                        — Documentation source, decisions, roadmap snapshots, generated baselines
 scripts/                     — roadmap/GitLab project-management scripts
 ```

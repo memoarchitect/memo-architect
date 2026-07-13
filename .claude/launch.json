@@ -4,10 +4,10 @@
     {
       "name": "memo-dev",
       "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["../../../../../packages/cli/lib/bin/memo.js", "dev", "--no-open", "-p", "3000"],
+      "runtimeArgs": ["../../../packages/cli/lib/bin/memo.js", "dev", "--no-open", "-p", "3000"],
       "port": 3000,
       "autoPort": false,
-      "cwd": "vendor/memo-sysmlv2/src/examples/gpca-pump"
+      "cwd": "memo-tools/memo/src/examples/gpca-pump"
     },
     {
       "name": "slides",

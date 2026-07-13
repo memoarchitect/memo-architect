@@ -11,7 +11,7 @@ Use this as the small context pack for AI agents. Do not scan the whole reposito
    - **ADR-1-12** — namespace canonicalization (`memo::core::*`, `memo::ontology::*`, `memo::methodology::*`); snake_case filenames; SysON / SysIDE / Sysand interop binding.
    - **ADR-1-13** — standard library import wrapper at `memo::core::stdlib::*`. Ontology + methodology files MUST NOT import kernel paths directly.
    - **ADR-1-14** — medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*`. Automotive and aerospace are out of scope.
-   - **ADR-1-17** — three-repo split, **implemented 2026-07-12**: content (`memo`) ◄ engine (`memo-tools`) ◄ web (`memo-architect` = THIS repo, engine stripped out). Each layer consumes the previous as a git submodule (`vendor/memo-tools` → nested `vendor/memo-sysmlv2`). Public GitHub mirrors in the `memoarchitect` org use the same names.
+   - **ADR-1-17** — three-repo split, **implemented 2026-07-12**: content (`memo`) ◄ engine (`memo-tools`) ◄ web (`memo-architect` = THIS repo, engine stripped out). Each layer consumes the previous as a git submodule (`memo-tools` → nested `memo-tools/memo`). Public GitHub mirrors in the `memoarchitect` org use the same names.
 4. [design/sysmlv2-rulebook.md](design/sysmlv2-rulebook.md) before editing `.sysml`.
 5. GitLab issue [#367 "Roadmap Overview"](https://gitlab.com/somesh_sandbox/memo/-/issues/367) for the wave plan and epic index. Local `docs/roadmap/epic-*.md` and `docs/roadmap/index.md` have been removed — GitLab is the sole source of truth for roadmap content.
 

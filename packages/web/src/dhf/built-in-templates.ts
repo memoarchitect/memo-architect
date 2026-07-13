@@ -11,11 +11,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Vite loads all .md files under the templates directory as raw strings.
-// @memo/core lives in the vendor/memo-tools submodule (three-repo split);
+// @memo/core lives in the memo-tools submodule (three-repo split);
 // the sibling-package path is kept for monorepo-style checkouts.
 const _rawTemplates = import.meta.glob(
     [
-        '../../../../vendor/memo-tools/packages/core/src/dhf/templates/**/*.md',
+        '../../../../memo-tools/packages/core/src/dhf/templates/**/*.md',
         '../../../core/src/dhf/templates/**/*.md',
     ],
     { query: '?raw', eager: true, import: 'default' }
