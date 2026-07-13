@@ -37,6 +37,7 @@ describe('explicit renderer samples', () => {
             viewKind: 'interconnection',
             elementIds: ['partA'],
             relationshipTypes: ['ExchangesWith'],
+            sourceFile: 'sample/model/test.sysml',
         })]);
     });
 });

@@ -4,7 +4,7 @@
 // runs the layout algorithm, and returns positioned ReactFlow nodes/edges.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ELKConstructor, { type ELK } from 'elkjs/lib/elk.bundled.js';
 import type { Node, Edge } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memo/core';
 import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } from '../constants';
@@ -17,11 +17,13 @@ import { pickCompartmentEntries } from './templates/composition-tree';
 let elkInstance: ELK | undefined;
 function getElk(): ELK {
     if (!elkInstance) {
-        elkInstance = new ELK({
-            workerFactory: (_url: string) => new Worker(
-                new URL('elkjs/lib/elk-worker.min.js', import.meta.url)
-            ),
-        } as any);
+        elkInstance = typeof Worker === 'undefined'
+            ? new ELKConstructor()
+            : new ELKConstructor({
+                workerFactory: (_url: string) => new Worker(
+                    new URL('elkjs/lib/elk-worker.min.js', import.meta.url)
+                ),
+            } as any);
     }
     return elkInstance;
 }
@@ -75,6 +77,474 @@ export const elk = {
 export interface LayoutResult {
     nodes: Node[];
     edges: Edge[];
+}
+
+// ─── Shared adaptive layout resolver ─────────────────────────────────────────
+
+export interface ResolverNode { id: string; width: number; height: number }
+export interface ResolverEdge {
+    id: string;
+    source: string;
+    target: string;
+    /** Local y-coordinate of the semantic connection anchor on each node. */
+    sourceAnchorY?: number;
+    targetAnchorY?: number;
+}
+export interface ResolverChild extends ResolverNode { x: number; y: number }
+export interface ResolvedGraphLayout {
+    strategy: 'layered-right' | 'layered-down' | 'balanced-board' | 'elk-layered';
+    width: number;
+    height: number;
+    children: ResolverChild[];
+}
+
+export interface RoutePoint { x: number; y: number }
+export interface RouteObstacle { id: string; x: number; y: number; width: number; height: number }
+export interface OrthogonalRouteRequest {
+    id: string;
+    source: RoutePoint;
+    target: RoutePoint;
+    sourceNodeId: string;
+    targetNodeId: string;
+    sourceSide?: 'left' | 'right' | 'top' | 'bottom';
+    targetSide?: 'left' | 'right' | 'top' | 'bottom';
+}
+
+const segmentIntersectsRect = (a: RoutePoint, b: RoutePoint, r: RouteObstacle, pad = 10): boolean => {
+    const left = r.x - pad, right = r.x + r.width + pad;
+    const top = r.y - pad, bottom = r.y + r.height + pad;
+    if (a.y === b.y) return a.y >= top && a.y <= bottom && Math.max(a.x, b.x) >= left && Math.min(a.x, b.x) <= right;
+    if (a.x === b.x) return a.x >= left && a.x <= right && Math.max(a.y, b.y) >= top && Math.min(a.y, b.y) <= bottom;
+    return false;
+};
+
+const sameSegment = (a: RoutePoint, b: RoutePoint, c: RoutePoint, d: RoutePoint): boolean => {
+    if (a.y === b.y && c.y === d.y && a.y === c.y) {
+        return Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)) < Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x));
+    }
+    if (a.x === b.x && c.x === d.x && a.x === c.x) {
+        return Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)) < Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y));
+    }
+    return false;
+};
+
+const segmentsCrossOrthogonally = (a: RoutePoint, b: RoutePoint, c: RoutePoint, d: RoutePoint): boolean => {
+    const h1 = a.y === b.y, h2 = c.y === d.y;
+    if (h1 === h2) return false;
+    const hA = h1 ? a : c, hB = h1 ? b : d, vA = h1 ? c : a, vB = h1 ? d : b;
+    return vA.x > Math.min(hA.x, hB.x) && vA.x < Math.max(hA.x, hB.x)
+        && hA.y > Math.min(vA.y, vB.y) && hA.y < Math.max(vA.y, vB.y);
+};
+
+/** Plan all routes together so later edges avoid occupied tracks and crossings. */
+export function routeOrthogonalEdges(
+    requests: OrthogonalRouteRequest[],
+    obstacles: RouteObstacle[],
+    channelGap = 18,
+): Map<string, RoutePoint[]> {
+    const result = new Map<string, RoutePoint[]>();
+    const occupied: Array<[RoutePoint, RoutePoint]> = [];
+    const clearance = Math.max(12, channelGap * 0.75);
+    // Long connectors establish the scarce cross-board channels first; local
+    // edges can then take nearby alternatives without forcing long detours.
+    const orderedRequests = [...requests].sort((a, b) =>
+        (Math.abs(b.source.x - b.target.x) + Math.abs(b.source.y - b.target.y))
+        - (Math.abs(a.source.x - a.target.x) + Math.abs(a.source.y - a.target.y)));
+
+    for (const request of orderedRequests) {
+        const { source: s, target: t } = request;
+        const relevant = obstacles.filter(o => o.id !== request.sourceNodeId && o.id !== request.targetNodeId);
+        const xCoords = new Set<number>([s.x, t.x, (s.x + t.x) / 2, s.x - channelGap, s.x + channelGap, t.x - channelGap, t.x + channelGap]);
+        const yCoords = new Set<number>([s.y, t.y, (s.y + t.y) / 2, s.y - channelGap, s.y + channelGap, t.y - channelGap, t.y + channelGap]);
+        for (const obstacle of relevant) {
+            xCoords.add(obstacle.x - clearance);
+            xCoords.add(obstacle.x + obstacle.width + clearance);
+            yCoords.add(obstacle.y - clearance);
+            yCoords.add(obstacle.y + obstacle.height + clearance);
+        }
+        // Existing tracks become candidate coordinates, allowing tidy parallel
+        // lanes while the cost function prevents coincident segments.
+        for (const [a, b] of occupied) {
+            xCoords.add(a.x); xCoords.add(b.x);
+            yCoords.add(a.y); yCoords.add(b.y);
+        }
+        const xs = [...xCoords].sort((a, b) => a - b);
+        const ys = [...yCoords].sort((a, b) => a - b);
+        const points: RoutePoint[] = [];
+        const pointIndex = new Map<string, number>();
+        const key = (x: number, y: number) => `${x.toFixed(3)}:${y.toFixed(3)}`;
+        const inside = (point: RoutePoint) => relevant.some(o =>
+            point.x > o.x - clearance && point.x < o.x + o.width + clearance
+            && point.y > o.y - clearance && point.y < o.y + o.height + clearance);
+        for (const y of ys) for (const x of xs) {
+            const point = { x, y };
+            if (inside(point) && key(x, y) !== key(s.x, s.y) && key(x, y) !== key(t.x, t.y)) continue;
+            pointIndex.set(key(x, y), points.length);
+            points.push(point);
+        }
+        const adjacency = new Map<number, number[]>();
+        const link = (a: number, b: number) => {
+            if (!adjacency.has(a)) adjacency.set(a, []);
+            if (!adjacency.has(b)) adjacency.set(b, []);
+            adjacency.get(a)!.push(b); adjacency.get(b)!.push(a);
+        };
+        const clear = (a: RoutePoint, b: RoutePoint) => !relevant.some(o => segmentIntersectsRect(a, b, o, clearance - 1));
+        for (const y of ys) {
+            const row = xs.map(x => pointIndex.get(key(x, y))).filter((i): i is number => i !== undefined);
+            for (let i = 1; i < row.length; i++) if (clear(points[row[i - 1]], points[row[i]])) link(row[i - 1], row[i]);
+        }
+        for (const x of xs) {
+            const col = ys.map(y => pointIndex.get(key(x, y))).filter((i): i is number => i !== undefined);
+            for (let i = 1; i < col.length; i++) if (clear(points[col[i - 1]], points[col[i]])) link(col[i - 1], col[i]);
+        }
+
+        const start = pointIndex.get(key(s.x, s.y));
+        const goal = pointIndex.get(key(t.x, t.y));
+        type SearchState = { node: number; dir: 'H' | 'V' | 'N'; g: number; f: number; parent?: string };
+        const stateKey = (node: number, dir: SearchState['dir']) => `${node}:${dir}`;
+        const open: SearchState[] = start === undefined ? [] : [{
+            node: start, dir: 'N', g: 0,
+            f: Math.abs(s.x - t.x) + Math.abs(s.y - t.y),
+        }];
+        const bestCost = new Map<string, number>(start === undefined ? [] : [[stateKey(start, 'N'), 0]]);
+        const states = new Map<string, SearchState>();
+        if (open[0]) states.set(stateKey(open[0].node, open[0].dir), open[0]);
+        let found: SearchState | undefined;
+        const leavesSide = (a: RoutePoint, b: RoutePoint, side: OrthogonalRouteRequest['sourceSide']) =>
+            !side || (side === 'left' && b.x < a.x) || (side === 'right' && b.x > a.x)
+            || (side === 'top' && b.y < a.y) || (side === 'bottom' && b.y > a.y);
+        while (open.length > 0) {
+            open.sort((a, b) => a.f - b.f);
+            const current = open.shift()!;
+            if (current.node === goal) { found = current; break; }
+            for (const nextNode of adjacency.get(current.node) ?? []) {
+                const a = points[current.node], b = points[nextNode];
+                if (current.node === start && !leavesSide(a, b, request.sourceSide)) continue;
+                if (nextNode === goal && !leavesSide(b, a, request.targetSide)) continue;
+                const dir: 'H' | 'V' = a.y === b.y ? 'H' : 'V';
+                const length = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+                let penalty = current.dir !== 'N' && current.dir !== dir ? 90 : 0;
+                for (const [c, d] of occupied) {
+                    if (sameSegment(a, b, c, d)) penalty += 4_000;
+                    else if (segmentsCrossOrthogonally(a, b, c, d)) penalty += 600;
+                }
+                // Prefer monotone progress, but never at the expense of routing
+                // through an obstacle (the visibility graph forbids that).
+                const before = Math.abs(a.x - t.x) + Math.abs(a.y - t.y);
+                const after = Math.abs(b.x - t.x) + Math.abs(b.y - t.y);
+                if (after > before) penalty += (after - before) * 1.5;
+                const g = current.g + length + penalty;
+                const nextKey = stateKey(nextNode, dir);
+                if (g >= (bestCost.get(nextKey) ?? Number.POSITIVE_INFINITY)) continue;
+                const next: SearchState = { node: nextNode, dir, g, f: g + after, parent: stateKey(current.node, current.dir) };
+                bestCost.set(nextKey, g); states.set(nextKey, next); open.push(next);
+            }
+        }
+
+        let route: RoutePoint[] = [];
+        if (found) {
+            let cursor: SearchState | undefined = found;
+            while (cursor) {
+                route.push(points[cursor.node]);
+                cursor = cursor.parent ? states.get(cursor.parent) : undefined;
+            }
+            route.reverse();
+        }
+        if (route.length < 2) {
+            const midX = (s.x + t.x) / 2;
+            route = [s, { x: midX, y: s.y }, { x: midX, y: t.y }, t];
+        }
+        const compact = route.filter((p, i) => i === 0 || i === route.length - 1
+            || !((route[i - 1].x === p.x && p.x === route[i + 1].x)
+                || (route[i - 1].y === p.y && p.y === route[i + 1].y)));
+        result.set(request.id, compact);
+        for (let i = 1; i < compact.length; i++) occupied.push([compact[i - 1], compact[i]]);
+    }
+    return result;
+}
+
+/** Base footprint score shared by every diagram template. */
+export function compactnessScore(width: number, height: number, targetAspect = 1.5): number {
+    if (width <= 0 || height <= 0) return Number.POSITIVE_INFINITY;
+    const aspectPenalty = 1 + 1.35 * Math.abs(Math.log((width / height) / targetAspect));
+    return width * height * aspectPenalty;
+}
+
+/** Column count for a two-dimensional board near the requested aspect. */
+export function balancedGridColumns(count: number, targetAspect = 1.25): number {
+    if (count <= 1) return Math.max(count, 1);
+    return Math.min(count, Math.max(2, Math.round(Math.sqrt(count * targetAspect))));
+}
+
+/** Stable connectivity order: sources first, then breadth-first adjacency. */
+export function connectivityOrder(nodes: ResolverNode[], edges: ResolverEdge[]): string[] {
+    const present = new Set(nodes.map(n => n.id));
+    const outgoing = new Map<string, string[]>();
+    const indegree = new Map(nodes.map(n => [n.id, 0]));
+    for (const edge of edges) {
+        if (!present.has(edge.source) || !present.has(edge.target) || edge.source === edge.target) continue;
+        if (!outgoing.has(edge.source)) outgoing.set(edge.source, []);
+        outgoing.get(edge.source)!.push(edge.target);
+        indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1);
+    }
+    const original = nodes.map(n => n.id);
+    const queue = original.filter(id => (indegree.get(id) ?? 0) === 0);
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    while (queue.length) {
+        const id = queue.shift()!;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ordered.push(id);
+        for (const target of outgoing.get(id) ?? []) {
+            indegree.set(target, (indegree.get(target) ?? 1) - 1);
+            if (indegree.get(target) === 0) queue.push(target);
+        }
+    }
+    for (const id of original) if (!seen.has(id)) ordered.push(id);
+    return ordered;
+}
+
+function balancedBoard(nodes: ResolverNode[], edges: ResolverEdge[], gapX: number, gapY: number, targetAspect: number): ResolvedGraphLayout {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const ordered = connectivityOrder(nodes, edges).map(id => byId.get(id)!);
+    const cols = balancedGridColumns(nodes.length, targetAspect);
+    const rows = Math.ceil(nodes.length / cols);
+    const slots = ordered.map((node, index) => {
+        const row = Math.floor(index / cols);
+        const offset = index % cols;
+        // Snake rows keep a connected sequence adjacent at row turns instead
+        // of producing a long return connector across the entire board.
+        const col = row % 2 === 0 ? offset : cols - 1 - offset;
+        return { node, row, col };
+    });
+    const colWidths = Array.from({ length: cols }, () => 0);
+    const rowHeights = Array.from({ length: rows }, () => 0);
+    for (const { node, row, col } of slots) {
+        colWidths[col] = Math.max(colWidths[col], node.width);
+        rowHeights[row] = Math.max(rowHeights[row], node.height);
+    }
+    const colX = colWidths.map((_, i) => i === 0 ? 0 : colWidths.slice(0, i).reduce((a, b) => a + b, 0) + gapX * i);
+    const rowY = rowHeights.map((_, i) => i === 0 ? 0 : rowHeights.slice(0, i).reduce((a, b) => a + b, 0) + gapY * i);
+    const children = slots.map(({ node, row, col }) => ({
+        ...node,
+        x: colX[col] + (colWidths[col] - node.width) / 2,
+        y: rowY[row] + (rowHeights[row] - node.height) / 2,
+    }));
+    return {
+        strategy: 'balanced-board',
+        width: colWidths.reduce((a, b) => a + b, 0) + gapX * Math.max(cols - 1, 0),
+        height: rowHeights.reduce((a, b) => a + b, 0) + gapY * Math.max(rows - 1, 0),
+        children,
+    };
+}
+
+function segmentsCross(a: ResolverChild, b: ResolverChild, c: ResolverChild, d: ResolverChild): boolean {
+    const p = { x: a.x + a.width / 2, y: a.y + a.height / 2 };
+    const q = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    const r = { x: c.x + c.width / 2, y: c.y + c.height / 2 };
+    const s = { x: d.x + d.width / 2, y: d.y + d.height / 2 };
+    const orient = (u: typeof p, v: typeof p, w: typeof p) => (v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x);
+    return orient(p, q, r) * orient(p, q, s) < 0 && orient(r, s, p) * orient(r, s, q) < 0;
+}
+
+/** Score actual geometry, including connector length and pairwise crossings. */
+export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: ResolverEdge[], targetAspect = 1.5): number {
+    const byId = new Map(layout.children.map(n => [n.id, n]));
+    let edgeLength = 0;
+    let crossings = 0;
+    let directionPenalty = 0;
+    let bendPenalty = 0;
+    const usable = edges.filter(e => byId.has(e.source) && byId.has(e.target));
+    for (const edge of usable) {
+        const s = byId.get(edge.source)!;
+        const t = byId.get(edge.target)!;
+        edgeLength += Math.abs((s.x + s.width / 2) - (t.x + t.width / 2))
+            + Math.abs((s.y + s.height / 2) - (t.y + t.height / 2));
+        const dx = (t.x + t.width / 2) - (s.x + s.width / 2);
+        const dy = Math.abs((t.y + t.height / 2) - (s.y + s.height / 2));
+        if (dx <= 0) directionPenalty += 55_000;
+        directionPenalty += Math.max(0, dy - Math.max(dx, 0)) * 80;
+        // When both axes change, an orthogonal connector needs at least one
+        // bend. Prefer candidates that align connected ports into straight
+        // horizontal runs before spending space on routing lanes.
+        if (Math.abs(dx) > 8 && dy > 8) bendPenalty += 18_000;
+    }
+    for (let i = 0; i < usable.length; i++) for (let j = i + 1; j < usable.length; j++) {
+        const a = usable[i], b = usable[j];
+        if (a.source === b.source || a.source === b.target || a.target === b.source || a.target === b.target) continue;
+        if (segmentsCross(byId.get(a.source)!, byId.get(a.target)!, byId.get(b.source)!, byId.get(b.target)!)) crossings++;
+    }
+    // Score the paths the shared orthogonal router can actually realize for
+    // this candidate. Centre-line estimates alone routinely choose compact
+    // arrangements that later require long detours or crossing channels.
+    const routed = routeOrthogonalEdges(usable.map(edge => {
+        const source = byId.get(edge.source)!;
+        const target = byId.get(edge.target)!;
+        return {
+            id: edge.id,
+            source: { x: source.x + source.width, y: source.y + source.height / 2 },
+            target: { x: target.x, y: target.y + target.height / 2 },
+            sourceNodeId: edge.source,
+            targetNodeId: edge.target,
+            sourceSide: 'right' as const,
+            targetSide: 'left' as const,
+        };
+    }), layout.children);
+    let routedLength = 0;
+    let routedBends = 0;
+    let routedCrossings = 0;
+    const routedSegments: Array<{ edgeId: string; a: RoutePoint; b: RoutePoint }> = [];
+    for (const [edgeId, points] of routed) {
+        routedBends += Math.max(0, points.length - 2);
+        for (let i = 1; i < points.length; i++) {
+            routedLength += Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y);
+            routedSegments.push({ edgeId, a: points[i - 1], b: points[i] });
+        }
+    }
+    for (let i = 0; i < routedSegments.length; i++) for (let j = i + 1; j < routedSegments.length; j++) {
+        const a = routedSegments[i], b = routedSegments[j];
+        if (a.edgeId === b.edgeId) continue;
+        if (sameSegment(a.a, a.b, b.a, b.b) || segmentsCrossOrthogonally(a.a, a.b, b.a, b.b)) routedCrossings++;
+    }
+    return compactnessScore(layout.width, layout.height, targetAspect)
+        + edgeLength * 18
+        + directionPenalty
+        + bendPenalty
+        + crossings * Math.max(layout.width * layout.height * 0.35, 50_000)
+        + routedLength * 6
+        + routedBends * 4_000
+        + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000);
+}
+
+/**
+ * Generic layout policy used by templates: evaluate real horizontal, vertical,
+ * and balanced-board candidates, then choose from measured geometry.
+ */
+export async function resolveGraphLayout(options: {
+    id: string;
+    nodes: ResolverNode[];
+    edges: ResolverEdge[];
+    targetAspect?: number;
+    gapX?: number;
+    gapY?: number;
+    /** Preserve a semantic flow axis when the view requires ordered lanes. */
+    directedFlowAxis?: 'RIGHT' | 'DOWN' | 'AUTO';
+}): Promise<ResolvedGraphLayout> {
+    const { nodes, edges } = options;
+    if (nodes.length === 0) return { strategy: 'balanced-board', width: 0, height: 0, children: [] };
+    const targetAspect = options.targetAspect ?? 1.5;
+    const gapX = options.gapX ?? 54;
+    const gapY = options.gapY ?? 58;
+    const layered = (direction: 'RIGHT' | 'DOWN'): ResolvedGraphLayout => {
+        const byId = new Map(nodes.map(n => [n.id, n]));
+        const ordered = connectivityOrder(nodes, edges).map(nodeId => byId.get(nodeId)!);
+        let cursor = 0;
+        const crossSize = direction === 'RIGHT'
+            ? Math.max(...ordered.map(n => n.height))
+            : Math.max(...ordered.map(n => n.width));
+        let children = ordered.map(node => {
+            const child = {
+                ...node,
+                x: direction === 'RIGHT' ? cursor : (crossSize - node.width) / 2,
+                y: direction === 'DOWN' ? cursor : (crossSize - node.height) / 2,
+            };
+            cursor += (direction === 'RIGHT' ? node.width + gapX : node.height + gapY);
+            return child;
+        });
+        if (direction === 'RIGHT' && edges.some(e => e.sourceAnchorY !== undefined && e.targetAnchorY !== undefined)) {
+            const childById = new Map(children.map(n => [n.id, n]));
+            const placedY = new Map<string, number>();
+            const anchor = [...children].sort((a, b) => b.width * b.height - a.width * a.height)[0];
+            placedY.set(anchor.id, 0);
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (const edge of edges) {
+                    if (edge.sourceAnchorY === undefined || edge.targetAnchorY === undefined) continue;
+                    const sy = placedY.get(edge.source), ty = placedY.get(edge.target);
+                    if (sy !== undefined && ty === undefined) {
+                        placedY.set(edge.target, sy + edge.sourceAnchorY - edge.targetAnchorY); changed = true;
+                    } else if (ty !== undefined && sy === undefined) {
+                        placedY.set(edge.source, ty + edge.targetAnchorY - edge.sourceAnchorY); changed = true;
+                    }
+                }
+            }
+            children = children.map(n => ({ ...n, y: placedY.get(n.id) ?? n.y }));
+            const minY = Math.min(...children.map(n => n.y));
+            children = children.map(n => ({ ...n, y: n.y - minY }));
+        }
+        const resolvedWidth = Math.max(...children.map(n => n.x + n.width));
+        const resolvedHeight = Math.max(...children.map(n => n.y + n.height));
+        return {
+            strategy: direction === 'RIGHT' ? 'layered-right' : 'layered-down',
+            width: resolvedWidth,
+            height: resolvedHeight,
+            children,
+        };
+    };
+    if (options.directedFlowAxis === 'RIGHT') return layered('RIGHT');
+    if (options.directedFlowAxis === 'DOWN') return layered('DOWN');
+
+    const candidates: ResolvedGraphLayout[] = [
+        balancedBoard(nodes, edges, gapX, gapY, targetAspect),
+        layered('RIGHT'),
+        layered('DOWN'),
+    ];
+
+    // ELK Layered is the primary topology-aware candidate. MULTI_EDGE wrapping
+    // gives it permission to trade a very long strip for a compact board, while
+    // crossing minimisation and straight-edge preference remain global rather
+    // than being encoded for a particular diagram.
+    if (nodes.length >= 3 && edges.length > 0) {
+        try {
+            const output = await elk.layout({
+                id: `resolver-${options.id}`,
+                layoutOptions: {
+                    'elk.algorithm': 'layered',
+                    'elk.direction': 'RIGHT',
+                    'elk.edgeRouting': 'ORTHOGONAL',
+                    'elk.aspectRatio': String(targetAspect),
+                    'elk.padding': '[top=0,left=0,bottom=0,right=0]',
+                    'elk.spacing.nodeNode': String(gapY),
+                    'elk.layered.spacing.nodeNodeBetweenLayers': String(gapX),
+                    'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+                    'elk.layered.nodePlacement.favorStraightEdges': 'true',
+                    'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+                    'elk.layered.wrapping.strategy': 'MULTI_EDGE',
+                    'elk.layered.wrapping.additionalEdgeSpacing': '18',
+                    'elk.separateConnectedComponents': 'true',
+                    'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+                    'elk.randomSeed': '1',
+                },
+                children: nodes.map(node => ({ id: node.id, width: node.width, height: node.height })),
+                edges: edges.map(edge => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
+            });
+            const rawChildren = output.children ?? [];
+            if (rawChildren.length === nodes.length) {
+                const byId = new Map(nodes.map(node => [node.id, node]));
+                const minX = Math.min(...rawChildren.map(child => child.x ?? 0));
+                const minY = Math.min(...rawChildren.map(child => child.y ?? 0));
+                const children = rawChildren.map(child => ({
+                    ...byId.get(child.id)!,
+                    x: (child.x ?? 0) - minX,
+                    y: (child.y ?? 0) - minY,
+                }));
+                candidates.push({
+                    strategy: 'elk-layered',
+                    width: Math.max(...children.map(child => child.x + child.width)),
+                    height: Math.max(...children.map(child => child.y + child.height)),
+                    children,
+                });
+            }
+        } catch {
+            // The deterministic measured candidates remain available if the
+            // worker is unavailable or a graph exposes an unsupported option.
+        }
+    }
+    return candidates.reduce((best, candidate) =>
+        resolvedLayoutScore(candidate, edges, targetAspect) < resolvedLayoutScore(best, edges, targetAspect)
+            ? candidate : best);
 }
 
 export async function computeLayout(

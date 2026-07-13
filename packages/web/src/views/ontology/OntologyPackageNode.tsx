@@ -10,7 +10,7 @@ import { LAYER_COLORS } from '../../constants';
 
 export interface OntologyPackageNodeData {
     name: string;
-    type: 'ontology' | 'profile' | 'extension';
+    type: 'ontology' | 'profile' | 'extension' | 'methodology';
     version: string;
     description: string;
     kindCount: number;

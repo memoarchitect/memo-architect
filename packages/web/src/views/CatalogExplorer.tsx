@@ -3,7 +3,7 @@ import {
     useModelStore, getRelationshipsForElement,
     getAllTags, getElementTags, getElementGroup, getGroupsForKind,
 } from '../store/model-store';
-import { sendElementUpdate, sendAddRelationship } from '../store/ws-client';
+import { sendAddRelationship } from '../store/ws-client';
 import { LAYER_COLORS, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
 import { ContextMenu } from '../components/ContextMenu';
 import type { MemoElement, ElementStatus } from '@memo/core';
@@ -76,22 +76,16 @@ export function CatalogExplorer() {
     const saveAll = () => {
         const store = useModelStore.getState();
         for (const [elementId, fields] of dirtyFields) {
-            const attrUpdates: Record<string, string> = {};
-            let docUpdate: string | undefined;
             for (const [key, value] of Object.entries(fields)) {
                 if (key === 'doc') {
-                    docUpdate = value;
                     store.updateElementField(elementId, 'doc', value);
                 } else {
-                    attrUpdates[key] = value;
                     store.updateElementAttribute(elementId, key, value);
                 }
             }
+            // applyEdit consumes the pending edits and syncs the full element to
+            // the server (sendElementUpdate) itself — no extra send needed here.
             store.applyEdit(elementId);
-            sendElementUpdate(elementId, {
-                doc: docUpdate,
-                attributes: Object.keys(attrUpdates).length > 0 ? attrUpdates : undefined,
-            });
         }
         setDirtyFields(new Map());
     };
@@ -250,8 +244,8 @@ export function CatalogExplorer() {
     const setElementAttribute = useCallback((elementId: string, key: string, value: string) => {
         const store = useModelStore.getState();
         store.updateElementAttribute(elementId, key, value);
+        // applyEdit persists the pending edit and syncs the full element itself.
         store.applyEdit(elementId);
-        sendElementUpdate(elementId, { attributes: { [key]: value } });
     }, []);
 
     const moveToGroup = useCallback((elementId: string, groupName: string) => {
@@ -295,7 +289,7 @@ export function CatalogExplorer() {
     }, [model, setElementAttribute]);
 
     // ─── Context menu ───────────────────────────────────────────────────
-    const handleContextMenu = useCallback((e: React.MouseEvent, target?: typeof ctxMenu) => {
+    const handleContextMenu = useCallback((e: React.MouseEvent, target?: Omit<NonNullable<typeof ctxMenu>, 'x' | 'y'>) => {
         e.preventDefault(); e.stopPropagation();
         setCtxMenu({ x: e.clientX, y: e.clientY, ...target });
     }, []);

@@ -15,6 +15,7 @@ export const FONT = {
         group: '13px',
         kind: '12px',
         item: '13px',
+        element: '13px',
         count: '12px',
         search: '13px',
         tab: '13px',

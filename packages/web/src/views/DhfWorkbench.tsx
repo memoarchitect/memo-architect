@@ -542,7 +542,7 @@ function renderMarkdown(md: string, model: MemoModelDTO | null, settings: DhfSet
         const el = model.elements[id];
         if (!el) return `<em>[${escapeHtml(id)} not found]</em>`;
         if (!attr || attr === 'name') return escapeHtml(el.name);
-        return escapeHtml(String((el as Record<string, unknown>)[attr] ?? el.name));
+        return escapeHtml(String((el as unknown as Record<string, unknown>)[attr] ?? el.name));
     });
 
     // ── Other directives ──
@@ -575,7 +575,7 @@ function renderMarkdown(md: string, model: MemoModelDTO | null, settings: DhfSet
         const cols = ['name', 'kind', 'layer'];
         const header = cols.map(c => `<th>${c}</th>`).join('');
         const rows = els.slice(0, 10).map(el => {
-            const cells = cols.map(c => `<td>${escapeHtml(String((el as Record<string, unknown>)[c] ?? '—'))}</td>`).join('');
+            const cells = cols.map(c => `<td>${escapeHtml(String((el as unknown as Record<string, unknown>)[c] ?? '—'))}</td>`).join('');
             return `<tr>${cells}</tr>`;
         }).join('');
         const more = els.length > 10 ? `<tr><td colspan="${cols.length}" style="color:#9CA3AF;font-size:11px">…and ${els.length - 10} more</td></tr>` : '';

@@ -68,6 +68,7 @@ export function OntologyViewer() {
             layers,
             kindCount: layers.reduce((s, l) => s + l.kindCount, 0),
             relationshipCount: 0,
+            relationshipTypes: [],
             selected: true,
         };
     }, [focusedOntology, isDetailView, model]);

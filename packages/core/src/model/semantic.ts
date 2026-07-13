@@ -146,6 +146,8 @@ export interface DiagramDTO {
     properties?: Record<string, string>;
     elementIds?: string[];
     relationshipTypes?: string[];
+    /** SysML source containing the view definition (project-relative). */
+    sourceFile?: string;
 }
 
 /** Architecture layer info (serializable subset of config) */

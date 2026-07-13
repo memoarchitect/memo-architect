@@ -461,14 +461,13 @@ function ElementProperties() {
                             onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                             onClick={() => {
-                                const text = element.line ? `${element.file}:${element.line}` : element.file!;
-                                navigator.clipboard.writeText(text).catch(() => {});
+                                navigator.clipboard.writeText(element.file!).catch(() => {});
                             }}
                             title="Click to copy path"
                         >
                             <span style={{ flexShrink: 0 }}>⟨/⟩</span>
                             <span className="font-mono truncate">
-                                {element.file}{element.line ? `:${element.line}` : ''}
+                                {element.file}
                             </span>
                             <span style={{ flexShrink: 0, color: '#9CA3AF', fontSize: '9px' }}>copy</span>
                         </button>
