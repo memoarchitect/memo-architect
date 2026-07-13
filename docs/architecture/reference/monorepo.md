@@ -1,6 +1,6 @@
 # Monorepo Structure
 
-MEMO currently uses a single pnpm/Turborepo workspace for tool code, ontology source, examples, and documentation. The intended long-term split is documented in [../platform.md §10](../platform.md#10-repo-layout-final-state).
+MEMO development uses a single pnpm/Turborepo workspace for tool code and documentation, with the canonical ontology consumed as the `vendor/memo-sysmlv2` git submodule. The three-repo split ([../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12), [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)) was cut on 2026-07-12 — `memo-tools` (engine) and `memo-architect` (web) exist as squashed split repos on GitLab and GitHub — but this monorepo remains the working checkout; package removal here is a separate follow-up decision.
 
 ## Current Working Tree
 
@@ -9,11 +9,10 @@ memo/
 ├── packages/
 │   ├── core/                 # @memo/core: parser, model builder, registries, validation
 │   ├── cli/                  # @memo/cli: commands, dev server, file watching
-│   ├── web/                  # @memo/web: React application
-│   ├── methodology-*/        # methodology packages during migration
-│   └── ...                   # transitional packages until migration phases remove or rename them
-├── ontology/                 # canonical SysML ontology source for local development
-├── examples/                 # projects that pin a methodology and contain element instances
+│   └── web/                  # @memo/web: React application (split target: memo-architect)
+├── vendor/
+│   └── memo-sysmlv2/         # git submodule: canonical ontology + methodology + examples
+│       └── src/examples/gpca-pump/   # GPCA reference model (canonical copy)
 ├── tools/
 │   ├── ontology-tools/       # lint and diagram helper scripts
 │   ├── ontology-viewer/      # standalone read-only ontology viewer
@@ -34,7 +33,7 @@ memo/
 
 `pnpm-workspace.yaml` intentionally includes consumable packages and examples, not every folder under `tools/`. Most tools are scripts or standalone utilities rather than workspace packages.
 
-The canonical ontology is represented as source under `ontology/` during this migration. Publishable package boundaries are:
+The canonical ontology lives in the `vendor/memo-sysmlv2` submodule (`src/` mirrors the `memo::` namespace). Publishable package boundaries are:
 
 | Boundary | Purpose |
 |---|---|

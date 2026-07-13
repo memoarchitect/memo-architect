@@ -377,19 +377,29 @@ No domain content. Treat like a stdlib.
 
 ---
 
-## 10. Repo layout (final state)
+## 10. Repo layout (executed 2026-07-12)
 
-Three repos, split along dependency lines — see [ADR-1-17](../decisions/adr/ADR-1-17-three-repo-split.md). The conceptual L0/L1/L2 content collapses into a single pure-content repo; the L3 tool splits into engine (cli) vs UI (web).
+Three repos, split along dependency lines — see [ADR-1-17](../decisions/adr/ADR-1-17-three-repo-split.md) (Implemented). The conceptual L0/L1/L2 content collapses into a single pure-content repo; the L3 tool splits into engine (cli) vs UI (web).
+
+Actual repos (public naming follows the meMO four-layer stack):
+
+| Repo | Layers | GitLab (private, canonical) | GitHub (public, `memoarchitect`) |
+|---|---|---|---|
+| `memo` (a.k.a. memo-sysmlv2) | 01 Ontology + 02 Methodology | `somesh_sandbox/memo` | `memoarchitect/memo` |
+| `memo-tools` (engine, née memo-cli) | 03 Tools | `somesh_sandbox/memo-tools` | `memoarchitect/memo-tools` |
+| `memo-architect` (web UI) | 04 Architect | `somesh_sandbox/memo-webapp` | `memoarchitect/memo-architect` |
+
+The split repos are squashed cuts of monorepo commit `a973127`; this monorepo remains the working checkout, and the packages below stay here until removal is decided separately.
 
 ```
 memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)
   src/                              all .sysml content; directory tree mirrors the memo:: namespace
     medical_device_library.sysml    public import surface
-    base/                           L0 helpers (@memo/sysml-base) + stdlib/ KerML wrapper
-    core/                           common/ enumerations/ relationships/
+    core/                           common/ enumerations/ relationships/ semantics/ + stdlib/ KerML wrapper
+                                    (former base/ L0 helpers merged in)
     architecture/                   one folder per layer: context/ … risk/ cybersecurity/ assurance/ …
     compliance/                     artifacts/ change/ document_views/ postmarket/ iso14971/
-    viewpoints/  views/             core/ + default_viewpoints/ ; core/ + document_views/
+    viewpoints/                     per-concern viewpoint + view defs (views nested here)
     artifacts/                      artifact kinds
     rules/                          native constraint def / requirement def (Epic EE)
     methodology/                    nested sysand project: memo/ (default) + gpca/
@@ -397,9 +407,11 @@ memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content,
   packages/                         thin @memo/* manifests (sysmlDir points into src/)
   .project.json + sysand-lock.toml  ships as a sysand package; SysIDE/SysON/sysand consumable
         ▲ data-dependency (versioned sysand artifact)
-memo-cli/                           (L3 engine + CLI)
+memo-tools/                         (L3 engine + CLI; ADR name: memo-cli)
   packages/core/                    Langium grammar, parser, builder, validator, KerML evaluator
   packages/cli/
+  tools/                            ontology lint/diagram tooling, viewer, VS Code extension
+  vendor/memo-sysmlv2/              git submodule → canonical content
         ▲ build-dep (core types) + runtime WebSocket (dev server, versioned protocol)
 memo-architect/                     (L3 tool UI)
   packages/web/
@@ -407,7 +419,7 @@ memo-architect/                     (L3 tool UI)
   examples/full-medical-device/
 ```
 
-Dependency direction: `memo-sysmlv2 ◄─ memo-cli ◄─ memo-architect`. `web` does **not** build-depend on `cli` — only on `@memo/core` types; the CLI↔web link is the WebSocket protocol at runtime (kept a versioned contract). Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
+Dependency direction: `memo-sysmlv2 ◄─ memo-tools ◄─ memo-architect`. `web` does **not** build-depend on `cli` — only on `@memo/core` types; the CLI↔web link is the WebSocket protocol at runtime (kept a versioned contract). Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
 
 Execution: keystone Epic EE (rules → native constraints) gates the first cut; Epic J prepares boundaries; Epics FF (memo-sysmlv2) → GG (memo-cli) → HH (memo-architect) execute the cuts.
 

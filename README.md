@@ -143,12 +143,19 @@ memo/
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
 ├── vendor/
-│   └── memo-sysmlv2/src/examples/gpca-pump/  — GPCA infusion pump reference model (500+ elements)
-├── ontology/                       — Canonical SysML ontology source
+│   └── memo-sysmlv2/               — git submodule: canonical ontology + methodology + examples
+│       └── src/examples/gpca-pump/ — GPCA infusion pump reference model (canonical copy)
+├── tools/                          — ontology tooling, viewer, VS Code extension
 └── docs/                           — MkDocs documentation site
 ```
 
 The canonical ontology and methodology layout is documented in [`docs/architecture/platform.md`](docs/architecture/platform.md).
+
+**Split repos (ADR-1-17, cut 2026-07-12):** the engine ships from
+[`memo-tools`](https://github.com/memoarchitect/memo-tools) and the web app from
+[`memo-architect`](https://github.com/memoarchitect/memo-architect); the ontology is
+publicly mirrored at [`memoarchitect/memo`](https://github.com/memoarchitect/memo).
+This monorepo remains the working checkout.
 
 ## Architecture
 
