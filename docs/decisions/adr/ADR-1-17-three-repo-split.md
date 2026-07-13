@@ -58,13 +58,17 @@ The first cut was executed with **`memo-tools`** as the engine repo name (not
 |---|---|---|---|
 | memo-sysmlv2 | `memo` | `somesh_sandbox/memo` | `memoarchitect/memo` |
 | memo-cli | `memo-tools` | `somesh_sandbox/memo-tools` | `memoarchitect/memo-tools` |
-| memo-architect | `memo-architect` / `memo-webapp` | `somesh_sandbox/memo-webapp` | `memoarchitect/memo-architect` |
+| memo-architect | `memo-architect` | `somesh_sandbox/memo-architect` (this repo, engine stripped 2026-07-12) | `memoarchitect/memo-architect` |
 
 Public naming follows the meMO four-layer stack (Ontology + Methodology →
 `memo`; Tools → `memo-tools`; Architect → `memo-architect`). Cut mechanics:
 
-- Split repos are **squashed snapshots** of monorepo commit `a973127`; full
-  history stays in the monorepo, which remains the working checkout for now.
+- The former monorepo (`somesh_sandbox/memo-architect`) **is** the webapp repo:
+  the ontology was stripped into `memo` earlier, and the engine was stripped
+  into `memo-tools` on 2026-07-12 — what remains is `packages/web` + docs +
+  project scripts, with full history preserved. The GitHub copies are squashed
+  snapshots. A transient `somesh_sandbox/memo-webapp` repo from the first cut
+  is retired (archived).
 - `memo-tools` carries `vendor/memo-sysmlv2` as a git submodule — pinned to
   GitLab `memo@e5afe1d` in the GitLab variant, to the public mirror commit in
   the GitHub variant.

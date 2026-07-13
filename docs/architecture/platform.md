@@ -387,9 +387,9 @@ Actual repos (public naming follows the meMO four-layer stack):
 |---|---|---|---|
 | `memo` (a.k.a. memo-sysmlv2) | 01 Ontology + 02 Methodology | `somesh_sandbox/memo` | `memoarchitect/memo` |
 | `memo-tools` (engine, née memo-cli) | 03 Tools | `somesh_sandbox/memo-tools` | `memoarchitect/memo-tools` |
-| `memo-architect` (web UI) | 04 Architect | `somesh_sandbox/memo-webapp` | `memoarchitect/memo-architect` |
+| `memo-architect` (web UI) | 04 Architect | `somesh_sandbox/memo-architect` (this repo) | `memoarchitect/memo-architect` |
 
-The split repos are squashed cuts of monorepo commit `a973127`; this monorepo remains the working checkout, and the packages below stay here until removal is decided separately.
+This repo (`somesh_sandbox/memo-architect`) is the webapp: the ontology was stripped into `memo`, the engine into `memo-tools` (2026-07-12), each consumed back through submodules (`vendor/memo-tools` → nested `vendor/memo-sysmlv2`). The GitHub org `memoarchitect` carries public squashed mirrors under the same names.
 
 ```
 memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)

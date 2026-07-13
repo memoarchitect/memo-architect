@@ -82,10 +82,10 @@ memo/            # Layers 01 Ontology + 02 Methodology — pure SysML v2 / KerML
 memo-tools/      # Layer 03 Tools — engine (@memo/core) + memo CLI (@memo/cli) + tooling
                  #   gitlab: somesh_sandbox/memo-tools · github: memoarchitect/memo-tools
 memo-architect/  # Layer 04 Architect — web app (@memo/web)
-                 #   gitlab: somesh_sandbox/memo-webapp · github: memoarchitect/memo-architect
+                 #   gitlab: somesh_sandbox/memo-architect · github: memoarchitect/memo-architect
 ```
 
-Dependency direction: `memo ◄─ memo-tools ◄─ memo-architect`. The ontology content (formerly L0/L1/L2 repos) collapsed into one pure-content release; the tool split into engine vs UI so CLI-only users are served without the web bundle. The split repos are squashed cuts of the monorepo, which remains the working checkout during local development; `memo-tools` consumes the content repo as a git submodule, and `memo-architect` consumes `memo-tools` the same way (`vendor/memo-tools`, nesting the content submodule) with pnpm workspace globs resolving `@memo/core` as a normal workspace dependency. Published consumers will depend on versioned sysand artifacts, not on tool internals.
+Dependency direction: `memo ◄─ memo-tools ◄─ memo-architect`. The ontology content (formerly L0/L1/L2 repos) collapsed into one pure-content release; the tool split into engine vs UI so CLI-only users are served without the web bundle. The former monorepo is now the memo-architect webapp repo itself (ontology and engine stripped out, history preserved); the GitHub mirrors are squashed cuts; `memo-tools` consumes the content repo as a git submodule, and `memo-architect` consumes `memo-tools` the same way (`vendor/memo-tools`, nesting the content submodule) with pnpm workspace globs resolving `@memo/core` as a normal workspace dependency. Published consumers will depend on versioned sysand artifacts, not on tool internals.
 
 ## Migration Guardrails
 

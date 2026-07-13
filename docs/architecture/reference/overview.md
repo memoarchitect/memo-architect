@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This reference page summarizes the runtime architecture. The canonical product and ontology architecture lives in [../platform.md](../platform.md). Repo boundaries follow the executed three-repo split ([ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)): content `memo` ◄ engine `memo-tools` (@memo/core + @memo/cli) ◄ web `memo-architect` (@memo/web).
+This reference page summarizes the runtime architecture. The canonical product and ontology architecture lives in [../platform.md](../platform.md). Repo boundaries follow the executed three-repo split ([ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)): content `memo` ◄ engine `memo-tools` (@memo/core + @memo/cli) ◄ web `memo-architect` (@memo/web — this repo), each consumed by the next as a git submodule.
 
 ## System Context
 

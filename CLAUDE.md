@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical device architecture per ISO 14971, IEC 62304, and ISO/IEC/IEEE 42010. Built as a Turbo monorepo with pnpm workspaces.
+MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical device architecture per ISO 14971, IEC 62304, and ISO/IEC/IEEE 42010. This repo is the **webapp layer (memo-architect)** of the three-repo meMO stack; the engine (`memo-tools`) and ontology (`memo`) are consumed as git submodules. Turborepo + pnpm workspace.
 
 ## Documentation Entry Points
 
@@ -22,7 +22,7 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 
 | Layer | Technology |
 |-------|-----------|
-| Monorepo | Turborepo + pnpm |
+| Workspace | Turborepo + pnpm (submodule package globs) |
 | Parser | Langium (SysML v2 grammar) |
 | CLI | Commander.js + Chalk |
 | Dev Server | Vite + Chokidar + WebSocket |
@@ -35,21 +35,22 @@ MEMO (Medical Engineering Modelling Ontology) is a SysML v2 tool for medical dev
 
 ```
 packages/
-  core/                      — Langium grammar, parser, model builder, validator, serializers
-  cli/                       — CLI commands (init, dev, validate, export, import, ontology)
-  web/                       — React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
-tools/                       — ontology lint/diagram tooling, ontology viewer, VS Code extension
+  web/                       — @memo/web: React web app (6 modes: catalog, diagram, actionflow, dsm, scenario, ontology)
 vendor/
-  memo-sysmlv2/              — git submodule: canonical SysML ontology + methodology + examples
-                               (GPCA reference model lives at src/examples/gpca-pump — canonical copy)
+  memo-tools/                — git submodule → somesh_sandbox/memo-tools: @memo/core (parser/engine),
+                               @memo/cli (memo CLI), ontology tooling, VS Code extension
+    vendor/memo-sysmlv2/     — nested submodule → somesh_sandbox/memo: canonical ontology + methodology
+                               + examples (GPCA reference model at src/examples/gpca-pump)
 docs/                        — Documentation source, decisions, roadmap snapshots, generated baselines
+scripts/                     — roadmap/GitLab project-management scripts
 ```
 
-**Three-repo split (ADR-1-17, cut 2026-07-12):** squashed split repos exist —
-`memo-tools` (core+cli+tools, gitlab `somesh_sandbox/memo-tools`, github `memoarchitect/memo-tools`)
-and `memo-architect` (web, gitlab `somesh_sandbox/memo-webapp`, github `memoarchitect/memo-architect`);
-the canonical content repo `memo` is mirrored publicly at `memoarchitect/memo`.
-This monorepo remains the working checkout; the split repos are release cuts.
+**This repo IS the webapp** (`memo-architect`, Layer 04 of the meMO stack). The stack is
+three repos wired by submodules (ADR-1-17, cut 2026-07-12): ontology `memo` ◄ engine
+`memo-tools` ◄ webapp `memo-architect` (this repo). Public GitHub mirrors live in the
+`memoarchitect` org under the same names. The engine and ontology are edited in their
+own repos (or via the submodule working trees) — engine/content changes must be
+committed and pushed in the submodule repo, then the pin bumped here.
 
 See `docs/architecture/platform.md` for canonical ontology and methodology layout.
 
@@ -57,7 +58,7 @@ See `docs/architecture/platform.md` for canonical ontology and methodology layou
 
 ```bash
 pnpm run build        # Build all packages (Turborepo cached)
-pnpm run test         # Run all tests (130+ passing)
+pnpm run test         # Run all tests (web + submodule engine packages)
 pnpm run dev          # Start dev server (packages/cli: memo dev)
 ```
 
@@ -79,7 +80,7 @@ When asked to "execute" a milestone or phase, follow this protocol:
 4. **Verify baseline:** `pnpm run build && pnpm run test`
 5. **Work on the user's currently checked-out branch** — trunk-based; do not create feature branches.
 6. **Execute:** Follow story scope from the GitLab issue description. Read all affected files before modifying. Run tests after each logical change.
-7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `cd examples/gpca-pump && memo dev`.
+7. **Verify:** `pnpm run build && pnpm run test`. If CLI/builder touched: `pnpm run example:dev`.
 8. **Close issues:** After completing work for an issue, close it: `glab issue close -R somesh_sandbox/memo-architect <number>`
 9. **Commit:** Reference the phase and issue number (e.g., `Phase A: fix product title (#81)`)
 
