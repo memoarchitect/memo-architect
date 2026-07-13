@@ -19,6 +19,23 @@ import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '.
 import type { ViewpointDTO } from '@memo/core';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
+const ACTIVE_VIEW_KEY = 'memo:activeView';
+
+/** Restore only stable, project-addressable navigation across browser reloads. */
+function restoreActiveView(): ActiveView {
+    try {
+        const value = JSON.parse(sessionStorage.getItem(ACTIVE_VIEW_KEY) ?? 'null') as ActiveView | null;
+        if (value?.type === 'diagram' && typeof value.diagramId === 'string') return value;
+    } catch { /* unavailable storage or stale value */ }
+    return { type: 'welcome' };
+}
+
+export function persistActiveView(view: ActiveView): void {
+    try {
+        if (view.type === 'diagram') sessionStorage.setItem(ACTIVE_VIEW_KEY, JSON.stringify(view));
+        else sessionStorage.removeItem(ACTIVE_VIEW_KEY);
+    } catch { /* unavailable storage */ }
+}
 
 /** One-time migration: read any legacy localStorage viewpoints and wipe the key. */
 function migrateLegacyViewpoints(): ViewpointDTO[] {
@@ -41,8 +58,8 @@ function migrateLegacyViewpoints(): ViewpointDTO[] {
 
 export const FOLDER_ATTR = '_folder';
 
-/** @deprecated Legacy 6-mode type — kept for backward compat during transition */
-export type AppMode = 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf';
+/** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
+export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import';
 
 /** Active view in the unified canvas */
 export type ActiveView =
@@ -301,6 +318,8 @@ export interface ModelState {
     rejectLlmRequest: (requestId: string, error: string) => void;
 }
 
+const restoredActiveView = restoreActiveView();
+
 export const useModelStore = create<ModelState>((set, get) => ({
     // Data
     model: null,
@@ -311,15 +330,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
     methodology: null,
 
     // UI state
-    activeMode: 'catalog' as AppMode,
-    activeView: { type: 'welcome' } as ActiveView,
+    activeMode: restoredActiveView.type === 'diagram' ? 'diagram' : 'catalog' as AppMode,
+    activeView: restoredActiveView,
     explorerTab: 'model' as ExplorerTab,
     selectedElementId: null,
     selectedRelationshipId: null,
     selectedElementIds: new Set<string>(),
     recentlyVisited: [],
     selectedViewpointId: null,
-    selectedDiagramId: null,
+    selectedDiagramId: restoredActiveView.type === 'diagram' ? restoredActiveView.diagramId : null,
     searchTerm: '',
     sidebarCollapsed: false,
     propertiesPanelCollapsed: true,
@@ -439,20 +458,41 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
     setMethodology: (m) => set({ methodology: m }),
-    setModel: (model) => set((s) => ({
-        model,
-        // Navigate to dashboard on first model load if we're on welcome/dashboard
-        activeView: (s.activeView.type === 'welcome' || s.activeView.type === 'dashboard')
-            && Object.keys(model.elements).length > 0
-            ? { type: 'dashboard' }
-            : s.activeView,
-    })),
+    setModel: (model) => set((s) => {
+        let activeView = s.activeView;
+        let selectedDiagramId = s.selectedDiagramId;
+        let selectedViewpointId = s.selectedViewpointId;
+        if (activeView.type === 'diagram') {
+            const requestedDiagramId = activeView.diagramId;
+            const exact = model.diagrams?.find(diagram => diagram.id === requestedDiagramId);
+            const previous = s.model?.diagrams?.find(diagram => diagram.id === requestedDiagramId);
+            const replacement = exact ?? (previous?.sourceFile
+                ? model.diagrams?.find(diagram => diagram.sourceFile === previous.sourceFile)
+                : undefined);
+            if (replacement) {
+                activeView = { type: 'diagram', diagramId: replacement.id };
+                selectedDiagramId = replacement.id;
+                selectedViewpointId = replacement.viewpointId === '__model' ? null : replacement.viewpointId;
+                persistActiveView(activeView);
+            }
+            // If a file is temporarily invalid while being edited, retain the
+            // requested diagram instead of navigating elsewhere. The next
+            // successful model update will reconcile it again.
+        } else if ((activeView.type === 'welcome' || activeView.type === 'dashboard')
+            && Object.keys(model.elements).length > 0) {
+            activeView = { type: 'dashboard' };
+        }
+        return { model, activeView, selectedDiagramId, selectedViewpointId };
+    }),
     setValidation: (validation) => set({ validation }),
     setCompleteness: (completeness) => set({ completeness }),
     setConnected: (connected) => set({ connected }),
     setAnalysisIssues: (issues) => set({ analysisIssues: issues }),
     setActiveMode: (mode) => set({ activeMode: mode }),
-    setActiveView: (view) => set({ activeView: view }),
+    setActiveView: (view) => {
+        persistActiveView(view);
+        set({ activeView: view });
+    },
     setExplorerTab: (tab) => set({ explorerTab: tab }),
     selectElement: (id) => {
         if (id) {

@@ -72,9 +72,30 @@ body {
     background: #9CA3AF;
 }
 
-/* Node & edge transitions for smooth interactions */
+/* Never animate the transform used for direct manipulation. A transform
+   transition makes the painted node trail its hit box during drag/resize. */
 .react-flow__node {
-    transition: box-shadow 200ms ease, transform 200ms ease, opacity 200ms ease;
+    transition: box-shadow 150ms ease, opacity 150ms ease;
+}
+
+/* IBD edges provide their own endpoint-safe hit path. React Flow's default
+   full-length interaction stroke overlaps boundary ports. */
+.ibd-interconnection-edge .react-flow__edge-interaction {
+    pointer-events: none;
+}
+
+@keyframes memo-ibd-flow {
+    to { stroke-dashoffset: -30; }
+}
+
+.memo-ibd-flow {
+    stroke-dasharray: 8 7;
+    animation: memo-ibd-flow 700ms linear infinite;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .memo-ibd-flow { animation: none; }
 }
 
 .react-flow__edge path {
@@ -88,4 +109,12 @@ body {
 /* Handle visibility on hover */
 .react-flow__node:hover .react-flow__handle {
     opacity: 1 !important;
+}
+
+/* IBD port anchors are routing geometry, not UI handles. Showing four
+   coincident anchors on node hover caused the apparent icon/cursor flicker. */
+.react-flow__node:hover .react-flow__handle.ibd-port-anchor,
+.react-flow__handle.ibd-port-anchor {
+    opacity: 0 !important;
+    pointer-events: none !important;
 }

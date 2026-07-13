@@ -7,10 +7,11 @@
 
 import { createServer as createHttpServer, type Server } from 'node:http';
 import { resolve } from 'node:path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, createReadStream, statSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, createReadStream, statSync } from 'node:fs';
 import { extname } from 'node:path';
-import type { ServerMessage, ModelUpdateMessage, DiagramDTO, DiagramLayout } from '@memo/core';
+import type { ServerMessage, ModelUpdateMessage, DiagramDTO } from '@memo/core';
 import type { BuilderRegistries } from '@memo/core';
+import { loadViewLayouts, saveViewLayout } from './view-layout-store.js';
 
 export interface DevServerOptions {
     port: number;
@@ -24,47 +25,6 @@ export interface DevServerOptions {
 export interface DevServer {
     broadcast(messages: ServerMessage[]): void;
     close(): void;
-}
-
-// ─── Sidecar layout persistence ────────────────────────────────────────────
-
-function layoutsDir(projectRoot: string): string {
-    return resolve(projectRoot, '.memo', 'layouts');
-}
-
-function layoutPath(projectRoot: string, diagramId: string): string {
-    return resolve(layoutsDir(projectRoot), `${diagramId}.yaml`);
-}
-
-function loadDiagramLayout(projectRoot: string, diagramId: string): DiagramLayout | null {
-    const p = layoutPath(projectRoot, diagramId);
-    if (!existsSync(p)) return null;
-    try {
-        const { parse } = require('yaml');
-        return parse(readFileSync(p, 'utf8')) as DiagramLayout;
-    } catch { return null; }
-}
-
-function saveDiagramLayout(projectRoot: string, diagramId: string, layout: DiagramLayout): void {
-    const dir = layoutsDir(projectRoot);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const { stringify } = require('yaml');
-    writeFileSync(layoutPath(projectRoot, diagramId), stringify(layout), 'utf8');
-}
-
-function loadAllLayouts(projectRoot: string): Record<string, DiagramLayout> {
-    const dir = layoutsDir(projectRoot);
-    if (!existsSync(dir)) return {};
-    const layouts: Record<string, DiagramLayout> = {};
-    try {
-        for (const file of readdirSync(dir)) {
-            if (!file.endsWith('.yaml')) continue;
-            const diagramId = file.replace(/\.yaml$/, '');
-            const layout = loadDiagramLayout(projectRoot, diagramId);
-            if (layout) layouts[diagramId] = layout;
-        }
-    } catch { /* ignore */ }
-    return layouts;
 }
 
 // ─── User-diagram persistence helpers ──────────────────────────────────────
@@ -190,6 +150,11 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
     const wss = new WebSocketServer({ server });
     const clients = new Set<any>();
 
+    const currentDiagrams = (): DiagramDTO[] => {
+        const model = initialMessages.find(m => m.type === 'model:update') as ModelUpdateMessage | undefined;
+        return model?.payload.diagrams ?? [];
+    };
+
     /** Push an updated model:update message (with modified diagrams) to all clients */
     function broadcastDiagramChange(changedDiagram: DiagramDTO, op: 'create' | 'update' | 'delete'): void {
         const modelMsgIdx = initialMessages.findIndex(m => m.type === 'model:update');
@@ -249,7 +214,7 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
         }
 
         // Send all sidecar layouts on connect
-        const layouts = loadAllLayouts(options.projectRoot);
+        const layouts = loadViewLayouts(options.projectRoot, currentDiagrams());
         if (Object.keys(layouts).length > 0) {
             ws.send(JSON.stringify({ type: 'diagram:layout', payload: { layouts } }));
         }
@@ -311,7 +276,10 @@ export async function createDevServer(options: DevServerOptions): Promise<DevSer
                     console.log(`[Diagram] Deleted: ${msg.payload.id}`);
                 } else if (msg.type === 'diagram:layout:update') {
                     const { diagramId, layout } = msg.payload;
-                    saveDiagramLayout(options.projectRoot, diagramId, layout);
+                    const diagram = currentDiagrams().find(d => d.id === diagramId)
+                        ?? { id: diagramId, name: diagramId, diagramType: 'bdd', viewpointId: '__model', auto: false };
+                    const savedPath = saveViewLayout(options.projectRoot, diagram, layout);
+                    console.log(`[Diagram] Saved layout: ${savedPath}`);
                     // Broadcast to other clients (not the sender)
                     const layoutMsg = JSON.stringify({ type: 'diagram:layout', payload: { layouts: { [diagramId]: layout } } });
                     for (const client of clients) {

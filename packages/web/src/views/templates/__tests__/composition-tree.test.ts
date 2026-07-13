@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoRelationship } from '@memo/core';
 import {
     buildCompositionTree, collectTreeIds, pickCompartmentEntries,
-    COMPOSITION_REL_TYPES,
+    COMPOSITION_REL_TYPES, validateSingleTree,
 } from '../composition-tree';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -89,6 +89,27 @@ describe('collectTreeIds', () => {
             [rel('composes', 'a', 'b'), rel('composes', 'b', 'c')],
         );
         expect([...collectTreeIds(tree)].sort()).toEqual(['a', 'b', 'c', 'd']);
+    });
+});
+
+describe('validateSingleTree', () => {
+    it('rejects forests and floating BDD elements', () => {
+        const tree = buildCompositionTree(
+            [el('root'), el('child'), el('floating')],
+            [rel('composes', 'root', 'child')],
+        );
+        expect(validateSingleTree(tree)).toEqual({
+            rootIds: ['root', 'floating'],
+            disconnectedIds: ['floating'],
+        });
+    });
+
+    it('accepts one connected hierarchy', () => {
+        const tree = buildCompositionTree(
+            [el('root'), el('child'), el('leaf')],
+            [rel('composes', 'root', 'child'), rel('composes', 'child', 'leaf')],
+        );
+        expect(validateSingleTree(tree)).toBeNull();
     });
 });
 

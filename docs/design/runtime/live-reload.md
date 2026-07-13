@@ -129,7 +129,7 @@ Changes:
 
 3. **Remove** `window.__MEMO_DATA__` embedded-data fallback from `ws-client.ts:loadEmbeddedData()` for dev mode. Keep only for static `memo build` output.
 
-4. **Keep but scope-limit** `.memo/user-diagrams.json` and `.memo/layouts/*.yaml` — these are view state (layout coords), not ontology. BUT add validation at load: drop any diagram/layout whose `kind` or relationship `type` not present in current ontology registries. Log drop count.
+4. **Keep but scope-limit** `.memo/user-diagrams.json` and `*.viewlayout` companions — these are view state (layout coordinates), not ontology. Legacy `.memo/layouts/*.yaml` files remain load-compatible and migrate to `.viewlayout` on the next save. Validate at load: drop any diagram/layout whose `kind` or relationship `type` is not present in current ontology registries. Log the drop count.
 
 5. Audit Zustand for `persist()` middleware. Remove any persistence of: `model`, `validation`, `completeness`, `availableOntologies`, `selectedOntologies`, `ontologySelection`. UI state OK (sidebar collapsed, selected tab).
 

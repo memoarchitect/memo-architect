@@ -217,13 +217,15 @@ export interface DiagramParseResultMessage {
 
 // ─── Sidecar Layout ─────────────────────────────────────────────────────────
 
-/** Per-node visual override stored in .memo/layouts/<diagramId>.yaml */
+/** Per-node visual override stored in the view's .viewlayout companion. */
 export interface DiagramNodeLayout {
     x: number;
     y: number;
     width?: number;
     height?: number;
     color?: string;
+    /** Per-diagram boundary-port positions, relative to the owning node. */
+    ports?: Record<string, { x: number; y: number; side?: 'top' | 'bottom' | 'left' | 'right' }>;
 }
 
 /** Per-edge visual override */
@@ -232,13 +234,30 @@ export interface DiagramEdgeLayout {
     strokeWidth?: number;
     labelVisible?: boolean;
     style?: 'solid' | 'dashed' | 'dotted';
+    /** User-adjusted orthogonal route points in canvas coordinates. */
+    points?: Array<{ x: number; y: number }>;
+    /** Endpoint identity captured with a manual route. A changed attachment
+     * invalidates the bends and returns the edge to automatic routing. */
+    source?: string;
+    target?: string;
+    sourcePortId?: string;
+    targetPortId?: string;
 }
 
-/** Full layout for one diagram, deserialized from the YAML sidecar */
+/** Full layout for one diagram, deserialized from its .viewlayout companion. */
 export interface DiagramLayout {
     nodes: Record<string, DiagramNodeLayout>;
     edges: Record<string, DiagramEdgeLayout>;
-    canvas?: { zoom?: number; pan?: { x: number; y: number }; grid?: number; snap?: boolean };
+    canvas?: {
+        zoom?: number;
+        pan?: { x: number; y: number };
+        grid?: number;
+        snap?: boolean;
+        /** False after the first user geometry override. */
+        autoLayout?: boolean;
+        /** Animate directional flow along connectors. */
+        flowAnimation?: boolean;
+    };
 }
 
 /** Server → Client: initial layout data for all diagrams that have sidecars */

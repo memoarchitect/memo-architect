@@ -81,7 +81,7 @@ export function ScenarioEditor() {
     const saveSteps = useCallback(() => {
         if (!selectedElement || !editingSteps) return;
         const doc = serializeSteps(editingSteps);
-        sendElementUpdate(selectedElement.id, { doc });
+        sendElementUpdate({ ...selectedElement, doc });
         setEditingSteps(null);
     }, [selectedElement, editingSteps]);
 

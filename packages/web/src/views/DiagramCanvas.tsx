@@ -1,7 +1,7 @@
 // ─── DiagramCanvas ────────────────────────────────────────────────────────────
 //
 // Interactive diagram canvas with:
-//   - Sidecar position persistence (.memo/layouts/<diagramId>.yaml)
+//   - Per-view position persistence (<view>.viewlayout)
 //   - Palette sidebar (drag-to-create elements)
 //   - On-canvas creation (double-click canvas, drop from palette)
 //   - Edge drawing (handle-to-handle, relationship type picker)
@@ -18,6 +18,7 @@ import {
 import {
     ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
     useNodesState, useEdgesState, useReactFlow, addEdge,
+    applyNodeChanges,
     ConnectionMode,
     type Node as RFNode,
     type Edge as RFEdge,
@@ -37,13 +38,14 @@ import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveAct
 import { FONT, COLOR } from '../styles/tokens';
 import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
-    computeFBSLayout, buildDecompositionTree, buildFunctionalTree,
+    computeFBSLayout, buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges,
 } from './layout';
 import {
     computeGeneralViewLayout, resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
-import { computeInterconnectionLayout } from './templates/interconnection-view';
+import { validateSingleTree, COMPOSITION_REL_TYPES } from './templates/composition-tree';
+import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type PortDisplay } from './templates/interconnection-view';
 import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
@@ -78,7 +80,6 @@ const RF_FIT_VIEW_OPTIONS = { padding: 0.08, maxZoom: 2 } as const;
 const MINIMAP_STYLE = { background: '#FFFFFF' } as const;
 const RF_PRO_OPTIONS = { hideAttribution: true } as const;
 const SNAP_GRID: [number, number] = [20, 20];
-const LAYOUT_DEBOUNCE_MS = 500;
 const UNDO_STACK_DEPTH = 50;
 const LAYOUT_TIMEOUT_MS = 8_000;
 // Coalesce rapid diagram switches: only the diagram you land on lays out,
@@ -107,6 +108,71 @@ type FlowEdge = RFEdge<Record<string, RFAny>>;
 interface UndoCommand {
     do: () => void;
     undo: () => void;
+}
+
+/** Re-route explicit orthogonal edges after saved/user node positions overlay. */
+function reroutePositionedEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[] {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const absolute = new Map<string, { x: number; y: number }>();
+    const absOf = (id: string): { x: number; y: number } => {
+        const known = absolute.get(id);
+        if (known) return known;
+        const node = byId.get(id)!;
+        const parent = node.parentId ? absOf(node.parentId) : { x: 0, y: 0 };
+        const value = { x: parent.x + node.position.x, y: parent.y + node.position.y };
+        absolute.set(id, value);
+        return value;
+    };
+    const sizeOf = (node: FlowNode) => ({
+        width: Number(node.width ?? node.style?.width ?? 0),
+        height: Number(node.height ?? node.style?.height ?? 0),
+    });
+    const requests = edges.flatMap(edge => {
+        const liveOffset = (nodeId: string, portId: unknown, fallback: unknown) => {
+            if (typeof portId === 'string') {
+                const port = ((byId.get(nodeId)?.data as { ports?: Array<{ id: string; x: number; y: number; size?: number }> })?.ports ?? [])
+                    .find(candidate => candidate.id === portId);
+                if (port) {
+                    const size = port.size ?? 20;
+                    return { x: port.x + size / 2, y: port.y + size / 2 };
+                }
+            }
+            return fallback as { x: number; y: number } | undefined;
+        };
+        const sourceOffset = liveOffset(edge.source, edge.data?.sourcePortId, edge.data?.sourceOffset);
+        const targetOffset = liveOffset(edge.target, edge.data?.targetPortId, edge.data?.targetOffset);
+        if (!sourceOffset || !targetOffset || !byId.has(edge.source) || !byId.has(edge.target)) return [];
+        const s = absOf(edge.source), t = absOf(edge.target);
+        return [{
+            id: edge.id,
+            source: { x: s.x + sourceOffset.x, y: s.y + sourceOffset.y },
+            target: { x: t.x + targetOffset.x, y: t.y + targetOffset.y },
+            sourceNodeId: edge.source,
+            targetNodeId: edge.target,
+            sourceSide: edge.data?.sourceSide as 'left' | 'right' | 'top' | 'bottom' | undefined,
+            targetSide: edge.data?.targetSide as 'left' | 'right' | 'top' | 'bottom' | undefined,
+        }];
+    });
+    if (requests.length === 0) return edges;
+    const obstacles = nodes
+        .filter(node => !(node.data as { isFrame?: boolean }).isFrame)
+        .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }));
+    const requestById = new Map(requests.map(request => [request.id, request]));
+    const automaticRequests = requests.filter(request => !edges.find(edge => edge.id === request.id)?.data?.manualRoute);
+    const routes = routeOrthogonalEdges(automaticRequests, obstacles);
+    return edges.map(edge => {
+        const request = requestById.get(edge.id);
+        if (!request) return edge;
+        if (edge.data?.manualRoute) {
+            const points = [...((edge.data.points as Array<{ x: number; y: number }> | undefined) ?? [])];
+            if (points.length >= 2) {
+                points[0] = request.source;
+                points[points.length - 1] = request.target;
+                return { ...edge, data: { ...edge.data, points } };
+            }
+        }
+        return routes.has(edge.id) ? { ...edge, data: { ...edge.data, points: routes.get(edge.id) } } : edge;
+    });
 }
 
 // ─── Quick create popup ───────────────────────────────────────────────────────
@@ -189,6 +255,20 @@ function QuickCreatePopup({ x, y, onConfirm, onCancel }: QuickCreateProps) {
     );
 }
 
+/** Small coloured port glyph for the IBD legend. */
+function PortSwatch({ color, glyph }: { color: string; glyph: string }) {
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 13, height: 13, borderRadius: 2,
+            background: color + '22', border: `1.5px solid ${color}`,
+            color, fontSize: 9, fontWeight: 800, lineHeight: 1,
+        }}>
+            {glyph}
+        </span>
+    );
+}
+
 // ─── Main canvas inner (inside ReactFlowProvider) ─────────────────────────────
 
 function DiagramCanvasInner() {
@@ -209,11 +289,32 @@ function DiagramCanvasInner() {
     const setNodeLayout = useModelStore(s => s.setNodeLayout);
     const mergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
     const updateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
-    const { fitView, screenToFlowPosition } = useReactFlow();
+    const { fitView, screenToFlowPosition, getViewport, setViewport } = useReactFlow();
 
-    const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
+    const [nodes, setNodes] = useNodesState<FlowNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
+    const nodesRef = useRef<FlowNode[]>([]);
+    const edgesRef = useRef<FlowEdge[]>([]);
+    const geometryFrameRef = useRef<number | null>(null);
+    const nodeDragStartRef = useRef<{ id: string; x: number; y: number } | null>(null);
+    const suppressInspectUntilRef = useRef(0);
+    useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+    useEffect(() => { edgesRef.current = edges; }, [edges]);
+
+    const scheduleGeometryUpdate = useCallback((nextNodes: FlowNode[]) => {
+        nodesRef.current = nextNodes;
+        if (geometryFrameRef.current !== null) return;
+        geometryFrameRef.current = requestAnimationFrame(() => {
+            geometryFrameRef.current = null;
+            const stableNodes = nodesRef.current;
+            const routedEdges = reroutePositionedEdges(stableNodes, edgesRef.current);
+            edgesRef.current = routedEdges;
+            setNodes(stableNodes);
+            setEdges(routedEdges);
+        });
+    }, [setNodes, setEdges]);
     const [isLayouting, setIsLayouting] = useState(false);
+    const [layoutEditVersion, setLayoutEditVersion] = useState(0);
     const [layoutError, setLayoutError] = useState<string | null>(null);
     const [layoutVersion, setLayoutVersion] = useState(0);
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
@@ -269,7 +370,6 @@ function DiagramCanvasInner() {
     }, []);
 
     // Layout debounce timer
-    const layoutTimer = useRef<ReturnType<typeof setTimeout>>();
 
     // Get the selected diagram
     const selectedDiagram = getDiagram(model, selectedDiagramId);
@@ -277,11 +377,77 @@ function DiagramCanvasInner() {
     const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
     const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
+    const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
+    const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
+    const markManualLayout = useCallback(() => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        if (previous.canvas?.autoLayout === false) return;
+        mergeDiagramLayouts({
+            [selectedDiagramId]: {
+                ...previous,
+                canvas: { ...previous.canvas, autoLayout: false },
+            },
+        });
+    }, [selectedDiagramId, mergeDiagramLayouts]);
+
+    // Manual geometry is the user's document state, not an explicit export
+    // operation. Persist it after interaction settles so there is no separate
+    // Save Layout workflow and rapid pointer moves do not flood the backend.
+    useEffect(() => {
+        if (!selectedDiagramId || autoLayoutEnabled || isLayouting || nodes.length === 0 || layoutEditVersion === 0) return;
+        const timer = window.setTimeout(() => {
+            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+            const viewport = getViewport();
+            const layout: DiagramLayout = {
+                nodes: Object.fromEntries(nodes.map(node => [node.id, {
+                    ...(previous.nodes[node.id] ?? {}),
+                    x: node.position.x,
+                    y: node.position.y,
+                    ...(node.width ? { width: node.width } : {}),
+                    ...(node.height ? { height: node.height } : {}),
+                    ports: Object.fromEntries(
+                        (((node.data as { ports?: Array<{ id: string; x: number; y: number; side?: 'top' | 'bottom' | 'left' | 'right' }> }).ports) ?? [])
+                            .map(port => [port.id, { x: port.x, y: port.y, side: port.side }]),
+                    ),
+                }])),
+                edges: Object.fromEntries(edges.map(edge => [edge.id, {
+                    ...(() => {
+                        const { points: _oldPoints, ...rest } = previous.edges?.[edge.id] ?? {};
+                        return rest;
+                    })(),
+                    ...(edge.data?.manualRoute && (edge.data?.points as Array<{ x: number; y: number }> | undefined)?.length
+                        ? {
+                            points: edge.data?.points as Array<{ x: number; y: number }>,
+                            source: edge.source,
+                            target: edge.target,
+                            sourcePortId: edge.data?.sourcePortId as string | undefined,
+                            targetPortId: edge.data?.targetPortId as string | undefined,
+                        }
+                        : {}),
+                }])),
+                canvas: {
+                    ...previous.canvas,
+                    zoom: viewport.zoom,
+                    pan: { x: viewport.x, y: viewport.y },
+                    autoLayout: false,
+                },
+            };
+            mergeDiagramLayouts({ [selectedDiagramId]: layout });
+            sendDiagramLayoutUpdate(selectedDiagramId, layout);
+            setLayoutEditVersion(0);
+        }, 350);
+        return () => window.clearTimeout(timer);
+    }, [selectedDiagramId, autoLayoutEnabled, isLayouting, layoutEditVersion, nodes, edges, getViewport, mergeDiagramLayouts]);
 
     // Spec view kind (Epic KK): every diagram resolves to one of the 8 kinds
     const viewKind: ViewKind | undefined = selectedDiagram
         ? ((selectedDiagram.viewKind as ViewKind | undefined) ?? diagramMeta?.viewKind ?? 'general')
         : undefined;
+    // IBD text and ports must remain readable on first render. A board can be
+    // panned like Miro; shrinking an entire architecture until labels become
+    // dust is not a useful definition of "fit".
+    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : 0.1;
     const viewKindMeta = viewKind ? VIEW_KIND_META[viewKind] : null;
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
@@ -319,23 +485,48 @@ function DiagramCanvasInner() {
     }, [model, selectedDiagram]);
     const floatingActions = useMemo(() => {
         if (!model || !selectedDiagram || viewKind !== 'actionflow') return [];
-        const actions = selectedDiagram.elementIds
+        const actions = (selectedDiagram.elementIds ?? [])
             .map(id => model.elements[id])
             .filter((element): element is MemoElement => Boolean(element) && element.construct === 'action');
         return findFloatingActions(actions, model);
     }, [model, selectedDiagram, viewKind]);
-
     // Decomposition state
     const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [collapsedInterconnectionNodes, setCollapsedInterconnectionNodes] = useState<Set<string>>(new Set());
+    const [focusedInterconnectionId, setFocusedInterconnectionId] = useState<string | null>(null);
+    const [interconnectionPortDisplay, setInterconnectionPortDisplay] = useState<PortDisplay>('all');
+    const [interconnectionLegendOpen, setInterconnectionLegendOpen] = useState(false);
     const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
     const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
     const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
+    // Drill-down breadcrumb: composition ancestry of the focused IBD part.
+    const interconnectionPath = useMemo(() => {
+        if (!model || !focusedInterconnectionId) return [] as string[];
+        const parentOf = new Map<string, string>();
+        for (const rel of model.relationships) {
+            if (COMPOSITION_REL_TYPES.has(rel.type) && !parentOf.has(rel.targetId)) {
+                parentOf.set(rel.targetId, rel.sourceId);
+            }
+        }
+        const path = [focusedInterconnectionId];
+        const seen = new Set(path);
+        let cur = focusedInterconnectionId;
+        while (parentOf.has(cur)) {
+            const parent = parentOf.get(cur)!;
+            if (seen.has(parent)) break;
+            path.unshift(parent);
+            seen.add(parent);
+            cur = parent;
+        }
+        return path;
+    }, [model, focusedInterconnectionId]);
+
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
+        setLayoutEditVersion(0);
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');
@@ -345,6 +536,9 @@ function DiagramCanvasInner() {
             : [];
         setExpandedNodes(new Set(expandedHint));
         setCollapsedInterconnectionNodes(new Set());
+        setFocusedInterconnectionId(null);
+        setInterconnectionPortDisplay('all');
+        setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
         positionCacheRef.current.clear();
@@ -365,10 +559,7 @@ function DiagramCanvasInner() {
         forkNode: ForkNode,
         startEndNode: StartEndNode,
     }), []);
-
-    const edgeTypes = useMemo(() => ({
-        interconnectionEdge: InterconnectionEdge,
-    }), []);
+    const edgeTypes = useMemo(() => ({ interconnectionEdge: InterconnectionEdge }), []);
 
     const miniMapNodeColor = useCallback((node: any) =>
         node.data?.color || node.data?.layerColor || '#ccc', []);
@@ -400,6 +591,13 @@ function DiagramCanvasInner() {
             return true;
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
+
+    // BDD integrity: a block definition diagram must be one connected hierarchy,
+    // not a forest of disconnected/floating elements (validateSingleTree).
+    const bddTreeIssue = useMemo(() => {
+        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
+        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter));
+    }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
     // Tree source: legacy layoutStyle diagrams keep their kind-scoped trees;
@@ -437,21 +635,14 @@ function DiagramCanvasInner() {
     }, []);
 
     const toggleDirection = useCallback((nodeId: string) => {
-        const tree = buildActiveTree();
-        if (tree) {
-            const clearDescendants = (id: string) => {
-                positionCacheRef.current.delete(id);
-                for (const cid of (tree.childrenMap.get(id) || [])) clearDescendants(cid);
-            };
-            clearDescendants(nodeId);
-        }
+        positionCacheRef.current.clear();
         setNodeDirections(prev => {
             const next = new Map(prev);
             const current = next.get(nodeId) || 'vertical';
             next.set(nodeId, current === 'vertical' ? 'horizontal' : 'vertical');
             return next;
         });
-    }, [buildActiveTree]);
+    }, []);
 
     const expandAll = useCallback(() => {
         const tree = buildActiveTree();
@@ -516,10 +707,52 @@ function DiagramCanvasInner() {
                 data: {
                     ...n.data,
                     bgColor: pos.color || undefined,
+                    ...(pos.ports ? {
+                        ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string }> }).ports ?? [])
+                            .map(port => ({ ...port, ...(pos.ports?.[port.id] ?? {}) })),
+                    } : {}),
                 },
             };
         });
     }, []);
+
+    const moveInterconnectionPort = useCallback((ownerId: string, portId: string, y: number) => {
+        suppressInspectUntilRef.current = Date.now() + 250;
+        markManualLayout();
+        setLayoutEditVersion(version => version + 1);
+        // A moved attachment point changes the connector contract. Any manual
+        // bends on incident edges are no longer authoritative, so let the
+        // shared orthogonal router calculate a fresh obstacle-safe route.
+        const invalidatedEdges = edgesRef.current.map(edge => {
+            const incident = edge.data?.sourcePortId === portId || edge.data?.targetPortId === portId;
+            if (!incident) return edge;
+            const { points: _points, manualRoute: _manualRoute, ...data } = edge.data ?? {};
+            return { ...edge, data };
+        });
+        edgesRef.current = invalidatedEdges;
+        const next = nodesRef.current.map(node => node.id !== ownerId ? node : {
+            ...node,
+            data: {
+                ...node.data,
+                ports: ((node.data as { ports?: Array<{ id: string; y: number }> }).ports ?? [])
+                    .map(port => port.id === portId ? { ...port, y } : port),
+            },
+        });
+        scheduleGeometryUpdate(next);
+    }, [scheduleGeometryUpdate, markManualLayout]);
+
+    const moveEdgeRoute = useCallback((edgeId: string, points: Array<{ x: number; y: number }>) => {
+        suppressInspectUntilRef.current = Date.now() + 250;
+        markManualLayout();
+        setLayoutEditVersion(version => version + 1);
+        setEdges(previous => {
+            const next = previous.map(edge => edge.id === edgeId
+                ? { ...edge, data: { ...edge.data, points, manualRoute: true } }
+                : edge);
+            edgesRef.current = next;
+            return next;
+        });
+    }, [markManualLayout, setEdges]);
 
     // ─── Layout computation ────────────────────────────────────────────────────
 
@@ -538,8 +771,44 @@ function DiagramCanvasInner() {
             interactive = true,
         ) => {
             if (cancelled) return;
-            setNodes(interactive ? applyInteractiveData(n) : n);
-            setEdges(e);
+            const savedLayout = selectedDiagramId
+                ? useModelStore.getState().diagramLayouts[selectedDiagramId]
+                : undefined;
+            const positioned = savedLayout && Object.keys(savedLayout.nodes).length > 0
+                ? buildNodesFromSidecar(n, savedLayout)
+                : n;
+            const preparedEdges = e.map(edge => {
+                const savedEdge = savedLayout?.edges?.[edge.id];
+                const attachmentMatches = !savedEdge?.source || (
+                    savedEdge.source === edge.source
+                    && savedEdge.target === edge.target
+                    && savedEdge.sourcePortId === edge.data?.sourcePortId
+                    && savedEdge.targetPortId === edge.data?.targetPortId
+                );
+                const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
+                return {
+                    ...edge,
+                    data: {
+                        ...edge.data,
+                        ...(savedPoints?.length ? { points: savedPoints, manualRoute: true } : {}),
+                        flowAnimation: flowAnimationEnabled,
+                        onRouteChange: (points: Array<{ x: number; y: number }>) => moveEdgeRoute(edge.id, points),
+                        onSelect: (event: React.MouseEvent<SVGPathElement>) => {
+                            event.stopPropagation();
+                            if (Date.now() < suppressInspectUntilRef.current) return;
+                            setEdges(previous => previous.map(candidate => ({
+                                ...candidate,
+                                selected: candidate.id === edge.id,
+                            })));
+                            if (model.relationships.some(relationship => relationship.id === edge.id)) {
+                                inspectRelationship(edge.id);
+                            }
+                        },
+                    },
+                };
+            });
+            setNodes(interactive ? applyInteractiveData(positioned) : positioned);
+            setEdges(reroutePositionedEdges(positioned, preparedEdges));
             setIsLayouting(false);
             setLayoutVersion(v => v + 1);
         };
@@ -588,6 +857,9 @@ function DiagramCanvasInner() {
                 relationshipTypes: selectedDiagram?.relationshipTypes,
                 collapsedNodes: collapsedInterconnectionNodes,
                 onToggleCollapse: toggleInterconnectionCollapse,
+                focusId: focusedInterconnectionId ?? undefined,
+                portDisplay: interconnectionPortDisplay,
+                onPortMove: moveInterconnectionPort,
             }), false);
         } else if (viewKind === 'actionflow') {
             // Action Flow template (KK-4): actions with parameter ports,
@@ -623,12 +895,10 @@ function DiagramCanvasInner() {
             // Standard diagram / General template graph mode — check for sidecar
             const relationshipTypes = selectedDiagram?.relationshipTypes;
             const compartments = isGeneralTemplate;
-            const overlaySidecar = currentLayout && Object.keys(currentLayout.nodes).length > 0;
             setIsLayouting(true);
             setLayoutError(null);
             boundedLayout(computeLayout(model, { viewpointFilter, relationshipTypes, compartments }), 'Standard').then(({ nodes: n, edges: e }) => {
-                // Overlay sidecar positions onto the skeleton nodes when present
-                apply({ nodes: overlaySidecar ? buildNodesFromSidecar(n, currentLayout!) : n, edges: e });
+                apply({ nodes: n, edges: e });
             }).catch(fail('Standard'));
         }
         };
@@ -638,18 +908,25 @@ function DiagramCanvasInner() {
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes,
-        expandedNodes, collapsedInterconnectionNodes, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
-        toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, currentLayout,
-        buildNodesFromSidecar, applyInteractiveData]);
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
+        toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
+        buildNodesFromSidecar, applyInteractiveData, moveInterconnectionPort, moveEdgeRoute, inspectRelationship]);
 
     // Re-fit after layout
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.08, maxZoom: 2, duration: 500 });
+            const saved = selectedDiagramId
+                ? useModelStore.getState().diagramLayouts[selectedDiagramId]?.canvas
+                : undefined;
+            if (saved?.zoom !== undefined && saved.pan) {
+                setViewport({ x: saved.pan.x, y: saved.pan.y, zoom: saved.zoom }, { duration: 300 });
+            } else {
+                fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 500 });
+            }
         }, 200);
         return () => clearTimeout(timer);
-    }, [layoutVersion, fitView]);
+    }, [layoutVersion, selectedDiagramId, fitView, fitMinZoom, setViewport]);
 
     // Highlight selected element
     useEffect(() => {
@@ -676,7 +953,7 @@ function DiagramCanvasInner() {
     useEffect(() => {
         if (!focusNodeId || !model) return;
         const impact = computeImpact(model, focusNodeId, 'both', focusDepth);
-        const visibleIds = new Set(impact.nodes.map((n: { id: string }) => n.id));
+        const visibleIds = new Set(impact.nodes.map(n => n.elementId));
         visibleIds.add(focusNodeId);
         setNodes(prev => prev.map(n => ({
             ...n,
@@ -725,12 +1002,12 @@ function DiagramCanvasInner() {
             }
             if (e.key === '0' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                fitView({ padding: 0.08, maxZoom: 2, duration: 400 });
+                fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 400 });
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [fitView]);
+    }, [fitView, fitMinZoom]);
 
     // ─── Drag/drop from palette ───────────────────────────────────────────────
 
@@ -878,22 +1155,28 @@ function DiagramCanvasInner() {
         setRelPicker(null);
     }, [relPicker, selectedDiagramId, setEdges]);
 
-    // ─── Node drag stop → save to sidecar ─────────────────────────────────────
+    // ─── Node drag stop → stage a per-diagram override ───────────────────────
+
+    const onNodeDragStart = useCallback((_: RFAny, node: FlowNode) => {
+        nodeDragStartRef.current = { id: node.id, x: node.position.x, y: node.position.y };
+    }, []);
 
     const onNodeDragStop = useCallback((_: RFAny, node: FlowNode) => {
+        const start = nodeDragStartRef.current;
+        nodeDragStartRef.current = null;
+        if (start?.id === node.id && Math.hypot(node.position.x - start.x, node.position.y - start.y) > 2) {
+            // React Flow emits click after pointer-up. Keep a real drag from
+            // opening the inspector as though it were a click.
+            suppressInspectUntilRef.current = Date.now() + 250;
+            setLayoutEditVersion(version => version + 1);
+        }
         if (!selectedDiagramId) return;
+        markManualLayout();
         const { x, y } = node.position;
 
         const prevPos = positionCacheRef.current.get(node.id);
         positionCacheRef.current.set(node.id, { x, y });
         setNodeLayout(selectedDiagramId, node.id, { x, y });
-
-        // Debounced save
-        clearTimeout(layoutTimer.current);
-        layoutTimer.current = setTimeout(() => {
-            const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
-            if (layout) sendDiagramLayoutUpdate(selectedDiagramId, layout);
-        }, LAYOUT_DEBOUNCE_MS);
 
         // Push to undo stack
         if (prevPos) {
@@ -908,21 +1191,20 @@ function DiagramCanvasInner() {
                 },
             });
         }
-    }, [selectedDiagramId, setNodeLayout, pushUndo, setNodes]);
+    }, [selectedDiagramId, setNodeLayout, pushUndo, setNodes, markManualLayout]);
 
-    // ─── Node resize stop → save to sidecar ───────────────────────────────────
+    // ─── Node resize + live orthogonal re-routing ─────────────────────────────
 
     const onNodesChangeWithResize = useCallback((changes: NodeChange<FlowNode>[]) => {
-        onNodesChange(changes);
-        // Debounce layout save after resize
-        if (changes.some(c => c.type === 'dimensions') && selectedDiagramId) {
-            clearTimeout(layoutTimer.current);
-            layoutTimer.current = setTimeout(() => {
-                const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
-                if (layout) sendDiagramLayoutUpdate(selectedDiagramId, layout);
-            }, LAYOUT_DEBOUNCE_MS);
+        // Dimension notifications are emitted while nodes mount and must not
+        // turn a freshly opened diagram into a manual, dirty document.
+        if (changes.some(change => change.type === 'position')) markManualLayout();
+        if (changes.some(change => change.type === 'dimensions' && change.resizing)) {
+            markManualLayout();
+            setLayoutEditVersion(version => version + 1);
         }
-    }, [onNodesChange, selectedDiagramId]);
+        scheduleGeometryUpdate(applyNodeChanges(changes, nodesRef.current));
+    }, [scheduleGeometryUpdate, markManualLayout]);
 
     // ─── Context menu handlers ─────────────────────────────────────────────────
 
@@ -942,6 +1224,7 @@ function DiagramCanvasInner() {
     }, []);
 
     const onNodeClick = useCallback((_: RFAny, node: FlowNode) => {
+        if (Date.now() < suppressInspectUntilRef.current) return;
         const laneTarget = node.type === 'actionFlowLane'
             ? (node.data as { inspectElementId?: string }).inspectElementId
             : undefined;
@@ -952,12 +1235,22 @@ function DiagramCanvasInner() {
 
     const onNodeDoubleClick = useCallback((event: RFAny, node: FlowNode) => {
         event?.stopPropagation?.();
-        if (viewKind !== 'actionflow') return;
-        const hasChildren = Object.values(model?.elements ?? {}).some(el => el.parentAction === node.id);
-        if (!hasChildren) return;
-        setFocusedActionId(node.id);
-        setExpandedActionNodes(new Set());
-        inspectElement(null);
+        if (viewKind === 'actionflow') {
+            const hasChildren = Object.values(model?.elements ?? {}).some(el => el.parentAction === node.id);
+            if (!hasChildren) return;
+            setFocusedActionId(node.id);
+            setExpandedActionNodes(new Set());
+            inspectElement(null);
+            return;
+        }
+        if (viewKind === 'interconnection') {
+            // Drill into a container part's own IBD; a leaf just inspects.
+            const isContainer = Boolean((node.data as { isContainer?: boolean }).isContainer);
+            if (!isContainer) { inspectElement(node.id); return; }
+            setFocusedInterconnectionId(node.id);
+            setCollapsedInterconnectionNodes(new Set());
+            inspectElement(null);
+        }
     }, [viewKind, model?.elements, inspectElement]);
 
     const onPaneClick = useCallback(() => {
@@ -969,10 +1262,19 @@ function DiagramCanvasInner() {
             ...n,
             style: { ...n.style, opacity: 1, boxShadow: undefined },
         })));
-    }, [selectElement, inspectRelationship, setNodes]);
+        setEdges(prev => prev.map(edge => edge.selected ? { ...edge, selected: false } : edge));
+    }, [selectElement, inspectRelationship, setNodes, setEdges]);
 
     const onEdgeClick = useCallback((event: RFAny, edge: FlowEdge) => {
         event?.stopPropagation?.();
+        if (Date.now() < suppressInspectUntilRef.current) return;
+        // Selecting an IBD connector exposes its draggable orthogonal segment
+        // handles. Keep selection in controlled edge state so it survives the
+        // next route render.
+        setEdges(previous => previous.map(candidate => ({
+            ...candidate,
+            selected: candidate.id === edge.id,
+        })));
         // Most renderer edges retain their model relationship id. State
         // transitions are modelled as transition elements, so they use the
         // same inspector surface through the element fallback.
@@ -981,7 +1283,7 @@ function DiagramCanvasInner() {
         } else if (model?.elements[edge.id]) {
             inspectElement(edge.id);
         }
-    }, [model, inspectElement, inspectRelationship]);
+    }, [model, inspectElement, inspectRelationship, setEdges]);
 
     // ─── Node context menu actions ─────────────────────────────────────────────
 
@@ -994,11 +1296,6 @@ function DiagramCanvasInner() {
         setNodes(prev => prev.map(n => n.id === nodeId
             ? { ...n, data: { ...n.data, bgColor: color || undefined } } : n));
 
-        clearTimeout(layoutTimer.current);
-        layoutTimer.current = setTimeout(() => {
-            const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
-            if (layout) sendDiagramLayoutUpdate(selectedDiagramId, layout);
-        }, LAYOUT_DEBOUNCE_MS);
     }, [selectedDiagramId, diagramLayouts, setNodeLayout, setNodes]);
 
     const handleRemoveFromDiagram = useCallback((nodeId: string) => {
@@ -1319,6 +1616,47 @@ function DiagramCanvasInner() {
                                 >
                                     Collapse All
                                 </button>
+                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
+                                <Segmented
+                                    value={interconnectionPortDisplay}
+                                    onChange={setInterconnectionPortDisplay}
+                                    options={[
+                                        { value: 'all', label: 'Nested', title: 'Show ports and their nested ports' },
+                                        { value: 'ports', label: 'Top', title: 'Show top-level ports only (nested connectors lift to the parent port)' },
+                                        { value: 'none', label: 'Off', title: 'Hide ports; connectors run part to part' },
+                                    ]}
+                                />
+                                {/* Drill-down breadcrumb (double-click a part to descend) */}
+                                {interconnectionPath.length > 0 && (
+                                    <>
+                                        <span style={{ color: '#E5E5E0' }}>|</span>
+                                        <button
+                                            onClick={() => setFocusedInterconnectionId(null)}
+                                            className="px-1.5 py-0.5 text-xs font-medium rounded"
+                                            style={{ background: '#F7F7F5', color: '#2563EB', border: '1px solid #E5E5E0' }}
+                                            title="Back to the whole diagram"
+                                        >
+                                            ⌂ All
+                                        </button>
+                                        {interconnectionPath.map((id, i) => {
+                                            const last = i === interconnectionPath.length - 1;
+                                            return (
+                                                <span key={id} className="flex items-center gap-1" style={{ color: '#9CA3AF' }}>
+                                                    <span>›</span>
+                                                    <button
+                                                        onClick={() => setFocusedInterconnectionId(id)}
+                                                        disabled={last}
+                                                        className="text-xs font-medium"
+                                                        style={{ color: last ? '#1a1a1a' : '#2563EB', fontWeight: last ? 700 : 500, cursor: last ? 'default' : 'pointer' }}
+                                                        title={last ? undefined : `Focus ${model?.elements[id]?.name ?? id}`}
+                                                    >
+                                                        {model?.elements[id]?.name ?? id}
+                                                    </button>
+                                                </span>
+                                            );
+                                        })}
+                                    </>
+                                )}
                             </>
                         )}
 
@@ -1399,22 +1737,72 @@ function DiagramCanvasInner() {
                             </>
                         )}
 
-                        {/* Reset layout */}
-                        {!isDecompDiagram && !isFBSDiagram && currentLayout && (
+                        {selectedDiagramId && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <button
+                                    aria-pressed={autoLayoutEnabled}
                                     onClick={() => {
-                                        if (!selectedDiagramId) return;
-                                        mergeDiagramLayouts({ [selectedDiagramId]: { nodes: {}, edges: {} } });
-                                        sendDiagramLayoutUpdate(selectedDiagramId, { nodes: {}, edges: {} });
-                                        resetLayout();
+                                        if (autoLayoutEnabled) {
+                                            markManualLayout();
+                                        } else {
+                                            const layout: DiagramLayout = { nodes: {}, edges: {}, canvas: { autoLayout: true } };
+                                            mergeDiagramLayouts({ [selectedDiagramId]: layout });
+                                            sendDiagramLayoutUpdate(selectedDiagramId, layout);
+                                            setRelayoutNonce(value => value + 1);
+                                        }
                                     }}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                    title="Reset to auto layout"
+                                    className="px-2 py-0.5 text-xs font-semibold rounded"
+                                    style={{
+                                        background: autoLayoutEnabled ? '#ECFDF5' : '#FFF7ED',
+                                        color: autoLayoutEnabled ? '#047857' : '#C2410C',
+                                        border: `1px solid ${autoLayoutEnabled ? '#A7F3D0' : '#FED7AA'}`,
+                                    }}
+                                    title={autoLayoutEnabled
+                                        ? 'Auto layout is on. Drag any item to switch it off and preserve your changes automatically.'
+                                        : 'Auto layout is off. Your changes are saved automatically; click to discard overrides and recalculate.'}
                                 >
-                                    Auto Layout
+                                    Auto layout: {autoLayoutEnabled ? 'On' : 'Off'}
+                                </button>
+                            </>
+                        )}
+
+                        {selectedDiagramId && viewKind === 'interconnection' && (
+                            <>
+                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                <button
+                                    aria-pressed={flowAnimationEnabled}
+                                    onClick={() => {
+                                        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+                                        const layout: DiagramLayout = {
+                                            ...previous,
+                                            canvas: { ...previous.canvas, flowAnimation: !flowAnimationEnabled },
+                                        };
+                                        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+                                        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+                                        setEdges(current => current.map(edge => ({
+                                            ...edge,
+                                            data: { ...edge.data, flowAnimation: !flowAnimationEnabled },
+                                        })));
+                                    }}
+                                    className="px-2 py-0.5 text-xs font-semibold rounded"
+                                    style={{
+                                        background: flowAnimationEnabled ? '#EFF6FF' : '#F8FAFC',
+                                        color: flowAnimationEnabled ? '#1D4ED8' : '#64748B',
+                                        border: `1px solid ${flowAnimationEnabled ? '#93C5FD' : '#CBD5E1'}`,
+                                    }}
+                                    title="Toggle animated source-to-target flow on IBD connectors"
+                                >
+                                    Flow: {flowAnimationEnabled ? 'On' : 'Off'}
+                                </button>
+                                <button
+                                    aria-pressed={interconnectionLegendOpen}
+                                    onClick={() => setInterconnectionLegendOpen(open => !open)}
+                                    className="px-2 py-0.5 text-xs font-medium rounded"
+                                    style={{ background: '#F8FAFC', color: '#475569', border: '1px solid #CBD5E1' }}
+                                    title="Show or hide the IBD notation legend"
+                                >
+                                    Legend
                                 </button>
                             </>
                         )}
@@ -1522,6 +1910,21 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {bddTreeIssue && !isLayouting && (
+                    <div role="alert" className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-2"
+                        style={{
+                            maxWidth: 720, background: '#FEF2F2', color: '#991B1B',
+                            border: '1px solid #FCA5A5', borderRadius: 4,
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)', fontSize: FONT.xs,
+                        }}>
+                        <span style={{ fontWeight: 700 }}>BDD error:</span>{' '}
+                        expected one connected hierarchy, but found {bddTreeIssue.rootIds.length} roots
+                        {bddTreeIssue.disconnectedIds.length > 0 && (
+                            <> and {bddTreeIssue.disconnectedIds.length} disconnected/floating elements</>
+                        )}.
+                    </div>
+                )}
+
                 {viewKind === 'actionflow' && (
                     <div
                         aria-label="Action flow legend"
@@ -1548,6 +1951,48 @@ function DiagramCanvasInner() {
                             <span style={{ width: 24, height: 0, borderTop: '2.5px solid #16A34A' }} />
                             Material flow
                         </span>}
+                    </div>
+                )}
+
+                {viewKind === 'interconnection' && nodes.length > 0 && interconnectionLegendOpen && (
+                    <div
+                        aria-label="Interconnection legend"
+                        className="absolute right-3 bottom-3 z-10 flex flex-col gap-1.5 px-3 py-2"
+                        style={{
+                            background: 'rgba(255,255,255,0.96)', border: '1px solid #D1D5DB',
+                            borderRadius: 4, color: '#374151', fontSize: FONT.xs,
+                        }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <span style={{ fontWeight: 700 }}>Ports</span>
+                            {interconnectionPortDisplay !== 'none' ? (
+                                <>
+                                    <span className="flex items-center gap-1"><PortSwatch color={PORT_DIR_COLORS.in} glyph="→" /> in</span>
+                                    <span className="flex items-center gap-1"><PortSwatch color={PORT_DIR_COLORS.out} glyph="→" /> out</span>
+                                    <span className="flex items-center gap-1"><PortSwatch color={PORT_DIR_COLORS.inout} glyph="⇄" /> inout</span>
+                                    {interconnectionPortDisplay === 'all' && (
+                                        <span className="flex items-center gap-1">
+                                            <span style={{
+                                                width: 9, height: 9, borderRadius: 2, flexShrink: 0,
+                                                background: '#6B728022', border: '1.5px solid #6B7280',
+                                            }} />
+                                            nested
+                                        </span>
+                                    )}
+                                </>
+                            ) : (
+                                <span style={{ color: '#9CA3AF' }}>hidden</span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span style={{ fontWeight: 700 }}>Flow</span>
+                            {(['data', 'energy', 'material'] as const).map(k => (
+                                <span key={k} className="flex items-center gap-1.5">
+                                    <span style={{ width: 20, height: 0, borderTop: `2.5px solid ${IBD_FLOW_COLORS[k]}` }} />
+                                    {k}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -1603,6 +2048,7 @@ function DiagramCanvasInner() {
                     onNodeDoubleClick={onNodeDoubleClick}
                     onEdgeClick={onEdgeClick}
                     onPaneClick={onPaneClick}
+                    onNodeDragStart={onNodeDragStart}
                     onNodeDragStop={onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
                     onEdgeContextMenu={handleEdgeContextMenu}
@@ -1610,10 +2056,11 @@ function DiagramCanvasInner() {
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd as any}
                     connectionMode={ConnectionMode.Loose}
+                    defaultEdgeOptions={{ interactionWidth: 24 }}
                     snapToGrid={snapEnabled}
                     snapGrid={SNAP_GRID}
                     fitView
-                    fitViewOptions={RF_FIT_VIEW_OPTIONS}
+                    fitViewOptions={{ ...RF_FIT_VIEW_OPTIONS, minZoom: fitMinZoom }}
                     minZoom={0.1}
                     maxZoom={3}
                     zoomOnScroll
@@ -1691,9 +2138,8 @@ function DiagramCanvasInner() {
                     onOpenSource={() => {
                         const el = model?.elements[nodeCtx.nodeId];
                         if (!el?.file) return;
-                        const text = el.line ? `${el.file}:${el.line}` : el.file;
-                        navigator.clipboard.writeText(text).catch(() => {});
-                        setSourceToast(text);
+                        navigator.clipboard.writeText(el.file).catch(() => {});
+                        setSourceToast(el.file);
                     }}
                     onViewKindInOntology={() => {
                         const kind = nodeCtx.nodeKind;

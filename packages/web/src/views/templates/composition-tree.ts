@@ -69,6 +69,27 @@ export function collectTreeIds(tree: CompositionTree): Set<string> {
     return ids;
 }
 
+export interface SingleTreeIssue {
+    rootIds: string[];
+    disconnectedIds: string[];
+}
+
+/** BDD integrity: the selected elements must form one connected hierarchy. */
+export function validateSingleTree(tree: CompositionTree): SingleTreeIssue | null {
+    if (tree.elements.size === 0) return null;
+    const reached = new Set<string>();
+    const visit = (id: string) => {
+        if (reached.has(id)) return;
+        reached.add(id);
+        for (const childId of tree.childrenMap.get(id) ?? []) visit(childId);
+    };
+    if (tree.roots[0]) visit(tree.roots[0]);
+    const disconnectedIds = [...tree.elements.keys()].filter(id => !reached.has(id));
+    return tree.roots.length === 1 && disconnectedIds.length === 0
+        ? null
+        : { rootIds: tree.roots, disconnectedIds };
+}
+
 // ─── Compartments ────────────────────────────────────────────────────────────
 
 /** Attribute keys that never belong in a node compartment. */

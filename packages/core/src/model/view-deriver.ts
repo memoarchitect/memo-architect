@@ -162,6 +162,7 @@ export function deriveModelViews(model: MemoModel, kindRegistry?: KindRegistry):
             ...(Object.keys(properties).length > 0 ? { properties } : {}),
             elementIds: resolveViewElementIds(el, model, kindRegistry),
             relationshipTypes: queryRels,
+            sourceFile: el.file,
         });
     }
 

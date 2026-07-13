@@ -397,7 +397,7 @@ function RecursiveTree({
     expanded: Set<string>;
     toggleExpand: (id: string, e?: React.MouseEvent) => void;
     selectedElementId: string | null;
-    selectElement: (id: string | null) => void;
+    selectElement: (id: string) => void;
     selectedElementIds: Set<string>;
     toggleElementSelection: (id: string) => void;
     violationCounts: Map<string, number>;
@@ -445,7 +445,7 @@ function RecursiveTree({
                                     expanded={expanded}
                                     toggleExpand={toggleExpand}
                                     selectedElementId={selectedElementId}
-                                    selectElement={selectElementAndNavigate}
+                                    selectElement={selectElement}
                                     selectedElementIds={selectedElementIds}
                                     toggleElementSelection={toggleElementSelection}
                                     violationCounts={violationCounts}
