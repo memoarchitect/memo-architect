@@ -69,12 +69,12 @@ Public naming follows the meMO four-layer stack (Ontology + Methodology →
   project scripts, with full history preserved. The GitHub copies are squashed
   snapshots. A transient `somesh_sandbox/memo-webapp` repo from the first cut
   is retired (archived).
-- `memo-tools` carries `vendor/memo-sysmlv2` as a git submodule — pinned to
+- `memo-tools` carries `memo-tools/memo` as a git submodule — pinned to
   GitLab `memo@e5afe1d` in the GitLab variant, to the public mirror commit in
   the GitHub variant.
 - Dependencies are wired with git submodules mirroring the layer stack:
-  `memo-architect` carries `vendor/memo-tools` (which nests
-  `vendor/memo-sysmlv2`), and its pnpm workspace globs the submodule
+  `memo-architect` carries `memo-tools` (which nests
+  `memo-tools/memo`), and its pnpm workspace globs the submodule
   packages so `@memo/web` consumes `@memo/core` as a normal `workspace:*`
   dependency. `memo dev` from the nested example serves the full UI.
 - `memo build` (static site export, incl. `--kpar`) requires a built

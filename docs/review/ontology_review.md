@@ -132,7 +132,7 @@ This is the ontology's most architecturally significant feature for end users. I
 
 ### 3.1 Level 1: Archetypes (Project Templates)
 
-[memo_archetypes.sysml](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/methodology/memo/memo_archetypes.sysml) defines **7 presets** that select which architecture layers and standards to include:
+[memo_archetypes.sysml](file:///home/mando1/sandbox/memo/memo-tools/memo/methodology/memo/memo_archetypes.sysml) defines **7 presets** that select which architecture layers and standards to include:
 
 | Archetype | Layers | Standards | Typical Use |
 |-----------|--------|-----------|-------------|
@@ -150,7 +150,7 @@ This is the ontology's most architecturally significant feature for end users. I
 
 ### 3.2 Level 2: Methodology Scope (Subtraction-Based Tailoring)
 
-[MethodologyScope](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/base/methodology.sysml#L32-L39) supports **additive includes + explicit excludes**:
+[MethodologyScope](file:///home/mando1/sandbox/memo/memo-tools/memo/base/methodology.sysml#L32-L39) supports **additive includes + explicit excludes**:
 
 ```
 includedArchLayer = "context"
@@ -177,7 +177,7 @@ Coverage rules are organized by standard (ISO 14971, IEC 62304, FDA 21 CFR 820, 
 
 1. **Specialization is clean.** User models specialize ontology `part def`s. E.g., a user can do `part def MyCustomRequirement specializes Requirement { attribute myField : String; }`.
 
-2. **`metadata def` for annotation.** [semantics.sysml](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/base/semantics.sysml) provides `StandardReference` and `Provenance` metadata defs. Users can annotate any element with `@StandardReference { standard = "IEC 60601-1"; clause = "8.5"; }` without modifying the ontology.
+2. **`metadata def` for annotation.** [semantics.sysml](file:///home/mando1/sandbox/memo/memo-tools/memo/base/semantics.sysml) provides `StandardReference` and `Provenance` metadata defs. Users can annotate any element with `@StandardReference { standard = "IEC 60601-1"; clause = "8.5"; }` without modifying the ontology.
 
 3. **Viewpoints are declared as `userExtensible = true`.** All four default viewpoints carry this flag, signaling that users can add elements/relationships beyond the defaults.
 
@@ -225,7 +225,7 @@ Coverage rules are organized by standard (ISO 14971, IEC 62304, FDA 21 CFR 820, 
 
 > [!WARNING]
 > ### 4.2.7 No `doc` Comments on Definitions
-> None of the ~70 `part def` / `item def` definitions use SysML v2's native `doc` keyword. For example, [memo_common.sysml](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/core/memo_common.sysml) defines:
+> None of the ~70 `part def` / `item def` definitions use SysML v2's native `doc` keyword. For example, [memo_common.sysml](file:///home/mando1/sandbox/memo/memo-tools/memo/core/memo_common.sysml) defines:
 > ```
 > part def IdentifiedElement {
 >     attribute id : String;
@@ -256,7 +256,7 @@ Coverage rules are organized by standard (ISO 14971, IEC 62304, FDA 21 CFR 820, 
 
 > [!WARNING]
 > ### 4.2.9 No Standard-Linking Attributes on Base Elements
-> The only way to tie an element to a regulatory standard is via the optional `metadata def StandardReference` in [semantics.sysml](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/base/semantics.sysml):
+> The only way to tie an element to a regulatory standard is via the optional `metadata def StandardReference` in [semantics.sysml](file:///home/mando1/sandbox/memo/memo-tools/memo/base/semantics.sysml):
 > ```
 > @StandardReference { standard = "ISO 14971"; clause = "5.4"; }
 > ```
@@ -269,7 +269,7 @@ Coverage rules are organized by standard (ISO 14971, IEC 62304, FDA 21 CFR 820, 
 
 > [!WARNING]
 > ### 4.2.10 Inconsistent Relationship Naming — Nouns vs Verbs
-> The ~70 relationship types in [memo_relationships.sysml](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/core/memo_relationships.sysml) use **two conflicting naming conventions**:
+> The ~70 relationship types in [memo_relationships.sysml](file:///home/mando1/sandbox/memo/memo-tools/memo/core/memo_relationships.sysml) use **two conflicting naming conventions**:
 >
 > | Style | Count | Examples |
 > |-------|-------|----------|
@@ -326,7 +326,7 @@ Coverage rules are organized by standard (ISO 14971, IEC 62304, FDA 21 CFR 820, 
 
 ## 6. The GPCA Reference Model
 
-The [examples/gpca-pump/](file:///home/mando1/sandbox/memo/vendor/memo-sysmlv2/examples/gpca-pump) directory contains a complete, non-trivial model with 13 files (~57 KB total). It demonstrates:
+The [examples/gpca-pump/](file:///home/mando1/sandbox/memo/memo-tools/memo/examples/gpca-pump) directory contains a complete, non-trivial model with 13 files (~57 KB total). It demonstrates:
 
 - **Methodology binding:** `memo.config.yaml` pins `@memo/methodology-gpca@^1.0`
 - **Scope subtraction:** Cybersecurity and SOUP explicitly excluded for non-networked prototype

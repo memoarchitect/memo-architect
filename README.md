@@ -50,7 +50,7 @@ pnpm memo init my-pump          # Scaffold a new project
 pnpm memo export json           # Export model as JSON
 
 # Or invoke the CLI directly with node
-node vendor/memo-tools/packages/cli/lib/bin/memo.js dev --port 3000
+node memo-tools/packages/cli/lib/bin/memo.js dev --port 3000
 ```
 
 > **Note:** `npx memo` does not work in this workspace because the CLI package
@@ -142,9 +142,8 @@ memo/
 │   ├── core/        @memo/core     — Langium SysML v2 parser, semantic model, rule engine
 │   ├── cli/         @memo/cli      — CLI commands (init, dev, validate, build, export)
 │   ├── web/         @memo/web      — React + ReactFlow web app
-├── vendor/
-│   └── memo-tools/                 — git submodule: engine (@memo/core + @memo/cli) + tooling
-│       └── vendor/memo-sysmlv2/    — nested submodule: canonical ontology + methodology + examples
+├── memo-tools/                     — git submodule: engine (@memo/core + @memo/cli) + tooling
+│   └── memo/                      — nested submodule: canonical ontology + methodology + examples
 └── docs/                           — MkDocs documentation site
 ```
 
@@ -191,8 +190,8 @@ pnpm run type-check   # TypeScript type checking
 pnpm example:dev
 
 # Or validate the reference model directly
-cd vendor/memo-tools/vendor/memo-sysmlv2/src/examples/gpca-pump
-node ../../../../../packages/cli/lib/bin/memo.js validate  # cli resolves inside memo-tools
+cd memo-tools/memo/src/examples/gpca-pump
+node ../../../packages/cli/lib/bin/memo.js validate
 ```
 
 ## Roadmap
