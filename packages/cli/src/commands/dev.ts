@@ -353,6 +353,9 @@ function resolveWebPackage(cwd: string): string {
     const tryPaths = [
         resolve(cwd, '../../packages/web'),
         resolve(cwd, '../../../../../packages/web'),
+        // memo-architect layout: example lives in the nested content submodule
+        // (vendor/memo-tools/vendor/memo-sysmlv2/src/examples/<x>), web at repo root
+        resolve(cwd, '../../../../../../../packages/web'),
         resolve(cwd, '../web'),
         resolve(cwd, 'node_modules/@memo/web'),
     ];

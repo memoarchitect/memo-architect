@@ -187,6 +187,9 @@ function resolveWebDist(cwd: string): string | undefined {
         // Monorepo-relative fallback so projects outside packages/../examples
         // (e.g. the vendor submodule reference model) can still build.
         resolve(cliDir, '../../../web/dist'),
+        // memo-architect layout: cli lives in vendor/memo-tools/packages/cli,
+        // web at the outer workspace root
+        resolve(cliDir, '../../../../../../packages/web/dist'),
     ];
 
     for (const p of tryPaths) {
