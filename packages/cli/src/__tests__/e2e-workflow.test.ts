@@ -447,7 +447,12 @@ description: "Another fake ontology"
     });
 });
 
-describe('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
+// `memo build` exports the static viewer site, so it needs a built @memo/web
+// dist. @memo/web is an optional peer in the three-repo split (ADR-1-17):
+// present in the monorepo, absent in memo-tools — skip the suite there.
+const WEB_DIST_AVAILABLE = existsSync(join(REPO_ROOT, 'packages', 'web', 'dist', 'index.html'));
+
+describe.skipIf(!WEB_DIST_AVAILABLE)('DD-3: kpar round-trip smoke test (GPCA pump)', () => {
     const GPCA_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'examples', 'gpca-pump');
     let extractDir: string;
 

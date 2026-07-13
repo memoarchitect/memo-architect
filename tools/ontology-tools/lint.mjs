@@ -135,7 +135,7 @@ const STDLIB_WRAPPER_DIR = join(REPO_ROOT, 'vendor', 'memo-sysmlv2', 'src', 'cor
 // dirs, installed deps, build output). Only the flattened ontology content
 // at the submodule root is linted; skip the rest to avoid false positives on
 // hyphenated package/dep directory names.
-const VENDOR_SKIP_SEGMENTS = new Set(['node_modules', '.git', 'output', 'packages', 'examples']);
+const VENDOR_SKIP_SEGMENTS = new Set(['node_modules', '.git', 'output', 'packages', 'examples', 'docs', 'site']);
 function isVendorContentFile(absPath) {
     return !relative(REPO_ROOT, absPath).split('/').some((seg) => VENDOR_SKIP_SEGMENTS.has(seg));
 }
@@ -248,7 +248,7 @@ function lintP6(failures) {
         const walkDirs = (dir) => {
             for (const entry of readdirSync(dir, { withFileTypes: true })) {
                 if (!entry.isDirectory()) continue;
-                if (VENDOR_SKIP_SEGMENTS.has(entry.name)) continue;
+                if (VENDOR_SKIP_SEGMENTS.has(entry.name) || entry.name.startsWith('.')) continue;
                 if (!SNAKE_CASE_RE.test(entry.name)) {
                     failures.push({
                         rule: 'P6-dir',
