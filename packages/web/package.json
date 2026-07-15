@@ -1,6 +1,6 @@
 {
   "name": "@memo/web",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "MEMO web app — primary interface for device modeling and ontology editing",
   "splitTarget": "memo-architect",
   "type": "module",
