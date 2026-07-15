@@ -1,0 +1,120 @@
+@import "tailwindcss";
+@source "../src";
+
+:root {
+    --color-bg: #F7F7F5;
+    --color-surface: #FFFFFF;
+    --color-surface-alt: #F0F0ED;
+    --color-border: #E5E5E0;
+    --color-border-light: #EDEDEA;
+    --color-text: #1a1a1a;
+    --color-text-secondary: #6B7280;
+    --color-text-muted: #9CA3AF;
+    --color-accent: #2DD4A8;
+    --color-hero-from: #1B3A4B;
+    --color-hero-to: #2D6A7A;
+}
+
+body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+#root {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ReactFlow overrides for light theme */
+.react-flow__controls {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid #E5E5E0 !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.react-flow__controls-button {
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #EDEDEA !important;
+    fill: #6B7280 !important;
+}
+
+.react-flow__controls-button:hover {
+    background: #F0F0ED !important;
+}
+
+.react-flow__minimap {
+    border: 1px solid #E5E5E0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+    overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
+/* Never animate the transform used for direct manipulation. A transform
+   transition makes the painted node trail its hit box during drag/resize. */
+.react-flow__node {
+    transition: box-shadow 150ms ease, opacity 150ms ease;
+}
+
+/* IBD edges provide their own endpoint-safe hit path. React Flow's default
+   full-length interaction stroke overlaps boundary ports. */
+.ibd-interconnection-edge .react-flow__edge-interaction {
+    pointer-events: none;
+}
+
+@keyframes memo-ibd-flow {
+    to { stroke-dashoffset: -30; }
+}
+
+.memo-ibd-flow {
+    stroke-dasharray: 8 7;
+    animation: memo-ibd-flow 700ms linear infinite;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .memo-ibd-flow { animation: none; }
+}
+
+.react-flow__edge path {
+    transition: stroke-width 150ms ease;
+}
+
+.react-flow__edge:hover path {
+    stroke-width: 3px;
+}
+
+/* Handle visibility on hover */
+.react-flow__node:hover .react-flow__handle {
+    opacity: 1 !important;
+}
+
+/* IBD port anchors are routing geometry, not UI handles. Showing four
+   coincident anchors on node hover caused the apparent icon/cursor flicker. */
+.react-flow__node:hover .react-flow__handle.ibd-port-anchor,
+.react-flow__handle.ibd-port-anchor {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

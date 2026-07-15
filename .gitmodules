@@ -1,0 +1,3 @@
+[submodule "memo-tools"]
+	path = memo-tools
+	url = https://github.com/memoarchitect/memo-tools.git

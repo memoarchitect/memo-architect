@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 58" fill="none">
+  <!-- Rounded chat bubble matching original design -->
+  <rect x="4" y="4" width="144" height="38" rx="19" ry="19"
+        stroke="#B8BBB8" stroke-width="4" fill="none"/>
+  <!-- Tail bottom-left -->
+  <path d="M30 42 Q24 52 20 54 Q30 50 38 42"
+        stroke="#B8BBB8" stroke-width="4" stroke-linejoin="round" fill="none"/>
+  <!-- MEMO text — same gray as outline -->
+  <text x="76" y="29" text-anchor="middle"
+        font-family="'Nunito', 'Arial Rounded MT Bold', Arial, sans-serif"
+        font-size="20" font-weight="900" letter-spacing="3.5" fill="#B8BBB8">MEMO</text>
+</svg>

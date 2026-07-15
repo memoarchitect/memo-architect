@@ -1,0 +1,235 @@
+/* MEMO Architect — MkDocs theme overrides
+   Matches the MEMO web app chrome exactly:
+     Title bar:  #0B1E2D
+     Mode tabs:  #1B3A4B
+     Accent:     #2DD4A8
+*/
+
+/* ── CSS variable overrides (both schemes) ──────────────────────────────── */
+:root,
+[data-md-color-scheme="slate"],
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #1B3A4B;
+  --md-primary-fg-color--light: #2D5A70;
+  --md-primary-fg-color--dark:  #0B1E2D;
+  --md-accent-fg-color:         #2DD4A8;
+  --md-accent-fg-color--transparent: rgba(45, 212, 168, 0.12);
+  --memo-accent: #2DD4A8;
+  --memo-header: #0B1E2D;
+  --memo-tabs:   #1B3A4B;
+}
+
+/* ── Header (matches app title bar exactly) ─────────────────────────────── */
+.md-header {
+  background: #0B1E2D !important;
+  box-shadow: 0 1px 0 rgba(45, 212, 168, 0.2);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.md-header__title {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Site name portion — teal accent like app nav active item */
+.md-header__topic:first-child .md-ellipsis {
+  color: #2DD4A8;
+  font-weight: 700;
+}
+
+.md-header__button.md-logo {
+  padding: 0.3rem;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 26px;
+  width: auto;
+  filter: brightness(0) invert(1) opacity(0.85);
+}
+
+/* ── Nav tabs (matches app mode-switcher bar) ───────────────────────────── */
+.md-tabs {
+  background: #1B3A4B !important;
+  border-bottom: 1px solid rgba(45, 212, 168, 0.2);
+}
+
+.md-tabs__link {
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-size: 0.82rem;
+  font-weight: 500;
+  opacity: 1 !important;
+}
+
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: #2DD4A8 !important;
+}
+
+/* Active tab underline */
+.md-tabs__link--active::after {
+  background: #2DD4A8;
+  height: 2px;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+.md-nav__title {
+  color: #2DD4A8 !important;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+[data-md-color-scheme="default"] .md-nav__link--active,
+[data-md-color-scheme="default"] .md-nav__item--active > .md-nav__link {
+  color: #0A7A6A !important;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .md-nav__link:hover {
+  color: #1B3A4B !important;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+  color: #2DD4A8 !important;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link:hover {
+  color: #2DD4A8 !important;
+}
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+.md-search__form {
+  border: 1px solid rgba(45, 212, 168, 0.2);
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.md-search-result__terms mark,
+.md-typeset mark {
+  background: rgba(45, 212, 168, 0.25);
+  color: inherit;
+}
+
+/* ── Code blocks — light mode (VS Code light style) ─────────────────────── */
+[data-md-color-scheme="default"] .highlight pre,
+[data-md-color-scheme="default"] .md-typeset pre {
+  background: #EEF2F5 !important;
+  border: 1px solid rgba(27, 58, 75, 0.12);
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="default"] .highlight code,
+[data-md-color-scheme="default"] .md-typeset pre code {
+  background: transparent !important;
+  color: #0B1E2D !important;
+  font-size: 0.85em;
+  padding: 0;
+}
+
+/* Inline code — light mode */
+[data-md-color-scheme="default"] .md-typeset :not(pre) > code {
+  background: rgba(27, 58, 75, 0.08) !important;
+  color: #1B3A4B !important;
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+}
+
+/* ── Code blocks — dark mode ────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .highlight pre,
+[data-md-color-scheme="slate"] .md-typeset pre {
+  background: #0f1f2e !important;
+  border: 1px solid rgba(45, 212, 168, 0.15);
+  border-radius: 6px;
+}
+
+[data-md-color-scheme="slate"] .highlight code,
+[data-md-color-scheme="slate"] .md-typeset pre code {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  font-size: 0.85em;
+  padding: 0;
+}
+
+/* Inline code — dark mode */
+[data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
+  background: rgba(45, 212, 168, 0.12) !important;
+  color: #2DD4A8 !important;
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+}
+
+/* ── Admonitions ────────────────────────────────────────────────────────── */
+.md-typeset .admonition,
+.md-typeset details {
+  border-left-color: #2DD4A8;
+  border-radius: 0 6px 6px 0;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background-color: rgba(45, 212, 168, 0.08);
+}
+
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  color: #2DD4A8 !important;
+}
+
+/* ── Links — light mode: darker teal for contrast on white ──────────────── */
+[data-md-color-scheme="default"] .md-typeset a {
+  color: #0A7A6A;
+}
+
+[data-md-color-scheme="default"] .md-typeset a:hover {
+  color: #1B3A4B;
+}
+
+/* ── Links — dark mode: bright teal on dark bg ──────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: #2DD4A8;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: #50e8c0;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: #1B3A4B;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover {
+  background: rgba(45, 212, 168, 0.05);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.md-footer {
+  background: #0B1E2D !important;
+}
+
+.md-footer-meta {
+  background: #060f18 !important;
+}
+
+/* ── Scrollbar (subtle teal tint in dark mode) ──────────────────────────── */
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 168, 0.2);
+  border-radius: 3px;
+}
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 168, 0.35);
+}

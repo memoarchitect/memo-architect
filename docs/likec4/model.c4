@@ -1,0 +1,883 @@
+/**
+ * MEMO — LikeC4 Architecture Model
+ *
+ * Uses the C4 "view of <element>" drill-down pattern:
+ *   view index           → L0  System landscape (entry point)
+ *   view of memo         → L1  Container decomposition
+ *   view of memo.core    → L2a @memo/core components
+ *   view of memo.cli     → L2b @memo/cli components
+ *   view of memo.web     → L2c @memo/web components
+ *   view of memo.ont     → L2d Ontology packages
+ *
+ * Clicking any element that has a matching "view of" view
+ * renders a "zoom in" / drill-down button automatically.
+ */
+
+// ─── Specification ────────────────────────────────────────────────────────────
+
+specification {
+
+  element actor {
+    style {
+      shape  person
+      color  amber
+    }
+  }
+
+  element system {
+    style {
+      color  blue
+    }
+  }
+
+  element container {
+    style {
+      color  sky
+    }
+  }
+
+  element component {
+    style {
+      color  slate
+    }
+  }
+
+  element database {
+    style {
+      shape  cylinder
+      color  green
+    }
+  }
+
+  element library {
+    style {
+      color  indigo
+    }
+  }
+}
+
+// ─── Model ────────────────────────────────────────────────────────────────────
+
+model {
+
+  // ── Actors ────────────────────────────────────────────────────────────────
+
+  actor engineer "Medical Device Engineer" {
+    description "
+      Systems/software engineer building a medical device project.
+      Interacts via CLI, browser web app, and SysML v2 source files in git.
+    "
+  }
+
+  actor reviewer "Regulatory Reviewer" {
+    description "
+      Quality/regulatory professional who consumes exported DHF documents,
+      traceability matrices, and review packets produced by MEMO.
+    "
+  }
+
+  // ── External systems ───────────────────────────────────────────────────────
+
+  system llmProviders "LLM Providers" {
+    description "
+      External AI APIs: Anthropic Claude and OpenAI GPT-4o.
+      Used by memo ask, memo generate, and memo dhf draft commands.
+      Requires ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.
+    "
+    style { color red }
+  }
+
+  system gitRegistry "Git / npm Registry" {
+    description "
+      Remote registries used when installing ontology packages.
+      Supports: git clone (URL), npm install (@scope/package), local path symlink.
+    "
+    style { color amber }
+  }
+
+  system ciPipeline "CI / CD Pipeline" {
+    description "
+      Automated quality gates that run memo validate and memo build.
+      Enforces closure-rule compliance and produces static review artifacts.
+    "
+    style { color green }
+  }
+
+  // ── MEMO Platform (L1 containers) ─────────────────────────────────────────
+
+  system memo "MEMO Platform" {
+    description "
+      Open-source SysML v2-native platform for medical device architecture,
+      analysis, traceability, and DHF generation.
+    "
+
+    // ── @memo/core ──────────────────────────────────────────────────────────
+    container core "@memo/core" {
+      description "
+        Shared kernel library — zero runtime dependencies, consumed by both
+        the CLI (Node.js) and web app (browser, for types only).
+        Provides: Langium SysML v2 parser, semantic model builder, 109-rule
+        closure engine, completeness tracker, DHF workbench, LLM engines,
+        import/export serializers, plugin system, and WebSocket protocol types.
+      "
+      technology "TypeScript / Node.js · Langium · Vitest"
+
+      component parser "SysML v2 Parser" {
+        description "
+          Langium-generated LALR parser for the MEMO SysML v2 grammar subset.
+          Produces an AST from .sysml source files.
+          Entry: packages/core/src/language/
+          Key files:
+            grammar/MemoSysml.langium  — grammar definition
+            generated/ast.ts           — generated AST node types
+            memo-sysml-module.ts       — Langium DI module
+        "
+        technology "Langium · Chevrotain"
+      }
+
+      component modelBuilder "Model Builder" {
+        description "
+          Traverses the Langium AST and builds a fully-indexed MemoModel:
+            elements: Map<id, MemoElement>
+            relationships: MemoRelationship[]
+          Also resolves arch layers, short IDs (e.g. SW-REQ-4291), and
+          populates derived indexes (outgoing/incoming/by-kind/by-layer).
+          Entry: packages/core/src/model/builder.ts
+        "
+        technology "TypeScript"
+      }
+
+      component configLoader "Config Loader" {
+        description "
+          Loads and merges the memo.config.yaml inheritance chain:
+            device → profile → ontology (via 'extends' field)
+          Produces a merged MEMOConfig: kinds, relationships, closure rules,
+          viewpoints, workflows, architecture layers.
+          Entry: packages/core/src/model/config-loader.ts
+        "
+        technology "TypeScript · js-yaml"
+      }
+
+      component ontologyLoader "Ontology Loader" {
+        description "
+          Discovers ontology packages from node_modules + memo_packages/.
+          Merges multi-package kind/relationship/rule sets into a single
+          resolved ontology. Exposes OntologyPackageInfo for the web UI.
+          Entry: packages/core/src/model/ontology-loader.ts
+        "
+        technology "TypeScript"
+      }
+
+      component ruleEngine "Closure Rule Engine" {
+        description "
+          Evaluates 109+ closure rules against MemoModel:
+            requireRelationship    — element must have N relationships of type X
+            requireAttribute       — element must have attribute Y set
+            cardinalityCheck       — relationship cardinality bounds
+            conditionalRequire     — rules that fire only when attribute matches
+          Produces ValidationResult: Map<elementId, Violation[]>
+          Entry: packages/core/src/validator/rule-engine.ts
+        "
+        technology "TypeScript"
+      }
+
+      component completenessTracker "Completeness Tracker" {
+        description "
+          Aggregates rule violations per architecture layer into a
+          CompletenessReport: { layer → { total, satisfied, pct } }.
+          Powers the regulatory readiness % bar in the web app.
+          Entry: packages/core/src/completeness/tracker.ts
+        "
+        technology "TypeScript"
+      }
+
+      component dhfWorkbench "DHF Workbench" {
+        description "
+          Design History File document pipeline:
+            DocumentRegistry  — discovers + merges template sections
+            TemplateEngine    — Handlebars rendering with model queries
+            QueryEngine       — structured model queries (elements by layer, etc.)
+            SnapshotManager   — YAML baseline + diff/redline generation
+            Exporters         — HTML · Markdown · DOCX (docx.js)
+          Entry: packages/core/src/dhf/
+        "
+        technology "TypeScript · Handlebars · docx.js"
+      }
+
+      component llmEngine "LLM Engine" {
+        description "
+          AI-assisted modeling and document drafting:
+            AskEngine      — free-form model Q&A (memo ask)
+            GenerateEngine — NL → SysML snippet (memo generate)
+            DraftEngine    — gap-aware DHF section drafting (memo dhf draft)
+            ModelContext   — compact prompt context from MemoModel
+            LlmProvider    — Anthropic SDK + OpenAI SDK adapter
+          Entry: packages/core/src/llm/
+        "
+        technology "TypeScript · Anthropic SDK · OpenAI SDK"
+      }
+
+      component importers "Importer Suite" {
+        description "
+          Round-trip import adapters:
+            CSV I/O    — parseElementsCsv / parseRelationshipsCsv + generateFile
+            EA         — Sparx Enterprise Architect JSON → SysML
+            Cameo      — MagicDraw/Cameo XMI/JSON → SysML
+            SysAnd     — SysAnd project directory → SysML
+            OWL        — OWL/Turtle / JSON-LD ontology → kind definitions
+          Entry: packages/core/src/importer/  packages/core/src/import/
+        "
+        technology "TypeScript · fast-xml-parser · N3.js"
+      }
+
+      component pluginSystem "Plugin System" {
+        description "
+          Extensibility layer for custom generators and analysis scripts.
+          Plugin manifests declared in memo.config.yaml.
+          CLI command: memo plugin list / create / run <name>
+          Entry: packages/core/src/plugin/
+        "
+        technology "TypeScript"
+      }
+
+      component analysisEngine "Analysis Engine" {
+        description "
+          Structural analysis tools:
+            DSM     — Design Structure Matrix (dependency coupling)
+            Impact  — change ripple-effect tracing through relationships
+          Entry: packages/core/src/analysis/
+        "
+        technology "TypeScript"
+      }
+
+      component wsProtocol "WebSocket Protocol" {
+        description "
+          Shared TypeScript discriminated-union types for the CLI ↔ web app
+          bidirectional protocol. Pure types — no runtime code.
+
+          Server → Client: model:update · validation:update ·
+            completeness:update · ontology:packages · diagram:layout ·
+            import:result · diagram:parse:result · error ·
+            ontology:install:result · ontology:remove:result
+
+          Client → Server: request:refresh · element:update ·
+            element:create · relationship:add · csv:import ·
+            diagram:create · diagram:update · diagram:delete ·
+            diagram:parse · diagram:layout:update ·
+            ontology:save-selection · ontology:install · ontology:remove
+
+          Entry: packages/core/src/protocol/messages.ts
+        "
+        technology "TypeScript (pure types)"
+      }
+    }
+
+    // ── @memo/cli ───────────────────────────────────────────────────────────
+    container cli "@memo/cli" {
+      description "
+        CLI binary (`memo`) and dev server. Orchestrates the full pipeline:
+        watch → parse → validate → completeness → broadcast.
+        Runs the Vite + WebSocket dev server that serves the React app.
+      "
+      technology "TypeScript / Node.js · Commander.js · Vite · chokidar · ws"
+
+      component devServer "Dev Server" {
+        description "
+          HTTP + WebSocket server started by `memo dev`.
+          — Serves @memo/web React SPA via Vite middleware (dev) or
+            static files (production build)
+          — Serves built MkDocs documentation under /help
+          — Handles ALL bidirectional WebSocket protocol messages:
+              element:update/create  → Persistor → .sysml patch
+              relationship:add       → Persistor → .sysml patch
+              diagram:create/update/delete → .memo/user-diagrams.json
+              diagram:layout:update  → .memo/layouts/<id>.yaml
+              csv:import             → core importers → new .sysml file
+              ontology:save-selection → ontology-selection.sysml + YAML config
+              ontology:install       → git clone / npm / symlink
+              ontology:remove        → rmSync(memo_packages/<name>)
+          Entry: packages/cli/src/server/dev-server.ts
+        "
+        technology "Node.js http · ws · Vite"
+      }
+
+      component fileWatcher "File Watcher" {
+        description "
+          chokidar-based watcher on *.sysml and memo.config.yaml.
+          On any change triggers full re-parse → re-validate → broadcast cycle.
+          Entry: packages/cli/src/server/file-watcher.ts
+        "
+        technology "chokidar"
+      }
+
+      component persistor "Persistor" {
+        description "
+          Reads source .sysml files, locates the target element by name,
+          and performs a line-level patch to persist attribute/doc/relationship
+          changes committed by the browser. Falls back to append if not found.
+          Entry: packages/cli/src/server/persistor.ts
+        "
+        technology "TypeScript · Node.js fs"
+      }
+
+      component configResolver "Config Resolver" {
+        description "
+          Runtime config loader used by the dev server.
+          Resolves the 'extends' inheritance chain and merges all ancestor
+          configs before handing the merged MEMOConfig to the core pipeline.
+          Entry: packages/cli/src/server/config-resolver.ts
+        "
+        technology "TypeScript"
+      }
+
+      component cliCommands "CLI Commands (20+)" {
+        description "
+          All Commander.js sub-commands:
+
+          Model management:
+            memo init <name>     scaffold new device project
+            memo dev             start dev server + file watcher
+            memo validate        run rule engine (CI-safe exit code)
+            memo build           build static HTML site
+
+          Export:
+            memo export json     full model as JSON
+            memo export dot      Graphviz DOT graph
+            memo export dhf      DHF docs (HTML / MD / DOCX)
+
+          Import:
+            memo import csv        elements from CSV
+            memo import csv-rel    relationships from CSV
+            memo import template   generate ontology-aware CSV template
+            memo import ea         Sparx EA JSON
+            memo import cameo      MagicDraw/Cameo XMI/JSON
+            memo import sysand     SysAnd project directory
+            memo import owl        OWL/Turtle/JSON-LD
+
+          DHF:
+            memo dhf status        document readiness
+            memo dhf snapshot      baseline current state
+            memo dhf diff          compare vs last snapshot
+            memo dhf redline       generate redline HTML
+            memo dhf review-packet  full regulatory review bundle
+
+          Ontology:
+            memo ontology show     print resolved summary
+            memo ontology export owl/xml/sysand
+
+          AI (requires API key):
+            memo ask \"<question>\"      model Q&A
+            memo generate \"<desc>\"     NL → SysML snippet
+            memo dhf draft --target    gap-section draft
+
+          Package management:
+            memo install <pkg>     install ontology
+            memo lock              regenerate memo.lock.yaml
+            memo create-package    scaffold ontology/profile/library
+            memo plugin list/create/run
+
+          Entry: packages/cli/src/commands/
+        "
+        technology "Commander.js"
+      }
+    }
+
+    // ── @memo/web ───────────────────────────────────────────────────────────
+    container web "@memo/web" {
+      description "
+        React 18 SPA served by the CLI dev server at http://localhost:3000.
+        Connects to the CLI via WebSocket; all model data is pushed from the server.
+        Central state managed by Zustand (model-store).
+      "
+      technology "TypeScript · React 18 · ReactFlow · Zustand · ELK.js · Tailwind CSS 4 · Vite"
+
+      component modelStore "Model Store (Zustand)" {
+        description "
+          Single source of truth for all UI state. Holds:
+            model: MemoModelDTO | null
+            validation: ValidationResult | null
+            completeness: CompletenessReport | null
+            activeView: ActiveView discriminated union (14 variants)
+            selectedElementId, selectedViewpointId, selectedDiagramId
+            diagramLayouts, ontology selection state, DHF documents,
+            analysis issues, pending edits, user-created viewpoints
+          Actions optimistically update local state and sync to server via ws-client.
+          Entry: packages/web/src/store/model-store.ts
+        "
+        technology "Zustand"
+      }
+
+      component wsClient "WebSocket Client" {
+        description "
+          Persistent WebSocket connection to the CLI dev server.
+          Dispatches incoming ServerMessages to modelStore.
+          Provides typed send helpers:
+            sendElementUpdate · sendElementCreate
+            sendRelationshipAdd · sendCsvImport
+            sendDiagramCreate · sendDiagramUpdate · sendDiagramDelete
+            sendOntologySaveSelection · sendOntologyInstall
+          Entry: packages/web/src/store/ws-client.ts
+        "
+        technology "Native WebSocket API"
+      }
+
+      component diagramCanvas "Diagram Canvas" {
+        description "
+          Interactive diagram editor: ReactFlow nodes + ELK.js auto-layout.
+          Color-coded by architecture layer. Features: zoom/pan, drag-and-drop
+          node repositioning, context menus (create/delete/connect elements),
+          relationship edge rendering, sidecar layout persistence.
+          Entry: packages/web/src/views/DiagramCanvas.tsx
+                 packages/web/src/views/layout.ts
+        "
+        technology "ReactFlow · ELK.js"
+      }
+
+      component catalogExplorer "Catalog Explorer" {
+        description "
+          Left-sidebar model browser. Hierarchical tree grouped by V-Cycle layer
+          → kind → folder → element. Supports search, attribute/label/tag
+          filters, drag-and-drop folder reorganisation, context-menu element
+          creation. Always visible.
+          Entry: packages/web/src/views/CatalogExplorer.tsx
+        "
+        technology "React"
+      }
+
+      component elementDetailView "Element Detail View" {
+        description "
+          Right-panel attribute inspector. Shows all attributes with inline edit,
+          doc comment editor, relationships list, validation violations, and
+          quick-navigate links to related elements. Opens when any element
+          is selected.
+          Entry: packages/web/src/views/ElementDetailView.tsx
+        "
+        technology "React"
+      }
+
+      component dashboardViews "Dashboard Views" {
+        description "
+          Home and analytics screens:
+            Dashboard         — model-aware home (N1), completeness gauge,
+                                next-action cards, recent elements
+            ReviewDashboard   — regulatory review 'money shot': layer breakdown,
+                                gap count, elements ready for review
+            StatisticsDashboard — element counts by layer/kind (charts)
+            DhfDashboard      — DHF document readiness overview
+          Entry: packages/web/src/views/Dashboard.tsx
+                 packages/web/src/views/ReviewDashboard.tsx
+        "
+        technology "React · Recharts"
+      }
+
+      component ontologyViewer "Ontology Viewer" {
+        description "
+          Two-panel ontology browser (Phase C2).
+          Left: package list + layer/kind grid (visual) or table.
+            — bidirectional kind selection sync with model
+            — package install/remove via ws-client
+          Right: detail panel — full kind definition, relationships, attributes.
+          Orphan resolution dialog when deselecting a package that has
+          live elements in the model.
+          Entry: packages/web/src/views/OntologyViewer.tsx
+                 packages/web/src/views/ontology/
+        "
+        technology "React"
+      }
+
+      component analysisViews "Analysis Views" {
+        description "
+          Structural analysis UIs:
+            TraceabilityMatrix — N×N element coverage matrix by viewpoint;
+                                 click-through to element detail
+            DSMView            — Design Structure Matrix; highlights cycles
+                                 and uncoupled components
+            ModelDiff          — git-style element diff view
+            TabularView        — spreadsheet of elements by viewpoint/diagram
+          Entry: packages/web/src/views/TraceabilityMatrix.tsx
+                 packages/web/src/views/DSMView.tsx
+                 packages/web/src/views/ModelDiff.tsx
+                 packages/web/src/views/TabularView.tsx
+        "
+        technology "React"
+      }
+
+      component guidedWorkflows "Guided Workflows" {
+        description "
+          Wizard-style UIs for structured modeling and compliance:
+            WorkflowWizard    — guided multi-step element creation (N1 Golden Path)
+                                driven by WorkflowDefinition steps from config
+            ComplianceWizard  — step-by-step regulatory gap closure; surfaces
+                                ValidationResult violations, guides resolution
+          Entry: packages/web/src/views/WorkflowWizard.tsx
+                 packages/web/src/views/ComplianceWizard.tsx
+        "
+        technology "React"
+      }
+
+      component dhfWorkbenchUI "DHF Workbench UI" {
+        description "
+          Document editor for DHF sections. Create, edit, preview, and export
+          Design History File documents. Uses the template engine on the server.
+          Entry: packages/web/src/views/DhfWorkbench.tsx
+        "
+        technology "React · CodeMirror"
+      }
+    }
+
+    // ── Ontology packages ───────────────────────────────────────────────────
+    container ont "Ontology Packages" {
+      description "
+        Two-ontology backbone (post-ADR-1-10): an architecture ontology
+        (`ontology-arch`, 11 ISO 42010 layers) and a process ontology
+        (`ontology-process`, regulatory standards) bridged by a single
+        modeling profile (`medical-modeling-profile`) that adds closure
+        rules, viewpoints, and starter templates.
+        Device projects compose them by listing package names in
+        `memo.config.yaml `ontologies:``. Loaded at runtime by
+        `@memo/core`'s ontology-loader.
+      "
+      technology "SysML v2 (source of truth) · YAML side-cars"
+
+      library ontologyArch "@memo/ontology-arch" {
+        description "
+          Architecture ontology — 11-layer MBSE backbone per ISO 42010 /
+          Arcadia. Layers: Operational · Behavioral · Functional · Logical ·
+          Software (+ Software-Extension/ROS) · Hardware · Safety · Security ·
+          Privacy · Verification.
+          ~56 classes, 45 object properties, ~55 data properties, 37 axioms.
+          Path: packages/ontology-arch/
+        "
+      }
+
+      library ontologyProcess "@memo/ontology-process" {
+        description "
+          Process ontology — regulatory process activities and work
+          products. Standards: ISO 14971, IEC 62304, ISO 13485, IEC 60601,
+          ISO 14155, ISO 27001/27701, FDA 21 CFR 820, EU MDR.
+          Bridges to ontology-arch via `producesEvidence` / `tracedTo`.
+          Path: packages/ontology-process/
+        "
+      }
+
+      library medProfile "@memo/medical-modeling-profile" {
+        description "
+          Modeling profile that combines arch + process. Adds 35+ closure
+          rules, viewpoints (Risk · Requirements Traceability · Architecture ·
+          Software · V&V · DHF), guided workflow steps, and starter
+          templates. Extends both ontology packages.
+          Path: packages/medical-modeling-profile/
+        "
+      }
+    }
+
+    // ── Persistent storage ──────────────────────────────────────────────────
+    database projectFs "Device Project (Filesystem)" {
+      description "
+        On-disk representation of a MEMO device project:
+          *.sysml                   — SysML v2 source (authoritative)
+          memo.config.yaml          — project config (extends, ontologies, …)
+          memo.lock.yaml            — resolved ontology dependency lock
+          .memo/user-diagrams.json  — user-created diagram metadata
+          .memo/layouts/<id>.yaml   — per-diagram node position sidecars
+          model/                    — arch / requirements / risk model files
+          model/ontology-selection.sysml — active ontology import declarations
+      "
+      technology "YAML · SysML v2 text files"
+    }
+
+    database docsFs "Documentation Site (Filesystem)" {
+      description "
+        MkDocs-generated static documentation site.
+        Source in docs/src/ (Markdown + mkdocs.yml).
+        Built to docs/dist/ and served under /help by the dev server.
+        Content: user guide, CLI reference, developer docs, ADRs.
+      "
+      technology "MkDocs · Material theme"
+    }
+  }
+
+  // ─── Relationships ─────────────────────────────────────────────────────────
+
+  // Actors
+  engineer -> memo.cli        "runs CLI commands"
+  engineer -> memo.web        "browses model in browser"
+  engineer -> memo.projectFs  "edits .sysml files (IDE / git)"
+  reviewer -> memo.web        "reviews completeness / DHF"
+
+  // CLI ↔ Core (in-process calls)
+  memo.cli.fileWatcher    -> memo.core.parser             "triggers re-parse on file change"
+  memo.cli.configResolver -> memo.core.configLoader       "resolves config inheritance chain"
+  memo.cli.devServer      -> memo.core.wsProtocol         "sends / receives typed messages"
+  memo.cli.devServer      -> memo.cli.fileWatcher         "subscribes to fs change events"
+  memo.cli.devServer      -> memo.cli.persistor           "element:update patches .sysml"
+  memo.cli.devServer      -> memo.projectFs               "reads .sysml + config files"
+  memo.cli.devServer      -> memo.projectFs               "writes user-diagrams / layouts"
+  memo.cli.cliCommands    -> memo.cli.devServer           "memo dev: starts server"
+  memo.cli.cliCommands    -> memo.core.importers          "memo import …"
+  memo.cli.cliCommands    -> memo.core.dhfWorkbench       "memo dhf …"
+  memo.cli.cliCommands    -> memo.core.llmEngine          "memo ask / generate"
+  memo.cli.cliCommands    -> memo.core.ruleEngine         "memo validate"
+  memo.cli.devServer      -> memo.docsFs                  "serves /help static site"
+
+  // Core internal pipeline
+  memo.core.parser            -> memo.core.modelBuilder         "AST to MemoModel"
+  memo.core.configLoader      -> memo.core.ontologyLoader       "config triggers package loading"
+  memo.core.modelBuilder      -> memo.core.ruleEngine           "model to validate"
+  memo.core.ruleEngine        -> memo.core.completenessTracker  "violations to layer %"
+  memo.core.modelBuilder      -> memo.core.analysisEngine       "model to DSM / impact"
+  memo.core.dhfWorkbench      -> memo.core.modelBuilder         "queries model for rendering"
+  memo.core.llmEngine         -> memo.core.modelBuilder         "serialises model as LLM context"
+
+  // Ontology loading
+  memo.core.ontologyLoader -> memo.ont.ontologyArch    "loads 11 architecture layers + kinds"
+  memo.core.ontologyLoader -> memo.ont.ontologyProcess "loads regulatory process activities"
+  memo.core.ontologyLoader -> memo.ont.medProfile      "loads 35+ closure rules + viewpoints"
+
+  // Ontology composition (per ADR-1-10)
+  memo.ont.ontologyArch    -> memo.ont.ontologyProcess "extends (process bridges to arch)"
+  memo.ont.ontologyArch    -> memo.ont.medProfile      "extends"
+  memo.ont.ontologyProcess -> memo.ont.medProfile      "extends"
+
+  // Web app
+  memo.web.wsClient          -> memo.cli.devServer   "WebSocket bidirectional"
+  memo.web.modelStore        -> memo.web.wsClient    "dispatches incoming / sends mutations"
+  memo.web.diagramCanvas     -> memo.web.modelStore  "reads model and layout; sends updates"
+  memo.web.catalogExplorer   -> memo.web.modelStore  "reads elements; sends edits"
+  memo.web.elementDetailView -> memo.web.modelStore  "reads and edits element attributes"
+  memo.web.ontologyViewer    -> memo.web.modelStore  "reads ontologies; sends selection"
+  memo.web.dashboardViews    -> memo.web.modelStore  "reads completeness and stats"
+  memo.web.guidedWorkflows   -> memo.web.modelStore  "drives element creation"
+  memo.web.analysisViews     -> memo.web.modelStore  "reads model and analysis issues"
+  memo.web.dhfWorkbenchUI    -> memo.web.modelStore  "reads and stores DHF documents"
+
+  // External
+  memo.core.llmEngine  -> llmProviders "REST API (Anthropic / OpenAI)"
+  memo.cli.cliCommands -> gitRegistry  "memo install: git clone / npm"
+  ciPipeline           -> memo.cli     "memo validate and memo build"
+}
+
+// ─── Views — hierarchical C4 drill-down ───────────────────────────────────────
+
+views {
+
+  // ── L0: System landscape (entry point) ──────────────────────────────────
+
+  view index {
+    title "MEMO — System Landscape"
+    description "
+      Who uses the MEMO platform and what external systems does it depend on.
+      Click any element to drill down into its internals.
+    "
+
+    include
+      engineer,
+      reviewer,
+      memo,
+      llmProviders,
+      gitRegistry,
+      ciPipeline
+
+    style memo        { color blue }
+    style engineer    { color amber }
+    style reviewer    { color green }
+    style llmProviders { color red }
+    style ciPipeline  { color green }
+  }
+
+  // ── L1: Container decomposition (drill into MEMO) ────────────────────────
+
+  view of memo {
+    title "MEMO — Containers"
+    description "
+      Internal packages of the MEMO monorepo (Turborepo + pnpm).
+      The core pipeline: .sysml → parser → model builder → rule engine →
+      completeness tracker → WebSocket broadcast → React web app.
+    "
+
+    include
+      memo,
+      memo.*,
+      engineer,
+      reviewer,
+      llmProviders,
+      gitRegistry,
+      ciPipeline
+  }
+
+  // ── L2a: @memo/core components ───────────────────────────────────────────
+
+  view of memo.core {
+    title "@memo/core — Components"
+    description "
+      Shared kernel library components. Zero runtime dependencies —
+      consumed by both @memo/cli (Node.js) and @memo/web (browser types only).
+
+      Critical path: parser → modelBuilder → ruleEngine → completenessTracker
+    "
+
+    include
+      memo.core,
+      memo.core.*,
+      memo.ont.ontologyArch,
+      memo.ont.ontologyProcess,
+      memo.ont.medProfile,
+      llmProviders
+
+    style memo.core.parser              { color blue }
+    style memo.core.modelBuilder        { color blue }
+    style memo.core.configLoader        { color blue }
+    style memo.core.ontologyLoader      { color blue }
+    style memo.core.ruleEngine          { color red }
+    style memo.core.completenessTracker { color red }
+    style memo.core.dhfWorkbench        { color green }
+    style memo.core.llmEngine           { color indigo }
+    style memo.core.importers           { color slate }
+    style memo.core.analysisEngine      { color amber }
+    style memo.core.wsProtocol          { color sky }
+  }
+
+  // ── L2b: @memo/cli components ────────────────────────────────────────────
+
+  view of memo.cli {
+    title "@memo/cli — Components"
+    description "
+      CLI binary and dev server. Orchestrates the core pipeline and
+      exposes 20+ Commander.js sub-commands.
+
+      `memo dev` startup flow:
+        cliCommands → configResolver → core.parser → core.modelBuilder
+        → core.ruleEngine → completenessTracker → devServer → fileWatcher
+    "
+
+    include
+      memo.cli,
+      memo.cli.*,
+      memo.core.parser,
+      memo.core.configLoader,
+      memo.core.ruleEngine,
+      memo.core.completenessTracker,
+      memo.core.importers,
+      memo.core.dhfWorkbench,
+      memo.core.llmEngine,
+      memo.projectFs,
+      memo.docsFs,
+      gitRegistry
+  }
+
+  // ── L2c: @memo/web components ────────────────────────────────────────────
+
+  view of memo.web {
+    title "@memo/web — Components"
+    description "
+      React 18 SPA served at http://localhost:3000.
+      All model data pushed from the CLI dev server via WebSocket.
+      Zustand model-store is the single source of UI truth.
+    "
+
+    include
+      memo.web,
+      memo.web.*,
+      memo.cli.devServer
+
+    style memo.web.modelStore { color blue }
+    style memo.web.wsClient   { color sky }
+  }
+
+  // ── L2d: Ontology packages ───────────────────────────────────────────────
+
+  view of memo.ont {
+    title "Ontology Package Family"
+    description "
+      Two-ontology backbone (post-ADR-1-10): architecture + process,
+      bridged by a single modeling profile.
+      Device projects compose them in memo.config.yaml `ontologies:`.
+      The core ontology-loader discovers and merges them at startup.
+
+      Composition:
+        ontology-arch    ──┐
+                           ├──> medical-modeling-profile
+        ontology-process ──┘
+        (ontology-process also extends ontology-arch for `producesEvidence`)
+    "
+
+    include
+      memo.ont,
+      memo.ont.*,
+      memo.core.ontologyLoader
+  }
+
+  // ── L3: WebSocket protocol (drill into the shared contract) ─────────────
+
+  view of memo.core.wsProtocol {
+    title "WebSocket Protocol — Message Types"
+    description "
+      All messages exchanged between the CLI dev server and the React web app.
+
+      Server → Client (push on every file change):
+        model:update          — full MemoModelDTO (elements + relationships + metadata)
+        validation:update     — per-element ValidationResult violations
+        completeness:update   — per-layer CompletenessReport percentages
+        ontology:packages     — available OntologyPackageInfo[] for browser UI
+        diagram:layout        — sidecar layout data (.memo/layouts/)
+        import:result         — CSV import outcome (counts + errors)
+        diagram:parse:result  — element IDs extracted from SysML text
+        error                 — server-side error message
+        ontology:install:result / ontology:remove:result
+
+      Client → Server (user mutations):
+        element:update        → Persistor patches .sysml file
+        element:create        → Persistor appends new block to .sysml
+        relationship:add      → Persistor appends connection to .sysml
+        csv:import            → imports CSV, writes .sysml, triggers re-parse
+        diagram:create/update/delete → .memo/user-diagrams.json
+        diagram:layout:update → .memo/layouts/<id>.yaml (sidecar)
+        diagram:parse         → server name-matches against model elements
+        ontology:save-selection → writes SysML import decls + updates YAML config
+        ontology:install      → git clone / npm install / symlink
+        ontology:remove       → removes from memo_packages/
+        request:refresh       → server re-sends all initialMessages
+    "
+
+    include
+      memo.core.wsProtocol,
+      memo.cli.devServer,
+      memo.cli.persistor,
+      memo.cli.fileWatcher,
+      memo.web.wsClient,
+      memo.web.modelStore,
+      memo.projectFs
+  }
+
+  // ── L3: Element edit round-trip ──────────────────────────────────────────
+
+  view of memo.cli.persistor {
+    title "Element Edit Round-Trip"
+    description "
+      Full cycle when a user edits an element attribute in the browser:
+
+        1. User edits in ElementDetailView → modelStore.applyEdit()
+        2. wsClient.sendElementUpdate({ elementId, attributes }) → devServer
+        3. devServer → persistor.saveElementToFile()
+        4. persistor patches the source .sysml file on disk
+        5. fileWatcher detects change (chokidar)
+        6. parser re-parses → modelBuilder rebuilds MemoModel
+        7. ruleEngine re-validates → completenessTracker recomputes
+        8. devServer broadcasts: model:update + validation:update + completeness:update
+        9. wsClient dispatches to modelStore → all React components re-render
+    "
+
+    include
+      memo.web.elementDetailView,
+      memo.web.modelStore,
+      memo.web.wsClient,
+      memo.cli.devServer,
+      memo.cli.persistor,
+      memo.cli.fileWatcher,
+      memo.core.parser,
+      memo.core.modelBuilder,
+      memo.core.ruleEngine,
+      memo.core.completenessTracker,
+      memo.projectFs
+  }
+}

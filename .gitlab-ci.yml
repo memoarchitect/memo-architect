@@ -1,0 +1,53 @@
+stages:
+  - build
+  - test
+  - package
+
+build:
+  stage: build
+  image: node:20
+  script:
+    - corepack enable
+    - pnpm install --frozen-lockfile
+    - pnpm run build
+  cache:
+    key: pnpm-$CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+      - .turbo/
+
+test:
+  stage: test
+  image: node:20
+  script:
+    - corepack enable
+    - pnpm install --frozen-lockfile
+    - pnpm run test
+  cache:
+    key: pnpm-$CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+      - .turbo/
+
+# EE-5 portability gate — proves the constraint-bearing ontology parses in an
+# external SysML v2 tool (sysand). FAILS the pipeline if the external parser
+# reports errors, so a non-portable ontology can never ship as memo-sysmlv2.
+# The script regenerates each project's .meta.json and runs the real `sysand build`.
+sysand-portability:
+  stage: package
+  image: ghcr.io/sensmetry/sysand:latest
+  before_script:
+    - apt-get update && apt-get install -y python3 unzip || true
+  script:
+    - ./scripts/sysand-portability-check.sh
+    - mkdir -p dist
+    - cp ontology/output/*.kpar dist/ || true
+    - cp ontology/methodology/output/*.kpar dist/ || true
+  artifacts:
+    paths:
+      - dist/*.kpar
+    expire_in: 30 days
+  rules:
+    - changes:
+        - ontology/**/*
+        - scripts/sysand-portability-check.sh

@@ -1,0 +1,6 @@
+# MEMO CODEOWNERS — enforces review gates on ontology changes
+# Syntax: https://docs.gitlab.com/ee/user/project/codeowners/
+
+# Ontology and methodology packages require dual review:
+# Method Steward (domain correctness) + Syntax Steward (SysML v2 conformance)
+ontology/ @method-steward @syntax-steward

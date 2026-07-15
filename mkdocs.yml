@@ -1,0 +1,95 @@
+site_name: MEMO — Medical Engineering Modelling Ontology
+site_description: SysML v2 platform for medical device architecture, analysis, and documentation
+site_author: Somesh Kashyap
+repo_url: https://github.com/memoarchitect/memo-architect
+repo_name: memoarchitect/memo-architect
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  logo: images/logo-brain.svg
+  favicon: images/favicon.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+docs_dir: docs/src
+site_dir: docs/dist
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Users:
+      - Installation: users/installation.md
+      - Running MEMO: users/running.md
+      - Command Line Usage: users/cli-usage.md
+      - Workbench UI Usage: users/ui-usage.md
+      - Workbench Features:
+          - DHF Workbench: users/dhf-workbench.md
+          - Analysis Tools: users/analysis-tools.md
+          - Intelligence & AI: users/ai-features.md
+      - Guides:
+          - Overview: users/guides-index.md
+          - Starting a New Project: users/new-project.md
+          - Modeling Your Device: users/modeling-guide.md
+          - Importing Existing Data: users/importing-data.md
+          - Validation & Closure Rules: users/validation.md
+          - Viewpoints & Diagrams: users/viewpoints-diagrams.md
+      - Tutorials:
+          - Medical Device Quick Start: users/medical-device-tutorial.md
+  - Developers:
+      - Codebase Overview: developers/codebase-overview.md
+      - SysIDE Configuration: developers/syside-configuration.md
+      - Configuration:
+          - memo.config.yaml Reference: developers/config/reference.md
+          - Medical Domain: developers/config/medical-domain.md
+      - Plugin Development: developers/plugin-development.md
+      - Contributing: developers/development/contributing.md

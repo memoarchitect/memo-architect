@@ -1,0 +1,18 @@
+# Syside configuration for MEMO
+# https://docs.sensmetry.com/modeler/configuration.html
+#
+# Folder mode (default) treats all .sysml files in included paths as one model.
+# The canonical ontology submodule contains the ontology, methodologies, and
+# examples under one source root. Index it as one model so cross-package imports
+# resolve (e.g. gpca_architecture → memo::architecture::*).
+
+include = [
+    "memo-tools/memo/src",
+]
+
+exclude = [
+    "node_modules",
+    "dist",
+    "memo-tools/memo/packages",
+    ".sysand",
+]
