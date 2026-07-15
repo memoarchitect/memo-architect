@@ -433,13 +433,13 @@ model {
         technology "ReactFlow · ELK.js"
       }
 
-      component catalogExplorer "Catalog Explorer" {
+      component catalogExplorer "Explorer Panel" {
         description "
           Left-sidebar model browser. Hierarchical tree grouped by V-Cycle layer
           → kind → folder → element. Supports search, attribute/label/tag
           filters, drag-and-drop folder reorganisation, context-menu element
           creation. Always visible.
-          Entry: packages/web/src/views/CatalogExplorer.tsx
+          Entry: packages/web/src/components/ExplorerPanel.tsx
         "
         technology "React"
       }
@@ -479,7 +479,7 @@ model {
           Right: detail panel — full kind definition, relationships, attributes.
           Orphan resolution dialog when deselecting a package that has
           live elements in the model.
-          Entry: packages/web/src/views/OntologyViewer.tsx
+          Entry: packages/web/src/views/ontology/OntologyViewer.tsx
                  packages/web/src/views/ontology/
         "
         technology "React"

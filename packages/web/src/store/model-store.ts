@@ -608,7 +608,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         // Canonical foundation packages that must always be selected when available.
         // These are the base ontologies every project depends on.
-        const FOUNDATION_PACKAGES = ['@memo/ontology-medical-arch', '@memo/ontology-medical-process'];
+        const FOUNDATION_PACKAGES = ['@memo/ontology'];
         for (const o of ontologies) {
             if (FOUNDATION_PACKAGES.includes(o.name)) selected.add(o.name);
         }

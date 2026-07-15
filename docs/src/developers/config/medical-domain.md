@@ -1,6 +1,6 @@
 # Medical Domain Configuration
 
-The `@memo/medical-modeling-profile` package is the medical modeling profile layered on top of `@memo/ontology-medical`.
+The `@memo/medical-modeling-profile` package is the medical modeling profile layered on top of `@memo/ontology`.
 
 It now provides:
 
@@ -13,7 +13,7 @@ It now provides:
 - cybersecurity, connected-system, and terminology-binding semantics for FDA-aligned cyber devices and interoperable clinical integrations
 - clinical evaluation, clinical evidence, and clinical claims semantics connected back to intended use, benefit-risk, and QMS records
 - manufacturing, installation, service, preventive-maintenance, calibration, and regulated product-configuration semantics
-- reusable data-messaging semantics in `@memo/ontology-core`, including event-driven services, brokers, ROS specializations, and RabbitMQ specializations that are not specific to medical devices
+- reusable data-messaging semantics in `@memo/ontology`, including event-driven services, brokers, ROS specializations, and RabbitMQ specializations that are not specific to medical devices
 - medical specializations on top of the core procedure-context backbone (`UserProfile` on `OperationalActor`, `UseEnvironment` on `OperationalEnvironment`)
 
 ## Overview
@@ -21,7 +21,7 @@ It now provides:
 | Metric | Count |
 |---|---|
 | Primary role | Rules + viewpoints + templates |
-| Extends | `@memo/ontology-medical` |
+| Extends | `@memo/ontology` |
 | Closure Rules | 109 |
 | Modeling Viewpoints | 11 |
 
@@ -29,7 +29,7 @@ It now provides:
 
 ### ISO 14971 — Risk Management
 
-The ontology-level risk concepts live in `@memo/ontology-medical`. The `@memo/medical-modeling-profile`
+The ontology-level risk concepts live in `@memo/ontology`. The `@memo/medical-modeling-profile`
 package adds the validation and viewpoint layer that operationalizes them:
 
 - Hazard identification → `Hazard` elements
@@ -52,7 +52,7 @@ failure-analysis artifacts are modeled as part of risk analysis, not as detached
 
 ### IEC 62304 — Software Lifecycle
 
-The ontology-level software lifecycle concepts live in `@memo/ontology-medical`. The
+The ontology-level software lifecycle concepts live in `@memo/ontology`. The
 medical modeling profile package adds traceability and completeness rules over them:
 
 - User needs → System requirements → Software requirements
@@ -69,7 +69,7 @@ specializes the core `StakeholderNeed` concept.
 
 ### IEC 60601 / IEC 60601-1-6 — Safety, Essential Performance, and Usability
 
-The ontology-level safety, design-control, and product-UI concepts live in `@memo/ontology-medical`.
+The ontology-level safety, design-control, and product-UI concepts live in `@memo/ontology`.
 The medical modeling profile package adds usability and essential-performance checks over them:
 
 - Use specifications, use-error analysis, and formative/summative evaluations
@@ -82,14 +82,14 @@ The medical modeling profile package adds usability and essential-performance ch
 
 ### Procedure Context — Paper-Informed Operational Backbone
 
-Following the CIFMeDD paper's reusable ideas, the domain-agnostic procedure-context
-concepts live in `@memo/ontology-core`, while medical specializations live in
-`@memo/ontology-medical`:
+Following the CIFMeDD paper's reusable ideas, both the reusable
+procedure-context concepts and their medical specializations live in the single
+canonical `@memo/ontology` package:
 
 - `Procedure`, `OperationalEnvironment`, `Substance`, `Observable`, and performer/subject/resource relations live in the core backbone
 - `UserProfile` now specializes `OperationalActor`
 - `UseEnvironment` now specializes `OperationalEnvironment`
-- `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, `TreatmentPathway`, `ClinicalObservation`, `MorphologyState`, and `ClinicalEnvironmentQualifier` now live in `@memo/ontology-medical`
+- `Patient`, `AnatomicalSite`, `ProcedureMethod`, `RouteOfAdministration`, `TreatmentPathway`, `ClinicalObservation`, `MorphologyState`, and `ClinicalEnvironmentQualifier` now live in `@memo/ontology`
 - medical examples can now model who performs a procedure, where it occurs, what it acts on, which anatomy is involved, which method/route is used, and which observations/outcomes matter without inventing device-specific terms
 
 **Enforced by rules:** CR-MED-049 through CR-MED-055
@@ -107,7 +107,7 @@ The current boundary is deliberate:
 
 ### ISO 13485 — QMS, Traceability, and Records
 
-The ontology-level QMS and record concepts live in `@memo/ontology-medical`, and the
+The ontology-level QMS and record concepts live in `@memo/ontology`, and the
 medical modeling profile package uses them to keep regulated records tied to lifecycle,
 usability, and risk-analysis artifacts:
 
@@ -120,18 +120,18 @@ usability, and risk-analysis artifacts:
 
 ### Cybersecurity and Interoperability — FDA / IEC 81001-5-1 / IEC 80001 / HL7 FHIR
 
-The ontology-level connected-system and interface semantics are split between `@memo/ontology-core`
-and `@memo/ontology-medical`:
+The canonical `@memo/ontology` contains both reusable connected-system concepts
+and medical interface specializations:
 
-- domain-agnostic system-of-systems and interface concepts such as `SystemOfSystems`, `DataInterface`, `DataEndpoint`, `CommunicationProtocol`, and `InteroperabilityProfile` live in `@memo/ontology-core`
-- medical cybersecurity and clinical-terminology anchors such as `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `SecurityControl`, `SBOMArtifact`, `SecureUpdateCapability`, `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` live in `@memo/ontology-medical`
+- domain-agnostic system-of-systems and interface concepts such as `SystemOfSystems`, `DataInterface`, `DataEndpoint`, `CommunicationProtocol`, and `InteroperabilityProfile` live in `@memo/ontology`
+- medical cybersecurity and clinical-terminology anchors such as `CybersecurityRequirement`, `ThreatModel`, `ThreatScenario`, `SecurityControl`, `SBOMArtifact`, `SecureUpdateCapability`, `ClinicalCodeSystemReference`, `ClinicalValueSetReference`, `ClinicalConceptMapReference`, and `TerminologyBinding` live in `@memo/ontology`
 - medical examples can now model cyber-device interfaces, secure integration controls, threat models, SBOM/update artifacts, and versioned clinical-terminology bindings without pretending to import full external terminologies into the local model
 
 **Enforced by rules:** CR-MED-062 through CR-MED-074
 
 ### Privacy, Data Governance, and Import Boundary — HIPAA / GDPR
 
-The ontology-level privacy and import-governance semantics now also live in `@memo/ontology-medical`:
+The ontology-level privacy and import-governance semantics now also live in `@memo/ontology`:
 
 - governed data-classification anchors → `PersonalDataCategory`, `SpecialCategoryPersonalData`, `ProtectedHealthInformation`
 - governed processing/activity semantics → `DataProcessingActivity`
@@ -146,7 +146,7 @@ These concepts are intended to support architecture and traceability reasoning f
 
 ### Clinical Evaluation, Evidence, and Claims
 
-The ontology-level claim and evidence semantics now live in `@memo/ontology-medical`:
+The ontology-level claim and evidence semantics now live in `@memo/ontology`:
 
 - clinical-use and submission-facing claims → `ClinicalPerformanceClaim`, `ClinicalSafetyClaim`
 - claim evidence anchors → `ClinicalEvidenceArtifact`
@@ -159,7 +159,7 @@ These semantics keep clinical claims from collapsing into generic `documents` or
 
 ### Manufacturing, Service, and Configuration Semantics
 
-The regulated lifecycle and product-configuration anchors now also live in `@memo/ontology-medical`:
+The regulated lifecycle and product-configuration anchors now also live in `@memo/ontology`:
 
 - manufacturing / installation / service procedures → `ManufacturingProcedure`, `InstallationProcedure`, `ServiceProcedure`
 - preventive maintenance / calibration procedures → `PreventiveMaintenanceProcedure`, `CalibrationProcedure`
@@ -173,12 +173,12 @@ These semantics are intended for reusable regulated medical-device backbone reas
 
 ### Data Messaging and Event-Driven Interface Semantics
 
-The ontology-level data-modeling backbone now lives in `@memo/ontology-core`:
+The ontology-level data-modeling backbone now lives in `@memo/ontology`:
 
-- domain-agnostic data-exchange concepts such as `PublishSubscribeChannel`, `RequestResponseInterface`, `Message`, `RequestMessage`, `ResponseMessage`, `MessageSchema`, and `MessageField` live in `@memo/ontology-core`
-- event-driven microservice and broker concepts such as `EventDrivenService`, `MessageBroker`, `EventBus`, `TopicChannel`, `QueueChannel`, `MessageProducer`, `MessageConsumer`, `BrokerExchange`, and `BrokerQueue` also live in `@memo/ontology-core`
-- generic typed messaging relations such as `publishesTo`, `subscribesTo`, `publishesMessage`, `consumesMessage`, `servesInterface`, `invokesInterface`, `carriesRequestMessage`, `carriesResponseMessage`, `brokersChannel`, `routesToChannel`, `definesMessageSchema`, and `hasMessageField` also live in `@memo/ontology-core`
-- technology specializations such as `RosNode` / `RosTopic` / `RosService` and `RabbitMqBroker` / `RabbitMqExchange` / `RabbitMqQueue` now also live in `@memo/ontology-core` because they are reusable integration-platform concepts rather than medical-only semantics
+- domain-agnostic data-exchange concepts such as `PublishSubscribeChannel`, `RequestResponseInterface`, `Message`, `RequestMessage`, `ResponseMessage`, `MessageSchema`, and `MessageField` live in `@memo/ontology`
+- event-driven microservice and broker concepts such as `EventDrivenService`, `MessageBroker`, `EventBus`, `TopicChannel`, `QueueChannel`, `MessageProducer`, `MessageConsumer`, `BrokerExchange`, and `BrokerQueue` also live in `@memo/ontology`
+- generic typed messaging relations such as `publishesTo`, `subscribesTo`, `publishesMessage`, `consumesMessage`, `servesInterface`, `invokesInterface`, `carriesRequestMessage`, `carriesResponseMessage`, `brokersChannel`, `routesToChannel`, `definesMessageSchema`, and `hasMessageField` also live in `@memo/ontology`
+- technology specializations such as `RosNode` / `RosTopic` / `RosService` and `RabbitMqBroker` / `RabbitMqExchange` / `RabbitMqQueue` now also live in `@memo/ontology` because they are reusable integration-platform concepts rather than medical-only semantics
 
 This keeps reusable interface/data semantics in the core MBSE backbone while still supporting platform-specific modeling of ROS, RabbitMQ, and similar non-medical integration technologies where teams need them.
 
@@ -197,7 +197,7 @@ The ontology packages validate cleanly within that supported subset. MEMO should
 
 ### ISO/IEC/IEEE 42010 — Viewpoint Separation
 
-`@memo/ontology-medical` carries the medical semantics, while `@memo/medical-modeling-profile`
+`@memo/ontology` carries the medical semantics, while `@memo/medical-modeling-profile`
 adds viewpoint definitions on top. The dedicated risk-analysis viewpoint keeps
 FMEA / FTA concerns separate from broader safety and software views, which is
 consistent with ISO/IEC/IEEE 42010's viewpoint-driven architecture-description direction.
@@ -214,6 +214,5 @@ extends: "@memo/medical-modeling-profile"
 
 Projects inherit:
 
-- `@memo/ontology-core` via `@memo/ontology-medical`
-- `@memo/ontology-medical`
+- `@memo/ontology`
 - `@memo/medical-modeling-profile` rules, viewpoints, and starter templates

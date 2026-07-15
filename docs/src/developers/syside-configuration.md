@@ -71,4 +71,5 @@ only the Git index entries:
 git submodule update --init --recursive
 ```
 
-For MEMO 0.4.0, the innermost `memo` checkout is tagged `v0.4.0`.
+Keep all three checkouts on the same `MAJOR.MINOR` compatibility line; patch
+versions may differ.

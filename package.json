@@ -1,10 +1,11 @@
 {
   "name": "memo",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "description": "MEMO Architect \u2014 web workbench for medical device systems engineering (webapp of the meMO stack)",
   "scripts": {
-    "build": "turbo build",
+    "build": "pnpm run check:cache && turbo build",
+    "check:cache": "bash scripts/check-no-ontology-cache.sh",
     "dev": "turbo dev",
     "test": "turbo test",
     "test:coverage": "turbo test:coverage",

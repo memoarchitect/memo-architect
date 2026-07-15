@@ -2,83 +2,61 @@
 
 ## Prerequisites
 
-- **Node.js** 24 LTS
-- **pnpm** >= 9.15.0
+- Node.js 20 or later
+- pnpm 9.15 or later
+- Python 3.12 and PDM only when building the documentation site
 
-## Clone and Install
+## Development checkout
+
+Clone recursively because Memo Architect contains Memo Tools, which contains the
+canonical MEMO ontology:
 
 ```bash
 git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
+corepack enable
 pnpm install
-```
-
-## Build All Packages
-
-```bash
 pnpm run build
 ```
 
-This uses Turborepo to build all workspace packages in dependency order, including:
+The build runs the repositories in dependency order:
 
-1. `@memo/ontology-core` — Domain-agnostic MBSE backbone ontology
-2. `@memo/ontology-medical` — Reusable medical device development backbone
-3. `@memo/core` — Parser, model builder, validator, completeness tracker
-4. `@memo/medical-modeling-profile` — Medical domain configuration
-5. `@memo/cli` — Command-line interface
-6. `@memo/web` — React web application
+1. `@memo/ontology` and methodology/profile data from `memo-tools/memo`
+2. `@memo/core` and `@memo/cli` from `memo-tools`
+3. `@memo/web` from Memo Architect
 
-## Verify Installation
+The repositories share a `MAJOR.MINOR` compatibility line. Any `0.4.x` releases
+are intended to work together; patch versions can advance independently.
+
+## Verify the checkout
 
 ```bash
-# Run the test suite
 pnpm run test
-
-# Check the CLI is available
-cd examples/infusion-pump
+pnpm run type-check
+pnpm memo --version
 pnpm memo --help
 ```
 
-You should see:
-
-```
-Usage: memo [options] [command]
-
-MEMO — Model-Based Systems Engineering for Medical Devices
-
-Options:
-  -V, --version           output the version number
-  -h, --help              display help for command
-
-Commands:
-  validate [dir]          Validate the model against closure rules
-  dev [options]           Start development server with live model reload
-  init [options] <name>   Scaffold a new MEMO project
-  help [command]          display help for command
-```
-
-## Global Installation (Optional)
-
-To use `memo` globally from any project:
+To run the included GPCA reference model:
 
 ```bash
-cd packages/cli
-pnpm link --global
+pnpm run example:dev
 ```
 
-Then from any MEMO project directory:
+## Work in any folder
+
+The installed `memo` command is independent of the source checkout. After
+installing the packaged Memo CLI and web application, initialize a product model
+in its own directory:
 
 ```bash
+mkdir my-device
+cd my-device
+memo init .
+memo validate .
 memo dev
-memo validate
 ```
 
-To verify the shared medical backbone against both reference models:
-
-```bash
-cd examples/infusion-pump
-pnpm memo validate
-
-cd ../irrigation-pump
-pnpm memo validate
-```
+Product files remain in `my-device`; MEMO implementation code remains in the
+installed packages. See [Command Line Usage](cli-usage.md) for the complete
+command surface and [Running MEMO](running.md) for server options.

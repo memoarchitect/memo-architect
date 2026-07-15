@@ -21,18 +21,16 @@ This is the exit gate for Epic EE and the precondition for cutting the standalon
 
 ## Portability gate (CI)
 
-`scripts/sysand-portability-check.sh` builds each ontology project with the external
-Sensmetry `sysand` tool and fails if the parse reports any error:
+`memo-tools/memo/scripts/build-kpar.sh` builds each ontology project with the
+external Sensmetry `sysand` tool and fails if the parse reports any error:
 
 ```bash
-./scripts/sysand-portability-check.sh
-# ▶ ontology               → memo_ontology-1.0.0.kpar built — 39 source files, zero errors
-# ▶ ontology/methodology   → memo_methodology_default-1.0.0.kpar built — 10 source files, zero errors
-# ✔ EE-5 portability gate PASSED — MEMO ontology constraints are portable SysML v2.
+./memo-tools/memo/scripts/build-kpar.sh
+# builds memo-ontology and memo-methodology-default KPAR archives with zero errors
 ```
 
-The same script runs in `.gitlab-ci.yml` (`sysand-portability` job) on any change under
-`ontology/`. It complements Epic DD's `memo round-trip` / `memo check --sysml-compat`,
+The same script runs in MEMO's `.gitlab-ci.yml` on ontology changes. It
+complements `memo round-trip` / `memo check --sysml-compat`,
 which are MEMO-internal model heuristics — this is the real external-tool round-trip.
 
 ## Standard authoring forms the ontology must use

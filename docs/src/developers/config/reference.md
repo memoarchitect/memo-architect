@@ -162,11 +162,11 @@ firstRun:
 ```yaml
 projectName: "@memo/medical-modeling-profile"
 projectType: device
-extends: "@memo/ontology-medical"
+extends: "@memo/medical-modeling-profile"
 
 ontologies:
-  - name: memo-ontology-medical
-    version: "^0.1.0"
+  - name: "@memo/ontology"
+    version: "^0.4.0"
 
 cosmaLayers:
   - id: risk

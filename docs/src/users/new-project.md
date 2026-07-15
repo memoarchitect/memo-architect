@@ -44,8 +44,8 @@ projectType: device
 extends: "@memo/medical-modeling-profile"
 
 ontologies:
-  - name: memo-ontology-medical
-    version: "^0.1.0"
+  - name: "@memo/ontology"
+    version: "^0.4.0"
 ```
 
 The key line is `extends: "@memo/medical-modeling-profile"`. This gives you:
