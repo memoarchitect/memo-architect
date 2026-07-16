@@ -130,13 +130,13 @@ package MyDevice {
 
 ```bash
 cd my-device
-pnpm memo dev --port 3000
+pnpm architect -- dev --port 3000
 ```
 
 Or from the repo root:
 
 ```bash
-pnpm memo dev --port 3000
+pnpm architect -- dev --port 3000
 ```
 
 This starts:

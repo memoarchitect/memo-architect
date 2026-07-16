@@ -23,7 +23,7 @@
 import { useState, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { useModelStore } from '../store/model-store';
 import { sendLlmDraft } from '../store/ws-client';
-import type { MemoModelDTO } from '@memo/core';
+import type { MemoModelDTO } from '@memo/tools/browser';
 import type { DhfSettings, DhfDoc } from '../store/model-store';
 import { renderDhfDocumentHtml, DIAGRAM_MARKER_RE } from '../dhf/document-renderer';
 import { documentThemeCss } from '../dhf/document-theme';

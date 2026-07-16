@@ -38,7 +38,9 @@ Key facts:
 
 - **The ontology content (L0/L1/L2) collapses into one repo** (`memo-sysmlv2`) — it is one release to one audience.
 - **The L3 tool splits in two**: engine (`memo-cli`) vs UI (`memo-architect`), so CLI-only users are served without the web bundle.
-- **web does not build-depend on cli code** — only `@memo/core` (types). The CLI↔web link is the WebSocket dev-server protocol at runtime, kept as a versioned contract package to prevent drift.
+- **Tools does not depend on Architect.** Tools owns headless commands and
+  reusable operations. Architect depends on Tools and Ontology and owns every
+  command that requires the visual client.
 - **Rules ship as native SysML v2 constraints** (Epic EE), so `memo-sysmlv2` is portable, not engine config.
 
 ## Consequences
@@ -72,10 +74,11 @@ Public naming follows the meMO four-layer stack (Ontology + Methodology →
 - Dependencies are wired with git submodules mirroring the layer stack:
   `memo-architect` carries `memo-tools` (which nests
   `memo-tools/memo`), and its pnpm workspace globs the submodule
-  packages so `@memo/web` consumes `@memo/core` as a normal `workspace:*`
-  dependency. `memo dev` from the nested example serves the full UI.
-- `memo build` (static site export, incl. `--kpar`) requires a built
-  `@memo/web`; the DD-3 e2e suite skips where the web app is absent.
+  packages so `@memo/architect` consumes `@memo/tools` as a normal `workspace:*`
+  dependency. `memo-architect dev` from the nested example serves the full UI.
+- `memo pack` remains headless in `@memo/tools`.
+- `memo-architect build` and `memo-architect dev` live in
+  `@memo/architect`; Tools tests do not skip because Architect is absent.
 
 ## Out of scope
 

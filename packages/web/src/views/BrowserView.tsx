@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState, useCallback } from 'react';
-import type { DiagramDTO, MemoElement, MemoModelDTO } from '@memo/core';
+import type { DiagramDTO, MemoElement, MemoModelDTO } from '@memo/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, VIEW_KIND_META } from '../constants';
 import { FONT } from '../styles/tokens';

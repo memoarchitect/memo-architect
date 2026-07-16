@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeExplorerGroupTree } from '../ExplorerPanel';
-import type { MemoElement } from '@memo/core';
+import type { MemoElement } from '@memo/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
 // Mirrors the vendored @memo/ontology package shape: layer ids are the

@@ -1,7 +1,7 @@
 // ─── Sequence template tests (KK-6 structure logic) ─────────────────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/core';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/tools/browser';
 import {
     buildSequenceModel, itemShortName, resolveLifelineLabel, isStepElement,
 } from '../sequence-view';

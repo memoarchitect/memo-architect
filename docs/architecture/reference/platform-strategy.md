@@ -9,7 +9,7 @@ This page is a reference summary of packaging and release strategy. The canonica
 | L0 helpers | `@memo/sysml-base` | Shared SysML library types, dimensions, rule/view base defs |
 | L1 ontology | `@memo/ontology` | Comprehensive medical-device ontology with architecture, compliance, artifact, and viewpoint dimensions |
 | L2 methodology | `@memo/methodology-default` and custom packages | Scope, aliases, workflow, DHF bindings, rule strengths, viewpoint selection |
-| L3 tool | MEMO Architect (`@memo/core`, `@memo/cli`, `@memo/web`) | Parse, validate, visualize, analyze, and export projects |
+| L3 tool | `@memo/tools` + `@memo/architect` | Parse, validate, visualize, analyze, and export projects |
 
 The ontology is the reusable modeling product. MEMO Architect consumes it and adds engineering workflow. Methodology packages tailor what the project sees without forking the ontology.
 
@@ -79,13 +79,16 @@ The three-repo split from [../platform.md §10](../platform.md#10-repo-layout-ex
 ```text
 memo/            # Layers 01 Ontology + 02 Methodology — pure SysML v2 / KerML content
                  #   github: memoarchitect/memo
-memo-tools/      # Layer 03 Tools — engine (@memo/core) + memo CLI (@memo/cli) + tooling
+memo-tools/      # Layer 03 Tools — one @memo/tools package
                  #   github: memoarchitect/memo-tools
-memo-architect/  # Layer 04 Architect — web app (@memo/web)
+memo-architect/  # Layer 04 Architect — web app (@memo/architect)
                  #   github: memoarchitect/memo-architect
 ```
 
-Dependency direction: `memo ◄─ memo-tools ◄─ memo-architect`. The ontology content (formerly L0/L1/L2 repos) collapsed into one pure-content release; the tool split into engine vs UI so CLI-only users are served without the web bundle. The former monorepo is now the memo-architect webapp repo itself (ontology and engine stripped out, history preserved); the GitHub mirrors are squashed cuts; `memo-tools` consumes the content repo as a git submodule, and `memo-architect` consumes `memo-tools` the same way (`memo-tools`, nesting the content submodule) with pnpm workspace globs resolving `@memo/core` as a normal workspace dependency. Published consumers will depend on versioned sysand artifacts, not on tool internals.
+Dependency direction is `@memo/ontology` ← `@memo/tools` ←
+`@memo/architect`. Architect also declares Ontology directly. Tools exposes
+only headless commands and reusable operations; interactive and viewer commands
+belong to Architect. All three are normal versioned npm packages.
 
 ## Migration Guardrails
 

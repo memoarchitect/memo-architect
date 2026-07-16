@@ -85,7 +85,7 @@ export interface RestartRequiredMessage {
   type: 'app:restart-required'
   reason: 'ontology-source-changed' | 'ontology-selection-changed'
   changedFile: string
-  instruction: string   // human-readable: "Stop dev server (Ctrl+C) and run `memo dev` again"
+  instruction: string   // human-readable: "Stop dev server (Ctrl+C) and run `memo-architect dev` again"
 }
 ```
 
@@ -95,7 +95,7 @@ On ontology watcher fire:
 3. Print loud banner to CLI stderr: `⚠ Ontology changed — restart required. Changes ignored until restart.`
 4. Exit code: do not exit. User decides.
 
-**Optional flag** `--auto-restart-ontology`: if set, dev server self-terminates with exit code 75 (EX_TEMPFAIL), a supervisor script (`memo dev`) respawns fresh process. Default OFF.
+**Optional flag** `--auto-restart-ontology`: if set, dev server self-terminates with exit code 75 (EX_TEMPFAIL), a supervisor script (`memo-architect dev`) respawns fresh process. Default OFF.
 
 ### Part D — Web app handles restart signal
 
@@ -113,7 +113,7 @@ case 'app:restart-required':
 
 Add `restartRequired: RestartRequiredMessage | null` to state. When non-null, render modal overlay (new component `packages/web/src/components/RestartRequiredBanner.tsx`) blocking UI:
 
-> Ontology changed on disk. Restart dev server (`Ctrl+C`, then `memo dev`) to apply. Current view may be inconsistent.
+> Ontology changed on disk. Restart dev server (`Ctrl+C`, then `memo-architect dev`) to apply. Current view may be inconsistent.
 
 Modal has one action: `Reload page` — triggers `window.location.reload()`. On reconnect WS sees fresh server with fresh bootstrap. Clear `restartRequired`.
 
@@ -127,7 +127,7 @@ Changes:
 
 2. **Remove** `availableOntologies` persistence. Always derived from server `ontology:packages` message on connect. Never localStorage.
 
-3. **Remove** `window.__MEMO_DATA__` embedded-data fallback from `ws-client.ts:loadEmbeddedData()` for dev mode. Keep only for static `memo build` output.
+3. **Remove** `window.__MEMO_DATA__` embedded-data fallback from `ws-client.ts:loadEmbeddedData()` for dev mode. Keep only for static `memo-architect build` output.
 
 4. **Keep but scope-limit** `.memo/user-diagrams.json` and `*.viewlayout` companions — these are view state (layout coordinates), not ontology. Legacy `.memo/layouts/*.yaml` files remain load-compatible and migrate to `.viewlayout` on the next save. Validate at load: drop any diagram/layout whose `kind` or relationship `type` is not present in current ontology registries. Log the drop count.
 
@@ -181,7 +181,7 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 ### Phase 1 — Add RestartRequired message type
 - Edit `packages/core/src/protocol/messages.ts`: add `RestartRequiredMessage` interface. Add to union.
 - Export from index.
-- Test: `pnpm --filter @memo/core test`.
+- Test: `pnpm --filter @memo/tools test`.
 
 ### Phase 2 — Split file watcher
 - Edit `packages/cli/src/server/file-watcher.ts`: replace `createFileWatcher()` with `createProjectWatcher()` + `createOntologyWatcher()`. Each returns `{ close() }`.
@@ -197,7 +197,7 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
   - Extract `notifyRestartRequired(reason, changedFile)` func: broadcast `app:restart-required`, print stderr banner.
   - Wire project watcher → `rebuildProject`. Wire ontology watcher → `notifyRestartRequired`.
 - Remove old unified `rebuild()`.
-- Verify `memo dev` in `examples/infusion-pump` hot-reloads a `.sysml` edit under `model/` but NOT under ontology paths.
+- Verify `memo-architect dev` in `examples/infusion-pump` hot-reloads a `.sysml` edit under `model/` but NOT under ontology paths.
 
 ### Phase 4 — Change ontology:save-selection handler
 - Edit `packages/cli/src/server/dev-server.ts` lines 386-463:
@@ -216,7 +216,7 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 - Edit `packages/web/src/store/model-store.ts`:
   - Remove `loadUserViewpoints()`/`saveUserViewpoints()` and their localStorage access. Delete key `memo:userViewpoints` on first load (migration).
   - Grep store for `persist(` — remove from any ontology/model slice.
-- Write migration: on first store init after upgrade, if `localStorage.memo:userViewpoints` present, POST to `memo dev` via WS as `viewpoint:migrate` or write directly into project's `memo.viewpoints.yaml`. Then `localStorage.removeItem('memo:userViewpoints')`.
+- Write migration: on first store init after upgrade, if `localStorage.memo:userViewpoints` present, POST to `memo-architect dev` via WS as `viewpoint:migrate` or write directly into project's `memo.viewpoints.yaml`. Then `localStorage.removeItem('memo:userViewpoints')`.
 - Edit `packages/web/src/store/ws-client.ts:loadEmbeddedData`: keep path for static build (detect via `window.__MEMO_DATA__` + no WS URL), but in dev mode (WS URL set) never call it.
 
 ### Phase 7 — Validate user diagrams/layouts on load
@@ -242,7 +242,7 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 
 ### Phase 11 — Verification
 - `pnpm run build && pnpm run test` (all packages).
-- `cd examples/infusion-pump && memo dev`. Web open. Edit a `model/**/*.sysml` → diagrams update instantly. Edit `../../ontology/**/*.sysml` → modal appears, no model update.
+- `cd examples/infusion-pump && memo-architect dev`. Web open. Edit a `model/**/*.sysml` → diagrams update instantly. Edit `../../ontology/**/*.sysml` → modal appears, no model update.
 - Toggle ontology in UI → file written, modal appears, reload → new ontology active.
 - Hard reload page repeatedly → identical model each time (no drift).
 - `grep -r "memo:userViewpoints" packages/web/src` → no matches.

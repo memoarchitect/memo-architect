@@ -52,7 +52,7 @@ rebuildProject() — runs on each project file change:
 |---------|-------------|
 | `localStorage:memo:userViewpoints` | In-memory only; one-time migration wipes the key and logs a warning |
 | `availableOntologies` persistence | Always derived from `ontology:packages` WS message on connect |
-| `window.__MEMO_DATA__` in dev mode | Only used for `memo build` static output; dev mode always uses WS |
+| `window.__MEMO_DATA__` in dev mode | Only used for `memo-architect build` static output; dev mode always uses WS |
 
 ### Ontology selection
 

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
-import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memo/core';
+import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memo/tools/browser';
 
 // ─── Diff Types ──────────────────────────────────────────────────────────────
 

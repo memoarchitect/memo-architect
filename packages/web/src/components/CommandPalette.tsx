@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useModelStore, type ActiveView } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
-import type { MemoElement, DiagramDTO } from '@memo/core';
+import type { MemoElement, DiagramDTO } from '@memo/tools/browser';
 
 interface PaletteItem {
     id: string;

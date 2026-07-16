@@ -7,7 +7,7 @@
 
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { MemoElement } from '@memo/core';
+import type { MemoElement } from '@memo/tools/browser';
 import { FONT } from '../styles/tokens';
 
 export interface DecompositionNodeData {

@@ -4,9 +4,9 @@
  * Uses the C4 "view of <element>" drill-down pattern:
  *   view index           → L0  System landscape (entry point)
  *   view of memo         → L1  Container decomposition
- *   view of memo.core    → L2a @memo/core components
- *   view of memo.cli     → L2b @memo/cli components
- *   view of memo.web     → L2c @memo/web components
+ *   view of memo.core    → L2a @memo/tools components
+ *   view of memo.cli     → L2b @memo/tools components
+ *   view of memo.web     → L2c @memo/architect components
  *   view of memo.ont     → L2d Ontology packages
  *
  * Clicking any element that has a matching "view of" view
@@ -97,7 +97,7 @@ model {
 
   system ciPipeline "CI / CD Pipeline" {
     description "
-      Automated quality gates that run memo validate and memo build.
+      Automated quality gates that run memo validate and memo-architect build.
       Enforces closure-rule compliance and produces static review artifacts.
     "
     style { color green }
@@ -111,8 +111,8 @@ model {
       analysis, traceability, and DHF generation.
     "
 
-    // ── @memo/core ──────────────────────────────────────────────────────────
-    container core "@memo/core" {
+    // ── @memo/tools ──────────────────────────────────────────────────────────
+    container core "@memo/tools" {
       description "
         Shared kernel library — zero runtime dependencies, consumed by both
         the CLI (Node.js) and web app (browser, for types only).
@@ -272,8 +272,8 @@ model {
       }
     }
 
-    // ── @memo/cli ───────────────────────────────────────────────────────────
-    container cli "@memo/cli" {
+    // ── @memo/tools ───────────────────────────────────────────────────────────
+    container cli "@memo/tools" {
       description "
         CLI binary (`memo`) and dev server. Orchestrates the full pipeline:
         watch → parse → validate → completeness → broadcast.
@@ -283,8 +283,8 @@ model {
 
       component devServer "Dev Server" {
         description "
-          HTTP + WebSocket server started by `memo dev`.
-          — Serves @memo/web React SPA via Vite middleware (dev) or
+          HTTP + WebSocket server started by `memo-architect dev`.
+          — Serves @memo/architect React SPA via Vite middleware (dev) or
             static files (production build)
           — Serves built MkDocs documentation under /help
           — Handles ALL bidirectional WebSocket protocol messages:
@@ -336,9 +336,9 @@ model {
 
           Model management:
             memo init <name>     scaffold new device project
-            memo dev             start dev server + file watcher
+            memo-architect dev             start dev server + file watcher
             memo validate        run rule engine (CI-safe exit code)
-            memo build           build static HTML site
+            memo-architect build           build static HTML site
 
           Export:
             memo export json     full model as JSON
@@ -382,8 +382,8 @@ model {
       }
     }
 
-    // ── @memo/web ───────────────────────────────────────────────────────────
-    container web "@memo/web" {
+    // ── @memo/architect ───────────────────────────────────────────────────────────
+    container web "@memo/architect" {
       description "
         React 18 SPA served by the CLI dev server at http://localhost:3000.
         Connects to the CLI via WebSocket; all model data is pushed from the server.
@@ -535,7 +535,7 @@ model {
         rules, viewpoints, and starter templates.
         Device projects compose them by listing package names in
         `memo.config.yaml `ontologies:``. Loaded at runtime by
-        `@memo/core`'s ontology-loader.
+        `@memo/tools`'s ontology-loader.
       "
       technology "SysML v2 (source of truth) · YAML side-cars"
 
@@ -613,7 +613,7 @@ model {
   memo.cli.devServer      -> memo.cli.persistor           "element:update patches .sysml"
   memo.cli.devServer      -> memo.projectFs               "reads .sysml + config files"
   memo.cli.devServer      -> memo.projectFs               "writes user-diagrams / layouts"
-  memo.cli.cliCommands    -> memo.cli.devServer           "memo dev: starts server"
+  memo.cli.cliCommands    -> memo.cli.devServer           "memo-architect dev: starts server"
   memo.cli.cliCommands    -> memo.core.importers          "memo import …"
   memo.cli.cliCommands    -> memo.core.dhfWorkbench       "memo dhf …"
   memo.cli.cliCommands    -> memo.core.llmEngine          "memo ask / generate"
@@ -654,7 +654,7 @@ model {
   // External
   memo.core.llmEngine  -> llmProviders "REST API (Anthropic / OpenAI)"
   memo.cli.cliCommands -> gitRegistry  "memo install: git clone / npm"
-  ciPipeline           -> memo.cli     "memo validate and memo build"
+  ciPipeline           -> memo.cli     "memo validate and memo-architect build"
 }
 
 // ─── Views — hierarchical C4 drill-down ───────────────────────────────────────
@@ -705,13 +705,13 @@ views {
       ciPipeline
   }
 
-  // ── L2a: @memo/core components ───────────────────────────────────────────
+  // ── L2a: @memo/tools components ───────────────────────────────────────────
 
   view of memo.core {
-    title "@memo/core — Components"
+    title "@memo/tools — Components"
     description "
       Shared kernel library components. Zero runtime dependencies —
-      consumed by both @memo/cli (Node.js) and @memo/web (browser types only).
+      consumed by both @memo/tools (Node.js) and @memo/architect (browser types only).
 
       Critical path: parser → modelBuilder → ruleEngine → completenessTracker
     "
@@ -737,15 +737,15 @@ views {
     style memo.core.wsProtocol          { color sky }
   }
 
-  // ── L2b: @memo/cli components ────────────────────────────────────────────
+  // ── L2b: @memo/tools components ────────────────────────────────────────────
 
   view of memo.cli {
-    title "@memo/cli — Components"
+    title "@memo/tools — Components"
     description "
       CLI binary and dev server. Orchestrates the core pipeline and
       exposes 20+ Commander.js sub-commands.
 
-      `memo dev` startup flow:
+      `memo-architect dev` startup flow:
         cliCommands → configResolver → core.parser → core.modelBuilder
         → core.ruleEngine → completenessTracker → devServer → fileWatcher
     "
@@ -765,10 +765,10 @@ views {
       gitRegistry
   }
 
-  // ── L2c: @memo/web components ────────────────────────────────────────────
+  // ── L2c: @memo/architect components ────────────────────────────────────────────
 
   view of memo.web {
-    title "@memo/web — Components"
+    title "@memo/architect — Components"
     description "
       React 18 SPA served at http://localhost:3000.
       All model data pushed from the CLI dev server via WebSocket.

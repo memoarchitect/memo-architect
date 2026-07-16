@@ -3,7 +3,7 @@
 // Single source of truth for architecture layer colors and design tokens.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { ViewKind } from '@memo/core';
+import type { ViewKind } from '@memo/tools/browser';
 
 export const LAYER_COLORS: Record<string, string> = {
     business: '#8E44AD',
@@ -182,7 +182,7 @@ export const BUILDER_SYNTHESIZED_KINDS: Set<string> = new Set([
 // ─── SysML v2 View Kind Metadata ────────────────────────────────────────────
 // The eight standard spec view kinds — every diagram resolves to exactly one
 // (Epic KK). The canonical diagramType → viewKind mapping lives in
-// @memo/core (view-kinds.ts).
+// @memo/tools/browser (view-kinds.ts).
 
 export interface ViewKindMeta {
     label: string;

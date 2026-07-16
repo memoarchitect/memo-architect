@@ -12,11 +12,11 @@ import type {
     DiagramDTO,
     DiagramLayout,
     RestartRequiredMessage,
-} from '@memo/core';
-import type { ValidationResult, CompletenessReport } from '@memo/core';
+} from '@memo/tools/browser';
+import type { ValidationResult, CompletenessReport } from '@memo/tools/browser';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
-import type { ViewpointDTO } from '@memo/core';
+import type { ViewpointDTO } from '@memo/tools/browser';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
@@ -154,7 +154,7 @@ export interface ModelState {
     completeness: CompletenessReport | null;
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
-    methodology: import('@memo/core').MethodologyDescriptor | null;
+    methodology: import('@memo/tools/browser').MethodologyDescriptor | null;
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
@@ -218,7 +218,7 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
-    setMethodology: (m: import('@memo/core').MethodologyDescriptor | null) => void;
+    setMethodology: (m: import('@memo/tools/browser').MethodologyDescriptor | null) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;

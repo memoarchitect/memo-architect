@@ -12,8 +12,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModelStore } from '../store/model-store';
 import { sendCsvImport } from '../store/ws-client';
-import type { ColumnMapping, ImportRecipe } from '@memo/core/lib/import/index.js';
-import { BUILTIN_RECIPES, inferColumnMappings, applyColumnMappings } from '@memo/core/lib/import/index.js';
+import type { ColumnMapping, ImportRecipe } from '@memo/tools/browser';
+import { BUILTIN_RECIPES, inferColumnMappings, applyColumnMappings } from '@memo/tools/browser';
 import { FONT } from '../styles/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

@@ -35,9 +35,9 @@ graph LR
     A[Clone MEMO] --> B[memo init my-device]
     B --> C[Import CSV data]
     C --> D[Add relationships in .sysml]
-    D --> E[memo dev — visual review]
+    D --> E[memo-architect dev — visual review]
     E --> F[memo validate — fix gaps]
-    F --> G[memo build — static report]
+    F --> G[memo-architect build — static report]
 ```
 
 !!! tip "Already have requirements in Excel?"

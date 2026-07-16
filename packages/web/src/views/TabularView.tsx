@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import { FONT } from '../styles/tokens';
-import type { MemoElement } from '@memo/core';
+import type { MemoElement } from '@memo/tools/browser';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

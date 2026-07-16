@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderMarkdownBody, renderDhfDocumentHtml } from '../document-renderer';
 import type { DhfDoc, DhfSettings } from '../../store/model-store';
-import type { MemoModelDTO } from '@memo/core';
+import type { MemoModelDTO } from '@memo/tools/browser';
 
 const settings = (over: Partial<DhfSettings> = {}): DhfSettings => ({
     company: 'Acme Medical', product: 'GPCA Pump', deviceType: 'Infusion pump',

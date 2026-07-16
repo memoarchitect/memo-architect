@@ -10,7 +10,7 @@
 //   - Markdown  → the raw document source
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO } from '@memo/core';
+import type { MemoModelDTO } from '@memo/tools/browser';
 import type { DhfDoc, DhfSettings } from '../store/model-store';
 import { renderDhfDocumentHtml } from './document-renderer';
 import { documentThemeCss } from './document-theme';
@@ -23,7 +23,7 @@ body{margin:0;padding:40px;background:#fff}
 
 // Word page setup: US Letter, 1in margins, numbered footer. Mirrors the
 // engine's docx exporter (kept in sync by hand — importing runtime values
-// from @memo/core would pull node builtins into the browser bundle).
+// from @memo/tools/browser would pull node builtins into the browser bundle).
 const WORD_SECTION_CSS = `
 @page WordSection1{size:8.5in 11.0in;margin:1.0in;mso-header-margin:0.5in;mso-footer-margin:0.5in;mso-footer:f1}
 div.WordSection1{page:WordSection1}

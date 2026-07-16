@@ -12,48 +12,31 @@ pnpm run test
 
 ## Development Workflow
 
-### Working on `@memo/core`
+### Working on `@memo/tools`
 
 ```bash
-cd packages/core
+cd memo-tools
 pnpm run build    # Rebuild after changes
 pnpm run test
 ```
 
-After changing the Langium grammar (`src/grammar/memo-sysml.langium`), the build step runs `langium generate` to regenerate the parser.
+After changing the Langium grammar under `packages/tools/src/grammar`, the
+build step runs `langium generate`.
 
-### Working on `@memo/web`
+### Working on `@memo/architect`
 
 ```bash
-cd examples/infusion-pump
-pnpm memo dev     # Starts Vite + WebSocket server
+pnpm run example:dev
 ```
 
 The web app hot-reloads via Vite. Changes to React components reflect immediately.
-
-### Working on `@memo/cli`
-
-```bash
-cd packages/cli
-pnpm run build    # Rebuild TypeScript
-cd ../../examples/infusion-pump
-pnpm memo validate    # Test the validate command
-pnpm memo dev         # Test the dev server
-cd ../irrigation-pump
-pnpm memo validate    # Compare against the second medical reference model
-```
 
 ## Project Structure
 
 | Directory | Purpose |
 |---|---|
-| `packages/core/src/grammar/` | Langium grammar for SysML v2 |
-| `packages/core/src/model/` | Config, semantic model, builder |
-| `packages/core/src/validator/` | Closure rule engine |
-| `packages/core/src/completeness/` | Completeness tracker |
-| `packages/core/src/__tests__/` | All core tests |
-| `packages/cli/src/commands/` | CLI command implementations |
-| `packages/cli/src/server/` | Dev server, file watcher, config resolver |
+| `memo-tools/memo/` | `@memo/ontology` source |
+| `memo-tools/packages/tools/src/` | Internal `@memo/tools` engine and CLI source |
 | `packages/web/src/views/` | Diagram canvas, layout engine |
 | `packages/web/src/components/` | UI components |
 | `packages/web/src/store/` | Zustand state + WebSocket client |
@@ -70,16 +53,16 @@ pnpm run test
 pnpm run test:coverage
 
 # Run specific package tests
-pnpm --filter @memo/core test
+pnpm --filter @memo/tools test
 ```
 
 ### Test Coverage
 
 | Package | Tests | Status |
 |---|---|---|
-| `@memo/core` | Vitest suite | Parser, ontology parsing, real files, builder, validation |
-| `@memo/cli` | Vitest suite | E2E CLI workflows against live example projects |
-| `@memo/web` | 0 | Pending |
+| `@memo/ontology` | Node test suite | Package shape and published content |
+| `@memo/tools` | Vitest suite | Parser, validation, commands, and E2E workflows |
+| `@memo/architect` | Vitest suite | Workbench behavior and renderer/view logic |
 
 ## Code Style
 

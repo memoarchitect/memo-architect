@@ -1,6 +1,10 @@
 # Architecture Overview
 
-This reference page summarizes the runtime architecture. The canonical product and ontology architecture lives in [../platform.md](../platform.md). Repo boundaries follow the executed three-repo split ([ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md)): content `memo` ◄ engine `memo-tools` (@memo/core + @memo/cli) ◄ web `memo-architect` (@memo/web — this repo), each consumed by the next as a git submodule.
+This reference page summarizes the runtime architecture. The canonical product
+and ontology architecture lives in [../platform.md](../platform.md). Each
+repository publishes one npm package:
+
+`@memo/ontology` ← `@memo/tools` ← `@memo/architect`.
 
 ## System Context
 
@@ -13,7 +17,8 @@ graph LR
     CLI -->|loads once at startup| Ontology[Canonical @memo/ontology]
     CLI -->|loads once at startup| Methodology[@memo/methodology-*]
     CLI -->|parses on change| ProjectSysML
-    CLI -->|serves| Web[MEMO Web App]
+    Architect[memo-architect CLI] -->|composes| CLI
+    Architect -->|serves| Web[MEMO Architect App]
     Web -->|renders| Views[Model, compliance, artifact, and diagram views]
 ```
 
@@ -25,7 +30,7 @@ graph TD
     L1[L1 canonical ontology: @memo/ontology]
     L2[L2 methodology: @memo/methodology-default or custom]
     L3[L3 project: examples/* or user project]
-    Tool[MEMO Architect: @memo/core + @memo/cli + @memo/web]
+    Tool[MEMO Architect: @memo/architect]
 
     L0 --> L1
     L0 --> L2
@@ -49,13 +54,13 @@ The core separation is:
 
 | Package / area | Role |
 |---|---|
-| `@memo/core` | Langium parser, semantic model builder, registries, validation, DTO conversion |
-| `@memo/cli` | `memo dev`, `memo validate`, project bootstrap, file watching, WebSocket server |
-| `@memo/web` | Browser UI, viewpoint filtering, diagrams, dashboards, artifact/compliance surfaces |
+| `@memo/tools` | Langium parser, semantic model builder, registries, validation, DTO conversion, headless `memo` CLI, file watching, and reusable server operations |
+| `@memo/architect` | Browser UI, viewpoint filtering, diagrams, dashboards, artifact/compliance surfaces |
 | `ontology/` | Local development checkout of the canonical ontology and methodology SysML packages |
 | `examples/*` | Project instances that pin a methodology and contain concrete `.sysml` model files |
 
-`@memo/core` has no compiled dependency on a specific domain package. Domain knowledge enters at runtime from parsed ontology and methodology SysML.
+`@memo/tools` depends on `@memo/ontology` and exposes no commands that require
+Architect. `@memo/architect` depends on both lower packages.
 
 ## UI Mapping
 

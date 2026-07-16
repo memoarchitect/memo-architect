@@ -26,11 +26,11 @@ memo init [name] [options]
 memo init my-ventilator --template medical
 ```
 
-### `memo dev`
-Start the interactive development server with live model reload and a built-in diagram viewer.
+### `memo-architect dev`
+Start Architect with live model reload.
 
 ```bash
-memo dev [options]
+memo-architect dev [options]
 ```
 
 | Option | Default | Description |
@@ -50,18 +50,28 @@ memo validate [dir] [options]
 | `--format <fmt>` | `text` | Output format: `text`, `junit`, `json` |
 | `-o, --output <file>` | — | Write validation results to a file |
 
-### `memo build`
-Generate a self-contained, static HTML site from your model. Ideal for air-gapped design reviews.
+### `memo-architect build`
+Generate a static Architect viewer from your model.
 
 ```bash
-memo build [options]
+memo-architect build [options]
 ```
 
 | Option | Default | Description |
 |---|---|---|
 | `-o, --output <dir>` | `dist` | Target directory for the build |
-| `--single-file` | — | Inline all assets into a single `index.html` file |
-| `--kpar` | — | Also produce a `.kpar` (Knowledge Package Archive) for distribution |
+| `--standalone` | — | Inline entry JavaScript and CSS into `index.html` |
+
+### `memo pack`
+Create a Knowledge Package Archive without requiring Architect.
+
+```bash
+memo pack [options]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `-o, --output <file>` | project-derived | Output `.kpar` path |
 
 ---
 

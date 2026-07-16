@@ -368,7 +368,7 @@ export function OntologyBrowserTab() {
                 <div className="text-center" style={{ color: COLOR.faint }}>
                     <div className="text-xl mb-2">&#9673;</div>
                     <div style={{ fontSize: FONT.xs }}>No ontology packages</div>
-                    <div style={{ fontSize: FONT.xs, opacity: 0.7, marginTop: '4px' }}>Start memo dev to load</div>
+                    <div style={{ fontSize: FONT.xs, opacity: 0.7, marginTop: '4px' }}>Start memo-architect dev to load</div>
                 </div>
             </div>
         );

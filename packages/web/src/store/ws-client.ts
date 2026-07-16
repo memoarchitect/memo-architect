@@ -3,15 +3,15 @@
 // Connects to the CLI dev server WebSocket and dispatches messages
 // to the Zustand store. Auto-reconnects on disconnect.
 //
-// For static builds (memo build), model data is embedded in the HTML as
+// For static builds (memo-architect build), model data is embedded in the HTML as
 // window.__MEMO_DATA__. If present, we load from that instead of WebSocket.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo } from '@memo/core';
+import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo } from '@memo/tools/browser';
 
-/** Embedded data injected by `memo build` */
+/** Embedded data injected by `memo-architect build` */
 interface EmbeddedData {
     model: any;
     validation: any;

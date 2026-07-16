@@ -19,11 +19,11 @@ pnpm install
 pnpm run build
 ```
 
-The build runs the repositories in dependency order:
+The build runs the three repository-root packages in dependency order:
 
-1. `@memo/ontology` and methodology/profile data from `memo-tools/memo`
-2. `@memo/core` and `@memo/cli` from `memo-tools`
-3. `@memo/web` from Memo Architect
+1. `@memo/ontology` from `memo-tools/memo`
+2. `@memo/tools` from `memo-tools`
+3. `@memo/architect` from Memo Architect
 
 The repositories share a `MAJOR.MINOR` compatibility line. Any `0.4.x` releases
 are intended to work together; patch versions can advance independently.
@@ -45,16 +45,22 @@ pnpm run example:dev
 
 ## Work in any folder
 
-The installed `memo` command is independent of the source checkout. After
-installing the packaged Memo CLI and web application, initialize a product model
-in its own directory:
+The installed commands are independent of a source checkout. Install from npm:
+
+```bash
+npm install @memo/tools
+npm install @memo/architect
+```
+
+`@memo/tools` installs `@memo/ontology`; `@memo/architect` installs both lower
+layers. Then initialize a product model in its own directory:
 
 ```bash
 mkdir my-device
 cd my-device
 memo init .
 memo validate .
-memo dev
+memo-architect dev
 ```
 
 Product files remain in `my-device`; MEMO implementation code remains in the

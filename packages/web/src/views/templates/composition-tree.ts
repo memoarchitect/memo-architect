@@ -7,7 +7,7 @@
 // Interconnection view derives its hierarchy from its own selection.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoRelationship } from '@memo/core';
+import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
 
 /**
  * Relationship types that express whole→part composition.

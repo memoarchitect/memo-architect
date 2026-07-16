@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/core';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';

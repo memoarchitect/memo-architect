@@ -1,7 +1,7 @@
 // ─── Composition tree tests (KK-2/KK-3 template structure logic) ────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoRelationship } from '@memo/core';
+import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
 import {
     buildCompositionTree, collectTreeIds, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree,

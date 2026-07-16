@@ -45,11 +45,11 @@ interaction; it does not maintain a second engineering model.
 ## Repository layout
 
 ```text
-packages/web/                  @memo/web — React workbench
-memo-tools/                    submodule → memo-tools
-  packages/core/              reusable non-UI engine libraries
-  packages/cli/               thin CLI and local application server
-  memo/                       nested submodule → portable ontology
+package.json                   @memo/architect — the sole package in this repo
+packages/web/                  internal React workbench source
+src/                           Architect CLI and composition commands
+memo-tools/                    submodule → @memo/tools
+  memo/                       nested submodule → @memo/ontology
 docs/                          public user, developer, architecture, and design docs
 ```
 
@@ -73,11 +73,18 @@ pnpm run example:dev
 # http://localhost:3000
 ```
 
-Run any CLI command:
+Run headless Tools commands:
 
 ```bash
 pnpm memo -- validate
 pnpm memo -- export json
+```
+
+Run Architect commands:
+
+```bash
+pnpm architect -- dev
+pnpm architect -- build --output dist
 ```
 
 ## Documentation

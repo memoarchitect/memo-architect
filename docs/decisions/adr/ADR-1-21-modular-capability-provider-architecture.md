@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-07-13
 **Owners:** Web and platform architecture
-**Scope:** `@memo/web` application boundaries, replaceable technologies, and user-selectable providers
+**Scope:** `@memo/architect` application boundaries, replaceable technologies, and user-selectable providers
 **Related:** [ADR-1-20 maxGraph renderer migration](ADR-1-20-maxgraph-diagram-renderer.md)
 
 ---
@@ -133,7 +133,7 @@ about. MEMO should instead use:
 
 ### Useful foundations
 
-- The semantic model is already outside the web renderer in `@memo/core`.
+- The semantic model is already outside the web renderer in `@memo/tools`.
 - Kind, relationship, rule, and plugin registries establish a familiar registry
   pattern.
 - The existing plugin system supports export, analysis, validation, and
@@ -146,7 +146,7 @@ about. MEMO should instead use:
 
 ### Gaps to address
 
-- `@memo/web` is organized mainly by React component type, not dependency
+- `@memo/architect` is organized mainly by React component type, not dependency
   direction. Views import stores, WebSocket functions, vendor types, layout
   algorithms, and domain operations directly.
 - `DiagramCanvas.tsx` combines application use cases, layout orchestration,
@@ -266,7 +266,7 @@ packages/diagram-contracts/       @memo/diagram-contracts
 packages/diagram-core/            @memo/diagram-core
 packages/provider-layout-elk/     @memo/provider-layout-elk
 packages/provider-renderer-maxgraph/ @memo/provider-renderer-maxgraph
-packages/web/                     @memo/web shell and features
+packages/web/                     @memo/architect shell and features
 ```
 
 Do not start with many packages. Physical extraction follows proven logical

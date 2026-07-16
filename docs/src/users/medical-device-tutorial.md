@@ -241,7 +241,7 @@ pnpm memo import csv-rel data/traceability.csv \
 ### Start the Dev Server
 
 ```bash
-pnpm memo dev --port 3000
+pnpm architect -- dev --port 3000
 ```
 
 Open `http://localhost:3000` in your browser. You'll see:
@@ -364,7 +364,7 @@ Run validation again — watch the completeness climb toward 100%.
 
 ```mermaid
 graph LR
-    A[Edit .sysml files] --> B[memo dev auto-reloads]
+    A[Edit .sysml files] --> B[memo-architect dev auto-reloads]
     B --> C[Check completeness bar]
     C --> D{Gaps?}
     D -->|Yes| E[Add relationships]
@@ -480,7 +480,7 @@ my-device/
 
 1. Ensure all closure rules pass: `pnpm memo validate`
 2. Switch to each relevant viewpoint and export diagrams
-3. Use `pnpm memo build -o dist` for a static HTML report
+3. Use `pnpm architect -- build -o dist` for a static HTML report
 4. The completeness percentage provides objective evidence of traceability coverage
 
 ### "Multiple engineers working on the same model"
@@ -501,7 +501,7 @@ MEMO models are **plain text SysML files** stored in Git:
 | Command | What It Does |
 |---------|-------------|
 | `pnpm memo init <name>` | Scaffold a new project |
-| `pnpm memo dev --port 3000` | Launch dev server with live reload |
+| `pnpm architect -- dev --port 3000` | Launch dev server with live reload |
 | `pnpm memo validate` | Check all closure rules |
 | `pnpm memo import csv <file>` | Import elements from CSV |
 | `pnpm memo import csv-rel <file>` | Import relationships from CSV |
@@ -510,7 +510,7 @@ MEMO models are **plain text SysML files** stored in Git:
 | `pnpm memo ontology show` | List all available element kinds |
 | `pnpm memo export dot -o <file>` | Export as Graphviz DOT |
 | `pnpm memo export json -o <file>` | Export as JSON |
-| `pnpm memo build -o <dir>` | Build static HTML report |
+| `pnpm architect -- build -o <dir>` | Build static HTML report |
 
 ### Key Relationship Types
 

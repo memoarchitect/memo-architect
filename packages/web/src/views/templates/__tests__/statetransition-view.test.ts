@@ -1,7 +1,7 @@
 // ─── State Transition template tests (KK-5 structure logic) ─────────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoModelDTO } from '@memo/core';
+import type { MemoElement, MemoModelDTO } from '@memo/tools/browser';
 import {
     classifyStateTransitionElements, resolveTransitions, transitionLabel,
     isTransitionElement, isStateElement,

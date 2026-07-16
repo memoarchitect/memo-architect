@@ -1,4 +1,4 @@
 packages:
-  - "packages/*"
-  - "memo-tools/packages/*"
-  - "memo-tools/memo/packages/*"
+  - "."
+  - "memo-tools"
+  - "memo-tools/memo"

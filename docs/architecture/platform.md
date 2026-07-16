@@ -354,7 +354,7 @@ memo methodology publish
 ```bash
 memo init --methodology @memo/methodology-default
 memo init --methodology @memo/methodology-gpca
-memo dev
+memo-architect dev
 memo validate    # ontology rules + methodology rules + project rules
 memo export dhf  # uses methodology.includedArtifactKinds
 ```
@@ -420,7 +420,11 @@ memo-architect/                     (L3 tool UI)
   examples/full-medical-device/
 ```
 
-Dependency direction: `memo-sysmlv2 ◄─ memo-tools ◄─ memo-architect`. `web` does **not** build-depend on `cli` — only on `@memo/core` types; the CLI↔web link is the WebSocket protocol at runtime (kept a versioned contract). Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
+Dependency direction: `@memo/ontology` ← `@memo/tools` ←
+`@memo/architect`, with Architect also declaring Ontology directly. Tools does
+not depend on Architect and exposes no commands that require it. Published
+consumers install versioned npm packages; repository nesting is only a
+development workflow.
 
 Execution: keystone Epic EE (rules → native constraints) gates the first cut; Epic J prepares boundaries; Epics FF (memo-sysmlv2) → GG (memo-cli) → HH (memo-architect) execute the cuts.
 

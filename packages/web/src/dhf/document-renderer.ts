@@ -16,7 +16,7 @@
 // output survives. Styling lives in document-theme.ts, not here.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO } from '@memo/core';
+import type { MemoModelDTO } from '@memo/tools/browser';
 import type { DhfSettings, DhfDoc } from '../store/model-store';
 
 export interface RenderOptions {

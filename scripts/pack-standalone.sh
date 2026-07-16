@@ -1,28 +1,17 @@
 #!/usr/bin/env bash
 # ─── pack-standalone.sh ───────────────────────────────────────────────────────
 #
-# Builds the meMO stack and packs it into installable npm tarballs so a user
-# can run `memo dev` in their own model folder without the memo-architect
-# source tree. Output: dist-standalone/
-#
-#   memo-core-<v>.tgz      @memo/core      — parser/engine       (memo-tools)
-#   memo-ontology-<v>.tgz  @memo/ontology  — canonical ontology  (memo)
-#   memo-cli-<v>.tgz       @memo/cli       — the `memo` CLI      (memo-tools)
-#   memo-web-<v>.tgz       @memo/web       — prebuilt web app dist/
-#
-# Install (from the user's machine):
-#   npm install -g ./memo-core-*.tgz ./memo-ontology-*.tgz ./memo-cli-*.tgz ./memo-web-*.tgz
-#   mkdir my-device && cd my-device && memo init . && memo dev
-#
-# The CLI resolves the web app from the global install (or MEMO_WEB_ROOT) and
-# serves the prebuilt dist/ statically — Vite is not needed at runtime.
+# Builds and packs the three independently distributable npm packages:
+# @memo/ontology, @memo/tools, and @memo/architect.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$ROOT/dist-standalone"
 
-echo "▸ Building all packages…"
+echo "▸ Building the three-package release"
+(cd "$ROOT/memo-tools/memo" && corepack pnpm run test)
+(cd "$ROOT/memo-tools" && corepack pnpm run build)
 (cd "$ROOT" && corepack pnpm run build)
 
 rm -rf "$OUT"
@@ -34,41 +23,50 @@ pack() {
     (cd "$dir" && corepack pnpm pack --pack-destination "$OUT" >/dev/null)
 }
 
-pack "$ROOT/memo-tools/packages/core"
-pack "$ROOT/memo-tools/memo/packages/ontology"
-pack "$ROOT/memo-tools/packages/cli"
-pack "$ROOT/packages/web"
+pack "$ROOT/memo-tools/memo"
+pack "$ROOT/memo-tools"
+pack "$ROOT"
 
 cat > "$OUT/README.md" <<'EOF'
-# meMO standalone distribution
+# MEMO npm distribution
 
-Install the stack globally (order matters — dependencies first):
-
-```bash
-npm install -g ./memo-core-*.tgz ./memo-ontology-*.tgz ./memo-cli-*.tgz ./memo-web-*.tgz
-```
-
-Then work in any folder of your own:
+Each tarball is independently publishable. Install only the level you need:
 
 ```bash
-mkdir my-device && cd my-device
-memo init .        # scaffold model/ + memo.config.yaml
-memo dev           # opens the web app at http://127.0.0.1:3000
+npm install @memo/ontology
+npm install @memo/tools
+npm install @memo/architect
 ```
 
-The `memo` CLI carries the engine (`@memo/core`) and the canonical ontology
-(`@memo/ontology`) as regular package dependencies; the web app is resolved
-from the installed `@memo/web` package (prebuilt `dist/`, served statically).
-
-To point the CLI at a different web build, set `MEMO_WEB_ROOT`:
+For these local tarballs:
 
 ```bash
-MEMO_WEB_ROOT=/path/to/memo-architect/packages/web memo dev
+npm install ./memo-ontology-*.tgz ./memo-tools-*.tgz ./memo-architect-*.tgz
 ```
 
-Diagram rendering engine can be switched per session with `?renderer=maxgraph`
-or persistently via the on-canvas switcher (feature flag, defaults to ReactFlow).
+Dependency direction is:
+
+`@memo/ontology` ← `@memo/tools` ← `@memo/architect`
 EOF
 
-echo "✓ Standalone tarballs in $OUT"
+echo "▸ Verifying a clean npm consumer without a source checkout"
+VERIFY="$(mktemp -d)"
+trap 'rm -rf "$VERIFY"' EXIT
+(cd "$VERIFY" && npm init -y >/dev/null && npm install "$OUT"/*.tgz >/dev/null)
+(cd "$VERIFY" && ./node_modules/.bin/memo --help >/dev/null)
+(cd "$VERIFY" && ./node_modules/.bin/memo-architect --help >/dev/null)
+(cd "$VERIFY" && ./node_modules/.bin/memo init device --archetype blank >/dev/null)
+(cd "$VERIFY/device" && ../node_modules/.bin/memo validate . >/dev/null)
+(cd "$VERIFY/device" && ../node_modules/.bin/memo pack --output device.kpar >/dev/null)
+(cd "$VERIFY/device" && ../node_modules/.bin/memo-architect build --output viewer >/dev/null)
+test -f "$VERIFY/node_modules/@memo/ontology/memo.manifest.yaml"
+test -f "$VERIFY/node_modules/@memo/tools/packages/tools/lib/index.js"
+test -f "$VERIFY/node_modules/@memo/architect/dist/index.html"
+test -f "$VERIFY/device/device.kpar"
+test -f "$VERIFY/device/viewer/index.html"
+
+COUNT="$(find "$OUT" -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')"
+test "$COUNT" = "3"
+
+echo "✓ Three verified npm tarballs in $OUT"
 ls -lh "$OUT"

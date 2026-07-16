@@ -1,5 +1,5 @@
 import { useModelStore, getDiagram } from '../store/model-store';
-import type { ViewKind } from '@memo/core';
+import type { ViewKind } from '@memo/tools/browser';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { useNavigate } from 'react-router-dom';
 

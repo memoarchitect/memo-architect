@@ -100,14 +100,14 @@ Sent after completeness computation.
 
 ### `app:restart-required`
 
-Sent when the ontology source or selection changes on disk. The server **does not reload registries** — the client must restart the dev server (`Ctrl+C`, then `memo dev`) to apply changes.
+Sent when the ontology source or selection changes on disk. The server **does not reload registries** — the client must restart the dev server (`Ctrl+C`, then `memo-architect dev`) to apply changes.
 
 ```json
 {
     "type": "app:restart-required",
     "reason": "ontology-source-changed",
     "changedFile": "/path/to/ontology/architecture/safety/hazard.sysml",
-    "instruction": "Stop dev server (Ctrl+C) and run `memo dev` again to apply ontology changes."
+    "instruction": "Stop dev server (Ctrl+C) and run `memo-architect dev` again to apply ontology changes."
 }
 ```
 

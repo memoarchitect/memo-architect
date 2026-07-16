@@ -225,7 +225,7 @@ pnpm memo validate
 
 ## The Completeness Bar (Web UI)
 
-When running `memo dev`, the web UI shows a **completeness bar** at the bottom
+When running `memo-architect dev`, the web UI shows a **completeness bar** at the bottom
 of the screen. This visualizes the same closure rules in real time:
 
 - **Green segments** — rules fully satisfied

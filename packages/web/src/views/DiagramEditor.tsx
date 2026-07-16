@@ -13,7 +13,7 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useModelStore, getDiagram, getElementsByLayer } from '../store/model-store';
 import { loadDiagramSource, saveDiagramSource, sendDiagramParse } from '../store/ws-client';
-import type { DiagramDTO, MemoElement } from '@memo/core';
+import type { DiagramDTO, MemoElement } from '@memo/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 import { DiagramSurface } from './DiagramSurface';
@@ -281,7 +281,7 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                     style={{ background: '#F9F9F8', color: COLOR.faint, borderTop: `1px solid ${COLOR.border}` }}
                 >
                     {diagram.sourceFile && window.__MEMO_DATA__
-                        ? 'Static build — run memo dev to edit the SysML source'
+                        ? 'Static build — run memo-architect dev to edit the SysML source'
                         : diagram.sourceFile
                             ? 'The SysML source could not be loaded'
                             : 'Generated model view — no editable SysML source file'}

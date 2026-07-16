@@ -45,7 +45,7 @@ The `:>` operator specializes from entity kinds defined in the ontology (e.g., `
 
 ```bash
 cd my-device
-memo dev
+memo-architect dev
 ```
 
 Your browser opens at `http://localhost:3000` showing:

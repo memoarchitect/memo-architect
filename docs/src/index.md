@@ -34,7 +34,7 @@ package GPCA_Pump {
 **2. Run the dev server:**
 
 ```bash
-memo dev
+memo-architect dev
 ```
 
 **3. See the live diagram** at `http://localhost:3000` with validation, completeness, and viewpoint filtering.

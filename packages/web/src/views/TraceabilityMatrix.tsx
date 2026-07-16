@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
-import type { MemoElement, MemoRelationship } from '@memo/core';
+import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
 

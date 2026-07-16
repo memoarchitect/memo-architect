@@ -321,7 +321,7 @@ export function App() {
                                 background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',
                                 fontFamily: 'monospace', fontSize: '13px',
                             }}>
-                                pnpm memo dev --port 3000
+                                pnpm architect -- dev --port 3000
                             </code>
                             <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or try the example project:</p>
                             <code style={{

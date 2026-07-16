@@ -1,27 +1,75 @@
 {
-  "name": "memo",
+  "name": "@memo/architect",
   "version": "0.4.4",
-  "private": true,
-  "description": "MEMO Architect \u2014 web workbench for medical device systems engineering (webapp of the meMO stack)",
+  "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
+  "type": "module",
+  "bin": {
+    "memo-architect": "./lib/bin/memo-architect.js"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./dist": "./dist/index.html"
+  },
+  "files": [
+    "dist/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "pnpm run check:cache && turbo build",
+    "build": "pnpm run check:cache && pnpm --filter @memo/tools build && pnpm run build:client && pnpm run build:cli",
+    "build:client": "vite build --config packages/web/vite.config.ts",
+    "build:cli": "tsc -p tsconfig.architect.json",
     "check:cache": "bash scripts/check-no-ontology-cache.sh",
-    "dev": "turbo dev",
-    "test": "turbo test",
-    "test:coverage": "turbo test:coverage",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check",
-    "clean": "turbo clean",
+    "dev": "vite --config packages/web/vite.config.ts",
+    "test": "cd packages/web && vitest run",
+    "test:coverage": "cd packages/web && vitest run --coverage",
+    "type-check": "pnpm --filter @memo/tools build && tsc -p packages/web/tsconfig.json --noEmit && tsc -p tsconfig.architect.json --noEmit",
+    "clean": "rm -rf dist lib",
     "docs:serve": "pdm run docs-serve",
     "docs:build": "pdm run docs-build",
-    "memo": "node memo-tools/packages/cli/lib/bin/memo.js",
-    "example:dev": "cd memo-tools/memo/src/examples/gpca-pump && node ../../../../packages/cli/lib/bin/memo.js dev --port 3000",
-    "setup": "pnpm install && pnpm run build && pdm install",
-    "preinstall": "npx only-allow pnpm"
+    "architect": "node lib/bin/memo-architect.js",
+    "example:dev": "cd memo-tools/memo/examples/gpca-pump && node ../../../../lib/bin/memo-architect.js dev --port 3000",
+    "setup": "pnpm install && pnpm run build && pdm install"
+  },
+  "dependencies": {
+    "@memo/tools": "workspace:*",
+    "@memo/ontology": "workspace:*",
+    "@dagrejs/dagre": "^2.0.0",
+    "@maxgraph/core": "^0.24.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@xyflow/react": "^12.3.0",
+    "commander": "^12.1.0",
+    "elkjs": "^0.9.3",
+    "monaco-editor": "^0.55.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.13.2",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0",
     "turbo": "^2.3.0",
-    "typescript": "~5.5.0"
+    "typescript": "~5.5.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoarchitect/memo-architect.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {

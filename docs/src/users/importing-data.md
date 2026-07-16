@@ -228,7 +228,7 @@ pnpm memo import csv-rel relationships.csv -o model/traceability.sysml
 After importing, run the dev server to visually inspect:
 
 ```bash
-pnpm memo dev --port 3000
+pnpm architect -- dev --port 3000
 ```
 
 Then validate for completeness:

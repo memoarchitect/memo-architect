@@ -38,7 +38,7 @@ Use viewpoints as review and navigation slices that cut across those homes.
 
 ## Using Viewpoints in the Web UI
 
-1. Launch the dev server: `pnpm memo dev --port 3000`
+1. Launch the dev server: `pnpm architect -- dev --port 3000`
 2. Open the **Viewpoint Browser** (left sidebar)
 3. Click a viewpoint to filter the diagram
 4. Click a diagram within the viewpoint to see a specific view
@@ -133,7 +133,7 @@ dot -Tsvg model.dot -o model.svg
 ### Static HTML
 
 ```bash
-pnpm memo build -o dist
+pnpm architect -- build -o dist
 ```
 
 This generates a self-contained HTML file with the interactive viewer

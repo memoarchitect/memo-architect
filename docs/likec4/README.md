@@ -24,9 +24,9 @@ renders a "zoom in" button automatically.
 |-------|------|------------|-------------|
 | L0 | `index` | (entry point) | Actors + MEMO platform + external systems |
 | L1 | `view of memo` | `memo` | Container decomposition (core / cli / web / ont / projectFs / docsFs) |
-| L2a | `view of memo.core` | `memo.core` | `@memo/core` components — parser, builder, rule engine, DHF, LLM |
-| L2b | `view of memo.cli` | `memo.cli` | `@memo/cli` components — dev server, file watcher, persistor, commands |
-| L2c | `view of memo.web` | `memo.web` | `@memo/web` components — model store, ws client, canvas, dashboards |
+| L2a | `view of memo.core` | `memo.core` | `@memo/tools` components — parser, builder, rule engine, DHF, LLM |
+| L2b | `view of memo.cli` | `memo.cli` | `@memo/tools` components — dev server, file watcher, persistor, commands |
+| L2c | `view of memo.web` | `memo.web` | `@memo/architect` components — model store, ws client, canvas, dashboards |
 | L2d | `view of memo.ont` | `memo.ont` | Ontology backbone: `@memo/ontology` + `medical-modeling-profile` |
 | L3 | `view of memo.core.wsProtocol` | `wsProtocol` | All WebSocket message types (Server→Client and Client→Server) |
 | L3 | `view of memo.cli.persistor` | `persistor` | Element edit round-trip — browser → server → .sysml → re-parse → broadcast |
@@ -35,7 +35,7 @@ renders a "zoom in" button automatically.
 
 ```
 .sysml files (chokidar watch)
-  → Langium parser (@memo/core)          packages/core/src/language/
+  → Langium parser (@memo/tools)          packages/core/src/language/
   → Semantic model builder               packages/core/src/model/builder.ts
   → Closure rule engine (109 rules)      packages/core/src/validator/rule-engine.ts
   → Completeness tracker (per-layer %)   packages/core/src/completeness/tracker.ts
@@ -45,7 +45,7 @@ renders a "zoom in" button automatically.
 
 ## Key Design Decisions
 
-1. **Shared kernel** — `@memo/core` is a zero-runtime-dependency TypeScript library
+1. **Shared kernel** — `@memo/tools` is a zero-runtime-dependency TypeScript library
    consumed by both the Node.js CLI and the browser React app. This ensures
    model types, protocol messages, and business logic are never duplicated.
 
