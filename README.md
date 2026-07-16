@@ -89,7 +89,12 @@ pnpm architect -- build --output dist
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
+- [Start here](docs/src/index.md)
+- [Layers and their questions](docs/src/users/layers.md)
+- [Choosing elements](docs/src/users/elements.md)
+- [Connecting elements](docs/src/users/relationships.md)
+- [Worked GPCA example](docs/src/users/gpca-example.md)
+- [Documentation source index](docs/README.md)
 - [Platform architecture](docs/architecture/platform.md)
 - [SysML v2 authoring rules](docs/design/sysmlv2-rulebook.md)
 - [Architecture decisions](docs/decisions/index.md)

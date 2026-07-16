@@ -66,26 +66,32 @@ plugins:
   - search
 
 nav:
-  - Home: index.md
-  - Users:
+  - Start Here:
+      - Welcome: index.md
+      - Choose Your MEMO Layer: users/choose-layer.md
       - Installation: users/installation.md
-      - Running MEMO: users/running.md
+      - Running a Project: users/running.md
+      - First Workbench Session: users/first-session.md
+  - Learn the Model:
+      - Layers and Their Questions: users/layers.md
+      - Choosing Elements: users/elements.md
+      - Connecting Elements: users/relationships.md
+      - Worked GPCA Example: users/gpca-example.md
+  - Use the Workbench:
+      - Workbench UI: users/ui-usage.md
+      - Viewpoints and Diagrams: users/viewpoints-diagrams.md
+      - Validation and Closure: users/validation.md
+      - Analysis Tools: users/analysis-tools.md
+      - DHF Workbench: users/dhf-workbench.md
+      - Intelligence and AI: users/ai-features.md
+  - Practical Guides:
+      - Guide Map: users/guides-index.md
+      - Start a New Project: users/new-project.md
+      - Model Your Device: users/modeling-guide.md
+      - Import Existing Data: users/importing-data.md
+      - End-to-End Tutorial: users/medical-device-tutorial.md
       - Command Line Usage: users/cli-usage.md
-      - Workbench UI Usage: users/ui-usage.md
-      - Workbench Features:
-          - DHF Workbench: users/dhf-workbench.md
-          - Analysis Tools: users/analysis-tools.md
-          - Intelligence & AI: users/ai-features.md
-      - Guides:
-          - Overview: users/guides-index.md
-          - Starting a New Project: users/new-project.md
-          - Modeling Your Device: users/modeling-guide.md
-          - Importing Existing Data: users/importing-data.md
-          - Validation & Closure Rules: users/validation.md
-          - Viewpoints & Diagrams: users/viewpoints-diagrams.md
-      - Tutorials:
-          - Medical Device Quick Start: users/medical-device-tutorial.md
-  - Developers:
+  - How It Works:
       - Codebase Overview: developers/codebase-overview.md
       - SysIDE Configuration: developers/syside-configuration.md
       - Configuration:
