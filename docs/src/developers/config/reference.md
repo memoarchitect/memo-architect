@@ -128,22 +128,11 @@ viewpoints:
 
 Elements are visible if they match `visibleKinds` OR belong to a `visibleLayers` layer. Relationships are visible only if both endpoints are visible.
 
-## `workflows`
+## Methodology workflows
 
-Legacy YAML workflow examples are retained here only to explain historical config shape. New workflow definitions belong in methodology SysML packages.
-
-```yaml
-workflows:
-  - id: risk-analysis
-    label: Risk Analysis Workflow
-    steps:
-      - id: identify-hazards
-        label: Identify Hazards
-        kinds: [Hazard]
-      - id: add-controls
-        label: Add Risk Controls
-        kinds: [RiskControl]
-```
+Methodology SysML packages define workflow steps, review gates, and scope.
+Project configuration selects the applicable methodology package; workflow
+content is not defined as an inline YAML list.
 
 ## `firstRun`
 
