@@ -17,7 +17,7 @@ pnpm run build
 pnpm run test
 ```
 
-Use Node.js 22 or later and pnpm 9 or later. The repository's `.nvmrc`
+Use Node.js 26 or later and pnpm 9 or later. The repository's `.nvmrc`
 selects the minimum supported Node.js major.
 
 ## Where a change belongs

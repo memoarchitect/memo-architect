@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 22 or later
+- Node.js 26 or later
 - pnpm 9.15 or later
 - Python 3.12 and PDM only when building the documentation site
 
