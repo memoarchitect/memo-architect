@@ -23,4 +23,5 @@ Use [../architecture/platform.md](../architecture/platform.md) for canonical arc
 
 - Architecture docs explain product structure, package boundaries, and repository shape.
 - Design docs explain concrete implementation behavior, authoring rules, protocols, and runtime flows.
-- If a design rule becomes a durable product decision, add or supersede an ADR and fold the consequence into architecture.
+- If a design rule becomes a durable product decision, record it in an ADR and
+  update architecture documentation to state the accepted current behavior.

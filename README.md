@@ -15,8 +15,8 @@
 
 ---
 
-> **Status: work in progress.** APIs, views, and model semantics may change
-> before the first stable release.
+> **Status: published preview.** `@memoarchitect/architect` is available on npm.
+> APIs, views, and model semantics remain pre-stable and may change before 1.0.
 
 ## Adopt only what you need
 
@@ -33,6 +33,15 @@ may advance independently for fixes and additive changes.
 Architect reuses the parser, semantic model, validation, document, and project
 operations from Memo Tools. The React application provides presentation and user
 interaction; it does not maintain a second engineering model.
+
+## Current repository relationship
+
+- Architect pins exact npm releases of `@memoarchitect/tools` and
+  `@memoarchitect/ontology`.
+- This repository contains no Tools or Ontology git submodules.
+- The private `memo-meta` workspace checks out all three product repositories as
+  siblings and applies meta-only pnpm overrides for coordinated development.
+- A standalone Architect clone builds and tests entirely from npm dependencies.
 
 ## Capabilities
 

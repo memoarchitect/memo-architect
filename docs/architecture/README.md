@@ -16,11 +16,11 @@ Canonical platform architecture and reference material live here.
 | Doc | Role |
 |---|---|
 | [reference/overview.md](reference/overview.md) | System context and package architecture |
-| [reference/monorepo.md](reference/monorepo.md) | Turborepo and pnpm layout |
 
 ## Conventions
 
 - Keep [platform.md](platform.md) as the canonical architecture doc.
-- Add or supersede ADRs in [../decisions/adr/](../decisions/adr/) for durable decisions.
+- Record durable decisions in [../decisions/adr/](../decisions/adr/) and keep the
+  canonical docs focused on the accepted current state.
 - Put concrete runtime behavior, protocols, and authoring rules in [../design/](../design/).
 - Do not create new architecture plan files unless they are replacing a specific canonical doc.

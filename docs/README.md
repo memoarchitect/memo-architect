@@ -20,3 +20,9 @@ integration with Memo Tools and the MEMO ontology.
 - Extension and contribution interfaces are documented under `src/developers/`.
 - Private roadmaps, internal reviews, handoffs, generated planning baselines, and
   release coordination belong in the private `memo-meta` repository.
+
+## Current package model
+
+Architect is a standalone npm package with exact dependencies on Memo Tools and
+the MEMO ontology. Cross-repository development happens in `memo-meta`, where the
+three repositories are sibling submodules linked by meta-only pnpm overrides.

@@ -35,12 +35,11 @@ renders a "zoom in" button automatically.
 
 ```
 .sysml files (chokidar watch)
-  → Langium parser (@memoarchitect/tools)          packages/core/src/language/
-  → Semantic model builder               packages/core/src/model/builder.ts
-  → Closure rule engine (109 rules)      packages/core/src/validator/rule-engine.ts
-  → Completeness tracker (per-layer %)   packages/core/src/completeness/tracker.ts
-  → WebSocket broadcast                  packages/cli/src/server/dev-server.ts
-  → React web app (Zustand model-store)  packages/web/src/store/model-store.ts
+  → Langium parser                       memo-tools/packages/tools/src/language/
+  → Semantic model builder               memo-tools/packages/tools/src/model/
+  → Validation and analysis              memo-tools/packages/tools/src/validator/
+  → WebSocket application boundary       memo-tools/packages/tools/src/server/
+  → React workbench                      memo-architect/packages/web/src/
 ```
 
 ## Key Design Decisions
@@ -57,9 +56,10 @@ renders a "zoom in" button automatically.
    authoritative representation. The browser never holds state that isn't
    reflected back to disk; the file watcher closes the loop.
 
-4. **Ontology-as-package** — domain knowledge (kinds, relationships, closure rules,
-   viewpoints) lives in independent npm packages. Device projects compose them
-   by listing `ontologies:` in `memo.config.yaml`.
+4. **Ontology as an exact dependency** — domain knowledge, relationships,
+   constraints, and viewpoints live in `@memoarchitect/ontology`. Tools and
+   Architect pin exact npm releases; `memo-meta` substitutes sibling checkouts
+   only during coordinated development.
 
 5. **Plugin extensibility** — the plugin system allows custom generators and
    analysis scripts without forking the core platform.
