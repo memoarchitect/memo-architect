@@ -13,9 +13,10 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-22](adr/ADR-1-22-npm-dependencies-meta-workspace.md) | Accepted | Exact npm dependencies in product repos; sibling workspace links in `memo-meta` |
 | [ADR-1-19](adr/ADR-1-19-geometry-view-deferred.md) | Accepted | Geometry view kind deferred — no renderer until the ontology carries geometric data; kind stays in the taxonomy, reachable only by explicit declaration, rendered as a deferred placeholder |
 | [ADR-1-18](adr/ADR-1-18-kerml-expression-subset.md) | Accepted | Closed KerML boolean expression subset (navigation, collection ops, comparison/boolean/arithmetic, literals) for native `require/assert constraint { … }` bodies; grammar runs ahead of evaluator (EE-2 fills deferred forms) |
-| [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Three-repo split `memo-sysmlv2` (pure content) / `memo-cli` (engine) / `memo-architect` (web); supersedes the four-repo layout in platform.md §10 |
+| [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Three-repo split remains; nested-submodule mechanics are superseded by ADR-1-22 |
 | [ADR-1-16](adr/ADR-1-16-view-presentation-syntax-fallbacks.md) | Accepted | View/template files use simple `view def`, bare imports, and repeated scalar `presentationKind` assignments until grammar support expands |
 | [ADR-1-15](adr/ADR-1-15-methodology-scope-explicit-lists.md) | Accepted | Methodology scope uses explicit enumerated entries; current grammar does not support set literals or `A - B` set difference |
 | [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memoarchitect/ext-*` packages under `memo::ontology::ext::*` |

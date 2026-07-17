@@ -16,7 +16,7 @@ You will:
 ## 1. Launch the example
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 corepack enable
 pnpm install
@@ -41,7 +41,9 @@ Use incoming and outgoing relationships to move between them.
 
 ## 3. Read the source
 
-The source is under `memo-tools/memo/examples/gpca-pump/model`:
+In a `memo-meta` development checkout, the editable source is under
+`memo/examples/gpca-pump/model`. Standalone Architect runs the same example
+from its installed `@memoarchitect/ontology` dependency.
 
 - `catalog/gpca_context.sysml`
 - `catalog/gpca_operational.sysml`
@@ -60,7 +62,7 @@ connection around it.
 From the repository root:
 
 ```bash
-pnpm memo -- validate memo-tools/memo/examples/gpca-pump
+pnpm --dir ../memo-tools run example:validate
 ```
 
 Choose one finding or one trace you want to understand. State the engineering

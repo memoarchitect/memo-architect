@@ -15,11 +15,11 @@ importers:
         specifier: ^0.24.0
         version: 0.24.0
       '@memoarchitect/ontology':
-        specifier: workspace:*
-        version: link:memo-tools/memo
+        specifier: 0.4.4
+        version: 0.4.4
       '@memoarchitect/tools':
-        specifier: workspace:*
-        version: link:memo-tools
+        specifier: 0.4.4
+        version: 0.4.4
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -90,72 +90,6 @@ importers:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.20.1)(jsdom@29.1.1)(lightningcss@1.31.1)
-
-  memo-tools:
-    dependencies:
-      '@memoarchitect/ontology':
-        specifier: workspace:*
-        version: link:memo
-      chalk:
-        specifier: ^5.3.0
-        version: 5.6.2
-      chokidar:
-        specifier: ^4.0.0
-        version: 4.0.3
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      glob:
-        specifier: ^11.0.0
-        version: 11.1.0
-      langium:
-        specifier: ^3.3.0
-        version: 3.5.0
-      open:
-        specifier: ^10.1.0
-        version: 10.2.0
-      ora:
-        specifier: ^8.1.0
-        version: 8.2.0
-      uuid:
-        specifier: ^10.0.0
-        version: 10.0.0
-      vscode-languageserver:
-        specifier: ^9.0.1
-        version: 9.0.1
-      vscode-languageserver-textdocument:
-        specifier: ^1.0.12
-        version: 1.0.12
-      ws:
-        specifier: ^8.18.0
-        version: 8.19.0
-      yaml:
-        specifier: ^2.5.0
-        version: 2.8.2
-    devDependencies:
-      '@types/node':
-        specifier: ^22.0.0
-        version: 22.20.1
-      '@types/ws':
-        specifier: ^8.5.0
-        version: 8.18.1
-      '@vitest/coverage-v8':
-        specifier: ^2.1.0
-        version: 2.1.9(vitest@2.1.9(@types/node@22.20.1)(jsdom@29.1.1)(lightningcss@1.31.1))
-      langium-cli:
-        specifier: ^3.3.0
-        version: 3.5.2
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
-      vite:
-        specifier: ^6.0.0
-        version: 6.4.1(@types/node@22.20.1)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
-      vitest:
-        specifier: ^2.1.0
-        version: 2.1.9(@types/node@22.20.1)(jsdom@29.1.1)(lightningcss@1.31.1)
-
-  memo-tools/memo: {}
 
 packages:
 
@@ -819,6 +753,15 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
+  '@memoarchitect/ontology@0.4.4':
+    resolution: {integrity: sha512-BgdK2rFdl2FTXvdlt5gJ1zRIB6O3Zu5xAgIOr9gOUWcNZLsKq1JFpsWQXQHg3hjMv4ZR/9sW01RLaJW7wAGkqg==}
+    engines: {node: '>=20'}
+
+  '@memoarchitect/tools@0.4.4':
+    resolution: {integrity: sha512-UbBJiIlUSyoy15z2VG66QFfjjREVQJVjI1y1DTxwy+V+eeLyYizJLClaAkF0CIZXZakHilevQVm2qLcd0reJow==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+
   '@monaco-editor/loader@1.7.0':
     resolution: {integrity: sha512-gIwR1HrJrrx+vfyOhYmCZ0/JcWqG5kbfG7+d3f/C1LXk2EvzAbHSg3MQ5lO2sMlo9izoAZ04shohfKLVT6crVA==}
 
@@ -1099,9 +1042,6 @@ packages:
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
-  '@types/ws@8.18.1':
-    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
-
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -1224,10 +1164,6 @@ packages:
     resolution: {integrity: sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==}
     engines: {node: '>=18'}
 
-  chalk@5.3.0:
-    resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
-    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-
   chalk@5.6.2:
     resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
@@ -1265,10 +1201,6 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
-
-  commander@11.0.0:
-    resolution: {integrity: sha512-9HMlXtt/BNoYr8ooyjjNRdIilOTkVJXB+GhxMTtOKwk0R4j4lS4NpjuqmRxroBfnfTSHQIHQB7wryHhXarNjmQ==}
-    engines: {node: '>=16'}
 
   commander@12.1.0:
     resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
@@ -1440,10 +1372,6 @@ packages:
   fraction.js@5.3.4:
     resolution: {integrity: sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==}
 
-  fs-extra@11.1.1:
-    resolution: {integrity: sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==}
-    engines: {node: '>=14.14'}
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -1570,20 +1498,6 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  jsonfile@6.2.0:
-    resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
-
-  jsonschema@1.4.1:
-    resolution: {integrity: sha512-S6cATIPVv1z0IlxdN+zUk5EPjkGCdnhN4wVSBlvoUO1tOLJootbo9CquNJmbIh4yikWHiUedhRYrNPn1arpEmQ==}
-
-  langium-cli@3.5.2:
-    resolution: {integrity: sha512-EVI462CIx8YnJfLSGArvvrlTzAXafA8zNeNbX6FPI5eX8ahicJcvnqW0eAmZ6mLFP7aipzV2F0Sehexe7KHmzA==}
-    engines: {node: '>=18.0.0'}
-    hasBin: true
-
-  langium-railroad@3.5.0:
-    resolution: {integrity: sha512-80Enc6bOR6oHZD18IQlVTdfCh07rbrM5SOsPUPc1kyh7n3zQbmLs5P2E9hV4SoWlkhOjGKL1I9Z6uORpgy+jTQ==}
-
   langium@3.5.0:
     resolution: {integrity: sha512-tnqVzWOkUcoiY0bWlyE8diFrZjmGBCF7MesC1bjUaZM+YGQSfdPC+KkhmHM0DWFG+uLcPxidKaPP1SYGtg3J0Q==}
     engines: {node: '>=18.0.0'}
@@ -1663,9 +1577,6 @@ packages:
 
   lodash-es@4.17.23:
     resolution: {integrity: sha512-kVI48u3PZr38HdYz98UmfPnXl2DXrpdctLrFLCd3kOx1xUkOmpFPx7gCWWM5MPkL/fD8zb+Ph0QzjGFs4+hHWg==}
-
-  lodash@4.17.23:
-    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
   log-symbols@6.0.0:
     resolution: {integrity: sha512-i24m8rpwhmPIS4zscNzK6MSEhk0DUWa/8iYQWxhffV8jkI4Phvs3F+quL5xvS0gdQR0FyTCMMH33Y78dDTzzIw==}
@@ -1790,9 +1701,6 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
-
-  railroad-diagrams@1.0.0:
-    resolution: {integrity: sha512-cz93DjNeLY0idrCNOH6PviZGRN9GJhsdm9hpn1YCS879fj4W+x5IFJhhkRZcwVgMmFF7R82UA/7Oh+R8lLZg6A==}
 
   react-dom@18.3.1:
     resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
@@ -2024,10 +1932,6 @@ packages:
   undici@7.28.0:
     resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
     engines: {node: '>=20.18.1'}
-
-  universalify@2.0.1:
-    resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
-    engines: {node: '>= 10.0.0'}
 
   update-browserslist-db@1.2.3:
     resolution: {integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==}
@@ -2719,6 +2623,27 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
+  '@memoarchitect/ontology@0.4.4': {}
+
+  '@memoarchitect/tools@0.4.4':
+    dependencies:
+      '@memoarchitect/ontology': 0.4.4
+      chalk: 5.6.2
+      chokidar: 4.0.3
+      commander: 12.1.0
+      glob: 11.1.0
+      langium: 3.5.0
+      open: 10.2.0
+      ora: 8.2.0
+      uuid: 10.0.0
+      vscode-languageserver: 9.0.1
+      vscode-languageserver-textdocument: 1.0.12
+      ws: 8.19.0
+      yaml: 2.8.2
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@monaco-editor/loader@1.7.0':
     dependencies:
       state-local: 1.0.7
@@ -2941,10 +2866,6 @@ snapshots:
   '@types/trusted-types@2.0.7':
     optional: true
 
-  '@types/ws@8.18.1':
-    dependencies:
-      '@types/node': 22.20.1
-
   '@vitejs/plugin-react@4.7.0(vite@6.4.1(@types/node@22.20.1)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@babel/core': 7.29.0
@@ -3101,8 +3022,6 @@ snapshots:
       loupe: 3.2.1
       pathval: 2.0.1
 
-  chalk@5.3.0: {}
-
   chalk@5.6.2: {}
 
   check-error@2.1.3: {}
@@ -3138,8 +3057,6 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
-
-  commander@11.0.0: {}
 
   commander@12.1.0: {}
 
@@ -3351,12 +3268,6 @@ snapshots:
 
   fraction.js@5.3.4: {}
 
-  fs-extra@11.1.1:
-    dependencies:
-      graceful-fs: 4.2.11
-      jsonfile: 6.2.0
-      universalify: 2.0.1
-
   fsevents@2.3.3:
     optional: true
 
@@ -3486,29 +3397,6 @@ snapshots:
 
   json5@2.2.3: {}
 
-  jsonfile@6.2.0:
-    dependencies:
-      universalify: 2.0.1
-    optionalDependencies:
-      graceful-fs: 4.2.11
-
-  jsonschema@1.4.1: {}
-
-  langium-cli@3.5.2:
-    dependencies:
-      chalk: 5.3.0
-      commander: 11.0.0
-      fs-extra: 11.1.1
-      jsonschema: 1.4.1
-      langium: 3.5.0
-      langium-railroad: 3.5.0
-      lodash: 4.17.23
-
-  langium-railroad@3.5.0:
-    dependencies:
-      langium: 3.5.0
-      railroad-diagrams: 1.0.0
-
   langium@3.5.0:
     dependencies:
       chevrotain: 11.0.3
@@ -3569,8 +3457,6 @@ snapshots:
   lodash-es@4.17.21: {}
 
   lodash-es@4.17.23: {}
-
-  lodash@4.17.23: {}
 
   log-symbols@6.0.0:
     dependencies:
@@ -3690,8 +3576,6 @@ snapshots:
       source-map-js: 1.2.1
 
   punycode@2.3.1: {}
-
-  railroad-diagrams@1.0.0: {}
 
   react-dom@18.3.1(react@18.3.1):
     dependencies:
@@ -3909,8 +3793,6 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici@7.28.0: {}
-
-  universalify@2.0.1: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.1):
     dependencies:

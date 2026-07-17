@@ -34,7 +34,7 @@ shows which elements are reused and which are scenario-specific.
 ## Source trail
 
 The example source is under
-`memo-tools/memo/examples/gpca-pump/model`. Catalog files define canonical
+`memo/examples/gpca-pump/model` in the `memo-meta` workspace. Catalog files define canonical
 elements; `catalog/gpca_trace.sysml` connects them; `views` defines purposeful
 selections.
 

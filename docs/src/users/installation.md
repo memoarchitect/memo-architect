@@ -8,22 +8,20 @@
 
 ## Development checkout
 
-Clone recursively because Memo Architect contains Memo Tools, which contains the
-canonical MEMO ontology:
+Clone Architect directly; versioned Tools and Ontology packages are installed
+from npm:
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 corepack enable
 pnpm install
 pnpm run build
 ```
 
-The build runs the three repository-root packages in dependency order:
-
-1. `@memoarchitect/ontology` from `memo-tools/memo`
-2. `@memoarchitect/tools` from `memo-tools`
-3. `@memoarchitect/architect` from Memo Architect
+The build compiles Architect against the exact `@memoarchitect/tools` and
+`@memoarchitect/ontology` versions in `package.json`. Maintainers use the
+separate `memo-meta` sibling workspace when changing all three together.
 
 The repositories share a `MAJOR.MINOR` compatibility line. Any `0.4.x` releases
 are intended to work together; patch versions can advance independently.

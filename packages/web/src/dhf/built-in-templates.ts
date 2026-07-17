@@ -1,7 +1,7 @@
 // ─── Built-in DHF Template Loader ────────────────────────────────────────────
 //
-// Loads all markdown template files from the memo ontology submodule
-// (memo/src/compliance/dhf-templates/) at build time via Vite's
+// Loads all markdown template files from the installed ontology package
+// (node_modules/@memoarchitect/ontology/) at build time via Vite's
 // import.meta.glob. Templates are compliance content owned by the ontology
 // repo; the templateId (e.g. "iso-14971/rmp") maps directly to a file path
 // within that directory.
@@ -12,10 +12,11 @@
 // export time by the CLI.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Vite loads all .md files under the ontology templates directory as raw
-// strings. The ontology repo is the nested submodule of memo-tools.
+// Vite loads all .md files under the installed ontology package as raw strings.
+// The meta checkout may include the ontology submodule, but package resolution
+// deliberately goes through node_modules so standalone clones build the same way.
 const _rawTemplates = import.meta.glob(
-    '../../../../memo-tools/memo/src/compliance/dhf-templates/**/*.md',
+    '../../../../node_modules/@memoarchitect/ontology/src/compliance/dhf-templates/**/*.md',
     { query: '?raw', eager: true, import: 'default' }
 ) as Record<string, string>;
 

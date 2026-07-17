@@ -21,11 +21,11 @@ This is the exit gate for Epic EE and the precondition for cutting the standalon
 
 ## Portability gate (CI)
 
-`memo-tools/memo/scripts/build-kpar.sh` builds each ontology project with the
+`memo/scripts/build-kpar.sh` builds each ontology project with the
 external Sensmetry `sysand` tool and fails if the parse reports any error:
 
 ```bash
-./memo-tools/memo/scripts/build-kpar.sh
+./memo/scripts/build-kpar.sh
 # builds memo-ontology and memo-methodology-default KPAR archives with zero errors
 ```
 

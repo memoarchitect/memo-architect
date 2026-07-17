@@ -3,7 +3,7 @@
 ## Development Setup
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 pnpm install
 pnpm run build
@@ -15,7 +15,7 @@ pnpm run test
 ### Working on `@memoarchitect/tools`
 
 ```bash
-cd memo-tools
+cd ../memo-tools  # sibling checkout in memo-meta
 pnpm run build    # Rebuild after changes
 pnpm run test
 ```
@@ -35,8 +35,8 @@ The web app hot-reloads via Vite. Changes to React components reflect immediatel
 
 | Directory | Purpose |
 |---|---|
-| `memo-tools/memo/` | `@memoarchitect/ontology` source |
-| `memo-tools/packages/tools/src/` | Internal `@memoarchitect/tools` engine and CLI source |
+| `../memo/` | `@memoarchitect/ontology` sibling in the meta workspace |
+| `../memo-tools/packages/tools/src/` | `@memoarchitect/tools` sibling source |
 | `packages/web/src/views/` | Diagram canvas, layout engine |
 | `packages/web/src/components/` | UI components |
 | `packages/web/src/store/` | Zustand state + WebSocket client |
@@ -52,8 +52,8 @@ pnpm run test
 # Run with coverage
 pnpm run test:coverage
 
-# Run specific package tests
-pnpm --filter @memoarchitect/tools test
+# Run Tools tests from the sibling repository
+pnpm --dir ../memo-tools test
 ```
 
 ### Test Coverage
@@ -76,7 +76,7 @@ pnpm --filter @memoarchitect/tools test
 ## Build Commands
 
 ```bash
-pnpm run build         # Build all packages (Turborepo)
+pnpm run build         # Build Architect against installed npm dependencies
 pnpm run test          # Run all tests
 pnpm run type-check    # TypeScript checking only
 pnpm run clean         # Remove all build artifacts

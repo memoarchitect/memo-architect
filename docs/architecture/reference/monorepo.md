@@ -1,8 +1,8 @@
 # Repo Structure (memo-architect)
 
 This repo is **memo-architect** (Layer 04). The ontology lives in `memo`, Tools
-lives in `memo-tools`, and this repo consumes both through the nested
-submodules. Each repository root is one workspace and one npm package.
+lives in `memo-tools`, and this repo consumes their published npm packages.
+Each product repository is independently installable, buildable, and testable.
 
 ## Current Working Tree
 
@@ -12,8 +12,6 @@ memo/
 ├── packages/
 │   └── web/                   # internal React application source
 ├── src/                       # internal Architect CLI/composition source
-├── memo-tools/                # git submodule: @memoarchitect/tools
-│   └── memo/                  # nested submodule: @memoarchitect/ontology
 ├── docs/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
@@ -28,8 +26,12 @@ memo/
 
 ## Workspace Scope
 
-`pnpm-workspace.yaml` includes exactly `.`, `memo-tools`, and
-`memo-tools/memo`.
+`pnpm-workspace.yaml` includes only `.`. Dependencies on
+`@memoarchitect/tools` and `@memoarchitect/ontology` use exact npm versions.
+
+The separate private `memo-meta` repository checks out Ontology, Tools, and
+Architect as sibling submodules. Its pnpm workspace links matching local
+versions for coordinated development without changing product manifests.
 
 The publishable package boundaries are:
 
@@ -41,11 +43,11 @@ The publishable package boundaries are:
 
 ## Build System
 
-Root scripts coordinate package tasks in dependency order:
+Root scripts operate only on Architect; npm supplies its lower layers:
 
 | Task | Purpose |
 |---|---|
-| `build` | Compile packages and generated outputs |
+| `build` | Compile Architect client and CLI outputs |
 | `test` | Run package tests |
 | `type-check` | TypeScript checking |
 | `dev` | Architect source development |

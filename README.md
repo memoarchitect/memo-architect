@@ -48,8 +48,6 @@ interaction; it does not maintain a second engineering model.
 package.json                   @memoarchitect/architect — the sole package in this repo
 packages/web/                  internal React workbench source
 src/                           Architect CLI and composition commands
-memo-tools/                    submodule → @memoarchitect/tools
-  memo/                       nested submodule → @memoarchitect/ontology
 docs/                          public user, developer, architecture, and design docs
 ```
 
@@ -58,13 +56,17 @@ docs/                          public user, developer, architecture, and design 
 Requires Node.js 24 LTS and pnpm 9 or later.
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 corepack enable
 pnpm install
 pnpm run build
 pnpm run test
 ```
+
+For coordinated changes across Ontology, Tools, and Architect, use the private
+`memo-meta` workspace. It checks out all three repositories as sibling
+submodules and links their matching npm package versions locally.
 
 Run the bundled GPCA reference model:
 

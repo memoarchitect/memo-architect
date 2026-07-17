@@ -1,6 +1,6 @@
 # ADR-1-17: Three-Repo Split — memo-sysmlv2 / memo-cli / memo-architect
 
-**Status:** Implemented (first cut executed 2026-07-12)
+**Status:** Implemented; nested-submodule mechanics superseded by ADR-1-22
 **Date:** 2026-05-29
 **Supersedes:** the four-repo layout in [platform.md §10](../../architecture/platform.md#10-repo-layout-final-state) (`memo-base` / `memo-ontology` / `memo-methodologies` / `memo-architect`)
 **Reference:** [ADR-1-12](ADR-1-12-namespace-canonicalization.md), [ADR-1-14](ADR-1-14-extension-package-policy.md), [platform.md](../../architecture/platform.md); GitLab Epics EE (#497), J (#356), FF (#504), GG (#505), HH (#506)

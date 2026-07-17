@@ -390,7 +390,9 @@ Actual repos (public naming follows the meMO four-layer stack):
 | `memo-architect` (web UI) | 04 Architect | `memoarchitect/memo-architect` |
 
 This repository is the webapp: the ontology was separated into `memo`, the engine
-into `memo-tools`, and each is consumed through the nested submodule chain.
+into `memo-tools`, and each is consumed through an exact npm dependency. The
+private `memo-meta` workspace checks out all three repositories as siblings and
+links matching package versions for coordinated development.
 
 ```
 memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content, no TypeScript)
@@ -412,7 +414,6 @@ memo-tools/                         (L3 engine + CLI; ADR name: memo-cli)
   packages/core/                    Langium grammar, parser, builder, validator, KerML evaluator
   packages/cli/
   tools/                            ontology lint/diagram tooling, viewer, VS Code extension
-  memo-tools/memo/              git submodule → canonical content
         ▲ build-dep (core types) + runtime WebSocket (dev server, versioned protocol)
 memo-architect/                     (L3 tool UI)
   packages/web/
@@ -423,8 +424,8 @@ memo-architect/                     (L3 tool UI)
 Dependency direction: `@memoarchitect/ontology` ← `@memoarchitect/tools` ←
 `@memoarchitect/architect`, with Architect also declaring Ontology directly. Tools does
 not depend on Architect and exposes no commands that require it. Published
-consumers install versioned npm packages; repository nesting is only a
-development workflow.
+consumers install versioned npm packages; iterative development uses sibling
+submodules in `memo-meta`.
 
 Execution: keystone Epic EE (rules → native constraints) gates the first cut; Epic J prepares boundaries; Epics FF (memo-sysmlv2) → GG (memo-cli) → HH (memo-architect) execute the cuts.
 

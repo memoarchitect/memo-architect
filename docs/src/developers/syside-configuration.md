@@ -1,24 +1,24 @@
 # SysIDE Configuration
 
-MEMO includes a root-level `syside.toml` so the SysIDE VS Code extension and
-command-line checker load the ontology, methodologies, namespace facade, and
-examples as one model.
+The `memo-meta` integration workspace includes a root-level `syside.toml` so
+the SysIDE VS Code extension and command-line checker load the ontology,
+methodologies, namespace facade, and examples as one model.
 
 ## Open the repository
 
-1. Clone the repository and initialize both submodules recursively.
-2. Open the repository root in VS Code, rather than opening an individual
-   `.sysml` file or the ontology submodule by itself.
+1. Clone `memo-meta` and initialize its sibling submodules.
+2. Open the meta repository root in VS Code, rather than an individual product
+   checkout.
 3. Install and enable the SysIDE extension.
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
-cd memo-architect
+git clone --recurse-submodules git@gitlab.com:somesh_sandbox/memo-meta.git
+cd memo-meta
 code .
 ```
 
 SysIDE discovers `syside.toml` at the Git root and indexes
-`memo-tools/memo/src`. This source root includes `memo_namespaces.sysml` and
+`memo/src`. This source root includes `memo_namespaces.sysml` and
 the GPCA pump examples, so their cross-package imports resolve in the same
 model as the canonical ontology.
 
@@ -26,13 +26,13 @@ model as the canonical ontology.
 
 ```toml
 include = [
-    "memo-tools/memo/src",
+    "memo/src",
 ]
 
 exclude = [
     "node_modules",
     "dist",
-    "memo-tools/memo/packages",
+    "memo/packages",
     ".sysand",
 ]
 ```
@@ -47,9 +47,9 @@ After configuring the SysIDE license in your environment, verify the same
 paths used by the editor:
 
 ```bash
-syside check --warnings-as-errors memo-tools/memo/src/memo_namespaces.sysml
-syside check --warnings-as-errors memo-tools/memo/src/examples
-syside check --warnings-as-errors memo-tools/memo/src
+syside check --warnings-as-errors memo/src/memo_namespaces.sysml
+syside check --warnings-as-errors memo/examples
+syside check --warnings-as-errors memo/src
 ```
 
 All three commands must complete with zero diagnostics. If VS Code still shows
@@ -58,10 +58,10 @@ so SysIDE rebuilds its workspace index from the updated submodule checkout.
 
 ## Updating submodules
 
-The repositories form this reference chain:
+The meta repository records all three products as siblings:
 
 ```text
-memo-architect -> memo-tools -> memo
+memo-meta -> { memo, memo-tools, memo-architect }
 ```
 
 After pulling a parent repository, update the physical nested checkouts—not

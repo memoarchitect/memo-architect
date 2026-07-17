@@ -48,7 +48,7 @@ package memo {
 }
 ```
 The trailing segment (`risk`) is the content-bearing leaf. Do **not** write `package memo::arch::risk { … }` — that flat-qualified form is a former MEMO grammar extension that external SysML v2 tools (sysand, SysIDE, SysON) reject, making the ontology non-portable. The model builder reconstructs the full FQN (`memo::arch::risk`) from the nesting, so addressing and imports are unchanged. Wrapper packages (`memo`, `memo::arch`) are legitimately shared across files; only the leaf must be unique. No two leaf packages in one file.
-**Why:** EE-5 portability gate — `memo-tools/memo/scripts/build-kpar.sh` builds the ontology with an external tool and fails CI if any declaration is non-portable. Enforced by conformance test `EE-5: no qualified names in package declarations`.
+**Why:** EE-5 portability gate — `memo/scripts/build-kpar.sh` builds the ontology with an external tool and fails if any declaration is non-portable. Enforced by conformance test `EE-5: no qualified names in package declarations`.
 **Lint:** P1.
 
 ### P2 · Use `private import` by default; `public import` only at intentional re-export boundaries.

@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # ─── pack-standalone.sh ───────────────────────────────────────────────────────
 #
-# Builds and packs the three independently distributable npm packages:
-# @memoarchitect/ontology, @memoarchitect/tools, and @memoarchitect/architect.
+# Builds Architect against its published dependencies, packs Architect locally,
+# downloads the exact dependency tarballs, and verifies all three together.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$ROOT/dist-standalone"
 
-echo "▸ Building the three-package release"
-(cd "$ROOT/memo-tools/memo" && corepack pnpm run test)
-(cd "$ROOT/memo-tools" && corepack pnpm run build)
+echo "▸ Building Architect against published npm dependencies"
 (cd "$ROOT" && corepack pnpm run build)
 
 rm -rf "$OUT"
@@ -23,9 +21,11 @@ pack() {
     (cd "$dir" && corepack pnpm pack --pack-destination "$OUT" >/dev/null)
 }
 
-pack "$ROOT/memo-tools/memo"
-pack "$ROOT/memo-tools"
 pack "$ROOT"
+
+ONTOLOGY_SPEC="$(node -p "const p=require('$ROOT/package.json'); '@memoarchitect/ontology@'+p.dependencies['@memoarchitect/ontology']")"
+TOOLS_SPEC="$(node -p "const p=require('$ROOT/package.json'); '@memoarchitect/tools@'+p.dependencies['@memoarchitect/tools']")"
+(cd "$OUT" && npm pack "$ONTOLOGY_SPEC" "$TOOLS_SPEC" >/dev/null)
 
 cat > "$OUT/README.md" <<'EOF'
 # MEMO npm distribution
@@ -41,7 +41,7 @@ npm install @memoarchitect/architect
 For these local tarballs:
 
 ```bash
-npm install ./memo-ontology-*.tgz ./memo-tools-*.tgz ./memo-architect-*.tgz
+npm install ./memoarchitect-ontology-*.tgz ./memoarchitect-tools-*.tgz ./memoarchitect-architect-*.tgz
 ```
 
 Dependency direction is:

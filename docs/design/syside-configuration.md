@@ -4,9 +4,9 @@ Syside (Sensmetry) is a VS Code–based SysML v2 tool suite. In folder mode (def
 
 ## Opening the GPCA Pump in Syside
 
-1. **Open the repo root** in VS Code with the Syside extension installed.
+1. **Open the `memo-meta` root** in VS Code with the Syside extension installed.
 2. Syside discovers `syside.toml` at the repo root (`.git` is the root marker).
-3. The config includes `memo-tools/memo/src/` — Syside indexes all 149 ontology, methodology, facade, and example documents as one model.
+3. The config includes `memo/src/` — Syside indexes the ontology, methodology, facade, and example documents as one model.
 4. Cross-package imports (e.g. `memo::architecture::risk::*` from `gpca_risk.sysml`) resolve automatically.
 
 No additional setup required. The `syside.toml` at repo root handles everything.
@@ -15,13 +15,13 @@ No additional setup required. The `syside.toml` at repo root handles everything.
 
 ```toml
 include = [
-    "memo-tools/memo/src",
+    "memo/src",
 ]
 
 exclude = [
     "node_modules",
     "dist",
-    "memo-tools/memo/packages",
+    "memo/packages",
     ".sysand",
 ]
 ```

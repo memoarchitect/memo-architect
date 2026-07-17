@@ -5,7 +5,7 @@ Use the included GPCA pump to learn the workbench before opening your own model.
 ## 1. Build and launch
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 corepack enable
 pnpm install

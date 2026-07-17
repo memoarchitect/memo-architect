@@ -36,7 +36,7 @@ matrix, table, or document is not a separate source of truth.
 ## Five-minute launch
 
 ```bash
-git clone --recurse-submodules https://github.com/memoarchitect/memo-architect.git
+git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
 corepack enable
 pnpm install
