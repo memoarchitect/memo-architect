@@ -6,6 +6,9 @@ repo_name: memoarchitect/memo-architect
 
 theme:
   name: material
+  font:
+    text: Nunito
+    code: JetBrains Mono
   palette:
     - scheme: default
       primary: custom

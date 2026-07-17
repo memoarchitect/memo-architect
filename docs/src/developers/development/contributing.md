@@ -1,84 +1,86 @@
 # Contributing
 
-## Development Setup
+Thank you for helping improve the MEMO visual workbench. Architect contains
+React presentation code and the thin `memo-architect` composition CLI —
+model behavior belongs in
+[memo-tools](https://github.com/memoarchitect/memo-tools), and ontology
+content belongs in [memo](https://github.com/memoarchitect/memo).
+
+## Set up
 
 ```bash
 git clone https://github.com/memoarchitect/memo-architect.git
 cd memo-architect
+corepack enable
 pnpm install
 pnpm run build
 pnpm run test
 ```
 
-## Development Workflow
+Use Node.js 20 or later and pnpm 9 or later. The repository's `.nvmrc`
+selects the minimum supported Node.js major.
 
-### Working on `@memoarchitect/tools`
+## Where a change belongs
+
+Dependency direction is strictly `memo ← memo-tools ← memo-architect`;
+lower layers must not import from higher layers.
+
+| You want to change… | Work in… |
+|---|---|
+| Diagram rendering, layout, or interaction | `packages/web/src/views/` |
+| UI components, panels, or navigation | `packages/web/src/components/` |
+| Client state or WebSocket handling | `packages/web/src/store/` |
+| Validation, operations, protocol, or anything the CLI also needs | `../memo-tools` (sibling checkout in `memo-meta`) |
+| Element meanings, relationships, or rules | `../memo` |
+
+Two boundaries are enforced:
+
+- **The web app imports only `@memoarchitect/tools/browser` and
+  `@memoarchitect/tools/types`** — never the root export, which would pull
+  Langium and `node:*` code into the Vite bundle.
+- **No model semantics in React code.** If the workbench needs new model
+  behavior, add it to Tools' operations or browser exports so the CLI and
+  workbench share one implementation.
+
+## Development workflow
 
 ```bash
-cd ../memo-tools  # sibling checkout in memo-meta
-pnpm run build    # Rebuild after changes
+pnpm run example:dev     # workbench on the GPCA example, hot-reloading
+```
+
+When changing `@memoarchitect/tools` alongside Architect:
+
+```bash
+cd ../memo-tools
+pnpm run build           # rebuild after changes; grammar edits rerun langium generate
 pnpm run test
 ```
-
-After changing the Langium grammar under `packages/tools/src/grammar`, the
-build step runs `langium generate`.
-
-### Working on `@memoarchitect/architect`
-
-```bash
-pnpm run example:dev
-```
-
-The web app hot-reloads via Vite. Changes to React components reflect immediately.
-
-## Project Structure
-
-| Directory | Purpose |
-|---|---|
-| `../memo/` | `@memoarchitect/ontology` sibling in the meta workspace |
-| `../memo-tools/packages/tools/src/` | `@memoarchitect/tools` sibling source |
-| `packages/web/src/views/` | Diagram canvas, layout engine |
-| `packages/web/src/components/` | UI components |
-| `packages/web/src/store/` | Zustand state + WebSocket client |
 
 ## Testing
 
 All tests use **Vitest**:
 
 ```bash
-# Run all tests
-pnpm run test
-
-# Run with coverage
-pnpm run test:coverage
-
-# Run Tools tests from the sibling repository
-pnpm --dir ../memo-tools test
+pnpm run test                    # all Architect tests
+pnpm run test:coverage           # with coverage
+pnpm --dir ../memo-tools test    # Tools suite from the sibling repository
 ```
 
-### Test Coverage
+Add or update tests for changed behavior. Workbench behavior, renderer, and
+view logic are covered here; parser, validation, and command behavior are
+covered in Tools.
 
-| Package | Tests | Status |
-|---|---|---|
-| `@memoarchitect/ontology` | Node test suite | Package shape and published content |
-| `@memoarchitect/tools` | Vitest suite | Parser, validation, commands, and E2E workflows |
-| `@memoarchitect/architect` | Vitest suite | Workbench behavior and renderer/view logic |
+## Code style
 
-## Code Style
-
-- **TypeScript** for all packages
-- **ESM** (`"type": "module"`) throughout
-- **Node.js >= 20** required
+- TypeScript and ESM (`"type": "module"`) throughout
 - File headers with `// ─── Section Name ───` comment style
 - Interfaces over classes for data types
-- Maps for indexed collections (MemoModel), Records for serialization (MemoModelDTO)
+- Maps for indexed collections (`MemoModel`), Records for serialization
+  (`MemoModelDTO`)
 
-## Build Commands
+## Releases
 
-```bash
-pnpm run build         # Build Architect against installed npm dependencies
-pnpm run test          # Run all tests
-pnpm run type-check    # TypeScript checking only
-pnpm run clean         # Remove all build artifacts
-pnpm run lint          # Run linter
-```
+`@memoarchitect/architect` and `@memoarchitect/tools` version and release in
+lockstep, with Tools pinned exactly. A change to the WebSocket protocol or
+DTOs therefore lands as a coordinated pair of pull requests and ships in one
+release.

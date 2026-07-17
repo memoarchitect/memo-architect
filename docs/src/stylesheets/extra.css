@@ -233,3 +233,60 @@
 [data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(45, 212, 168, 0.35);
 }
+
+/* ── MEMO deck tokens (shared brand with memo / memo-tools docs) ────────── */
+:root {
+  --memo-ink: #082744;
+  --memo-paper: #fbfcfd;
+  --memo-wash: #eef4f7;
+  --memo-line: #d8e2e9;
+  --memo-teal: #2dd4a8;
+  --memo-teal-deep: #0a8d76;
+  --memo-teal-soft: #e3faf3;
+  --memo-radius: 12px;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: var(--memo-paper);
+}
+
+/* Tight display headings, as in the introduction deck */
+.md-typeset h1 { font-weight: 800; letter-spacing: -0.03em; }
+.md-typeset h2 { font-weight: 750; letter-spacing: -0.02em; }
+.md-typeset h3 { font-weight: 700; letter-spacing: -0.01em; }
+[data-md-color-scheme="default"] .md-typeset h1 { color: var(--memo-ink); }
+
+/* Soft rounded card frames for tables and admonitions */
+.md-typeset table:not([class]) {
+  border-radius: var(--memo-radius);
+  border: 1px solid var(--memo-line);
+  overflow: hidden;
+}
+[data-md-color-scheme="default"] .md-typeset table:not([class]) th {
+  background: var(--memo-wash);
+  color: var(--memo-ink);
+  font-weight: 750;
+}
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  border-color: rgba(216, 226, 233, 0.16);
+}
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--memo-radius);
+  box-shadow: 0 6px 20px rgba(2, 31, 54, 0.08);
+}
+
+/* Teal-rail blockquote callout */
+[data-md-color-scheme="default"] .md-typeset blockquote {
+  border-left: 4px solid var(--memo-teal);
+  background: var(--memo-teal-soft);
+  border-radius: 0 var(--memo-radius) var(--memo-radius) 0;
+  padding: 0.6em 1em;
+  color: var(--memo-ink);
+}
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  border-left: 4px solid var(--memo-teal);
+  background: rgba(45, 212, 168, 0.08);
+  border-radius: 0 var(--memo-radius) var(--memo-radius) 0;
+  padding: 0.6em 1em;
+}

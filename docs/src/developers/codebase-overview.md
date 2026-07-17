@@ -1,45 +1,95 @@
 # Codebase Overview
 
-This document provides a high-level technical summary of the **MEMO Architect** codebase for developers and contributors.
+MEMO Architect is the **presentation layer** of the MEMO stack: a React
+workbench plus a thin composition CLI. It renders and navigates the model; all
+model behavior — parsing, validation, operations, the project server — lives
+in `@memoarchitect/tools` so the workbench can never become a second source of
+truth.
 
-## Monorepo Structure
+## Where Architect sits
 
-The development checkout uses three nested repositories and three pnpm
-workspaces. Each repository root publishes one package.
+```mermaid
+flowchart LR
+    O["memo<br/><code>@memoarchitect/ontology</code><br/>SysML content"] --> T
+    T["memo-tools<br/><code>@memoarchitect/tools</code><br/>engine · CLI · project server"] --> A
+    A["memo-architect (this repository)<br/><code>@memoarchitect/architect</code><br/>React workbench + <code>memo-architect</code> bin"]
+```
 
-### Packages
+Dependency direction is strict — `memo ← memo-tools ← memo-architect` — and
+lower layers never import from higher ones. `@memoarchitect/tools` and
+`@memoarchitect/architect` release in lockstep at the same version;
+Architect pins Tools exactly.
 
-- **`@memoarchitect/ontology`:**
-  - Portable SysML ontology, methodology, templates, and examples.
-- **`@memoarchitect/tools`:**
-  - **Engine and CLI:** Shared logic for SysML v2 parsing, model AST management (MemoModel), semantic validation, headless commands, and reusable server operations.
-  - **Registries:** Implements the `KindRegistry` and `RelationshipRegistry` discovery mechanisms.
-  - **Parsing:** Uses **Langium** and a custom SysML v2 grammar subset for robust model indexing.
-- **`@memoarchitect/architect`:**
-  - **Workbench UI and composition CLI:** A React application plus
-    `memo-architect dev` and `memo-architect build`.
-  - **State Management:** Uses **Zustand** for real-time model state synchronization with the CLI server.
-- **`ontology/`:**
-  - **Canonical ontology source:** SysML packages for architecture, compliance, artifacts, viewpoints, methodology, and base helpers.
+## Repository layout
 
-Repository-level architecture and decisions live under `docs/architecture/` and `docs/decisions/`.
+| Path | Purpose |
+|---|---|
+| `packages/web/src/views/` | Diagram canvas, layout engine, and model views |
+| `packages/web/src/components/` | Reusable UI components |
+| `packages/web/src/store/` | Zustand state and the WebSocket client |
+| `packages/web/src/dhf/`, `analysis/`, `diagram/` | DHF review, analysis, and diagram feature areas |
+| `src/bin/memo-architect.ts` | The `memo-architect` bin entry |
+| `src/commands/` | `dev` and `build` composition commands |
+| `dist/` | Prebuilt web assets bundled into the published package |
+| `lib/` | Compiled CLI output |
 
-## Key Technologies
+## How the runtime fits together
 
-- **Language:** TypeScript across the entire stack.
-- **Frameworks:**
-  - **React:** For the web interface.
-  - **Vitest:** For unit and E2E testing.
-  - **Zustand:** For state management in the web app.
-  - **Langium:** Background parsing and SysML v2 grammar support.
-- **Styling:** Vanilla CSS (post-processed) for maximum control and performance.
-- **Communications:** WebSocket-based protocol for model synchronization between UI and CLI.
+`memo-architect dev` does not implement a server. It calls
+`startProjectServer` from `@memoarchitect/tools` (the same operations the
+`memo` CLI uses) and points it at the web client:
 
-## Local Development Workflow
+```mermaid
+flowchart LR
+    PRJ["Project directory<br/>.sysml source + memo.package.yaml"] --> SRV
+    SRV["Project server<br/>from @memoarchitect/tools<br/>parse · validate · operations"] -- "WebSocket protocol<br/>(@memoarchitect/tools/types)" --> WEB
+    WEB["React workbench<br/>Zustand store<br/>imports @memoarchitect/tools/browser"]
+```
 
-1.  **Installation:** `pnpm install` at the root.
-2.  **Building:** `pnpm build` to compile all packages.
-3.  **Running:** Navigate to a project and run `memo-architect dev`.
-4.  **Testing:** `pnpm test` to run all unit and E2E tests across the monorepo.
+- The server parses and validates the project and pushes model state over a
+  WebSocket protocol whose event schemas live in `@memoarchitect/tools/types`.
+- The frontend derives diagrams and views with the pure functions in
+  `@memoarchitect/tools/browser`.
+- Edits flow back as operations; the `.sysml` files remain the source of
+  truth.
 
-For detailed contribution guidelines, see [Contributing](development/contributing.md).
+## The import boundary
+
+The web app imports **only** `@memoarchitect/tools/browser` and
+`@memoarchitect/tools/types` — never the root export, which contains Langium
+and `node:*` code that must not reach the Vite bundle. Keep it that way: if a
+function you need is Node-only, the feature belongs on the server side in
+memo-tools, exposed through the protocol.
+
+## Packaging
+
+The published `@memoarchitect/architect` package contains the compiled CLI
+(`lib/`) and the prebuilt web app (`dist/`) — the UI is served as static
+assets, so installing the package requires no frontend toolchain.
+`@memoarchitect/tools` owns the `memo` bin; this package owns `memo-architect`.
+Neither re-exposes the other's bin, so both can be installed globally side by
+side.
+
+## Key technologies
+
+| Concern | Choice |
+|---|---|
+| Language | TypeScript, ESM, Node.js ≥ 20 |
+| UI | React + Vite |
+| State | Zustand, synchronized over WebSocket |
+| Parsing (in Tools) | Langium with a SysML v2 grammar |
+| Testing | Vitest (unit and E2E) |
+| Styling | Vanilla CSS |
+
+## Local development
+
+1. `pnpm install` at the root (use the `memo-meta` workspace for coordinated
+   changes across repositories).
+2. `pnpm run build` to compile the client and CLI.
+3. `pnpm run example:dev` to open the workbench on the GPCA example, or run
+   `memo-architect dev` in any MEMO project.
+4. `pnpm run test` for the Vitest suite.
+
+Architecture decisions and planning records live in the private `memo-meta`
+workspace. For contribution guidelines, see
+[Contributing](development/contributing.md).
