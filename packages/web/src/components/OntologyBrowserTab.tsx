@@ -120,7 +120,7 @@ function DeselectedConfirmDialog({ pkgName, onCancel, onConfirm }: {
     onCancel: () => void;
     onConfirm: () => void;
 }) {
-    const shortName = pkgName.replace('@memo/', '');
+    const shortName = pkgName.replace(/^@memo(?:architect)?\//, '');
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center"
@@ -406,7 +406,7 @@ export function OntologyBrowserTab() {
                     const isSelected = selectedOntologies.has(pkg.name);
                     const isFocused = focusedPackage === pkg.name;
                     const isPkgExpanded = expandedPkgs.has(pkg.name);
-                    const shortName = pkg.name.replace('@memo/', '');
+                    const shortName = pkg.name.replace(/^@memo(?:architect)?\//, '');
                     const typeIcon = TYPE_ICONS[pkg.type] ?? TYPE_ICONS.ontology;
 
                     return (

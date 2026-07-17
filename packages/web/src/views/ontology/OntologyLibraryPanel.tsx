@@ -57,7 +57,7 @@ export function OntologyLibraryPanel({ onClose }: OntologyLibraryPanelProps) {
                             Add Ontology
                         </label>
                         <p className="text-xs mb-2" style={{ color: '#9CA3AF' }}>
-                            Enter a git URL (https://...git), npm package name (@memo/...), or local path.
+                            Enter a git URL (https://...git), npm package name (@memoarchitect/...), or local path.
                         </p>
                         <div className="flex gap-2">
                             <input

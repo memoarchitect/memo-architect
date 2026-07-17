@@ -21,7 +21,6 @@ include = [
 exclude = [
     "node_modules",
     "dist",
-    "memo/packages",
     ".sysand",
 ]
 ```
