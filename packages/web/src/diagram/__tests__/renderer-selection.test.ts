@@ -9,6 +9,24 @@ import {
     subscribeRendererSelection,
 } from '../renderer-selection';
 
+// Node >= 22.4 defines an experimental global `localStorage` that shadows the
+// jsdom one unless --localstorage-file is set; back the tests with an
+// in-memory store so they are independent of the host Node version.
+if (!window.localStorage) {
+    const store = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: {
+            getItem: (key: string) => store.get(key) ?? null,
+            setItem: (key: string, value: string) => void store.set(key, String(value)),
+            removeItem: (key: string) => void store.delete(key),
+            clear: () => store.clear(),
+            key: (index: number) => [...store.keys()][index] ?? null,
+            get length() { return store.size; },
+        } satisfies Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'clear' | 'key' | 'length'>,
+    });
+}
+
 function setUrl(search: string) {
     window.history.replaceState(null, '', `${window.location.pathname}${search}`);
 }

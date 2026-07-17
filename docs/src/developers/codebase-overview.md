@@ -74,7 +74,7 @@ side.
 
 | Concern | Choice |
 |---|---|
-| Language | TypeScript, ESM, Node.js ≥ 20 |
+| Language | TypeScript, ESM, Node.js ≥ 22 |
 | UI | React + Vite |
 | State | Zustand, synchronized over WebSocket |
 | Parsing (in Tools) | Langium with a SysML v2 grammar |
