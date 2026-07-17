@@ -3,7 +3,7 @@
 // Selecting an entry drives the shared model selection and canvas highlight.
 
 import { useMemo, useState } from 'react';
-import type { MemoElement } from '@memo/tools/browser';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';

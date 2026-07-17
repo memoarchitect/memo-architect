@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-07-13
 **Owners:** Web architecture and diagram rendering
-**Scope:** `@memo/architect` interactive graph diagrams; no change to SysML semantics
+**Scope:** `@memoarchitect/architect` interactive graph diagrams; no change to SysML semantics
 **Related:** [ADR-1-21 modular capability-provider architecture](ADR-1-21-modular-capability-provider-architecture.md)
 
 ---
@@ -30,7 +30,7 @@ team accepts this ADR and commits to full cutover.
 
 ## Implementation status (2026-07-13)
 
-The Phase 0 spike and the flag boundary are implemented in `@memo/architect`:
+The Phase 0 spike and the flag boundary are implemented in `@memoarchitect/architect`:
 
 - Renderer provider layer at `packages/web/src/diagram/` (`renderer-provider.ts`,
   `renderer-registry.ts`, `renderer-selection.ts`, `renderers.ts`) mirroring the

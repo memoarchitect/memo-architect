@@ -1,6 +1,6 @@
 // ─── Short ID helpers (web-side copy) ────────────────────────────────────────
 //
-// Duplicates kindToPrefix / prefixToFamily from @memo/tools/browser so the web bundle
+// Duplicates kindToPrefix / prefixToFamily from @memoarchitect/tools/browser so the web bundle
 // never imports runtime code from core (core uses node:fs which can't run in
 // a browser). Keep in sync with memo-tools/packages/core/src/model/short-id.ts.
 // ─────────────────────────────────────────────────────────────────────────────

@@ -30,8 +30,8 @@ import '@xyflow/react/dist/style.css';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RFAny = any;
 
-import type { MemoElement, DiagramLayout, ViewKind } from '@memo/tools/browser';
-import { computeImpact } from '@memo/tools/browser';
+import type { MemoElement, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
+import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram } from '../store/model-store';
 import { sendElementCreate, sendAddRelationship, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';

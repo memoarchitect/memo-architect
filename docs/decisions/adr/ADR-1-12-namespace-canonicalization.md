@@ -16,7 +16,7 @@
 The existing repository contains conflicting namespace conventions:
 
 - Legacy roadmap (W1.P*–W3.P*, issues #186–#319) targeted `memo::arch::<layer>::*`, `memo::core::*`, `memo::profile::*`, `memo::process::*`.
-- `platform.md` describes a single canonical `@memo/ontology` with conceptual layers (L0 helpers, L1 ontology, L2 methodology) but does not pin the SysML package path strings.
+- `platform.md` describes a single canonical `@memoarchitect/ontology` with conceptual layers (L0 helpers, L1 ontology, L2 methodology) but does not pin the SysML package path strings.
 - Currently committed SysML packages mix several styles (e.g. `medical-modeling-profile`, `ontology-arch`, `ontology-process`).
 
 Independently, the project commits to staying compatible with standard SysML v2 toolchains — **SysON**, **SysIDE**, and **Sysand** — so that authors can use a plain text editor or any conformant tool. Standard tools resolve packages by qualified name, expect canonical SysML v2 kernel/library imports, and consume `.kpar` packages produced by Sysand.
@@ -51,25 +51,25 @@ Within `memo::ontology`, the second segment names the **dimension** (`architectu
 
 **Migration cost** — every legacy `memo::arch::*`, `memo::core::*`, `memo::profile::*`, `memo::process::*` reference moves once. Codemod runs as part of Epic C (architecture migration). Scope: ~190 SysML files plus all `import` statements. Bounded by codemod script.
 
-**Compatibility** — `@memo/ontology-core`, `@memo/ontology-medical`, `@memo/ontology-arch`, `@memo/ontology-process`, `@memo/medical-modeling-profile` are deprecated package names from prior ADRs. The new package mapping is:
+**Compatibility** — `@memoarchitect/ontology-core`, `@memoarchitect/ontology-medical`, `@memoarchitect/ontology-arch`, `@memoarchitect/ontology-process`, `@memoarchitect/medical-modeling-profile` are deprecated package names from prior ADRs. The new package mapping is:
 
 | Deprecated package | New package | New root namespace |
 |---|---|---|
-| `@memo/ontology-core` | `@memo/sysml-base` | `memo::base::*` |
-| `@memo/ontology-arch` | `@memo/ontology` | `memo::ontology::architecture::*` |
-| `@memo/ontology-process` | `@memo/ontology` | `memo::ontology::compliance::*` + `memo::ontology::artifacts::*` |
-| `@memo/medical-modeling-profile` | `@memo/methodology-default` | `memo::methodology::default::*` |
+| `@memoarchitect/ontology-core` | `@memoarchitect/sysml-base` | `memo::base::*` |
+| `@memoarchitect/ontology-arch` | `@memoarchitect/ontology` | `memo::ontology::architecture::*` |
+| `@memoarchitect/ontology-process` | `@memoarchitect/ontology` | `memo::ontology::compliance::*` + `memo::ontology::artifacts::*` |
+| `@memoarchitect/medical-modeling-profile` | `@memoarchitect/methodology-default` | `memo::methodology::default::*` |
 
 **Epic ordering implication** — because every later epic imports L0 helpers, **Epic B (L0 helpers)** must land its package path as `memo::base::*` first. **Epic K (grammar gaps)** must verify Langium accepts the qualified-name form before C/D/E run their migrations.
 
 **Tool interop is enforceable** — a CI check (introduced under Epic T) runs `sysand build` and a SysON headless validation pass on every push. A failure blocks merge.
 
-**Forbidden patterns** — `package memo::arch::*` and `package memo::profile::*` are removed. `medical-modeling-profile` package is deleted after Epic G renames its substance into `@memo/methodology-default`. Dropped because they conflate dimension and layer, blocking the ontology/methodology split.
+**Forbidden patterns** — `package memo::arch::*` and `package memo::profile::*` are removed. `medical-modeling-profile` package is deleted after Epic G renames its substance into `@memoarchitect/methodology-default`. Dropped because they conflate dimension and layer, blocking the ontology/methodology split.
 
 ## Open questions
 
 1. SysML v2 kernel library import path — confirm against the OMG pilot reference. May affect L0 base imports.
-2. Whether `memo::ext::<vendor>::*` extensions ship inside `@memo/ontology` or as separate `@memo/ext-<vendor>` packages. Default: separate package; revisit if it forces circular deps.
+2. Whether `memo::ext::<vendor>::*` extensions ship inside `@memoarchitect/ontology` or as separate `@memoarchitect/ext-<vendor>` packages. Default: separate package; revisit if it forces circular deps.
 3. ~~Filename casing under nested standards.~~ **Resolved:** snake_case per Python convention; hyphens forbidden in path segments.
 
 ## Pointers

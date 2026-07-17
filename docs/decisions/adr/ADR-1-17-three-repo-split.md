@@ -47,7 +47,7 @@ Key facts:
 
 - Release phases: `memo-sysmlv2` first, then `memo-cli`, then `memo-architect`.
 - Epic EE is the keystone gate (constraints must be native + portable before the sysmlv2 cut). Epic J prepares boundaries; Epics FF/GG/HH execute the cuts.
-- ADR-1-14 (out-of-tree `@memo/ext-*` extensions) is unaffected — extensions remain separate repos.
+- ADR-1-14 (out-of-tree `@memoarchitect/ext-*` extensions) is unaffected — extensions remain separate repos.
 - ADR-1-12 namespace scheme (`memo::{base,ontology,methodology}::*`) is unaffected — namespaces are package-path strings, independent of repo grouping. The three conceptual layers still exist; they just live together in `memo-sysmlv2`.
 - Local dev keeps a workspace/subtree checkout; published consumers depend on versioned sysand artifacts, not tool internals.
 
@@ -74,11 +74,11 @@ Public naming follows the meMO four-layer stack (Ontology + Methodology →
 - Dependencies are wired with git submodules mirroring the layer stack:
   `memo-architect` carries `memo-tools` (which nests
   `memo-tools/memo`), and its pnpm workspace globs the submodule
-  packages so `@memo/architect` consumes `@memo/tools` as a normal `workspace:*`
+  packages so `@memoarchitect/architect` consumes `@memoarchitect/tools` as a normal `workspace:*`
   dependency. `memo-architect dev` from the nested example serves the full UI.
-- `memo pack` remains headless in `@memo/tools`.
+- `memo pack` remains headless in `@memoarchitect/tools`.
 - `memo-architect build` and `memo-architect dev` live in
-  `@memo/architect`; Tools tests do not skip because Architect is absent.
+  `@memoarchitect/architect`; Tools tests do not skip because Architect is absent.
 
 ## Out of scope
 

@@ -18,10 +18,10 @@ Architecture decisions are kept as ADRs for traceability. Current direction is s
 | [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Three-repo split `memo-sysmlv2` (pure content) / `memo-cli` (engine) / `memo-architect` (web); supersedes the four-repo layout in platform.md §10 |
 | [ADR-1-16](adr/ADR-1-16-view-presentation-syntax-fallbacks.md) | Accepted | View/template files use simple `view def`, bare imports, and repeated scalar `presentationKind` assignments until grammar support expands |
 | [ADR-1-15](adr/ADR-1-15-methodology-scope-explicit-lists.md) | Accepted | Methodology scope uses explicit enumerated entries; current grammar does not support set literals or `A - B` set difference |
-| [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memo/ext-*` packages under `memo::ontology::ext::*` |
+| [ADR-1-14](adr/ADR-1-14-extension-package-policy.md) | Accepted | Medical-only scope; out-of-tree `@memoarchitect/ext-*` packages under `memo::ontology::ext::*` |
 | [ADR-1-13](adr/ADR-1-13-sysml-library-import-wrapper.md) | Accepted | Standard library wrapper at `memo::core::stdlib::*` insulates from SysON/SysIDE/Sysand path drift |
 | [ADR-1-12](adr/ADR-1-12-namespace-canonicalization.md) | Accepted | Three-segment namespaces `memo::{core,ontology,methodology}::*`; snake_case filenames; SysON/SysIDE/Sysand interop binding |
-| [ADR-1-11](adr/ADR-1-11-single-canonical-ontology.md) | Accepted | Single canonical `@memo/ontology` — one `memo::` namespace, one `src/` tree, one ontology package |
+| [ADR-1-11](adr/ADR-1-11-single-canonical-ontology.md) | Accepted | Single canonical `@memoarchitect/ontology` — one `memo::` namespace, one `src/` tree, one ontology package |
 | [ADR-1-9](adr/ADR-1-9-ontology-restart-required.md) | Accepted | Ontology changes require dev server restart |
 | [ADR-1-8](adr/ADR-1-8-project-format-contract.md) | Accepted | Project configuration format contract |
 

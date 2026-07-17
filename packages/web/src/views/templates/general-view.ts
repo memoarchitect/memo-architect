@@ -16,7 +16,7 @@
 // not just structural ones — gets the interactive modes.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoModelDTO } from '@memo/tools/browser';
+import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
     type LayoutResult,

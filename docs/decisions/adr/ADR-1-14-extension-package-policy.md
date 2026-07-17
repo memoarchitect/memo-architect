@@ -8,9 +8,9 @@
 
 ## Context
 
-Earlier roadmap drafts included `@memo/automotive` (ISO 26262) and `@memo/aerospace` (DO-178C) as proof points that the architecture scales beyond medical. That scope-broadening drained focus. The product is medical-device-only.
+Earlier roadmap drafts included `@memoarchitect/automotive` (ISO 26262) and `@memoarchitect/aerospace` (DO-178C) as proof points that the architecture scales beyond medical. That scope-broadening drained focus. The product is medical-device-only.
 
-Separately, the architecture must still support extensions — vendors with proprietary kinds, customers with site-specific compliance overlays, future medical sub-domains (e.g. IVD, surgical robotics) — without forcing them into the canonical `@memo/ontology` package.
+Separately, the architecture must still support extensions — vendors with proprietary kinds, customers with site-specific compliance overlays, future medical sub-domains (e.g. IVD, surgical robotics) — without forcing them into the canonical `@memoarchitect/ontology` package.
 
 ## Decision
 
@@ -24,7 +24,7 @@ memo::ontology::ext::surgical_robotics::*      surgical robotics extension
 memo::ontology::ext::vendor_acme::*            vendor-private kinds
 ```
 
-**Packaging.** Extensions ship as separate npm + Sysand packages (e.g. `@memo/ext-ivd`, `@memo/ext-surgical-robotics`). They are out-of-tree relative to `@memo/ontology` and version independently. Project pins extensions through `.project.json` `usage[]` URNs, same mechanism as the core ontology.
+**Packaging.** Extensions ship as separate npm + Sysand packages (e.g. `@memoarchitect/ext-ivd`, `@memoarchitect/ext-surgical-robotics`). They are out-of-tree relative to `@memoarchitect/ontology` and version independently. Project pins extensions through `.project.json` `usage[]` URNs, same mechanism as the core ontology.
 
 **Loader behaviour.** Extension packages are auto-discovered when their package is resolvable (npm workspace, registry, or local path). The loader scans `ontology/ext/<id>/` per package and registers kinds, rules, and viewpoints under `memo::ontology::ext::<id>::*`.
 
@@ -36,7 +36,7 @@ memo::ontology::ext::vendor_acme::*            vendor-private kinds
 
 **Independent versioning.** Extension authors publish on their own cadence. Core ontology releases do not need to coordinate with extensions.
 
-**No mono-repo coupling.** Extensions are separate Git repositories or separate workspace packages, not subdirectories under `@memo/ontology`. Repo split (Epic J) is unaffected — extensions live in additional repos as needed.
+**No mono-repo coupling.** Extensions are separate Git repositories or separate workspace packages, not subdirectories under `@memoarchitect/ontology`. Repo split (Epic J) is unaffected — extensions live in additional repos as needed.
 
 **Marketing / docs.** Project description, README, marketing materials reflect medical-only scope. Existing automotive/aerospace mentions in docs are removed during Epic L.
 

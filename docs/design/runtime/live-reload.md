@@ -181,7 +181,7 @@ Execute phases in order. Run `pnpm run build && pnpm run test` after each phase.
 ### Phase 1 — Add RestartRequired message type
 - Edit `packages/core/src/protocol/messages.ts`: add `RestartRequiredMessage` interface. Add to union.
 - Export from index.
-- Test: `pnpm --filter @memo/tools test`.
+- Test: `pnpm --filter @memoarchitect/tools test`.
 
 ### Phase 2 — Split file watcher
 - Edit `packages/cli/src/server/file-watcher.ts`: replace `createFileWatcher()` with `createProjectWatcher()` + `createOntologyWatcher()`. Each returns `{ close() }`.

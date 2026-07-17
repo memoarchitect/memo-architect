@@ -11,7 +11,7 @@
 // Rendering lives in views/GridView.tsx; everything here is pure.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 
 // ─── Table ───────────────────────────────────────────────────────────────────
 

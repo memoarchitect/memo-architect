@@ -3,7 +3,7 @@ import { useModelStore, getRelationshipsForElement } from '../store/model-store'
 import { sendElementUpdate, sendAddRelationship } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
 import { FONT, SHADOW, RADIUS } from '../styles/tokens';
-import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
 // ─── Scenario Step (parsed from doc field) ──────────────────────────────────
 

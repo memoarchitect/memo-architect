@@ -12,7 +12,7 @@ pnpm run test
 
 ## Development Workflow
 
-### Working on `@memo/tools`
+### Working on `@memoarchitect/tools`
 
 ```bash
 cd memo-tools
@@ -23,7 +23,7 @@ pnpm run test
 After changing the Langium grammar under `packages/tools/src/grammar`, the
 build step runs `langium generate`.
 
-### Working on `@memo/architect`
+### Working on `@memoarchitect/architect`
 
 ```bash
 pnpm run example:dev
@@ -35,8 +35,8 @@ The web app hot-reloads via Vite. Changes to React components reflect immediatel
 
 | Directory | Purpose |
 |---|---|
-| `memo-tools/memo/` | `@memo/ontology` source |
-| `memo-tools/packages/tools/src/` | Internal `@memo/tools` engine and CLI source |
+| `memo-tools/memo/` | `@memoarchitect/ontology` source |
+| `memo-tools/packages/tools/src/` | Internal `@memoarchitect/tools` engine and CLI source |
 | `packages/web/src/views/` | Diagram canvas, layout engine |
 | `packages/web/src/components/` | UI components |
 | `packages/web/src/store/` | Zustand state + WebSocket client |
@@ -53,16 +53,16 @@ pnpm run test
 pnpm run test:coverage
 
 # Run specific package tests
-pnpm --filter @memo/tools test
+pnpm --filter @memoarchitect/tools test
 ```
 
 ### Test Coverage
 
 | Package | Tests | Status |
 |---|---|---|
-| `@memo/ontology` | Node test suite | Package shape and published content |
-| `@memo/tools` | Vitest suite | Parser, validation, commands, and E2E workflows |
-| `@memo/architect` | Vitest suite | Workbench behavior and renderer/view logic |
+| `@memoarchitect/ontology` | Node test suite | Package shape and published content |
+| `@memoarchitect/tools` | Vitest suite | Parser, validation, commands, and E2E workflows |
+| `@memoarchitect/architect` | Vitest suite | Workbench behavior and renderer/view logic |
 
 ## Code Style
 

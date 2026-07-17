@@ -9,13 +9,13 @@ workspaces. Each repository root publishes one package.
 
 ### Packages
 
-- **`@memo/ontology`:**
+- **`@memoarchitect/ontology`:**
   - Portable SysML ontology, methodology, templates, and examples.
-- **`@memo/tools`:**
+- **`@memoarchitect/tools`:**
   - **Engine and CLI:** Shared logic for SysML v2 parsing, model AST management (MemoModel), semantic validation, headless commands, and reusable server operations.
   - **Registries:** Implements the `KindRegistry` and `RelationshipRegistry` discovery mechanisms.
   - **Parsing:** Uses **Langium** and a custom SysML v2 grammar subset for robust model indexing.
-- **`@memo/architect`:**
+- **`@memoarchitect/architect`:**
   - **Workbench UI and composition CLI:** A React application plus
     `memo-architect dev` and `memo-architect build`.
   - **State Management:** Uses **Zustand** for real-time model state synchronization with the CLI server.

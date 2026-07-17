@@ -8,12 +8,12 @@ submodules. Each repository root is one workspace and one npm package.
 
 ```text
 memo/
-├── package.json               # @memo/architect
+├── package.json               # @memoarchitect/architect
 ├── packages/
 │   └── web/                   # internal React application source
 ├── src/                       # internal Architect CLI/composition source
-├── memo-tools/                # git submodule: @memo/tools
-│   └── memo/                  # nested submodule: @memo/ontology
+├── memo-tools/                # git submodule: @memoarchitect/tools
+│   └── memo/                  # nested submodule: @memoarchitect/ontology
 ├── docs/
 │   ├── architecture/         # canonical architecture and reference docs
 │   ├── decisions/            # ADRs
@@ -35,9 +35,9 @@ The publishable package boundaries are:
 
 | Boundary | Purpose |
 |---|---|
-| `@memo/ontology` | Portable ontology, methodology, templates, and examples |
-| `@memo/tools` | Engine, headless operations, and `memo` CLI |
-| `@memo/architect` | Visual workbench, live server composition, and static viewer build |
+| `@memoarchitect/ontology` | Portable ontology, methodology, templates, and examples |
+| `@memoarchitect/tools` | Engine, headless operations, and `memo` CLI |
+| `@memoarchitect/architect` | Visual workbench, live server composition, and static viewer build |
 
 ## Build System
 

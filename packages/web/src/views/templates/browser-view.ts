@@ -11,7 +11,7 @@
 // tree stays scannable.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import { buildCompositionTree } from './composition-tree';
 
 export interface BrowserNode {

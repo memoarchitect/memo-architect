@@ -1,10 +1,10 @@
 // ─── Design Structure Matrix (DSM) — Browser-safe copy ──────────────────────
 //
 // Pure computation on MemoModelDTO — no Node.js dependencies.
-// Canonical implementation lives in @memo/tools/browser/src/analysis/dsm.ts
+// Canonical implementation lives in @memoarchitect/tools/browser/src/analysis/dsm.ts
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO, MemoElement } from '@memo/tools/browser';
+import type { MemoModelDTO, MemoElement } from '@memoarchitect/tools/browser';
 
 /** A single cell in the DSM matrix */
 export interface DSMCell {

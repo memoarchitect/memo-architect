@@ -45,11 +45,11 @@ interaction; it does not maintain a second engineering model.
 ## Repository layout
 
 ```text
-package.json                   @memo/architect — the sole package in this repo
+package.json                   @memoarchitect/architect — the sole package in this repo
 packages/web/                  internal React workbench source
 src/                           Architect CLI and composition commands
-memo-tools/                    submodule → @memo/tools
-  memo/                       nested submodule → @memo/ontology
+memo-tools/                    submodule → @memoarchitect/tools
+  memo/                       nested submodule → @memoarchitect/ontology
 docs/                          public user, developer, architecture, and design docs
 ```
 

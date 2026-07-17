@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { computeExplorerGroupTree } from '../ExplorerPanel';
-import type { MemoElement } from '@memo/tools/browser';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
-// Mirrors the vendored @memo/ontology package shape: layer ids are the
+// Mirrors the vendored @memoarchitect/ontology package shape: layer ids are the
 // top-level src/ directories, kinds carry their namespace sub-group (the
 // directory under the layer), and no layer declares the builder-synthesized
 // kinds for native SysML constructs (action def / action / item def).
 const ONTOLOGY: OntologyPackageInfo = {
-    name: '@memo/ontology',
+    name: '@memoarchitect/ontology',
     version: '0.2.0',
     type: 'ontology',
     description: '',
@@ -36,7 +36,7 @@ function el(id: string, kind: string, layer: string): MemoElement {
     return { id, name: id, kind, construct: 'part', layer, file: 'model/test.sysml', attributes: {} } as MemoElement;
 }
 
-const SELECTED = new Set(['@memo/ontology']);
+const SELECTED = new Set(['@memoarchitect/ontology']);
 
 /** All kind names across a group's sub-groups. */
 function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): string[] {

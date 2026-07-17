@@ -12,11 +12,11 @@ import type {
     DiagramDTO,
     DiagramLayout,
     RestartRequiredMessage,
-} from '@memo/tools/browser';
-import type { ValidationResult, CompletenessReport } from '@memo/tools/browser';
+} from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport } from '@memoarchitect/tools/browser';
 import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
-import type { ViewpointDTO } from '@memo/tools/browser';
+import type { ViewpointDTO } from '@memoarchitect/tools/browser';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
@@ -154,7 +154,7 @@ export interface ModelState {
     completeness: CompletenessReport | null;
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
-    methodology: import('@memo/tools/browser').MethodologyDescriptor | null;
+    methodology: import('@memoarchitect/tools/browser').MethodologyDescriptor | null;
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
@@ -218,7 +218,7 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
-    setMethodology: (m: import('@memo/tools/browser').MethodologyDescriptor | null) => void;
+    setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -608,7 +608,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         // Canonical foundation packages that must always be selected when available.
         // These are the base ontologies every project depends on.
-        const FOUNDATION_PACKAGES = ['@memo/ontology'];
+        const FOUNDATION_PACKAGES = ['@memoarchitect/ontology'];
         for (const o of ontologies) {
             if (FOUNDATION_PACKAGES.includes(o.name)) selected.add(o.name);
         }

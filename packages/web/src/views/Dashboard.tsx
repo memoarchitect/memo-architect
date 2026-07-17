@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
-import type { MemoModelDTO } from '@memo/tools/browser';
+import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
 //

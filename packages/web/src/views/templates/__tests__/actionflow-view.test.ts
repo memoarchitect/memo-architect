@@ -1,7 +1,7 @@
 // ─── Action Flow template tests (KK-4 structure logic) ──────────────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
     collectActionFlowActions, actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,

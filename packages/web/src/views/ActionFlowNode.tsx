@@ -10,7 +10,7 @@
 
 import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { MemoElement, ActionParameter } from '@memo/tools/browser';
+import type { MemoElement, ActionParameter } from '@memoarchitect/tools/browser';
 import { SHADOW, RADIUS, FONT } from '../styles/tokens';
 
 export interface ActionFlowNodeData {

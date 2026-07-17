@@ -2,7 +2,7 @@
 # ─── pack-standalone.sh ───────────────────────────────────────────────────────
 #
 # Builds and packs the three independently distributable npm packages:
-# @memo/ontology, @memo/tools, and @memo/architect.
+# @memoarchitect/ontology, @memoarchitect/tools, and @memoarchitect/architect.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -33,9 +33,9 @@ cat > "$OUT/README.md" <<'EOF'
 Each tarball is independently publishable. Install only the level you need:
 
 ```bash
-npm install @memo/ontology
-npm install @memo/tools
-npm install @memo/architect
+npm install @memoarchitect/ontology
+npm install @memoarchitect/tools
+npm install @memoarchitect/architect
 ```
 
 For these local tarballs:
@@ -46,7 +46,7 @@ npm install ./memo-ontology-*.tgz ./memo-tools-*.tgz ./memo-architect-*.tgz
 
 Dependency direction is:
 
-`@memo/ontology` ← `@memo/tools` ← `@memo/architect`
+`@memoarchitect/ontology` ← `@memoarchitect/tools` ← `@memoarchitect/architect`
 EOF
 
 echo "▸ Verifying a clean npm consumer without a source checkout"
@@ -59,9 +59,9 @@ trap 'rm -rf "$VERIFY"' EXIT
 (cd "$VERIFY/device" && ../node_modules/.bin/memo validate . >/dev/null)
 (cd "$VERIFY/device" && ../node_modules/.bin/memo pack --output device.kpar >/dev/null)
 (cd "$VERIFY/device" && ../node_modules/.bin/memo-architect build --output viewer >/dev/null)
-test -f "$VERIFY/node_modules/@memo/ontology/memo.manifest.yaml"
-test -f "$VERIFY/node_modules/@memo/tools/packages/tools/lib/index.js"
-test -f "$VERIFY/node_modules/@memo/architect/dist/index.html"
+test -f "$VERIFY/node_modules/@memoarchitect/ontology/memo.manifest.yaml"
+test -f "$VERIFY/node_modules/@memoarchitect/tools/packages/tools/lib/index.js"
+test -f "$VERIFY/node_modules/@memoarchitect/architect/dist/index.html"
 test -f "$VERIFY/device/device.kpar"
 test -f "$VERIFY/device/viewer/index.html"
 

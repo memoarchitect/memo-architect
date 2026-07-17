@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, SEMANTIC_GROUPS, KIND_TO_GROUP } from '../constants';
-import type { MemoModelDTO, MemoElement } from '@memo/tools/browser';
+import type { MemoModelDTO, MemoElement } from '@memoarchitect/tools/browser';
 
 // ─── Statistics Computation ─────────────────────────────────────────────────
 

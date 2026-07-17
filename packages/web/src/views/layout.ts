@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO } from '@memo/tools/browser';
+import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { LayoutGraph, LayoutRunOptions } from '../diagram/layout-provider';
 import { runLayoutProvider } from '../diagram/layout-providers';
 import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } from '../constants';

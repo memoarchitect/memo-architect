@@ -31,7 +31,7 @@ A dedicated space for behavior engineering, focusing on user activities and syst
 A "Read-Only" mode for exploring the metamodel rules and relationship schemas enforced by your current modeling profile.
 
 ![Ontology Viewer](../images/screenshots/ontology-viewer.png)
-*Hierarchical view of the canonical `@memo/ontology` kind registry.*
+*Hierarchical view of the canonical `@memoarchitect/ontology` kind registry.*
 
 ---
 

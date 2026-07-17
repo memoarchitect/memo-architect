@@ -1,6 +1,6 @@
 # Diagram Renderer Providers
 
-The diagram drawing surface in `@memo/architect` is pluggable. A **renderer
+The diagram drawing surface in `@memoarchitect/architect` is pluggable. A **renderer
 provider** owns how the computed scene is drawn and interacted with; the
 semantic model, template layout pipeline (ELK + view-kind templates), and the
 `.viewlayout` sidecar are shared by all renderers. This mirrors the layout

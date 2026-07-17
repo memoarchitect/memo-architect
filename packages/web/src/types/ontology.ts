@@ -12,7 +12,7 @@ export interface OntologyRelationshipInfo {
 }
 
 export interface OntologyPackageInfo {
-    name: string;              // e.g. "@memo/ontology"
+    name: string;              // e.g. "@memoarchitect/ontology"
     version: string;           // e.g. "0.1.0"
     type: 'ontology' | 'profile' | 'extension' | 'methodology';
     description: string;

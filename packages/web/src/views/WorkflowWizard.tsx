@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
-import type { MemoModelDTO } from '@memo/tools/browser';
+import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 // ─── WorkflowWizard (#40) ───────────────────────────────────────────────────
 //

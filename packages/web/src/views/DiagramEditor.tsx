@@ -13,7 +13,7 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useModelStore, getDiagram, getElementsByLayer } from '../store/model-store';
 import { loadDiagramSource, saveDiagramSource, sendDiagramParse } from '../store/ws-client';
-import type { DiagramDTO, MemoElement } from '@memo/tools/browser';
+import type { DiagramDTO, MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 import { DiagramSurface } from './DiagramSurface';

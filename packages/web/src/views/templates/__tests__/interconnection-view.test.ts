@@ -6,7 +6,7 @@
 // the no-overlap invariant of deterministic boundary-port placement.
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement } from '@memo/tools/browser';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 import {
     inferPortRole, portSideFromRole, partitionChildren, focusSubtree,
     distributePorts, isPortElement, INTERCONNECTION_PORT_SIZE,

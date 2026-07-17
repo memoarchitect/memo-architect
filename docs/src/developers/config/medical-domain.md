@@ -1,22 +1,22 @@
 # Medical Modeling Profile
 
-`@memo/medical-modeling-profile` is the standard MEMO profile for medical-device
-projects. It combines the reusable `@memo/ontology` vocabulary with medical
+`@memoarchitect/medical-modeling-profile` is the standard MEMO profile for medical-device
+projects. It combines the reusable `@memoarchitect/ontology` vocabulary with medical
 modeling rules, viewpoints, archetypes, and project templates.
 
 ## Package responsibilities
 
 | Package | Responsibility |
 |---|---|
-| `@memo/ontology` | Element definitions, relationship definitions, shared semantics, native constraints, and reusable viewpoints |
-| `@memo/medical-modeling-profile` | Medical-device project defaults, archetypes, templates, and profile selection |
-| `@memo/methodology-default` | General modeling workflow and review gates |
-| `@memo/methodology-gpca` | Methodology content used by the GPCA reference project |
+| `@memoarchitect/ontology` | Element definitions, relationship definitions, shared semantics, native constraints, and reusable viewpoints |
+| `@memoarchitect/medical-modeling-profile` | Medical-device project defaults, archetypes, templates, and profile selection |
+| `@memoarchitect/methodology-default` | General modeling workflow and review gates |
+| `@memoarchitect/methodology-gpca` | Methodology content used by the GPCA reference project |
 
 Projects normally select the medical profile:
 
 ```yaml
-extends: "@memo/medical-modeling-profile"
+extends: "@memoarchitect/medical-modeling-profile"
 ```
 
 Model files import the public library surface:

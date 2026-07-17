@@ -1,7 +1,7 @@
 // ─── Browser template tests (KK-8 membership tree logic) ────────────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import { buildBrowserTree, filterBrowserTree, kindInitials } from '../browser-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {

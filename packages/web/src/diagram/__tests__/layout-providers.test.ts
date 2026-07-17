@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DiagramLayout } from '@memo/tools/browser';
+import type { DiagramLayout } from '@memoarchitect/tools/browser';
 import type { LayoutGraph, LayoutProvider } from '../layout-provider';
 import { LayoutProviderRegistry } from '../layout-provider-registry';
 import { listLayoutProviders, runLayoutProvider } from '../layout-providers';

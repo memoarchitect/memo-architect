@@ -8,7 +8,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
 import { FONT, COLOR } from '../styles/tokens';
-import type { MemoElement } from '@memo/tools/browser';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 
 function sectionStyle(color = COLOR.border) {
     return { borderTop: `1px solid ${color}` };

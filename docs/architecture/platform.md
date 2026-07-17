@@ -22,11 +22,11 @@
 ## 2. Conceptual stack
 
 ```
-L0  helpers                     ← @memo/sysml-base (libraries, not ontology)
+L0  helpers                     ← @memoarchitect/sysml-base (libraries, not ontology)
     common types, enumerations, dimension defs, alias defs, rule defs
     Reused by every higher layer. No domain content.
 
-L1  MEMO ontology               ← @memo/ontology
+L1  MEMO ontology               ← @memoarchitect/ontology
     domain kinds across 4 dimensions:
       - Architecture (layered: operational, functional, ..., safety, cybersecurity)
       - Compliance (per standard: ISO 14971, IEC 62304, FDA 21 CFR 820, ...)
@@ -35,7 +35,7 @@ L1  MEMO ontology               ← @memo/ontology
     + relationships
     + invariant rules
 
-L2  methodology                 ← @memo/methodology-default (or fork)
+L2  methodology                 ← @memoarchitect/methodology-default (or fork)
     declares LAYER SET, STANDARD SET, ARTIFACT SET, VIEWPOINT TYPE SET
     selects subset of ontology kinds (scope)
     aliases method terms → concrete ontology kinds
@@ -86,7 +86,7 @@ A concrete kind specializes one or more. Example: `Hazard` extends both `Archite
 
 ---
 
-## 4. Single ontology repo: `@memo/ontology`
+## 4. Single ontology repo: `@memoarchitect/ontology`
 
 ```
 ontology/
@@ -167,7 +167,7 @@ ontology/
 
 ## 5. Methodology
 
-### 5.1 Default methodology — `@memo/methodology-default`
+### 5.1 Default methodology — `@memoarchitect/methodology-default`
 
 Comprehensive medical-device methodology. Selects:
 
@@ -178,9 +178,9 @@ Comprehensive medical-device methodology. Selects:
 - Strict rules (most invariants required)
 - Full workflow (requirements → architecture → risk → design → V&V → DHF compile)
 
-### 5.2 Custom methodology example — `@memo/methodology-gpca`
+### 5.2 Custom methodology example — `@memoarchitect/methodology-gpca`
 
-Forks `@memo/methodology-default`. Demonstrates:
+Forks `@memoarchitect/methodology-default`. Demonstrates:
 
 - Hide layers (e.g. drop `cybersecurity` layer for non-networked pump variant)
 - Hide element kinds (drop `SOUPComponent` if no SOUP used)
@@ -270,7 +270,7 @@ package memo::examples::gpca::methodology_scope {
 part swUnitAlias : ElementKindAlias {
     attribute methodTerm = "SoftwareUnit";       // IEC 62304 vocabulary
     attribute concreteKind = "SoftwareElement";   // ontology arch kind
-    attribute concreteOntology = "@memo/ontology";
+    attribute concreteOntology = "@memoarchitect/ontology";
 }
 ```
 
@@ -323,7 +323,7 @@ Generic rule: **what a tab shows = (ontology kinds in dimension X) ∩ (methodol
 ### 8.1 Ontology authoring
 
 ```bash
-memo ontology init <name> --extends @memo/ontology
+memo ontology init <name> --extends @memoarchitect/ontology
 memo ontology add-kind <Name> --dimension architecture --layer software
 memo ontology add-kind <Name> --dimension compliance --standard "ISO 14971" --clause "5.4"
 memo ontology add-kind <Name> --dimension artifact --doc-title "Software Architecture Document"
@@ -336,7 +336,7 @@ memo ontology publish
 ### 8.2 Methodology authoring
 
 ```bash
-memo methodology init <name> --extends @memo/methodology-default
+memo methodology init <name> --extends @memoarchitect/methodology-default
 memo methodology add-layer <id>
 memo methodology drop-layer <id>
 memo methodology add-standard <id>
@@ -352,8 +352,8 @@ memo methodology publish
 ### 8.3 Project
 
 ```bash
-memo init --methodology @memo/methodology-default
-memo init --methodology @memo/methodology-gpca
+memo init --methodology @memoarchitect/methodology-default
+memo init --methodology @memoarchitect/methodology-gpca
 memo-architect dev
 memo validate    # ontology rules + methodology rules + project rules
 memo export dhf  # uses methodology.includedArtifactKinds
@@ -363,7 +363,7 @@ memo export dhf  # uses methodology.includedArtifactKinds
 
 ## 9. Helper packages (L0)
 
-`@memo/sysml-base` (L0 helpers) is consumed by both ontology and methodology packages. It ships inside the `memo-sysmlv2` repo (see §10). It only contains:
+`@memoarchitect/sysml-base` (L0 helpers) is consumed by both ontology and methodology packages. It ships inside the `memo-sysmlv2` repo (see §10). It only contains:
 
 - common attributes (id, name, version, description, ...)
 - enumerations (RuleStrengthKind, RigorKind, AudienceKind, WorkflowStageKind)
@@ -405,7 +405,7 @@ memo-sysmlv2/                       (L0+L1+L2 — pure SysML v2 / KerML content,
     rules/                          native constraint def / requirement def (Epic EE)
     methodology/                    nested sysand project: memo/ (default) + gpca/
     examples/gpca-pump/             reference model
-  packages/                         thin @memo/* manifests (sysmlDir points into src/)
+  packages/                         thin @memoarchitect/* manifests (sysmlDir points into src/)
   .project.json + sysand-lock.toml  ships as a sysand package; SysIDE/SysON/sysand consumable
         ▲ data-dependency (versioned sysand artifact)
 memo-tools/                         (L3 engine + CLI; ADR name: memo-cli)
@@ -420,8 +420,8 @@ memo-architect/                     (L3 tool UI)
   examples/full-medical-device/
 ```
 
-Dependency direction: `@memo/ontology` ← `@memo/tools` ←
-`@memo/architect`, with Architect also declaring Ontology directly. Tools does
+Dependency direction: `@memoarchitect/ontology` ← `@memoarchitect/tools` ←
+`@memoarchitect/architect`, with Architect also declaring Ontology directly. Tools does
 not depend on Architect and exposes no commands that require it. Published
 consumers install versioned npm packages; repository nesting is only a
 development workflow.
@@ -453,8 +453,8 @@ stable product and repository boundaries.
 ## 13. Decision log
 
 - **Methodology dictates layer set** — not the ontology. Ontology kinds carry `archLayer` attribute; methodology selects which layers to surface. (User direction.)
-- **Single canonical ontology** — `@memo/ontology` covers all medical-device kinds. Custom ontologies extend it. (User direction.)
-- **Default methodology = comprehensive** — `@memo/methodology-default` includes everything; tailoring = subtraction. (User direction.)
+- **Single canonical ontology** — `@memoarchitect/ontology` covers all medical-device kinds. Custom ontologies extend it. (User direction.)
+- **Default methodology = comprehensive** — `@memoarchitect/methodology-default` includes everything; tailoring = subtraction. (User direction.)
 - **GPCA = tailoring example** — not default. Drives example project. (User direction.)
 - **Artifacts = concrete document kinds** — `SoftwareArchitectureDocument`, `SystemRequirementsSpecification`, etc. Not abstract `DHFDocument`. (User direction.)
 - **Push to SysML maximally** — no YAML/JSON for kind/scope/rule data; only project pin lives in `memo.config.yaml`. (User direction.)

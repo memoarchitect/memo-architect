@@ -13,7 +13,7 @@ are **portable content**, not MEMO-private metadata:
 - `constraint def hazardMaxControlsRule { require constraint { mitigates->size() <= 10 } }`
   is read identically by sysand, SysIDE, and SysON.
 - An external tool is not required to *evaluate* the constraint (the KerML evaluator that
-  computes pass/fail lives in `@memo/tools`, see [constraint-evaluator.md](constraint-evaluator.md)).
+  computes pass/fail lives in `@memoarchitect/tools`, see [constraint-evaluator.md](constraint-evaluator.md)).
   It only has to *parse* it. Parse-fidelity is the bar.
 
 This is the exit gate for Epic EE and the precondition for cutting the standalone

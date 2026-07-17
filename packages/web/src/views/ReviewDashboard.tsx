@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
-import type { MemoModelDTO } from '@memo/tools/browser';
+import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 // ─── First-Review Dashboard (#132) ─────────────────────────────────────────
 //

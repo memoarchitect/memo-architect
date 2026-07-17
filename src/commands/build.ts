@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildProjectSnapshot, serializeForInlineScript } from '@memo/tools';
+import { buildProjectSnapshot, serializeForInlineScript } from '@memoarchitect/tools';
 
 function architectPackageRoot(): string {
     return resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -39,7 +39,7 @@ export async function architectBuildCommand(options: {
     const snapshot = await buildProjectSnapshot();
     const sourceDist = resolve(architectPackageRoot(), 'dist');
     if (!existsSync(resolve(sourceDist, 'index.html'))) {
-        throw new Error('Architect distribution is missing. Reinstall @memo/architect or run its build.');
+        throw new Error('Architect distribution is missing. Reinstall @memoarchitect/architect or run its build.');
     }
 
     const outputDir = resolve(snapshot.projectRoot, options.output || 'dist');

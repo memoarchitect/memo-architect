@@ -7,7 +7,7 @@
 // model through the same layouts — only the drawing engine differs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { DiagramDTO, MemoElement, MemoModelDTO, ViewKind } from '@memo/tools/browser';
+import type { DiagramDTO, MemoElement, MemoModelDTO, ViewKind } from '@memoarchitect/tools/browser';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../../../constants';
 import {
     computeLayout, computeContainmentLayout, computeDecompositionLayout, computeFBSLayout,

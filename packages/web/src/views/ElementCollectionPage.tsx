@@ -10,7 +10,7 @@ import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { elementUrl } from '../router';
-import type { MemoElement } from '@memo/tools/browser';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 
 interface Props {
     family: string;

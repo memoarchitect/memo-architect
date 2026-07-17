@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useModelStore } from '../store/model-store';
 import type { DhfDoc } from '../store/model-store';
 import { sendDhfTemplatesList, sendDhfTemplateRead } from '../store/ws-client';
-import type { DhfRepoTemplateInfo } from '@memo/tools/browser';
+import type { DhfRepoTemplateInfo } from '@memoarchitect/tools/browser';
 import {
     DHF_GROUPS, OTHER_GROUP_ID, OTHER_GROUP_COLOR,
     prefixFromTitle,

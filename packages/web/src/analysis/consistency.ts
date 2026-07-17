@@ -5,7 +5,7 @@
 // cross-component flows that imply interface needs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
 const FUNCTIONAL_KINDS = new Set(['Function', 'Function', 'UserActivity']);
 const STRUCTURAL_KINDS = new Set([

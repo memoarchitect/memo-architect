@@ -1,4 +1,4 @@
-import type { DiagramLayout } from '@memo/tools/browser';
+import type { DiagramLayout } from '@memoarchitect/tools/browser';
 import { DEFAULT_LAYOUT_PROVIDER_ID, type LayoutProviderDescriptor } from './layout-provider';
 
 export interface SavedLayoutProviderSelection {

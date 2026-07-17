@@ -1,7 +1,7 @@
 // ─── Grid template tests (KK-7 data preparation) ────────────────────────────
 
 import { describe, it, expect } from 'vitest';
-import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import { buildGridTable, buildGridMatrix, sortSection, pickColumns } from '../grid-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {

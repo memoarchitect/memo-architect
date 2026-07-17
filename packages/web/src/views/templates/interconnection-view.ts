@@ -24,7 +24,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO } from '@memo/tools/browser';
+import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { resolveGraphLayout, routeOrthogonalEdges, type LayoutResult, type OrthogonalRouteRequest } from '../layout';

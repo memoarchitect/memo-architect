@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FitPlugin, Graph, InternalEvent, Point, type Cell, type CellStyle } from '@maxgraph/core';
-import type { DiagramLayout } from '@memo/tools/browser';
+import type { DiagramLayout } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram } from '../../../store/model-store';
 import { sendDiagramLayoutUpdate } from '../../../store/ws-client';
 import { FONT } from '../../../styles/tokens';

@@ -14,10 +14,10 @@ importers:
       '@maxgraph/core':
         specifier: ^0.24.0
         version: 0.24.0
-      '@memo/ontology':
+      '@memoarchitect/ontology':
         specifier: workspace:*
         version: link:memo-tools/memo
-      '@memo/tools':
+      '@memoarchitect/tools':
         specifier: workspace:*
         version: link:memo-tools
       '@monaco-editor/react':
@@ -93,7 +93,7 @@ importers:
 
   memo-tools:
     dependencies:
-      '@memo/ontology':
+      '@memoarchitect/ontology':
         specifier: workspace:*
         version: link:memo
       chalk:

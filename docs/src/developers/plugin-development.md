@@ -49,7 +49,7 @@ configSchema:
 An Analysis plugin must implement a `run()` method that receives the `MemoModel`:
 
 ```typescript
-import { MemoModel, AnalysisResult } from '@memo/tools';
+import { MemoModel, AnalysisResult } from '@memoarchitect/tools';
 
 export default {
   async run(model: MemoModel, config: any): Promise<AnalysisResult> {

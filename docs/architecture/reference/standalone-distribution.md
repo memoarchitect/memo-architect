@@ -12,9 +12,9 @@ the source repositories.
 
 | Tarball | Package | Source repo |
 | --- | --- | --- |
-| `memo-ontology-*.tgz` | `@memo/ontology` — canonical ontology and methodology | memo |
-| `memo-tools-*.tgz` | `@memo/tools` — engine, headless operations, and `memo` CLI | memo-tools |
-| `memo-architect-*.tgz` | `@memo/architect` — visual workbench and viewer CLI | memo-architect |
+| `memo-ontology-*.tgz` | `@memoarchitect/ontology` — canonical ontology and methodology | memo |
+| `memo-tools-*.tgz` | `@memoarchitect/tools` — engine, headless operations, and `memo` CLI | memo-tools |
+| `memo-architect-*.tgz` | `@memoarchitect/architect` — visual workbench and viewer CLI | memo-architect |
 
 `pnpm pack` rewrites workspace dependency ranges to concrete versions. The
 packing script also installs all three tarballs into a fresh temporary npm
@@ -33,7 +33,7 @@ memo-architect dev   # http://127.0.0.1:3000
 ```
 
 The user's folder holds only their model and normal npm metadata. Tools finds
-its installed `@memo/ontology` dependency. Architect supplies its own client
+its installed `@memoarchitect/ontology` dependency. Architect supplies its own client
 assets to the reusable Tools server operation. Tools never resolves or imports
 Architect and exposes no commands that require it.
 
@@ -41,5 +41,5 @@ Architect and exposes no commands that require it.
 
 The diagram renderer feature flag works identically in packed builds:
 `?renderer=maxgraph`, the on-canvas switcher, or baking a default with
-`VITE_MEMO_DIAGRAM_RENDERER` when building `@memo/architect`. See
+`VITE_MEMO_DIAGRAM_RENDERER` when building `@memoarchitect/architect`. See
 [diagram-renderers.md](diagram-renderers.md).

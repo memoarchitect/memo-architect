@@ -6,8 +6,8 @@
 
 import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
-import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memo/tools/browser';
-import type { ValidationResult, CompletenessReport, Violation } from '@memo/tools/browser';
+import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, Violation } from '@memoarchitect/tools/browser';
 
 // ─── Inline document registry (lightweight, no core DHF dep for web) ────────
 

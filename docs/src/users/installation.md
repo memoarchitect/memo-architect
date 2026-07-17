@@ -21,9 +21,9 @@ pnpm run build
 
 The build runs the three repository-root packages in dependency order:
 
-1. `@memo/ontology` from `memo-tools/memo`
-2. `@memo/tools` from `memo-tools`
-3. `@memo/architect` from Memo Architect
+1. `@memoarchitect/ontology` from `memo-tools/memo`
+2. `@memoarchitect/tools` from `memo-tools`
+3. `@memoarchitect/architect` from Memo Architect
 
 The repositories share a `MAJOR.MINOR` compatibility line. Any `0.4.x` releases
 are intended to work together; patch versions can advance independently.
@@ -48,11 +48,11 @@ pnpm run example:dev
 The installed commands are independent of a source checkout. Install from npm:
 
 ```bash
-npm install @memo/tools
-npm install @memo/architect
+npm install @memoarchitect/tools
+npm install @memoarchitect/architect
 ```
 
-`@memo/tools` installs `@memo/ontology`; `@memo/architect` installs both lower
+`@memoarchitect/tools` installs `@memoarchitect/ontology`; `@memoarchitect/architect` installs both lower
 layers. Then initialize a product model in its own directory:
 
 ```bash

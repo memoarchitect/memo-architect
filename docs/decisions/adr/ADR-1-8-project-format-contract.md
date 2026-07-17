@@ -20,10 +20,10 @@ Device projects (created with `memo init`) use a **single monolithic file** at t
 projectName: my-device           # Required. Human-readable project identifier.
 projectType: device              # Required. Always "device" for end projects.
 
-extends: "@memo/medical-modeling-profile"  # Required. Ontology profile to inherit.
+extends: "@memoarchitect/medical-modeling-profile"  # Required. Ontology profile to inherit.
 
 ontologies:                      # Optional. Additional ontology extension packages.
-  - name: "@memo/ontology-clinical"
+  - name: "@memoarchitect/ontology-clinical"
     version: "^0.1.0"
 ```
 
@@ -31,7 +31,7 @@ ontologies:                      # Optional. Additional ontology extension packa
 
 - **Always at the project root** — never in `.memo/` or a subdirectory.
 - **No `kinds:` block** — kinds are defined by the SysML source files in the ontology packages, not in project config.
-- **No `closureRules:` block** — closure rules are owned by profile packages (e.g., `@memo/medical-modeling-profile`).
+- **No `closureRules:` block** — closure rules are owned by profile packages (e.g., `@memoarchitect/medical-modeling-profile`).
 - **No `cosmaLayers:` block** — layer colors and labels are owned by `memo.rendering.yaml` in the ontology package.
 - Projects inherit everything from `extends` and from the `ontologies` list. Project config is intentionally minimal.
 
@@ -41,12 +41,12 @@ ontologies:                      # Optional. Additional ontology extension packa
 projectName: infusion-pump
 projectType: device
 
-extends: "@memo/medical-modeling-profile"
+extends: "@memoarchitect/medical-modeling-profile"
 
 ontologies:
   - name: memo-ontology-medical
     version: "^0.1.0"
-  - name: "@memo/ontology-platform-robotics"
+  - name: "@memoarchitect/ontology-platform-robotics"
     version: "^0.1.0"
 ```
 
@@ -54,17 +54,17 @@ ontologies:
 
 ## Format 2: Ontology / Profile Package — `memo.package.yaml` + side-car files
 
-Ontology packages (`@memo/ontology-core`, `@memo/ontology-medical`, extension packages) and profile packages (`@memo/medical-modeling-profile`) use a **decomposed format** across up to three purpose-specific files.
+Ontology packages (`@memoarchitect/ontology-core`, `@memoarchitect/ontology-medical`, extension packages) and profile packages (`@memoarchitect/medical-modeling-profile`) use a **decomposed format** across up to three purpose-specific files.
 
 ### File 1: `memo.package.yaml` (required)
 
 Identity and dependency declaration.
 
 ```yaml
-name: "@memo/ontology-medical"   # Required. npm-style package name.
+name: "@memoarchitect/ontology-medical"   # Required. npm-style package name.
 version: "0.1.0"                 # Required. Semver.
 type: ontology                   # Required. "ontology" | "profile" | "library"
-extends: "@memo/ontology-core"   # Optional. Parent package.
+extends: "@memoarchitect/ontology-core"   # Optional. Parent package.
 description: "Medical device backbone (ISO 14971, IEC 62304, IEC 62366)"
 license: "Apache-2.0"
 tags: ["mbse", "sysml-v2", "medical-device"]

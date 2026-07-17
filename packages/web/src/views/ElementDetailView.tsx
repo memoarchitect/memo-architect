@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
 import { LAYER_COLORS, KIND_TO_GROUP } from '../constants';
 import { FONT, COLOR, SHADOW } from '../styles/tokens';
-import type { MemoElement, MemoRelationship } from '@memo/tools/browser';
+import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
 // ─── Scenario kinds ───────────────────────────────────────────────────────────
 const SCENARIO_KINDS = new Set(['Scenario', 'UseCase', 'UserActivity']);

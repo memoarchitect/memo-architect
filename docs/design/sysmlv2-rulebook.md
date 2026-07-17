@@ -1059,7 +1059,7 @@ Replaces hand-curated docs with deterministic output of B11/B12. Every package g
 
 **MEMO principle FB15** (no lint — design discipline):
 - Ontology is **the system**, not metadata about the system.
-- Tool (`memo-architect`) is the wrapper; the SysML files in `@memo/ontology` and the active methodology package are the truth.
+- Tool (`memo-architect`) is the wrapper; the SysML files in `@memoarchitect/ontology` and the active methodology package are the truth.
 - Every UI feature, every CLI command, every DHF section ultimately resolves to a query against the ontology AST. No business logic outside the ontology + view descriptors.
 - Reinforces platform.md §1 principle 1 ("Ontology is SysML, not YAML") and the "SysML-as-Source-of-Truth" memory marker (`feedback_sysml_ground_truth.md`).
 
