@@ -15,11 +15,11 @@ importers:
         specifier: ^0.24.0
         version: 0.24.0
       '@memoarchitect/ontology':
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
       '@memoarchitect/tools':
-        specifier: 0.4.4
-        version: 0.4.4
+        specifier: 0.4.5
+        version: 0.4.5
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -753,12 +753,12 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
-  '@memoarchitect/ontology@0.4.4':
-    resolution: {integrity: sha512-BgdK2rFdl2FTXvdlt5gJ1zRIB6O3Zu5xAgIOr9gOUWcNZLsKq1JFpsWQXQHg3hjMv4ZR/9sW01RLaJW7wAGkqg==}
+  '@memoarchitect/ontology@0.4.5':
+    resolution: {integrity: sha512-j+MnnAl/X9rbNMRBcoaKlS1o6cmOAbfzrtHEv0220M+aYLMXRpZiISUeW02dVz4MyhZAcuF9Wefl5OIiP7+6gA==}
     engines: {node: '>=20'}
 
-  '@memoarchitect/tools@0.4.4':
-    resolution: {integrity: sha512-UbBJiIlUSyoy15z2VG66QFfjjREVQJVjI1y1DTxwy+V+eeLyYizJLClaAkF0CIZXZakHilevQVm2qLcd0reJow==}
+  '@memoarchitect/tools@0.4.5':
+    resolution: {integrity: sha512-OriEtC/6NsCScwn2YT74DHed06ABqG2vUCwLvdpp4P+BKU0n2Jv8xUaJ29rAasCXv5D+UDxrgNC1JDoDz69QEA==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -2623,11 +2623,11 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
-  '@memoarchitect/ontology@0.4.4': {}
+  '@memoarchitect/ontology@0.4.5': {}
 
-  '@memoarchitect/tools@0.4.4':
+  '@memoarchitect/tools@0.4.5':
     dependencies:
-      '@memoarchitect/ontology': 0.4.4
+      '@memoarchitect/ontology': 0.4.5
       chalk: 5.6.2
       chokidar: 4.0.3
       commander: 12.1.0

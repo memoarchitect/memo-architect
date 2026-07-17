@@ -1,10 +1,10 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
-    "memo-architect": "./lib/bin/memo-architect.js"
+    "memo-architect": "lib/bin/memo-architect.js"
   },
   "exports": {
     "./package.json": "./package.json",
@@ -33,8 +33,8 @@
     "setup": "pnpm install && pnpm run build && pdm install"
   },
   "dependencies": {
-    "@memoarchitect/tools": "0.4.4",
-    "@memoarchitect/ontology": "0.4.4",
+    "@memoarchitect/tools": "0.4.5",
+    "@memoarchitect/ontology": "0.4.5",
     "@dagrejs/dagre": "^2.0.0",
     "@maxgraph/core": "^0.24.0",
     "@monaco-editor/react": "^4.7.0",
