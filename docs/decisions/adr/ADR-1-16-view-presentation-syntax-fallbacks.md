@@ -57,5 +57,5 @@ This ADR intentionally accepts a temporary mismatch between the standard SysML t
 
 ## Pointers
 
-- Parser fixture: `packages/core/src/__tests__/parser.test.ts`
+- Parser fixture: `memo-tools/packages/tools/src/__tests__/parser.test.ts`
 - Standard import target: [ADR-1-12](ADR-1-12-namespace-canonicalization.md)

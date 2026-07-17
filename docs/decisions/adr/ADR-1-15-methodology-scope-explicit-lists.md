@@ -45,5 +45,5 @@ If a future story adds first-class collection expressions to `packages/core`, th
 
 ## Pointers
 
-- Parser fixture: `packages/core/src/__tests__/parser.test.ts`
-- Platform open question resolved: [platform.md §12 question 1](../../architecture/platform.md#12-open-questions)
+- Parser fixture: `memo-tools/packages/tools/src/__tests__/parser.test.ts`
+- Current grammar behavior is explicit: methodology scope uses enumerated lists.

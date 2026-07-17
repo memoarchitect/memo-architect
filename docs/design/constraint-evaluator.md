@@ -1,7 +1,7 @@
 # Constraint Evaluator — Value Model & Semantics (Epic EE)
 
 Design note for the KerML-subset evaluator in
-`packages/core/src/validator/constraint-eval.ts`. Authoring subset is fixed by
+`memo-tools/packages/tools/src/validator/constraint-eval.ts`. Authoring subset is fixed by
 [ADR-1-18](../decisions/adr/ADR-1-18-kerml-expression-subset.md); this note
 documents the evaluator's runtime semantics (the EE-2 breadth).
 

@@ -41,7 +41,7 @@ These invariants ensure Syside (and SysON, Sysand) can index the project:
 | C4 | Directory path mirrors namespace segments | ADR-1-12 §4 |
 | C5 | No hyphens in `.sysml` filenames | ADR-1-12 §5 |
 
-Automated checks: `node tools/ontology-tools/syside-compat.mjs` (standalone) and the `DD-4` conformance test suite in `packages/core/src/__tests__/conformance.test.ts`.
+Automated checks: `node tools/ontology-tools/syside-compat.mjs` (standalone) and the `DD-4` conformance test suite in `memo-tools/packages/tools/src/__tests__/conformance.test.ts`.
 
 ## Standard library imports
 

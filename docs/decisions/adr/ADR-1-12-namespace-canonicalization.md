@@ -60,21 +60,13 @@ Within `memo::ontology`, the second segment names the **dimension** (`architectu
 | `@memoarchitect/ontology-process` | `@memoarchitect/ontology` | `memo::ontology::compliance::*` + `memo::ontology::artifacts::*` |
 | `@memoarchitect/medical-modeling-profile` | `@memoarchitect/methodology-default` | `memo::methodology::default::*` |
 
-**Epic ordering implication** — because every later epic imports L0 helpers, **Epic B (L0 helpers)** must land its package path as `memo::base::*` first. **Epic K (grammar gaps)** must verify Langium accepts the qualified-name form before C/D/E run their migrations.
+**Tool interop is enforceable** — CI runs the external build and compatibility
+checks for the supported SysML toolchain. A failure blocks merge.
 
-**Tool interop is enforceable** — a CI check (introduced under Epic T) runs `sysand build` and a SysON headless validation pass on every push. A failure blocks merge.
-
-**Forbidden patterns** — `package memo::arch::*` and `package memo::profile::*` are removed. `medical-modeling-profile` package is deleted after Epic G renames its substance into `@memoarchitect/methodology-default`. Dropped because they conflate dimension and layer, blocking the ontology/methodology split.
-
-## Open questions
-
-1. SysML v2 kernel library import path — confirm against the OMG pilot reference. May affect L0 base imports.
-2. Whether `memo::ext::<vendor>::*` extensions ship inside `@memoarchitect/ontology` or as separate `@memoarchitect/ext-<vendor>` packages. Default: separate package; revisit if it forces circular deps.
-3. ~~Filename casing under nested standards.~~ **Resolved:** snake_case per Python convention; hyphens forbidden in path segments.
+**Forbidden patterns** — `package memo::arch::*` and `package memo::profile::*`
+are not part of the canonical namespace. Filenames and nested directory segments
+use snake_case; hyphens are forbidden in namespace path segments.
 
 ## Pointers
 
-- Platform target architecture: [platform.md §4](../../architecture/platform.md)
-- Sysand `.kpar` build epic: Epic T
-- Standard conformance epic: Epic DD
-- Grammar verification: Epic K
+- Current platform architecture: [platform.md](../../architecture/platform.md)

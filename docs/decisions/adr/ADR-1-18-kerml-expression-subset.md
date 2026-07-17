@@ -13,7 +13,7 @@ as native SysML v2 / KerML boolean expressions inside `constraint def` /
 `requirement def` bodies, instead of the proprietary `ClosureRule` enum or the
 `predicate="..."` attribute hack interpreted by `RuleRegistry`.
 
-The EE-0 spike (`packages/core/src/validator/constraint-eval.ts`) proved the
+The EE-0 spike (`memo-tools/packages/tools/src/validator/constraint-eval.ts`) proved the
 evaluator works against the built `MemoModel`, but it parsed expressions with a
 hand-written recursive-descent parser. That parser is a stand-in — it lives
 outside the SysML AST, so authored rules are not part of the parsed model.
@@ -80,7 +80,7 @@ an explicit message. We do not silently accept unsupported KerML.
 
 ## Pointers
 
-- Grammar: `packages/core/src/grammar/memo-sysml.langium` (constraint expression rules)
-- Evaluator + mapping: `packages/core/src/validator/constraint-eval.ts`
-- Tests: `packages/core/src/__tests__/constraint-grammar.test.ts`
+- Grammar: `memo-tools/packages/tools/src/grammar/memo-sysml.langium` (constraint expression rules)
+- Evaluator + mapping: `memo-tools/packages/tools/src/validator/constraint-eval.ts`
+- Tests: `memo-tools/packages/tools/src/__tests__/constraint-grammar.test.ts`
 - Spike origin: EE-0 (`constraint-eval.ts` header)

@@ -6,7 +6,7 @@ Canonical platform architecture and reference material live here.
 
 | Doc | Role |
 |---|---|
-| [platform.md](platform.md) | Canonical platform architecture and grand plan |
+| [platform.md](platform.md) | Current platform architecture and product boundaries |
 | [reference/platform-strategy.md](reference/platform-strategy.md) | Package and repo strategy |
 | [../decisions/index.md](../decisions/index.md) | ADR catalog and current decision state |
 | [../design/README.md](../design/README.md) | Runtime design and authoring specifics |
@@ -16,6 +16,7 @@ Canonical platform architecture and reference material live here.
 | Doc | Role |
 |---|---|
 | [reference/overview.md](reference/overview.md) | System context and package architecture |
+| [reference/repository-layout.md](reference/repository-layout.md) | Current standalone Architect repository layout |
 
 ## Conventions
 

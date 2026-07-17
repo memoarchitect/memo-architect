@@ -35,7 +35,7 @@ which are MEMO-internal model heuristics — this is the real external-tool roun
 
 ## Standard authoring forms the ontology must use
 
-The MEMO grammar (`packages/core/src/grammar/memo-sysml.langium`) is a **strict SysML v2
+The MEMO grammar (`memo-tools/packages/tools/src/grammar/memo-sysml.langium`) is a **strict SysML v2
 subset**: the two formerly-accepted non-standard forms are now **rejected by the parser**, so
 compliance is guaranteed by construction (not only by lint):
 

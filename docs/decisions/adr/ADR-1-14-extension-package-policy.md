@@ -32,23 +32,13 @@ memo::ontology::ext::vendor_acme::*            vendor-private kinds
 
 ## Consequences
 
-**Roadmap simplification.** Epic Z drops automotive (Z-3) and aerospace (Z-4). Z keeps the plugin API contract (Z-1) and reusable component libraries (Z-2). Two new stories exemplify the extension pattern with **medical** sub-domains rather than non-medical regimes.
-
 **Independent versioning.** Extension authors publish on their own cadence. Core ontology releases do not need to coordinate with extensions.
 
-**No mono-repo coupling.** Extensions are separate Git repositories or separate workspace packages, not subdirectories under `@memoarchitect/ontology`. Repo split (Epic J) is unaffected — extensions live in additional repos as needed.
-
-**Marketing / docs.** Project description, README, marketing materials reflect medical-only scope. Existing automotive/aerospace mentions in docs are removed during Epic L.
+**No product-repository coupling.** Extensions are separate Git repositories and
+packages, not subdirectories under `@memoarchitect/ontology`.
 
 ## Out of scope
 
 - Automotive (ISO 26262) extension. Removed.
 - Aerospace (DO-178C) extension. Removed.
 - Any general-purpose systems engineering ontology (FIBO, etc.) beyond what already exists for medical traceability use cases.
-
-## Pointers
-
-- Plugin API: Epic Z-1
-- Reusable libraries: Epic Z-2
-- Loader namespace scan: legacy issue #261 (now mapped to Epic Z)
-- Doc cleanup: Epic L (remove automotive/aerospace references)

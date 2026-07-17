@@ -17,7 +17,6 @@ Use [../architecture/platform.md](../architecture/platform.md) for canonical arc
 |---|---|
 | [runtime/data-flow.md](runtime/data-flow.md) | Parser, registry, model, validation, and UI data flow |
 | [runtime/websocket-protocol.md](runtime/websocket-protocol.md) | CLI to web app WebSocket protocol |
-| [runtime/live-reload.md](runtime/live-reload.md) | Project hot-reload versus ontology/methodology restart-required behavior |
 
 ## Boundary
 

@@ -36,6 +36,7 @@ L0 helpers (`@memoarchitect/sysml-base`) hold dimension type defs, rule type, vi
 
 **UI** — tab content = `(ontology kinds tagged dim X) ∩ (methodology.includedX)`. Generic; same code path for every tab.
 
-**Migration** — incremental phases E1–E9 in [platform.md §11](../../architecture/platform.md). Build green at every phase boundary.
+**Current result** — the consolidated ontology source is published as
+`@memoarchitect/ontology` and consumed as an exact npm dependency.
 
 **Deprecated package names** — `@memoarchitect/ontology-core`, `@memoarchitect/ontology-medical`, `@memoarchitect/medical-modeling-profile`, `@memoarchitect/ontology-arch`, `@memoarchitect/ontology-process` all collapse into `@memoarchitect/ontology`. References in older docs remain for historical traceability.

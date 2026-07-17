@@ -39,7 +39,7 @@ Facts bearing on the decision:
 
 The kind remains a first-class citizen of the taxonomy, handled explicitly:
 
-1. `geometry` stays in `VIEW_KINDS` (`packages/core/src/model/view-kinds.ts`)
+1. `geometry` stays in `VIEW_KINDS` (`memo-tools/packages/tools/src/model/view-kinds.ts`)
    and in `enum def DiagramViewKind` in the ontology. Parsing, building, and
    view validation accept declared geometry views without warnings.
 2. **No legacy `diagramType` key maps to `geometry`.** The kind is reachable
@@ -71,6 +71,6 @@ At that point the renderer joins `packages/web/src/views/templates/` as
 
 ## Pointers
 
-- Taxonomy + mapping lock: `packages/core/src/model/view-kinds.ts`,
-  `packages/core/src/__tests__/view-kinds.test.ts`
+- Taxonomy + mapping lock: `memo-tools/packages/tools/src/model/view-kinds.ts`,
+  `memo-tools/packages/tools/src/__tests__/view-kinds.test.ts`
 - Deferred placeholder: `packages/web/src/views/DiagramCanvas.tsx`

@@ -11,10 +11,6 @@ provider layer:
 | Layout providers (`diagram/layout-provider.ts`) | Where do nodes go? | ELK, Dagre, Fixed |
 | Renderer providers (`diagram/renderer-provider.ts`) | How is the scene drawn? | ReactFlow, maxGraph |
 
-Decision record: [ADR-1-20](../../decisions/adr/ADR-1-20-maxgraph-diagram-renderer.md)
-(gated maxGraph migration) and [ADR-1-21](../../decisions/adr/ADR-1-21-modular-capability-provider-architecture.md)
-(capability-provider architecture).
-
 ## Module map
 
 ```
@@ -67,5 +63,5 @@ to `memo.renderer.<name>`.
    reuse `scene-source.ts` to obtain positioned scenes).
 2. Register a `DiagramRendererProvider` in `renderers.ts` with an honest
    capability list and a lazy `loadComponent`.
-3. Renderer-specific imports stay inside `renderers/<engine>/` — templates and
-   application code must not import engine types (ADR-1-20 constraint 1).
+3. Renderer-specific imports stay inside `renderers/<engine>/`; templates and
+   application code do not import concrete engine types.

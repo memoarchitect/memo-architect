@@ -1,98 +1,40 @@
 # Platform Strategy
 
-This page is a reference summary of packaging and release strategy. The canonical architecture is [../platform.md](../platform.md).
+MEMO ships three independent products with a single dependency direction.
 
-## Product Decomposition
-
-| Layer | Artifact | Role |
+| Product | Package | Current responsibility |
 |---|---|---|
-| L0 helpers | `@memoarchitect/sysml-base` | Shared SysML library types, dimensions, rule/view base defs |
-| L1 ontology | `@memoarchitect/ontology` | Comprehensive medical-device ontology with architecture, compliance, artifact, and viewpoint dimensions |
-| L2 methodology | `@memoarchitect/methodology-default` and custom packages | Scope, aliases, workflow, DHF bindings, rule strengths, viewpoint selection |
-| L3 tool | `@memoarchitect/tools` + `@memoarchitect/architect` | Parse, validate, visualize, analyze, and export projects |
+| Ontology | `@memoarchitect/ontology` | SysML v2 ontology, methodologies, constraints, viewpoints, templates, and examples |
+| Tools | `@memoarchitect/tools` | Parser, semantic model, validation, analysis, project operations, document tooling, and `memo` CLI |
+| Architect | `@memoarchitect/architect` | Visual workbench and application composition |
 
-The ontology is the reusable modeling product. MEMO Architect consumes it and adds engineering workflow. Methodology packages tailor what the project sees without forking the ontology.
+## Dependency and release policy
 
-## Source Layout
+- Tools pins an exact Ontology npm version.
+- Architect pins exact Tools and Ontology npm versions.
+- Products are installed, built, tested, and published independently.
+- Releases publish dependency-first: Ontology, Tools, then Architect.
+- Products on the same `MAJOR.MINOR` line are compatible; exact patch versions
+  make builds reproducible.
 
-Canonical ontology source follows the dimension layout from [../platform.md §4](../platform.md#4-single-ontology-repo-memoontology):
+## Coordinated development
 
-```text
-ontology/
-├── base/                 # L0-style helpers while local
-├── architecture/         # architecture dimension, grouped by archLayer
-├── compliance/           # compliance dimension, grouped by standard
-├── artifacts/            # concrete DHF/review document kinds
-├── viewpoints/           # viewpoint type kinds
-├── views/                # view templates and definitions
-├── relationships/        # cross-dimension connection defs
-└── rules/                # ontology invariant rules
-```
+The private `memo-meta` repository contains all three product repositories as
+direct sibling submodules. Meta-only pnpm overrides link those sibling working
+trees without changing product manifests. The meta build is explicitly ordered
+Ontology → Tools → Architect.
 
-Methodology packages select subsets across those dimensions:
+## Source ownership
 
-```text
-packages/methodology-default/
-└── sysml/methodology/default/
+- Ontology owns reusable modeling semantics and packaged source content.
+- Tools owns headless behavior and the shared typed application boundary.
+- Architect owns presentation and interaction.
+- Device projects own their `.sysml` instances and local configuration.
+- `memo-meta` owns planning, proposals, internal reviews, handoffs, generated
+  planning material, and coordinated release operations.
 
-packages/methodology-gpca/
-└── sysml/methodology/gpca/
-```
+## Package truth
 
-## Package Format
-
-MEMO should push semantics into SysML. Metadata files are thin package/project manifests, not duplicated type catalogs.
-
-| File | Role |
-|---|---|
-| `.project.json` | Sysand/SysML package manifest when publishing as `.kpar` |
-| `memo.package.yaml` | Temporary MEMO package identity and local source directory hints |
-| `memo.config.yaml` | Project-level methodology pin and runtime options |
-| `.sysml` files | Kinds, relationships, rules, scope, aliases, workflow, viewpoints |
-
-Do not reintroduce `kinds:`, `relationshipTypes:`, or closure-rule catalogs as parallel YAML truth. Registries are derived from SysML.
-
-## Methodology Strategy
-
-`@memoarchitect/methodology-default` is comprehensive. Custom methodologies, such as GPCA, extend default and subtract or override:
-
-- architecture layers
-- compliance standards
-- artifact/document kinds
-- viewpoint types
-- workflow stages
-- rule strengths
-- terminology aliases
-
-This keeps ontology authors, methodology authors, and project authors on separate axes:
-
-| Author | Edits |
-|---|---|
-| Ontology author | Shared kinds, relationships, invariant rules |
-| Methodology author | Scope, workflow, rule strengths, aliases |
-| Project author | Element instances and project-specific exemptions |
-
-## Release Direction
-
-The three-repo split from [../platform.md §10](../platform.md#10-repo-layout-executed-2026-07-12) was executed on 2026-07-12 — see [ADR-1-17](../../decisions/adr/ADR-1-17-three-repo-split.md) (Implemented). Public repo naming maps to the meMO four-layer stack:
-
-```text
-memo/            # Layers 01 Ontology + 02 Methodology — pure SysML v2 / KerML content
-                 #   github: memoarchitect/memo
-memo-tools/      # Layer 03 Tools — one @memoarchitect/tools package
-                 #   github: memoarchitect/memo-tools
-memo-architect/  # Layer 04 Architect — web app (@memoarchitect/architect)
-                 #   github: memoarchitect/memo-architect
-```
-
-Dependency direction is `@memoarchitect/ontology` ← `@memoarchitect/tools` ←
-`@memoarchitect/architect`. Architect also declares Ontology directly. Tools exposes
-only headless commands and reusable operations; interactive and viewer commands
-belong to Architect. All three are normal versioned npm packages.
-
-## Migration Guardrails
-
-- Architecture-changing work updates [../platform.md](../platform.md) or adds/supersedes an ADR.
-- Reference docs summarize current behavior; they do not define competing plans.
-- Generated requirements and roadmap plans are not source architecture.
-- Ontology inspection remains read-only and secondary. The primary MEMO Architect mode is methodology-scoped modeling, compliance, artifacts, and diagrams.
+SysML remains the semantic source of truth. YAML and JSON files configure
+projects or package resolution; they do not duplicate ontology kinds,
+relationships, constraints, or viewpoints.
