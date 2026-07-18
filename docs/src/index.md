@@ -1,9 +1,13 @@
-# Understand, review, and improve a medical-device model
+# MEMO Architect: review a medical-device model
 
-MEMO Architect is the visual workbench for models built with the Medical
-Engineering Modelling Ontology. It helps engineers explore the device by layer,
-follow traceability, inspect gaps, and prepare review artifacts while SysML v2
-source remains the system of record.
+MEMO Architect is the visual review workbench for a model that already lives
+in SysML v2 source. It helps an engineering team navigate a device by concern,
+follow a trace from need to evidence, inspect validation gaps, and prepare
+review artifacts—without creating a second model.
+
+Architect is the highest layer of the MEMO product family. The
+**Ontology** supplies meaning and methodology; **Tools** reads and validates the
+source; **Architect** makes that shared model easier to explore and review.
 
 ## Start with what you need to accomplish
 
@@ -20,18 +24,12 @@ source remains the system of record.
 
 ## The review path
 
-```mermaid
-flowchart LR
-    Context[Context and use] --> Need[Needs and requirements]
-    Need --> Design[Functions and architecture]
-    Design --> Risk[Risk and controls]
-    Need --> Evidence[Verification and evidence]
-    Risk --> Evidence
-    Evidence --> Review[Review views and DHF outputs]
-```
+Use views to follow a single connected thread:
 
-The workbench gives you different views of this one connected model. A diagram,
-matrix, table, or document is not a separate source of truth.
+`context and use → needs and requirements → design response → risk and controls → verification evidence → review`
+
+The workbench gives you different lenses on this one model. A diagram, matrix,
+table, or document is a view of the source—not a separate source of truth.
 
 ## Five-minute launch
 

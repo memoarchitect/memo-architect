@@ -1,21 +1,13 @@
-# Choose Your MEMO Layer
+# Choose the right MEMO product
 
-MEMO is available as three adoptable products. Choose the highest layer that
-matches your workflow; each higher layer includes or consumes the lower ones.
+MEMO is available as three complementary products. Choose the highest layer
+that fits the work you need to do; each higher layer consumes the one below it.
 
 | You need… | Use… | What you get |
 |---|---|---|
 | A portable SysML v2 vocabulary and methodology | **MEMO Ontology** | Elements, relationships, rules, viewpoints, templates |
 | Validation, import/export, packaging, and automation | **MEMO Tools** | The `memo` CLI and reusable model engine |
 | Interactive exploration and review | **MEMO Architect** | Web workbench plus the Tools and Ontology capabilities |
-
-```mermaid
-flowchart BT
-    Ontology[01–02 MEMO Ontology<br/>meaning and method]
-    Tools[03 MEMO Tools<br/>automation and analysis]
-    Architect[04 MEMO Architect<br/>interactive workbench]
-    Ontology --> Tools --> Architect
-```
 
 ## Common choices
 
@@ -24,8 +16,9 @@ flowchart BT
 - A cross-functional design review benefits from Architect's diagrams, tables,
   gap views, and document workbench.
 
-All three products share a `MAJOR.MINOR` compatibility line. Keep `0.4.x`
-products together, while allowing patch versions to advance independently.
+The three products publish independently. When combining them, keep their
+documented dependency versions together rather than assuming every same-number
+release is interchangeable.
 
 ## Continue
 

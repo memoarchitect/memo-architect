@@ -1,59 +1,66 @@
-# Workbench UI Usage
+# Use the Workbench
 
-The **MEMO Architect Workbench** is a unified environment for systems modeling, analysis, and refinement. This guide covers the key interface components and how to interact with your model visually.
+Start with a question, not a canvas. Architect is most useful when you can say
+what you need to review—for example, “which control mitigates this hazard?” or
+“does this requirement have verification evidence?” Then choose the smallest
+view that can answer it.
 
-## Interface Overview
+## Orient yourself
 
-The interface is divided into four main areas:
+The workbench gives the same model three complementary entry points:
 
-1.  **Sidebar (Model Explorer):** Navigate the hierarchy of your model elements, organized by layer (Operational, Functional, Logical, Physical).
-2.  **Breadcrumb / Toolbar:** Shows your current location in the model and provides access to different views (Diagram, Properties, Ontology).
-3.  **Main Viewport:** Where diagrams are rendered and model elements are edited.
-4.  **Property Panel:** (Optional) Context-sensitive details for the currently selected element in a diagram.
+| Area | Use it for | Good first action |
+|---|---|---|
+| **Model Explorer** | Find elements by layer, kind, or name | Open one known requirement, function, or hazard |
+| **View Explorer** | Select the viewpoint for a review question | Choose context, risk, requirements, or verification |
+| **Main view** | Read the selected diagram, table, or analysis | Follow one relationship at a time |
+| **Details and findings** | Inspect attributes, links, and validation messages | Decide whether a gap is real, intentional, or a modeling error |
 
-## 2. Workbench Modes
+## A five-minute review
 
-The top toolbar allows you to switch between the primary modes of the application.
+Use the included GPCA model and trace a single patient-bolus concern.
 
-### Modeling Workbench
-The default mode for architectural modeling. It features a dual-sidebar layout:
-- **Model Explorer:** (Top Left) Browse and search the semantic model elements by layer and kind.
-- **View Explorer:** (Bottom Left) Navigate the diagrams and analysis views defined in your project's viewpoints.
-- **Properties Panel:** (Right) Edit elementary attributes and view relationship traces.
+1. In the Model Explorer, open `needSafeTherapy`.
+2. Read its outgoing and incoming relationships. They explain why the need is
+   present and what claims depend on it.
+3. Switch to a requirements or functional view to see the design response.
+4. Switch to a risk view to find the related hazard and control.
+5. Switch to verification coverage to see whether the requirement has an
+   associated verification case and evidence.
 
-### Scenario Catalog
-A dedicated space for behavior engineering, focusing on user activities and system scenarios.
+If a view becomes crowded, return to the selected element and ask a narrower
+question. A crowded diagram is a sign to change the lens, not to add another
+copy of the model.
 
-<!-- ![Scenario Catalog](../images/screenshots/scenario-catalog.png) -->
-*The Scenario Catalog showing an infusion pump alarm response flow.*
+## Explore the current vocabulary
 
-### Ontology Viewer
-A "Read-Only" mode for exploring the metamodel rules and relationship schemas enforced by your current modeling profile.
+Use the **Ontology Viewer** when you are unsure which element kind or
+relationship belongs in a model. It shows the vocabulary selected by the
+project's active profile; it is a reference, not a second place to author
+project meaning.
 
 ![Ontology Viewer](../images/screenshots/ontology-viewer.png)
-*Hierarchical view of the canonical `@memoarchitect/ontology` kind registry.*
 
----
+## Find dependencies and gaps
 
-## 3. Analysis & Compliance
+The **DSM** highlights dependency patterns. Use it to prepare a technical
+discussion, then return to the connected elements to understand the engineering
+reason for a dependency.
 
-MEMO includes integrated tools for real-time model analysis.
-
-### DSM Matrix
-Click the **DSM** icon to open the Design Structure Matrix for dependency clustering.
 ![DSM Matrix](../images/screenshots/dsm-matrix.png)
 
-### Consistency Panel
-The **Problems** bar at the bottom reflects both schema violations and logical consistency issues.
+The **Problems** area reports validation and consistency findings. Treat each
+finding as a review prompt: inspect the affected source and decide whether to
+add missing information, correct a relationship, or document an explicit scope
+boundary.
+
 ![Consistency Panel](../images/screenshots/consistency-panel.png)
 
----
+## Optional assistance
 
-## 4. Interaction & Productivity
+Where enabled for a project, the command palette can help draft or query model
+content. Review generated text and all source changes as carefully as any other
+engineering input; assistance does not approve a requirement, risk control, or
+evidence claim.
 
-- **Command Palette (Cmd+K):** The central hub for AI-powered actions. Press `Cmd+K` and use `/ask` for model Q&A or `/generate` for SysML creation.
 ![AI Interface](../images/screenshots/ai-interface.png)
-- **Diagram Interactions:** 
-    - **Double-click:** Enter a container (Subsystem, Action) to see internal structure.
-    - **Hover:** Highlight connected traces across the canvas.
-    - **Breadcrumbs:** Use the breadcrumb bar to navigate back up the model hierarchy.
