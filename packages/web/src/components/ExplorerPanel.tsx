@@ -661,6 +661,12 @@ function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?:
         || sourcePackage === 'views';
 }
 
+function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
+    return isDiagramOnlyElement(kind, sourceLayer, sourcePackage)
+        || sourceLayer === 'methodology'
+        || sourcePackage === 'methodology';
+}
+
 function vModelSubGroup(kind: string, sourceLayer: string, sourcePackage?: string): string {
     if (kind === 'CareSystem') return 'operational';
     if (kind === 'OperationalScenario') return 'operational';
@@ -812,7 +818,7 @@ export function computeExplorerGroupTree(
     for (const el of elements) {
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
-        if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
+        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
         if (BUILDER_SYNTHESIZED_KINDS.has(el.kind) && !kindToLayerId[el.kind]) {
             synthesizedLayerIds.add(explorerDomain(el.layer));
         }
@@ -853,7 +859,7 @@ export function computeExplorerGroupTree(
             // Prefer ontology-defined layer; fall back to element's own layer field
             const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
             const sourcePackage = kindToSubGroup[el.kind];
-            if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
+            if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
             const layerId = explorerDomainForElement(el.kind, sourceLayer);
             if (layerId !== lg.id) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
@@ -870,7 +876,7 @@ export function computeExplorerGroupTree(
     for (const el of elements) {
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
-        if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
+        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
         const layerId = explorerDomainForElement(el.kind, sourceLayer);
         if (knownLayerIds.has(layerId)) continue;
         if (NON_ELEMENT_LAYERS.has(layerId)) continue;
