@@ -568,7 +568,7 @@ const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
  * logical_structure, risk, verification, …).  The explorer first presents
  * the two user-facing domains, then these layers below them.
  */
-const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance'> = {
+const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance' | 'methodology'> = {
     architecture: 'architecture',
     assurance: 'assurance',
     behavior: 'architecture',
@@ -582,8 +582,8 @@ const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance'> = {
     physical: 'architecture',
     system: 'architecture',
     context: 'architecture',
-    core: 'architecture',
-    methodology: 'architecture',
+    core: 'assurance',
+    methodology: 'methodology',
     activities: 'architecture',
     workflows: 'architecture',
     scenarios: 'architecture',
@@ -663,8 +663,8 @@ function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?:
 
 function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
     return isDiagramOnlyElement(kind, sourceLayer, sourcePackage)
-        || sourceLayer === 'methodology'
-        || sourcePackage === 'methodology';
+        || kind === 'ForkNode'
+        || kind === 'JoinNode';
 }
 
 function vModelSubGroup(kind: string, sourceLayer: string, sourcePackage?: string): string {
@@ -780,6 +780,12 @@ function subGroupLabel(id: string): string {
         .split(/[_-]/)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ');
+}
+
+function kindFolderLabel(kind: string, count: number): string {
+    const singular = kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    if (count === 1 || /(?:ss|Data|Status)$/i.test(singular)) return singular;
+    return singular.endsWith('s') ? singular : singular + 's';
 }
 
 /** One namespace sub-group inside a layer group (e.g. Risk inside Architecture). */
@@ -1156,7 +1162,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 className="font-medium flex-1 truncate"
                                                 style={{ color: isUndefinedGroup ? '#B45309' : COLOR.secondary, fontSize: FONT.explorer.kind }}
                                             >
-                                                {kind}
+                                                {kindFolderLabel(kind, kindElementIds.length)}
                                                 {isUndefinedGroup && <span style={{ color: '#F59E0B', marginLeft: '4px' }}>·</span>}
                                             </span>
                                             {/* Select all in kind */}
