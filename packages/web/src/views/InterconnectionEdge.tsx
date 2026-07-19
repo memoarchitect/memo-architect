@@ -65,11 +65,34 @@ function pathMidpoint(points: Point[]): Point {
     return points[points.length - 1];
 }
 
+/**
+ * Keep a connector label clear of its own line. The label belongs above or
+ * beside the longest segment that contains the route midpoint, rather than
+ * directly on top of the connector.
+ */
+function labelOffset(points: Point[]): { x: number; y: number } {
+    const lengths = points.slice(1).map((point, index) =>
+        Math.abs(point.x - points[index].x) + Math.abs(point.y - points[index].y));
+    const half = lengths.reduce((sum, length) => sum + length, 0) / 2;
+    let walked = 0;
+    for (let index = 0; index < lengths.length; index++) {
+        if (walked + lengths[index] >= half) {
+            const start = points[index], end = points[index + 1];
+            return Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+                ? { x: 0, y: -14 }
+                : { x: 14, y: 0 };
+        }
+        walked += lengths[index];
+    }
+    return { x: 0, y: -14 };
+}
+
 function InterconnectionEdgeInner(props: EdgeProps) {
     const { getZoom } = useReactFlow();
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
     const mid = pathMidpoint(points);
+    const offset = labelOffset(points);
     const hitTrim = Math.min(28 / Math.max(getZoom(), 0.1), routeLength(points) * 0.3);
     const hitPoints = trimEndpoints(points, hitTrim);
     const onRouteChange = props.data?.onRouteChange as ((points: Point[]) => void) | undefined;
@@ -106,7 +129,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                 <EdgeLabelRenderer>
                     <div style={{
                         position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${mid.x}px, ${mid.y}px)`,
+                        transform: `translate(-50%, -50%) translate(${mid.x + offset.x}px, ${mid.y + offset.y}px)`,
                         fontSize: FONT.badge, fontWeight: 600, color: '#475569',
                         background: 'rgba(255,255,255,0.96)', border: '1px solid #E2E8F0',
                         padding: '1px 4px', borderRadius: 4, pointerEvents: 'none',

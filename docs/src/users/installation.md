@@ -23,7 +23,7 @@ The build compiles Architect against the exact `@memoarchitect/tools` and
 `@memoarchitect/ontology` versions in `package.json`. Maintainers use the
 separate `memo-meta` sibling workspace when changing all three together.
 
-The repositories share a `MAJOR.MINOR` compatibility line. Any `0.4.x` releases
+The repositories share a `MAJOR.MINOR` compatibility line. Any `0.5.x` releases
 are intended to work together; patch versions can advance independently.
 
 ## Verify the checkout
@@ -35,10 +35,11 @@ pnpm memo --version
 pnpm memo --help
 ```
 
-To run the included GPCA reference model:
+To run a bundled example in a disposable copy:
 
 ```bash
-pnpm run example:dev
+memo-architect --example gpca
+memo-architect --example standard-sysml-diagrams
 ```
 
 ## Work in any folder

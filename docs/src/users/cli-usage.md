@@ -38,6 +38,21 @@ memo-architect dev [options]
 | `-p, --port <port>` | `3000` | Port for the web interface |
 | `--no-open` | — | Do not automatically open the browser |
 
+### `memo-architect --example`
+
+Open a bundled example from a disposable copy. Changes made in the workbench
+are discarded when the process exits.
+
+```bash
+memo-architect --example <name> [options]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--example <name>` | — | Manifest key or bundled example directory, such as `gpca` or `standard-sysml-diagrams` |
+| `-p, --port <port>` | `3000` | Port for the web interface |
+| `--no-open` | — | Do not automatically open the browser |
+
 ### `memo validate`
 Check your model against the active ontology's closure rules and show completeness stats.
 

@@ -219,6 +219,7 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     ibd:  { code: 'IBD',  label: 'IBD',  fullName: 'Internal Block Diagram',   color: '#1ABC9C', viewKind: 'interconnection' },
     req:  { code: 'REQ',  label: 'REQ',  fullName: 'Requirements Diagram',     color: '#4A90D9', viewKind: 'general' },
     ucd:  { code: 'UCD',  label: 'UCD',  fullName: 'Use Case Diagram',         color: '#E67E22', viewKind: 'general' },
+    context: { code: 'CTX', label: 'CTX', fullName: 'System Context Diagram',  color: '#5DADE2', viewKind: 'general' },
     act:  { code: 'ACT',  label: 'ACT',  fullName: 'Activity Diagram',         color: '#F39C12', viewKind: 'actionflow' },
     afd:  { code: 'AFD',  label: 'AFD',  fullName: 'Action Flow Diagram',      color: '#FF6B6B', viewKind: 'actionflow' },
     ofd:  { code: 'OFD',  label: 'OFD',  fullName: 'Operational Flow Diagram', color: '#F39C12', viewKind: 'actionflow' },

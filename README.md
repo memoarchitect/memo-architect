@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <code>memo-architect 0.4.6</code> &middot; MIT &middot; SysML v2 &middot;
+  <code>memo-architect 0.5.0</code> &middot; MIT &middot; SysML v2 &middot;
   ISO 14971 &middot; IEC 62304 &middot; ISO/IEC/IEEE 42010
 </p>
 
@@ -26,8 +26,8 @@
 | 03 | Reusable engine libraries and the `memo` CLI | [memo-tools](https://github.com/memoarchitect/memo-tools) |
 | 04 | Complete visual workbench | **memo-architect** (this repository) |
 
-All three products share a `MAJOR.MINOR` compatibility line. Any `0.4.x`
-release is intended to work with the other `0.4.x` products; patch versions
+All three products share a `MAJOR.MINOR` compatibility line. Any `0.5.x`
+release is intended to work with the other `0.5.x` products; patch versions
 may advance independently for fixes and additive changes.
 
 Architect reuses the parser, semantic model, validation, document, and project
@@ -96,6 +96,14 @@ Run Architect commands:
 ```bash
 pnpm architect -- dev
 pnpm architect -- build --output dist
+```
+
+Open a bundled example read-only — the project is copied to a disposable
+directory and served with the dev server, so edits are discarded on exit:
+
+```bash
+memo-architect --example gpca                    # GPCA reference model
+memo-architect --example standard-sysml-diagrams # one view per SysML v2 diagram type
 ```
 
 ## Documentation

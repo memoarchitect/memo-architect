@@ -45,12 +45,13 @@ resolved dependency lock, and build command with the review record.
 
 ## Run the bundled example
 
-From a Memo Architect source checkout:
+The command copies the selected example to a disposable directory, so edits do
+not affect the installed ontology or source checkout:
 
 ```bash
-pnpm run build
-pnpm run example:dev
+memo-architect --example gpca
+memo-architect --example standard-sysml-diagrams
 ```
 
-The example is the quickest way to learn the workbench before opening your own
-project.
+The examples are the quickest way to learn the workbench before opening your
+own project.
