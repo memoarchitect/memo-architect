@@ -583,6 +583,7 @@ const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance'> = {
     system: 'architecture',
     context: 'architecture',
     core: 'architecture',
+    methodology: 'architecture',
     activities: 'architecture',
     workflows: 'architecture',
     scenarios: 'architecture',
@@ -752,7 +753,7 @@ export function computeExplorerGroupTree(
 
     // Derive groups and kind→layer map from the currently selected ontology packages.
     // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
-    const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'methodology', 'manifest']);
+    const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
     const kindToSubGroup = buildKindToSubGroupMap(availableOntologies, selectedOntologies);
     // Builder-synthesized kinds for native SysML constructs (action def /
