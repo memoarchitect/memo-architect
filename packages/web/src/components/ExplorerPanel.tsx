@@ -599,6 +599,41 @@ const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance'> = {
     needs: 'assurance',
 };
 
+/**
+ * The V-model packages are the only architecture layers exposed in the
+ * explorer. Interfaces are relationships/ports within Logical architecture;
+ * they are deliberately not a layer. Viewpoints and Views are diagram
+ * descriptions and are handled by the Diagrams workspace.
+ */
+const V_MODEL_LAYER_BY_PACKAGE: Record<string, string> = {
+    operational: 'operational',
+    context: 'operational',
+    activities: 'operational',
+    workflows: 'operational',
+    scenarios: 'operational',
+    interaction: 'operational',
+    use_cases: 'operational',
+    functions: 'functional',
+    behavior: 'functional',
+    logical_structure: 'logical',
+    system: 'logical',
+    interfaces: 'logical',
+    hardware_structure: 'implementation',
+    software_structure: 'implementation',
+    software_runtime: 'implementation',
+    physical: 'realization',
+    deployment: 'realization',
+    requirements: 'requirements',
+    needs: 'requirements',
+    risk: 'safety-risk',
+    safety: 'safety-risk',
+    safety_analysis: 'safety-risk',
+    cybersecurity: 'cybersecurity',
+    human_factors: 'human-factors',
+    verification: 'verification-validation',
+    core: 'evidence',
+};
+
 function explorerDomain(layer: string): string {
     return EXPLORER_DOMAIN_BY_LAYER[layer] ?? layer;
 }
@@ -612,10 +647,27 @@ function fallbackSubGroup(kind: string, layer: string): string | undefined {
 }
 
 function explorerDomainForElement(kind: string, layer: string): string {
-    if (layer === 'unknown' && (/^Memo.*View$/.test(kind) || kind === 'CareSystem' || kind === 'OperationalScenario')) {
+    if (layer === 'unknown' && (kind === 'CareSystem' || kind === 'OperationalScenario')) {
         return 'architecture';
     }
     return explorerDomain(layer);
+}
+
+function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
+    return kind.endsWith('View')
+        || sourceLayer === 'viewpoints'
+        || sourceLayer === 'views'
+        || sourcePackage === 'viewpoints'
+        || sourcePackage === 'views';
+}
+
+function vModelSubGroup(kind: string, sourceLayer: string, sourcePackage?: string): string {
+    if (kind === 'CareSystem') return 'operational';
+    if (kind === 'OperationalScenario') return 'operational';
+    return V_MODEL_LAYER_BY_PACKAGE[sourcePackage ?? '']
+        ?? V_MODEL_LAYER_BY_PACKAGE[sourceLayer]
+        ?? sourcePackage
+        ?? sourceLayer;
 }
 
 /** Build ordered layer groups from the currently selected ontology packages. */
@@ -705,20 +757,17 @@ function buildKindToSubGroupMap(
 /** "hardware_structure" → "Hardware Structure" */
 function subGroupLabel(id: string): string {
     const labels: Record<string, string> = {
-        behavior: 'Behavior',
-        functions: 'Functional',
-        logical_structure: 'Logical',
-        hardware_structure: 'Hardware',
-        software_structure: 'Software',
-        software_runtime: 'Software Runtime',
+        functional: 'Functional',
+        logical: 'Logical',
+        implementation: 'Implementation',
+        realization: 'Realization',
         operational: 'Operational',
-        safety: 'Risk',
-        safety_analysis: 'Risk Analysis',
-        verification: 'V&V',
+        'safety-risk': 'Safety / Risk',
+        'verification-validation': 'Verification & Validation (V&V)',
         human_factors: 'Human Factors',
         requirements: 'Requirements',
-        needs: 'User Needs',
         cybersecurity: 'Cybersecurity',
+        evidence: 'Evidence',
     };
     if (labels[id]) return labels[id];
     return id
@@ -761,6 +810,9 @@ export function computeExplorerGroupTree(
     // their builder-assigned layer instead of "Undefined — Not in Ontology".
     const synthesizedLayerIds = new Set<string>();
     for (const el of elements) {
+        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
+        const sourcePackage = kindToSubGroup[el.kind];
+        if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
         if (BUILDER_SYNTHESIZED_KINDS.has(el.kind) && !kindToLayerId[el.kind]) {
             synthesizedLayerIds.add(explorerDomain(el.layer));
         }
@@ -779,7 +831,7 @@ export function computeExplorerGroupTree(
             const fallback = !kindToLayerId[kind] || BUILDER_SYNTHESIZED_KINDS.has(kind)
                 ? fallbackSubGroup(kind, ownLayer)
                 : undefined;
-            const sub = kindToSubGroup[kind] ?? fallback ?? '';
+            const sub = vModelSubGroup(kind, ownLayer, kindToSubGroup[kind] ?? fallback);
             if (!buckets.has(sub)) buckets.set(sub, new Map());
             buckets.get(sub)!.set(kind, buildTree(els));
         }
@@ -799,7 +851,10 @@ export function computeExplorerGroupTree(
         const kindMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
             // Prefer ontology-defined layer; fall back to element's own layer field
-            const layerId = explorerDomainForElement(el.kind, kindToLayerId[el.kind] ?? el.layer);
+            const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
+            const sourcePackage = kindToSubGroup[el.kind];
+            if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
+            const layerId = explorerDomainForElement(el.kind, sourceLayer);
             if (layerId !== lg.id) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
             if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
@@ -813,7 +868,10 @@ export function computeExplorerGroupTree(
     // Elements whose layer isn't in any selected ontology → "Not in Ontology"
     const uncategorizedMap = new Map<string, MemoElement[]>();
     for (const el of elements) {
-        const layerId = explorerDomainForElement(el.kind, kindToLayerId[el.kind] ?? el.layer);
+        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
+        const sourcePackage = kindToSubGroup[el.kind];
+        if (isDiagramOnlyElement(el.kind, sourceLayer, sourcePackage)) continue;
+        const layerId = explorerDomainForElement(el.kind, sourceLayer);
         if (knownLayerIds.has(layerId)) continue;
         if (NON_ELEMENT_LAYERS.has(layerId)) continue;
         if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;

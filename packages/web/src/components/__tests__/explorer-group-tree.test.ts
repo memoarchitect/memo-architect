@@ -23,7 +23,7 @@ const ONTOLOGY: OntologyPackageInfo = {
             color: '#7B68EE',
             kindCount: 4,
             kinds: [
-                { name: 'BehaviorMachine', label: 'Behavior Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [] },
+                { name: 'BehaviorMachine', label: 'Behavior Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'behavior' },
                 { name: 'Hazard', label: 'Hazard', construct: 'item', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'risk' },
                 { name: 'RiskControl', label: 'Risk Control', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'risk' },
                 { name: 'Requirement', label: 'Requirement', construct: 'requirement', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'requirements' },
@@ -49,7 +49,7 @@ describe('computeExplorerGroupTree', () => {
         expect(groups.map(g => g.group.id)).toEqual(['architecture']);
     });
 
-    it('clubs kinds by namespace sub-group within a layer (e.g. risk under architecture)', () => {
+    it('maps package sub-groups into V-model layers and assurance disciplines', () => {
         const elements = [
             el('h1', 'Hazard', 'risk'),
             el('rc1', 'RiskControl', 'risk'),
@@ -59,16 +59,15 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
         const arch = groups.find(g => g.group.id === 'architecture');
         expect(arch).toBeDefined();
-        // Root kinds ('' sub-group) sort first, then named sub-groups alphabetically
-        expect(arch!.subGroups.map(sg => sg.id)).toEqual(['', 'requirements', 'risk']);
-        const risk = arch!.subGroups.find(sg => sg.id === 'risk')!;
-        expect(risk.label).toBe('Risk');
+        expect(arch!.subGroups.map(sg => sg.id)).toEqual(['functional', 'requirements', 'safety-risk']);
+        const risk = arch!.subGroups.find(sg => sg.id === 'safety-risk')!;
+        expect(risk.label).toBe('Safety / Risk');
         expect([...risk.kinds.keys()].sort()).toEqual(['Hazard', 'RiskControl']);
-        const root = arch!.subGroups.find(sg => sg.id === '')!;
-        expect([...root.kinds.keys()]).toEqual(['BehaviorMachine']);
+        const functional = arch!.subGroups.find(sg => sg.id === 'functional')!;
+        expect([...functional.kinds.keys()]).toEqual(['BehaviorMachine']);
     });
 
-    it('groups builder-synthesized action/item kinds under Architecture → Behavior, not Undefined', () => {
+    it('groups builder-synthesized action/item kinds under Architecture → Functional, not Undefined', () => {
         const elements = [
             el('AcquireSensorData', 'ActionDefinition', 'behavior'),
             el('acquireSensors', 'ActionUsage', 'behavior'),
@@ -77,9 +76,9 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
         const architecture = groups.find(g => g.group.id === 'architecture');
         expect(architecture).toBeDefined();
-        const behavior = architecture!.subGroups.find(sg => sg.id === 'behavior');
-        expect(behavior).toBeDefined();
-        expect(allKinds({ ...architecture!, subGroups: [behavior!] })).toEqual(['ActionDefinition', 'ActionUsage', 'ItemDefinition']);
+        const functional = architecture!.subGroups.find(sg => sg.id === 'functional');
+        expect(functional).toBeDefined();
+        expect(allKinds({ ...architecture!, subGroups: [functional!] })).toEqual(['ActionDefinition', 'ActionUsage', 'ItemDefinition']);
         expect(groups.find(g => g.group.id === 'undefined')).toBeUndefined();
     });
 
