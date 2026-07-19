@@ -568,74 +568,14 @@ const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
  * logical_structure, risk, verification, …).  The explorer first presents
  * the two user-facing domains, then these layers below them.
  */
-const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance' | 'methodology'> = {
-    architecture: 'architecture',
-    assurance: 'assurance',
-    behavior: 'architecture',
-    functions: 'architecture',
-    logical_structure: 'architecture',
-    hardware_structure: 'architecture',
-    software_structure: 'architecture',
-    software_runtime: 'architecture',
-    interfaces: 'architecture',
-    operational: 'architecture',
-    physical: 'architecture',
-    system: 'architecture',
-    context: 'architecture',
-    core: 'assurance',
-    methodology: 'methodology',
-    activities: 'architecture',
-    workflows: 'architecture',
-    scenarios: 'architecture',
-    interaction: 'architecture',
-    use_cases: 'architecture',
-    requirements: 'assurance',
-    risk: 'assurance',
-    safety: 'assurance',
-    safety_analysis: 'assurance',
-    verification: 'assurance',
-    human_factors: 'assurance',
-    cybersecurity: 'assurance',
-    needs: 'assurance',
-};
-
 /**
  * The V-model packages are the only architecture layers exposed in the
  * explorer. Interfaces are relationships/ports within Logical architecture;
  * they are deliberately not a layer. Viewpoints and Views are diagram
  * descriptions and are handled by the Diagrams workspace.
  */
-const V_MODEL_LAYER_BY_PACKAGE: Record<string, string> = {
-    operational: 'operational',
-    context: 'operational',
-    activities: 'operational',
-    workflows: 'operational',
-    scenarios: 'operational',
-    interaction: 'operational',
-    use_cases: 'operational',
-    functions: 'functional',
-    behavior: 'functional',
-    logical_structure: 'logical',
-    system: 'logical',
-    interfaces: 'logical',
-    hardware_structure: 'implementation',
-    software_structure: 'implementation',
-    software_runtime: 'implementation',
-    physical: 'realization',
-    deployment: 'realization',
-    requirements: 'requirements',
-    needs: 'requirements',
-    risk: 'safety-risk',
-    safety: 'safety-risk',
-    safety_analysis: 'safety-risk',
-    cybersecurity: 'cybersecurity',
-    human_factors: 'human-factors',
-    verification: 'verification-validation',
-    core: 'evidence',
-};
-
 function explorerDomain(layer: string): string {
-    return EXPLORER_DOMAIN_BY_LAYER[layer] ?? layer;
+    return layer;
 }
 
 function fallbackSubGroup(kind: string, layer: string): string | undefined {
@@ -664,15 +604,19 @@ function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?:
 function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
     return isDiagramOnlyElement(kind, sourceLayer, sourcePackage)
         || kind === 'ForkNode'
-        || kind === 'JoinNode';
+        || kind === 'JoinNode'
+        // Generic SysML action-flow notation belongs in a Diagram. A typed
+        // SystemAction or InterfaceItem remains visible through its ontology
+        // kind; an untyped action/item never becomes architecture by itself.
+        || kind === 'ActionDefinition'
+        || kind === 'ActionUsage'
+        || kind === 'ItemDefinition';
 }
 
 function vModelSubGroup(kind: string, sourceLayer: string, sourcePackage?: string): string {
     if (kind === 'CareSystem') return 'operational';
     if (kind === 'OperationalScenario') return 'operational';
-    return V_MODEL_LAYER_BY_PACKAGE[sourcePackage ?? '']
-        ?? V_MODEL_LAYER_BY_PACKAGE[sourceLayer]
-        ?? sourcePackage
+    return sourcePackage
         ?? sourceLayer;
 }
 
@@ -760,6 +704,21 @@ function buildKindToSubGroupMap(
     return map;
 }
 
+/** Immediate ontology parent used as the Explorer's type folder. */
+function buildKindToParentMap(
+    availableOntologies: OntologyPackageInfo[],
+    selectedOntologies: Set<string>,
+): Record<string, string | undefined> {
+    const map: Record<string, string | undefined> = {};
+    for (const pkg of availableOntologies) {
+        if (!selectedOntologies.has(pkg.name)) continue;
+        for (const layer of pkg.layers) {
+            for (const kind of layer.kinds) map[kind.name] = kind.derivesFrom;
+        }
+    }
+    return map;
+}
+
 /** "hardware_structure" → "Hardware Structure" */
 function subGroupLabel(id: string): string {
     const labels: Record<string, string> = {
@@ -782,7 +741,31 @@ function subGroupLabel(id: string): string {
         .join(' ');
 }
 
+// Match the V-model reading order. These are presentation groups inside the
+// two ontology domains, not additional architecture layers.
+const EXPLORER_SUBGROUP_ORDER: Record<string, number> = {
+    operational: 10,
+    functional: 20,
+    logical: 30,
+    implementation: 40,
+    realization: 50,
+    requirements: 60,
+    'safety-risk': 70,
+    cybersecurity: 80,
+    human_factors: 90,
+    'verification-validation': 100,
+    evidence: 110,
+};
+
 function kindFolderLabel(kind: string, count: number): string {
+    const labels: Record<string, string> = {
+        BehaviorMachine: 'State Machine',
+        ModeState: 'Mode State',
+        BehaviorProperty: 'Behavioral Constraint',
+        AssumeProperty: 'Assumption',
+        GuaranteeProperty: 'Guarantee',
+    };
+    if (labels[kind]) return count === 1 ? labels[kind] : labels[kind] + 's';
     const singular = kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
     if (count === 1 || /(?:ss|Data|Status)$/i.test(singular)) return singular;
     return singular.endsWith('s') ? singular : singular + 's';
@@ -817,6 +800,7 @@ export function computeExplorerGroupTree(
     const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
     const kindToSubGroup = buildKindToSubGroupMap(availableOntologies, selectedOntologies);
+    const kindToParent = buildKindToParentMap(availableOntologies, selectedOntologies);
     // Builder-synthesized kinds for native SysML constructs (action def /
     // action / item def) exist in no ontology package — group them under
     // their builder-assigned layer instead of "Undefined — Not in Ontology".
@@ -844,11 +828,15 @@ export function computeExplorerGroupTree(
                 ? fallbackSubGroup(kind, ownLayer)
                 : undefined;
             const sub = vModelSubGroup(kind, ownLayer, kindToSubGroup[kind] ?? fallback);
+            const typeFolder = kindToParent[kind] ?? kind;
             if (!buckets.has(sub)) buckets.set(sub, new Map());
-            buckets.get(sub)!.set(kind, buildTree(els));
+            const kinds = buckets.get(sub)!;
+            const existing = kinds.get(typeFolder) ?? [];
+            kinds.set(typeFolder, [...existing, ...buildTree(els)]);
         }
         return [...buckets.entries()]
-            .sort((a, b) => a[0].localeCompare(b[0]))
+            .sort((a, b) => (EXPLORER_SUBGROUP_ORDER[a[0]] ?? 999) - (EXPLORER_SUBGROUP_ORDER[b[0]] ?? 999)
+                || a[0].localeCompare(b[0]))
             .map(([id, kinds]) => ({
                 id,
                 label: id ? subGroupLabel(id) : '',

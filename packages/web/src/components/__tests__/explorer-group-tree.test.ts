@@ -23,9 +23,9 @@ const ONTOLOGY: OntologyPackageInfo = {
             color: '#7B68EE',
             kindCount: 4,
             kinds: [
-                { name: 'BehaviorMachine', label: 'Behavior Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'behavior' },
-                { name: 'Hazard', label: 'Hazard', construct: 'item', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'risk' },
-                { name: 'RiskControl', label: 'Risk Control', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'risk' },
+                { name: 'BehaviorMachine', label: 'Behavior Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'functional' },
+                { name: 'Hazard', label: 'Hazard', construct: 'item', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk' },
+                { name: 'RiskControl', label: 'Risk Control', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk' },
                 { name: 'Requirement', label: 'Requirement', construct: 'requirement', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'requirements' },
             ],
         },
@@ -67,19 +67,14 @@ describe('computeExplorerGroupTree', () => {
         expect([...functional.kinds.keys()]).toEqual(['BehaviorMachine']);
     });
 
-    it('groups builder-synthesized action/item kinds under Architecture → Functional, not Undefined', () => {
+    it('keeps untyped action-flow notation out of the architecture Explorer', () => {
         const elements = [
             el('AcquireSensorData', 'ActionDefinition', 'behavior'),
             el('acquireSensors', 'ActionUsage', 'behavior'),
             el('SensorStatusVector', 'ItemDefinition', 'behavior'),
         ];
         const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
-        const architecture = groups.find(g => g.group.id === 'architecture');
-        expect(architecture).toBeDefined();
-        const functional = architecture!.subGroups.find(sg => sg.id === 'functional');
-        expect(functional).toBeDefined();
-        expect(allKinds({ ...architecture!, subGroups: [functional!] })).toEqual(['ActionDefinition', 'ActionUsage', 'ItemDefinition']);
-        expect(groups.find(g => g.group.id === 'undefined')).toBeUndefined();
+        expect(groups).toEqual([]);
     });
 
     it('still flags genuinely unknown kinds as Undefined', () => {
@@ -87,8 +82,7 @@ describe('computeExplorerGroupTree', () => {
         expect(groups.map(g => g.group.id)).toEqual(['undefined']);
     });
 
-    it('prefers an ontology-declared kind over the synthesized fallback', () => {
-        // If a package someday declares ActionDefinition, the ontology layer wins.
+    it('keeps generic action notation out of Explorer even when it is declared', () => {
         const withAction: OntologyPackageInfo = {
             ...ONTOLOGY,
             layers: [
@@ -102,6 +96,6 @@ describe('computeExplorerGroupTree', () => {
             ],
         } as OntologyPackageInfo;
         const groups = computeExplorerGroupTree([el('a1', 'ActionDefinition', 'behavior')], '', [withAction], SELECTED);
-        expect(groups.map(g => g.group.id)).toEqual(['architecture']);
+        expect(groups).toEqual([]);
     });
 });
