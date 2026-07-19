@@ -68,17 +68,18 @@ describe('computeExplorerGroupTree', () => {
         expect([...root.kinds.keys()]).toEqual(['BehaviorMachine']);
     });
 
-    it('groups builder-synthesized action/item kinds under their builder layer, not Undefined', () => {
+    it('groups builder-synthesized action/item kinds under Architecture → Behavior, not Undefined', () => {
         const elements = [
             el('AcquireSensorData', 'ActionDefinition', 'behavior'),
             el('acquireSensors', 'ActionUsage', 'behavior'),
             el('SensorStatusVector', 'ItemDefinition', 'behavior'),
         ];
         const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
-        const behavior = groups.find(g => g.group.id === 'behavior');
+        const architecture = groups.find(g => g.group.id === 'architecture');
+        expect(architecture).toBeDefined();
+        const behavior = architecture!.subGroups.find(sg => sg.id === 'behavior');
         expect(behavior).toBeDefined();
-        expect(behavior!.group.label).toBe('Behavior');
-        expect(allKinds(behavior!)).toEqual(['ActionDefinition', 'ActionUsage', 'ItemDefinition']);
+        expect(allKinds({ ...architecture!, subGroups: [behavior!] })).toEqual(['ActionDefinition', 'ActionUsage', 'ItemDefinition']);
         expect(groups.find(g => g.group.id === 'undefined')).toBeUndefined();
     });
 

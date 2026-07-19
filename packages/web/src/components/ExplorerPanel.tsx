@@ -563,6 +563,60 @@ interface LayerGroup {
 
 const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
 
+/**
+ * The ontology source distinguishes implementation-facing layers (behavior,
+ * logical_structure, risk, verification, …).  The explorer first presents
+ * the two user-facing domains, then these layers below them.
+ */
+const EXPLORER_DOMAIN_BY_LAYER: Record<string, 'architecture' | 'assurance'> = {
+    architecture: 'architecture',
+    assurance: 'assurance',
+    behavior: 'architecture',
+    functions: 'architecture',
+    logical_structure: 'architecture',
+    hardware_structure: 'architecture',
+    software_structure: 'architecture',
+    software_runtime: 'architecture',
+    interfaces: 'architecture',
+    operational: 'architecture',
+    physical: 'architecture',
+    system: 'architecture',
+    context: 'architecture',
+    core: 'architecture',
+    activities: 'architecture',
+    workflows: 'architecture',
+    scenarios: 'architecture',
+    interaction: 'architecture',
+    use_cases: 'architecture',
+    requirements: 'assurance',
+    risk: 'assurance',
+    safety: 'assurance',
+    safety_analysis: 'assurance',
+    verification: 'assurance',
+    human_factors: 'assurance',
+    cybersecurity: 'assurance',
+    needs: 'assurance',
+};
+
+function explorerDomain(layer: string): string {
+    return EXPLORER_DOMAIN_BY_LAYER[layer] ?? layer;
+}
+
+function fallbackSubGroup(kind: string, layer: string): string | undefined {
+    if (layer !== 'unknown') return layer;
+    if (/^Memo.*View$/.test(kind)) return 'views';
+    if (kind === 'CareSystem') return 'context';
+    if (kind === 'OperationalScenario') return 'operational';
+    return undefined;
+}
+
+function explorerDomainForElement(kind: string, layer: string): string {
+    if (layer === 'unknown' && (/^Memo.*View$/.test(kind) || kind === 'CareSystem' || kind === 'OperationalScenario')) {
+        return 'architecture';
+    }
+    return explorerDomain(layer);
+}
+
 /** Build ordered layer groups from the currently selected ontology packages. */
 function buildLayerGroupsFromOntologies(
     availableOntologies: OntologyPackageInfo[],
@@ -649,6 +703,23 @@ function buildKindToSubGroupMap(
 
 /** "hardware_structure" → "Hardware Structure" */
 function subGroupLabel(id: string): string {
+    const labels: Record<string, string> = {
+        behavior: 'Behavior',
+        functions: 'Functional',
+        logical_structure: 'Logical',
+        hardware_structure: 'Hardware',
+        software_structure: 'Software',
+        software_runtime: 'Software Runtime',
+        operational: 'Operational',
+        safety: 'Risk',
+        safety_analysis: 'Risk Analysis',
+        verification: 'V&V',
+        human_factors: 'Human Factors',
+        requirements: 'Requirements',
+        needs: 'User Needs',
+        cybersecurity: 'Cybersecurity',
+    };
+    if (labels[id]) return labels[id];
     return id
         .split(/[_-]/)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -690,7 +761,7 @@ export function computeExplorerGroupTree(
     const synthesizedLayerIds = new Set<string>();
     for (const el of elements) {
         if (BUILDER_SYNTHESIZED_KINDS.has(el.kind) && !kindToLayerId[el.kind]) {
-            synthesizedLayerIds.add(el.layer);
+            synthesizedLayerIds.add(explorerDomain(el.layer));
         }
     }
     const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies, synthesizedLayerIds)
@@ -703,7 +774,11 @@ export function computeExplorerGroupTree(
         for (const [kind, els] of kindMap.entries()) {
             // Ontology namespace sub-group; synthesized/fallback kinds group
             // under the elements' own layer when it adds information
-            const sub = kindToSubGroup[kind] ?? '';
+            const ownLayer = els[0]?.layer ?? 'unknown';
+            const fallback = !kindToLayerId[kind] || BUILDER_SYNTHESIZED_KINDS.has(kind)
+                ? fallbackSubGroup(kind, ownLayer)
+                : undefined;
+            const sub = kindToSubGroup[kind] ?? fallback ?? '';
             if (!buckets.has(sub)) buckets.set(sub, new Map());
             buckets.get(sub)!.set(kind, buildTree(els));
         }
@@ -723,7 +798,7 @@ export function computeExplorerGroupTree(
         const kindMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
             // Prefer ontology-defined layer; fall back to element's own layer field
-            const layerId = kindToLayerId[el.kind] ?? el.layer;
+            const layerId = explorerDomainForElement(el.kind, kindToLayerId[el.kind] ?? el.layer);
             if (layerId !== lg.id) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
             if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
@@ -737,7 +812,7 @@ export function computeExplorerGroupTree(
     // Elements whose layer isn't in any selected ontology → "Not in Ontology"
     const uncategorizedMap = new Map<string, MemoElement[]>();
     for (const el of elements) {
-        const layerId = kindToLayerId[el.kind] ?? el.layer;
+        const layerId = explorerDomainForElement(el.kind, kindToLayerId[el.kind] ?? el.layer);
         if (knownLayerIds.has(layerId)) continue;
         if (NON_ELEMENT_LAYERS.has(layerId)) continue;
         if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
