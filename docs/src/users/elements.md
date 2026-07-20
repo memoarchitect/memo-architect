@@ -5,8 +5,8 @@ Choose an element by the engineering statement you want to preserve.
 | Statement | Element kind |
 |---|---|
 | “A nurse programs therapy.” | `Actor` plus `OperationalActivity` |
-| “The patient needs controlled analgesia.” | `StakeholderNeed` |
-| “The pump shall enforce a bolus limit.” | `SystemRequirement` |
+| “The patient needs controlled analgesia.” | `Need` (needKind: stakeholder) |
+| “The pump shall enforce a bolus limit.” | `Requirement` (requirementKind: system) |
 | “Evaluate the requested bolus.” | `LogicalFunction` |
 | “Dose-management responsibility.” | `LogicalComponent` |
 | “Dose-control firmware image.” | `FirmwareItem` |
@@ -18,8 +18,9 @@ Choose an element by the engineering statement you want to preserve.
 ## A reliable naming pattern
 
 ```sysml
-requirement reqBolusLimit : SystemRequirement {
+requirement reqBolusLimit : Requirement {
     attribute :>> id = "REQ-025";
+    attribute :>> requirementKind = RequirementKind::system;
     attribute :>> name = "EnforceBolusLimit";
     attribute :>> statement =
         "The pump shall reject a bolus request that exceeds the configured limit.";

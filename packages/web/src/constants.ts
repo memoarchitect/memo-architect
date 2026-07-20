@@ -131,7 +131,7 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         label: 'Interfaces & Ports',
         color: '#1ABC9C',
         kinds: ['Port', 'Port', 'Port', 'Port', 'Port',
-            'Interface', 'SoftwareInterface', 'SoftwareProvidedInterface',
+            'Interface', 'SoftwareProvidedInterface',
             'SoftwareRequiredInterface', 'DataType', 'RosTopic', 'RosService'],
     },
     {

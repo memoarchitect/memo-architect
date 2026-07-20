@@ -37,8 +37,9 @@ For the scenario, add:
 Use stable identifiers from the beginning:
 
 ```sysml
-requirement detectFault : SystemRequirement {
+requirement detectFault : Requirement {
     attribute :>> id = "REQ-001";
+    attribute :>> requirementKind = RequirementKind::system;
     attribute :>> name = "DetectDeliveryFault";
     attribute :>> statement =
         "The device shall detect a delivery fault within two seconds.";

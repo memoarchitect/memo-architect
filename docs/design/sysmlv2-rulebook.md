@@ -667,11 +667,11 @@ library package memo::arch::risk {
     private import ScalarValues::*;
     private import ISQ::*;
 
-    part def HazardousSituation :> TraceableElement {
+    part def HazardousSituation :> MemoPart {
         attribute exposureFrequency : Real;        // dimensionless rate per use
     }
 
-    part def Hazard :> TraceableElement {
+    part def Hazard :> MemoPart {
         doc /* An actual or potential source of harm — ISO 14971:2019 §3.4.
              * Severity is a property of the hazard's worst-case Harm,
              * not of the Hazard itself. */
@@ -685,11 +685,11 @@ library package memo::arch::risk {
         ref part associatedHarm     : Harm              [1..*];
     }
 
-    part def Harm :> TraceableElement {
+    part def Harm :> MemoPart {
         attribute severity : SeverityKind;
     }
 
-    part def Mitigation :> TraceableElement {
+    part def Mitigation :> MemoPart {
         doc /* A risk-control measure per ISO 14971 §7. */
     }
 
@@ -772,7 +772,7 @@ Studied corpus deliberately omits:
 | Concern | OMG / GfSE coverage | MEMO must add |
 |---|---|---|
 | Regulatory clause traceability (ISO 14971 §6.3 → element) | none — corpus is generic | `memo::process::compliance::<standard>` parts as `:> StandardClause` with `attribute clauseRef` |
-| Lifecycle on every part | only on documents | `attribute lifecycleState : LifecycleStateKind` on `TraceableElement` |
+| Lifecycle on every part | only on documents | `attribute lifecycleState : LifecycleStateKind` on `MemoPart` |
 | Post-market (PMS, vigilance, FSCA) | none | `memo::process::pms` package |
 | SBOM | none | `memo::arch::sbom` package |
 | Privacy (DPIA depth) | none | `memo::arch::privacy` package |

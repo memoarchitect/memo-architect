@@ -37,7 +37,7 @@ export interface SequenceOccurrence {
 
 export interface SequenceSection {
     chain?: MemoElement;
-    /** Realized scenario name, when a RealizesScenario edge exists */
+    /** Realized scenario name, when a Realizes edge exists */
     scenario?: string;
     occurrences: SequenceOccurrence[];
 }

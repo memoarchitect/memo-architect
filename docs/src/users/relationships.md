@@ -14,8 +14,8 @@ supported.
 | `VerifiedBy` | This verification case checks this claim |
 | `ProducesEvidence` | This assurance activity produced this evidence |
 | `MitigatesHazard` | This risk control reduces this hazard |
-| `DeploysOnto` | This software executes on this processing node |
-| `RealizesInterface` | This design element realizes this interface |
+| `DeploysTo` | This software executes on this processing node |
+| `Realizes` | This design element realizes this interface |
 
 ```mermaid
 flowchart LR

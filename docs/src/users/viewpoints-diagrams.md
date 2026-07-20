@@ -28,7 +28,7 @@ Use viewpoints as review and navigation slices that cut across those homes.
 | Semantic Home | Typical Kinds | Common Viewpoints |
 |-----------|-----------|-----------|
 | **Purpose** | Actor, Stakeholder, Goal, Concern | Use Case View, Requirements Traceability |
-| **Requirements** | UserNeed, SystemRequirement, SoftwareRequirement, UserInterfaceRequirement | Requirements Traceability, Software Architecture, Usability Engineering |
+| **Requirements** | Need, Requirement, UserInterfaceRequirement | Requirements Traceability, Software Architecture, Usability Engineering |
 | **Functional / Operational** | UseCase, Scenario, SystemFunction, Procedure, UserActivity | System Architecture, Usability Engineering, Safety Analysis |
 | **Logical / Physical** | System, Subsystem, LogicalComponent, PhysicalComponent, Microcontroller | System Architecture, Physical Architecture, Lifecycle Operations |
 | **Software / Interfaces** | SoftwareComponent, Firmware, DataInterface, Message, RosNode | Software Architecture, Data & Messaging, Cybersecurity & Interoperability |

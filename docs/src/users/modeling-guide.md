@@ -4,7 +4,7 @@ Model one engineering argument at a time:
 
 ```mermaid
 flowchart LR
-    Need[StakeholderNeed] --> Req[SystemRequirement]
+    Need[Need] --> Req[Requirement]
     Req --> Function[LogicalFunction]
     Function --> Component[LogicalComponent]
     Control[RiskControl] --> Hazard[Hazard]
@@ -19,15 +19,17 @@ flowchart LR
 package infusion_pump {
     private import memo_medical_device_library::*;
 
-    requirement safeDelivery : StakeholderNeed {
+    requirement safeDelivery : Need {
         attribute :>> id = "NEED-001";
         attribute :>> name = "SafeDelivery";
+        attribute :>> needKind = NeedKind::stakeholder;
         attribute :>> statement =
             "The patient needs medication delivered without unintended over-infusion.";
     }
 
-    requirement detectOverDelivery : SystemRequirement {
+    requirement detectOverDelivery : Requirement {
         attribute :>> id = "REQ-001";
+        attribute :>> requirementKind = RequirementKind::system;
         attribute :>> name = "DetectOverDelivery";
         attribute :>> statement =
             "The pump shall detect flow above the configured limit.";

@@ -170,8 +170,8 @@ kinds:
     label: Hazard
     layer: risk
     sysmlConstruct: requirement def
-  SystemRequirement:
-    label: System Requirement
+  Requirement:
+    label: Requirement
     layer: requirements
     sysmlConstruct: requirement def
 

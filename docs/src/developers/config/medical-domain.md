@@ -34,7 +34,7 @@ concerns.
 |---|---|---|
 | Context and use | `IntendedUse`, `Actor`, `UseContext`, `UseError` | Who uses the device, where, and under which conditions? |
 | Operations | `OperationalActivity`, `OperationalCapability`, `OperationalScenario` | What work and clinical outcome must be supported? |
-| Requirements | `StakeholderNeed`, `SystemRequirement`, `SoftwareRequirement`, `HardwareRequirement` | What measurable obligations apply? |
+| Requirements | `Need` (needKind: stakeholder…), `Requirement` (requirementKind: system, software, hardware) | What measurable obligations apply? |
 | Functions and behavior | `LogicalFunction`, `BehaviorMachine`, `ModeState`, `ActivityAction` | What transformations, states, and interactions are required? |
 | Architecture | `LogicalComponent`, `SoftwareItem`, `FirmwareItem`, `HardwareAssembly`, `ProcessingNode`, `Interface` | Which design elements own and realize the required behavior? |
 | Safety risk | `Hazard`, `SequenceOfEvents`, `HazardousSituation`, `Harm`, `RiskControl` | How can harm occur and where is risk controlled? |
@@ -99,7 +99,7 @@ The profile uses typed relationships rather than labels embedded in prose.
 | `MitigatesHazard` | Risk control | Hazard |
 | `VerifiedBy` | Verification target | Verification case |
 | `ProducesEvidence` | Verification or validation case | Evidence |
-| `DeploysOnto` | Software component | Host assembly |
+| `DeploysTo` | Software component | Host assembly |
 | `DependsOnSoup` | Software component | SOUP item |
 
 Use `memo ontology show` to inspect the complete relationship registry resolved

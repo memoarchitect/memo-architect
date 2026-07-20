@@ -18,8 +18,8 @@ columns become attributes when supported.
 
 ```csv
 id,name,kind,construct,doc,priority
-NEED-001,Safe therapy,StakeholderNeed,requirement,Patient needs safe medication delivery,high
-REQ-001,Flow accuracy,SystemRequirement,requirement,The pump shall deliver within the specified tolerance,high
+NEED-001,Safe therapy,Need,requirement,Patient needs safe medication delivery,high
+REQ-001,Flow accuracy,Requirement,requirement,The pump shall deliver within the specified tolerance,high
 HAZ-001,Over-infusion,Hazard,item,Delivery exceeds the prescribed amount,
 ```
 

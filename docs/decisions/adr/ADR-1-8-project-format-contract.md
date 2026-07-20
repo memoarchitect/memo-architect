@@ -113,7 +113,7 @@ packages/ontology-medical/
       hazard.sysml        ← part def Hazard { }
       risk-control.sysml  ← part def RiskControl { }
     requirements/
-      requirement.sysml   ← requirement def SystemRequirement { }
+      requirement.sysml   ← requirement def Requirement { }
 ```
 
 The directory path determines the CoSMA layer (`sysml/risk/` → risk layer): the directory tree mirrors the `memo::` namespace, so the layer is read from the path. (The content layout is documented in [platform.md](../../architecture/platform.md).)
