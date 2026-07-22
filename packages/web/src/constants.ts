@@ -138,7 +138,7 @@ export const SEMANTIC_GROUPS: SemanticGroup[] = [
         id: 'risk',
         label: 'Risk Management',
         color: '#E74C3C',
-        kinds: ['Hazard', 'HazardousSituation', 'Harm', 'Risk', 'RiskControl', 'SafetyGoal'],
+        kinds: ['Hazard', 'HazardousSituation', 'Harm', 'Risk', 'RiskControlMeasure', 'SafetyGoal'],
     },
     {
         id: 'verification',

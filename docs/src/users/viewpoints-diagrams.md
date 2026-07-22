@@ -32,7 +32,7 @@ Use viewpoints as review and navigation slices that cut across those homes.
 | **Functional / Operational** | UseCase, Scenario, SystemFunction, Procedure, UserActivity | System Architecture, Usability Engineering, Safety Analysis |
 | **Logical / Physical** | System, Subsystem, LogicalComponent, PhysicalComponent, Microcontroller | System Architecture, Physical Architecture, Lifecycle Operations |
 | **Software / Interfaces** | SoftwareComponent, Firmware, DataInterface, Message, RosNode | Software Architecture, Data & Messaging, Cybersecurity & Interoperability |
-| **Risk / Safety** | Hazard, Harm, RiskControl, EssentialPerformance, SafetyFunction | Risk Overview, Risk Analysis, Safety Analysis, Usability Engineering |
+| **Risk / Safety** | Hazard, Harm, RiskControlMeasure, EssentialPerformance, SafetyFunction | Risk Overview, Risk Analysis, Safety Analysis, Usability Engineering |
 | **QMS / Lifecycle** | DesignHistoryRecord, SoftwareWorkProduct, RiskManagementReport | Software Architecture, Clinical Evidence & Claims, Lifecycle Operations |
 | **UI** | UIElement, UIScreen, UIPanel | Usability Engineering, Safety Analysis |
 
@@ -161,7 +161,7 @@ viewpoints:
     visibleKinds:
       - ElectricalComponent
       - Hazard
-      - RiskControl
+      - RiskControlMeasure
       - Test
     visibleRelationships:
       - mitigates

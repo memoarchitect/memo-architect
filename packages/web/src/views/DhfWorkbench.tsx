@@ -51,7 +51,7 @@ const BUILT_IN_SNIPPETS: Snippet[] = [
     { id: 'q-hazardous-situations', label: 'Hazardous Situations', description: 'All hazardous situations', category: 'query',
         code: '```memo-query\nkind: HazardousSituation\ndisplay: table\ncolumns: name, layer, doc\nsort: name\n```' },
     { id: 'q-risk-controls', label: 'Risk Controls', description: 'All risk control measures', category: 'query',
-        code: '```memo-query\nkind: RiskControl\ndisplay: table\ncolumns: name, layer, doc\nsort: name\n```' },
+        code: '```memo-query\nkind: RiskControlMeasure\ndisplay: table\ncolumns: name, layer, doc\nsort: name\n```' },
     { id: 'q-requirements', label: 'Requirements', description: 'All system requirements', category: 'query',
         code: '```memo-query\nkind: Requirement\ndisplay: table\ncolumns: name, layer, doc\nsort: name\n```' },
     { id: 'q-soup', label: 'SOUP List', description: 'All SOUP components', category: 'query',

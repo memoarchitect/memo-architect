@@ -93,7 +93,7 @@ alias Torque for ISQ::TorqueValue;
 
 ### N1 · Use unquoted identifiers when the name is a single CamelCase or camelCase token.
 **Source:** OMG `VehicleDefinitions.sysml` uses `Vehicle`, `AxleAssembly`, `frontAxle`. Validation `8-Requirements.sysml` uses unquoted `MassLimitationRequirement`.
-**MEMO rule:** part definitions = `PascalCase` (`Hazard`, `RiskControl`); part usages = `camelCase` (`fluidOverInfusion`); enums = `PascalCase` with `Kind` suffix (`ConcernKind`). Don't quote what doesn't need quoting.
+**MEMO rule:** part definitions = `PascalCase` (`Hazard`, `RiskControlMeasure`); part usages = `camelCase` (`fluidOverInfusion`); enums = `PascalCase` with `Kind` suffix (`ConcernKind`). Don't quote what doesn't need quoting.
 
 ### N2 · Use single-quoted strings only when the name contains spaces or punctuation.
 **Source:** OMG `'Part Definition Example'`, `'Generate Torque'`, `'1a-Parts Tree'`. GfSE `'Market Leader'` for #systemObjective.

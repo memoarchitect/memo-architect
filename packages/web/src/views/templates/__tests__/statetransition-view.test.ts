@@ -31,7 +31,7 @@ function model(elements: MemoElement[]): MemoModelDTO {
 describe('classifyStateTransitionElements', () => {
     it('splits states, transitions, and annotations', () => {
         const m = model([
-            el('machine', { kind: 'BehaviorMachine' }),
+            el('machine', { kind: 'StateMachine' }),
             el('off', { name: 'OFF' }),
             el('tr1', {
                 kind: 'Transition',
@@ -50,7 +50,7 @@ describe('classifyStateTransitionElements', () => {
             kind: 'CustomEdgeKind',
             attributes: { sourceState: 'A', targetState: 'B' },
         }))).toBe(true);
-        expect(isStateElement(el('m', { kind: 'BehaviorMachine' }))).toBe(true);
+        expect(isStateElement(el('m', { kind: 'StateMachine' }))).toBe(true);
         expect(isStateElement(el('p', { kind: 'BehaviorProperty' }))).toBe(false);
     });
 });

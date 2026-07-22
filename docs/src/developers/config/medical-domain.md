@@ -35,9 +35,9 @@ concerns.
 | Context and use | `IntendedUse`, `Actor`, `UseContext`, `UseError` | Who uses the device, where, and under which conditions? |
 | Operations | `OperationalActivity`, `OperationalCapability`, `OperationalScenario` | What work and clinical outcome must be supported? |
 | Requirements | `Need` (needKind: stakeholder…), `Requirement` (requirementKind: system, software, hardware) | What measurable obligations apply? |
-| Functions and behavior | `LogicalFunction`, `BehaviorMachine`, `ModeState`, `ActivityAction` | What transformations, states, and interactions are required? |
+| Functions and behavior | `LogicalFunction`, `StateMachine`, `ModeState`, `ActivityAction` | What transformations, states, and interactions are required? |
 | Architecture | `LogicalComponent`, `SoftwareItem`, `FirmwareItem`, `HardwareAssembly`, `ProcessingNode`, `Interface` | Which design elements own and realize the required behavior? |
-| Safety risk | `Hazard`, `SequenceOfEvents`, `HazardousSituation`, `Harm`, `RiskControl` | How can harm occur and where is risk controlled? |
+| Safety risk | `IntendedUse`, `ReasonablyForeseeableMisuse`, `SafetyRelatedCharacteristic`, `HazardCause`, `Hazard`, `SequenceOfEvents`, `HazardousSituation`, `Harm`, `Risk`, `RiskControlMeasure`, `ResidualRisk`, `Benefit` | How can harm occur, be controlled, and be evaluated? |
 | Cybersecurity | `CybersecurityAsset`, `Threat`, `Vulnerability`, `ThreatScenario`, `CyberMitigation`, `SecurityRequirement` | How can the connected device be compromised and protected? |
 | Assurance | `VerificationCase`, `ValidationCase`, `TestArtifact`, `Evidence` | What activity and evidence support each claim? |
 
@@ -55,10 +55,15 @@ situations, harms, controls, residual-risk records, verification, and evidence.
 ```mermaid
 flowchart LR
     Cause[HazardCause] --> Hazard[Hazard]
+    Cause[HazardCause] --> Hazard
     Hazard --> Sequence[SequenceOfEvents]
     Sequence --> Situation[HazardousSituation]
     Situation --> Harm[Harm]
-    Control[RiskControl] -->|MitigatesHazard| Hazard
+    Harm --> Risk[Risk]
+    Control[RiskControlMeasure] -->|MitigatesHazard| Hazard
+    Risk --> Control
+    Control --> Residual[ResidualRisk]
+    Benefit[Benefit] --> Residual
     Control -->|VerifiedBy| Test[VerificationCase]
     Test -->|ProducesEvidence| Evidence[Evidence]
 ```

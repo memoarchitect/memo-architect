@@ -18,7 +18,7 @@ const EXAMPLES = [
     'Add a PressureSensor component with a USB interface and a power port.',
     'Create a hazard: AlarmFailure that causes patient harm in ICU setting.',
     'Define a software item InfusionController with a requirement for dose limit checking.',
-    'Add a RiskControl that mitigates OverInfusion by adding a flow rate sensor.',
+    'Add a RiskControlMeasure that mitigates OverInfusion by adding a flow rate sensor.',
 ];
 
 export function SysmlGenerator() {

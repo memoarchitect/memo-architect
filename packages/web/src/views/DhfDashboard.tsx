@@ -21,9 +21,9 @@ interface DocType {
 }
 
 const DOC_TYPES: DocType[] = [
-    { id: 'rmp', title: 'Risk Management Plan', standards: ['ISO 14971:2019 §4.4'], layers: ['risk'], relevantKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControl', 'RiskAcceptabilityCriteria'], group: 'risk' },
-    { id: 'har', title: 'Hazard Analysis Report', standards: ['ISO 14971:2019 §5', 'ISO 14971:2019 §6'], layers: ['risk'], relevantKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControl'], group: 'risk' },
-    { id: 'fmea', title: 'Failure Mode and Effects Analysis', standards: ['IEC 60812:2018'], layers: ['risk', 'functional', 'physical'], relevantKinds: ['Hazard', 'RiskControl', 'Function', 'Component', 'Subsystem'], group: 'risk' },
+    { id: 'rmp', title: 'Risk Management Plan', standards: ['ISO 14971:2019 §4.4'], layers: ['risk'], relevantKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControlMeasure', 'RiskAcceptabilityCriteria'], group: 'risk' },
+    { id: 'har', title: 'Hazard Analysis Report', standards: ['ISO 14971:2019 §5', 'ISO 14971:2019 §6'], layers: ['risk'], relevantKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControlMeasure'], group: 'risk' },
+    { id: 'fmea', title: 'Failure Mode and Effects Analysis', standards: ['IEC 60812:2018'], layers: ['risk', 'functional', 'physical'], relevantKinds: ['Hazard', 'RiskControlMeasure', 'Function', 'Component', 'Subsystem'], group: 'risk' },
     { id: 'rtm', title: 'Requirements Traceability Matrix', standards: ['IEC 62304:2006 §5.1.1'], layers: ['requirements', 'functional', 'verification'], relevantKinds: ['Requirement', 'Requirement', 'DesignInput', 'DesignOutput', 'TestCase', 'VerificationActivity'], group: 'design' },
     { id: 'sad', title: 'System Architecture Description', standards: ['ISO/IEC/IEEE 42010:2022'], layers: ['functional', 'logical', 'physical', 'software', 'interfaces'], relevantKinds: ['Function', 'Component', 'Subsystem', 'Interface', 'Port', 'SoftwareItem', 'SOUPComponent'], group: 'design' },
     { id: 'sds', title: 'Software Design Specification', standards: ['IEC 62304:2006 §5.4'], layers: ['software'], relevantKinds: ['SoftwareItem', 'SoftwareUnit', 'SoftwareSystem', 'SOUPComponent', 'Interface'], group: 'design' },
@@ -33,7 +33,7 @@ const DOC_TYPES: DocType[] = [
     { id: 'vvp', title: 'Verification & Validation Plan', standards: ['ISO 13485:2016 §7.3.6'], layers: ['verification'], relevantKinds: ['TestCase', 'VerificationActivity', 'ValidationActivity', 'TestProtocol'], group: 'verification' },
     { id: 'vvr', title: 'Verification & Validation Report', standards: ['ISO 13485:2016 §7.3.7'], layers: ['verification'], relevantKinds: ['TestCase', 'VerificationActivity', 'ValidationActivity', 'TestResult'], group: 'verification' },
     { id: 'sdp', title: 'Software Development Plan', standards: ['IEC 62304:2006 §5.1'], layers: ['software', 'verification'], relevantKinds: ['SoftwareItem', 'SoftwareUnit', 'SoftwareSystem', 'TestCase'], group: 'compliance' },
-    { id: 'csr', title: 'Clinical Safety Report', standards: ['ISO 14971:2019 §10'], layers: ['risk', 'verification'], relevantKinds: ['Hazard', 'RiskControl', 'ClinicalEvidence', 'ValidationActivity'], group: 'compliance' },
+    { id: 'csr', title: 'Clinical Safety Report', standards: ['ISO 14971:2019 §10'], layers: ['risk', 'verification'], relevantKinds: ['Hazard', 'RiskControlMeasure', 'ClinicalEvidence', 'ValidationActivity'], group: 'compliance' },
     { id: 'uer', title: 'Usability Engineering Report', standards: ['IEC 62366-1:2015'], layers: ['ui', 'requirements'], relevantKinds: ['UseCase', 'UserActivity', 'UserInterface', 'UsabilityRequirement'], group: 'compliance' },
     { id: 'cybersecurity', title: 'Cybersecurity Documentation', standards: ['IEC 81001-5-1:2021'], layers: ['software', 'interfaces'], relevantKinds: ['ThreatModel', 'SecurityControl', 'Interface', 'SOUPComponent'], group: 'compliance' },
     { id: 'labeling', title: 'Labeling Specification', standards: ['21 CFR 801'], layers: ['requirements', 'ui'], relevantKinds: ['LabelingRequirement', 'Requirement'], group: 'compliance' },

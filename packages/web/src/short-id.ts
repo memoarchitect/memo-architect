@@ -7,7 +7,7 @@
 
 const KIND_PREFIX_OVERRIDES: Record<string, string> = {
     Hazard: 'HZD', HazardousEvent: 'HZD-EVT', HazardousSituation: 'HZD-SIT',
-    Risk: 'RISK', RiskControl: 'RISK-CTL', MitigationMeasure: 'MIT', ResidualRisk: 'RRISK',
+    Risk: 'RISK', RiskControlMeasure: 'RISK-CTL', MitigationMeasure: 'MIT', ResidualRisk: 'RRISK',
     StakeholderRequirement: 'STK-REQ', Requirement: 'REQ',
     SoftwareSpecification: 'SW-SPEC', InterfaceRequirement: 'REQ',
     PerformanceRequirement: 'PERF-REQ', SafetyRequirement: 'SAF-REQ',

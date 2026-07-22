@@ -23,9 +23,9 @@ const ONTOLOGY: OntologyPackageInfo = {
             color: '#7B68EE',
             kindCount: 4,
             kinds: [
-                { name: 'BehaviorMachine', label: 'Behavior Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'functional' },
+                { name: 'StateMachine', label: 'State Machine', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'functional' },
                 { name: 'Hazard', label: 'Hazard', construct: 'item', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk' },
-                { name: 'RiskControl', label: 'Risk Control', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk' },
+                { name: 'RiskControlMeasure', label: 'Risk Control', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk' },
                 { name: 'Requirement', label: 'Requirement', construct: 'requirement', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'requirements' },
             ],
         },
@@ -52,9 +52,9 @@ describe('computeExplorerGroupTree', () => {
     it('maps package sub-groups into V-model layers and assurance disciplines', () => {
         const elements = [
             el('h1', 'Hazard', 'risk'),
-            el('rc1', 'RiskControl', 'risk'),
+            el('rc1', 'RiskControlMeasure', 'risk'),
             el('r1', 'Requirement', 'requirements'),
-            el('bm1', 'BehaviorMachine', 'architecture'),
+            el('bm1', 'StateMachine', 'architecture'),
         ];
         const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
         const arch = groups.find(g => g.group.id === 'architecture');
@@ -62,9 +62,9 @@ describe('computeExplorerGroupTree', () => {
         expect(arch!.subGroups.map(sg => sg.id)).toEqual(['functional', 'requirements', 'safety-risk']);
         const risk = arch!.subGroups.find(sg => sg.id === 'safety-risk')!;
         expect(risk.label).toBe('Safety / Risk');
-        expect([...risk.kinds.keys()].sort()).toEqual(['Hazard', 'RiskControl']);
+        expect([...risk.kinds.keys()].sort()).toEqual(['Hazard', 'RiskControlMeasure']);
         const functional = arch!.subGroups.find(sg => sg.id === 'functional')!;
-        expect([...functional.kinds.keys()]).toEqual(['BehaviorMachine']);
+        expect([...functional.kinds.keys()]).toEqual(['StateMachine']);
     });
 
     it('keeps untyped action-flow notation out of the architecture Explorer', () => {
@@ -97,5 +97,22 @@ describe('computeExplorerGroupTree', () => {
         } as OntologyPackageInfo;
         const groups = computeExplorerGroupTree([el('a1', 'ActionDefinition', 'behavior')], '', [withAction], SELECTED);
         expect(groups).toEqual([]);
+    });
+
+    it('does not nest concrete kinds under abstract ontology bases', () => {
+        const withAbstractBase: OntologyPackageInfo = {
+            ...ONTOLOGY,
+            layers: [{
+                ...ONTOLOGY.layers[0],
+                kinds: [
+                    { name: 'AbstractRisk', label: 'Abstract Risk', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk', isAbstract: true },
+                    { name: 'ResidualRisk', label: 'Residual Risk', construct: 'part', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'safety-risk', derivesFrom: 'AbstractRisk' },
+                ],
+            }],
+        } as OntologyPackageInfo;
+        const groups = computeExplorerGroupTree([el('rr1', 'ResidualRisk', 'risk')], '', [withAbstractBase], SELECTED);
+        const risk = groups[0].subGroups.find(group => group.id === 'safety-risk')!;
+        expect(risk.kinds.has('ResidualRisk')).toBe(true);
+        expect(risk.kinds.has('AbstractRisk')).toBe(false);
     });
 });

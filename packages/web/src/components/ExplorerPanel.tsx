@@ -710,11 +710,16 @@ function buildKindToParentMap(
     selectedOntologies: Set<string>,
 ): Record<string, string | undefined> {
     const map: Record<string, string | undefined> = {};
+    const abstractKinds = new Set<string>();
     for (const pkg of availableOntologies) {
         if (!selectedOntologies.has(pkg.name)) continue;
         for (const layer of pkg.layers) {
+            for (const kind of layer.kinds) if (kind.isAbstract) abstractKinds.add(kind.name);
             for (const kind of layer.kinds) map[kind.name] = kind.derivesFrom;
         }
+    }
+    for (const [kind, parent] of Object.entries(map)) {
+        if (parent && abstractKinds.has(parent)) map[kind] = undefined;
     }
     return map;
 }
@@ -759,7 +764,7 @@ const EXPLORER_SUBGROUP_ORDER: Record<string, number> = {
 
 function kindFolderLabel(kind: string, count: number): string {
     const labels: Record<string, string> = {
-        BehaviorMachine: 'State Machine',
+        StateMachine: 'State Machine',
         ModeState: 'Mode State',
         BehaviorProperty: 'Behavioral Constraint',
         AssumeProperty: 'Assumption',

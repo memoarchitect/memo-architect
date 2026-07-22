@@ -118,7 +118,7 @@ viewpoints:
     label: Risk Overview (ISO 14971) # Display label
     visibleKinds:                    # Show elements of these kinds
       - Hazard
-      - RiskControl
+      - RiskControlMeasure
     visibleRelationships:            # Show these relationship types
       - mitigates
       - causes
@@ -196,7 +196,7 @@ closureRules:
 viewpoints:
   - id: risk-overview
     label: Risk Overview
-    visibleKinds: [Hazard, RiskControl]
+    visibleKinds: [Hazard, RiskControlMeasure]
     visibleRelationships: [mitigates]
     visibleLayers: [risk]
 ```

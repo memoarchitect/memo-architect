@@ -11,7 +11,7 @@ Choose an element by the engineering statement you want to preserve.
 | “Dose-management responsibility.” | `LogicalComponent` |
 | “Dose-control firmware image.” | `FirmwareItem` |
 | “Unintended over-infusion.” | `Hazard` |
-| “Independent maximum-dose monitor.” | `RiskControl` |
+| “Independent maximum-dose monitor.” | `RiskControlMeasure` |
 | “Verify lockout interval enforcement.” | `VerificationCase` |
 | “Approved test report 2.1.” | `Evidence` |
 

@@ -111,7 +111,7 @@ packages/ontology-medical/
   sysml/
     risk/
       hazard.sysml        ← part def Hazard { }
-      risk-control.sysml  ← part def RiskControl { }
+      risk-control.sysml  ← part def RiskControlMeasure { }
     requirements/
       requirement.sysml   ← requirement def Requirement { }
 ```

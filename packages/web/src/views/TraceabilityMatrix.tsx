@@ -20,7 +20,7 @@ const PRESETS: MatrixPreset[] = [
         label: 'ISO 14971: Risk \u2192 Control',
         description: 'Hazards and hazardous situations traced to risk controls',
         rowKinds: ['Hazard', 'HazardousSituation'],
-        colKinds: ['RiskControl', 'SafetyGoal'],
+        colKinds: ['RiskControlMeasure', 'SafetyGoal'],
         relationshipTypes: ['mitigates', 'traceTo', 'causes', 'leadsTo'],
     },
     {

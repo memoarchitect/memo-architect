@@ -52,7 +52,7 @@ const VIEWPOINT_TABS: ViewpointTab[] = [
         id: 'risk',
         label: 'Risk Chain',
         layerIds: ['requirements', 'risk', 'safety', 'cybersecurity', 'verification', 'analysis'],
-        description: 'Risk trace chain: Hazard → HazardousSituation → Harm → RiskControl → verification',
+        description: 'Risk trace chain: Hazard → HazardousSituation → Harm → RiskControlMeasure → verification',
     },
     {
         id: 'traceability',

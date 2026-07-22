@@ -46,6 +46,7 @@ export interface OntologyKindInfo {
     relationships?: Array<{ type: string; targetKind: string; direction: 'outgoing' | 'incoming' }>;
     group?: string;            // namespace sub-group: first directory under the layer (e.g. "risk")
     standard?: string;         // compliance standard (e.g. "iso14971") for kinds under compliance/<standard>/
+    isAbstract?: boolean;
 }
 
 export interface OntologySaveResult {

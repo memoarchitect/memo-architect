@@ -7,7 +7,13 @@ flowchart LR
     Need[Need] --> Req[Requirement]
     Req --> Function[LogicalFunction]
     Function --> Component[LogicalComponent]
-    Control[RiskControl] --> Hazard[Hazard]
+    Cause[HazardCause] --> Hazard[Hazard]
+    Hazard --> Events[SequenceOfEvents]
+    Events --> Situation[HazardousSituation]
+    Situation --> Harm[Harm]
+    Harm --> Risk[Risk]
+    Control[RiskControlMeasure] --> Hazard
+    Control --> Residual[ResidualRisk]
     Req --> Test[VerificationCase]
     Control --> Test
     Test --> Evidence[Evidence]
@@ -50,7 +56,7 @@ package infusion_pump {
         attribute :>> name = "OverInfusion";
     }
 
-    item independentMonitor : RiskControl {
+    item independentMonitor : RiskControlMeasure {
         attribute :>> id = "RC-001";
         attribute :>> name = "IndependentFlowMonitor";
     }

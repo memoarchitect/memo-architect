@@ -29,7 +29,7 @@ const STANDARDS: ComplianceStandard[] = [
             { id: 'verification', label: 'Verification', description: 'Verify risk control effectiveness' },
             { id: 'summary', label: 'Summary', description: 'Review compliance status' },
         ],
-        requiredKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControl'],
+        requiredKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControlMeasure'],
         requiredRelationships: ['causes', 'leadsTo', 'mitigates'],
     },
     {
@@ -65,7 +65,7 @@ function checkISO14971(model: ReturnType<typeof useModelStore.getState>['model']
     const hazards = elements.filter(e => e.kind === 'Hazard');
     const hazSits = elements.filter(e => e.kind === 'HazardousSituation');
     const harms = elements.filter(e => e.kind === 'Harm');
-    const controls = elements.filter(e => e.kind === 'RiskControl');
+    const controls = elements.filter(e => e.kind === 'RiskControlMeasure');
 
     checks.push({
         label: 'Hazards identified',
@@ -222,7 +222,7 @@ export function ComplianceWizard() {
                 if (selectedStandard === 'iso-14971') return elements.filter(e => e.kind === 'HazardousSituation' || e.kind === 'Harm');
                 return elements.filter(e => e.kind === 'SoftwareComponent' || e.kind === 'Subsystem' || e.kind === 'Component');
             case 'control-measures':
-                if (selectedStandard === 'iso-14971') return elements.filter(e => e.kind === 'RiskControl');
+                if (selectedStandard === 'iso-14971') return elements.filter(e => e.kind === 'RiskControlMeasure');
                 return elements.filter(e => e.kind === 'Requirement' || e.kind === 'Requirement');
             case 'verification':
                 return elements.filter(e => e.kind === 'Test');
