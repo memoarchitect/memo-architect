@@ -49,12 +49,14 @@ import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type Po
 import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
+import { computeUseCaseViewLayout } from './templates/use-case-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
 import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
+import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
 import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
@@ -571,6 +573,9 @@ function DiagramCanvasInner() {
         seqLifeline: SeqLifelineNode,
         seqSection: SeqSectionNode,
         seqOccurrence: SeqOccurrenceNode,
+        useCase: UseCaseNode,
+        useCaseActor: UseCaseActorNode,
+        useCaseBoundary: UseCaseBoundaryNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -895,6 +900,11 @@ function DiagramCanvasInner() {
                     callbacks: { onToggleExpand: toggleExpand },
                 }));
             }
+        } else if (selectedDiagram?.diagramType === 'ucd') {
+            apply(computeUseCaseViewLayout(model, {
+                viewpointFilter,
+                systemName: selectedDiagram.name,
+            }), false);
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,
             // typed connectors, nested containment
@@ -956,7 +966,7 @@ function DiagramCanvasInner() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
-        selectedDiagram?.relationshipTypes,
+        selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name,
         layoutProviderId,
         expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
