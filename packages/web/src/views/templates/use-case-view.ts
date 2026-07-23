@@ -15,12 +15,41 @@ export function isUseCase(element: MemoElement): boolean {
     return USE_CASE_KINDS.has(element.kind) || element.construct === 'use case';
 }
 
+/** Highest include-hierarchy depth available for the UCD display-level control. */
+export function useCaseMaxDepth(model: MemoModelDTO): number {
+    const ids = new Set(Object.values(model.elements).filter(isUseCase).map(element => element.id));
+    const parentIds = new Map<string, string[]>();
+    for (const rel of model.relationships.filter(rel => rel.type === 'Includes' && ids.has(rel.sourceId) && ids.has(rel.targetId))) {
+        parentIds.set(rel.targetId, [...(parentIds.get(rel.targetId) ?? []), rel.sourceId]);
+    }
+    const depth = (id: string, seen = new Set<string>()): number => {
+        if (seen.has(id)) return 0;
+        const parents = parentIds.get(id) ?? [];
+        return parents.length === 0 ? 0 : 1 + Math.min(...parents.map(parent => depth(parent, new Set([...seen, id]))));
+    };
+    return Math.max(0, ...[...ids].map(id => depth(id)));
+}
+
 export interface UseCaseViewOptions {
     viewpointFilter?: (element: MemoElement) => boolean;
     systemName?: string;
     /** L0 shows roots; L1 includes direct children. "all" shows the full hierarchy. */
     level?: number | 'all';
     edgeStyle?: EdgeStyle;
+    /** Actor ids whose associated use cases are excluded from this presentation. */
+    hiddenActorIds?: ReadonlySet<string>;
+}
+
+export interface UseCaseActorOption { id: string; name: string; }
+
+export function useCaseActorOptions(model: MemoModelDTO): UseCaseActorOption[] {
+    const elements = Object.values(model.elements);
+    const caseIds = new Set(elements.filter(isUseCase).map(element => element.id));
+    const relatedActorIds = new Set(model.relationships
+        .filter(rel => ASSOCIATION_TYPES.has(rel.type))
+        .flatMap(rel => caseIds.has(rel.sourceId) ? [rel.targetId] : caseIds.has(rel.targetId) ? [rel.sourceId] : []));
+    return elements.filter(isUseCaseActor).filter(actor => relatedActorIds.has(actor.id))
+        .map(actor => ({ id: actor.id, name: actor.name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Read UCD presentation configuration from model-owned view hints, never UI state. */
@@ -71,27 +100,53 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             }
         }
     }
+    const hiddenActorIds = options.hiddenActorIds ?? new Set<string>();
+    for (const rel of relationships) {
+        const actorId = useCaseIds.has(rel.sourceId) ? rel.targetId : useCaseIds.has(rel.targetId) ? rel.sourceId : undefined;
+        if (actorId && hiddenActorIds.has(actorId)) {
+            useCaseIds.delete(rel.sourceId);
+            useCaseIds.delete(rel.targetId);
+        }
+    }
     const useCases = allUseCases.filter(element => useCaseIds.has(element.id));
-    const actors = visible.filter(isUseCaseActor).filter(actor => relationships.some(rel =>
+    const actors = visible.filter(isUseCaseActor).filter(actor => !hiddenActorIds.has(actor.id)).filter(actor => relationships.some(rel =>
         (rel.sourceId === actor.id && useCaseIds.has(rel.targetId)) || (rel.targetId === actor.id && useCaseIds.has(rel.sourceId))));
     const shown = new Set([...actors, ...useCases].map(element => element.id));
     if (useCases.length === 0) return { nodes: [], edges: [] };
 
-    const cols = Math.max(1, Math.ceil(Math.sqrt(useCases.length)));
-    const rows = Math.ceil(useCases.length / cols);
-    const width = Math.max(520, cols * 210 + 100);
-    const height = Math.max(320, rows * 150 + 100);
+    const casesByLevel = new Map<number, MemoElement[]>();
+    for (const useCase of useCases) {
+        const caseLevel = depth(useCase.id);
+        casesByLevel.set(caseLevel, [...(casesByLevel.get(caseLevel) ?? []), useCase]);
+    }
+    const levels = [...casesByLevel.keys()].sort((a, b) => a - b);
+    // Each hierarchy level owns a compact grid: hierarchy is communicated by
+    // the band position, while the grid avoids wasting a tall, sparse canvas.
+    const gridColumns = new Map(levels.map(caseLevel => [caseLevel,
+        Math.max(1, Math.ceil(Math.sqrt(casesByLevel.get(caseLevel)!.length))),
+    ]));
+    const levelWidths = levels.map(caseLevel => gridColumns.get(caseLevel)! * 205 + 35);
+    const maxRows = Math.max(...levels.map(caseLevel =>
+        Math.ceil(casesByLevel.get(caseLevel)!.length / gridColumns.get(caseLevel)!)));
+    const width = Math.max(520, levelWidths.reduce((sum, value) => sum + value, 70));
+    const height = Math.max(320, maxRows * 145 + 125);
     const nodes: Node[] = [{
         id: '__use_case_boundary__', type: 'useCaseBoundary', position: { x: 130, y: 28 },
         data: { label: options.systemName || 'System Boundary', isFrame: true, kind: 'System Boundary' },
         style: { width, height }, draggable: false, selectable: false, zIndex: -1,
     }];
-    useCases.forEach((element, index) => {
-        const col = index % cols, row = Math.floor(index / cols);
+    let bandX = 130 + 45;
+    levels.forEach((caseLevel) => {
+        const columns = gridColumns.get(caseLevel)!;
+        (casesByLevel.get(caseLevel) ?? []).forEach((element, row) => {
+        const column = row % columns;
+        const gridRow = Math.floor(row / columns);
         nodes.push({
-            id: element.id, type: 'useCase', position: { x: 130 + 55 + col * 210, y: 28 + 62 + row * 150 },
-            data: { label: element.name, kind: element.kind, color: '#E67E22' }, style: { width: 150, height: 82 },
+            id: element.id, type: 'useCase', position: { x: bandX + column * 205, y: 28 + 62 + gridRow * 145 },
+            data: { label: element.name, kind: element.kind, color: '#E67E22', level: caseLevel }, style: { width: 170, height: 82 },
         });
+        });
+        bandX += columns * 205 + 35;
     });
     const leftActors = actors.filter((actor, index) => {
         const outgoing = relationships.filter(rel => rel.sourceId === actor.id && useCaseIds.has(rel.targetId)).length;

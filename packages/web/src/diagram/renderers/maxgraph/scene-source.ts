@@ -122,7 +122,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Diagra
             callbacks: NO_CALLBACKS,
         });
     } else if (diagram?.diagramType === 'ucd') {
-        result = computeUseCaseViewLayout(model, { viewpointFilter, systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
+        result = computeUseCaseViewLayout(model, { systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
     } else if (viewKind === 'interconnection') {
         result = await computeInterconnectionLayout(model, {
             viewpointFilter,

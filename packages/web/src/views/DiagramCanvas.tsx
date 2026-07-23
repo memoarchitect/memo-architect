@@ -49,7 +49,7 @@ import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type Po
 import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
-import { computeUseCaseViewLayout, useCaseViewOptions } from './templates/use-case-view';
+import { computeUseCaseViewLayout, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions } from './templates/use-case-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -65,9 +65,7 @@ import { RelationshipPicker } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
-import type { LayoutCapability } from '../diagram/layout-provider';
-import { listLayoutProviders } from '../diagram/layout-providers';
-import { selectedLayoutProviderId, withLayoutProvider } from '../diagram/layout-selection';
+import { selectedLayoutProviderId } from '../diagram/layout-selection';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -460,17 +458,12 @@ function DiagramCanvasInner() {
     const viewKindMeta = viewKind ? VIEW_KIND_META[viewKind] : null;
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
+    const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
-    const requiredLayoutCapabilities = useMemo<LayoutCapability[]>(() =>
-        viewKind === 'statetransition' ? ['compound-graph'] : ['flat-graph'], [viewKind]);
-    const automaticLayoutProviders = useMemo(() =>
-        listLayoutProviders(requiredLayoutCapabilities).filter(provider => provider.mode === 'automatic'),
-    [requiredLayoutCapabilities]);
-    const usesLayoutProvider = isFBSDiagram
-        || (isGeneralTemplate && generalMode === 'graph')
-        || viewKind === 'interconnection'
-        || viewKind === 'actionflow'
-        || viewKind === 'statetransition';
+    const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
+    const [hiddenUseCaseActorIds, setHiddenUseCaseActorIds] = useState<Set<string>>(new Set());
+    const useCaseDepth = useMemo(() => model ? useCaseMaxDepth(model) : 0, [model]);
+    const useCaseActors = useMemo(() => model ? useCaseActorOptions(model) : [], [model]);
     // A view may restrict its presentation modes (e.g. the BDD sample is a
     // strict tree — no graph) via properties.modes = "tree,containment"
     const declaredModes = selectedDiagram?.properties?.modes;
@@ -547,6 +540,8 @@ function DiagramCanvasInner() {
     useEffect(() => {
         setLayoutEditVersion(0);
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
+        setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
+        setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');
         setActionFlowDisplayLevel('all');
@@ -902,9 +897,12 @@ function DiagramCanvasInner() {
             }
         } else if (selectedDiagram?.diagramType === 'ucd') {
             apply(computeUseCaseViewLayout(model, {
-                viewpointFilter,
+                // A UCD selection can be derived before relationship endpoints
+                // are resolved. The template itself selects only actors linked
+                // to its visible use cases, so do not drop actors here.
+                viewpointFilter: undefined,
                 systemName: selectedDiagram.name,
-                ...useCaseViewOptions(selectedDiagram.properties),
+                ...useCaseViewOptions(selectedDiagram.properties), level: useCaseDisplayLevel, hiddenActorIds: hiddenUseCaseActorIds,
             }), false);
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,
@@ -967,7 +965,7 @@ function DiagramCanvasInner() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
-        selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name,
+        selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, hiddenUseCaseActorIds,
         layoutProviderId,
         expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
@@ -1728,7 +1726,50 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* General template mode switcher (KK-2) */}
-                        {isGeneralTemplate && (
+                        {isUseCaseDiagram && (
+                            <>
+                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                <label className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#475569' }}>
+                                    Level
+                                    <select
+                                        aria-label="Use case hierarchy level"
+                                        value={useCaseDisplayLevel}
+                                        onChange={event => setUseCaseDisplayLevel(event.target.value === 'all' ? 'all' : Number(event.target.value))}
+                                        className="px-1.5 py-0.5 text-xs font-medium rounded"
+                                        style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}
+                                    >
+                                        <option value="all">All levels</option>
+                                        {Array.from({ length: useCaseDepth + 1 }, (_, level) => (
+                                            <option key={level} value={level}>L{level}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                {useCaseActors.length > 0 && (
+                                    <details className="relative">
+                                        <summary className="px-2 py-0.5 text-xs font-semibold rounded cursor-pointer"
+                                            style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}>
+                                            Actors{hiddenUseCaseActorIds.size ? `: ${hiddenUseCaseActorIds.size} hidden` : ''}
+                                        </summary>
+                                        <div className="absolute top-7 left-0 z-30 min-w-48 p-2 rounded shadow-lg"
+                                            style={{ background: '#FFFFFF', border: '1px solid #D1D5DB' }}>
+                                            <div className="mb-1 text-xs" style={{ color: '#64748B' }}>Hide related use cases</div>
+                                            {useCaseActors.map(actor => <label key={actor.id} className="flex items-center gap-2 py-1 text-xs" style={{ color: '#374151' }}>
+                                                <input type="checkbox" checked={hiddenUseCaseActorIds.has(actor.id)}
+                                                    onChange={() => setHiddenUseCaseActorIds(previous => {
+                                                        const next = new Set(previous);
+                                                        if (next.has(actor.id)) next.delete(actor.id); else next.add(actor.id);
+                                                        return next;
+                                                    })} />
+                                                {actor.name}
+                                            </label>)}
+                                        </div>
+                                    </details>
+                                )}
+                            </>
+                        )}
+
+                        {/* General template mode switcher (KK-2) */}
+                        {isGeneralTemplate && !isUseCaseDiagram && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
@@ -1807,36 +1848,7 @@ function DiagramCanvasInner() {
                         {selectedDiagramId && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
-                                {usesLayoutProvider && automaticLayoutProviders.length > 0 && (
-                                    <select
-                                        aria-label="Layout provider"
-                                        value={layoutProviderId}
-                                        disabled={isLayouting}
-                                        onChange={(event) => {
-                                            const descriptor = automaticLayoutProviders.find(provider => provider.id === event.target.value);
-                                            if (!descriptor) return;
-                                            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
-                                            const layout = withLayoutProvider({
-                                                ...(previous ?? { nodes: {}, edges: {} }),
-                                                nodes: {},
-                                                edges: {},
-                                                canvas: { ...previous?.canvas, autoLayout: true },
-                                            }, descriptor);
-                                            mergeDiagramLayouts({ [selectedDiagramId]: layout });
-                                            sendDiagramLayoutUpdate(selectedDiagramId, layout);
-                                            positionCacheRef.current.clear();
-                                            setRelayoutNonce(value => value + 1);
-                                        }}
-                                        title="Choose an installed layout provider for this diagram"
-                                        className="px-1.5 py-0.5 text-xs font-medium rounded"
-                                        style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}
-                                    >
-                                        {automaticLayoutProviders.map(provider => (
-                                            <option key={provider.id} value={provider.id}>{provider.name}</option>
-                                        ))}
-                                    </select>
-                                )}
-                                <button
+                                {!isUseCaseDiagram && <button
                                     aria-pressed={autoLayoutEnabled}
                                     onClick={() => {
                                         if (autoLayoutEnabled) {
@@ -1864,7 +1876,7 @@ function DiagramCanvasInner() {
                                         : 'Auto layout is off. Your changes are saved automatically; click to discard overrides and recalculate.'}
                                 >
                                     Auto layout: {autoLayoutEnabled ? 'On' : 'Off'}
-                                </button>
+                                </button>}
                             </>
                         )}
 

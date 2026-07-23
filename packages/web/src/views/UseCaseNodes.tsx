@@ -42,3 +42,10 @@ export const UseCaseBoundaryNode = memo(function UseCaseBoundaryNode({ data }: N
         background: 'rgba(255,255,255,0.32)', padding: '10px 14px', color: '#475569', fontSize: 12, fontWeight: 700,
     }}>{d.label}</div>;
 });
+
+export const UseCaseLevelNode = memo(function UseCaseLevelNode({ data }: NodeProps) {
+    const d = data as UseCaseData;
+    return <div style={{ width: '100%', textAlign: 'center', color: '#64748B', fontSize: 11, fontWeight: 700, letterSpacing: '.03em' }}>
+        {d.label}
+    </div>;
+});
