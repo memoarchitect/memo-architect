@@ -6,6 +6,7 @@
 import type { ViewKind } from '@memoarchitect/tools/browser';
 
 export const LAYER_COLORS: Record<string, string> = {
+    operational: '#0F766E',
     business: '#8E44AD',
     requirements: '#4A90D9',
     risk: '#E74C3C',
@@ -20,6 +21,7 @@ export const LAYER_COLORS: Record<string, string> = {
 };
 
 export const LAYER_LABELS: Record<string, string> = {
+    operational: 'Operational Analysis',
     business: 'Business Analysis',
     requirements: 'Requirements',
     risk: 'Risk Management',
@@ -34,7 +36,7 @@ export const LAYER_LABELS: Record<string, string> = {
 };
 
 export const LAYER_ORDER = [
-    'business', 'requirements', 'risk', 'functional', 'behavior', 'logical',
+    'operational', 'business', 'requirements', 'risk', 'functional', 'behavior', 'logical',
     'physical', 'software', 'interfaces', 'verification', 'ui',
 ] as const;
 

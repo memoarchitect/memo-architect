@@ -1356,28 +1356,6 @@ function NewDiagramModal({ viewpointId, onClose }: { viewpointId: string; onClos
 
 // ─── Collapsible sub-section inside a viewpoint ──────────────────────────────
 
-function CollapsibleSection({ label, count, defaultOpen, children }: {
-    label: string; count: number; defaultOpen: boolean; children: React.ReactNode;
-}) {
-    const [open, setOpen] = useState(defaultOpen);
-    return (
-        <div>
-            <div
-                className="flex items-center gap-1 px-2 py-1 cursor-pointer select-none"
-                style={{ borderRadius: '4px', margin: '0 4px' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                onClick={() => setOpen(v => !v)}
-            >
-                <ChevronIcon expanded={open} size={12} color={COLOR.faint} />
-                <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>{label}</span>
-                <span className="ml-1 px-1 rounded" style={{ background: '#F0F0ED', color: COLOR.faint, fontSize: FONT.badge, fontWeight: 600 }}>{count}</span>
-            </div>
-            {open && children}
-        </div>
-    );
-}
-
 function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const methodology = useModelStore(s => s.methodology);
@@ -1434,10 +1412,26 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
     const modelDiagrams = getDiagramsForViewpoint(model, '__model');
-    const isSample = (d: DiagramDTO) => d.id.startsWith('diag-sample-');
-    const sampleModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto && isSample(d)));
-    const autoModelDiags = filterDiagrams(modelDiagrams.filter(d => d.auto && !isSample(d)));
-    const userModelDiags = filterDiagrams(modelDiagrams.filter(d => !d.auto));
+    const authoredModelDiags = filterDiagrams(modelDiagrams.filter(diagram => !diagram.id.startsWith('diag-layer-')));
+    const diagramsByLayer = useMemo(() => {
+        const groups = new Map<string, DiagramDTO[]>();
+        for (const diagram of authoredModelDiags) {
+            const layers = (diagram.elementIds ?? [])
+                .map(id => model?.elements[id]?.layer)
+                .filter((layer): layer is string => Boolean(layer));
+            const layer = [...layers].sort((a, b) => {
+                const aIndex = LAYER_ORDER.indexOf(a as typeof LAYER_ORDER[number]);
+                const bIndex = LAYER_ORDER.indexOf(b as typeof LAYER_ORDER[number]);
+                return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
+            })[0] ?? 'other';
+            groups.set(layer, [...(groups.get(layer) ?? []), diagram]);
+        }
+        return [...groups.entries()].sort(([a], [b]) => {
+            const aIndex = LAYER_ORDER.indexOf(a as typeof LAYER_ORDER[number]);
+            const bIndex = LAYER_ORDER.indexOf(b as typeof LAYER_ORDER[number]);
+            return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
+        });
+    }, [authoredModelDiags, model?.elements]);
 
     const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
         diagrams.map(diag => (
@@ -1514,24 +1508,17 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
                 {expandedVps.has('__model') && (
                     <div style={{ marginLeft: '16px' }}>
-                        {/* One sample per view-kind template — collapsed by default */}
-                        {sampleModelDiags.length > 0 && (
-                            <CollapsibleSection label="Samples" count={sampleModelDiags.length} defaultOpen={false}>
-                                <div style={{ marginLeft: '12px' }}>
-                                    {renderDiagramList(sampleModelDiags, '__model')}
+                        {diagramsByLayer.map(([layer, diagrams]) => (
+                            <div key={layer} style={{ margin: '5px 4px 2px' }}>
+                                <div className="px-2 py-1 font-semibold" style={{
+                                    color: LAYER_COLORS[layer] ?? COLOR.muted, fontSize: FONT.xs,
+                                    borderLeft: `3px solid ${LAYER_COLORS[layer] ?? COLOR.border}`,
+                                }}>
+                                    {LAYER_LABELS[layer] ?? `${layer.charAt(0).toUpperCase()}${layer.slice(1)}`}
                                 </div>
-                            </CollapsibleSection>
-                        )}
-                        {/* Auto-generated diagrams — collapsed by default */}
-                        {autoModelDiags.length > 0 && (
-                            <CollapsibleSection label="Generated" count={autoModelDiags.length} defaultOpen={false}>
-                                <div style={{ marginLeft: '12px' }}>
-                                    {renderDiagramList(autoModelDiags, '__model')}
-                                </div>
-                            </CollapsibleSection>
-                        )}
-                        {/* User diagrams */}
-                        {renderDiagramList(userModelDiags, '__model')}
+                                <div style={{ marginLeft: '8px' }}>{renderDiagramList(diagrams, '__model')}</div>
+                            </div>
+                        ))}
                         {/* + New Diagram */}
                         <button
                             className="flex items-center gap-1 px-2 py-1 w-full text-left"
@@ -1551,8 +1538,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const allDiagrams = getDiagramsForViewpoint(model, vp.id);
-                const autoDiags = filterDiagrams(allDiagrams.filter(d => d.auto));
-                const userDiags = filterDiagrams(allDiagrams.filter(d => !d.auto));
+                const authoredDiags = filterDiagrams(allDiagrams.filter(d => !d.id.startsWith('diag-layer-')));
 
                 return (
                     <div key={vp.id} className="mb-0.5">
@@ -1570,14 +1556,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
-                                {autoDiags.length > 0 && (
-                                    <CollapsibleSection label="Generated" count={autoDiags.length} defaultOpen={false}>
-                                        <div style={{ marginLeft: '12px' }}>
-                                            {renderDiagramList(autoDiags, vp.id)}
-                                        </div>
-                                    </CollapsibleSection>
-                                )}
-                                {renderDiagramList(userDiags, vp.id)}
+                                {renderDiagramList(authoredDiags, vp.id)}
                                 <button
                                     className="flex items-center gap-1 px-2 py-1 w-full text-left"
                                     style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
@@ -1592,17 +1571,6 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     </div>
                 );
             })}
-
-            {/* Diagram type legend */}
-            <div className="px-3 py-2 mt-2" style={{ borderTop: `1px solid ${COLOR.border}` }}>
-                <div className="flex flex-wrap items-center gap-1.5" style={{ color: COLOR.faint, fontSize: FONT.xs }}>
-                    {Object.entries(DIAGRAM_TYPE_META).map(([key, meta]) => (
-                        <span key={key} className="px-1.5 py-0.5 rounded" style={{ background: meta.color + '15', color: meta.color, fontSize: FONT.badge, fontWeight: 600 }}>
-                            {meta.code}
-                        </span>
-                    ))}
-                </div>
-            </div>
 
             {/* New Diagram modal */}
             {newDiagramVp !== null && (
@@ -1636,7 +1604,7 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
             title={[meta?.fullName, diag.description].filter(Boolean).join(' \u2014 ')}
         >
             <DiagramTypeBadge diagram={diag} />
-            {diag.auto && (
+            {diag.auto && !diag.sourceFile && (
                 <span className="px-1 py-0.5 rounded"
                     style={{ background: '#F0F0ED', color: COLOR.faint, fontSize: FONT.badge, fontWeight: 600 }}>
                     AUTO
