@@ -102,6 +102,9 @@ describe('use-case view template', () => {
         expect(layout.nodes.filter(node => node.type === 'useCaseActor')).toHaveLength(1);
         expect(layout.edges).toHaveLength(3);
         expect((layout.edges[1].data?.points as Array<unknown>).length).toBeGreaterThanOrEqual(2);
+        expect(layout.edges[0].data).toMatchObject({
+            sourceOffset: { x: 95, y: 43 }, targetOffset: { x: 0, y: 41 }, sourceSide: 'right', targetSide: 'left',
+        });
         expect(useCaseMaxDepth(model({ root, child, grandchild }, [
             { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
             { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },

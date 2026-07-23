@@ -211,9 +211,27 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         .map(node => ({ id: node.id, x: node.position.x, y: node.position.y, ...dimensions(node) }));
     const routes = routing === 'straight' ? new Map<string, { x: number; y: number }[]>()
         : routeOrthogonalEdges(routeRequests, obstacles, 28);
+    const requestById = new Map(routeRequests.map(request => [request.id, request]));
     const edges: Edge[] = edgeDrafts.map(({ edge }) => ({
         ...edge,
-        data: { ...edge.data, points: routes.get(edge.id) ?? [] },
+        data: {
+            ...edge.data,
+            points: routes.get(edge.id) ?? [],
+            // The shared drag scheduler uses these relative anchors to reroute
+            // against current node positions after a user moves any endpoint.
+            sourceOffset: (() => {
+                const request = requestById.get(edge.id)!;
+                const size = dimensions(nodeById.get(edge.source)!);
+                return { x: request.sourceSide === 'right' ? size.width : 0, y: size.height / 2 };
+            })(),
+            targetOffset: (() => {
+                const request = requestById.get(edge.id)!;
+                const size = dimensions(nodeById.get(edge.target)!);
+                return { x: request.targetSide === 'right' ? size.width : 0, y: size.height / 2 };
+            })(),
+            sourceSide: requestById.get(edge.id)!.sourceSide,
+            targetSide: requestById.get(edge.id)!.targetSide,
+        },
     }));
     return { nodes, edges };
 }
