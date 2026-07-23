@@ -50,6 +50,7 @@ import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, 
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
 import { computeUseCaseViewLayout, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
+import { computeContextViewLayout } from './templates/context-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -58,6 +59,7 @@ import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
 import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
 import { UseCaseEdge } from './UseCaseEdge';
+import { ContextBoundaryNode, ContextExternalNode, ContextSystemNode } from './ContextNodes';
 import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
@@ -574,6 +576,9 @@ function DiagramCanvasInner() {
         useCase: UseCaseNode,
         useCaseActor: UseCaseActorNode,
         useCaseBoundary: UseCaseBoundaryNode,
+        contextSystem: ContextSystemNode,
+        contextExternal: ContextExternalNode,
+        contextBoundary: ContextBoundaryNode,
         diagramNode: DiagramInteractiveNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
@@ -921,6 +926,8 @@ function DiagramCanvasInner() {
                 systemName: selectedDiagram.name,
                 ...useCaseViewOptions(selectedDiagram.properties), level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
             }), false);
+        } else if (selectedDiagram?.diagramType === 'context') {
+            apply(computeContextViewLayout(model, selectedDiagram.name), false);
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,
             // typed connectors, nested containment
