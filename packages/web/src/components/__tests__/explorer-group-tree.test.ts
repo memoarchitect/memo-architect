@@ -61,7 +61,7 @@ describe('computeExplorerGroupTree', () => {
         expect(arch).toBeDefined();
         expect(arch!.subGroups.map(sg => sg.id)).toEqual(['functional', 'requirements', 'safety-risk']);
         const risk = arch!.subGroups.find(sg => sg.id === 'safety-risk')!;
-        expect(risk.label).toBe('Safety / Risk');
+        expect(risk.label).toBe('Safety Risk');
         expect([...risk.kinds.keys()].sort()).toEqual(['Hazard', 'RiskControlMeasure']);
         const functional = arch!.subGroups.find(sg => sg.id === 'functional')!;
         expect([...functional.kinds.keys()]).toEqual(['StateMachine']);
@@ -80,6 +80,27 @@ describe('computeExplorerGroupTree', () => {
     it('still flags genuinely unknown kinds as Undefined', () => {
         const groups = computeExplorerGroupTree([el('x1', 'MysteryKind', 'unknown')], '', [ONTOLOGY], SELECTED);
         expect(groups.map(g => g.group.id)).toEqual(['undefined']);
+    });
+
+    it('accepts MEMO-derived canonical types instead of marking them undefined', () => {
+        const memoOntology: OntologyPackageInfo = {
+            ...ONTOLOGY,
+            layers: [{
+                id: 'architecture', label: 'Architecture', color: '#7B68EE', kindCount: 2,
+                kinds: [
+                    { name: 'User', label: 'User', construct: 'part def', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'operational', derivesFrom: 'Actor' },
+                    { name: 'HardwareAssembly', label: 'Hardware Assembly', construct: 'part def', layer: 'architecture', instanceCount: 0, viewpoints: [], group: 'implementation', derivesFrom: 'PhysicalAssembly' },
+                ],
+            }],
+        } as OntologyPackageInfo;
+        const groups = computeExplorerGroupTree([
+            el('user', 'User', 'context'),
+            el('assembly', 'HardwareAssembly', 'implementation'),
+        ], '', [memoOntology], SELECTED);
+        expect(groups.map(group => group.group.id)).toEqual(['architecture']);
+        // The concrete elements nest below their ontology bases; critically,
+        // they stay in the MEMO architecture group rather than Undefined.
+        expect(allKinds(groups[0])).toEqual(['Actor', 'PhysicalAssembly']);
     });
 
     it('keeps generic action notation out of Explorer even when it is declared', () => {

@@ -8,7 +8,7 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, KIND_TO_GROUP, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
@@ -141,6 +141,8 @@ function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: strin
 
 function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
     const model = useModelStore(s => s.model);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const selectedOntologies = useModelStore(s => s.selectedOntologies);
     const selectElement = useModelStore(s => s.selectElement);
     const addElement = useModelStore(s => s.addElement);
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
@@ -166,7 +168,12 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         const el = model.elements[menu.elementId];
         if (!el) return null;
         title = el.name;
-        const isUndefinedKind = !KIND_TO_GROUP[el.kind];
+        // Canonical types are supplied by MEMO at runtime. The old static
+        // display palette is deliberately not an ontology validator: it would
+        // mislabel valid derived types such as User and HardwareAssembly.
+        const isUndefinedKind = !availableOntologies.some(pkg =>
+            selectedOntologies.has(pkg.name) && pkg.layers.some(layer => layer.kinds.some(kind => kind.name === el.kind)),
+        ) && !BUILDER_SYNTHESIZED_KINDS.has(el.kind);
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
             {
@@ -561,38 +568,6 @@ interface LayerGroup {
     kinds: string[];
 }
 
-const LAYER_RANK = Object.fromEntries(LAYER_ORDER.map((id, i) => [id, i]));
-
-/**
- * The ontology source distinguishes implementation-facing layers (behavior,
- * logical_structure, risk, verification, …).  The explorer first presents
- * the two user-facing domains, then these layers below them.
- */
-/**
- * The V-model packages are the only architecture layers exposed in the
- * explorer. Interfaces are relationships/ports within Logical architecture;
- * they are deliberately not a layer. Viewpoints and Views are diagram
- * descriptions and are handled by the Diagrams workspace.
- */
-function explorerDomain(layer: string): string {
-    return layer;
-}
-
-function fallbackSubGroup(kind: string, layer: string): string | undefined {
-    if (layer !== 'unknown') return layer;
-    if (/^Memo.*View$/.test(kind)) return 'views';
-    if (kind === 'CareSystem') return 'context';
-    if (kind === 'OperationalScenario') return 'operational';
-    return undefined;
-}
-
-function explorerDomainForElement(kind: string, layer: string): string {
-    if (layer === 'unknown' && (kind === 'CareSystem' || kind === 'OperationalScenario')) {
-        return 'architecture';
-    }
-    return explorerDomain(layer);
-}
-
 function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
     return kind.endsWith('View')
         || sourceLayer === 'viewpoints'
@@ -613,18 +588,10 @@ function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackag
         || kind === 'ItemDefinition';
 }
 
-function vModelSubGroup(kind: string, sourceLayer: string, sourcePackage?: string): string {
-    if (kind === 'CareSystem') return 'operational';
-    if (kind === 'OperationalScenario') return 'operational';
-    return sourcePackage
-        ?? sourceLayer;
-}
-
 /** Build ordered layer groups from the currently selected ontology packages. */
 function buildLayerGroupsFromOntologies(
     availableOntologies: OntologyPackageInfo[],
     selectedOntologies: Set<string>,
-    fallbackLayerIds: Iterable<string> = [],
 ): LayerGroup[] {
     const layerMap = new Map<string, LayerGroup>();
     for (const pkg of availableOntologies) {
@@ -646,24 +613,8 @@ function buildLayerGroupsFromOntologies(
             }
         }
     }
-    // Layers carried only by builder-synthesized elements (no ontology package
-    // declares them) still get a group so their elements categorize cleanly.
-    for (const id of fallbackLayerIds) {
-        if (!layerMap.has(id)) {
-            layerMap.set(id, {
-                id,
-                label: LAYER_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1),
-                color: (LAYER_COLORS as Record<string, string>)[id] ?? '#6B7280',
-                kinds: [],
-            });
-        }
-    }
-    // Sort by LAYER_ORDER, then alphabetically for unknown layers
-    return [...layerMap.values()].sort((a, b) => {
-        const ra = LAYER_RANK[a.id] ?? 999;
-        const rb = LAYER_RANK[b.id] ?? 999;
-        return ra !== rb ? ra - rb : a.label.localeCompare(b.label);
-    });
+    // Preserve the order and labels supplied by the selected ontology.
+    return [...layerMap.values()];
 }
 
 /** Build kind-name → layer-id map from selected ontology packages. */
@@ -724,43 +675,12 @@ function buildKindToParentMap(
     return map;
 }
 
-/** "hardware_structure" → "Hardware Structure" */
 function subGroupLabel(id: string): string {
-    const labels: Record<string, string> = {
-        functional: 'Functional',
-        logical: 'Logical',
-        implementation: 'Implementation',
-        realization: 'Realization',
-        operational: 'Operational',
-        'safety-risk': 'Safety / Risk',
-        'verification-validation': 'Verification & Validation (V&V)',
-        human_factors: 'Human Factors',
-        requirements: 'Requirements',
-        cybersecurity: 'Cybersecurity',
-        evidence: 'Evidence',
-    };
-    if (labels[id]) return labels[id];
     return id
         .split(/[_-]/)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ');
 }
-
-// Match the V-model reading order. These are presentation groups inside the
-// two ontology domains, not additional architecture layers.
-const EXPLORER_SUBGROUP_ORDER: Record<string, number> = {
-    operational: 10,
-    functional: 20,
-    logical: 30,
-    implementation: 40,
-    realization: 50,
-    requirements: 60,
-    'safety-risk': 70,
-    cybersecurity: 80,
-    human_factors: 90,
-    'verification-validation': 100,
-    evidence: 110,
-};
 
 function kindFolderLabel(kind: string, count: number): string {
     const labels: Record<string, string> = {
@@ -788,8 +708,8 @@ export interface ExplorerSubGroup {
 /**
  * Group model elements by ontology layer, then by namespace sub-group, for
  * the Model Explorer tree (e.g. Architecture → Risk → Hazard → elements).
- * Elements whose kind no selected ontology declares fall back to their own
- * layer field; whatever remains lands in "Undefined — Not in Ontology".
+ * Elements whose kind no selected ontology declares land in
+ * "Undefined — Not in Ontology". The client never invents their placement.
  * Exported for tests.
  */
 export function computeExplorerGroupTree(
@@ -806,19 +726,7 @@ export function computeExplorerGroupTree(
     const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
     const kindToSubGroup = buildKindToSubGroupMap(availableOntologies, selectedOntologies);
     const kindToParent = buildKindToParentMap(availableOntologies, selectedOntologies);
-    // Builder-synthesized kinds for native SysML constructs (action def /
-    // action / item def) exist in no ontology package — group them under
-    // their builder-assigned layer instead of "Undefined — Not in Ontology".
-    const synthesizedLayerIds = new Set<string>();
-    for (const el of elements) {
-        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
-        const sourcePackage = kindToSubGroup[el.kind];
-        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        if (BUILDER_SYNTHESIZED_KINDS.has(el.kind) && !kindToLayerId[el.kind]) {
-            synthesizedLayerIds.add(explorerDomain(el.layer));
-        }
-    }
-    const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies, synthesizedLayerIds)
+    const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies)
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
@@ -826,13 +734,9 @@ export function computeExplorerGroupTree(
     const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string): ExplorerSubGroup[] => {
         const buckets = new Map<string, Map<string, TreeNode[]>>();
         for (const [kind, els] of kindMap.entries()) {
-            // Ontology namespace sub-group; synthesized/fallback kinds group
-            // under the elements' own layer when it adds information
-            const ownLayer = els[0]?.layer ?? 'unknown';
-            const fallback = !kindToLayerId[kind] || BUILDER_SYNTHESIZED_KINDS.has(kind)
-                ? fallbackSubGroup(kind, ownLayer)
-                : undefined;
-            const sub = vModelSubGroup(kind, ownLayer, kindToSubGroup[kind] ?? fallback);
+            // An ontology kind without a namespace group sits directly in its
+            // declared ontology layer.
+            const sub = kindToSubGroup[kind] ?? '';
             const typeFolder = kindToParent[kind] ?? kind;
             if (!buckets.has(sub)) buckets.set(sub, new Map());
             const kinds = buckets.get(sub)!;
@@ -840,8 +744,7 @@ export function computeExplorerGroupTree(
             kinds.set(typeFolder, [...existing, ...buildTree(els)]);
         }
         return [...buckets.entries()]
-            .sort((a, b) => (EXPLORER_SUBGROUP_ORDER[a[0]] ?? 999) - (EXPLORER_SUBGROUP_ORDER[b[0]] ?? 999)
-                || a[0].localeCompare(b[0]))
+            .sort(([a], [b]) => a.localeCompare(b))
             .map(([id, kinds]) => ({
                 id,
                 label: id ? subGroupLabel(id) : '',
@@ -855,11 +758,11 @@ export function computeExplorerGroupTree(
     for (const lg of layerGroups) {
         const kindMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
-            // Prefer ontology-defined layer; fall back to element's own layer field
             const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
             const sourcePackage = kindToSubGroup[el.kind];
             if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-            const layerId = explorerDomainForElement(el.kind, sourceLayer);
+            const layerId = kindToLayerId[el.kind];
+            if (!layerId) continue;
             if (layerId !== lg.id) continue;
             if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
             if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
@@ -876,9 +779,9 @@ export function computeExplorerGroupTree(
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
         if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        const layerId = explorerDomainForElement(el.kind, sourceLayer);
-        if (knownLayerIds.has(layerId)) continue;
-        if (NON_ELEMENT_LAYERS.has(layerId)) continue;
+        const layerId = kindToLayerId[el.kind];
+        if (layerId && knownLayerIds.has(layerId)) continue;
+        if (layerId && NON_ELEMENT_LAYERS.has(layerId)) continue;
         if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
         if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
         uncategorizedMap.get(el.kind)!.push(el);
