@@ -4,8 +4,10 @@ import type { LayoutResult } from '../layout';
 
 const ACTOR_KINDS = /(?:Actor|User)$/;
 const USE_CASE_KINDS = new Set(['UseCase']);
-const ASSOCIATION_TYPES = new Set(['Initiates', 'ParticipatesIn', 'Performs', 'InteractsWith', 'Includes', 'Extends']);
+const ASSOCIATION_TYPES = new Set(['initiates', 'participatesin', 'performs', 'interactswith', 'includes', 'extends']);
 type EdgeStyle = 'straight' | 'orthogonal' | 'curved';
+
+const relationshipType = (type: string) => type.toLowerCase();
 
 export function isUseCaseActor(element: MemoElement): boolean {
     return ACTOR_KINDS.test(element.kind) || element.construct === 'actor';
@@ -19,7 +21,7 @@ export function isUseCase(element: MemoElement): boolean {
 export function useCaseMaxDepth(model: MemoModelDTO): number {
     const ids = new Set(Object.values(model.elements).filter(isUseCase).map(element => element.id));
     const parentIds = new Map<string, string[]>();
-    for (const rel of model.relationships.filter(rel => rel.type === 'Includes' && ids.has(rel.sourceId) && ids.has(rel.targetId))) {
+    for (const rel of model.relationships.filter(rel => relationshipType(rel.type) === 'includes' && ids.has(rel.sourceId) && ids.has(rel.targetId))) {
         parentIds.set(rel.targetId, [...(parentIds.get(rel.targetId) ?? []), rel.sourceId]);
     }
     const depth = (id: string, seen = new Set<string>()): number => {
@@ -46,7 +48,7 @@ export function useCaseActorOptions(model: MemoModelDTO): UseCaseActorOption[] {
     const elements = Object.values(model.elements);
     const caseIds = new Set(elements.filter(isUseCase).map(element => element.id));
     const relatedActorIds = new Set(model.relationships
-        .filter(rel => ASSOCIATION_TYPES.has(rel.type))
+        .filter(rel => ASSOCIATION_TYPES.has(relationshipType(rel.type)))
         .flatMap(rel => caseIds.has(rel.sourceId) ? [rel.targetId] : caseIds.has(rel.targetId) ? [rel.sourceId] : []));
     return elements.filter(isUseCaseActor).filter(actor => relatedActorIds.has(actor.id))
         .map(actor => ({ id: actor.id, name: actor.name })).sort((a, b) => a.name.localeCompare(b.name));
@@ -67,11 +69,11 @@ export function useCaseViewOptions(properties?: Record<string, string>): Pick<Us
 export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseViewOptions = {}): LayoutResult {
     const visible = Object.values(model.elements).filter(element => !options.viewpointFilter || options.viewpointFilter(element));
     const allUseCases = visible.filter(isUseCase);
-    const relationships = model.relationships.filter(rel => ASSOCIATION_TYPES.has(rel.type));
+    const relationships = model.relationships.filter(rel => ASSOCIATION_TYPES.has(relationshipType(rel.type)));
     // Includes creates the presentation hierarchy. An included use case has
     // one parent; L0 therefore means a root use case with no parent.
     const parentIds = new Map<string, string[]>();
-    for (const rel of relationships.filter(rel => rel.type === 'Includes')) {
+    for (const rel of relationships.filter(rel => relationshipType(rel.type) === 'includes')) {
         const parents = parentIds.get(rel.targetId) ?? [];
         parents.push(rel.sourceId);
         parentIds.set(rel.targetId, parents);
@@ -90,7 +92,7 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
     let changed = true;
     while (changed) {
         changed = false;
-        for (const rel of relationships.filter(rel => rel.type === 'Extends')) {
+        for (const rel of relationships.filter(rel => relationshipType(rel.type) === 'extends')) {
             if (useCaseIds.has(rel.sourceId) || useCaseIds.has(rel.targetId)) {
                 for (const id of [rel.sourceId, rel.targetId]) {
                     if (!useCaseIds.has(id) && allUseCases.some(element => element.id === id)) {
@@ -169,9 +171,9 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             const sourceIsRightActor = rightActors.some(actor => actor.id === rel.sourceId);
             return {
             id: rel.id, source: sourceIsRightActor ? rel.targetId : rel.sourceId, target: sourceIsRightActor ? rel.sourceId : rel.targetId,
-            label: /^(Includes|Extends)$/.test(rel.type) ? `«${rel.type.toLowerCase()}»` : undefined,
+            label: /^(includes|extends)$/.test(relationshipType(rel.type)) ? `«${relationshipType(rel.type)}»` : undefined,
             type: edgeType, data: { routing: options.edgeStyle ?? 'orthogonal' },
-            style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(Includes|Extends)$/.test(rel.type) ? '5 4' : undefined },
+            style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(includes|extends)$/.test(relationshipType(rel.type)) ? '5 4' : undefined },
         }; });
     return { nodes, edges };
 }

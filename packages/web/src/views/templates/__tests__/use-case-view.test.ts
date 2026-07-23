@@ -38,7 +38,7 @@ describe('use-case view template', () => {
         ]), { level: 0, edgeStyle: 'curved' });
         expect(layout.nodes.map(node => node.id)).not.toContain('unrelated');
         expect(layout.nodes.map(node => node.id)).toEqual(expect.arrayContaining(['root', 'child', 'extension']));
-        expect(useCaseMaxDepth(model({ root, child, extension }, [{ id: 'i', type: 'Includes', sourceId: 'root', targetId: 'child' }]))).toBe(1);
+        expect(useCaseMaxDepth(model({ root, child, extension }, [{ id: 'i', type: 'includes', sourceId: 'root', targetId: 'child' }]))).toBe(1);
         expect(layout.edges.find(edge => edge.id === 'e')).toMatchObject({ label: '«extends»', type: 'bezier' });
     });
 
@@ -60,5 +60,23 @@ describe('use-case view template', () => {
     it('reads depth and routing from model-owned presentation hints', () => {
         expect(useCaseViewOptions({ layoutHint: 'usecase:level=1;edge=straight' }))
             .toEqual({ level: 1, edgeStyle: 'straight' });
+    });
+
+    it('accepts canonical lower-camel relationship types from the semantic model', () => {
+        const clinician = el('clinician', 'User');
+        const root = el('root', 'UseCase');
+        const child = el('child', 'UseCase');
+        const grandchild = el('grandchild', 'UseCase');
+        const layout = computeUseCaseViewLayout(model({ clinician, root, child, grandchild }, [
+            { id: 'a', type: 'initiates', sourceId: 'clinician', targetId: 'root' },
+            { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
+            { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },
+        ]));
+        expect(layout.nodes.filter(node => node.type === 'useCaseActor')).toHaveLength(1);
+        expect(layout.edges).toHaveLength(3);
+        expect(useCaseMaxDepth(model({ root, child, grandchild }, [
+            { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
+            { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },
+        ]))).toBe(2);
     });
 });
