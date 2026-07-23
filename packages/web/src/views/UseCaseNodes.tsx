@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 
-interface UseCaseData extends Record<string, unknown> { label: string; kind?: string; color?: string; }
+interface UseCaseData extends Record<string, unknown> { label: string; kind?: string; color?: string; side?: 'left' | 'right'; }
 
 const hiddenHandle = { opacity: 0, width: 1, height: 1 };
 
@@ -20,6 +20,7 @@ export const UseCaseNode = memo(function UseCaseNode({ data }: NodeProps) {
 
 export const UseCaseActorNode = memo(function UseCaseActorNode({ data }: NodeProps) {
     const d = data as UseCaseData;
+    const handleSide = d.side === 'right' ? Position.Left : Position.Right;
     return <div style={{
         width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', color: '#334155', fontSize: 12, fontWeight: 600, textAlign: 'center', gap: 3,
@@ -29,8 +30,8 @@ export const UseCaseActorNode = memo(function UseCaseActorNode({ data }: NodePro
             <path d="M19 14v18M6 23h26M19 32L8 49M19 32l11 17" strokeLinecap="round" />
         </svg>
         <span>{d.label}</span>
-        <Handle type="source" position={Position.Right} style={hiddenHandle} />
-        <Handle type="target" position={Position.Left} style={hiddenHandle} />
+        <Handle type="source" position={handleSide} style={hiddenHandle} />
+        <Handle type="target" position={handleSide} style={hiddenHandle} />
     </div>;
 });
 

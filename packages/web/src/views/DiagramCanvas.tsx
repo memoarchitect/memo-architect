@@ -49,7 +49,7 @@ import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type Po
 import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
-import { computeUseCaseViewLayout } from './templates/use-case-view';
+import { computeUseCaseViewLayout, useCaseViewOptions } from './templates/use-case-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -904,6 +904,7 @@ function DiagramCanvasInner() {
             apply(computeUseCaseViewLayout(model, {
                 viewpointFilter,
                 systemName: selectedDiagram.name,
+                ...useCaseViewOptions(selectedDiagram.properties),
             }), false);
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,

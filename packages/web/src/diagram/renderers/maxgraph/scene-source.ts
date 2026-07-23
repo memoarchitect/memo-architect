@@ -21,7 +21,7 @@ import { computeActionFlowViewLayout } from '../../../views/templates/actionflow
 import type { ActionFlowDisplayLevel, ActionFlowKind, ActionFlowLaneGrouping } from '../../../views/templates/actionflow-view';
 import { computeStateTransitionLayout } from '../../../views/templates/statetransition-view';
 import { computeSequenceLayout } from '../../../views/templates/sequence-view';
-import { computeUseCaseViewLayout } from '../../../views/templates/use-case-view';
+import { computeUseCaseViewLayout, useCaseViewOptions } from '../../../views/templates/use-case-view';
 import { buildScene, type DiagramSceneSpec } from './scene';
 
 export interface SceneRequest {
@@ -122,7 +122,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Diagra
             callbacks: NO_CALLBACKS,
         });
     } else if (diagram?.diagramType === 'ucd') {
-        result = computeUseCaseViewLayout(model, { viewpointFilter, systemName: diagram.name });
+        result = computeUseCaseViewLayout(model, { viewpointFilter, systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
     } else if (viewKind === 'interconnection') {
         result = await computeInterconnectionLayout(model, {
             viewpointFilter,
