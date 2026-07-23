@@ -687,6 +687,20 @@ function DiagramCanvasInner() {
         setRelayoutNonce(n => n + 1);
     }, []);
 
+    /** Restore the model-derived UCD geometry and its best-fit viewport. */
+    const autoArrangeUseCase = useCallback(() => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const { pan: _pan, zoom: _zoom, ...canvas } = previous.canvas ?? {};
+        const layout: DiagramLayout = { nodes: {}, edges: {}, canvas: { ...canvas, autoLayout: true } };
+        preservedViewportRef.current = null;
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+        positionCacheRef.current.clear();
+        setRelayoutNonce(value => value + 1);
+        window.setTimeout(() => fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 300 }), 250);
+    }, [selectedDiagramId, mergeDiagramLayouts, fitView, fitMinZoom]);
+
     // ─── Apply interactive node data (context menu + inline edit callbacks) ───
 
     const applyInteractiveData = useCallback((rawNodes: FlowNode[]): FlowNode[] => {
@@ -1760,6 +1774,12 @@ function DiagramCanvasInner() {
                                         <option value="arc">Arc</option>
                                     </select>
                                 </label>
+                                <button onClick={autoArrangeUseCase}
+                                    className="px-2 py-0.5 text-xs font-semibold rounded"
+                                    style={{ color: '#047857', background: '#ECFDF5', border: '1px solid #A7F3D0' }}
+                                    title="Reapply the constrained hierarchy layout and obstacle-aware routes">
+                                    Auto arrange
+                                </button>
                                 {useCaseActors.length > 0 && (
                                     <details className="relative">
                                         <summary className="px-2 py-0.5 text-xs font-semibold rounded cursor-pointer"

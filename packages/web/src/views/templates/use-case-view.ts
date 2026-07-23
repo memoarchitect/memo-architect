@@ -117,40 +117,51 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
     const shown = new Set([...actors, ...useCases].map(element => element.id));
     if (useCases.length === 0) return { nodes: [], edges: [] };
 
+    const extendingCaseIds = new Set(relationships
+        .filter(rel => relationshipType(rel.type) === 'extends')
+        .map(rel => rel.sourceId));
     const casesByLevel = new Map<number, MemoElement[]>();
     for (const useCase of useCases) {
+        if (extendingCaseIds.has(useCase.id)) continue;
         const caseLevel = depth(useCase.id);
         casesByLevel.set(caseLevel, [...(casesByLevel.get(caseLevel) ?? []), useCase]);
     }
     const levels = [...casesByLevel.keys()].sort((a, b) => a - b);
-    // Each hierarchy level owns a compact grid: hierarchy is communicated by
-    // the band position, while the grid avoids wasting a tall, sparse canvas.
-    const gridColumns = new Map(levels.map(caseLevel => [caseLevel,
-        Math.max(1, Math.ceil(Math.sqrt(casesByLevel.get(caseLevel)!.length))),
-    ]));
-    const levelWidths = levels.map(caseLevel => gridColumns.get(caseLevel)! * 205 + 35);
-    const maxRows = Math.max(...levels.map(caseLevel =>
-        Math.ceil(casesByLevel.get(caseLevel)!.length / gridColumns.get(caseLevel)!)));
-    const width = Math.max(520, levelWidths.reduce((sum, value) => sum + value, 70));
-    const height = Math.max(320, maxRows * 145 + 125);
+    // Constrained layered placement: include depth owns the horizontal rank.
+    // Independent roots stack vertically; extensions sit beneath their base,
+    // which keeps their dashed relationships local rather than diagonal.
+    const rankGap = 285;
+    const rowGap = 145;
+    const maxRows = Math.max(1, ...levels.map(caseLevel => casesByLevel.get(caseLevel)!.length));
+    const width = Math.max(620, levels.length * rankGap + 100);
+    const height = Math.max(320, (maxRows + 1) * rowGap + 80);
     const nodes: Node[] = [{
         id: '__use_case_boundary__', type: 'useCaseBoundary', position: { x: 130, y: 28 },
         data: { label: options.systemName || 'System Boundary', isFrame: true, kind: 'System Boundary' },
         style: { width, height }, draggable: false, selectable: false, zIndex: -1,
     }];
-    let bandX = 130 + 45;
-    levels.forEach((caseLevel) => {
-        const columns = gridColumns.get(caseLevel)!;
+    const positions = new Map<string, { x: number; y: number }>();
+    levels.forEach((caseLevel, rank) => {
         (casesByLevel.get(caseLevel) ?? []).forEach((element, row) => {
-        const column = row % columns;
-        const gridRow = Math.floor(row / columns);
+        const position = { x: 130 + 55 + rank * rankGap, y: 28 + 62 + row * rowGap };
+        positions.set(element.id, position);
         nodes.push({
-            id: element.id, type: 'useCase', position: { x: bandX + column * 205, y: 28 + 62 + gridRow * 145 },
+            id: element.id, type: 'useCase', position,
             data: { label: element.name, kind: element.kind, color: '#E67E22', level: caseLevel }, style: { width: 170, height: 82 },
         });
         });
-        bandX += columns * 205 + 35;
     });
+    for (const rel of relationships.filter(rel => relationshipType(rel.type) === 'extends')) {
+        const extension = useCases.find(element => element.id === rel.sourceId);
+        const basePosition = positions.get(rel.targetId);
+        if (!extension || !basePosition) continue;
+        const position = { x: basePosition.x, y: basePosition.y + rowGap };
+        positions.set(extension.id, position);
+        nodes.push({
+            id: extension.id, type: 'useCase', position,
+            data: { label: extension.name, kind: extension.kind, color: '#E67E22', level: depth(extension.id) }, style: { width: 170, height: 82 },
+        });
+    }
     // Balance actors around the boundary. This shortens association routes and
     // avoids funneling every participant into the same gutter.
     const leftActors = actors.filter((_, index) => index % 2 === 0);

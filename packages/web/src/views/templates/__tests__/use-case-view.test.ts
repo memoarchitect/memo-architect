@@ -73,6 +73,22 @@ describe('use-case view template', () => {
         expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'arc' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'arc' } });
     });
 
+    it('places include ranks left-to-right and an extending use case below its base', () => {
+        const root = el('root', 'UseCase');
+        const child = el('child', 'UseCase');
+        const extension = el('extension', 'UseCase');
+        const layout = computeUseCaseViewLayout(model({ root, child, extension }, [
+            { id: 'include', type: 'includes', sourceId: 'root', targetId: 'child' },
+            { id: 'extend', type: 'extends', sourceId: 'extension', targetId: 'child' },
+        ]));
+        const rootPosition = layout.nodes.find(node => node.id === 'root')!.position;
+        const childPosition = layout.nodes.find(node => node.id === 'child')!.position;
+        const extensionPosition = layout.nodes.find(node => node.id === 'extension')!.position;
+        expect(childPosition.x).toBeGreaterThan(rootPosition.x);
+        expect(extensionPosition).toMatchObject({ x: childPosition.x });
+        expect(extensionPosition.y).toBeGreaterThan(childPosition.y);
+    });
+
     it('accepts canonical lower-camel relationship types from the semantic model', () => {
         const clinician = el('clinician', 'User');
         const root = el('root', 'UseCase');
