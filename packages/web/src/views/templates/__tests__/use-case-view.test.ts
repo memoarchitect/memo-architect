@@ -39,7 +39,7 @@ describe('use-case view template', () => {
         expect(layout.nodes.map(node => node.id)).not.toContain('unrelated');
         expect(layout.nodes.map(node => node.id)).toEqual(expect.arrayContaining(['root', 'child', 'extension']));
         expect(useCaseMaxDepth(model({ root, child, extension }, [{ id: 'i', type: 'includes', sourceId: 'root', targetId: 'child' }]))).toBe(1);
-        expect(layout.edges.find(edge => edge.id === 'e')).toMatchObject({ label: '«extends»', type: 'bezier' });
+        expect(layout.edges.find(edge => edge.id === 'e')).toMatchObject({ label: '«extends»', type: 'useCaseEdge', data: { routing: 'curved' } });
     });
 
     it('offers participating actors and can hide their associated use cases', () => {
@@ -66,11 +66,11 @@ describe('use-case view template', () => {
         const actor = el('actor', 'User');
         const useCase = el('useCase', 'UseCase');
         const fixture = model({ actor, useCase }, [{ id: 'a', type: 'initiates', sourceId: 'actor', targetId: 'useCase' }]);
-        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'straight' }).edges[0]).toMatchObject({ type: 'straight' });
-        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'elbow' }).edges[0]).toMatchObject({ type: 'step' });
-        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'rounded' }).edges[0]).toMatchObject({ type: 'smoothstep', pathOptions: { borderRadius: 18 } });
-        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'curved' }).edges[0]).toMatchObject({ type: 'bezier' });
-        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'arc' }).edges[0]).toMatchObject({ type: 'simplebezier' });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'straight' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'straight' } });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'elbow' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'elbow' } });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'rounded' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'rounded' } });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'curved' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'curved' } });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'arc' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'arc' } });
     });
 
     it('accepts canonical lower-camel relationship types from the semantic model', () => {
@@ -85,6 +85,7 @@ describe('use-case view template', () => {
         ]));
         expect(layout.nodes.filter(node => node.type === 'useCaseActor')).toHaveLength(1);
         expect(layout.edges).toHaveLength(3);
+        expect((layout.edges[1].data?.points as Array<unknown>).length).toBeGreaterThanOrEqual(2);
         expect(useCaseMaxDepth(model({ root, child, grandchild }, [
             { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
             { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },

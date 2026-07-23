@@ -57,6 +57,7 @@ import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
 import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
+import { UseCaseEdge } from './UseCaseEdge';
 import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
@@ -578,7 +579,7 @@ function DiagramCanvasInner() {
         forkNode: ForkNode,
         startEndNode: StartEndNode,
     }), []);
-    const edgeTypes = useMemo(() => ({ interconnectionEdge: InterconnectionEdge }), []);
+    const edgeTypes = useMemo(() => ({ interconnectionEdge: InterconnectionEdge, useCaseEdge: UseCaseEdge }), []);
 
     const miniMapNodeColor = useCallback((node: any) =>
         node.data?.color || node.data?.layerColor || '#ccc', []);

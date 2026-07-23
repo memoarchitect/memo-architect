@@ -1,6 +1,6 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
-import type { LayoutResult } from '../layout';
+import { routeOrthogonalEdges, type LayoutResult, type RouteObstacle } from '../layout';
 
 const ACTOR_KINDS = /(?:Actor|User)$/;
 const USE_CASE_KINDS = new Set(['UseCase']);
@@ -164,22 +164,45 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         });
     });
     const routing = options.edgeStyle ?? 'rounded';
-    const edgeType = routing === 'straight' ? 'straight'
-        : routing === 'elbow' ? 'step'
-            : routing === 'curved' ? 'bezier'
-                : routing === 'arc' ? 'simplebezier'
-                    : 'smoothstep';
-    const edges: Edge[] = relationships
+    const edgeDrafts = relationships
         .filter(rel => shown.has(rel.sourceId) && shown.has(rel.targetId))
         .map(rel => {
             const sourceIsRightActor = rightActors.some(actor => actor.id === rel.sourceId);
-            return {
-            id: rel.id, source: sourceIsRightActor ? rel.targetId : rel.sourceId, target: sourceIsRightActor ? rel.sourceId : rel.targetId,
+            const source = sourceIsRightActor ? rel.targetId : rel.sourceId;
+            const target = sourceIsRightActor ? rel.sourceId : rel.targetId;
+            return { edge: {
+            id: rel.id, source, target,
             label: /^(includes|extends)$/.test(relationshipType(rel.type)) ? `«${relationshipType(rel.type)}»` : undefined,
-            type: edgeType, data: { routing },
-            pathOptions: routing === 'rounded' ? { borderRadius: 18, offset: 24 }
-                : routing === 'elbow' ? { borderRadius: 0, offset: 20 } : undefined,
+            type: 'useCaseEdge', data: { routing },
             style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(includes|extends)$/.test(relationshipType(rel.type)) ? '5 4' : undefined },
-        }; });
+        } as Edge, source, target }; });
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
+    const dimensions = (node: Node) => ({
+        width: Number(node.style?.width ?? 150), height: Number(node.style?.height ?? 82),
+    });
+    const endpoint = (id: string, side: 'left' | 'right') => {
+        const node = nodeById.get(id)!;
+        const size = dimensions(node);
+        return { x: node.position.x + (side === 'right' ? size.width : 0), y: node.position.y + size.height / 2 };
+    };
+    const routeRequests = edgeDrafts.map(({ edge, source, target }) => {
+        const sourceActor = actors.find(actor => actor.id === source);
+        const targetActor = actors.find(actor => actor.id === target);
+        const sourceSide: 'left' | 'right' = sourceActor ? (rightActors.includes(sourceActor) ? 'left' : 'right') : 'right';
+        const targetSide: 'left' | 'right' = targetActor ? (rightActors.includes(targetActor) ? 'left' : 'right') : 'left';
+        return {
+            id: edge.id, source: endpoint(source, sourceSide), target: endpoint(target, targetSide),
+            sourceNodeId: source, targetNodeId: target, sourceSide, targetSide,
+        };
+    });
+    const obstacles: RouteObstacle[] = nodes
+        .filter(node => node.type === 'useCase' || node.type === 'useCaseActor')
+        .map(node => ({ id: node.id, x: node.position.x, y: node.position.y, ...dimensions(node) }));
+    const routes = routing === 'straight' ? new Map<string, { x: number; y: number }[]>()
+        : routeOrthogonalEdges(routeRequests, obstacles, 28);
+    const edges: Edge[] = edgeDrafts.map(({ edge }) => ({
+        ...edge,
+        data: { ...edge.data, points: routes.get(edge.id) ?? [] },
+    }));
     return { nodes, edges };
 }
