@@ -5,7 +5,7 @@ import type { LayoutResult } from '../layout';
 const ACTOR_KINDS = /(?:Actor|User)$/;
 const USE_CASE_KINDS = new Set(['UseCase']);
 const ASSOCIATION_TYPES = new Set(['initiates', 'participatesin', 'performs', 'interactswith', 'includes', 'extends']);
-type EdgeStyle = 'straight' | 'orthogonal' | 'curved';
+export type UseCaseEdgeStyle = 'straight' | 'elbow' | 'rounded' | 'curved' | 'arc';
 
 const relationshipType = (type: string) => type.toLowerCase();
 
@@ -37,7 +37,7 @@ export interface UseCaseViewOptions {
     systemName?: string;
     /** L0 shows roots; L1 includes direct children. "all" shows the full hierarchy. */
     level?: number | 'all';
-    edgeStyle?: EdgeStyle;
+    edgeStyle?: UseCaseEdgeStyle;
     /** Actor ids whose associated use cases are excluded from this presentation. */
     hiddenActorIds?: ReadonlySet<string>;
 }
@@ -58,10 +58,11 @@ export function useCaseActorOptions(model: MemoModelDTO): UseCaseActorOption[] {
 export function useCaseViewOptions(properties?: Record<string, string>): Pick<UseCaseViewOptions, 'level' | 'edgeStyle'> {
     const hint = `${properties?.layoutHint ?? ''};${properties?.styleHint ?? ''}`;
     const levelMatch = /(?:usecase:)?level\s*=\s*(all|\d+)/i.exec(hint);
-    const edgeMatch = /(?:edge|routing)\s*=\s*(straight|orthogonal|curved)/i.exec(hint);
+    const edgeMatch = /(?:edge|routing)\s*=\s*(straight|orthogonal|elbow|rounded|curved|arc)/i.exec(hint);
     return {
         level: levelMatch?.[1] === 'all' ? 'all' : levelMatch ? Number(levelMatch[1]) : 'all',
-        edgeStyle: (edgeMatch?.[1]?.toLowerCase() as EdgeStyle | undefined) ?? 'orthogonal',
+        edgeStyle: ({ orthogonal: 'elbow' }[edgeMatch?.[1]?.toLowerCase() ?? ''] as UseCaseEdgeStyle | undefined)
+            ?? (edgeMatch?.[1]?.toLowerCase() as UseCaseEdgeStyle | undefined) ?? 'rounded',
     };
 }
 
@@ -150,11 +151,9 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         });
         bandX += columns * 205 + 35;
     });
-    const leftActors = actors.filter((actor, index) => {
-        const outgoing = relationships.filter(rel => rel.sourceId === actor.id && useCaseIds.has(rel.targetId)).length;
-        const incoming = relationships.filter(rel => rel.targetId === actor.id && useCaseIds.has(rel.sourceId)).length;
-        return outgoing > incoming || (outgoing === incoming && index % 2 === 0);
-    });
+    // Balance actors around the boundary. This shortens association routes and
+    // avoids funneling every participant into the same gutter.
+    const leftActors = actors.filter((_, index) => index % 2 === 0);
     const rightActors = actors.filter(actor => !leftActors.includes(actor));
     [...leftActors, ...rightActors].forEach((element) => {
         const right = rightActors.includes(element);
@@ -164,7 +163,12 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             data: { label: element.name, kind: element.kind, color: '#334155', side: right ? 'right' : 'left' }, style: { width: 95, height: 86 },
         });
     });
-    const edgeType = options.edgeStyle === 'straight' ? 'straight' : options.edgeStyle === 'curved' ? 'bezier' : 'smoothstep';
+    const routing = options.edgeStyle ?? 'rounded';
+    const edgeType = routing === 'straight' ? 'straight'
+        : routing === 'elbow' ? 'step'
+            : routing === 'curved' ? 'bezier'
+                : routing === 'arc' ? 'simplebezier'
+                    : 'smoothstep';
     const edges: Edge[] = relationships
         .filter(rel => shown.has(rel.sourceId) && shown.has(rel.targetId))
         .map(rel => {
@@ -172,7 +176,9 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             return {
             id: rel.id, source: sourceIsRightActor ? rel.targetId : rel.sourceId, target: sourceIsRightActor ? rel.sourceId : rel.targetId,
             label: /^(includes|extends)$/.test(relationshipType(rel.type)) ? `«${relationshipType(rel.type)}»` : undefined,
-            type: edgeType, data: { routing: options.edgeStyle ?? 'orthogonal' },
+            type: edgeType, data: { routing },
+            pathOptions: routing === 'rounded' ? { borderRadius: 18, offset: 24 }
+                : routing === 'elbow' ? { borderRadius: 0, offset: 20 } : undefined,
             style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(includes|extends)$/.test(relationshipType(rel.type)) ? '5 4' : undefined },
         }; });
     return { nodes, edges };

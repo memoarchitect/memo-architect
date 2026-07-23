@@ -62,6 +62,17 @@ describe('use-case view template', () => {
             .toEqual({ level: 1, edgeStyle: 'straight' });
     });
 
+    it('supports Miro-style straight, elbow, rounded, curved, and arc routes', () => {
+        const actor = el('actor', 'User');
+        const useCase = el('useCase', 'UseCase');
+        const fixture = model({ actor, useCase }, [{ id: 'a', type: 'initiates', sourceId: 'actor', targetId: 'useCase' }]);
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'straight' }).edges[0]).toMatchObject({ type: 'straight' });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'elbow' }).edges[0]).toMatchObject({ type: 'step' });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'rounded' }).edges[0]).toMatchObject({ type: 'smoothstep', pathOptions: { borderRadius: 18 } });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'curved' }).edges[0]).toMatchObject({ type: 'bezier' });
+        expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'arc' }).edges[0]).toMatchObject({ type: 'simplebezier' });
+    });
+
     it('accepts canonical lower-camel relationship types from the semantic model', () => {
         const clinician = el('clinician', 'User');
         const root = el('root', 'UseCase');

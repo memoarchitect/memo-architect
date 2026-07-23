@@ -49,7 +49,7 @@ import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type Po
 import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
 import { computeStateTransitionLayout } from './templates/statetransition-view';
 import { computeSequenceLayout } from './templates/sequence-view';
-import { computeUseCaseViewLayout, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions } from './templates/use-case-view';
+import { computeUseCaseViewLayout, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -461,6 +461,7 @@ function DiagramCanvasInner() {
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
     const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
+    const [useCaseEdgeStyle, setUseCaseEdgeStyle] = useState<UseCaseEdgeStyle>('rounded');
     const [hiddenUseCaseActorIds, setHiddenUseCaseActorIds] = useState<Set<string>>(new Set());
     const useCaseDepth = useMemo(() => model ? useCaseMaxDepth(model) : 0, [model]);
     const useCaseActors = useMemo(() => model ? useCaseActorOptions(model) : [], [model]);
@@ -541,6 +542,7 @@ function DiagramCanvasInner() {
         setLayoutEditVersion(0);
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
+        setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'rounded');
         setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');
@@ -902,7 +904,7 @@ function DiagramCanvasInner() {
                 // to its visible use cases, so do not drop actors here.
                 viewpointFilter: undefined,
                 systemName: selectedDiagram.name,
-                ...useCaseViewOptions(selectedDiagram.properties), level: useCaseDisplayLevel, hiddenActorIds: hiddenUseCaseActorIds,
+                ...useCaseViewOptions(selectedDiagram.properties), level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
             }), false);
         } else if (viewKind === 'interconnection') {
             // Interconnection template (KK-3): parts with boundary ports,
@@ -965,7 +967,7 @@ function DiagramCanvasInner() {
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
-        selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, hiddenUseCaseActorIds,
+        selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
         expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
@@ -1742,6 +1744,19 @@ function DiagramCanvasInner() {
                                         {Array.from({ length: useCaseDepth + 1 }, (_, level) => (
                                             <option key={level} value={level}>L{level}</option>
                                         ))}
+                                    </select>
+                                </label>
+                                <label className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#475569' }}>
+                                    Routing
+                                    <select aria-label="Use case connector routing" value={useCaseEdgeStyle}
+                                        onChange={event => setUseCaseEdgeStyle(event.target.value as UseCaseEdgeStyle)}
+                                        className="px-1.5 py-0.5 text-xs font-medium rounded"
+                                        style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}>
+                                        <option value="straight">Straight</option>
+                                        <option value="elbow">Elbow</option>
+                                        <option value="rounded">Rounded</option>
+                                        <option value="curved">Curved</option>
+                                        <option value="arc">Arc</option>
                                     </select>
                                 </label>
                                 {useCaseActors.length > 0 && (
