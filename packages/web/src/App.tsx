@@ -1,6 +1,7 @@
-import { useEffect, lazy, Suspense, useMemo } from 'react';
-import { Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, lazy, Suspense, useMemo, useRef } from 'react';
+import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
+import { pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
@@ -14,6 +15,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
 import { RestartRequiredBanner } from './components/RestartRequiredBanner';
 import { CatalogHomePage } from './views/CatalogHomePage';
+import { DiagramHomePage } from './views/DiagramHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
 
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
@@ -419,7 +421,18 @@ export function App() {
                         <Route path="/catalog/:family" element={<FamilyRoute />} />
                         <Route path="/catalog/:family/:shortId" element={<ElementPermalinkRoute />} />
                         {/* Diagram routes */}
+                        <Route path="/diagrams" element={<DiagramHomePage />} />
                         <Route path="/diagrams/:diagramType/:diagramId" element={<DiagramPermalinkRoute />} />
+                        {/* Every remaining view is addressable too, so any
+                            destination can be bookmarked and reloaded into.
+                            Paths come from view-routes.ts, the single table
+                            that also drives the store → URL direction. */}
+                        {staticViewPaths().map(path => (
+                            <Route key={path} path={path} element={<UnifiedCanvas />} />
+                        ))}
+                        <Route path="/ontology/:packageName" element={<UnifiedCanvas />} />
+                        <Route path="/ontology/:packageName/:layerId" element={<UnifiedCanvas />} />
+                        <Route path="/dhf/:docId" element={<UnifiedCanvas />} />
                         {/* Default: existing state-driven canvas */}
                         <Route path="*" element={<UnifiedCanvas />} />
                     </Routes>
@@ -527,25 +540,70 @@ function DiagramPermalinkRoute() {
 function UrlNavigationSync() {
     const activeView = useModelStore(s => s.activeView);
     const model = useModelStore(s => s.model);
+    const setActiveView = useModelStore(s => s.setActiveView);
     const navigate = useNavigate();
     const location = useLocation();
+    const navigationType = useNavigationType();
 
-    // Store → URL: when the user clicks an element in the explorer, push to history
+    // The two directions must not chase each other. The URL is authoritative on
+    // first load (a bookmark or pasted link) and on Back/Forward; the store is
+    // authoritative whenever the user navigates inside the app. `suppressPush`
+    // marks the tick where a URL-driven change is still in flight, so the
+    // store → URL effect does not push the view it is about to replace.
+    const urlConsumed = useRef(false);
+    const suppressPush = useRef(false);
+
+    // ── URL → Store ──────────────────────────────────────────────────────
+    // Applies on first load and on Back/Forward. In-app navigation is already
+    // reflected in the store, so re-applying it here would only fight the push.
+    // Element and diagram permalinks have their own route components, which
+    // resolve the identifier against the model; everything else maps directly.
     useEffect(() => {
-        if (activeView.type === 'element-detail' && model) {
-            const elementId = (activeView as { type: 'element-detail'; elementId: string }).elementId;
-            const element = model.elements[elementId];
-            if (element) {
-                const shortId = element.shortId ?? element.id;
-                const family = shortId.split('-')[0];
-                const url = `/catalog/${family}/${shortId}`;
-                if (location.pathname !== url) {
-                    navigate(url, { replace: false });
-                }
-            }
+        const isInitial = !urlConsumed.current;
+        urlConsumed.current = true;
+        if (!isInitial && navigationType !== 'POP') return;
+
+        const view = pathToView(location.pathname, location.search);
+        if (view && JSON.stringify(view) !== JSON.stringify(activeView)) {
+            suppressPush.current = true;
+            setActiveView(view);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeView]);
+    }, [location.pathname, location.search, navigationType]);
+
+    // ── Store → URL ──────────────────────────────────────────────────────
+    // Every view the user reaches by clicking also lands in the address bar,
+    // so the page can be bookmarked, shared, or reloaded into.
+    useEffect(() => {
+        if (!urlConsumed.current) return;
+        if (suppressPush.current) { suppressPush.current = false; return; }
+
+        // 'welcome' is the app's neutral state, used by route-driven pages such
+        // as /catalog and /diagrams that have no view of their own. Pushing '/'
+        // for it would drag those pages back to the root.
+        if (activeView.type === 'welcome' && location.pathname !== '/') return;
+
+        let url: string | null = null;
+
+        if (activeView.type === 'element-detail' && model) {
+            const element = model.elements[activeView.elementId];
+            if (element) {
+                const shortId = element.shortId ?? element.id;
+                url = `/catalog/${shortId.split('-')[0]}/${shortId}`;
+            }
+        } else if (activeView.type === 'diagram' && model) {
+            const diagram = model.diagrams?.find(d => d.id === activeView.diagramId);
+            // Diagram permalinks need the type slug, which only the model knows.
+            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${slug(diagram.id)}`;
+        } else {
+            url = viewToPath(activeView);
+        }
+
+        if (url && location.pathname + location.search !== url) {
+            navigate(url, { replace: false });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView, model]);
 
     return null;
 }

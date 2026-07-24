@@ -14,7 +14,18 @@ import type {
     RestartRequiredMessage,
 } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport } from '@memoarchitect/tools/browser';
-import { sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete } from './ws-client';
+import type {
+    OntologyRegistriesDTO,
+    RelationshipCreateRequest,
+    RelationshipDefinitionDTO,
+    RelationshipDiagnostic,
+    RelationshipDirection,
+} from '@memoarchitect/tools/browser';
+import { findRelationshipDefinition } from '@memoarchitect/tools/browser';
+import {
+    sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
+    requestRelationshipCreate, requestRelationshipDelete,
+} from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
 import type { ViewpointDTO } from '@memoarchitect/tools/browser';
 
@@ -57,6 +68,39 @@ function migrateLegacyViewpoints(): ViewpointDTO[] {
 }
 
 export const FOLDER_ATTR = '_folder';
+
+// ─── Relationship authoring types ───────────────────────────────────────────
+
+/** What the UI supplies to create a relationship; requestId is added by the client. */
+export type RelationshipCreateInput = Omit<RelationshipCreateRequest, 'requestId'>;
+
+/** A relationship shown in the UI while the server decides its fate. */
+export interface PendingRelationship {
+    /** Client-side identity, distinct from any model relationship ID. */
+    pendingId: string;
+    type: string;
+    label: string;
+    sourceId: string;
+    targetId: string;
+    direction: RelationshipDirection;
+    status: 'saving' | 'failed';
+    /** Server diagnostic, set when status is 'failed'. */
+    error?: string;
+}
+
+export interface RelationshipCreateOutcome {
+    success: boolean;
+    relationshipId?: string;
+    sourceFile?: string;
+    error?: string;
+    diagnostics?: RelationshipDiagnostic[];
+}
+
+export interface RelationshipDeleteOutcome {
+    success: boolean;
+    sourceFile?: string;
+    error?: string;
+}
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
 export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import';
@@ -212,6 +256,17 @@ export interface ModelState {
     editingElementId: string | null;
     pendingEdits: Map<string, Partial<{ doc: string; attributes: Record<string, string> }>>;
 
+    // ─── Relationship authoring ───────────────────────────────────────────
+    /**
+     * Relationships awaiting a server answer, keyed by a client-side pending
+     * ID. They render as pending rows and are never treated as model facts —
+     * the canonical relationship only arrives with the rebuilt model.
+     */
+    pendingRelationships: PendingRelationship[];
+    createRelationship: (request: RelationshipCreateInput) => Promise<RelationshipCreateOutcome>;
+    deleteRelationship: (relationshipId: string) => Promise<RelationshipDeleteOutcome>;
+    dismissPendingRelationship: (pendingId: string) => void;
+
     // ─── Actions ──────────────────────────────────────────────────────────
     setModel: (model: MemoModelDTO) => void;
     setValidation: (validation: ValidationResult) => void;
@@ -285,6 +340,7 @@ export interface ModelState {
     // ─── Diagram actions ──────────────────────────────────────────────
     createDiagram: (opts: { name: string; diagramType: string; viewpointId: string }) => void;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
+    addElementToDiagram: (diagramId: string, elementId: string) => void;
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
@@ -458,6 +514,92 @@ export const useModelStore = create<ModelState>((set, get) => ({
     analysisIssues: [],
     editingElementId: null,
     pendingEdits: new Map(),
+
+    // Relationship authoring
+    pendingRelationships: [],
+
+    /**
+     * Create a model relationship through the server.
+     *
+     * A pending row appears immediately, but nothing about the model changes
+     * until the server confirms: on success the pending row is dropped and the
+     * canonical relationship arrives with the rebuilt model; on failure the row
+     * is marked failed and the model and view are left exactly as they were.
+     */
+    createRelationship: async (request) => {
+        const pendingId = `pending-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const definition = getRelationshipDefinition(get().model, request.type);
+
+        set(s => ({
+            pendingRelationships: [...s.pendingRelationships, {
+                pendingId,
+                type: request.type,
+                label: definition?.label ?? request.type,
+                sourceId: request.sourceId,
+                targetId: request.targetId,
+                direction: request.direction,
+                status: 'saving' as const,
+            }],
+        }));
+
+        const fail = (error: string, diagnostics?: RelationshipDiagnostic[]): RelationshipCreateOutcome => {
+            set(s => ({
+                pendingRelationships: s.pendingRelationships.map(p =>
+                    p.pendingId === pendingId ? { ...p, status: 'failed' as const, error } : p),
+            }));
+            return { success: false, error, diagnostics };
+        };
+
+        try {
+            const result = await requestRelationshipCreate(request);
+            if (!result.success) {
+                return fail(result.error ?? 'The relationship could not be created.', result.diagnostics);
+            }
+            // Confirmed: drop the pending row. The file watcher's rebuild
+            // delivers the canonical relationship and its stable ID.
+            set(s => ({
+                pendingRelationships: s.pendingRelationships.filter(p => p.pendingId !== pendingId),
+            }));
+            return {
+                success: true,
+                relationshipId: result.relationshipId,
+                sourceFile: result.sourceFile,
+                diagnostics: result.diagnostics,
+            };
+        } catch (e) {
+            return fail(e instanceof Error ? e.message : String(e));
+        }
+    },
+
+    /** Delete one relationship usage. Both endpoint elements are left alone. */
+    deleteRelationship: async (relationshipId) => {
+        try {
+            const result = await requestRelationshipDelete({ relationshipId });
+            if (!result.success) {
+                return { success: false, error: result.error ?? 'The relationship could not be deleted.' };
+            }
+            // Drop it locally so the row disappears at once; the rebuild that
+            // follows is what actually reconciles the model.
+            set(s => (s.model
+                ? {
+                    model: {
+                        ...s.model,
+                        relationships: s.model.relationships.filter(rel => rel.id !== relationshipId),
+                    },
+                    selectedRelationshipId: s.selectedRelationshipId === relationshipId
+                        ? null
+                        : s.selectedRelationshipId,
+                }
+                : {}));
+            return { success: true, sourceFile: result.sourceFile };
+        } catch (e) {
+            return { success: false, error: e instanceof Error ? e.message : String(e) };
+        }
+    },
+
+    dismissPendingRelationship: (pendingId) => set(s => ({
+        pendingRelationships: s.pendingRelationships.filter(p => p.pendingId !== pendingId),
+    })),
 
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
@@ -846,6 +988,20 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }));
         sendDiagramCreate({ id, name, diagramType, viewpointId, elementIds: [] });
     },
+    /**
+     * Add one element to a view's selection.
+     *
+     * Only ever called from an explicit user confirmation — creating a
+     * relationship never changes an authored view's selection on its own.
+     */
+    addElementToDiagram: (diagramId, elementId) => {
+        const { model } = get();
+        const diagram = model?.diagrams?.find(d => d.id === diagramId);
+        if (!diagram) return;
+        const elementIds = diagram.elementIds ?? [];
+        if (elementIds.includes(elementId)) return;
+        get().updateDiagramElementIds(diagramId, [...elementIds, elementId]);
+    },
     updateDiagramElementIds: (diagramId, elementIds) => {
         const { model } = get();
         if (!model?.diagrams) return;
@@ -935,6 +1091,27 @@ export const useModelStore = create<ModelState>((set, get) => ({
 }));
 
 // ─── Derived selectors ──────────────────────────────────────────────────────
+
+/** Empty registries, so callers can resolve legality before the model arrives. */
+const EMPTY_REGISTRIES: OntologyRegistriesDTO = { relationships: [], kinds: [] };
+
+/**
+ * Ontology relationship and kind definitions shipped with the model.
+ *
+ * This is the only source of relationship legality in the web app — there is no
+ * hardcoded relationship table behind it.
+ */
+export function getRegistries(model: MemoModelDTO | null): OntologyRegistriesDTO {
+    return model?.registries ?? EMPTY_REGISTRIES;
+}
+
+/** Look up one relationship definition by camelCase or PascalCase name. */
+export function getRelationshipDefinition(
+    model: MemoModelDTO | null,
+    type: string,
+): RelationshipDefinitionDTO | undefined {
+    return findRelationshipDefinition(type, getRegistries(model));
+}
 
 export function getElements(model: MemoModelDTO | null): MemoElement[] {
     if (!model) return [];

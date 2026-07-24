@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
-import { sendElementUpdate, sendAddRelationship } from '../store/ws-client';
+import { sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
 import { FONT, SHADOW, RADIUS } from '../styles/tokens';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
@@ -30,6 +30,7 @@ function serializeSteps(steps: ScenarioStep[]): string {
 
 export function ScenarioEditor() {
     const model = useModelStore(s => s.model);
+    const createRelationship = useModelStore(s => s.createRelationship);
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const setActiveMode = useModelStore(s => s.setActiveMode);
@@ -381,7 +382,15 @@ export function ScenarioEditor() {
                                             onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
                                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                             onClick={() => {
-                                                sendAddRelationship(selectedElement.id, el.id, 'traceTo');
+                                                // Fire-and-forget is fine here: the row is a shortcut, and
+                                                // a rejected link surfaces in the Properties panel.
+                                                void createRelationship({
+                                                    type: 'traceTo',
+                                                    sourceId: selectedElement.id,
+                                                    targetId: el.id,
+                                                    direction: 'outgoing',
+                                                    selectedElementId: selectedElement.id,
+                                                });
                                                 setLinkSearch('');
                                                 setLinkingStepIndex(null);
                                             }}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useModelStore } from '../store/model-store';
-import { sendElementUpdate, sendAddRelationship } from '../store/ws-client';
+import { sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
 import type { MemoElement, OntologyPackageInfo } from '@memoarchitect/tools/browser';
 

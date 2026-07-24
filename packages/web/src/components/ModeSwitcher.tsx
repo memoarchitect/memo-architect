@@ -164,12 +164,15 @@ export function ModeSwitcher() {
             toggleSidebar();
         }
         setActiveMode(modeId);
+        // Set the view and let UrlNavigationSync derive the URL from it, so
+        // every mode lands on its own bookmarkable path. Navigating to a fixed
+        // '/' here is what used to leave the address bar stuck at the root.
         switch (modeId) {
             case 'dashboard':
                 setActiveView({ type: 'dashboard' });
-                navigate('/');
                 break;
             case 'catalog':
+                // The catalog page is route-driven rather than view-driven.
                 setActiveView({ type: 'welcome' });
                 navigate('/catalog');
                 break;
@@ -177,23 +180,19 @@ export function ModeSwitcher() {
                 // Show views tab in explorer so user can pick a diagram
                 setExplorerTab('views');
                 setActiveView({ type: 'welcome' });
-                navigate('/');
+                navigate('/diagrams');
                 break;
             case 'dhf':
                 setActiveView({ type: 'dhf-dashboard' });
-                navigate('/');
                 break;
             case 'scenario':
                 setActiveView({ type: 'scenario-editor' });
-                navigate('/');
                 break;
             case 'ontology':
                 setActiveView({ type: 'ontology' });
-                navigate('/');
                 break;
             case 'import':
                 setActiveView({ type: 'import' });
-                navigate('/');
                 break;
         }
     }

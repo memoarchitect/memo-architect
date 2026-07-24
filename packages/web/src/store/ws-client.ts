@@ -10,6 +10,10 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo } from '@memoarchitect/tools/browser';
+import type {
+    RelationshipCreateRequest, RelationshipCreateResultMessage,
+    RelationshipDeleteRequest, RelationshipDeleteResultMessage,
+} from '@memoarchitect/tools/browser';
 
 /** Embedded data injected by `memo-architect build` */
 interface EmbeddedData {
@@ -53,6 +57,68 @@ function rejectDiagramSourceRequests(message: string): void {
         pending.reject(new Error(message));
     }
     diagramSourceRequests.clear();
+}
+
+// ─── Relationship authoring requests ────────────────────────────────────────
+
+/** One in-flight relationship mutation, keyed by requestId. */
+interface PendingRequest<T> {
+    resolve: (payload: T) => void;
+    reject: (error: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+}
+
+type RelationshipCreatePayload = RelationshipCreateResultMessage['payload'];
+type RelationshipDeletePayload = RelationshipDeleteResultMessage['payload'];
+
+const relationshipCreateRequests = new Map<string, PendingRequest<RelationshipCreatePayload>>();
+const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDeletePayload>>();
+
+/**
+ * Resolve an in-flight mutation with the server's answer.
+ *
+ * Both outcomes resolve — a rejected relationship is a normal result the UI
+ * renders as a diagnostic, not an exception. Only transport failures reject.
+ */
+function settleRelationshipRequest<T extends { requestId: string }>(
+    payload: T,
+    pending: Map<string, PendingRequest<T>>,
+): void {
+    const request = pending.get(payload.requestId);
+    if (!request) return;
+    clearTimeout(request.timer);
+    pending.delete(payload.requestId);
+    request.resolve(payload);
+}
+
+/** Fail every in-flight mutation, so no pending row is left waiting forever. */
+function rejectRelationshipRequests(message: string): void {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests]) {
+        for (const pending of map.values()) {
+            clearTimeout(pending.timer);
+            pending.reject(new Error(message));
+        }
+        map.clear();
+    }
+}
+
+function sendRelationshipRequest<T extends { requestId: string }>(
+    type: 'relationship:create' | 'relationship:delete',
+    request: Record<string, unknown>,
+    pending: Map<string, PendingRequest<T>>,
+): Promise<T> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => {
+            pending.delete(requestId);
+            reject(new Error('The server did not answer the relationship request.'));
+        }, 15000);
+        pending.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type, payload: { ...request, requestId } }));
+    });
 }
 
 /**
@@ -109,6 +175,7 @@ export function connectWebSocket(url?: string): void {
     ws.onclose = () => {
         store.setConnected(false);
         rejectDiagramSourceRequests('The development server disconnected.');
+        rejectRelationshipRequests('The development server disconnected.');
         ws = null;
         // Exponential backoff: 2s, 4s, 8s, capped at 10s
         reconnectAttempts++;
@@ -153,6 +220,12 @@ function handleMessage(msg: ServerMessage): void {
             break;
         case 'diagram:source:result':
             settleDiagramSourceRequest(msg.payload);
+            break;
+        case 'relationship:create:result':
+            settleRelationshipRequest(msg.payload, relationshipCreateRequests);
+            break;
+        case 'relationship:delete:result':
+            settleRelationshipRequest(msg.payload, relationshipDeleteRequests);
             break;
         case 'ontology:packages': {
             const hash = (msg.payload as any).ontologyHash as string | undefined;
@@ -351,14 +424,24 @@ export function sendElementCreate(element: any): void {
     }
 }
 
-/** Send a new relationship request to the CLI server */
-export function sendAddRelationship(sourceId: string, targetId: string, relType: string): void {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: 'relationship:add',
-            payload: { sourceId, targetId, type: relType },
-        }));
-    }
+/**
+ * Ask the server to create a model relationship, and wait for its answer.
+ *
+ * The server revalidates the request and writes it into project SysML before
+ * responding, so a resolved promise means the relationship is on disk — never
+ * assume success from having sent the request.
+ */
+export function requestRelationshipCreate(
+    request: Omit<RelationshipCreateRequest, 'requestId'>,
+): Promise<RelationshipCreateResultMessage['payload']> {
+    return sendRelationshipRequest('relationship:create', request, relationshipCreateRequests);
+}
+
+/** Ask the server to delete one relationship usage, and wait for its answer. */
+export function requestRelationshipDelete(
+    request: Omit<RelationshipDeleteRequest, 'requestId'>,
+): Promise<RelationshipDeleteResultMessage['payload']> {
+    return sendRelationshipRequest('relationship:delete', request, relationshipDeleteRequests);
 }
 
 /** Send a new user diagram creation to the CLI server */

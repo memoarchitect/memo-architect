@@ -51,6 +51,37 @@ interaction; it does not maintain a second engineering model.
 - Author and export Design History File documents from the versioned model.
 - Run the same validation and export operations through the CLI or the workbench.
 
+## Try it on a bundled example
+
+The examples ship inside the ontology package, `@memoarchitect/ontology`, so
+they are already present once Architect is installed — there is nothing to
+clone or download. One command opens one:
+
+```bash
+memo-architect --example gpca
+```
+
+```bash
+memo-architect --example standard-sysml-diagrams
+```
+
+| Example | What it contains |
+|---|---|
+| `gpca` | GPCA infusion-pump reference model — the full worked device |
+| `standard-sysml-diagrams` | One openable view per standard SysML v2 diagram type |
+
+The project is copied to a disposable directory before it is served, so the
+installed ontology is never modified and any edits are discarded on exit. Pass
+`--port` to choose a port; the URL is printed on startup.
+
+Every view is addressable, so any page can be bookmarked or shared while the
+app is running — `/dashboard`, `/ontology`, `/dhf`, `/statistics`,
+`/catalog/<family>/<shortId>` for an element, `/diagrams/<type>/<id>` for a
+diagram. Back and Forward work as expected.
+
+To point Architect at your own project instead, run `memo-architect dev` from
+the project directory.
+
 ## Repository layout
 
 ```text
@@ -98,13 +129,7 @@ pnpm architect -- dev
 pnpm architect -- build --output dist
 ```
 
-Open a bundled example read-only — the project is copied to a disposable
-directory and served with the dev server, so edits are discarded on exit:
-
-```bash
-memo-architect --example gpca                    # GPCA reference model
-memo-architect --example standard-sysml-diagrams # one view per SysML v2 diagram type
-```
+To open a bundled example, see [Try it on a bundled example](#try-it-on-a-bundled-example).
 
 ## Documentation
 

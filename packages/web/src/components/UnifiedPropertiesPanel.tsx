@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useModelStore, getRelationshipsForElement, getDiagram } from '../store/model-store';
+import { useModelStore, getRelationshipsForElement, getDiagram, getRegistries } from '../store/model-store';
+import type { PendingRelationship } from '../store/model-store';
+import { findRelationshipDefinition } from '@memoarchitect/tools/browser';
+import type {
+    MemoElement, MemoModelDTO, MemoRelationship,
+    OntologyRegistriesDTO, RelationshipDirection,
+} from '@memoarchitect/tools/browser';
+import { AddRelationshipDialog } from './AddRelationshipDialog';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 
@@ -233,6 +240,418 @@ function DiagramProperties() {
     );
 }
 
+// ─── Relationships Section ──────────────────────────────────────────────────
+
+/**
+ * Model relationships of the selected element: existing links in both
+ * directions, authoring of new ones, and removal where the project permits it.
+ *
+ * Every relationship shown here is a semantic model fact backed by project
+ * SysML — pending rows are marked as such and are never mistaken for one.
+ */
+function RelationshipsSection({ element, outgoing, incoming }: {
+    element: MemoElement;
+    outgoing: MemoRelationship[];
+    incoming: MemoRelationship[];
+}) {
+    const model = useModelStore(s => s.model);
+    const connected = useModelStore(s => s.connected);
+    const selectElement = useModelStore(s => s.selectElement);
+    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const pendingRelationships = useModelStore(s => s.pendingRelationships);
+    const createRelationship = useModelStore(s => s.createRelationship);
+    const deleteRelationship = useModelStore(s => s.deleteRelationship);
+    const dismissPendingRelationship = useModelStore(s => s.dismissPendingRelationship);
+    const addElementToDiagram = useModelStore(s => s.addElementToDiagram);
+
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [status, setStatus] = useState<RelationshipStatus | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+    const registries = useMemo(() => getRegistries(model), [model]);
+
+    // Reset transient state whenever the inspected element changes.
+    useEffect(() => { setStatus(null); setConfirmDelete(null); setDialogOpen(false); }, [element.id]);
+
+    const mine = pendingRelationships.filter(p =>
+        p.sourceId === element.id || p.targetId === element.id);
+
+    const total = outgoing.length + incoming.length;
+
+    const handleConfirm = useCallback(async (request: {
+        type: string; sourceId: string; targetId: string; direction: RelationshipDirection;
+    }) => {
+        setDialogOpen(false);
+        setStatus(null);
+        const outcome = await createRelationship({
+            ...request,
+            selectedElementId: element.id,
+            diagramId: selectedDiagramId ?? undefined,
+        });
+
+        if (!outcome.success) {
+            setStatus({ kind: 'error', message: outcome.error ?? 'The relationship could not be created.' });
+            return;
+        }
+
+        // The opposite endpoint may sit outside the current view. Offer to add
+        // it, but never change an authored view's selection unprompted.
+        const oppositeId = request.sourceId === element.id ? request.targetId : request.sourceId;
+        const diagram = getDiagram(model, selectedDiagramId);
+        const profileBlocked = outcome.diagnostics?.find(d => d.code === 'REL-005');
+        const outsideView = !!diagram
+            && !!diagram.elementIds
+            && diagram.elementIds.length > 0
+            && !diagram.elementIds.includes(oppositeId);
+
+        setStatus({
+            kind: 'success',
+            message: `Relationship created in ${outcome.sourceFile ?? 'the model'}.`,
+            profileMessage: profileBlocked?.message,
+            offerAddToView: outsideView && !profileBlocked && !!selectedDiagramId
+                ? { elementId: oppositeId, diagramId: selectedDiagramId }
+                : undefined,
+        });
+    }, [createRelationship, element.id, selectedDiagramId, model]);
+
+    const handleDelete = useCallback(async (relationshipId: string) => {
+        setConfirmDelete(null);
+        const outcome = await deleteRelationship(relationshipId);
+        setStatus(outcome.success
+            ? { kind: 'success', message: `Relationship removed from ${outcome.sourceFile ?? 'the model'}.` }
+            : { kind: 'error', message: outcome.error ?? 'The relationship could not be deleted.' });
+    }, [deleteRelationship]);
+
+    if (!model) return null;
+
+    return (
+        <>
+            <Section
+                title="Relationships"
+                count={total}
+                defaultOpen
+                actions={
+                    <button
+                        onClick={() => { setStatus(null); setDialogOpen(true); }}
+                        disabled={!connected}
+                        className="px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                            background: connected ? '#F0F0ED' : '#F7F7F5',
+                            color: connected ? '#374151' : '#D1D5DB',
+                            border: 'none', cursor: connected ? 'pointer' : 'not-allowed',
+                        }}
+                        title={connected ? 'Add a model relationship' : 'Connect to the dev server to author relationships'}
+                    >
+                        + Add
+                    </button>
+                }
+            >
+                {total === 0 && mine.length === 0 && (
+                    <div className="text-xs py-1" style={{ color: '#9CA3AF' }}>
+                        No relationships yet.
+                    </div>
+                )}
+
+                {outgoing.map(rel => (
+                    <RelationshipRow
+                        key={rel.id}
+                        relationship={rel}
+                        direction="outgoing"
+                        model={model}
+                        registries={registries}
+                        confirming={confirmDelete === rel.id}
+                        onNavigate={() => selectElement(rel.targetId)}
+                        onRequestDelete={() => setConfirmDelete(rel.id)}
+                        onCancelDelete={() => setConfirmDelete(null)}
+                        onConfirmDelete={() => handleDelete(rel.id)}
+                        deletable={connected}
+                    />
+                ))}
+
+                {incoming.map(rel => (
+                    <RelationshipRow
+                        key={rel.id}
+                        relationship={rel}
+                        direction="incoming"
+                        model={model}
+                        registries={registries}
+                        confirming={confirmDelete === rel.id}
+                        onNavigate={() => selectElement(rel.sourceId)}
+                        onRequestDelete={() => setConfirmDelete(rel.id)}
+                        onCancelDelete={() => setConfirmDelete(null)}
+                        onConfirmDelete={() => handleDelete(rel.id)}
+                        deletable={connected}
+                    />
+                ))}
+
+                {mine.map(pending => (
+                    <PendingRelationshipRow
+                        key={pending.pendingId}
+                        pending={pending}
+                        model={model}
+                        onDismiss={() => dismissPendingRelationship(pending.pendingId)}
+                    />
+                ))}
+
+                {status && (
+                    <StatusBanner
+                        status={status}
+                        onAddToView={() => {
+                            if (!status.offerAddToView) return;
+                            addElementToDiagram(status.offerAddToView.diagramId, status.offerAddToView.elementId);
+                            setStatus({ kind: 'success', message: 'Element added to this view.' });
+                        }}
+                        onDismiss={() => setStatus(null)}
+                        model={model}
+                    />
+                )}
+            </Section>
+
+            {dialogOpen && (
+                <AddRelationshipDialog
+                    element={element}
+                    model={model}
+                    registries={registries}
+                    diagramId={selectedDiagramId ?? undefined}
+                    onCancel={() => setDialogOpen(false)}
+                    onConfirm={handleConfirm}
+                />
+            )}
+        </>
+    );
+}
+
+/** Outcome banner shown under the relationship list after a mutation. */
+interface RelationshipStatus {
+    kind: 'success' | 'error';
+    message: string;
+    /** Set when the model accepted the link but the view profile hides it. */
+    profileMessage?: string;
+    /** Set when the opposite endpoint is not in the current view. */
+    offerAddToView?: { elementId: string; diagramId: string };
+}
+
+function StatusBanner({ status, onAddToView, onDismiss, model }: {
+    status: RelationshipStatus;
+    onAddToView: () => void;
+    onDismiss: () => void;
+    model: MemoModelDTO;
+}) {
+    const success = status.kind === 'success';
+    const elementName = status.offerAddToView
+        ? model.elements[status.offerAddToView.elementId]?.name ?? status.offerAddToView.elementId
+        : null;
+    return (
+        <div
+            className="text-xs p-2 rounded-lg mt-2"
+            style={{
+                background: success ? '#F0FDF4' : '#FEF2F2',
+                border: `1px solid ${success ? '#BBF7D0' : '#FECACA'}`,
+                color: success ? '#166534' : '#DC2626',
+            }}
+        >
+            <div className="flex items-start gap-1.5">
+                <span className="flex-1">{status.message}</span>
+                <button
+                    onClick={onDismiss}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', lineHeight: 1 }}
+                    aria-label="Dismiss"
+                >
+                    ×
+                </button>
+            </div>
+            {status.profileMessage && (
+                <div className="mt-1" style={{ color: '#92400E' }}>
+                    Relationship created in the model, but this view profile does not display this
+                    relationship type.
+                </div>
+            )}
+            {status.offerAddToView && (
+                <button
+                    onClick={onAddToView}
+                    className="mt-1.5 px-2 py-0.5 rounded"
+                    style={{ background: '#FFFFFF', border: '1px solid #BBF7D0', color: '#166534', cursor: 'pointer', fontSize: FONT.xs }}
+                >
+                    Relationship created. Add {elementName} to this view?
+                </button>
+            )}
+        </div>
+    );
+}
+
+/** One existing relationship: endpoint, type, direction, roles and source file. */
+function RelationshipRow({
+    relationship, direction, model, registries, deletable,
+    confirming, onNavigate, onRequestDelete, onCancelDelete, onConfirmDelete,
+}: {
+    relationship: MemoRelationship;
+    direction: RelationshipDirection;
+    model: MemoModelDTO;
+    registries: OntologyRegistriesDTO;
+    deletable: boolean;
+    confirming: boolean;
+    onNavigate: () => void;
+    onRequestDelete: () => void;
+    onCancelDelete: () => void;
+    onConfirmDelete: () => void;
+}) {
+    const oppositeId = direction === 'outgoing' ? relationship.targetId : relationship.sourceId;
+    const opposite = model.elements[oppositeId];
+    const color = opposite ? (LAYER_COLORS[opposite.layer] || '#666') : '#666';
+    const definition = findRelationshipDefinition(relationship.type, registries);
+    const [expanded, setExpanded] = useState(false);
+
+    // Only a named connection usage can be addressed for deletion; anonymous
+    // ones have no stable identity in the source.
+    const removable = deletable && relationship.named === true;
+
+    return (
+        <div style={{ borderBottom: '1px solid #F7F7F5' }}>
+            <div className="flex items-center gap-1.5 ml-2" style={{ padding: '4px 8px', fontSize: FONT.xs }}>
+                <span style={{ color: '#9CA3AF' }}>{direction === 'outgoing' ? '→' : '←'}</span>
+                <span
+                    className="px-1 py-0.5 rounded flex-shrink-0"
+                    style={{
+                        background: (direction === 'outgoing' ? '#2563EB' : '#10B981') + '18',
+                        color: direction === 'outgoing' ? '#2563EB' : '#10B981',
+                        fontSize: FONT.xs,
+                    }}
+                >
+                    {definition?.label ?? relationship.type}
+                </span>
+                <button
+                    onClick={onNavigate}
+                    className="truncate text-left"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#374151', flex: 1, minWidth: 0 }}
+                    title={`Go to ${opposite?.name ?? oppositeId}`}
+                >
+                    {opposite?.name ?? oppositeId}
+                </button>
+                <button
+                    onClick={() => setExpanded(e => !e)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D1D5DB' }}
+                    aria-label={expanded ? 'Hide relationship details' : 'Show relationship details'}
+                >
+                    {expanded ? '▾' : '▸'}
+                </button>
+            </div>
+
+            {expanded && (
+                <div className="ml-4 pb-2 space-y-1" style={{ fontSize: '10px', color: '#6B7280' }}>
+                    <DetailLine label="Kind" value={opposite?.kind ?? '—'} valueColor={color} />
+                    <DetailLine
+                        label="Roles"
+                        value={`${relationship.sourceEnd || definition?.sourceEnd.name || 'source'} → ${
+                            relationship.targetEnd || definition?.targetEnd.name || 'target'}`}
+                    />
+                    <DetailLine label="ID" value={relationship.id} mono />
+                    <DetailLine label="Source" value={relationship.file || '—'} mono />
+                    {!relationship.named && (
+                        <div style={{ color: '#D97706' }}>
+                            Anonymous connection — name it in SysML to allow deletion from here.
+                        </div>
+                    )}
+                    {removable && !confirming && (
+                        <button
+                            onClick={onRequestDelete}
+                            className="px-1.5 py-0.5 rounded"
+                            style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', cursor: 'pointer', fontSize: '10px' }}
+                        >
+                            Remove relationship
+                        </button>
+                    )}
+                    {confirming && (
+                        <div className="p-1.5 rounded" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                            <div style={{ color: '#DC2626' }}>
+                                Remove {definition?.label ?? relationship.type} to {opposite?.name ?? oppositeId}?
+                                Both elements are kept.
+                            </div>
+                            <div className="flex gap-1 mt-1">
+                                <button
+                                    onClick={onConfirmDelete}
+                                    className="px-1.5 py-0.5 rounded"
+                                    style={{ background: '#DC2626', color: '#FFFFFF', border: 'none', cursor: 'pointer', fontSize: '10px' }}
+                                >
+                                    Remove
+                                </button>
+                                <button
+                                    onClick={onCancelDelete}
+                                    className="px-1.5 py-0.5 rounded"
+                                    style={{ background: '#FFFFFF', color: '#374151', border: '1px solid #E5E5E0', cursor: 'pointer', fontSize: '10px' }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DetailLine({ label, value, mono, valueColor }: {
+    label: string; value: string; mono?: boolean; valueColor?: string;
+}) {
+    return (
+        <div className="flex gap-1.5">
+            <span style={{ minWidth: 48, color: '#9CA3AF' }}>{label}</span>
+            <span
+                className={`truncate ${mono ? 'font-mono' : ''}`}
+                style={{ color: valueColor ?? '#374151' }}
+                title={value}
+            >
+                {value}
+            </span>
+        </div>
+    );
+}
+
+/** A relationship the server has not answered on yet — never a model fact. */
+function PendingRelationshipRow({ pending, model, onDismiss }: {
+    pending: PendingRelationship;
+    model: MemoModelDTO;
+    onDismiss: () => void;
+}) {
+    const oppositeId = pending.direction === 'outgoing' ? pending.targetId : pending.sourceId;
+    const opposite = model.elements[oppositeId];
+    const failed = pending.status === 'failed';
+    return (
+        <div
+            className="flex items-center gap-1.5 ml-2 rounded"
+            style={{
+                padding: '4px 8px',
+                fontSize: FONT.xs,
+                background: failed ? '#FEF2F2' : '#F9FAFB',
+                color: failed ? '#DC2626' : '#6B7280',
+                fontStyle: failed ? 'normal' : 'italic',
+            }}
+        >
+            <span>{pending.direction === 'outgoing' ? '→' : '←'}</span>
+            <span className="px-1 py-0.5 rounded flex-shrink-0" style={{ background: '#E5E7EB', color: '#6B7280', fontSize: FONT.xs }}>
+                {pending.label}
+            </span>
+            <span className="truncate flex-1">{opposite?.name ?? oppositeId}</span>
+            {failed ? (
+                <>
+                    <span className="truncate" style={{ fontSize: '10px', maxWidth: 90 }} title={pending.error}>
+                        {pending.error}
+                    </span>
+                    <button
+                        onClick={onDismiss}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+                        aria-label="Dismiss failed relationship"
+                    >
+                        ×
+                    </button>
+                </>
+            ) : (
+                <span style={{ fontSize: '10px' }}>saving…</span>
+            )}
+        </div>
+    );
+}
+
 // ─── Element Properties ─────────────────────────────────────────────────────
 
 function ElementProperties() {
@@ -381,47 +800,7 @@ function ElementProperties() {
                     </Section>
                 )}
 
-                {outgoing.length > 0 && (
-                    <Section title="Outgoing" count={outgoing.length} defaultOpen>
-                        {outgoing.map(rel => {
-                            const target = model.elements[rel.targetId];
-                            const tColor = target ? (LAYER_COLORS[target.layer] || '#666') : '#666';
-                            return (
-                                <TreeRow
-                                    key={rel.id}
-                                    label={target?.name || rel.targetId}
-                                    kind={target?.kind}
-                                    kindColor={tColor}
-                                    arrow="→"
-                                    typeBadge={rel.type}
-                                    typeColor="#2563EB"
-                                    onClick={() => selectElement(rel.targetId)}
-                                />
-                            );
-                        })}
-                    </Section>
-                )}
-
-                {incoming.length > 0 && (
-                    <Section title="Incoming" count={incoming.length} defaultOpen>
-                        {incoming.map(rel => {
-                            const source = model.elements[rel.sourceId];
-                            const sColor = source ? (LAYER_COLORS[source.layer] || '#666') : '#666';
-                            return (
-                                <TreeRow
-                                    key={rel.id}
-                                    label={source?.name || rel.sourceId}
-                                    kind={source?.kind}
-                                    kindColor={sColor}
-                                    arrow="←"
-                                    typeBadge={rel.type}
-                                    typeColor="#10B981"
-                                    onClick={() => selectElement(rel.sourceId)}
-                                />
-                            );
-                        })}
-                    </Section>
-                )}
+                <RelationshipsSection element={element} outgoing={outgoing} incoming={incoming} />
 
                 {violations.length > 0 && (
                     <Section title="Guidance" count={violations.length} defaultOpen>

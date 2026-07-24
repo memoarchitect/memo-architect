@@ -32,8 +32,8 @@ type RFAny = any;
 
 import type { MemoElement, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
-import { useModelStore, getDiagram } from '../store/model-store';
-import { sendElementCreate, sendAddRelationship, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
+import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
+import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import {
@@ -64,7 +64,7 @@ import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette } from './DiagramPalette';
-import { RelationshipPicker } from './RelationshipPicker';
+import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
@@ -279,6 +279,8 @@ function PortSwatch({ color, glyph }: { color: string; glyph: string }) {
 
 function DiagramCanvasInner() {
     const model = useModelStore(s => s.model);
+    const createRelationship = useModelStore(s => s.createRelationship);
+    const registries = useMemo(() => getRegistries(model), [model]);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
@@ -346,11 +348,11 @@ function DiagramCanvasInner() {
         kind?: string; layer?: string; construct?: string;
     } | null>(null);
 
-    // Relationship picker state
+    // Relationship picker state — holds the two elements the edge connects, so
+    // the picker can resolve legality from the ontology rather than kind names.
     const [relPicker, setRelPicker] = useState<{
         x: number; y: number;
-        sourceId: string; targetId: string;
-        sourceKind: string; targetKind: string;
+        sourceElement: MemoElement; targetElement: MemoElement;
     } | null>(null);
 
     // Context menu state
@@ -1203,31 +1205,53 @@ function DiagramCanvasInner() {
 
         const sourceEl = model?.elements[source];
         const targetEl = model?.elements[target];
+        // Both endpoints must be model elements — legality is resolved from
+        // their kinds, so an edge to something unknown offers no types.
+        if (!sourceEl || !targetEl) return;
 
         // Show relationship picker at approximate mouse position
         setRelPicker({
-            x: window.innerWidth / 2 - 120,
+            x: window.innerWidth / 2 - 130,
             y: window.innerHeight / 2 - 160,
-            sourceId: source,
-            targetId: target,
-            sourceKind: sourceEl?.kind ?? '',
-            targetKind: targetEl?.kind ?? '',
+            sourceElement: sourceEl,
+            targetElement: targetEl,
         });
     }, [model]);
 
-    const confirmRelationship = useCallback((relType: string) => {
+    /**
+     * Persist the chosen relationship, then draw it.
+     *
+     * The edge is only added after the server confirms the write — an optimistic
+     * edge would show a relationship that may never have reached the model.
+     */
+    const confirmRelationship = useCallback(async (choice: RelationshipChoice) => {
         if (!relPicker || !selectedDiagramId) { setRelPicker(null); return; }
 
-        const { sourceId, targetId } = relPicker;
-        const color = REL_COLORS[relType] ?? '#6B7280';
-        const edgeId = `e_${sourceId}_${targetId}_${relType}_${Date.now()}`;
+        const drawnFromId = relPicker.sourceElement.id;
+        setRelPicker(null);
 
-        // Add edge to ReactFlow
+        const outcome = await createRelationship({
+            type: choice.type,
+            sourceId: choice.sourceId,
+            targetId: choice.targetId,
+            direction: choice.direction,
+            selectedElementId: drawnFromId,
+            diagramId: selectedDiagramId,
+        });
+
+        if (!outcome.success) {
+            // Nothing was drawn, so nothing needs undoing — the canvas is
+            // already in its prior state.
+            console.warn(`[MEMO] Relationship rejected: ${outcome.error}`);
+            return;
+        }
+
+        const color = REL_COLORS[choice.type] ?? '#6B7280';
         const newEdge: FlowEdge = {
-            id: edgeId,
-            source: sourceId,
-            target: targetId,
-            label: relType,
+            id: outcome.relationshipId ?? `e_${choice.sourceId}_${choice.targetId}_${choice.type}`,
+            source: choice.sourceId,
+            target: choice.targetId,
+            label: choice.type,
             type: 'default',
             style: { stroke: color, strokeWidth: 2 },
             labelStyle: { fontSize: '10px', fill: '#374151' },
@@ -1237,12 +1261,7 @@ function DiagramCanvasInner() {
             markerEnd: { type: 'arrowclosed' as any, color },
         };
         setEdges(prev => addEdge(newEdge, prev));
-
-        // Persist to SysML
-        sendAddRelationship(sourceId, targetId, relType);
-
-        setRelPicker(null);
-    }, [relPicker, selectedDiagramId, setEdges]);
+    }, [relPicker, selectedDiagramId, setEdges, createRelationship]);
 
     // ─── Node drag stop → stage a per-diagram override ───────────────────────
 
@@ -2253,8 +2272,9 @@ function DiagramCanvasInner() {
                 <RelationshipPicker
                     x={relPicker.x}
                     y={relPicker.y}
-                    sourceKind={relPicker.sourceKind}
-                    targetKind={relPicker.targetKind}
+                    sourceElement={relPicker.sourceElement}
+                    targetElement={relPicker.targetElement}
+                    registries={registries}
                     onSelect={confirmRelationship}
                     onCancel={() => setRelPicker(null)}
                 />
