@@ -137,6 +137,22 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
 }
 
 /**
+ * Whether a path is an element or diagram permalink — a route whose target is
+ * an identifier that must be resolved against the loaded model.
+ *
+ * These resolve asynchronously in their own route components, so until the
+ * model arrives the store still holds whatever view it booted with. The URL
+ * sync uses this to leave such a path alone rather than overwriting an
+ * incoming bookmark with the default view.
+ */
+export function isPermalinkPath(pathname: string): boolean {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments[0] === 'catalog' && segments.length === 3) return true;   // /catalog/:family/:shortId
+    if (segments[0] === 'diagrams' && segments.length === 3) return true;  // /diagrams/:type/:id
+    return false;
+}
+
+/**
  * Every static path, for route registration and for tests to enumerate.
  * '/' is excluded: it is the index route, registered separately.
  */

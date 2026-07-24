@@ -1,4 +1,7 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+    accessSync, constants, cpSync, existsSync, mkdtempSync,
+    readFileSync, realpathSync, rmSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
@@ -68,13 +71,44 @@ function listExampleKeys(ontologyRoot: string): string[] {
 }
 
 /**
- * Open a bundled example read-only: copy it to a disposable temp directory and
- * start the dev server there, so any edits are discarded when the process exits.
+ * Whether an example lives in an installed package rather than a working
+ * checkout. Installed content is somebody else's artifact — editing it would
+ * mutate a dependency — so those examples are served from a disposable copy.
+ * A sibling checkout is the user's own source and is served in place.
+ *
+ * Node resolves symlinked dependencies to their real path, so a workspace link
+ * such as node_modules/@memoarchitect/ontology -> ../../memo already reports
+ * the checkout, not the link.
+ */
+function isInstalledPackage(exampleDir: string): boolean {
+    const real = existsSync(exampleDir) ? realpathSync(exampleDir) : resolve(exampleDir);
+    return real.split(sep).includes('node_modules');
+}
+
+/** Whether the process can actually write to a directory. */
+function isWritable(dir: string): boolean {
+    try {
+        accessSync(dir, constants.W_OK);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Open a bundled example.
+ *
+ * A checkout you own is served in place, so edits are real and can be
+ * committed. An example inside an installed package is copied to a disposable
+ * directory first and the copy is discarded on exit, so a dependency is never
+ * modified.
  */
 export async function architectExampleCommand(options: {
     name: string;
     port?: number;
     open?: boolean;
+    /** Force the disposable copy even for a local checkout. */
+    readOnly?: boolean;
 }): Promise<void> {
     const ontologyRoot = resolveOntologyRoot();
 
@@ -85,6 +119,19 @@ export async function architectExampleCommand(options: {
         const keys = listExampleKeys(ontologyRoot);
         const hint = keys.length ? `\nAvailable examples: ${keys.join(', ')}` : '';
         throw new Error(`${(error as Error).message}${hint}`);
+    }
+
+    const editInPlace = !options.readOnly
+        && !isInstalledPackage(exampleDir)
+        && isWritable(exampleDir);
+
+    if (editInPlace) {
+        const target = realpathSync(exampleDir);
+        console.log(`Opening example '${options.name}' from ${target}`);
+        console.log('Edits are saved to that directory.');
+        process.chdir(target);
+        await architectDevCommand({ port: options.port, open: options.open });
+        return;
     }
 
     const slug = options.name.replace(/[^A-Za-z0-9]+/g, '-');
@@ -99,7 +146,8 @@ export async function architectExampleCommand(options: {
         process.on(signal, () => { cleanup(); process.exit(0); });
     }
 
-    console.log(`Opening example '${options.name}' read-only (disposable copy; edits are discarded on exit).`);
+    const why = options.readOnly ? '--read-only' : 'installed package';
+    console.log(`Opening example '${options.name}' read-only (${why}: disposable copy; edits are discarded on exit).`);
     process.chdir(tempRoot);
     await architectDevCommand({ port: options.port, open: options.open });
 }

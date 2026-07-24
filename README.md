@@ -70,9 +70,17 @@ memo-architect --example standard-sysml-diagrams
 | `gpca` | GPCA infusion-pump reference model — the full worked device |
 | `standard-sysml-diagrams` | One openable view per standard SysML v2 diagram type |
 
-The project is copied to a disposable directory before it is served, so the
-installed ontology is never modified and any edits are discarded on exit. Pass
-`--port` to choose a port; the URL is printed on startup.
+Where the example is opened from depends on where the ontology resolves:
+
+- **A local checkout** (a sibling clone or workspace link) is served **in
+  place**, so edits are real and can be committed. The path is printed on
+  startup.
+- **An installed package** under `node_modules` is copied to a disposable
+  directory first and the copy is discarded on exit, so a dependency is never
+  modified.
+
+Pass `--read-only` to force the disposable copy even from a checkout, and
+`--port` to choose a port.
 
 Every view is addressable, so any page can be bookmarked or shared while the
 app is running — `/dashboard`, `/ontology`, `/dhf`, `/statistics`,

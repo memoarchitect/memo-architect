@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense, useMemo, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
-import { pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
+import { isPermalinkPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
@@ -582,6 +582,16 @@ function UrlNavigationSync() {
         // as /catalog and /diagrams that have no view of their own. Pushing '/'
         // for it would drag those pages back to the root.
         if (activeView.type === 'welcome' && location.pathname !== '/') return;
+
+        // A permalink resolves against the model in its own route component,
+        // which cannot run until the model has loaded. Pushing the default view
+        // over it in the meantime is what breaks a bookmarked diagram on a cold
+        // load, so wait for the route to adopt the link.
+        if (isPermalinkPath(location.pathname)) {
+            const adopted =
+                (activeView.type === 'diagram' || activeView.type === 'element-detail');
+            if (!adopted) return;
+        }
 
         let url: string | null = null;
 
