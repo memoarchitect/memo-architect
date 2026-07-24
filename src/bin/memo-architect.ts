@@ -28,13 +28,31 @@ program
         program.help();
     });
 
+/**
+ * Read an option that is declared on both this command and its parent.
+ *
+ * `-p, --port` and `--no-open` exist on the program so `--example` can take
+ * them, and on `dev` so it can too. Commander binds the flag on the command
+ * line to the program-level declaration, leaving the subcommand holding its
+ * own default — which silently pinned `dev --port` to 3000. Prefer whichever
+ * declaration the user actually set, falling back to the local default.
+ */
+function resolveOption<T>(command: Command, name: string, local: T): T {
+    if (command.getOptionValueSource(name) === 'cli') return local;
+    const parent = command.parent;
+    if (parent?.getOptionValueSource(name) === 'cli') return parent.opts()[name] as T;
+    return local;
+}
+
 program
     .command('dev')
     .description('Start Architect with live model reload')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
-    .action(async (options: { port: string; open: boolean }) => {
-        await architectDevCommand({ port: Number.parseInt(options.port, 10), open: options.open });
+    .action(async function (this: Command, options: { port: string; open: boolean }) {
+        const port = resolveOption(this, 'port', options.port);
+        const open = resolveOption(this, 'open', options.open);
+        await architectDevCommand({ port: Number.parseInt(String(port), 10), open });
     });
 
 program
