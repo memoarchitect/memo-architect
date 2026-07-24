@@ -36,21 +36,17 @@ import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
+import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges } from './layout';
 import {
-    computeLayout, computeDecompositionLayout, computeContainmentLayout,
-    computeFBSLayout, buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges,
-} from './layout';
-import {
-    computeGeneralViewLayout, resolveGeneralMode, buildGeneralViewTree,
+    resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import { validateSingleTree, COMPOSITION_REL_TYPES } from './templates/composition-tree';
-import { computeInterconnectionLayout, PORT_DIR_COLORS, IBD_FLOW_COLORS, type PortDisplay } from './templates/interconnection-view';
-import { computeActionFlowViewLayout, commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
-import { computeStateTransitionLayout } from './templates/statetransition-view';
-import { computeSequenceLayout } from './templates/sequence-view';
-import { computeUseCaseViewLayout, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
-import { computeContextViewLayout } from './templates/context-view';
+import { PORT_DIR_COLORS, IBD_FLOW_COLORS, type PortDisplay } from './templates/interconnection-view';
+import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
+import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
+import { templateRegistry } from '../diagram/templates';
+import type { TemplateOptionSlices } from '../diagram/template-provider';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -899,92 +895,75 @@ function DiagramCanvasInner() {
 
         // Debounce so skimming through diagrams doesn't queue an ELK job per
         // one skipped past — only the diagram you settle on gets laid out.
+        // Template selection and computation go through the template registry
+        // (diagram/templates.ts) — registration order is precedence, and the
+        // canvas only assembles the option slices.
         const dispatch = () => {
-        if (isFBSDiagram) {
-            run('FBS', computeFBSLayout(model, {
-                expandedNodes, nodeDirections,
-                callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
-                layoutProviderId,
-            }));
-        } else if (isDecompDiagram) {
-            if (layoutStyle === 'decomposition') {
-                run('Decomposition', computeDecompositionLayout(model, {
-                    expandedNodes, nodeDirections,
-                    callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
+            const provider = templateRegistry.select({
+                viewKind,
+                diagramType: selectedDiagram?.diagramType,
+                isFBSDiagram, isDecompDiagram, isGeneralTemplate, generalMode, layoutStyle,
+            });
+            const treeCallbacks = { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection };
+            const options: TemplateOptionSlices = {
+                fbs: { expandedNodes, nodeDirections, callbacks: treeCallbacks, layoutProviderId },
+                decomposition: {
+                    expandedNodes, nodeDirections, callbacks: treeCallbacks,
                     positionCache: positionCacheRef.current,
-                }));
-            } else {
-                apply(computeContainmentLayout(model, {
-                    expandedNodes,
-                    callbacks: { onToggleExpand: toggleExpand },
-                }));
-            }
-        } else if (selectedDiagram?.diagramType === 'ucd') {
-            apply(computeUseCaseViewLayout(model, {
-                // A UCD selection can be derived before relationship endpoints
-                // are resolved. The template itself selects only actors linked
-                // to its visible use cases, so do not drop actors here.
-                viewpointFilter: undefined,
-                systemName: selectedDiagram.name,
-                ...useCaseViewOptions(selectedDiagram.properties), level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
-            }), false);
-        } else if (selectedDiagram?.diagramType === 'context') {
-            apply(computeContextViewLayout(model, selectedDiagram.name), false);
-        } else if (viewKind === 'interconnection') {
-            // Interconnection template (KK-3): parts with boundary ports,
-            // typed connectors, nested containment
-            run('Interconnection', computeInterconnectionLayout(model, {
-                viewpointFilter,
-                relationshipTypes: selectedDiagram?.relationshipTypes,
-                collapsedNodes: collapsedInterconnectionNodes,
-                onToggleCollapse: toggleInterconnectionCollapse,
-                focusId: focusedInterconnectionId ?? undefined,
-                portDisplay: interconnectionPortDisplay,
-                onPortMove: moveInterconnectionPort,
-                layoutProviderId,
-            }), false);
-        } else if (viewKind === 'actionflow') {
-            // Action Flow template (KK-4): actions with parameter ports,
-            // item flows, successions, optional swimlanes
-            run('Action flow', computeActionFlowViewLayout(model, {
-                viewpointFilter,
-                swimlanes: swimlanesOn,
-                laneGrouping: actionFlowLaneGrouping,
-                displayLevel: actionFlowDisplayLevel,
-                expandedActionIds: expandedActionNodes,
-                onToggleAction: toggleActionExpand,
-                focusActionId: focusedActionId ?? undefined,
-                visibleFlowKinds: visibleActionFlowKinds,
-                direction: actionFlowDirection,
-                layoutProviderId,
-            }), false);
-        } else if (viewKind === 'statetransition') {
-            // State Transition template (KK-5): nested states, transition
-            // edges with trigger [guard] labels
-            run('State transition', computeStateTransitionLayout(model, { viewpointFilter, layoutProviderId }), false);
-        } else if (viewKind === 'sequence') {
-            // Sequence template (KK-6): lifelines, chronological messages
-            apply(computeSequenceLayout(model, { viewpointFilter }), false);
-        } else if (isGeneralTemplate && generalMode !== 'graph') {
-            // General template (KK-2) tree/containment modes
-            run('General', computeGeneralViewLayout(model, {
-                mode: generalMode,
-                viewpointFilter,
-                expandedNodes, nodeDirections,
-                callbacks: { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection },
-                positionCache: positionCacheRef.current,
-                layoutProviderId,
-            }));
-        } else {
-            // Standard diagram / General template graph mode — check for sidecar
-            const relationshipTypes = selectedDiagram?.relationshipTypes;
-            const compartments = isGeneralTemplate;
-            setIsLayouting(true);
-            setLayoutError(null);
-            boundedLayout(computeLayout(model, { viewpointFilter, relationshipTypes, compartments, layoutProviderId }), 'Standard').then(({ nodes: n, edges: e }) => {
-                apply({ nodes: n, edges: e });
-            }).catch(fail('Standard'));
-        }
+                },
+                containment: { expandedNodes, callbacks: { onToggleExpand: toggleExpand } },
+                useCase: {
+                    // A UCD selection can be derived before relationship endpoints
+                    // are resolved. The template itself selects only actors linked
+                    // to its visible use cases, so do not drop actors here.
+                    viewpointFilter: undefined,
+                    systemName: selectedDiagram?.name,
+                    ...(selectedDiagram ? useCaseViewOptions(selectedDiagram.properties) : {}),
+                    level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
+                },
+                contextSystemName: selectedDiagram?.name,
+                interconnection: {
+                    viewpointFilter,
+                    relationshipTypes: selectedDiagram?.relationshipTypes,
+                    collapsedNodes: collapsedInterconnectionNodes,
+                    onToggleCollapse: toggleInterconnectionCollapse,
+                    focusId: focusedInterconnectionId ?? undefined,
+                    portDisplay: interconnectionPortDisplay,
+                    onPortMove: moveInterconnectionPort,
+                    layoutProviderId,
+                },
+                actionflow: {
+                    viewpointFilter,
+                    swimlanes: swimlanesOn,
+                    laneGrouping: actionFlowLaneGrouping,
+                    displayLevel: actionFlowDisplayLevel,
+                    expandedActionIds: expandedActionNodes,
+                    onToggleAction: toggleActionExpand,
+                    focusActionId: focusedActionId ?? undefined,
+                    visibleFlowKinds: visibleActionFlowKinds,
+                    direction: actionFlowDirection,
+                    layoutProviderId,
+                },
+                statetransition: { viewpointFilter, layoutProviderId },
+                sequence: { viewpointFilter },
+                general: {
+                    mode: generalMode, viewpointFilter, expandedNodes, nodeDirections,
+                    callbacks: treeCallbacks,
+                    positionCache: positionCacheRef.current,
+                    layoutProviderId,
+                },
+                standard: {
+                    viewpointFilter,
+                    relationshipTypes: selectedDiagram?.relationshipTypes,
+                    compartments: isGeneralTemplate,
+                    layoutProviderId,
+                },
+            };
+            const result = provider.compute(model, options);
+            // Sync templates apply immediately (no spinner flash); async ones
+            // run bounded with the progress surface.
+            if (result instanceof Promise) run(provider.descriptor.label, result, provider.descriptor.interactive);
+            else apply(result, provider.descriptor.interactive);
         };
 
         const timer = window.setTimeout(dispatch, LAYOUT_SWITCH_DEBOUNCE_MS);
@@ -1562,15 +1541,11 @@ function DiagramCanvasInner() {
                         {/* FBS controls */}
                         {isFBSDiagram && (
                             <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                <button onClick={expandAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                    Expand All
-                                </button>
-                                <button onClick={collapseAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                    Collapse All
-                                </button>
+                                <ToolbarSep />
+                                <IconButton icon={<Icon.expand />} onClick={expandAll}
+                                    title="Expand all nodes" ariaLabel="Expand all" />
+                                <IconButton icon={<Icon.collapse />} onClick={collapseAll}
+                                    title="Collapse all nodes" ariaLabel="Collapse all" />
                             </>
                         )}
 
@@ -1705,25 +1680,21 @@ function DiagramCanvasInner() {
 
                         {viewKind === 'interconnection' && (
                             <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                <button
+                                <ToolbarSep />
+                                <IconButton
+                                    icon={<Icon.expand />}
                                     onClick={() => setCollapsedInterconnectionNodes(new Set())}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                >
-                                    Expand All
-                                </button>
-                                <button
+                                    title="Expand all parts" ariaLabel="Expand all"
+                                />
+                                <IconButton
+                                    icon={<Icon.collapse />}
                                     onClick={() => setCollapsedInterconnectionNodes(new Set(
                                         model?.relationships
                                             .filter(r => ['composes', 'composedof', 'aggregation', 'decomposedby'].includes(r.type.toLowerCase()))
                                             .map(r => r.sourceId) ?? [],
                                     ))}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                >
-                                    Collapse All
-                                </button>
+                                    title="Collapse all parts" ariaLabel="Collapse all"
+                                />
                                 <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
                                 <Segmented
                                     value={interconnectionPortDisplay}
@@ -1852,14 +1823,10 @@ function DiagramCanvasInner() {
                                 </div>
                                 {generalMode !== 'graph' && (
                                     <>
-                                        <button onClick={expandAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                            style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                            Expand All
-                                        </button>
-                                        <button onClick={collapseAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                            style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                            Collapse All
-                                        </button>
+                                        <IconButton icon={<Icon.expand />} onClick={expandAll}
+                                            title="Expand all nodes" ariaLabel="Expand all" />
+                                        <IconButton icon={<Icon.collapse />} onClick={collapseAll}
+                                            title="Collapse all nodes" ariaLabel="Collapse all" />
                                         {generalMode === 'tree' && (
                                             <button onClick={resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
                                                 style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
@@ -1888,15 +1855,11 @@ function DiagramCanvasInner() {
                                         </button>
                                     ))}
                                 </div>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                <button onClick={expandAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                    Expand All
-                                </button>
-                                <button onClick={collapseAll} className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}>
-                                    Collapse All
-                                </button>
+                                <ToolbarSep />
+                                <IconButton icon={<Icon.expand />} onClick={expandAll}
+                                    title="Expand all nodes" ariaLabel="Expand all" />
+                                <IconButton icon={<Icon.collapse />} onClick={collapseAll}
+                                    title="Collapse all nodes" ariaLabel="Collapse all" />
                                 {layoutStyle === 'decomposition' && (
                                     <button onClick={resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
                                         style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}

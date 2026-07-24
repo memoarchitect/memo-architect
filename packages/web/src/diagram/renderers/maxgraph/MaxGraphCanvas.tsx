@@ -12,10 +12,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FitPlugin, Graph, InternalEvent, Point, type Cell, type CellStyle } from '@maxgraph/core';
-import type { DiagramLayout } from '@memoarchitect/tools/browser';
-import { useModelStore, getDiagram } from '../../../store/model-store';
+import {
+    ConnectionHandler, FitPlugin, Graph, InternalEvent, Point,
+    RubberBandHandler, SelectionHandler, getDefaultPlugins,
+    type Cell, type CellStyle,
+} from '@maxgraph/core';
+import type { DiagramLayout, MemoElement } from '@memoarchitect/tools/browser';
+import { useModelStore, getDiagram, getRegistries } from '../../../store/model-store';
 import { sendDiagramLayoutUpdate } from '../../../store/ws-client';
+import { RelationshipPicker, type RelationshipChoice } from '../../../views/RelationshipPicker';
 import { FONT } from '../../../styles/tokens';
 import { GridView } from '../../../views/GridView';
 import { BrowserView } from '../../../views/BrowserView';
@@ -68,6 +73,30 @@ function nodeStyle(spec: SceneNodeSpec): CellStyle {
 /** Overlay saved sidecar geometry (user drags) onto the computed scene. */
 function fitGraph(graph: Graph | null): void {
     graph?.getPlugin<FitPlugin>('fit')?.fit({ margin: 24 });
+}
+
+/**
+ * Fit only once the container has real dimensions. Calling fit() on a 0×0
+ * container (which happens on the first paint of a route transition) collapses
+ * the whole diagram into a corner at a broken scale. Fit on the next frame if
+ * the container is already sized, else observe until it is, then disconnect.
+ * Returns a cleanup that cancels any pending fit.
+ */
+function fitWhenSized(graph: Graph, container: HTMLElement): () => void {
+    let settled = false;
+    const attempt = (): boolean => {
+        if (settled) return true;
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+            fitGraph(graph);
+            settled = true;
+        }
+        return settled;
+    };
+    const raf = requestAnimationFrame(attempt);
+    if (attempt()) return () => cancelAnimationFrame(raf);
+    const observer = new ResizeObserver(() => { if (attempt()) observer.disconnect(); });
+    observer.observe(container);
+    return () => { cancelAnimationFrame(raf); observer.disconnect(); };
 }
 
 function applySavedLayout(scene: DiagramSceneSpec, saved?: DiagramLayout): DiagramSceneSpec {
@@ -132,6 +161,7 @@ export function MaxGraphCanvas() {
     const inspectRelationship = useModelStore(s => s.inspectRelationship);
     const diagramLayouts = useModelStore(s => s.diagramLayouts);
     const mergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
+    const createRelationship = useModelStore(s => s.createRelationship);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<Graph | null>(null);
@@ -148,6 +178,12 @@ export function MaxGraphCanvas() {
     const [visibleFlowKinds, setVisibleFlowKinds] = useState<Set<ActionFlowKind>>(new Set(['control', 'data', 'energy', 'material']));
     const [expandedActionIds, setExpandedActionIds] = useState<Set<string>>(new Set());
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    /** Selected vertex count — the align tools appear from two. */
+    const [selectionCount, setSelectionCount] = useState(0);
+    /** Open relationship picker for an interactively drawn connector. */
+    const [relPicker, setRelPicker] = useState<{ sourceElement: MemoElement; targetElement: MemoElement } | null>(null);
+    /** Bumped to rebuild the graph — e.g. after resetting to the auto layout. */
+    const [rebuildNonce, setRebuildNonce] = useState(0);
 
     const selectedDiagram = getDiagram(model, selectedDiagramId);
     const viewKind = resolveViewKind(selectedDiagram);
@@ -239,6 +275,9 @@ export function MaxGraphCanvas() {
     }, [selectedDiagramId, mergeDiagramLayouts]);
     const persistMovedCellsRef = useRef(persistMovedCells);
     useEffect(() => { persistMovedCellsRef.current = persistMovedCells; }, [persistMovedCells]);
+    // Latest model for the connection handler, which is bound once at mount.
+    const modelRef = useRef(model);
+    useEffect(() => { modelRef.current = model; }, [model]);
 
     // ── Graph mount: rebuild cells whenever the scene changes ────────────────
     useEffect(() => {
@@ -246,16 +285,28 @@ export function MaxGraphCanvas() {
         if (!container || !scene) return;
 
         InternalEvent.disableContextMenu(container);
-        const graph = new Graph(container);
+        // Rubberband selection on top of the default plugin set — left-drag on
+        // empty canvas marquee-selects, the draw.io convention.
+        const graph = new Graph(container, undefined, [...getDefaultPlugins(), RubberBandHandler]);
         graphRef.current = graph;
         graph.setPanning(true);
         graph.setCellsEditable(false);
         graph.setCellsResizable(false);
-        graph.setConnectable(false);
+        // Authoring: draw a connector by dragging from a part's edge. The raw
+        // maxGraph edge is discarded on CONNECT; the real typed relationship is
+        // created through the same picker + store as the ReactFlow canvas, and
+        // redrawn when the model change recomputes the scene.
+        graph.setConnectable(true);
         graph.setAllowDanglingEdges(false);
         graph.setCellsDisconnectable(false);
         // Frames (lane/boundary cells) stay behind their children when dragged
         graph.options.foldingEnabled = false;
+        // draw.io alignment tools: dashed guides that snap a dragged cell to
+        // the edges/centres of its neighbours, plus grid snapping.
+        graph.setGridEnabled(true);
+        graph.setGridSize(20);
+        const selectionHandler = graph.getPlugin<SelectionHandler>('SelectionHandler');
+        if (selectionHandler) selectionHandler.guidesEnabled = true;
 
         const saved = selectedDiagramId
             ? useModelStore.getState().diagramLayouts[selectedDiagramId]
@@ -314,13 +365,16 @@ export function MaxGraphCanvas() {
         // Source saves replace the scene, but should not move the camera.
         const preservedViewport = preservedViewportRef.current;
         preservedViewportRef.current = null;
+        let cancelFit: (() => void) | undefined;
         if (preservedViewport) {
             graph.getView().scaleAndTranslate(preservedViewport.scale, preservedViewport.x, preservedViewport.y);
         } else if (saved?.canvas?.zoom !== undefined && saved.canvas.pan) {
             graph.getView().setScale(saved.canvas.zoom);
             graph.getView().setTranslate(saved.canvas.pan.x, saved.canvas.pan.y);
         } else {
-            fitGraph(graph);
+            // Defer until the container is measured; fit on a 0×0 container
+            // (first paint of a route change) collapses the diagram to a corner.
+            cancelFit = fitWhenSized(graph, container);
         }
 
         // A selection changes as soon as a drag starts. Inspect only a genuine
@@ -342,6 +396,34 @@ export function MaxGraphCanvas() {
             persistMovedCellsRef.current(cells);
         });
 
+        // Track the vertex selection so the align tools can appear.
+        const selectionModel = graph.getSelectionModel();
+        const onSelectionChange = () => {
+            setSelectionCount(graph.getSelectionCells().filter(cell => !cell.isEdge()).length);
+        };
+        selectionModel.addListener(InternalEvent.CHANGE, onSelectionChange);
+
+        // Interactive edge draw → typed relationship. maxGraph inserts a raw
+        // edge on connect; capture its endpoints, discard it, and open the
+        // relationship picker so the ontology decides the legal type.
+        const connectionHandler = graph.getPlugin<ConnectionHandler>('ConnectionHandler');
+        connectionHandler?.addListener(InternalEvent.CONNECT, (_sender: unknown, event: { getProperty(name: string): unknown }) => {
+            const edge = event.getProperty('cell') as Cell | undefined;
+            if (!edge) return;
+            const sourceId = edge.getTerminal(true)?.getId();
+            const targetId = edge.getTerminal(false)?.getId();
+            // Remove the phantom edge after connect() settles its own update.
+            window.setTimeout(() => {
+                try { graph.removeCells([edge], false); } catch { /* already gone */ }
+            }, 0);
+            const current = modelRef.current;
+            const sourceElement = sourceId ? current?.elements[sourceId] : undefined;
+            const targetElement = targetId ? current?.elements[targetId] : undefined;
+            if (sourceElement && targetElement && sourceId !== targetId) {
+                setRelPicker({ sourceElement, targetElement });
+            }
+        });
+
         // Wheel zoom toward the cursor (draw.io convention: plain wheel zooms)
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
@@ -350,22 +432,70 @@ export function MaxGraphCanvas() {
         container.addEventListener('wheel', onWheel, { passive: false });
 
         return () => {
+            cancelFit?.();
             container.removeEventListener('wheel', onWheel);
+            selectionModel.removeListener(onSelectionChange);
+            setSelectionCount(0);
             graphRef.current = null;
             graph.destroy();
             container.innerHTML = '';
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [scene, selectedDiagramId]);
+    }, [scene, selectedDiagramId, rebuildNonce]);
 
     // ── Selection highlight from the explorer/inspector ───────────────────────
     useEffect(() => {
         const graph = graphRef.current;
         if (!graph) return;
+        // A manual multi-selection (rubberband / shift-click) drives the align
+        // tools — syncing it back to the single inspected cell would make a
+        // two-cell selection unreachable.
+        if (graph.getSelectionCells().length > 1) return;
         if (!selectedElementId) { graph.clearSelection(); return; }
         const cell = graph.getDataModel().getCell(selectedElementId);
         if (cell && graph.getSelectionCell() !== cell) graph.setSelectionCell(cell);
     }, [selectedElementId, scene]);
+
+    // draw.io Arrange-style alignment: align selected vertices on an edge or
+    // centreline. maxGraph moves the cells; the sidecar persist keeps them.
+    const alignSelection = useCallback((align: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+        const graph = graphRef.current;
+        if (!graph) return;
+        const cells = graph.getSelectionCells().filter(cell => !cell.isEdge());
+        if (cells.length < 2) return;
+        graph.alignCells(align, cells);
+        persistMovedCellsRef.current(cells);
+    }, []);
+
+    // Persist the picked relationship; the model change recomputes the scene,
+    // which draws the real typed edge. Mirrors the ReactFlow confirm path.
+    const confirmRelationship = useCallback(async (choice: RelationshipChoice) => {
+        const drawnFromId = relPicker?.sourceElement.id;
+        setRelPicker(null);
+        if (!selectedDiagramId) return;
+        const outcome = await createRelationship({
+            type: choice.type,
+            sourceId: choice.sourceId,
+            targetId: choice.targetId,
+            direction: choice.direction,
+            selectedElementId: drawnFromId,
+            diagramId: selectedDiagramId,
+        });
+        if (!outcome.success) console.warn(`[MEMO] Relationship rejected: ${outcome.error}`);
+    }, [relPicker, selectedDiagramId, createRelationship]);
+
+    // Auto layout is renderer-independent: clear this diagram's saved drags so
+    // the computed template layout is shown, and rebuild the graph. Mirrors the
+    // ReactFlow canvas's "Auto layout" reset.
+    const hasManualLayout = !!currentLayout
+        && (Object.keys(currentLayout.nodes ?? {}).length > 0 || currentLayout.canvas?.autoLayout === false);
+    const resetLayout = useCallback(() => {
+        if (!selectedDiagramId) return;
+        const cleared: DiagramLayout = { nodes: {}, edges: {}, canvas: { autoLayout: true } };
+        mergeDiagramLayouts({ [selectedDiagramId]: cleared });
+        sendDiagramLayoutUpdate(selectedDiagramId, cleared);
+        setRebuildNonce(nonce => nonce + 1);
+    }, [selectedDiagramId, mergeDiagramLayouts]);
 
     const exportSvg = useCallback(() => {
         const svg = containerRef.current?.querySelector('svg');
@@ -428,10 +558,30 @@ export function MaxGraphCanvas() {
                 </div>
             )}
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                {selectionCount >= 2 && (
+                    <>
+                        <button style={toolbarButton} onClick={() => alignSelection('left')} title="Align left edges" aria-label="Align left">⇤</button>
+                        <button style={toolbarButton} onClick={() => alignSelection('center')} title="Align horizontal centres" aria-label="Align centres">↔</button>
+                        <button style={toolbarButton} onClick={() => alignSelection('right')} title="Align right edges" aria-label="Align right">⇥</button>
+                        <button style={toolbarButton} onClick={() => alignSelection('top')} title="Align top edges" aria-label="Align top">⤒</button>
+                        <button style={toolbarButton} onClick={() => alignSelection('middle')} title="Align vertical middles" aria-label="Align middles">↕</button>
+                        <button style={toolbarButton} onClick={() => alignSelection('bottom')} title="Align bottom edges" aria-label="Align bottom">⤓</button>
+                        <span style={{ color: '#E5E5E0' }}>|</span>
+                    </>
+                )}
+                <button
+                    style={{ ...toolbarButton, background: hasManualLayout ? '#FFFFFF' : '#ECFDF5', color: hasManualLayout ? '#374151' : '#047857', borderColor: hasManualLayout ? '#E5E5E0' : '#A7F3D0' }}
+                    onClick={resetLayout}
+                    disabled={!hasManualLayout}
+                    title={hasManualLayout ? 'Re-run automatic layout (discards manual moves)' : 'Layout is automatic'}
+                >
+                    Auto layout
+                </button>
+                <span style={{ color: '#E5E5E0' }}>|</span>
                 <button style={toolbarButton} onClick={() => graphRef.current?.zoomIn()} title="Zoom in">＋</button>
                 <button style={toolbarButton} onClick={() => graphRef.current?.zoomOut()} title="Zoom out">－</button>
-                <button style={toolbarButton} onClick={() => fitGraph(graphRef.current)} title="Fit diagram">Fit</button>
-                <button style={toolbarButton} onClick={exportSvg} title="Export as SVG">SVG</button>
+                <button style={toolbarButton} onClick={() => fitGraph(graphRef.current)} title="Fit diagram to the viewport">Fit view</button>
+                <button style={toolbarButton} onClick={exportSvg} title="Download this diagram as an SVG image">Export SVG</button>
             </div>
             {isComputing && (
                 <div className="absolute inset-x-0 top-0 z-10" style={{
@@ -453,6 +603,17 @@ export function MaxGraphCanvas() {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ color: '#9CA3AF', fontSize: FONT.sm }}>
                     {selectedDiagram ? 'No elements in this view.' : 'Select a view from the explorer.'}
                 </div>
+            )}
+            {relPicker && (
+                <RelationshipPicker
+                    x={window.innerWidth / 2 - 130}
+                    y={window.innerHeight / 2 - 160}
+                    sourceElement={relPicker.sourceElement}
+                    targetElement={relPicker.targetElement}
+                    registries={getRegistries(model)}
+                    onSelect={confirmRelationship}
+                    onCancel={() => setRelPicker(null)}
+                />
             )}
         </div>
     );

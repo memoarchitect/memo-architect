@@ -94,18 +94,21 @@ export function ToolbarCluster({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Icon button / toggle ────────────────────────────────────────────────────
-export function IconButton({ icon, label, onClick, active = false, title, ariaExpanded }: {
+export function IconButton({ icon, label, onClick, active = false, title, ariaExpanded, ariaLabel }: {
     icon: React.ReactNode;
     label?: React.ReactNode;
     onClick: () => void;
     active?: boolean;
     title?: string;
     ariaExpanded?: boolean;
+    /** Accessible name for icon-only buttons (no visible label). */
+    ariaLabel?: string;
 }) {
     return (
         <button
             onClick={onClick}
             title={title}
+            aria-label={ariaLabel}
             aria-pressed={active}
             aria-expanded={ariaExpanded}
             className="flex items-center gap-1.5 text-xs font-semibold"

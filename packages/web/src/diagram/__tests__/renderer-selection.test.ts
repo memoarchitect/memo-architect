@@ -47,7 +47,8 @@ describe('normalizeRendererId', () => {
 
 describe('selectedRendererId precedence', () => {
     it('defaults to the ReactFlow renderer', () => {
-        expect(selectedRendererId()).toBe(DEFAULT_RENDERER_ID);
+        expect(DEFAULT_RENDERER_ID).toBe('memo.renderer.reactflow');
+        expect(selectedRendererId()).toBe('memo.renderer.reactflow');
     });
 
     it('reads the localStorage preference', () => {

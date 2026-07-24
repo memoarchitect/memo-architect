@@ -208,6 +208,204 @@ export function routeOrthogonalEdges(
     return result;
 }
 
+// ─── Connector label placement ───────────────────────────────────────────────
+
+export interface ConnectorLabelRequest {
+    id: string;
+    points: RoutePoint[];
+    /** Estimated on-canvas label box, including padding. */
+    width: number;
+    height: number;
+}
+
+const rectOverlap = (
+    a: { x: number; y: number; width: number; height: number },
+    b: { x: number; y: number; width: number; height: number },
+): number => {
+    const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+    const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+    return w > 0 && h > 0 ? w * h : 0;
+};
+
+/** Length of the part of segment a→b that lies inside rect (axis-aligned). */
+const segmentLengthInRect = (
+    a: RoutePoint,
+    b: RoutePoint,
+    rect: { x: number; y: number; width: number; height: number },
+): number => {
+    if (a.y === b.y) {
+        if (a.y < rect.y || a.y > rect.y + rect.height) return 0;
+        const overlap = Math.min(Math.max(a.x, b.x), rect.x + rect.width) - Math.max(Math.min(a.x, b.x), rect.x);
+        return Math.max(overlap, 0);
+    }
+    if (a.x === b.x) {
+        if (a.x < rect.x || a.x > rect.x + rect.width) return 0;
+        const overlap = Math.min(Math.max(a.y, b.y), rect.y + rect.height) - Math.max(Math.min(a.y, b.y), rect.y);
+        return Math.max(overlap, 0);
+    }
+    return 0;
+};
+
+/**
+ * Place every connector label of a diagram together so labels avoid each
+ * other, the node boxes and every routed line — a single edge cannot see its
+ * neighbours' labels or tracks. Candidates are points beside each route
+ * segment; the best-scoring candidate wins. Returns label centre points keyed
+ * by request id.
+ */
+export function placeConnectorLabels(
+    requests: ConnectorLabelRequest[],
+    obstacles: RouteObstacle[],
+): Map<string, RoutePoint> {
+    const result = new Map<string, RoutePoint>();
+    const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
+    const routeLength = (points: RoutePoint[]) => points.slice(1)
+        .reduce((sum, p, i) => sum + Math.abs(p.x - points[i].x) + Math.abs(p.y - points[i].y), 0);
+    // Every routed segment, so a label never sits across another edge's line.
+    const segments = requests.flatMap(request => request.points.slice(1).map((point, i) => ({
+        edgeId: request.id, a: request.points[i], b: point,
+    })));
+    // Long routes claim the scarce corridors first, mirroring the router.
+    const ordered = [...requests].sort((a, b) => routeLength(b.points) - routeLength(a.points));
+
+    for (const request of ordered) {
+        const { points, width, height } = request;
+        if (points.length < 2) continue;
+        type Candidate = { center: RoutePoint; segmentLength: number };
+        const candidates: Candidate[] = [];
+        for (let i = 1; i < points.length; i++) {
+            const a = points[i - 1], b = points[i];
+            const segmentLength = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+            const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+            const gap = height / 2 + 4;
+            for (const t of segmentLength >= width * 1.5 ? [0.5, 0.3, 0.7] : [0.5, 0.25, 0.75]) {
+                const at = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+                for (const sign of [-1, 1]) {
+                    candidates.push({
+                        center: horizontal
+                            ? { x: at.x, y: at.y + sign * gap }
+                            : { x: at.x + sign * (width / 2 + 4), y: at.y },
+                        segmentLength,
+                    });
+                }
+            }
+        }
+        let best: RoutePoint = candidates[0]?.center ?? points[0];
+        let bestScore = Number.POSITIVE_INFINITY;
+        for (const candidate of candidates) {
+            const rect = {
+                x: candidate.center.x - width / 2,
+                y: candidate.center.y - height / 2,
+                width,
+                height,
+            };
+            let score = 0;
+            for (const label of placed) score += rectOverlap(rect, label) * 3;
+            // A label under a node border is worse than two labels touching:
+            // the node paints over it entirely.
+            for (const obstacle of obstacles) score += rectOverlap(rect, obstacle) * 4;
+            // Another edge's line striking through the text is almost as bad —
+            // weight the crossing length as if it were a 12px-tall overlap.
+            for (const segment of segments) {
+                if (segment.edgeId === request.id) continue;
+                score += segmentLengthInRect(segment.a, segment.b, rect) * 12 * 2.5;
+            }
+            // Prefer roomier segments: a label on a short stub crowds a node.
+            score += Math.max(0, width * 1.4 - candidate.segmentLength) * 2;
+            if (score < bestScore) { bestScore = score; best = candidate.center; }
+        }
+        result.set(request.id, best);
+        placed.push({ x: best.x - width / 2, y: best.y - height / 2, width, height });
+    }
+    return result;
+}
+
+// ─── Connector finishing pipeline ────────────────────────────────────────────
+//
+// The template-facing entry point for connector rendering quality: obstacle-
+// avoiding orthogonal routes plus diagram-wide label placement, in one call.
+// A template supplies node rectangles and logical connectors; it gets back
+// per-edge `points` + `labelPoint` ready for the interconnectionEdge renderer.
+// Templates with custom anchoring (e.g. IBD boundary ports) can instead
+// compose the primitives (routeOrthogonalEdges / placeConnectorLabels)
+// directly — this wrapper covers the common side-centre case so a new view
+// kind needs no routing code of its own.
+
+export interface ConnectorRect { x: number; y: number; width: number; height: number }
+
+export interface Connector {
+    id: string;
+    sourceId: string;
+    targetId: string;
+    label?: string;
+}
+
+export interface FinishedConnector {
+    points: RoutePoint[];
+    labelPoint?: RoutePoint;
+}
+
+export const CONNECTOR_LABEL_HEIGHT = 20;
+/** Estimated pill width for the interconnectionEdge label (12px, 600). */
+export const connectorLabelWidth = (label: string): number => label.length * 6.4 + 12;
+
+export function finishConnectorRoutes(options: {
+    connectors: Connector[];
+    /** Absolute node rectangles; edges route between facing side centres. */
+    rects: ReadonlyMap<string, ConnectorRect>;
+    /** Rectangles routes must avoid; defaults to every rect. */
+    obstacles?: RouteObstacle[];
+    channelGap?: number;
+}): Map<string, FinishedConnector> {
+    const { connectors, rects } = options;
+    const obstacles = options.obstacles
+        ?? [...rects.entries()].map(([id, r]) => ({ id, ...r }));
+
+    const requests: OrthogonalRouteRequest[] = [];
+    for (const c of connectors) {
+        const s = rects.get(c.sourceId);
+        const g = rects.get(c.targetId);
+        if (!s || !g || c.sourceId === c.targetId) continue;
+        const horizontal = Math.abs((g.x + g.width / 2) - (s.x + s.width / 2))
+            >= Math.abs((g.y + g.height / 2) - (s.y + s.height / 2));
+        const forward = horizontal
+            ? g.x + g.width / 2 >= s.x + s.width / 2
+            : g.y + g.height / 2 >= s.y + s.height / 2;
+        const sourceSide = horizontal ? (forward ? 'right' : 'left') : (forward ? 'bottom' : 'top');
+        const targetSide = horizontal ? (forward ? 'left' : 'right') : (forward ? 'top' : 'bottom');
+        const sideCenter = (r: ConnectorRect, side: string): RoutePoint =>
+            side === 'left' ? { x: r.x, y: r.y + r.height / 2 }
+            : side === 'right' ? { x: r.x + r.width, y: r.y + r.height / 2 }
+            : side === 'top' ? { x: r.x + r.width / 2, y: r.y }
+            : { x: r.x + r.width / 2, y: r.y + r.height };
+        requests.push({
+            id: c.id,
+            source: sideCenter(s, sourceSide),
+            target: sideCenter(g, targetSide),
+            sourceNodeId: c.sourceId,
+            targetNodeId: c.targetId,
+            sourceSide,
+            targetSide,
+        });
+    }
+    const routes = routeOrthogonalEdges(requests, obstacles, options.channelGap);
+    const labelPoints = placeConnectorLabels(
+        connectors.flatMap(c => {
+            const points = routes.get(c.id);
+            return c.label && points && points.length >= 2
+                ? [{ id: c.id, points, width: connectorLabelWidth(c.label), height: CONNECTOR_LABEL_HEIGHT }]
+                : [];
+        }),
+        obstacles,
+    );
+
+    const result = new Map<string, FinishedConnector>();
+    for (const [id, points] of routes) {
+        result.set(id, { points, labelPoint: labelPoints.get(id) });
+    }
+    return result;
+}
+
 /** Base footprint score shared by every diagram template. */
 export function compactnessScore(width: number, height: number, targetAspect = 1.5): number {
     if (width <= 0 || height <= 0) return Number.POSITIVE_INFINITY;

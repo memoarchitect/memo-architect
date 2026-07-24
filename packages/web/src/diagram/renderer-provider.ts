@@ -57,6 +57,11 @@ export interface DiagramRendererProvider {
     loadComponent(): Promise<DiagramCanvasComponent>;
 }
 
+// ReactFlow is the default diagram surface: rich React node components (ports,
+// typed-item pins, fork/join, layer colours), full authoring, and the clean
+// routing quality the templates are tuned for. maxGraph (the draw.io engine)
+// is available from the in-canvas renderer switcher for its alignment guides,
+// snapping and SVG export.
 export const DEFAULT_RENDERER_ID = 'memo.renderer.reactflow';
 
 export function hasRendererCapabilities(

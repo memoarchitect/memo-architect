@@ -27,7 +27,11 @@ import type { Node, Edge } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
-import { resolveGraphLayout, routeOrthogonalEdges, type LayoutResult, type OrthogonalRouteRequest } from '../layout';
+import {
+    CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
+    resolveGraphLayout, routeOrthogonalEdges,
+    type LayoutResult, type OrthogonalRouteRequest,
+} from '../layout';
 import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree';
 
 /**
@@ -923,9 +927,24 @@ export async function computeInterconnectionLayout(
             return { id: n.id, x: abs.x, y: abs.y, width: l.width, height: l.height };
         });
     const routes = routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles);
+    // Labelled connectors (typed flow items) share one placement pass so two
+    // flows through the same corridor don't stack their labels.
+    const labelPoints = placeConnectorLabels(
+        edgeDrafts.flatMap(({ edge }) => {
+            const points = routes.get(edge.id);
+            return edge.label && points && points.length >= 2
+                ? [{ id: edge.id, points, width: connectorLabelWidth(String(edge.label)), height: CONNECTOR_LABEL_HEIGHT }]
+                : [];
+        }),
+        obstacles,
+    );
     const edges = edgeDrafts.map(({ edge }) => ({
         ...edge,
-        data: { ...edge.data, points: routes.get(edge.id) ?? [] },
+        data: {
+            ...edge.data,
+            points: routes.get(edge.id) ?? [],
+            labelPoint: labelPoints.get(edge.id),
+        },
     }));
 
     return { nodes, edges };

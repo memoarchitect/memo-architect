@@ -88,7 +88,6 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const size = port.size ?? INTERCONNECTION_PORT_SIZE;
-    const hitInset = (PORT_HIT_SIZE - size) / 2;
     const labelOffset = size + 5;
     const color = portColor(port.direction);
     // Label sits inside the owner, just ABOVE the port's centreline — the
@@ -121,46 +120,52 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
     return (
         <div
             className="nodrag nopan"
-            onPointerDown={onMove ? event => {
-                event.preventDefault();
-                event.stopPropagation();
-                const startClientY = event.clientY;
-                const startY = port.y;
-                const move = (e: PointerEvent) => onMove(startY + (e.clientY - startClientY) / getZoom());
-                const up = () => {
-                    window.removeEventListener('pointermove', move);
-                    window.removeEventListener('pointerup', up);
-                };
-                window.addEventListener('pointermove', move);
-                window.addEventListener('pointerup', up, { once: true });
-            } : undefined}
             style={{
                 position: 'absolute',
-                left: port.x - hitInset,
-                top: port.y - hitInset,
-                width: PORT_HIT_SIZE,
-                height: PORT_HIT_SIZE,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                left: port.x,
+                top: port.y,
+                width: size,
+                height: size,
                 zIndex: port.nested ? 11 : 10,
-                // Use the board's grab convention instead of a competing
-                // resize cursor. The port is constrained vertically by the
-                // drag handler, but the pointer remains visually stable when
-                // crossing its boundary and the parent node.
-                cursor: onMove ? 'grab' : 'default',
-                touchAction: 'none',
-                // Ports are interaction controls as well as model glyphs. Keep
-                // their on-screen acquisition size stable when fitView zooms a
-                // large IBD down; otherwise a 32px port becomes ~18px at 0.58x
-                // and the adjacent connector hit path wins hover intermittently.
-                transform: `scale(${1 / Math.max(zoom, 0.1)})`,
-                transformOrigin: 'center',
             }}
-            title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
         >
+            {/* Invisible hit target only. Ports are interaction controls as
+                well as model glyphs: keep the on-screen acquisition size stable
+                when fitView zooms a large IBD down. The visual square and its
+                label stay at model scale \u2014 scaling them too made labels grow
+                relative to their node at low zoom and collide. */}
+            <div
+                onPointerDown={onMove ? event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const startClientY = event.clientY;
+                    const startY = port.y;
+                    const move = (e: PointerEvent) => onMove(startY + (e.clientY - startClientY) / getZoom());
+                    const up = () => {
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', up);
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up, { once: true });
+                } : undefined}
+                title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
+                style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    width: PORT_HIT_SIZE,
+                    height: PORT_HIT_SIZE,
+                    transform: `translate(-50%, -50%) scale(${1 / Math.max(zoom, 0.1)})`,
+                    // Use the board's grab convention instead of a competing
+                    // resize cursor. The port is constrained vertically by the
+                    // drag handler, but the pointer remains visually stable
+                    // when crossing its boundary and the parent node.
+                    cursor: onMove ? 'grab' : 'default',
+                    touchAction: 'none',
+                }}
+            />
             <div style={{
-                position: 'relative', width: size, height: size, boxSizing: 'border-box',
+                position: 'absolute', inset: 0, boxSizing: 'border-box',
                 background: '#FFFFFF', border: `2px solid ${color}`, borderRadius: 5,
                 boxShadow: '0 1px 3px rgba(15,23,42,0.18)', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', color,
@@ -169,7 +174,7 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
             }}>
                 {portGlyph(port.direction, port.side)}
                 <span style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
-                {/* Anchor-only handles. The 36px parent owns all interaction. */}
+                {/* Anchor-only handles. The hit target owns all interaction. */}
                 {([
                     { suffix: '', pos: SIDE_TO_POSITION[port.side] },
                     { suffix: INNER_HANDLE_SUFFIX, pos: SIDE_TO_POSITION[OPPOSITE_SIDE[port.side]] },

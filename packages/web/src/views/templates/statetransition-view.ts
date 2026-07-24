@@ -13,7 +13,10 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { EDGE, FONT } from '../../styles/tokens';
-import { elk, type LayoutResult } from '../layout';
+import {
+    elk, finishConnectorRoutes,
+    type LayoutResult, type RouteObstacle,
+} from '../layout';
 import { buildCompositionTree } from './composition-tree';
 
 // ─── Classification ──────────────────────────────────────────────────────────
@@ -107,6 +110,8 @@ export function resolveTransitions(
 
 const STATE_COLOR = '#FF6B6B';
 const NOTE_COLOR = '#95A5A6';
+/** Transitions read as neutral connectors; the coral stays on state accents. */
+const TRANSITION_COLOR = '#64748B';
 
 export interface StateTransitionOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
@@ -149,10 +154,17 @@ export async function computeStateTransitionLayout(
             id,
             layoutOptions: {
                 'elk.algorithm': 'layered',
-                'elk.direction': 'RIGHT',
+                // UML reading order: the machine flows top-down; back
+                // transitions route around the sides instead of weaving long
+                // corridors between two horizontal rows.
+                'elk.direction': 'DOWN',
                 'elk.padding': '[top=48,left=28,bottom=28,right=28]',
-                'elk.spacing.nodeNode': '48',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '72',
+                // Roomy corridors: transitions are routed orthogonally after
+                // layout and carry beside-the-line trigger labels, so parallel
+                // tracks and their labels need real space between states.
+                'elk.spacing.nodeNode': '72',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+                'elk.spacing.edgeNode': '32',
                 'elk.edgeRouting': 'ORTHOGONAL',
             },
             children: children.map(buildElkNode),
@@ -163,12 +175,12 @@ export async function computeStateTransitionLayout(
         id: 'root',
         layoutOptions: {
             'elk.algorithm': 'layered',
-            'elk.direction': 'RIGHT',
+            'elk.direction': 'DOWN',
             'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
             'elk.edgeRouting': 'ORTHOGONAL',
-            'elk.spacing.nodeNode': '56',
-            'elk.layered.spacing.nodeNodeBetweenLayers': '96',
-            'elk.spacing.edgeNode': '28',
+            'elk.spacing.nodeNode': '72',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+            'elk.spacing.edgeNode': '32',
             'elk.spacing.edgeLabel': '8',
             'elk.separateConnectedComponents': 'true',
             'elk.spacing.componentComponent': '64',
@@ -188,11 +200,20 @@ export async function computeStateTransitionLayout(
 
     // ── Flatten to ReactFlow nodes ──
     const nodes: Node[] = [];
-    const flatten = (elkNode: ElkNode, parentId?: string) => {
+    /** Absolute canvas rectangles, for orthogonal edge routing. */
+    const absRect = new Map<string, { x: number; y: number; width: number; height: number; isContainer: boolean }>();
+    const flatten = (elkNode: ElkNode, parentId?: string, parentAbs = { x: 0, y: 0 }) => {
         const el = tree.elements.get(elkNode.id);
         if (el) {
             const isContainer = !!elkNode.children?.length;
             const isMachine = el.kind.endsWith('Machine');
+            const abs = { x: parentAbs.x + (elkNode.x ?? 0), y: parentAbs.y + (elkNode.y ?? 0) };
+            absRect.set(elkNode.id, {
+                ...abs,
+                width: elkNode.width ?? 150,
+                height: elkNode.height ?? 54,
+                isContainer,
+            });
             nodes.push({
                 id: elkNode.id,
                 type: 'stateNode',
@@ -211,7 +232,7 @@ export async function computeStateTransitionLayout(
                     height: elkNode.height ?? 54,
                 },
             });
-            for (const child of elkNode.children ?? []) flatten(child, elkNode.id);
+            for (const child of elkNode.children ?? []) flatten(child, elkNode.id, abs);
             return;
         }
     };
@@ -248,27 +269,60 @@ export async function computeStateTransitionLayout(
         });
     }
 
-    // ── Transition edges ──
-    const edges: Edge[] = resolved.map((t, i) => ({
+    // ── Transition edges — the shared connector pipeline routes them around
+    // the state boxes and places all trigger labels together ──
+    // Containers hold the routed states, so only leaves and notes block routes.
+    const obstacles: RouteObstacle[] = [...absRect.entries()]
+        .filter(([, r]) => !r.isContainer)
+        .map(([id, r]) => ({ id, x: r.x, y: r.y, width: r.width, height: r.height }));
+    const finished = finishConnectorRoutes({
+        connectors: resolved.map((t, i) => ({
+            id: t.element.id || `st-e-${i}`,
+            sourceId: t.sourceId,
+            targetId: t.targetId,
+            label: t.label,
+        })),
+        rects: absRect,
+        obstacles,
+        // A wider channel gap than the IBD default: transition labels ride
+        // beside their line and must clear neighbouring state borders too.
+        channelGap: 26,
+    });
+
+    const edges: Edge[] = resolved.map((t, i) => {
         // A transition is a first-class SysML model element, so preserve its
         // id to let an edge click open the transition's properties.
-        id: t.element.id || `st-e-${i}`,
-        source: t.sourceId,
-        target: t.targetId,
-        type: 'smoothstep',
-        label: t.label,
-        style: { stroke: STATE_COLOR, strokeWidth: EDGE.defaultWidth },
-        labelStyle: { fontSize: FONT.badge, fill: '#6B7280', fontWeight: 500 },
-        labelBgPadding: EDGE.labelBgPadding,
-        labelBgBorderRadius: EDGE.labelBgRadius,
-        labelBgStyle: EDGE.labelBgStyle,
-        markerEnd: {
-            type: 'arrowclosed' as never,
-            color: STATE_COLOR,
-            width: EDGE.arrowSize,
-            height: EDGE.arrowSize,
-        },
-    }));
+        const id = t.element.id || `st-e-${i}`;
+        const route = finished.get(id);
+        const shared = {
+            id,
+            source: t.sourceId,
+            target: t.targetId,
+            label: t.label,
+            style: { stroke: TRANSITION_COLOR, strokeWidth: EDGE.defaultWidth },
+            markerEnd: {
+                type: 'arrowclosed' as never,
+                color: TRANSITION_COLOR,
+                width: EDGE.arrowSize,
+                height: EDGE.arrowSize,
+            },
+        };
+        if (route) {
+            return {
+                ...shared,
+                type: 'interconnectionEdge',
+                data: { points: route.points, labelPoint: route.labelPoint },
+            };
+        }
+        return {
+            ...shared,
+            type: 'smoothstep',
+            labelStyle: { fontSize: FONT.badge, fill: '#6B7280', fontWeight: 500 },
+            labelBgPadding: EDGE.labelBgPadding,
+            labelBgBorderRadius: EDGE.labelBgRadius,
+            labelBgStyle: EDGE.labelBgStyle,
+        };
+    });
 
     return { nodes, edges };
 }

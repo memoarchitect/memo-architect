@@ -48,51 +48,37 @@ function roundedPath(points: Point[], radius = 7): string {
     return `${path} L ${last.x},${last.y}`;
 }
 
-function pathMidpoint(points: Point[]): Point {
-    const lengths = points.slice(1).map((p, i) => Math.abs(p.x - points[i].x) + Math.abs(p.y - points[i].y));
-    const half = lengths.reduce((a, b) => a + b, 0) / 2;
-    let walked = 0;
-    for (let i = 0; i < lengths.length; i++) {
-        if (walked + lengths[i] >= half) {
-            const ratio = lengths[i] ? (half - walked) / lengths[i] : 0;
-            return {
-                x: points[i].x + (points[i + 1].x - points[i].x) * ratio,
-                y: points[i].y + (points[i + 1].y - points[i].y) * ratio,
-            };
-        }
-        walked += lengths[i];
-    }
-    return points[points.length - 1];
-}
-
 /**
- * Keep a connector label clear of its own line. The label belongs above or
- * beside the longest segment that contains the route midpoint, rather than
- * directly on top of the connector.
+ * Where a connector label belongs: the midpoint of the route's longest
+ * segment, nudged perpendicular so it sits beside the line instead of on it.
+ * The longest segment is an edge's most distinctive corridor — labels from
+ * edges sharing a junction spread apart instead of stacking at the shared
+ * path midpoint, and it is the stretch least likely to hug a node border.
  */
-function labelOffset(points: Point[]): { x: number; y: number } {
-    const lengths = points.slice(1).map((point, index) =>
-        Math.abs(point.x - points[index].x) + Math.abs(point.y - points[index].y));
-    const half = lengths.reduce((sum, length) => sum + length, 0) / 2;
-    let walked = 0;
-    for (let index = 0; index < lengths.length; index++) {
-        if (walked + lengths[index] >= half) {
-            const start = points[index], end = points[index + 1];
-            return Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
-                ? { x: 0, y: -14 }
-                : { x: 14, y: 0 };
-        }
-        walked += lengths[index];
+function labelAnchor(points: Point[]): Point {
+    let best = 0;
+    let bestLength = -1;
+    for (let i = 1; i < points.length; i++) {
+        const length = Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y);
+        if (length > bestLength) { bestLength = length; best = i; }
     }
-    return { x: 0, y: -14 };
+    const start = points[best - 1], end = points[best];
+    const offset = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+        ? { x: 0, y: -14 }
+        : { x: 14, y: 0 };
+    return {
+        x: (start.x + end.x) / 2 + offset.x,
+        y: (start.y + end.y) / 2 + offset.y,
+    };
 }
 
 function InterconnectionEdgeInner(props: EdgeProps) {
     const { getZoom } = useReactFlow();
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
-    const mid = pathMidpoint(points);
-    const offset = labelOffset(points);
+    // A template that placed all its labels together supplies the point; a
+    // lone edge falls back to its own longest segment.
+    const anchor = (props.data?.labelPoint as Point | undefined) ?? labelAnchor(points);
     const hitTrim = Math.min(28 / Math.max(getZoom(), 0.1), routeLength(points) * 0.3);
     const hitPoints = trimEndpoints(points, hitTrim);
     const onRouteChange = props.data?.onRouteChange as ((points: Point[]) => void) | undefined;
@@ -129,7 +115,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                 <EdgeLabelRenderer>
                     <div style={{
                         position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${mid.x + offset.x}px, ${mid.y + offset.y}px)`,
+                        transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)`,
                         fontSize: FONT.badge, fontWeight: 600, color: '#475569',
                         background: 'rgba(255,255,255,0.96)', border: '1px solid #E2E8F0',
                         padding: '1px 4px', borderRadius: 4, pointerEvents: 'none',

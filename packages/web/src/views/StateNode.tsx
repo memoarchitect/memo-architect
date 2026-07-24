@@ -6,7 +6,7 @@
 // for non-state behavior elements (properties, timing constraints).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
 
@@ -43,6 +43,7 @@ function FallbackHandles() {
 
 function StateNodeInner({ data, selected }: NodeProps) {
     const d = data as unknown as StateNodeData;
+    const [hovered, setHovered] = useState(false);
 
     if (d.isNote) {
         return (
@@ -73,7 +74,8 @@ function StateNodeInner({ data, selected }: NodeProps) {
         );
     }
 
-    // State machine frame or composite state region
+    // State machine frame or composite state region. The frame is the diagram
+    // boundary — neutral so the states carry the colour, like the IBD frame.
     if (d.isContainer) {
         return (
             <div
@@ -82,7 +84,7 @@ function StateNodeInner({ data, selected }: NodeProps) {
                     height: '100%',
                     boxSizing: 'border-box',
                     background: d.isMachine ? 'transparent' : `${d.color}06`,
-                    border: d.isMachine ? `1.5px dashed ${d.color}88` : `1.5px solid ${d.color}55`,
+                    border: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
                     borderRadius: 14,
                     boxShadow: selected ? SHADOW.selected : 'none',
                     position: 'relative',
@@ -90,10 +92,10 @@ function StateNodeInner({ data, selected }: NodeProps) {
             >
                 <FallbackHandles />
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '10px 14px 0' }}>
-                    <span style={{ fontSize: FONT.md, fontWeight: 700, color: d.color, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: FONT.md, fontWeight: 700, color: d.isMachine ? '#334155' : d.color, whiteSpace: 'nowrap' }}>
                         {d.label}
                     </span>
-                    <span style={{ fontSize: '8px', fontWeight: 700, color: `${d.color}AA`, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: d.isMachine ? '#94A3B8' : `${d.color}AA`, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         {d.kind}
                     </span>
                 </div>
@@ -101,17 +103,23 @@ function StateNodeInner({ data, selected }: NodeProps) {
         );
     }
 
-    // Leaf state: classic UML rounded box
+    // Leaf state: rounded card with the layer colour as a top accent — the
+    // same identity language as IBD part boxes.
     return (
         <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
             style={{
                 width: '100%',
                 height: '100%',
                 boxSizing: 'border-box',
                 background: '#FFFFFF',
-                border: `1.5px solid ${d.color}`,
+                border: `1px solid ${hovered ? `${d.color}9A` : '#CBD5E1'}`,
+                borderTop: `3px solid ${d.color}`,
                 borderRadius: 12,
-                boxShadow: selected ? SHADOW.selected : SHADOW.md,
+                boxShadow: selected ? SHADOW.selected
+                    : hovered ? '0 8px 20px rgba(15,23,42,0.12)' : SHADOW.md,
+                transition: 'box-shadow 150ms ease, border-color 150ms ease',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
