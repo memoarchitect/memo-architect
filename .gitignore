@@ -2,8 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# Legacy nested checkout retained locally during the move to memo-meta siblings.
+# Guard against a nested checkout reappearing. Architect consumes
+# @memoarchitect/tools and @memoarchitect/ontology from npm; the memo-meta
+# workspace links the sibling repos for cross-repo work. Neither is a submodule.
 /memo-tools/
+/memo/
 
 # Claude Code worktrees (internal)
 .claude/worktrees/
