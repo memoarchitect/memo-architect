@@ -26,21 +26,50 @@ export interface LayoutResult {
 
 // ─── Shared adaptive layout resolver ─────────────────────────────────────────
 
-export interface ResolverNode { id: string; width: number; height: number }
+/** A connection point on a node boundary, declared to the layout engine. */
+export interface ResolverPort {
+    id: string;
+    side: 'left' | 'right' | 'top' | 'bottom';
+}
+export interface ResolverNode {
+    id: string;
+    width: number;
+    height: number;
+    /**
+     * Boundary ports, when the view anchors connectors to them. Declaring them
+     * lets a port-aware engine order each side to minimise crossings instead of
+     * treating every connector as leaving the box centre.
+     */
+    ports?: ResolverPort[];
+}
 export interface ResolverEdge {
     id: string;
     source: string;
     target: string;
+    /** Boundary port the connector actually anchors to, when there is one. */
+    sourcePort?: string;
+    targetPort?: string;
     /** Local y-coordinate of the semantic connection anchor on each node. */
     sourceAnchorY?: number;
     targetAnchorY?: number;
 }
-export interface ResolverChild extends ResolverNode { x: number; y: number }
+export interface ResolverChild extends ResolverNode {
+    x: number;
+    y: number;
+    /** Port id → the local y the engine chose for it, when it placed ports. */
+    portY?: ReadonlyMap<string, number>;
+}
 export interface ResolvedGraphLayout {
     strategy: 'layered-right' | 'layered-down' | 'balanced-board' | 'elk-layered';
     width: number;
     height: number;
     children: ResolverChild[];
+    /**
+     * Local y chosen for each port of the enclosing boundary, when the graph
+     * declared them. A container's own ports are ordered by the same crossing
+     * minimisation as its contents rather than by declaration order.
+     */
+    graphPortY?: ReadonlyMap<string, number>;
 }
 
 export interface RoutePoint { x: number; y: number }
@@ -81,6 +110,27 @@ const segmentsCrossOrthogonally = (a: RoutePoint, b: RoutePoint, c: RoutePoint, 
         && hA.y > Math.min(vA.y, vB.y) && hA.y < Math.max(vA.y, vB.y);
 };
 
+/**
+ * Straight run reserved directly off an anchored endpoint. The search plans
+ * from the stub, not the anchor, so the visible connector always enters its
+ * port square perpendicular and dead-centre: no corner may be rounded, and no
+ * grid-length first step may be taken, within the glyph itself. Sized to clear
+ * a port half-width (12px) plus the renderer's 7px corner radius, leaving a
+ * visible straight approach outside the square.
+ */
+const PORT_STUB = 26;
+
+/** Move `distance` away from an endpoint along the side it is anchored to. */
+const stepOffSide = (
+    point: RoutePoint,
+    side: OrthogonalRouteRequest['sourceSide'],
+    distance: number,
+): RoutePoint =>
+    side === 'left' ? { x: point.x - distance, y: point.y }
+    : side === 'right' ? { x: point.x + distance, y: point.y }
+    : side === 'top' ? { x: point.x, y: point.y - distance }
+    : { x: point.x, y: point.y + distance };
+
 /** Plan all routes together so later edges avoid occupied tracks and crossings. */
 export function routeOrthogonalEdges(
     requests: OrthogonalRouteRequest[],
@@ -97,8 +147,26 @@ export function routeOrthogonalEdges(
         - (Math.abs(a.source.x - a.target.x) + Math.abs(a.source.y - a.target.y)));
 
     for (const request of orderedRequests) {
-        const { source: s, target: t } = request;
-        const relevant = obstacles.filter(o => o.id !== request.sourceNodeId && o.id !== request.targetNodeId);
+        const { source: anchorSource, target: anchorTarget } = request;
+        // Reserve the perpendicular approach at each anchored end, then plan
+        // between the stubs. A stub shorter than a third of the span would
+        // dominate a short connector, so it shrinks with the available room.
+        const span = Math.abs(anchorSource.x - anchorTarget.x) + Math.abs(anchorSource.y - anchorTarget.y);
+        const stub = Math.min(PORT_STUB, span / 3);
+        const stubbedSource = Boolean(request.sourceSide) && stub > 0.5;
+        const stubbedTarget = Boolean(request.targetSide) && stub > 0.5;
+        const s = stubbedSource ? stepOffSide(anchorSource, request.sourceSide, stub) : anchorSource;
+        const t = stubbedTarget ? stepOffSide(anchorTarget, request.targetSide, stub) : anchorTarget;
+        // A box that encloses an endpoint cannot be avoided — the connector
+        // starts inside it. Treating an ancestor container as an obstacle
+        // leaves the search with no route out at all, and the fallback path
+        // then cuts through everything.
+        const encloses = (o: RouteObstacle, p: RoutePoint) =>
+            p.x > o.x - clearance && p.x < o.x + o.width + clearance
+            && p.y > o.y - clearance && p.y < o.y + o.height + clearance;
+        const relevant = obstacles.filter(o =>
+            o.id !== request.sourceNodeId && o.id !== request.targetNodeId
+            && !encloses(o, anchorSource) && !encloses(o, anchorTarget));
         const xCoords = new Set<number>([s.x, t.x, (s.x + t.x) / 2, s.x - channelGap, s.x + channelGap, t.x - channelGap, t.x + channelGap]);
         const yCoords = new Set<number>([s.y, t.y, (s.y + t.y) / 2, s.y - channelGap, s.y + channelGap, t.y - channelGap, t.y + channelGap]);
         for (const obstacle of relevant) {
@@ -158,14 +226,21 @@ export function routeOrthogonalEdges(
         const leavesSide = (a: RoutePoint, b: RoutePoint, side: OrthogonalRouteRequest['sourceSide']) =>
             !side || (side === 'left' && b.x < a.x) || (side === 'right' && b.x > a.x)
             || (side === 'top' && b.y < a.y) || (side === 'bottom' && b.y > a.y);
+        // A stub has already left the port; the plan may turn immediately from
+        // there, it may only never double back over the glyph it just cleared.
+        const keepsClear = (a: RoutePoint, b: RoutePoint, side: OrthogonalRouteRequest['sourceSide']) =>
+            !side || (side === 'left' ? b.x <= a.x : side === 'right' ? b.x >= a.x
+                : side === 'top' ? b.y <= a.y : b.y >= a.y);
+        const startConstraint = stubbedSource ? keepsClear : leavesSide;
+        const goalConstraint = stubbedTarget ? keepsClear : leavesSide;
         while (open.length > 0) {
             open.sort((a, b) => a.f - b.f);
             const current = open.shift()!;
             if (current.node === goal) { found = current; break; }
             for (const nextNode of adjacency.get(current.node) ?? []) {
                 const a = points[current.node], b = points[nextNode];
-                if (current.node === start && !leavesSide(a, b, request.sourceSide)) continue;
-                if (nextNode === goal && !leavesSide(b, a, request.targetSide)) continue;
+                if (current.node === start && !startConstraint(a, b, request.sourceSide)) continue;
+                if (nextNode === goal && !goalConstraint(b, a, request.targetSide)) continue;
                 const dir: 'H' | 'V' = a.y === b.y ? 'H' : 'V';
                 const length = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
                 let penalty = current.dir !== 'N' && current.dir !== dir ? 90 : 0;
@@ -199,6 +274,10 @@ export function routeOrthogonalEdges(
             const midX = (s.x + t.x) / 2;
             route = [s, { x: midX, y: s.y }, { x: midX, y: t.y }, t];
         }
+        // Put the anchors back on: the plan runs stub-to-stub, the connector
+        // runs port-centre to port-centre.
+        if (stubbedSource) route.unshift(anchorSource);
+        if (stubbedTarget) route.push(anchorTarget);
         const compact = route.filter((p, i) => i === 0 || i === route.length - 1
             || !((route[i - 1].x === p.x && p.x === route[i + 1].x)
                 || (route[i - 1].y === p.y && p.y === route[i + 1].y)));
@@ -361,31 +440,69 @@ export function finishConnectorRoutes(options: {
     const obstacles = options.obstacles
         ?? [...rects.entries()].map(([id, r]) => ({ id, ...r }));
 
-    const requests: OrthogonalRouteRequest[] = [];
+    type Face = NonNullable<OrthogonalRouteRequest['sourceSide']>;
+    interface Endpoint { connectorId: string; nodeId: string; side: Face; otherCentre: RoutePoint }
+    const endpoints: Endpoint[] = [];
+    const sides = new Map<string, { source: Face; target: Face }>();
     for (const c of connectors) {
         const s = rects.get(c.sourceId);
         const g = rects.get(c.targetId);
         if (!s || !g || c.sourceId === c.targetId) continue;
-        const horizontal = Math.abs((g.x + g.width / 2) - (s.x + s.width / 2))
-            >= Math.abs((g.y + g.height / 2) - (s.y + s.height / 2));
-        const forward = horizontal
-            ? g.x + g.width / 2 >= s.x + s.width / 2
-            : g.y + g.height / 2 >= s.y + s.height / 2;
-        const sourceSide = horizontal ? (forward ? 'right' : 'left') : (forward ? 'bottom' : 'top');
-        const targetSide = horizontal ? (forward ? 'left' : 'right') : (forward ? 'top' : 'bottom');
-        const sideCenter = (r: ConnectorRect, side: string): RoutePoint =>
-            side === 'left' ? { x: r.x, y: r.y + r.height / 2 }
-            : side === 'right' ? { x: r.x + r.width, y: r.y + r.height / 2 }
-            : side === 'top' ? { x: r.x + r.width / 2, y: r.y }
-            : { x: r.x + r.width / 2, y: r.y + r.height };
+        const centre = (r: ConnectorRect): RoutePoint => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+        const horizontal = Math.abs(centre(g).x - centre(s).x) >= Math.abs(centre(g).y - centre(s).y);
+        const forward = horizontal ? centre(g).x >= centre(s).x : centre(g).y >= centre(s).y;
+        const sourceSide: Face = horizontal ? (forward ? 'right' : 'left') : (forward ? 'bottom' : 'top');
+        const targetSide: Face = horizontal ? (forward ? 'left' : 'right') : (forward ? 'top' : 'bottom');
+        sides.set(c.id, { source: sourceSide, target: targetSide });
+        endpoints.push({ connectorId: c.id, nodeId: c.sourceId, side: sourceSide, otherCentre: centre(g) });
+        endpoints.push({ connectorId: c.id, nodeId: c.targetId, side: targetSide, otherCentre: centre(s) });
+    }
+
+    // Several connectors arriving on the same face share it rather than
+    // stacking on its midpoint: each takes its own slot, ordered by where the
+    // far end lies, so parallel exchanges stay parallel and their arrowheads
+    // stay apart. The slots occupy the middle of the face, never its corners.
+    const anchors = new Map<string, RoutePoint>();
+    const anchorKey = (connectorId: string, nodeId: string) => `${connectorId} ${nodeId}`;
+    const byFace = new Map<string, Endpoint[]>();
+    for (const endpoint of endpoints) {
+        const key = `${endpoint.nodeId} ${endpoint.side}`;
+        byFace.set(key, [...(byFace.get(key) ?? []), endpoint]);
+    }
+    for (const group of byFace.values()) {
+        const rect = rects.get(group[0].nodeId)!;
+        const vertical = group[0].side === 'left' || group[0].side === 'right';
+        const ordered = [...group].sort((a, b) =>
+            (vertical ? a.otherCentre.y - b.otherCentre.y : a.otherCentre.x - b.otherCentre.x));
+        const span = (vertical ? rect.height : rect.width) * 0.7;
+        const start = (vertical ? rect.y + rect.height / 2 : rect.x + rect.width / 2) - span / 2;
+        ordered.forEach((endpoint, index) => {
+            const offset = ordered.length === 1
+                ? (vertical ? rect.height : rect.width) / 2
+                : (start + span * (index / (ordered.length - 1))) - (vertical ? rect.y : rect.x);
+            anchors.set(anchorKey(endpoint.connectorId, endpoint.nodeId), {
+                x: endpoint.side === 'left' ? rect.x
+                    : endpoint.side === 'right' ? rect.x + rect.width
+                    : rect.x + (vertical ? rect.width / 2 : offset),
+                y: endpoint.side === 'top' ? rect.y
+                    : endpoint.side === 'bottom' ? rect.y + rect.height
+                    : rect.y + (vertical ? offset : rect.height / 2),
+            });
+        });
+    }
+
+    const requests: OrthogonalRouteRequest[] = [];
+    for (const c of connectors) {
+        const side = sides.get(c.id);
+        if (!side) continue;
         requests.push({
             id: c.id,
-            source: sideCenter(s, sourceSide),
-            target: sideCenter(g, targetSide),
+            source: anchors.get(anchorKey(c.id, c.sourceId))!,
+            target: anchors.get(anchorKey(c.id, c.targetId))!,
             sourceNodeId: c.sourceId,
             targetNodeId: c.targetId,
-            sourceSide,
-            targetSide,
+            sourceSide: side.source,
+            targetSide: side.target,
         });
     }
     const routes = routeOrthogonalEdges(requests, obstacles, options.channelGap);
@@ -521,6 +638,10 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
     // Score the paths the shared orthogonal router can actually realize for
     // this candidate. Centre-line estimates alone routinely choose compact
     // arrangements that later require long detours or crossing channels.
+    // Every candidate is scored from the same anchor model — facing side
+    // centres. Only the port-aware candidate knows where its ports landed, and
+    // scoring it against its own tighter anchors while its rivals are measured
+    // box-to-box would pick it for the measurement, not for the layout.
     const routed = routeOrthogonalEdges(usable.map(edge => {
         const source = byId.get(edge.source)!;
         const target = byId.get(edge.target)!;
@@ -573,6 +694,12 @@ export async function resolveGraphLayout(options: {
     gapY?: number;
     /** Preserve a semantic flow axis when the view requires ordered lanes. */
     directedFlowAxis?: 'RIGHT' | 'DOWN' | 'AUTO';
+    /**
+     * Ports on the enclosing boundary itself (a container's own ports). Edges
+     * may name them as endpoints; their placed order comes back in
+     * `graphPortY`.
+     */
+    graphPorts?: ResolverPort[];
     /** Installed layout provider selected for this diagram. */
     layoutProviderId?: string;
 }): Promise<ResolvedGraphLayout> {
@@ -643,6 +770,27 @@ export async function resolveGraphLayout(options: {
     // than being encoded for a particular diagram.
     if (nodes.length >= 3 && edges.length > 0) {
         try {
+            // Ports are declared to ELK whenever the view has them: the layered
+            // algorithm then minimises crossings over the port order on each
+            // side (Sugiyama with port constraints), which is what keeps an IBD
+            // from weaving its connectors across a container.
+            const portedNodes = new Map(nodes.filter(node => node.ports?.length).map(node => [node.id, node]));
+            const portSideOption = { left: 'WEST', right: 'EAST', top: 'NORTH', bottom: 'SOUTH' } as const;
+            // The enclosing boundary's own ports enter as layer-pinned stand-in
+            // nodes: ELK rejects ports on the graph it is laying out, but a
+            // zero-size node in the first or last layer is ordered by the same
+            // crossing minimisation as everything else. They are dropped again
+            // before the geometry is read back.
+            const standInIds = new Set((options.graphPorts ?? []).map(port => port.id));
+            const boundaryStandIns = (options.graphPorts ?? []).map(port => ({
+                id: port.id,
+                width: 1,
+                height: 1,
+                layoutOptions: {
+                    'elk.layered.layering.layerConstraint':
+                        port.side === 'right' ? 'LAST_SEPARATE' : 'FIRST_SEPARATE',
+                },
+            }));
             const output = await elk.layout({
                 id: `resolver-${options.id}`,
                 layoutOptions: {
@@ -656,29 +804,70 @@ export async function resolveGraphLayout(options: {
                     'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
                     'elk.layered.nodePlacement.favorStraightEdges': 'true',
                     'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-                    'elk.layered.wrapping.strategy': 'MULTI_EDGE',
+                    'elk.layered.crossingMinimization.semiInteractive': 'true',
+                    'elk.layered.thoroughness': '18',
+                    // Wrapping trades a long strip for a compact block, which
+                    // is worth it for a long chain and actively harmful for a
+                    // short one: a three-stage flow folded into two rows sends
+                    // its last stage back across the whole board. Below the
+                    // legibility limit of a single run, keep the run.
+                    'elk.layered.wrapping.strategy': nodes.length > 5 ? 'MULTI_EDGE' : 'OFF',
                     'elk.layered.wrapping.additionalEdgeSpacing': '18',
                     'elk.separateConnectedComponents': 'true',
                     'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
                     'elk.randomSeed': '1',
                 },
-                children: nodes.map(node => ({ id: node.id, width: node.width, height: node.height })),
-                edges: edges.map(edge => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
+                children: [
+                    ...boundaryStandIns,
+                    ...nodes.map(node => (node.ports?.length ? {
+                        id: node.id,
+                        width: node.width,
+                        height: node.height,
+                        // FIXED_SIDE, not FIXED_POS: the side is a modelling
+                        // fact (in-ports west, out-ports east); the order down
+                        // that side is the engine's to optimise.
+                        layoutOptions: { 'elk.portConstraints': 'FIXED_SIDE' },
+                        ports: node.ports.map(port => ({
+                            id: port.id,
+                            width: 8,
+                            height: 8,
+                            layoutOptions: { 'elk.port.side': portSideOption[port.side] },
+                        })),
+                    } : { id: node.id, width: node.width, height: node.height })),
+                ],
+                edges: edges.map(edge => ({
+                    id: edge.id,
+                    sources: [portedNodes.has(edge.source) && edge.sourcePort ? edge.sourcePort : edge.source],
+                    targets: [portedNodes.has(edge.target) && edge.targetPort ? edge.targetPort : edge.target],
+                })),
             }, { providerId: options.layoutProviderId });
-            const rawChildren = output.children ?? [];
+            const laidOut = output.children ?? [];
+            const rawChildren = laidOut.filter(child => !standInIds.has(child.id));
             if (rawChildren.length === nodes.length) {
                 const byId = new Map(nodes.map(node => [node.id, node]));
+                // Normalised against the real content: the stand-in layers are
+                // an ordering device, not part of the container's footprint.
                 const minX = Math.min(...rawChildren.map(child => child.x ?? 0));
                 const minY = Math.min(...rawChildren.map(child => child.y ?? 0));
-                const children = rawChildren.map(child => ({
-                    ...byId.get(child.id)!,
-                    x: (child.x ?? 0) - minX,
-                    y: (child.y ?? 0) - minY,
-                }));
+                const children = rawChildren.map(child => {
+                    const ports = (child as { ports?: { id: string; y?: number }[] }).ports;
+                    return {
+                        ...byId.get(child.id)!,
+                        x: (child.x ?? 0) - minX,
+                        y: (child.y ?? 0) - minY,
+                        ...(ports?.length
+                            ? { portY: new Map(ports.map(port => [port.id, port.y ?? 0])) }
+                            : {}),
+                    };
+                });
+                const standIns = laidOut.filter(child => standInIds.has(child.id));
                 candidates.push({
                     strategy: 'elk-layered',
                     width: Math.max(...children.map(child => child.x + child.width)),
                     height: Math.max(...children.map(child => child.y + child.height)),
+                    ...(standIns.length
+                        ? { graphPortY: new Map(standIns.map(child => [child.id, (child.y ?? 0) - minY])) }
+                        : {}),
                     children,
                 });
             }

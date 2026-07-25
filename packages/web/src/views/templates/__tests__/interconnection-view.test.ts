@@ -12,7 +12,7 @@ import {
     distributePorts, isPortElement, INTERCONNECTION_PORT_SIZE,
     classifyIbdFlow, PORT_DIR_COLORS, IBD_FLOW_COLORS,
     buildPortOwnership, projectPortForDisplay, declaredPortRole,
-    ibdLabelWidth,
+    ibdLabelWidth, applyPortOrder, type PortSide,
 } from '../interconnection-view';
 import { compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
@@ -287,12 +287,122 @@ describe('shared orthogonal edge router', () => {
         expect(points.at(-2)!.x).toBeLessThan(points.at(-1)!.x);
     });
 
+    it('enters an anchored endpoint straight and centred, never on a corner', () => {
+        // Without a reserved approach the plan may turn one grid step off the
+        // port, and the renderer's corner radius then eats the stretch that
+        // should read as "this line lands in that square".
+        const points = routeOrthogonalEdges([{
+            id: 'stubbed', source: { x: 100, y: 60 }, target: { x: 420, y: 300 },
+            sourceNodeId: 'a', targetNodeId: 'b', sourceSide: 'right', targetSide: 'left',
+        }], [{ id: 'blocker', x: 220, y: 20, width: 80, height: 200 }]).get('stubbed')!;
+        expect(points[0]).toEqual({ x: 100, y: 60 });
+        expect(points.at(-1)).toEqual({ x: 420, y: 300 });
+        // First and last runs are axis-aligned with the port and long enough to
+        // clear the glyph (12px) plus the 7px corner radius.
+        expect(points[1].y).toBe(points[0].y);
+        expect(points[1].x - points[0].x).toBeGreaterThanOrEqual(19);
+        expect(points.at(-2)!.y).toBe(points.at(-1)!.y);
+        expect(points.at(-1)!.x - points.at(-2)!.x).toBeGreaterThanOrEqual(19);
+    });
+
+    it('shrinks the reserved approach rather than overshooting a short connector', () => {
+        const points = routeOrthogonalEdges([{
+            id: 'short', source: { x: 100, y: 60 }, target: { x: 118, y: 60 },
+            sourceNodeId: 'a', targetNodeId: 'b', sourceSide: 'right', targetSide: 'left',
+        }], []).get('short')!;
+        expect(points[0]).toEqual({ x: 100, y: 60 });
+        expect(points.at(-1)).toEqual({ x: 118, y: 60 });
+        expect(points.every(p => p.x >= 100 && p.x <= 118)).toBe(true);
+    });
+
     it('uses distinct tracks for parallel connectors when alternatives exist', () => {
         const routes = routeOrthogonalEdges([
             { id: 'one', source: { x: 0, y: 20 }, target: { x: 300, y: 100 }, sourceNodeId: 'a', targetNodeId: 'b' },
             { id: 'two', source: { x: 0, y: 40 }, target: { x: 300, y: 120 }, sourceNodeId: 'c', targetNodeId: 'd' },
         ], []);
         expect(routes.get('one')).not.toEqual(routes.get('two'));
+    });
+});
+
+describe('port-aware layout', () => {
+    const slot = (y: number, side: PortSide) => ({ x: 0, y, side });
+
+    it('re-deals the same slots in the order the engine placed the ports', () => {
+        const portPos = new Map([
+            ['a', slot(70, 'left')],
+            ['b', slot(108, 'left')],
+            ['c', slot(146, 'left')],
+        ]);
+        applyPortOrder(portPos, new Map([['a', 300], ['b', 100], ['c', 200]]));
+        expect(portPos.get('b')!.y).toBe(70);
+        expect(portPos.get('c')!.y).toBe(108);
+        expect(portPos.get('a')!.y).toBe(146);
+    });
+
+    it('permutes each side independently and leaves unplaced ports alone', () => {
+        const portPos = new Map([
+            ['in1', slot(70, 'left')],
+            ['in2', slot(108, 'left')],
+            ['out1', slot(70, 'right')],
+            ['loose', slot(146, 'left')],
+        ]);
+        applyPortOrder(portPos, new Map([['in1', 9], ['in2', 1], ['out1', 5]]));
+        expect(portPos.get('in2')!.y).toBe(70);
+        expect(portPos.get('in1')!.y).toBe(108);
+        expect(portPos.get('out1')!.y).toBe(70);
+        expect(portPos.get('loose')!.y).toBe(146);
+    });
+
+    it('keeps a ported three-stage exchange in one left-to-right run', async () => {
+        // Scored against a near-square footprint this packs into a snaking
+        // board, and the last stage has to send a long return connector back
+        // across the container.
+        const layout = await resolveGraphLayout({
+            id: 'ported-container',
+            nodes: [
+                { id: 'reservoir', width: 250, height: 168, ports: [
+                    { id: 'tankIn', side: 'left' }, { id: 'tankOut', side: 'right' },
+                ] },
+                { id: 'heater', width: 380, height: 260, ports: [
+                    { id: 'heatIn', side: 'left' }, { id: 'heatOut', side: 'right' },
+                ] },
+                { id: 'brew', width: 250, height: 168, ports: [
+                    { id: 'brewIn', side: 'left' }, { id: 'brewOut', side: 'right' },
+                ] },
+            ],
+            edges: [
+                { id: 'mains', source: 'frameIn', target: 'reservoir', targetPort: 'tankIn' },
+                { id: 'hot', source: 'reservoir', target: 'heater', sourcePort: 'tankOut', targetPort: 'heatIn' },
+                { id: 'brewed', source: 'heater', target: 'brew', sourcePort: 'heatOut', targetPort: 'brewIn' },
+            ],
+            graphPorts: [{ id: 'frameIn', side: 'left' }],
+            targetAspect: 2.4,
+        });
+        const part = Object.fromEntries(layout.children.map(node => [node.id, node]));
+        expect(part.reservoir.x + part.reservoir.width).toBeLessThanOrEqual(part.heater.x);
+        expect(part.heater.x + part.heater.width).toBeLessThanOrEqual(part.brew.x);
+        // One run, not two rows.
+        expect(layout.height).toBeLessThan(part.heater.height * 1.5);
+    });
+
+    it('resolves a ported graph without losing or corrupting a part', async () => {
+        const layout = await resolveGraphLayout({
+            id: 'ported-integrity',
+            nodes: ['a', 'b', 'c', 'd'].map(id => ({
+                id, width: 220, height: 150,
+                ports: [{ id: `${id}In`, side: 'left' as const }, { id: `${id}Out`, side: 'right' as const }],
+            })),
+            edges: [
+                { id: 'in', source: 'frameIn', target: 'a', targetPort: 'aIn' },
+                { id: 'ab', source: 'a', target: 'b', sourcePort: 'aOut', targetPort: 'bIn' },
+                { id: 'bc', source: 'b', target: 'c', sourcePort: 'bOut', targetPort: 'cIn' },
+                { id: 'bd', source: 'b', target: 'd', sourcePort: 'bOut', targetPort: 'dIn' },
+            ],
+            graphPorts: [{ id: 'frameIn', side: 'left' }],
+            targetAspect: 2.4,
+        });
+        expect(layout.children.map(node => node.id).sort()).toEqual(['a', 'b', 'c', 'd']);
+        expect(layout.children.every(node => Number.isFinite(node.x) && Number.isFinite(node.y))).toBe(true);
     });
 });
 

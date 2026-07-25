@@ -334,6 +334,27 @@ export function distributePorts(
     return pos;
 }
 
+/**
+ * Re-deal a box's port slots in a crossing-minimised order. The slots
+ * themselves — computed by `distributePorts` from the box's header, pitch and
+ * label gutters — are kept exactly as they are, so a box never has to grow or
+ * risk two labels colliding; only which port sits in which slot changes.
+ * Ports the engine did not place keep their slot.
+ */
+export function applyPortOrder(
+    portPos: Map<string, { x: number; y: number; side: PortSide }>,
+    placedY: ReadonlyMap<string, number>,
+): void {
+    for (const side of ['left', 'right'] as const) {
+        const ids = [...portPos].filter(([id, p]) => p.side === side && placedY.has(id)).map(([id]) => id);
+        if (ids.length < 2) continue;
+        const slots = ids.map(id => portPos.get(id)!.y).sort((a, b) => a - b);
+        [...ids]
+            .sort((a, b) => placedY.get(a)! - placedY.get(b)!)
+            .forEach((id, index) => { portPos.get(id)!.y = slots[index]; });
+    }
+}
+
 // ─── Options ─────────────────────────────────────────────────────────────────
 
 export interface InterconnectionOptions {
@@ -563,13 +584,26 @@ export async function computeInterconnectionLayout(
             while (cur && !kidSet.has(cur)) cur = parentOf.get(cur);
             return cur;
         };
-        const elkEdges: { id: string; sources: string[]; targets: string[] }[] = [];
+        /** The rendered top-level port a connector endpoint anchors to on `kid`. */
+        const portOnKid = (endpointId: string, kid: string): string | undefined => {
+            if (!portEls.has(endpointId) || portOwner.get(endpointId) !== kid) return undefined;
+            const top = topPortOf(endpointId);
+            return portsByOwner.get(kid)?.includes(top) ? top : undefined;
+        };
+        const elkEdges: {
+            id: string; source: string; target: string;
+            sourcePort?: string; targetPort?: string;
+        }[] = [];
         const connectedKids = new Set<string>();
         connectors.forEach((rel, i) => {
             const s = liftHere(rel.sourceId);
             const t = liftHere(rel.targetId);
             if (s && t && s !== t) {
-                elkEdges.push({ id: `ic-${i}`, sources: [s], targets: [t] });
+                elkEdges.push({
+                    id: `ic-${i}`, source: s, target: t,
+                    sourcePort: portOnKid(rel.sourceId, s),
+                    targetPort: portOnKid(rel.targetId, t),
+                });
                 if (kidSet.has(s)) connectedKids.add(s);
                 if (kidSet.has(t)) connectedKids.add(t);
             }
@@ -589,12 +623,28 @@ export async function computeInterconnectionLayout(
         let contentBottom = 0;
 
         if (elkKids.length > 0) {
+            const kidPorts = (id: string): { id: string; side: 'left' | 'right' }[] =>
+                (portsByOwner.get(id) ?? []).map(portId => ({ id: portId, side: portSideOf(portId) }));
             const resolved = await resolveGraphLayout({
                 id: `container-${partId}`,
-                nodes: elkKids.map(id => ({ id, width: kidLayouts.get(id)!.width, height: kidLayouts.get(id)!.height })),
-                edges: elkEdges.map(e => ({ id: e.id, source: e.sources[0], target: e.targets[0] })),
+                nodes: elkKids.map(id => ({
+                    id,
+                    width: kidLayouts.get(id)!.width,
+                    height: kidLayouts.get(id)!.height,
+                    ports: kidPorts(id),
+                })),
+                edges: elkEdges,
+                // This container's own boundary ports take part in the same
+                // pass, so a pass-through connector is ordered against the
+                // internal wiring instead of being placed blind.
+                graphPorts: ownPorts.map(portId => ({ id: portId, side: portSideOf(portId) })),
                 gapX: 54,
                 gapY: 58,
+                // An IBD reads as a left-to-right exchange. Scoring parts
+                // against a near-square footprint packs a three-stage flow into
+                // a snaking board and buys the compactness with a long return
+                // connector; a wider target keeps the stages in one run.
+                targetAspect: 2.4,
                 layoutProviderId: options?.layoutProviderId,
             });
             for (const c of resolved.children) {
@@ -603,7 +653,65 @@ export async function computeInterconnectionLayout(
                 childPos.set(c.id, { x, y });
                 contentW = Math.max(contentW, x - g.left + c.width);
                 contentBottom = Math.max(contentBottom, y + c.height);
+                // Keep the child's own port slots — its box was already sized
+                // around them — but hand the slots out in the order the layout
+                // engine minimised crossings for.
+                if (c.portY) applyPortOrder(kidLayouts.get(c.id)!.portPos, c.portY);
             }
+            if (resolved.graphPortY) {
+                portElkY.set(partId, new Map(
+                    [...resolved.graphPortY].map(([portId, y]) => [portId, y + HEADER_BAND]),
+                ));
+            }
+        }
+
+        // ── Crossing-reducing port order (barycentre sweeps) ──
+        // Whichever strategy placed the boxes, each port then moves to the
+        // slot nearest what it is wired to — the classic Sugiyama port-ordering
+        // step, run over the geometry that was actually chosen. Slots are
+        // re-dealt, never invented, so no box has to grow.
+        if (elkKids.length > 0 && elkEdges.length > 0) {
+            const contentCentre = (HEADER_BAND + Math.max(contentBottom, HEADER_BAND)) / 2;
+            const ownY = new Map<string, number>(portElkY.get(partId) ?? []);
+            const endpointY = (nodeId: string, portId?: string): number | undefined => {
+                if (ownPortSet.has(nodeId)) return ownY.get(nodeId) ?? contentCentre;
+                const pos = childPos.get(nodeId);
+                const kidLayout = kidLayouts.get(nodeId);
+                if (!pos || !kidLayout) return undefined;
+                const port = portId ? kidLayout.portPos.get(portId) : undefined;
+                return port ? pos.y + port.y + PORT_SIZE / 2 : pos.y + kidLayout.height / 2;
+            };
+            const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
+            // Two sweeps: the first orders against the boxes, the second
+            // against the ports the first sweep moved.
+            for (let sweep = 0; sweep < 2; sweep++) {
+                const wiredTo = new Map<string, number[]>();
+                const record = (portId: string | undefined, y: number | undefined) => {
+                    if (portId === undefined || y === undefined) return;
+                    if (!wiredTo.has(portId)) wiredTo.set(portId, []);
+                    wiredTo.get(portId)!.push(y);
+                };
+                for (const edge of elkEdges) {
+                    const sourceY = endpointY(edge.source, edge.sourcePort);
+                    const targetY = endpointY(edge.target, edge.targetPort);
+                    record(edge.sourcePort ?? (ownPortSet.has(edge.source) ? edge.source : undefined), targetY);
+                    record(edge.targetPort ?? (ownPortSet.has(edge.target) ? edge.target : undefined), sourceY);
+                }
+                for (const kid of elkKids) {
+                    const kidLayout = kidLayouts.get(kid)!;
+                    const placed = new Map<string, number>();
+                    for (const portId of kidLayout.portPos.keys()) {
+                        const ys = wiredTo.get(portId);
+                        if (ys?.length) placed.set(portId, mean(ys));
+                    }
+                    if (placed.size > 1) applyPortOrder(kidLayout.portPos, placed);
+                }
+                for (const portId of ownPorts) {
+                    const ys = wiredTo.get(portId);
+                    if (ys?.length) ownY.set(portId, mean(ys));
+                }
+            }
+            if (ownY.size > 0) portElkY.set(partId, ownY);
         }
 
         // ── Orphan grid, packed below the connected content ──
