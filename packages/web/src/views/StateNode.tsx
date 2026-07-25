@@ -144,7 +144,13 @@ function StateNodeInner({ data, selected }: NodeProps) {
                     height: '100%',
                     boxSizing: 'border-box',
                     background: d.isMachine ? 'transparent' : `${d.color}06`,
-                    border: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
+                    // Longhand on every side, matching the leaf card below: a
+                    // node switching between the two branches would otherwise
+                    // diff `border` against `borderTop` and make React warn.
+                    borderTop: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
+                    borderRight: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
+                    borderBottom: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
+                    borderLeft: d.isMachine ? '1.5px dashed #CBD5E1' : `1.5px solid ${d.color}55`,
                     borderRadius: 14,
                     boxShadow: selected ? SHADOW.selected : 'none',
                     position: 'relative',
