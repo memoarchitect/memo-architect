@@ -166,6 +166,12 @@ export async function computeStateTransitionLayout(
                 'elk.layered.spacing.nodeNodeBetweenLayers': '120',
                 'elk.spacing.edgeNode': '32',
                 'elk.edgeRouting': 'ORTHOGONAL',
+                // A machine is full of cycles. Broken arbitrarily they read as
+                // a jumble; broken at the transitions the model declares last,
+                // the states come out in the order an engineer wrote them —
+                // initial state first, returns drawn as the back edges.
+                'elk.layered.cycleBreaking.strategy': 'MODEL_ORDER',
+                'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
             },
             children: children.map(buildElkNode),
         };
@@ -182,6 +188,8 @@ export async function computeStateTransitionLayout(
             'elk.layered.spacing.nodeNodeBetweenLayers': '120',
             'elk.spacing.edgeNode': '32',
             'elk.spacing.edgeLabel': '8',
+            'elk.layered.cycleBreaking.strategy': 'MODEL_ORDER',
+            'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
             'elk.separateConnectedComponents': 'true',
             'elk.spacing.componentComponent': '64',
             'elk.padding': '[top=20, left=20, bottom=20, right=20]',

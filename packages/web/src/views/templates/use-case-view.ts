@@ -1,6 +1,9 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
-import { routeOrthogonalEdges, type LayoutResult, type RouteObstacle } from '../layout';
+import {
+    CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
+    routeOrthogonalEdges, type LayoutResult, type RouteObstacle,
+} from '../layout';
 
 const ACTOR_KINDS = /(?:Actor|User)$/;
 const USE_CASE_KINDS = new Set(['UseCase']);
@@ -128,52 +131,130 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
     }
     const levels = [...casesByLevel.keys()].sort((a, b) => a - b);
     // Constrained layered placement: include depth owns the horizontal rank.
-    // Independent roots stack vertically; extensions sit beneath their base,
-    // which keeps their dashed relationships local rather than diagonal.
-    const rankGap = 285;
-    const rowGap = 145;
-    const maxRows = Math.max(1, ...levels.map(caseLevel => casesByLevel.get(caseLevel)!.length));
-    const width = Math.max(620, levels.length * rankGap + 100);
-    const height = Math.max(320, (maxRows + 1) * rowGap + 80);
+    // An extension joins its base's rank directly beneath it, so its dashed
+    // relationship stays a short local hop and it can never land on the row of
+    // a neighbouring case.
+    const ranks: MemoElement[][] = levels.map(caseLevel => [...(casesByLevel.get(caseLevel) ?? [])]);
+    const rankOf = new Map<string, number>();
+    ranks.forEach((rank, index) => rank.forEach(element => rankOf.set(element.id, index)));
+    const extensionsOfBase = new Map<string, MemoElement[]>();
+    for (const rel of relationships.filter(rel => relationshipType(rel.type) === 'extends')) {
+        const extension = useCases.find(element => element.id === rel.sourceId);
+        const rankIndex = rankOf.get(rel.targetId);
+        if (!extension || rankIndex === undefined || rankOf.has(extension.id)) continue;
+        const rank = ranks[rankIndex];
+        rank.splice(rank.findIndex(element => element.id === rel.targetId) + 1, 0, extension);
+        rankOf.set(extension.id, rankIndex);
+        extensionsOfBase.set(rel.targetId, [...(extensionsOfBase.get(rel.targetId) ?? []), extension]);
+    }
+    const extensionIds = new Set([...extensionsOfBase.values()].flat().map(element => element.id));
+
+    // Crossing reduction: order each rank by the average row of what it is
+    // wired to — its actors and the cases it is included by — sweeping forward
+    // and back so an order settles against both neighbours.
+    const neighboursOf = (id: string): string[] => relationships
+        .filter(rel => rel.sourceId === id || rel.targetId === id)
+        .map(rel => (rel.sourceId === id ? rel.targetId : rel.sourceId));
+    const rowOf = new Map<string, number>();
+    const reindexRows = () => ranks.forEach(rank => rank.forEach((element, row) => rowOf.set(element.id, row)));
+    reindexRows();
+    // Actors start ordered as the model lists them; their rows settle with the
+    // cases they touch.
+    actors.forEach((actor, index) => rowOf.set(actor.id, index));
+    const barycentre = (id: string): number => {
+        const rows = neighboursOf(id).map(neighbour => rowOf.get(neighbour)).filter((row): row is number => row !== undefined);
+        return rows.length === 0 ? (rowOf.get(id) ?? 0) : rows.reduce((sum, row) => sum + row, 0) / rows.length;
+    };
+    for (let sweep = 0; sweep < 3; sweep++) {
+        const order = sweep % 2 === 0 ? ranks : [...ranks].reverse();
+        for (const rank of order) {
+            // Only bases are ordered: an extension travels with the base it
+            // extends and stays directly beneath it.
+            const bases = rank.filter(element => !extensionIds.has(element.id));
+            bases.sort((a, b) => barycentre(a.id) - barycentre(b.id));
+            rank.splice(0, rank.length, ...bases.flatMap(base => [base, ...(extensionsOfBase.get(base.id) ?? [])]));
+            reindexRows();
+        }
+        actors.sort((a, b) => barycentre(a.id) - barycentre(b.id));
+        actors.forEach((actor, index) => rowOf.set(actor.id, index));
+    }
+
+    // ── Geometry: the frame is sized to what it holds, not to a fixed guess ──
+    const CASE_W = 176, CASE_H = 88, RANK_GAP = 104, ROW_GAP = 40;
+    const ACTOR_W = 104, ACTOR_H = 88, ACTOR_PITCH = 116;
+    const PAD_X = 48, PAD_TOP = 62, PAD_BOTTOM = 44, SIDE_GAP = 76, MARGIN = 20;
+    const maxRows = Math.max(1, ...ranks.map(rank => rank.length));
+    const width = Math.max(520, ranks.length * CASE_W + Math.max(ranks.length - 1, 0) * RANK_GAP + PAD_X * 2);
+    const height = Math.max(300, maxRows * CASE_H + (maxRows - 1) * ROW_GAP + PAD_TOP + PAD_BOTTOM);
+
+    // Which flank each actor stands on: the side of the frame its cases sit
+    // nearest, so an association crosses the boundary once and runs straight.
+    const rankCentreX = (rankIndex: number) => PAD_X + rankIndex * (CASE_W + RANK_GAP) + CASE_W / 2;
+    const actorSide = new Map<string, 'left' | 'right'>();
+    for (const actor of actors) {
+        const centres = neighboursOf(actor.id)
+            .map(id => rankOf.get(id))
+            .filter((rank): rank is number => rank !== undefined)
+            .map(rankCentreX);
+        const mean = centres.length ? centres.reduce((sum, x) => sum + x, 0) / centres.length : 0;
+        actorSide.set(actor.id, centres.length === 0 || mean <= width / 2 ? 'left' : 'right');
+    }
+    const leftActors = actors.filter(actor => actorSide.get(actor.id) === 'left');
+    const rightActors = actors.filter(actor => actorSide.get(actor.id) === 'right');
+
+    const frameX = MARGIN + (leftActors.length ? ACTOR_W + SIDE_GAP : 0);
+    const frameY = MARGIN;
     const nodes: Node[] = [{
-        id: '__use_case_boundary__', type: 'useCaseBoundary', position: { x: 130, y: 28 },
+        id: '__use_case_boundary__', type: 'useCaseBoundary', position: { x: frameX, y: frameY },
         data: { label: options.systemName || 'System Boundary', isFrame: true, kind: 'System Boundary' },
         style: { width, height }, draggable: false, selectable: false, zIndex: -1,
     }];
     const positions = new Map<string, { x: number; y: number }>();
-    levels.forEach((caseLevel, rank) => {
-        (casesByLevel.get(caseLevel) ?? []).forEach((element, row) => {
-        const position = { x: 130 + 55 + rank * rankGap, y: 28 + 62 + row * rowGap };
-        positions.set(element.id, position);
-        nodes.push({
-            id: element.id, type: 'useCase', position,
-            data: { label: element.name, kind: element.kind, color: '#E67E22', level: caseLevel }, style: { width: 170, height: 82 },
-        });
-        });
+    const contentTop = frameY + PAD_TOP;
+    const contentHeight = height - PAD_TOP - PAD_BOTTOM;
+    ranks.forEach((rank, rankIndex) => {
+        const rankHeight = rank.length * CASE_H + (rank.length - 1) * ROW_GAP;
+        // Each rank is centred on the frame, so a short rank does not leave the
+        // diagram lopsided.
+        let cursor = contentTop + (contentHeight - rankHeight) / 2;
+        for (const element of rank) {
+            const position = { x: frameX + PAD_X + rankIndex * (CASE_W + RANK_GAP), y: cursor };
+            positions.set(element.id, position);
+            nodes.push({
+                id: element.id, type: 'useCase', position,
+                data: { label: element.name, kind: element.kind, color: '#E67E22', level: depth(element.id) },
+                style: { width: CASE_W, height: CASE_H },
+            });
+            cursor += CASE_H + ROW_GAP;
+        }
     });
-    for (const rel of relationships.filter(rel => relationshipType(rel.type) === 'extends')) {
-        const extension = useCases.find(element => element.id === rel.sourceId);
-        const basePosition = positions.get(rel.targetId);
-        if (!extension || !basePosition) continue;
-        const position = { x: basePosition.x, y: basePosition.y + rowGap };
-        positions.set(extension.id, position);
-        nodes.push({
-            id: extension.id, type: 'useCase', position,
-            data: { label: extension.name, kind: extension.kind, color: '#E67E22', level: depth(extension.id) }, style: { width: 170, height: 82 },
-        });
+
+    // Actors sit beside the case they serve: each one is drawn at the average
+    // height of its associations, then separated to a readable pitch.
+    for (const side of ['left', 'right'] as const) {
+        const column = side === 'left' ? leftActors : rightActors;
+        const wanted = column.map(actor => {
+            const ys = neighboursOf(actor.id)
+                .map(id => positions.get(id))
+                .filter((position): position is { x: number; y: number } => Boolean(position))
+                .map(position => position.y);
+            return {
+                actor,
+                y: ys.length ? ys.reduce((sum, y) => sum + y, 0) / ys.length : frameY + PAD_TOP,
+            };
+        }).sort((a, b) => a.y - b.y);
+        let previousBottom = -Infinity;
+        for (const { actor, y } of wanted) {
+            const top = Math.max(y, previousBottom + ACTOR_PITCH - ACTOR_H, MARGIN);
+            previousBottom = top + ACTOR_H;
+            nodes.push({
+                id: actor.id, type: 'useCaseActor',
+                position: { x: side === 'left' ? MARGIN : frameX + width + SIDE_GAP, y: top },
+                data: { label: actor.name, kind: actor.kind, color: '#334155', side },
+                style: { width: ACTOR_W, height: ACTOR_H },
+            });
+        }
     }
-    // Balance actors around the boundary. This shortens association routes and
-    // avoids funneling every participant into the same gutter.
-    const leftActors = actors.filter((_, index) => index % 2 === 0);
-    const rightActors = actors.filter(actor => !leftActors.includes(actor));
-    [...leftActors, ...rightActors].forEach((element) => {
-        const right = rightActors.includes(element);
-        const row = (right ? rightActors : leftActors).indexOf(element);
-        nodes.push({
-            id: element.id, type: 'useCaseActor', position: { x: right ? 130 + width + 45 : 15, y: 65 + row * 115 },
-            data: { label: element.name, kind: element.kind, color: '#334155', side: right ? 'right' : 'left' }, style: { width: 95, height: 86 },
-        });
-    });
     const routing = options.edgeStyle ?? 'rounded';
     const edgeDrafts = relationships
         .filter(rel => shown.has(rel.sourceId) && shown.has(rel.targetId))
@@ -191,16 +272,32 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
     const dimensions = (node: Node) => ({
         width: Number(node.style?.width ?? 150), height: Number(node.style?.height ?? 82),
     });
-    const endpoint = (id: string, side: 'left' | 'right') => {
+    type Face = 'left' | 'right' | 'top' | 'bottom';
+    const faceOffset = (id: string, side: Face) => {
+        const size = dimensions(nodeById.get(id)!);
+        return side === 'left' ? { x: 0, y: size.height / 2 }
+            : side === 'right' ? { x: size.width, y: size.height / 2 }
+            : side === 'top' ? { x: size.width / 2, y: 0 }
+            : { x: size.width / 2, y: size.height };
+    };
+    const endpoint = (id: string, side: Face) => {
         const node = nodeById.get(id)!;
-        const size = dimensions(node);
-        return { x: node.position.x + (side === 'right' ? size.width : 0), y: node.position.y + size.height / 2 };
+        const offset = faceOffset(id, side);
+        return { x: node.position.x + offset.x, y: node.position.y + offset.y };
     };
     const routeRequests = edgeDrafts.map(({ edge, source, target }) => {
         const sourceActor = actors.find(actor => actor.id === source);
         const targetActor = actors.find(actor => actor.id === target);
-        const sourceSide: 'left' | 'right' = sourceActor ? (rightActors.includes(sourceActor) ? 'left' : 'right') : 'right';
-        const targetSide: 'left' | 'right' = targetActor ? (rightActors.includes(targetActor) ? 'left' : 'right') : 'left';
+        // Ranks run left to right, so a case leaves right and is entered from
+        // the left — except between two cases of the same rank (an extension
+        // and its base), where the short way is straight up.
+        const sameRank = !sourceActor && !targetActor
+            && rankOf.get(source) !== undefined && rankOf.get(source) === rankOf.get(target);
+        const above = sameRank && (positions.get(source)?.y ?? 0) < (positions.get(target)?.y ?? 0);
+        const sourceSide: Face = sourceActor ? (rightActors.includes(sourceActor) ? 'left' : 'right')
+            : sameRank ? (above ? 'bottom' : 'top') : 'right';
+        const targetSide: Face = targetActor ? (rightActors.includes(targetActor) ? 'left' : 'right')
+            : sameRank ? (above ? 'top' : 'bottom') : 'left';
         return {
             id: edge.id, source: endpoint(source, sourceSide), target: endpoint(target, targetSide),
             sourceNodeId: source, targetNodeId: target, sourceSide, targetSide,
@@ -211,24 +308,29 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         .map(node => ({ id: node.id, x: node.position.x, y: node.position.y, ...dimensions(node) }));
     const routes = routing === 'straight' ? new Map<string, { x: number; y: number }[]>()
         : routeOrthogonalEdges(routeRequests, obstacles, 28);
+    // «includes» / «extends» stereotypes are placed as one set, so two of them
+    // through the same corridor do not print on top of each other or on a line.
+    const labelPoints = placeConnectorLabels(
+        edgeDrafts.flatMap(({ edge }) => {
+            const points = routes.get(edge.id);
+            const label = edge.label as string | undefined;
+            return label && points && points.length >= 2
+                ? [{ id: edge.id, points, width: connectorLabelWidth(label), height: CONNECTOR_LABEL_HEIGHT }]
+                : [];
+        }),
+        obstacles,
+    );
     const requestById = new Map(routeRequests.map(request => [request.id, request]));
     const edges: Edge[] = edgeDrafts.map(({ edge }) => ({
         ...edge,
         data: {
             ...edge.data,
             points: routes.get(edge.id) ?? [],
+            labelPoint: labelPoints.get(edge.id),
             // The shared drag scheduler uses these relative anchors to reroute
             // against current node positions after a user moves any endpoint.
-            sourceOffset: (() => {
-                const request = requestById.get(edge.id)!;
-                const size = dimensions(nodeById.get(edge.source)!);
-                return { x: request.sourceSide === 'right' ? size.width : 0, y: size.height / 2 };
-            })(),
-            targetOffset: (() => {
-                const request = requestById.get(edge.id)!;
-                const size = dimensions(nodeById.get(edge.target)!);
-                return { x: request.targetSide === 'right' ? size.width : 0, y: size.height / 2 };
-            })(),
+            sourceOffset: faceOffset(edge.source, requestById.get(edge.id)!.sourceSide),
+            targetOffset: faceOffset(edge.target, requestById.get(edge.id)!.targetSide),
             sourceSide: requestById.get(edge.id)!.sourceSide,
             targetSide: requestById.get(edge.id)!.targetSide,
         },

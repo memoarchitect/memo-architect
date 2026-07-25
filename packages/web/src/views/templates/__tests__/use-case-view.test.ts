@@ -102,9 +102,17 @@ describe('use-case view template', () => {
         expect(layout.nodes.filter(node => node.type === 'useCaseActor')).toHaveLength(1);
         expect(layout.edges).toHaveLength(3);
         expect((layout.edges[1].data?.points as Array<unknown>).length).toBeGreaterThanOrEqual(2);
-        expect(layout.edges[0].data).toMatchObject({
-            sourceOffset: { x: 95, y: 43 }, targetOffset: { x: 0, y: 41 }, sourceSide: 'right', targetSide: 'left',
-        });
+        // An association leaves the actor's facing side and enters the case's,
+        // both at mid-height, so the run is a straight horizontal.
+        const actor = layout.nodes.find(node => node.id === 'clinician')!;
+        const association = layout.edges[0].data as {
+            sourceOffset: { x: number; y: number }; targetOffset: { x: number; y: number };
+            sourceSide: string; targetSide: string;
+        };
+        expect(association).toMatchObject({ sourceSide: 'right', targetSide: 'left' });
+        expect(association.sourceOffset.x).toBe(Number(actor.style?.width));
+        expect(association.sourceOffset.y).toBe(Number(actor.style?.height) / 2);
+        expect(association.targetOffset.x).toBe(0);
         expect(useCaseMaxDepth(model({ root, child, grandchild }, [
             { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
             { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },
