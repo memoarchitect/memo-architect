@@ -1252,12 +1252,16 @@ function DiagramCanvasInner() {
     const onNodeDragStop = useCallback((_: RFAny, node: FlowNode) => {
         const start = nodeDragStartRef.current;
         nodeDragStartRef.current = null;
-        if (start?.id === node.id && Math.hypot(node.position.x - start.x, node.position.y - start.y) > 2) {
-            // React Flow emits click after pointer-up. Keep a real drag from
-            // opening the inspector as though it were a click.
-            suppressInspectUntilRef.current = Date.now() + 250;
-            setLayoutEditVersion(version => version + 1);
-        }
+        // A press that did not move the node is a click for the inspector, not
+        // a placement: it must not take the diagram off automatic layout or
+        // leave a companion file behind.
+        const moved = start?.id === node.id
+            && Math.hypot(node.position.x - start.x, node.position.y - start.y) > 2;
+        if (!moved) return;
+        // React Flow emits click after pointer-up. Keep a real drag from
+        // opening the inspector as though it were a click.
+        suppressInspectUntilRef.current = Date.now() + 250;
+        setLayoutEditVersion(version => version + 1);
         if (!selectedDiagramId) return;
         markManualLayout();
         const { x, y } = node.position;
@@ -1284,9 +1288,11 @@ function DiagramCanvasInner() {
     // ─── Node resize + live orthogonal re-routing ─────────────────────────────
 
     const onNodesChangeWithResize = useCallback((changes: NodeChange<FlowNode>[]) => {
-        // Dimension notifications are emitted while nodes mount and must not
-        // turn a freshly opened diagram into a manual, dirty document.
-        if (changes.some(change => change.type === 'position')) markManualLayout();
+        // Dimension and position notifications are both emitted while nodes
+        // mount and settle, and must not turn a freshly opened diagram into a
+        // manual, dirty document. Only a change the user is actively dragging
+        // counts as taking the diagram off automatic layout.
+        if (changes.some(change => change.type === 'position' && change.dragging)) markManualLayout();
         if (changes.some(change => change.type === 'dimensions' && change.resizing)) {
             markManualLayout();
             setLayoutEditVersion(version => version + 1);
