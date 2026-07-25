@@ -65,6 +65,60 @@ MEMO supports SysML v2 diagram types. Each type has a specific purpose:
 | **PAR** | Parametric Diagram | Green | Constraint relationships |
 | **RISK** | Risk Diagram | Red | Hazard chains (medical extension) |
 
+## Reading Nested Behaviour
+
+State machines and activity diagrams both nest: a composite state owns
+substates, a composite action owns steps. A real model nests several levels
+deep — GPCA's mode machine is four — and drawing all of it at once is
+unreadable. Both diagrams give you the same two moves, and neither changes the
+model. They change only what is on screen.
+
+### Fold in place
+
+Every composite carries a **`−` / `+`** button.
+
+- **State machine** — folding draws the composite as a single box with a
+  `⊞ n` badge counting the substates it is hiding. Transitions that pointed
+  into those substates re-attach to the composite, so no connection
+  disappears. Transitions that become internal to the fold are dropped; the
+  badge already tells you there is hidden structure.
+- **Activity diagram** — folding collapses a composite action back to one
+  step in the flow.
+
+The toolbar has **expand-all** and **collapse-all** for the whole diagram.
+
+### Drill down
+
+Every composite also carries a **`↳`** button — or double-click it.
+
+The diagram re-roots at that composite: you see its contents alone, as their
+own diagram. A breadcrumb appears in the toolbar:
+
+```
+← Parent   ⌂ All › Pump Operating Modes › Infusing
+```
+
+`← Parent` steps up one level, `⌂ All` returns to the whole diagram, and any
+ancestor in the trail is clickable. Connections reaching outside the
+drilled-into scope are not drawn — you are reading one sub-machine, not a
+fragment of the parent.
+
+### Inline or nested steps (activity diagrams)
+
+The activity diagram has one extra control, **Steps: Inline | Nested**,
+governing what an *expanded* composite looks like:
+
+| Mode | What you get |
+|---|---|
+| **Inline** | The composite is replaced by its steps, which join the parent flow in sequence. Best for reading one continuous path. |
+| **Nested** | The composite stays as a frame with its steps drawn inside it, the way a state machine draws substates. Best for seeing which steps belong to which composite. |
+
+!!! note "Nested mode turns swimlanes off"
+    A nested frame owns its children's positions; swimlane banding rewrites
+    absolute positions. The two cannot describe the same canvas, so nesting
+    wins. Lane colours stay on the action cards, so allocation is still
+    readable.
+
 ## Default Diagrams
 
 Each viewpoint comes with a default diagram that shows all relevant elements.

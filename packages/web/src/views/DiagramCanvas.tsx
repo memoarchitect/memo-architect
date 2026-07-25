@@ -30,7 +30,7 @@ import '@xyflow/react/dist/style.css';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RFAny = any;
 
-import type { MemoElement, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
+import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
@@ -44,7 +44,8 @@ import {
 } from './templates/general-view';
 import { validateSingleTree, COMPOSITION_REL_TYPES } from './templates/composition-tree';
 import { PORT_DIR_COLORS, IBD_FLOW_COLORS, type PortDisplay } from './templates/interconnection-view';
-import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping } from './templates/actionflow-view';
+import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
+import { isStateElement } from './templates/statetransition-view';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
@@ -269,6 +270,89 @@ function PortSwatch({ color, glyph }: { color: string; glyph: string }) {
         }}>
             {glyph}
         </span>
+    );
+}
+
+/**
+ * Composition ancestry of a drilled-into element, outermost first — the
+ * breadcrumb shared by the IBD and state-machine drill-down modes.
+ */
+function compositionPath(model: MemoModelDTO | null, focusId: string | null): string[] {
+    if (!model || !focusId) return [];
+    const parentOf = new Map<string, string>();
+    for (const rel of model.relationships) {
+        if (COMPOSITION_REL_TYPES.has(rel.type) && !parentOf.has(rel.targetId)) {
+            parentOf.set(rel.targetId, rel.sourceId);
+        }
+    }
+    const path = [focusId];
+    const seen = new Set(path);
+    let current = focusId;
+    while (parentOf.has(current)) {
+        const parent = parentOf.get(current)!;
+        if (seen.has(parent)) break;
+        path.unshift(parent);
+        seen.add(parent);
+        current = parent;
+    }
+    return path;
+}
+
+/**
+ * Drill-down breadcrumb shared by the IBD, state-machine, and action-flow
+ * toolbars: a step back to the parent, a jump to the whole diagram, and the
+ * ancestry in between. All three drill-downs behave the same way, so they read
+ * the same way too.
+ */
+function DrillBreadcrumb({ path, nameOf, onFocus, rootLabel }: {
+    path: string[];
+    nameOf: (id: string) => string;
+    onFocus: (id: string | null) => void;
+    rootLabel: string;
+}) {
+    if (path.length === 0) return null;
+    // One level up, not all the way out — the common move when reading a deep
+    // hierarchy. `⌂` remains the escape hatch to the top.
+    const parentId = path.length > 1 ? path[path.length - 2] : null;
+    return (
+        <>
+            <ToolbarSep />
+            <IconToggle
+                icon={<Icon.back />}
+                label="Parent"
+                onClick={() => onFocus(parentId)}
+                title={parentId ? `Back to ${nameOf(parentId)}` : rootLabel}
+            />
+            <button
+                onClick={() => onFocus(null)}
+                className="px-1.5 py-0.5 text-xs font-medium rounded"
+                style={{ background: '#F7F7F5', color: '#2563EB', border: '1px solid #E5E5E0' }}
+                title={rootLabel}
+            >
+                ⌂ All
+            </button>
+            {path.map((id, i) => {
+                const last = i === path.length - 1;
+                return (
+                    <span key={id} className="flex items-center gap-1" style={{ color: '#9CA3AF' }}>
+                        <span>›</span>
+                        <button
+                            onClick={() => onFocus(id)}
+                            disabled={last}
+                            className="text-xs font-medium"
+                            style={{
+                                color: last ? '#1a1a1a' : '#2563EB',
+                                fontWeight: last ? 700 : 500,
+                                cursor: last ? 'default' : 'pointer',
+                            }}
+                            title={last ? undefined : `Focus ${nameOf(id)}`}
+                        >
+                            {nameOf(id)}
+                        </button>
+                    </span>
+                );
+            })}
+        </>
     );
 }
 
@@ -514,30 +598,56 @@ function DiagramCanvasInner() {
     const [interconnectionLegendOpen, setInterconnectionLegendOpen] = useState(false);
     const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    const [actionFlowNesting, setActionFlowNesting] = useState<ActionFlowNesting>('flat');
+    // State machine nesting: composites folded in place, or one drilled into.
+    const [collapsedStateNodes, setCollapsedStateNodes] = useState<Set<string>>(new Set());
+    const [focusedStateId, setFocusedStateId] = useState<string | null>(null);
     const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
     const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
     // Drill-down breadcrumb: composition ancestry of the focused IBD part.
-    const interconnectionPath = useMemo(() => {
-        if (!model || !focusedInterconnectionId) return [] as string[];
-        const parentOf = new Map<string, string>();
-        for (const rel of model.relationships) {
-            if (COMPOSITION_REL_TYPES.has(rel.type) && !parentOf.has(rel.targetId)) {
-                parentOf.set(rel.targetId, rel.sourceId);
-            }
-        }
-        const path = [focusedInterconnectionId];
+    const interconnectionPath = useMemo(
+        () => compositionPath(model, focusedInterconnectionId),
+        [model, focusedInterconnectionId],
+    );
+    // Same breadcrumb for a drilled-into composite state.
+    const statePath = useMemo(
+        () => compositionPath(model, focusedStateId),
+        [model, focusedStateId],
+    );
+    // Action nesting runs on `parentAction`, not composition relationships, so
+    // the action-flow breadcrumb walks its own chain.
+    const actionPath = useMemo(() => {
+        if (!model || !focusedActionId) return [] as string[];
+        const path = [focusedActionId];
         const seen = new Set(path);
-        let cur = focusedInterconnectionId;
-        while (parentOf.has(cur)) {
-            const parent = parentOf.get(cur)!;
-            if (seen.has(parent)) break;
+        let current: string | undefined = focusedActionId;
+        while (current) {
+            const parent: string | undefined = model.elements[current]?.parentAction;
+            if (!parent || seen.has(parent) || !model.elements[parent]) break;
             path.unshift(parent);
             seen.add(parent);
-            cur = parent;
+            current = parent;
         }
         return path;
-    }, [model, focusedInterconnectionId]);
+    }, [model, focusedActionId]);
+    /**
+     * Every composite state — the target set for "collapse all". The owning
+     * state machine is excluded: folding the frame would collapse the whole
+     * diagram to a single box.
+     */
+    const compositeStateIds = useMemo(() => {
+        if (!model || viewKind !== 'statetransition') return [] as string[];
+        const composites = new Set<string>();
+        for (const rel of model.relationships) {
+            if (!COMPOSITION_REL_TYPES.has(rel.type)) continue;
+            const parent = model.elements[rel.sourceId];
+            if (!parent || !model.elements[rel.targetId]) continue;
+            if (!isStateElement(parent) || parent.kind.endsWith('Machine')) continue;
+            composites.add(parent.id);
+        }
+        return [...composites];
+    }, [model, viewKind]);
 
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
@@ -559,6 +669,9 @@ function DiagramCanvasInner() {
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
+        setActionFlowNesting('flat');
+        setCollapsedStateNodes(new Set());
+        setFocusedStateId(null);
         positionCacheRef.current.clear();
     }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint]);
 
@@ -652,6 +765,28 @@ function DiagramCanvasInner() {
 
     const toggleActionExpand = useCallback((nodeId: string) => {
         setExpandedActionNodes(previous => {
+            const next = new Set(previous);
+            if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+            return next;
+        });
+    }, []);
+
+    // Drill-down entry points shared by the node buttons and double-click, so
+    // both gestures land in exactly the same state.
+    const drillIntoState = useCallback((nodeId: string) => {
+        setFocusedStateId(nodeId);
+        setCollapsedStateNodes(new Set());
+        inspectElement(null);
+    }, [inspectElement]);
+
+    const drillIntoAction = useCallback((nodeId: string) => {
+        setFocusedActionId(nodeId);
+        setExpandedActionNodes(new Set());
+        inspectElement(null);
+    }, [inspectElement]);
+
+    const toggleStateCollapse = useCallback((nodeId: string) => {
+        setCollapsedStateNodes(previous => {
             const next = new Set(previous);
             if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
             return next;
@@ -940,12 +1075,21 @@ function DiagramCanvasInner() {
                     displayLevel: actionFlowDisplayLevel,
                     expandedActionIds: expandedActionNodes,
                     onToggleAction: toggleActionExpand,
+                    onDrillInAction: drillIntoAction,
                     focusActionId: focusedActionId ?? undefined,
                     visibleFlowKinds: visibleActionFlowKinds,
                     direction: actionFlowDirection,
+                    nesting: actionFlowNesting,
                     layoutProviderId,
                 },
-                statetransition: { viewpointFilter, layoutProviderId },
+                statetransition: {
+                    viewpointFilter,
+                    collapsedStateIds: collapsedStateNodes,
+                    onToggleCollapse: toggleStateCollapse,
+                    onDrillIn: drillIntoState,
+                    focusStateId: focusedStateId ?? undefined,
+                    layoutProviderId,
+                },
                 sequence: { viewpointFilter },
                 general: {
                     mode: generalMode, viewpointFilter, expandedNodes, nodeDirections,
@@ -973,7 +1117,8 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         buildNodesFromSidecar, applyInteractiveData, moveInterconnectionPort, moveEdgeRoute, inspectRelationship, getViewport]);
 
@@ -1332,9 +1477,16 @@ function DiagramCanvasInner() {
         if (viewKind === 'actionflow') {
             const hasChildren = Object.values(model?.elements ?? {}).some(el => el.parentAction === node.id);
             if (!hasChildren) return;
-            setFocusedActionId(node.id);
-            setExpandedActionNodes(new Set());
-            inspectElement(null);
+            drillIntoAction(node.id);
+            return;
+        }
+        if (viewKind === 'statetransition') {
+            // Drill into a composite state's own sub-machine; a leaf just
+            // inspects. Both the folded card and the expanded frame carry
+            // substates, so either can be descended into.
+            const data = node.data as { hasChildren?: boolean; isMachine?: boolean };
+            if (!data.hasChildren || data.isMachine) { inspectElement(node.id); return; }
+            drillIntoState(node.id);
             return;
         }
         if (viewKind === 'interconnection') {
@@ -1345,7 +1497,7 @@ function DiagramCanvasInner() {
             setCollapsedInterconnectionNodes(new Set());
             inspectElement(null);
         }
-    }, [viewKind, model?.elements, inspectElement]);
+    }, [viewKind, model?.elements, inspectElement, drillIntoAction, drillIntoState]);
 
     const onPaneClick = useCallback(() => {
         selectElement(null);
@@ -1604,6 +1756,19 @@ function DiagramCanvasInner() {
 
                                 <ToolbarSep />
 
+                                {/* How an expanded composite action shows its steps */}
+                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Steps</span>
+                                <Segmented
+                                    value={actionFlowNesting}
+                                    onChange={setActionFlowNesting}
+                                    options={[
+                                        { value: 'flat', label: 'Inline', title: 'Expanded steps join the parent flow in place' },
+                                        { value: 'nested', label: 'Nested', title: 'Expanded steps are drawn inside their composite action (swimlanes off)' },
+                                    ]}
+                                />
+
+                                <ToolbarSep />
+
                                 {/* Reading direction — segmented control */}
                                 <Segmented
                                     value={actionFlowDirection}
@@ -1681,20 +1846,13 @@ function DiagramCanvasInner() {
                                         </div>
                                     )}
                                 </div>
-                                {focusedActionId && (
-                                    <>
-                                        <ToolbarSep />
-                                        <IconToggle
-                                            icon={<Icon.back />}
-                                            label="Parent"
-                                            onClick={() => setFocusedActionId(null)}
-                                            title="Return to the parent action flow"
-                                        />
-                                        <span style={{ color: '#6B7280', fontSize: FONT.xs }}>
-                                            {model?.elements[focusedActionId]?.name ?? focusedActionId}
-                                        </span>
-                                    </>
-                                )}
+                                {/* Drill-down: the ↳ button on a composite action, or double-click */}
+                                <DrillBreadcrumb
+                                    path={actionPath}
+                                    nameOf={id => model?.elements[id]?.name ?? id}
+                                    onFocus={setFocusedActionId}
+                                    rootLabel="Back to the whole action flow"
+                                />
                             </>
                         )}
 
@@ -1726,36 +1884,35 @@ function DiagramCanvasInner() {
                                     ]}
                                 />
                                 {/* Drill-down breadcrumb (double-click a part to descend) */}
-                                {interconnectionPath.length > 0 && (
-                                    <>
-                                        <span style={{ color: '#E5E5E0' }}>|</span>
-                                        <button
-                                            onClick={() => setFocusedInterconnectionId(null)}
-                                            className="px-1.5 py-0.5 text-xs font-medium rounded"
-                                            style={{ background: '#F7F7F5', color: '#2563EB', border: '1px solid #E5E5E0' }}
-                                            title="Back to the whole diagram"
-                                        >
-                                            ⌂ All
-                                        </button>
-                                        {interconnectionPath.map((id, i) => {
-                                            const last = i === interconnectionPath.length - 1;
-                                            return (
-                                                <span key={id} className="flex items-center gap-1" style={{ color: '#9CA3AF' }}>
-                                                    <span>›</span>
-                                                    <button
-                                                        onClick={() => setFocusedInterconnectionId(id)}
-                                                        disabled={last}
-                                                        className="text-xs font-medium"
-                                                        style={{ color: last ? '#1a1a1a' : '#2563EB', fontWeight: last ? 700 : 500, cursor: last ? 'default' : 'pointer' }}
-                                                        title={last ? undefined : `Focus ${model?.elements[id]?.name ?? id}`}
-                                                    >
-                                                        {model?.elements[id]?.name ?? id}
-                                                    </button>
-                                                </span>
-                                            );
-                                        })}
-                                    </>
-                                )}
+                                <DrillBreadcrumb
+                                    path={interconnectionPath}
+                                    nameOf={id => model?.elements[id]?.name ?? id}
+                                    onFocus={setFocusedInterconnectionId}
+                                    rootLabel="Back to the whole diagram"
+                                />
+                            </>
+                        )}
+
+                        {viewKind === 'statetransition' && (
+                            <>
+                                <ToolbarSep />
+                                <IconButton
+                                    icon={<Icon.expand />}
+                                    onClick={() => setCollapsedStateNodes(new Set())}
+                                    title="Show all substates" ariaLabel="Expand all substates"
+                                />
+                                <IconButton
+                                    icon={<Icon.collapse />}
+                                    onClick={() => setCollapsedStateNodes(new Set(compositeStateIds))}
+                                    title="Fold every composite state" ariaLabel="Collapse all substates"
+                                />
+                                {/* Drill-down: the ↳ button on a composite state, or double-click */}
+                                <DrillBreadcrumb
+                                    path={statePath}
+                                    nameOf={id => model?.elements[id]?.name ?? id}
+                                    onFocus={setFocusedStateId}
+                                    rootLabel="Back to the whole machine"
+                                />
                             </>
                         )}
 

@@ -20,6 +20,66 @@ export interface StateNodeData extends Record<string, unknown> {
     isNote?: boolean;
     /** Small secondary line, e.g. the mode kind */
     subtitle?: string;
+    /** Composite state — it owns substates, whether or not they are drawn */
+    hasChildren?: boolean;
+    /** Drawn as a single box with its substates folded away */
+    isCollapsed?: boolean;
+    /** Substates this box is currently hiding */
+    hiddenCount?: number;
+    onToggleCollapse?: () => void;
+    onDrillIn?: () => void;
+}
+
+/**
+ * Drill-in affordance for a composite state. Double-clicking the state does
+ * the same thing, but a hidden gesture is not a discoverable one — this makes
+ * the sub-machine visibly reachable.
+ */
+function DrillInButton({ onDrillIn, color, label }: {
+    onDrillIn: () => void; color: string; label: string;
+}) {
+    return (
+        <button
+            onClick={e => { e.stopPropagation(); onDrillIn(); }}
+            onDoubleClick={e => e.stopPropagation()}
+            className="nodrag"
+            title={`Open ${label} as its own diagram`}
+            aria-label={`Drill into ${label}`}
+            style={{
+                width: 16, height: 16, flexShrink: 0, padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${color}66`, borderRadius: 4,
+                background: '#FFFFFF', color,
+                fontSize: 10, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+            }}
+        >
+            ↳
+        </button>
+    );
+}
+
+/** Fold/unfold affordance for a composite state. */
+function FoldToggle({ collapsed, onToggle, color }: {
+    collapsed: boolean; onToggle: () => void; color: string;
+}) {
+    return (
+        <button
+            onClick={e => { e.stopPropagation(); onToggle(); }}
+            onDoubleClick={e => e.stopPropagation()}
+            className="nodrag"
+            title={collapsed ? 'Show substates' : 'Hide substates'}
+            aria-label={collapsed ? 'Show substates' : 'Hide substates'}
+            style={{
+                width: 16, height: 16, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${color}66`, borderRadius: 4,
+                background: '#FFFFFF', color,
+                fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+            }}
+        >
+            {collapsed ? '+' : '−'}
+        </button>
+    );
 }
 
 const handleStyle: React.CSSProperties = {
@@ -91,7 +151,13 @@ function StateNodeInner({ data, selected }: NodeProps) {
                 }}
             >
                 <FallbackHandles />
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '10px 14px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px 0' }}>
+                    {d.onToggleCollapse && !d.isMachine && (
+                        <FoldToggle collapsed={false} onToggle={d.onToggleCollapse} color={d.color} />
+                    )}
+                    {d.onDrillIn && !d.isMachine && (
+                        <DrillInButton onDrillIn={d.onDrillIn} color={d.color} label={d.label} />
+                    )}
                     <span style={{ fontSize: FONT.md, fontWeight: 700, color: d.isMachine ? '#334155' : d.color, whiteSpace: 'nowrap' }}>
                         {d.label}
                     </span>
@@ -104,18 +170,27 @@ function StateNodeInner({ data, selected }: NodeProps) {
     }
 
     // Leaf state: rounded card with the layer colour as a top accent — the
-    // same identity language as IBD part boxes.
+    // same identity language as IBD part boxes. A composite drawn folded uses
+    // the same card plus the UML hidden-decomposition cue.
+    const foldedComposite = !!d.hasChildren;
     return (
         <div
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
+            title={foldedComposite
+                ? `${d.hiddenCount ?? 0} substate${d.hiddenCount === 1 ? '' : 's'} hidden — double-click to drill in`
+                : undefined}
             style={{
                 width: '100%',
                 height: '100%',
                 boxSizing: 'border-box',
                 background: '#FFFFFF',
-                border: `1px solid ${hovered ? `${d.color}9A` : '#CBD5E1'}`,
+                // Longhand on every side: mixing `border` with `borderTop`
+                // makes React warn when only one of them changes on rerender.
                 borderTop: `3px solid ${d.color}`,
+                borderRight: `1px solid ${hovered ? `${d.color}9A` : '#CBD5E1'}`,
+                borderBottom: `1px solid ${hovered ? `${d.color}9A` : '#CBD5E1'}`,
+                borderLeft: `1px solid ${hovered ? `${d.color}9A` : '#CBD5E1'}`,
                 borderRadius: 12,
                 boxShadow: selected ? SHADOW.selected
                     : hovered ? '0 8px 20px rgba(15,23,42,0.12)' : SHADOW.md,
@@ -135,6 +210,19 @@ function StateNodeInner({ data, selected }: NodeProps) {
             {d.subtitle && (
                 <span style={{ fontSize: '8px', fontWeight: 600, color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                     {d.subtitle}
+                </span>
+            )}
+            {foldedComposite && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {d.onToggleCollapse && (
+                        <FoldToggle collapsed onToggle={d.onToggleCollapse} color={d.color} />
+                    )}
+                    {d.onDrillIn && (
+                        <DrillInButton onDrillIn={d.onDrillIn} color={d.color} label={d.label} />
+                    )}
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: d.color, letterSpacing: '0.05em' }}>
+                        ⊞ {d.hiddenCount ?? 0}
+                    </span>
                 </span>
             )}
         </div>

@@ -17,7 +17,7 @@ import {
     elk, finishConnectorRoutes,
     type LayoutResult, type RouteObstacle,
 } from '../layout';
-import { buildCompositionTree } from './composition-tree';
+import { buildCompositionTree, type CompositionTree } from './composition-tree';
 
 // ─── Classification ──────────────────────────────────────────────────────────
 
@@ -106,6 +106,116 @@ export function resolveTransitions(
     return resolved;
 }
 
+// ─── Nesting projection ──────────────────────────────────────────────────────
+
+/**
+ * Which states a machine actually draws, once drill-down and collapse are
+ * applied to the composition hierarchy.
+ *
+ * The two nesting modes are the same projection with different inputs:
+ * *nested* keeps composites on the canvas and draws substates inside them,
+ * *drill-down* re-roots the diagram at one composite so only its substates
+ * are drawn. UML allows both; the model is identical either way.
+ */
+export interface StateProjection {
+    /** States rendered as boxes. */
+    visible: Set<string>;
+    /** Hidden state → the visible ancestor its transitions lift onto. */
+    liftTo: Map<string, string>;
+    /** Visible state → how many descendants it is hiding. */
+    hiddenCount: Map<string, number>;
+    /** Top-level states of the projected diagram. */
+    roots: string[];
+}
+
+export interface StateNestingOptions {
+    /** Drill down: draw only this composite's substates (UML sub-machine view). */
+    focusStateId?: string;
+    /** Composites drawn as a single box, their substates folded away. */
+    collapsedStateIds?: ReadonlySet<string>;
+}
+
+export function projectStateHierarchy(
+    tree: CompositionTree,
+    options: StateNestingOptions = {},
+): StateProjection {
+    const collapsed = options.collapsedStateIds ?? new Set<string>();
+    const focusId = options.focusStateId && tree.elements.has(options.focusStateId)
+        ? options.focusStateId
+        : undefined;
+    const childrenOf = (id: string) =>
+        (tree.childrenMap.get(id) ?? []).filter(cid => tree.elements.has(cid));
+    // A focused composite with no substates has nothing to drill into — fall
+    // back to the whole machine rather than rendering an empty canvas.
+    const focusChildren = focusId ? childrenOf(focusId) : [];
+    const roots = focusChildren.length > 0
+        ? focusChildren
+        : tree.roots.filter(id => tree.elements.has(id));
+
+    const visible = new Set<string>();
+    const liftTo = new Map<string, string>();
+    const hiddenCount = new Map<string, number>();
+
+    const hide = (id: string, anchor: string) => {
+        liftTo.set(id, anchor);
+        hiddenCount.set(anchor, (hiddenCount.get(anchor) ?? 0) + 1);
+        for (const child of childrenOf(id)) hide(child, anchor);
+    };
+    const walk = (id: string) => {
+        visible.add(id);
+        const children = childrenOf(id);
+        if (collapsed.has(id)) {
+            for (const child of children) hide(child, id);
+            return;
+        }
+        for (const child of children) walk(child);
+    };
+    for (const rootId of roots) walk(rootId);
+
+    return { visible, liftTo, hiddenCount, roots };
+}
+
+/** Composition ancestry of a state, outermost first — the drill-down breadcrumb. */
+export function stateAncestry(tree: CompositionTree, stateId: string): string[] {
+    const parentOf = new Map<string, string>();
+    for (const [parent, children] of tree.childrenMap) {
+        for (const child of children) if (!parentOf.has(child)) parentOf.set(child, parent);
+    }
+    const path: string[] = [];
+    const seen = new Set<string>();
+    let current: string | undefined = stateId;
+    while (current && tree.elements.has(current) && !seen.has(current)) {
+        seen.add(current);
+        path.unshift(current);
+        current = parentOf.get(current);
+    }
+    return path;
+}
+
+/**
+ * Re-point transitions onto the states the projection actually draws. A
+ * transition into a folded substate attaches to the composite standing in for
+ * it; one that becomes internal to a folded composite is dropped, since the
+ * composite already advertises hidden substates.
+ */
+export function liftTransitions(
+    resolved: ResolvedTransition[],
+    projection: StateProjection,
+): ResolvedTransition[] {
+    const anchor = (id: string) =>
+        projection.visible.has(id) ? id : projection.liftTo.get(id);
+    const lifted: ResolvedTransition[] = [];
+    for (const transition of resolved) {
+        const sourceId = anchor(transition.sourceId);
+        const targetId = anchor(transition.targetId);
+        if (!sourceId || !targetId) continue;
+        const wasSelfTransition = transition.sourceId === transition.targetId;
+        if (sourceId === targetId && !wasSelfTransition) continue;
+        lifted.push({ ...transition, sourceId, targetId });
+    }
+    return lifted;
+}
+
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 const STATE_COLOR = '#FF6B6B';
@@ -113,9 +223,13 @@ const NOTE_COLOR = '#95A5A6';
 /** Transitions read as neutral connectors; the coral stays on state accents. */
 const TRANSITION_COLOR = '#64748B';
 
-export interface StateTransitionOptions {
+export interface StateTransitionOptions extends StateNestingOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     layoutProviderId?: string;
+    /** Fold/unfold a composite state in place (nested mode). */
+    onToggleCollapse?: (id: string) => void;
+    /** Drill into a composite state's sub-machine (drill-down mode). */
+    onDrillIn?: (id: string) => void;
 }
 
 export async function computeStateTransitionLayout(
@@ -129,7 +243,12 @@ export async function computeStateTransitionLayout(
 
     // Composite nesting from composition edges among the states/machines
     const tree = buildCompositionTree(states, model.relationships);
-    const resolved = resolveTransitions(transitions, states);
+    const projection = projectStateHierarchy(tree, {
+        focusStateId: options?.focusStateId,
+        collapsedStateIds: options?.collapsedStateIds,
+    });
+    const resolved = liftTransitions(resolveTransitions(transitions, states), projection);
+    if (projection.visible.size === 0 && annotations.length === 0) return { nodes: [], edges: [] };
 
     interface ElkNode {
         id: string;
@@ -141,14 +260,16 @@ export async function computeStateTransitionLayout(
         layoutOptions?: Record<string, string>;
     }
 
+    // A folded composite carries an extra row (fold toggle + substate count),
+    // so it needs more room than a genuine leaf state.
     const leafSize = (el: MemoElement) => ({
         width: Math.max(el.name.length * 7.5 + 56, 150),
-        height: 54,
+        height: (tree.childrenMap.get(el.id) ?? []).some(cid => tree.elements.has(cid)) ? 74 : 54,
     });
 
     const buildElkNode = (id: string): ElkNode => {
         const el = tree.elements.get(id)!;
-        const children = (tree.childrenMap.get(id) ?? []).filter(cid => tree.elements.has(cid));
+        const children = (tree.childrenMap.get(id) ?? []).filter(cid => projection.visible.has(cid));
         if (children.length === 0) return { id, ...leafSize(el) };
         return {
             id,
@@ -196,7 +317,7 @@ export async function computeStateTransitionLayout(
         },
         // Annotations are laid out manually below the machine (a grid),
         // keeping ELK focused on the connected state graph
-        children: tree.roots.filter(id => tree.elements.has(id)).map(buildElkNode),
+        children: projection.roots.map(buildElkNode),
         edges: resolved.map((t, i) => ({
             id: `st-${i}`,
             sources: [t.sourceId],
@@ -234,6 +355,16 @@ export async function computeStateTransitionLayout(
                     isContainer,
                     isMachine,
                     subtitle: el.attributes['modeKind'],
+                    hasChildren: (tree.childrenMap.get(elkNode.id) ?? [])
+                        .some(cid => tree.elements.has(cid)),
+                    isCollapsed: !!options?.collapsedStateIds?.has(elkNode.id),
+                    hiddenCount: projection.hiddenCount.get(elkNode.id) ?? 0,
+                    onToggleCollapse: options?.onToggleCollapse
+                        ? () => options.onToggleCollapse!(elkNode.id)
+                        : undefined,
+                    onDrillIn: options?.onDrillIn
+                        ? () => options.onDrillIn!(elkNode.id)
+                        : undefined,
                 },
                 style: {
                     width: elkNode.width ?? 150,

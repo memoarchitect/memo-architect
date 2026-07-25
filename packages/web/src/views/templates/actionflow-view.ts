@@ -83,6 +83,77 @@ export function collectActionFlowActions(
 }
 
 /**
+ * How a composite action reveals its steps.
+ *
+ * `flat` — the composite is replaced by its steps, which join the parent flow
+ * inline (the original Action Flow behaviour).
+ * `nested` — the composite stays on the canvas as a frame and its steps are
+ * drawn inside it, the way a state machine draws substates.
+ */
+export type ActionFlowNesting = 'flat' | 'nested';
+
+export interface ActionFlowProjection {
+    /** Actions rendered as nodes, parents before their children. */
+    actions: MemoElement[];
+    /** Child action → the composite frame that contains it. */
+    parentOf: Map<string, string>;
+    /** Composite frame → its contained child ids, in model order. */
+    childrenOf: Map<string, string[]>;
+}
+
+/**
+ * Nested projection: expanded composites are kept as frames and their direct
+ * children nested inside them, recursively. Unlike the flat projection this
+ * never drops the composite, so the flow keeps its structural context.
+ */
+export function collectNestedActionFlowActions(
+    model: MemoModelDTO,
+    viewpointFilter?: (el: MemoElement) => boolean,
+    expandedActionIds: ReadonlySet<string> = new Set(),
+    focusActionId?: string,
+): ActionFlowProjection {
+    const all = Object.values(model.elements);
+    const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
+    const actions = visible.filter(el =>
+        el.construct === 'action' || el.kind === 'ActionUsage' || el.kind === 'ActionDefinition');
+
+    const projected: MemoElement[] = [];
+    const parentOf = new Map<string, string>();
+    const childrenOf = new Map<string, string[]>();
+    const childrenIn = (id: string) => actions.filter(candidate => candidate.parentAction === id);
+
+    const include = (action: MemoElement, frameId?: string) => {
+        projected.push(action);
+        if (frameId) {
+            parentOf.set(action.id, frameId);
+            if (!childrenOf.has(frameId)) childrenOf.set(frameId, []);
+            childrenOf.get(frameId)!.push(action.id);
+        }
+        const children = childrenIn(action.id);
+        if (children.length === 0 || !expandedActionIds.has(action.id)) return;
+        childrenOf.set(action.id, []);
+        for (const child of children) include(child, action.id);
+    };
+
+    if (focusActionId) {
+        for (const child of childrenIn(focusActionId)) include(child);
+        return { actions: projected, parentOf, childrenOf };
+    }
+    const actionById = new Map(actions.map(action => [action.id, action]));
+    const nested = actions.filter(el => el.parentAction);
+    if (nested.length === 0) {
+        return { actions, parentOf, childrenOf };
+    }
+    // Same entry point as the flat projection: a top-level composite is the
+    // view wrapper, so the diagram starts at its direct steps.
+    for (const action of nested) {
+        const parent = action.parentAction ? actionById.get(action.parentAction) : undefined;
+        if (!parent?.parentAction) include(action);
+    }
+    return { actions: projected, parentOf, childrenOf };
+}
+
+/**
  * Resolve an action usage's in/out parameter port names from the
  * ActionDefinition it is typed by (builder stores the type reference
  * in the `actionType` attribute) or its own parameters.
@@ -254,7 +325,11 @@ export interface ActionFlowViewOptions {
     displayLevel?: ActionFlowDisplayLevel;
     expandedActionIds?: ReadonlySet<string>;
     onToggleAction?: (id: string) => void;
+    /** Open a composite action as its own diagram (drill-down mode). */
+    onDrillInAction?: (id: string) => void;
     focusActionId?: string;
+    /** Draw an expanded composite's steps inline, or nested inside its frame. */
+    nesting?: ActionFlowNesting;
     /** Left-to-right or top-to-bottom reading direction for the flow. */
     direction?: 'horizontal' | 'vertical';
     /** Visible connection categories. Omit to render all flow categories. */
@@ -287,12 +362,17 @@ export async function computeActionFlowViewLayout(
     model: MemoModelDTO,
     options?: ActionFlowViewOptions,
 ): Promise<LayoutResult> {
-    const actions = collectActionFlowActions(
-        model,
-        options?.viewpointFilter,
-        options?.expandedActionIds,
-        options?.focusActionId,
-    );
+    const nesting: ActionFlowNesting = options?.nesting ?? 'flat';
+    const projection = nesting === 'nested'
+        ? collectNestedActionFlowActions(
+            model, options?.viewpointFilter, options?.expandedActionIds, options?.focusActionId)
+        : {
+            actions: collectActionFlowActions(
+                model, options?.viewpointFilter, options?.expandedActionIds, options?.focusActionId),
+            parentOf: new Map<string, string>(),
+            childrenOf: new Map<string, string[]>(),
+        };
+    const actions = projection.actions;
     if (actions.length === 0) return { nodes: [], edges: [] };
 
     const actionIds = new Set(actions.map(a => a.id));
@@ -301,13 +381,20 @@ export async function computeActionFlowViewLayout(
     // A selected display level can legitimately roll every responsibility up
     // to one common system. Keep that single lane visible instead of dropping
     // the contextual background when the level changes.
-    const swimlanes = (options?.swimlanes ?? true) && lanes.length >= 1;
+    // Nested frames own their children's coordinates; swimlane banding rewrites
+    // absolute positions, so the two cannot describe the same canvas. Nesting
+    // wins — it is the mode the user asked for — and the lane colours survive
+    // on the action cards.
+    const swimlanes = nesting !== 'nested' && (options?.swimlanes ?? true) && lanes.length >= 1;
 
     // ── Pseudo start/done nodes (builder convention: <parent>__start/__done) ──
     const rawSuccRels = model.relationships.filter(r => r.type === 'succession');
     const rawFlowRels = model.relationships.filter(r => r.type === 'flow');
+    // Flat mode splices an expanded composite out of the flow, so edges that
+    // addressed it must move to its first/last step. Nested mode keeps the
+    // composite as a frame, and edges stay attached to the frame itself.
     const expandedBoundaries = new Map<string, { first: string; last: string }>();
-    for (const compositeId of options?.expandedActionIds ?? []) {
+    for (const compositeId of nesting === 'nested' ? [] : options?.expandedActionIds ?? []) {
         const children = Object.values(model.elements).filter(el => el.parentAction === compositeId);
         if (children.length === 0) continue;
         const first = rawSuccRels.find(rel => rel.sourceId === `${compositeId}__start`)?.targetId
@@ -348,6 +435,62 @@ export async function computeActionFlowViewLayout(
 
     // ── ELK layered left-to-right layout ──
     const portsByAction = new Map(actions.map(el => [el.id, actionPortNames(el, model)]));
+    const actionById = new Map(actions.map(el => [el.id, el]));
+
+    // Nested mode: a composite becomes an ELK container. Its own start/done
+    // pseudo nodes belong inside it, the way a UML activity frame carries its
+    // initial and final nodes.
+    const frameChildren = new Map<string, string[]>();
+    const frameOfNode = new Map<string, string>();
+    if (nesting === 'nested') {
+        for (const [frameId, childIds] of projection.childrenOf) {
+            frameChildren.set(frameId, childIds.filter(id => graphIds.has(id)));
+        }
+        for (const id of pseudoIds) {
+            const owner = id.endsWith('__start')
+                ? id.slice(0, -'__start'.length)
+                : id.slice(0, -'__done'.length);
+            if (!frameChildren.has(owner)) continue;
+            frameChildren.get(owner)!.push(id);
+        }
+        for (const [frameId, childIds] of frameChildren) {
+            for (const childId of childIds) frameOfNode.set(childId, frameId);
+        }
+    }
+
+    interface ElkActionNode {
+        id: string;
+        width?: number; height?: number; x?: number; y?: number;
+        children?: ElkActionNode[];
+        layoutOptions?: Record<string, string>;
+    }
+
+    const leafBox = (id: string) => {
+        const el = actionById.get(id);
+        return el
+            ? nodeSize(el, portsByAction.get(id)!, direction)
+            : { width: 28, height: 28 };
+    };
+    const buildElkActionNode = (id: string): ElkActionNode => {
+        const childIds = frameChildren.get(id) ?? [];
+        if (childIds.length === 0) return { id, ...leafBox(id) };
+        return {
+            id,
+            layoutOptions: {
+                'elk.algorithm': 'layered',
+                'elk.direction': direction === 'vertical' ? 'DOWN' : 'RIGHT',
+                // Room at the top for the frame header that names the composite.
+                'elk.padding': '[top=44,left=24,bottom=24,right=24]',
+                'elk.spacing.nodeNode': '36',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '68',
+                'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+            },
+            children: childIds.map(buildElkActionNode),
+        };
+    };
+    const topLevelIds = [...pseudoIds, ...actions.map(el => el.id)]
+        .filter(id => !frameOfNode.has(id));
+
     const elkGraph = {
         id: 'root',
         layoutOptions: {
@@ -360,11 +503,9 @@ export async function computeActionFlowViewLayout(
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             'elk.separateConnectedComponents': 'true',
             'elk.spacing.componentComponent': '56',
+            ...(nesting === 'nested' ? { 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' } : {}),
         },
-        children: [
-            ...[...pseudoIds].map(id => ({ id, width: 28, height: 28 })),
-            ...actions.map(el => ({ id: el.id, ...nodeSize(el, portsByAction.get(el.id)!, direction) })),
-        ],
+        children: topLevelIds.map(buildElkActionNode),
         edges: [...visibleFlows, ...visibleSuccs].map((rel, i) => ({
             id: `afe-${i}`,
             sources: [rel.sourceId],
@@ -372,14 +513,19 @@ export async function computeActionFlowViewLayout(
         })),
     };
 
-    const layouted = await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as {
-        children?: { id: string; x?: number; y?: number; width?: number; height?: number }[];
+    const layouted = await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkActionNode;
+    // Positions stay in each node's own frame of reference: top-level nodes are
+    // absolute, nested ones are parent-relative — which is exactly what
+    // ReactFlow's `parentId` expects.
+    const positions = new Map<string, { x: number; y: number; width: number; height: number }>();
+    const collectPositions = (node: ElkActionNode) => {
+        positions.set(node.id, {
+            x: node.x ?? 0, y: node.y ?? 0,
+            width: node.width ?? 140, height: node.height ?? 56,
+        });
+        for (const child of node.children ?? []) collectPositions(child);
     };
-    const positions = new Map(
-        (layouted.children ?? []).map(c => [c.id, {
-            x: c.x ?? 0, y: c.y ?? 0, width: c.width ?? 140, height: c.height ?? 56,
-        }]),
-    );
+    for (const child of layouted.children ?? []) collectPositions(child);
 
     // ── Swimlane banding: rows for horizontal flow, columns for vertical flow ──
     const laneColor = new Map(lanes.map(l => [l.id, l.color]));
@@ -495,7 +641,10 @@ export async function computeActionFlowViewLayout(
     // ── Center fork/join bars on the cross-axis mean of their neighbors ──
     // Banding fixes each action's lane position; a control bar then slides to
     // the midpoint of the steps it splits/merges so it straddles those lanes.
-    const controlNodes = actions.filter(isControlNode);
+    // Nested frames put their contents in parent-relative coordinates, so the
+    // cross-axis arithmetic below would compare points from different frames.
+    // ELK's hierarchical pass has already placed them; leave them alone.
+    const controlNodes = nesting === 'nested' ? [] : actions.filter(isControlNode);
     if (controlNodes.length > 0) {
         for (const ctrl of controlNodes) {
             const p = positions.get(ctrl.id)!;
@@ -519,7 +668,7 @@ export async function computeActionFlowViewLayout(
     // Start/done are boundary nodes, not lane members. Align each one to the
     // center of the action or control node it actually connects to; centering
     // against the entire lane stack placed them on arbitrary lane boundaries.
-    for (const id of pseudoIds) {
+    for (const id of nesting === 'nested' ? [] : pseudoIds) {
         const p = positions.get(id);
         if (!p) continue;
         const centers: number[] = [];
@@ -558,6 +707,11 @@ export async function computeActionFlowViewLayout(
 
     // ── ReactFlow nodes ──
     const nodes: Node[] = [...laneNodes];
+    /** ReactFlow parenting for a node drawn inside a composite frame. */
+    const parenting = (id: string) => {
+        const frameId = frameOfNode.get(id);
+        return frameId ? { parentId: frameId, extent: 'parent' as const } : {};
+    };
     for (const id of pseudoIds) {
         const p = positions.get(id)!;
         const isStart = id.endsWith('__start');
@@ -571,6 +725,7 @@ export async function computeActionFlowViewLayout(
         nodes.push({
             id, type: 'actionFlowNode',
             position: { x: p.x, y: p.y },
+            ...parenting(id),
             data: data as unknown as Record<string, unknown>,
         });
     }
@@ -591,6 +746,7 @@ export async function computeActionFlowViewLayout(
                 id: el.id, type: 'actionFlowNode',
                 position: { x: p.x, y: p.y },
                 style: { width: p.width, height: p.height },
+                ...parenting(el.id),
                 data: controlData as unknown as Record<string, unknown>,
             });
             continue;
@@ -600,6 +756,7 @@ export async function computeActionFlowViewLayout(
         const allocatedName = el.allocatedTo
             ? displayNameAtLevel(el.allocatedTo, model, options?.displayLevel)
             : undefined;
+        const isFrame = (frameChildren.get(el.id)?.length ?? 0) > 0;
         const data: ActionFlowNodeData = {
             element: el,
             label: el.name,
@@ -612,16 +769,42 @@ export async function computeActionFlowViewLayout(
             outPorts: ports.outPorts,
             hasChildren: Object.values(model.elements).some(child => child.parentAction === el.id),
             isExpanded: options?.expandedActionIds?.has(el.id) ?? false,
+            isFrame,
             onToggleExpand: options?.onToggleAction
                 ? () => options.onToggleAction!(el.id)
+                : undefined,
+            onDrillIn: options?.onDrillInAction
+                ? () => options.onDrillInAction!(el.id)
                 : undefined,
             flowDirection: direction,
         };
         nodes.push({
             id: el.id, type: 'actionFlowNode',
             position: { x: p.x, y: p.y },
+            // A frame is sized by ELK around its contents; a plain action card
+            // sizes itself from its own header and ports.
+            ...(isFrame ? { style: { width: p.width, height: p.height } } : {}),
+            ...parenting(el.id),
             data: data as unknown as Record<string, unknown>,
         });
+    }
+
+    // ReactFlow resolves `parentId` against nodes it has already seen, so a
+    // frame must be emitted before anything drawn inside it.
+    if (frameOfNode.size > 0) {
+        const byId = new Map(nodes.map(node => [node.id, node]));
+        const ordered: Node[] = [];
+        const placed = new Set<string>();
+        const place = (node: Node) => {
+            if (placed.has(node.id)) return;
+            placed.add(node.id);
+            const parent = node.parentId ? byId.get(node.parentId) : undefined;
+            if (parent) place(parent);
+            ordered.push(node);
+        };
+        for (const node of nodes) place(node);
+        nodes.length = 0;
+        nodes.push(...ordered);
     }
 
     // ── Edges: item flows (labeled, animated) + successions (control) ──

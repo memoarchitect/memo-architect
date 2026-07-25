@@ -25,8 +25,36 @@ export interface ActionFlowNodeData {
     outPorts: string[];
     hasChildren?: boolean;
     isExpanded?: boolean;
+    /** Nested mode: this composite is drawn as a frame around its own steps. */
+    isFrame?: boolean;
     onToggleExpand?: () => void;
+    /** Open this composite action as its own diagram (drill-down mode). */
+    onDrillIn?: () => void;
     flowDirection?: 'horizontal' | 'vertical';
+}
+
+/** Drill-in affordance for a composite action — the visible twin of double-click. */
+function ActionDrillInButton({ onDrillIn, color, label }: {
+    onDrillIn: () => void; color: string; label: string;
+}) {
+    return (
+        <button
+            onClick={e => { e.stopPropagation(); onDrillIn(); }}
+            onDoubleClick={e => e.stopPropagation()}
+            className="nodrag"
+            title={`Open ${label} as its own diagram`}
+            aria-label={`Drill into ${label}`}
+            style={{
+                width: 16, height: 16, flexShrink: 0, padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${color}66`, borderRadius: 4,
+                background: '#FFFFFF', color,
+                fontSize: 10, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+            }}
+        >
+            ↳
+        </button>
+    );
 }
 
 function ActionFlowNodeInner({ data, selected }: NodeProps) {
@@ -85,6 +113,62 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
 
     // Action node: polished rounded card with ports
     const color = laneColor || layerColor || '#9CA3AF';
+
+    // Composite frame: the steps inside are separate ReactFlow children, so
+    // this draws only the boundary and its header — the same containment
+    // language the state machine uses for a composite state.
+    if (d.isFrame) {
+        return (
+            <div
+                style={{
+                    width: '100%', height: '100%', boxSizing: 'border-box',
+                    background: `${color}08`,
+                    border: `1.5px solid ${color}66`,
+                    borderRadius: 10,
+                    boxShadow: selected ? '0 0 0 3px #2DD4A8' : 'none',
+                    position: 'relative',
+                }}
+            >
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 14px 0',
+                }}>
+                    {d.onToggleExpand && (
+                        <button
+                            aria-label={`Collapse ${label}`}
+                            className="nodrag"
+                            onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
+                            onDoubleClick={event => event.stopPropagation()}
+                            style={{
+                                width: 16, height: 16, flexShrink: 0, padding: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: `1px solid ${color}66`, borderRadius: 4, background: '#FFFFFF',
+                                color, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+                            }}
+                        >
+                            −
+                        </button>
+                    )}
+                    {d.onDrillIn && (
+                        <ActionDrillInButton onDrillIn={d.onDrillIn} color={color} label={label} />
+                    )}
+                    <span style={{ fontSize: FONT.md, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
+                        {label}
+                    </span>
+                    {d.allocatedTo && (
+                        <span style={{ fontSize: '9px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>
+                            {'→'} {d.allocatedTo}
+                        </span>
+                    )}
+                </div>
+                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
+                    style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
+                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
+                    style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
+            </div>
+        );
+    }
+
     const portHeight = 18;
     const bodyHeight = Math.max(inPorts.length * portHeight, outPorts.length * portHeight, 0);
 
@@ -116,6 +200,22 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 whiteSpace: 'nowrap',
             }}>
                 {label}
+                {d.hasChildren && d.onDrillIn && (
+                    <button
+                        aria-label={`Drill into ${label}`}
+                        title={`Open ${label} as its own diagram`}
+                        className="nodrag"
+                        onClick={event => { event.stopPropagation(); d.onDrillIn!(); }}
+                        onDoubleClick={event => event.stopPropagation()}
+                        style={{
+                            float: 'right', marginLeft: 4, width: 18, height: 18, padding: 0,
+                            border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
+                            color, fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                        }}
+                    >
+                        ↳
+                    </button>
+                )}
                 {d.hasChildren && d.onToggleExpand && (
                     <button
                         aria-label={d.isExpanded ? `Collapse ${label}` : `Expand ${label}`}

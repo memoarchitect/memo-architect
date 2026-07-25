@@ -3,7 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
-    collectActionFlowActions, actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
+    collectActionFlowActions, collectNestedActionFlowActions,
+    actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
     findFloatingActions,
 } from '../actionflow-view';
@@ -78,6 +79,66 @@ describe('collectActionFlowActions', () => {
 
         expect(collectActionFlowActions(m, undefined, new Set(), 'process').map(a => a.id))
             .toEqual(['stepA', 'stepB']);
+    });
+});
+
+describe('collectNestedActionFlowActions', () => {
+    const nestedModel = () => model([
+        el('pipeline'),
+        el('process', { parentAction: 'pipeline' }),
+        el('finish', { parentAction: 'pipeline' }),
+        el('stepA', { parentAction: 'process' }),
+        el('stepB', { parentAction: 'process' }),
+    ]);
+
+    it('keeps a collapsed composite as a plain action, like the flat projection', () => {
+        const projection = collectNestedActionFlowActions(nestedModel());
+        expect(projection.actions.map(a => a.id)).toEqual(['process', 'finish']);
+        expect(projection.childrenOf.size).toBe(0);
+    });
+
+    it('keeps an expanded composite as a frame around its own steps', () => {
+        const projection = collectNestedActionFlowActions(
+            nestedModel(), undefined, new Set(['process']));
+
+        // The composite survives — that is what separates nested from flat.
+        expect(projection.actions.map(a => a.id)).toEqual(['process', 'stepA', 'stepB', 'finish']);
+        expect(projection.childrenOf.get('process')).toEqual(['stepA', 'stepB']);
+        expect(projection.parentOf.get('stepA')).toBe('process');
+        expect(projection.parentOf.has('finish')).toBe(false);
+    });
+
+    it('emits a frame before the steps drawn inside it', () => {
+        const projection = collectNestedActionFlowActions(
+            nestedModel(), undefined, new Set(['process']));
+        const order = projection.actions.map(a => a.id);
+        expect(order.indexOf('process')).toBeLessThan(order.indexOf('stepA'));
+    });
+
+    it('nests recursively through deeper expanded composites', () => {
+        const m = model([
+            el('pipeline'),
+            el('process', { parentAction: 'pipeline' }),
+            el('stepA', { parentAction: 'process' }),
+            el('inner', { parentAction: 'stepA' }),
+        ]);
+        const projection = collectNestedActionFlowActions(
+            m, undefined, new Set(['process', 'stepA']));
+        expect(projection.parentOf.get('inner')).toBe('stepA');
+        expect(projection.parentOf.get('stepA')).toBe('process');
+    });
+
+    it('projects direct children when a composite action is focused', () => {
+        const projection = collectNestedActionFlowActions(
+            nestedModel(), undefined, new Set(), 'process');
+        expect(projection.actions.map(a => a.id)).toEqual(['stepA', 'stepB']);
+        expect(projection.parentOf.size).toBe(0);
+    });
+
+    it('honors the viewpoint filter', () => {
+        const projection = collectNestedActionFlowActions(
+            nestedModel(), e => e.id !== 'stepB', new Set(['process']));
+        expect(projection.childrenOf.get('process')).toEqual(['stepA']);
     });
 });
 
