@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
+import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
 
 interface Point { x: number; y: number }
 
@@ -74,8 +75,22 @@ function labelAnchor(points: Point[]): Point {
 
 function InterconnectionEdgeInner(props: EdgeProps) {
     const { getZoom } = useReactFlow();
+    // Connectors that are not taking part are dimmed by ConnectorHoverStyles;
+    // this edge only adds the ornament that marks the one that is.
+    const highlighted = useConnectorHighlighted(props.id, [
+        props.source, props.target,
+        props.data?.sourcePortId as string | undefined,
+        props.data?.targetPortId as string | undefined,
+    ]);
+    // Labels render through a portal, out of reach of the shared dimming rule.
+    const labelDimmed = useConnectorHoverActive() && !highlighted;
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
+    const stroke = String(props.style?.stroke ?? '#2563EB');
+    const baseWidth = Number(props.style?.strokeWidth ?? 2);
+    const edgeStyle = highlighted
+        ? { ...props.style, strokeWidth: baseWidth + 1.4 }
+        : props.style;
     // A template that placed all its labels together supplies the point; a
     // lone edge falls back to its own longest segment.
     const anchor = (props.data?.labelPoint as Point | undefined) ?? labelAnchor(points);
@@ -90,7 +105,18 @@ function InterconnectionEdgeInner(props: EdgeProps) {
             .filter(segment => segment.index >= 2 && segment.index <= points.length - 2);
     return (
         <>
-            <BaseEdge id={props.id} path={roundedPath(points)} style={props.style} markerEnd={props.markerEnd} />
+            {highlighted && (
+                <path
+                    d={roundedPath(points)}
+                    fill="none"
+                    stroke={stroke}
+                    strokeOpacity={0.22}
+                    strokeWidth={baseWidth + 9}
+                    strokeLinecap="round"
+                    pointerEvents="none"
+                />
+            )}
+            <BaseEdge id={props.id} path={roundedPath(points)} style={edgeStyle} markerEnd={props.markerEnd} />
             {flowAnimation && (
                 <path
                     d={roundedPath(points)}
@@ -116,8 +142,11 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     <div style={{
                         position: 'absolute',
                         transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)`,
-                        fontSize: FONT.badge, fontWeight: 600, color: '#475569',
-                        background: 'rgba(255,255,255,0.96)', border: '1px solid #E2E8F0',
+                        fontSize: FONT.badge, fontWeight: highlighted ? 700 : 600,
+                        color: highlighted ? '#0F172A' : '#475569',
+                        background: 'rgba(255,255,255,0.96)',
+                        border: `1px solid ${highlighted ? stroke : '#E2E8F0'}`,
+                        opacity: labelDimmed ? 0.25 : 1,
                         padding: '1px 4px', borderRadius: 4, pointerEvents: 'none',
                     }}>
                         {props.label}

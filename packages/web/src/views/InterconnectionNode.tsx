@@ -15,6 +15,7 @@
 import { memo, useState } from 'react';
 import { Handle, NodeResizer, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
+import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
@@ -87,6 +88,8 @@ const handlePinStyle = (size: number): React.CSSProperties => ({
 function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) => void }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
+    const highlighted = useEndpointHighlighted(port.id);
+    const dimmed = useConnectorHoverActive() && !highlighted;
     const size = port.size ?? INTERCONNECTION_PORT_SIZE;
     const labelOffset = size + 5;
     const color = portColor(port.direction);
@@ -98,8 +101,10 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
     const labelStyle: React.CSSProperties = {
         position: 'absolute',
         fontSize: port.nested ? '9.5px' : '10.5px',
-        fontWeight: port.nested ? 600 : 650,
-        color: port.nested ? '#6B7280' : '#374151',
+        fontWeight: highlighted ? 750 : port.nested ? 600 : 650,
+        color: highlighted ? '#0F172A' : port.nested ? '#6B7280' : '#374151',
+        opacity: dimmed ? 0.45 : 1,
+        transition: 'color 120ms ease, opacity 120ms ease',
         whiteSpace: 'normal',
         pointerEvents: 'none',
         overflow: 'hidden',
@@ -135,6 +140,8 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
                 label stay at model scale \u2014 scaling them too made labels grow
                 relative to their node at low zoom and collide. */}
             <div
+                onPointerEnter={() => setConnectorHover({ endpointIds: [port.id] })}
+                onPointerLeave={() => setConnectorHover(null)}
                 onPointerDown={onMove ? event => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -167,10 +174,17 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
             <div style={{
                 position: 'absolute', inset: 0, boxSizing: 'border-box',
                 background: '#FFFFFF', border: `2px solid ${color}`, borderRadius: 5,
-                boxShadow: '0 1px 3px rgba(15,23,42,0.18)', display: 'flex',
+                // A hovered port wears a halo in its own direction colour, so
+                // the lit connectors read as belonging to this square.
+                boxShadow: highlighted
+                    ? `0 0 0 4px ${color}33, 0 2px 8px rgba(15,23,42,0.24)`
+                    : '0 1px 3px rgba(15,23,42,0.18)',
+                opacity: dimmed ? 0.5 : 1,
+                display: 'flex',
                 alignItems: 'center', justifyContent: 'center', color,
                 fontSize: port.nested ? '10px' : '12px', fontWeight: 800, lineHeight: 1,
                 pointerEvents: 'none',
+                transition: 'box-shadow 120ms ease, opacity 120ms ease',
             }}>
                 {portGlyph(port.direction, port.side)}
                 <span style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>

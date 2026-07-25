@@ -37,6 +37,7 @@ import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '.
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges } from './layout';
+import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
     resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
@@ -1372,6 +1373,19 @@ function DiagramCanvasInner() {
         }
     }, [model, inspectElement, inspectRelationship, setEdges]);
 
+    // ─── Connector hover ───────────────────────────────────────────────────────
+    // Published for every view from here, so a diagram gets connector tracing
+    // whatever node and edge components its template renders. A renderer with a
+    // finer subject than the whole node — an IBD port — publishes its own.
+
+    const onNodeMouseEnter = useCallback((_: RFAny, node: FlowNode) => {
+        setConnectorHover({ endpointIds: [node.id] });
+    }, []);
+    const onEdgeMouseEnter = useCallback((_: RFAny, edge: FlowEdge) => {
+        setConnectorHover({ edgeId: edge.id, endpointIds: connectorEndpoints(edge) });
+    }, []);
+    const clearConnectorHover = useCallback(() => setConnectorHover(null), []);
+
     // ─── Node context menu actions ─────────────────────────────────────────────
 
     const handleNodeColorChange = useCallback((nodeId: string, color: string) => {
@@ -2190,6 +2204,10 @@ function DiagramCanvasInner() {
                     onNodeDragStop={onNodeDragStop}
                     onNodeContextMenu={handleNodeContextMenu}
                     onEdgeContextMenu={handleEdgeContextMenu}
+                    onNodeMouseEnter={onNodeMouseEnter}
+                    onNodeMouseLeave={clearConnectorHover}
+                    onEdgeMouseEnter={onEdgeMouseEnter}
+                    onEdgeMouseLeave={clearConnectorHover}
                     onConnect={onConnect}
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd as any}
@@ -2209,6 +2227,7 @@ function DiagramCanvasInner() {
                     style={RF_STYLE}
                 >
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
+                    <ConnectorHoverStyles />
                     <Controls />
                     {nodes.length > 20 && (
                         <MiniMap
