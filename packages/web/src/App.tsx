@@ -20,7 +20,6 @@ import { ElementCollectionPage } from './views/ElementCollectionPage';
 
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
 const DiagramEditor = lazy(() => import('./views/DiagramEditor').then(m => ({ default: m.DiagramEditor })));
-const DiagramSurface = lazy(() => import('./views/DiagramSurface').then(m => ({ default: m.DiagramSurface })));
 const DSMView = lazy(() => import('./views/DSMView').then(m => ({ default: m.DSMView })));
 const OntologyViewer = lazy(() => import('./views/ontology/OntologyViewer').then(m => ({ default: m.OntologyViewer })));
 const TraceabilityMatrix = lazy(() => import('./views/TraceabilityMatrix').then(m => ({ default: m.TraceabilityMatrix })));
@@ -525,11 +524,11 @@ function DiagramPermalinkRoute() {
         }
     }, [diagramId, model, selectDiagram, setActiveView]);
 
-    return (
-        <Suspense fallback={<ViewLoadingFallback />}>
-            <DiagramSurface />
-        </Suspense>
-    );
+    // The canvas alone would drop the editor chrome the same diagram has when
+    // it is opened from the store — the Visual / Split / Text switcher, the
+    // source path and its save state. Addressable diagrams render through the
+    // same canvas dispatcher as every other addressable view.
+    return <UnifiedCanvas />;
 }
 
 /**
