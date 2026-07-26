@@ -47,7 +47,9 @@ function settleDiagramSourceRequest(payload: DiagramSourceResultMessage['payload
     if (!pending) return;
     clearTimeout(pending.timer);
     diagramSourceRequests.delete(payload.requestId);
-    if (payload.success) pending.resolve(payload);
+    // A conflict is an answer, not a failure: it carries the current file so
+    // the caller can show both sides. Only real errors reject.
+    if (payload.success || payload.conflict) pending.resolve(payload);
     else pending.reject(new Error(payload.error || `Could not ${payload.operation} diagram source.`));
 }
 
@@ -199,6 +201,10 @@ function handleMessage(msg: ServerMessage): void {
         case 'model:update':
             if (restartPending) return; // ignore stale updates from old server
             store.setModel(msg.payload);
+            break;
+        case 'source:changed':
+            if (restartPending) return;
+            store.applySourceChange(msg.payload);
             break;
         case 'validation:update':
             if (restartPending) return;
@@ -477,7 +483,7 @@ export function sendDiagramParse(diagramId: string, text: string): void {
 function sendDiagramSourceRequest(
     operation: 'load' | 'save',
     diagramId: string,
-    text?: string,
+    save?: { text: string; baseRevision?: string },
 ): Promise<DiagramSourceResultMessage['payload']> {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         return Promise.reject(new Error('The development server is not connected.'));
@@ -491,7 +497,7 @@ function sendDiagramSourceRequest(
         diagramSourceRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({
             type: operation === 'load' ? 'diagram:source:request' : 'diagram:source:save',
-            payload: { requestId, diagramId, ...(operation === 'save' ? { text } : {}) },
+            payload: { requestId, diagramId, ...(operation === 'save' ? save : {}) },
         }));
     });
 }
@@ -501,9 +507,20 @@ export function loadDiagramSource(diagramId: string): Promise<DiagramSourceResul
     return sendDiagramSourceRequest('load', diagramId);
 }
 
-/** Persist the exact .sysml file backing a source-derived diagram. */
-export function saveDiagramSource(diagramId: string, text: string): Promise<DiagramSourceResultMessage['payload']> {
-    return sendDiagramSourceRequest('save', diagramId, text);
+/**
+ * Persist the exact .sysml file backing a source-derived diagram.
+ *
+ * `baseRevision` is the revision the edit started from. The server refuses the
+ * write when the file has moved on since, and answers with `conflict` plus the
+ * current contents — passing it is what stops a stale editor from discarding
+ * someone else's work. Omit it only to overwrite deliberately.
+ */
+export function saveDiagramSource(
+    diagramId: string,
+    text: string,
+    baseRevision?: string,
+): Promise<DiagramSourceResultMessage['payload']> {
+    return sendDiagramSourceRequest('save', diagramId, { text, baseRevision });
 }
 
 /** Send kind remapping to server — replaces orphaned kind references in SysML files */

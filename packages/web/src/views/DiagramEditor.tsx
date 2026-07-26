@@ -8,10 +8,21 @@
 // Bidirectional sync:
 //   diagram → text: exact source-file load (or serialization for user diagrams)
 //   text → diagram: explicit Save (or optional 800ms auto-save) → source file → hot rebuild
+//
+// Disk → editor: the server reports which files each rebuild came from. When a
+// change lands in this view's dependency closure — its own source, the files of
+// the elements it shows, or anything those import — a clean buffer reloads
+// itself and the canvas is flagged as refreshed. A dirty buffer is never
+// overwritten; the user is told and chooses. Saves carry the revision they were
+// based on, so a stale buffer cannot silently discard work that arrived from
+// another editor, another client, or the relationship writer.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useModelStore, getDiagram, getElementsByLayer } from '../store/model-store';
+import {
+    useModelStore, getDiagram, getElementsByLayer,
+    getDiagramSourceFiles, sourceChangeAffects,
+} from '../store/model-store';
 import { loadDiagramSource, saveDiagramSource, sendDiagramParse } from '../store/ws-client';
 import type { DiagramDTO, MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
@@ -115,6 +126,78 @@ function ElementMembershipPanel({ diagram }: { diagram: DiagramDTO }) {
     );
 }
 
+// ─── Source state banners ───────────────────────────────────────────────────
+
+/**
+ * A change that arrived from outside this editor. Both variants state what
+ * each action costs, because both discard something and neither is undoable
+ * from here.
+ */
+function SourceBanner({ tone, message, actions }: {
+    tone: 'notice' | 'conflict';
+    message: string;
+    actions: Array<{ label: string; onClick: () => void; hint: string }>;
+}) {
+    const conflict = tone === 'conflict';
+    return (
+        <div
+            role="alert"
+            className="flex items-center gap-2 px-3 py-1.5 flex-wrap"
+            style={{
+                background: conflict ? '#FEF2F2' : '#FFFBEB',
+                borderBottom: `1px solid ${conflict ? '#FECACA' : '#FDE68A'}`,
+                color: conflict ? '#B91C1C' : '#92400E',
+                fontSize: FONT.xs,
+                flexShrink: 0,
+            }}
+        >
+            <span className="flex-1" style={{ minWidth: 180 }}>{message}</span>
+            {actions.map(action => (
+                <button
+                    key={action.label}
+                    onClick={action.onClick}
+                    title={action.hint}
+                    style={{
+                        fontSize: FONT.xs, padding: '2px 8px', borderRadius: 5, cursor: 'pointer',
+                        background: '#FFFFFF',
+                        border: `1px solid ${conflict ? '#FECACA' : '#FDE68A'}`,
+                        color: 'inherit', fontWeight: 600, whiteSpace: 'nowrap',
+                    }}
+                >
+                    {action.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/** How long the "refreshed from source" pulse stays visible. */
+const REFRESH_BADGE_MS = 4000;
+
+/** Transient confirmation that the view re-rendered from changed source. */
+function RefreshIndicator({ at }: { at: number | null }) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (!at) return;
+        setVisible(true);
+        const timer = setTimeout(() => setVisible(false), REFRESH_BADGE_MS);
+        return () => clearTimeout(timer);
+    }, [at]);
+
+    if (!visible) return null;
+    return (
+        <span
+            title="A source file this view depends on changed; the view was rebuilt"
+            style={{
+                fontSize: FONT.badge, padding: '1px 6px', borderRadius: 999,
+                background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', whiteSpace: 'nowrap',
+            }}
+        >
+            ↻ Refreshed from source
+        </span>
+    );
+}
+
 // ─── Main DiagramEditor component ────────────────────────────────────────────
 
 type EditorMode = 'visual' | 'text' | 'split';
@@ -126,9 +209,28 @@ interface DiagramEditorProps {
     diagramId: string;
 }
 
+/** An on-disk change the editor has seen but not yet resolved. */
+interface ExternalChange {
+    /** Files in this view's closure that changed. */
+    files: string[];
+    at: number;
+    /** True when the view's own backing file is one of them. */
+    touchesOwnSource: boolean;
+}
+
+/** A save the server refused because the file had moved on. */
+interface SourceConflict {
+    /** The file as it now stands on disk. */
+    theirs: string;
+    /** Revision of that content, needed to overwrite it deliberately. */
+    revision?: string;
+    at: number;
+}
+
 export function DiagramEditor({ diagramId }: DiagramEditorProps) {
     const model = useModelStore(s => s.model);
     const parseErrors = useModelStore(s => s.diagramParseErrors[diagramId] ?? EMPTY_ERRORS);
+    const lastSourceChange = useModelStore(s => s.lastSourceChange);
     const diagram = getDiagram(model, diagramId);
 
     const [mode, setMode] = useState<EditorMode>('visual');
@@ -139,19 +241,73 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
     const [isDirty, setIsDirty] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [savedAt, setSavedAt] = useState<number | null>(null);
+    const [externalChange, setExternalChange] = useState<ExternalChange | null>(null);
+    const [conflict, setConflict] = useState<SourceConflict | null>(null);
+    const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
+    const [saveDiagnostics, setSaveDiagnostics] = useState<string[]>([]);
     const [autoSave, setAutoSave] = useState(() => localStorage.getItem('memo.diagramEditor.autoSave') === 'true');
     const saveTimer = useRef<ReturnType<typeof setTimeout>>();
     const textRef = useRef('');
     const saveSequence = useRef(0);
+    /** Revision the current buffer was loaded from — the basis for every save. */
+    const revisionRef = useRef<string | undefined>(undefined);
+    /** Discards the result of any load superseded by a newer one. */
+    const loadSequence = useRef(0);
+    /** Latest dirty flag, readable from effects that must not depend on it. */
+    const dirtyRef = useRef(false);
+    useEffect(() => { dirtyRef.current = isDirty; }, [isDirty]);
+
+    // Files whose change can alter what this view shows: its own source, the
+    // files of the elements it displays, and everything those import.
+    const sourceFiles = useMemo(
+        () => getDiagramSourceFiles(model, diagramId),
+        [model, diagramId]);
+
+    /**
+     * Read the backing file into the buffer, replacing whatever is there.
+     *
+     * A load that resolves after a newer one started — or after the user moved
+     * to another diagram — is discarded rather than applied, so slow I/O can
+     * never drop the wrong file's text into the editor.
+     */
+    const loadSource = useCallback(async (): Promise<boolean> => {
+        const sequence = ++loadSequence.current;
+        const requestedDiagramId = diagramId;
+        setIsLoadingSource(true);
+        try {
+            const result = await loadDiagramSource(requestedDiagramId);
+            if (loadSequence.current !== sequence) return false;
+            const source = result.text ?? '';
+            textRef.current = source;
+            revisionRef.current = result.revision;
+            setTextContent(source);
+            setIsSourceReady(true);
+            setIsDirty(false);
+            setSaveError(null);
+            setConflict(null);
+            setExternalChange(null);
+            return true;
+        } catch (error) {
+            if (loadSequence.current === sequence) {
+                setSaveError(error instanceof Error ? error.message : String(error));
+            }
+            return false;
+        } finally {
+            if (loadSequence.current === sequence) setIsLoadingSource(false);
+        }
+    }, [diagramId]);
 
     // Source-derived diagrams edit their exact backing file. User-created
     // diagrams still use a generated snippet because they have no .sysml file.
     useEffect(() => {
-        let cancelled = false;
         clearTimeout(saveTimer.current);
         setSaveError(null);
         setSavedAt(null);
         setIsDirty(false);
+        setExternalChange(null);
+        setConflict(null);
+        setSaveDiagnostics([]);
+        revisionRef.current = undefined;
 
         if (!diagram || !model) return;
         if (!diagram.sourceFile || window.__MEMO_DATA__) {
@@ -165,26 +321,38 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
 
         setTextContent('');
         textRef.current = '';
-        setIsLoadingSource(true);
         setIsSourceReady(false);
-        loadDiagramSource(diagramId)
-            .then(result => {
-                if (cancelled) return;
-                const source = result.text ?? '';
-                textRef.current = source;
-                setTextContent(source);
-                setIsSourceReady(true);
-            })
-            .catch(error => {
-                if (!cancelled) setSaveError(error instanceof Error ? error.message : String(error));
-            })
-            .finally(() => {
-                if (!cancelled) setIsLoadingSource(false);
-            });
-
-        return () => { cancelled = true; };
+        void loadSource();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [diagramId, diagram?.sourceFile]);
+
+    // ── Disk → editor ───────────────────────────────────────────────────────
+    //
+    // A rebuild names the files it came from. A change inside this view's
+    // closure means the canvas has already re-rendered from the new model; the
+    // text buffer has to catch up too. A clean buffer reloads silently — there
+    // is nothing to lose and stale text is a trap. A dirty buffer is left
+    // exactly as typed and the choice is handed to the user.
+    useEffect(() => {
+        if (!lastSourceChange || !diagram?.sourceFile || window.__MEMO_DATA__) return;
+        if (!sourceChangeAffects(lastSourceChange, sourceFiles)) return;
+
+        setRefreshedAt(lastSourceChange.at);
+        const touchesOwnSource = lastSourceChange.files.includes(diagram.sourceFile);
+        if (!touchesOwnSource) return;   // closure changed, but not this file's text
+
+        if (dirtyRef.current) {
+            setExternalChange({
+                files: lastSourceChange.files.filter(file => sourceFiles.includes(file)),
+                at: lastSourceChange.at,
+                touchesOwnSource,
+            });
+            return;
+        }
+        void loadSource();
+    // Keyed on seq so a repeat change to the same file is still handled.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lastSourceChange?.seq]);
 
     const handleTextChange = (value: string) => {
         textRef.current = value;
@@ -193,14 +361,27 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         setSaveError(null);
     };
 
-    const persistText = useCallback(async (text: string) => {
+    const persistText = useCallback(async (text: string, options?: { force?: boolean }) => {
         if (!diagram) return;
         const sequence = ++saveSequence.current;
         setIsSaving(true);
         setSaveError(null);
         try {
             if (diagram.sourceFile) {
-                await saveDiagramSource(diagramId, text);
+                // Omitting the base revision is what makes a save unconditional,
+                // and only an explicit overwrite may do that.
+                const result = await saveDiagramSource(
+                    diagramId, text, options?.force ? undefined : revisionRef.current);
+
+                if (result.conflict) {
+                    setConflict({ theirs: result.text ?? '', revision: result.revision, at: Date.now() });
+                    setSaveError(result.error ?? 'The file changed on disk since this edit began.');
+                    return;
+                }
+                revisionRef.current = result.revision;
+                setConflict(null);
+                setExternalChange(null);
+                setSaveDiagnostics(result.parseErrors ?? []);
             } else {
                 // User-created diagrams persist their selected element IDs.
                 sendDiagramParse(diagramId, text);
@@ -214,14 +395,28 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         }
     }, [diagram, diagramId]);
 
+    /** Discard local edits and take the file as it now stands on disk. */
+    const handleTakeTheirs = useCallback(() => {
+        clearTimeout(saveTimer.current);
+        void loadSource();
+    }, [loadSource]);
+
+    /** Keep the local buffer and overwrite the newer file, deliberately. */
+    const handleOverwrite = useCallback(() => {
+        clearTimeout(saveTimer.current);
+        void persistText(textRef.current, { force: true });
+    }, [persistText]);
+
     useEffect(() => {
         localStorage.setItem('memo.diagramEditor.autoSave', String(autoSave));
         clearTimeout(saveTimer.current);
-        if (autoSave && isDirty && !isLoadingSource) {
+        // An unresolved conflict is the user's to settle: retrying on a timer
+        // would only fail again, or worse, win a race it should not.
+        if (autoSave && isDirty && !isLoadingSource && !conflict) {
             saveTimer.current = setTimeout(() => void persistText(textRef.current), 800);
         }
         return () => clearTimeout(saveTimer.current);
-    }, [autoSave, isDirty, isLoadingSource, textContent, persistText]);
+    }, [autoSave, isDirty, isLoadingSource, textContent, persistText, conflict]);
 
     const handleSave = useCallback(() => {
         clearTimeout(saveTimer.current);
@@ -247,6 +442,30 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
 
     const textPanel = (
         <div className="flex flex-col h-full flex-1 overflow-hidden">
+            {conflict && (
+                <SourceBanner
+                    tone="conflict"
+                    message={`${diagram.sourceFile} changed on disk while you were editing. Saving now would discard those changes.`}
+                    actions={[
+                        { label: 'Reload from disk', onClick: handleTakeTheirs, hint: 'Discards your unsaved edits' },
+                        { label: 'Overwrite with mine', onClick: handleOverwrite, hint: 'Discards the changes on disk' },
+                    ]}
+                />
+            )}
+            {!conflict && externalChange && (
+                <SourceBanner
+                    tone="notice"
+                    message={
+                        externalChange.files.length > 1
+                            ? `${externalChange.files.length} source files changed on disk. Your unsaved edits are untouched.`
+                            : `${externalChange.files[0]} changed on disk. Your unsaved edits are untouched.`
+                    }
+                    actions={[
+                        { label: 'Reload from disk', onClick: handleTakeTheirs, hint: 'Discards your unsaved edits' },
+                        { label: 'Keep editing', onClick: () => setExternalChange(null), hint: 'Dismiss until the next change' },
+                    ]}
+                />
+            )}
             <div className="flex-1 overflow-hidden" style={{ background: '#1E1E1E' }}>
                 <Suspense fallback={<div className="h-full flex items-center justify-center" style={{ color: '#9CA3AF', fontSize: FONT.xs }}>Loading SysML editor…</div>}>
                     <SysmlCodeEditor
@@ -259,6 +478,15 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                     />
                 </Suspense>
             </div>
+            {saveDiagnostics.length > 0 && (
+                <div
+                    className="px-3 py-1.5 text-xs"
+                    style={{ background: '#1C1407', color: '#FCD34D', borderTop: '1px solid #3B2A0A', fontFamily: 'monospace' }}
+                    title="Saved, but the file does not parse — the model keeps its last good state for this file"
+                >
+                    {saveDiagnostics.join(' · ')}
+                </div>
+            )}
             {parseErrors.length > 0 && (
                 <div
                     className="px-3 py-1.5 text-xs"
@@ -319,6 +547,7 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                         Monaco · SysML
                     </span>
                 )}
+                <RefreshIndicator at={refreshedAt} />
                 {isLoadingSource && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Loading source…</span>}
                 {isSaving && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Saving…</span>}
                 {!isSaving && saveError && <span title={saveError} style={{ color: '#EF4444', fontSize: FONT.xs }}>Save failed</span>}

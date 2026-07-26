@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useModelStore, getRelationshipsForElement, getDiagram, getRegistries } from '../store/model-store';
+import {
+    useModelStore, getRelationshipsForElement, getDiagram, getRegistries,
+    getElementSourceFiles, sourceChangeAffects,
+} from '../store/model-store';
 import type { PendingRelationship } from '../store/model-store';
 import { findRelationshipDefinition } from '@memoarchitect/tools/browser';
 import type {
@@ -7,6 +10,7 @@ import type {
     OntologyRegistriesDTO, RelationshipDirection,
 } from '@memoarchitect/tools/browser';
 import { AddRelationshipDialog } from './AddRelationshipDialog';
+import { RelationshipQuickAdd } from './RelationshipQuickAdd';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 
@@ -340,9 +344,11 @@ function RelationshipsSection({ element, outgoing, incoming }: {
                             color: connected ? '#374151' : '#D1D5DB',
                             border: 'none', cursor: connected ? 'pointer' : 'not-allowed',
                         }}
-                        title={connected ? 'Add a model relationship' : 'Connect to the dev server to author relationships'}
+                        title={connected
+                            ? 'Browse every relationship type and filter candidate elements'
+                            : 'Connect to the dev server to author relationships'}
                     >
-                        + Add
+                        Browse…
                     </button>
                 }
             >
@@ -392,6 +398,15 @@ function RelationshipsSection({ element, outgoing, incoming }: {
                         onDismiss={() => dismissPendingRelationship(pending.pendingId)}
                     />
                 ))}
+
+                <RelationshipQuickAdd
+                    element={element}
+                    model={model}
+                    registries={registries}
+                    enabled={connected}
+                    onCreate={handleConfirm}
+                    onOpenFullDialog={() => { setStatus(null); setDialogOpen(true); }}
+                />
 
                 {status && (
                     <StatusBanner
@@ -652,6 +667,50 @@ function PendingRelationshipRow({ pending, model, onDismiss }: {
     );
 }
 
+// ─── Source freshness ───────────────────────────────────────────────────────
+
+/** How long the reload confirmation stays on screen. */
+const FRESHNESS_BADGE_MS = 4000;
+
+/**
+ * Confirms that this element was rebuilt because its source moved.
+ *
+ * "Its source" is the closure: the element's own file plus everything that
+ * file imports — a change in an imported package can redefine the element's
+ * kind or supertype without its own file being touched at all.
+ */
+function SourceFreshness({ elementId }: { elementId: string }) {
+    const model = useModelStore(s => s.model);
+    const lastSourceChange = useModelStore(s => s.lastSourceChange);
+    const [shownAt, setShownAt] = useState<number | null>(null);
+
+    const dependencies = useMemo(
+        () => getElementSourceFiles(model, elementId),
+        [model, elementId]);
+
+    useEffect(() => {
+        if (!sourceChangeAffects(lastSourceChange, dependencies)) return;
+        setShownAt(lastSourceChange!.at);
+        const timer = setTimeout(() => setShownAt(null), FRESHNESS_BADGE_MS);
+        return () => clearTimeout(timer);
+    // Keyed on seq so a repeat change to the same file shows again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lastSourceChange?.seq]);
+
+    useEffect(() => { setShownAt(null); }, [elementId]);
+
+    if (!shownAt) return null;
+    return (
+        <span
+            title="A source file this element depends on changed; the model was rebuilt"
+            className="px-1.5 rounded"
+            style={{ fontSize: FONT.badge, background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0' }}
+        >
+            ↻ Updated
+        </span>
+    );
+}
+
 // ─── Element Properties ─────────────────────────────────────────────────────
 
 function ElementProperties() {
@@ -833,7 +892,11 @@ function ElementProperties() {
                 )}
 
                 {element.file && (
-                    <Section title="Source" defaultOpen={false}>
+                    <Section
+                        title="Source"
+                        defaultOpen={false}
+                        actions={<SourceFreshness elementId={selectedElementId} />}
+                    >
                         <button
                             className="flex items-center gap-1.5 text-xs w-full text-left rounded px-1 py-0.5 transition-colors"
                             style={{ color: '#2563EB', background: 'transparent', border: 'none', cursor: 'pointer', wordBreak: 'break-all' }}

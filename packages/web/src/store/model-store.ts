@@ -21,7 +21,7 @@ import type {
     RelationshipDiagnostic,
     RelationshipDirection,
 } from '@memoarchitect/tools/browser';
-import { findRelationshipDefinition } from '@memoarchitect/tools/browser';
+import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
     requestRelationshipCreate, requestRelationshipDelete,
@@ -100,6 +100,25 @@ export interface RelationshipDeleteOutcome {
     success: boolean;
     sourceFile?: string;
     error?: string;
+}
+
+// ─── Source change tracking ─────────────────────────────────────────────────
+
+/**
+ * The most recent set of source files the server reported as changed.
+ *
+ * `model:update` says what the model is now; this says what moved, which is
+ * what an open editor or a rendered view needs to decide whether it is showing
+ * stale content. Each notification replaces the last — it is an event, not a
+ * log — and `seq` increments so a consumer can react to a repeat change to the
+ * same file.
+ */
+export interface SourceChange {
+    files: string[];
+    revision: number;
+    at: number;
+    /** Client-side counter, distinct from the server's model revision. */
+    seq: number;
 }
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
@@ -199,6 +218,8 @@ export interface ModelState {
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
     methodology: import('@memoarchitect/tools/browser').MethodologyDescriptor | null;
+    /** Last source-change notification from the dev server, or null. */
+    lastSourceChange: SourceChange | null;
 
     // ─── UI State ─────────────────────────────────────────────────────────
     activeMode: AppMode;
@@ -273,6 +294,8 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
+    /** Record which source files the server just rebuilt from. */
+    applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
     setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
@@ -388,6 +411,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     connected: false,
     restartRequired: null,
     methodology: null,
+    lastSourceChange: null,
 
     // UI state
     activeMode: restoredActiveView.type === 'diagram' ? 'diagram' : 'catalog' as AppMode,
@@ -603,6 +627,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
+    applySourceChange: (change) => set(s => ({
+        lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
+    })),
     setMethodology: (m) => set({ methodology: m }),
     setModel: (model) => set((s) => {
         let activeView = s.activeView;
@@ -1213,6 +1240,50 @@ export function getAllTags(model: MemoModelDTO | null): string[] {
 export function getDiagram(model: MemoModelDTO | null, diagramId: string | null): DiagramDTO | null {
     if (!model || !diagramId || !model.diagrams) return null;
     return model.diagrams.find(d => d.id === diagramId) ?? null;
+}
+
+// ─── Source dependency selectors ────────────────────────────────────────────
+
+/**
+ * Files whose change can alter what a diagram renders.
+ *
+ * The server computes this closure during the build (own source + element
+ * files + transitive imports) and ships it on the diagram. Falling back to the
+ * diagram's own source file keeps older servers working, at the cost of missing
+ * changes that arrive through an import.
+ */
+export function getDiagramSourceFiles(
+    model: MemoModelDTO | null,
+    diagramId: string | null,
+): string[] {
+    const diagram = getDiagram(model, diagramId);
+    if (!diagram) return [];
+    if (diagram.sourceFiles && diagram.sourceFiles.length > 0) return diagram.sourceFiles;
+    return diagram.sourceFile ? [diagram.sourceFile] : [];
+}
+
+/** Files whose change can alter what one element means — its own and its imports. */
+export function getElementSourceFiles(
+    model: MemoModelDTO | null,
+    elementId: string | null,
+): string[] {
+    const file = elementId ? model?.elements[elementId]?.file : undefined;
+    if (!file) return [];
+    return [...affectingFiles(file, model?.sourceGraph)];
+}
+
+/**
+ * Whether the last source change touched anything the given files depend on.
+ *
+ * A surface with an unknown dependency set gets `false`: claiming every change
+ * would make the indicator meaningless.
+ */
+export function sourceChangeAffects(
+    change: SourceChange | null,
+    dependencies: readonly string[],
+): boolean {
+    if (!change) return false;
+    return changeAffects(change.files, dependencies);
 }
 
 /** Get diagrams for a specific viewpoint */
