@@ -648,6 +648,16 @@ function DiagramCanvasInner() {
         }
         return [...composites];
     }, [model, viewKind]);
+    /** Every part that owns parts — the target set for the IBD "collapse all". */
+    const interconnectionContainerIds = useMemo(() => {
+        if (!model) return [] as string[];
+        return [...new Set(
+            model.relationships
+                .filter(r => ['composes', 'composedof', 'aggregation', 'decomposedby']
+                    .includes(r.type.toLowerCase()))
+                .map(r => r.sourceId),
+        )];
+    }, [model]);
 
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
@@ -663,17 +673,44 @@ function DiagramCanvasInner() {
             ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
             : [];
         setExpandedNodes(new Set(expandedHint));
-        setCollapsedInterconnectionNodes(new Set());
+        // collapsedInterconnectionNodes / collapsedStateNodes are seeded by the
+        // default-collapsed effect below, which owns them outright — clearing
+        // them here too would race it and leave the diagram fully expanded.
         setFocusedInterconnectionId(null);
         setInterconnectionPortDisplay('all');
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
         setActionFlowNesting('flat');
-        setCollapsedStateNodes(new Set());
         setFocusedStateId(null);
         positionCacheRef.current.clear();
     }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint]);
+
+    /**
+     * A diagram that nests opens collapsed. A deep hierarchy drawn at full
+     * depth is unreadable — GPCA's mode machine is four levels — so the reader
+     * expands the one branch they came to look at.
+     *
+     * The action-flow and tree views already start collapsed, because they
+     * track which nodes are *expanded*. The state-machine and IBD views track
+     * the inverse, so an empty set means fully open and they have to be seeded.
+     * Seeded once per diagram: after that the set belongs to the user, and
+     * "expand all" must not be undone on the next render.
+     */
+    const seededCollapseRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!model) return;
+        const key = `${selectedDiagramId ?? ''}|${viewKind ?? ''}`;
+        if (seededCollapseRef.current === key) return;
+        if (viewKind === 'statetransition') {
+            if (compositeStateIds.length === 0) return;
+            setCollapsedStateNodes(new Set(compositeStateIds));
+        } else if (viewKind === 'interconnection') {
+            if (interconnectionContainerIds.length === 0) return;
+            setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds));
+        }
+        seededCollapseRef.current = key;
+    }, [model, selectedDiagramId, viewKind, compositeStateIds, interconnectionContainerIds]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -1866,11 +1903,7 @@ function DiagramCanvasInner() {
                                 />
                                 <IconButton
                                     icon={<Icon.collapse />}
-                                    onClick={() => setCollapsedInterconnectionNodes(new Set(
-                                        model?.relationships
-                                            .filter(r => ['composes', 'composedof', 'aggregation', 'decomposedby'].includes(r.type.toLowerCase()))
-                                            .map(r => r.sourceId) ?? [],
-                                    ))}
+                                    onClick={() => setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds))}
                                     title="Collapse all parts" ariaLabel="Collapse all"
                                 />
                                 <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
