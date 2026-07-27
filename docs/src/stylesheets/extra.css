@@ -290,3 +290,35 @@
   border-radius: 0 var(--memo-radius) var(--memo-radius) 0;
   padding: 0.6em 1em;
 }
+
+/* SysML v2 has no bundled Pygments lexer.  The MkDocs formatter supplies these
+   semantic token classes so source retains an editor-like visual hierarchy.
+   Colours are kept identical to the memo ontology docs so SysML reads the same
+   in both.
+
+   The block rules are scoped per colour scheme and marked !important on
+   purpose. Unlike the memo docs, this stylesheet forces its own code-block
+   palette with [data-md-color-scheme="…"] .md-typeset pre { … !important },
+   so an unscoped .sysml-highlight pre would lose and leave SysML blocks on the
+   light background with dark-theme token colours on top. */
+[data-md-color-scheme="default"] .sysml-highlight pre,
+[data-md-color-scheme="slate"] .sysml-highlight pre {
+    border: 1px solid #16435e;
+    background: #06243d !important;
+    box-shadow: 0 10px 22px rgba(2,31,54,.12);
+}
+[data-md-color-scheme="default"] .sysml-highlight pre > code,
+[data-md-color-scheme="slate"] .sysml-highlight pre > code {
+    display: block;
+    background: transparent !important;
+    color: #d9eaf4 !important;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.sysml-highlight .sysml-comment { color: #7196a9; font-style: italic; }
+.sysml-highlight .sysml-keyword { color: #82caff; font-weight: 700; }
+.sysml-highlight .sysml-type { color: #7eead0; font-weight: 700; }
+.sysml-highlight .sysml-relation { color: #d6a8ff; font-weight: 700; }
+.sysml-highlight .sysml-operator { color: #ffcf73; font-weight: 800; }
+.sysml-highlight .sysml-string { color: #a9dc98; }
+.sysml-highlight .sysml-number { color: #ffb86b; }

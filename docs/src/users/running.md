@@ -45,12 +45,15 @@ resolved dependency lock, and build command with the review record.
 
 ## Run the bundled example
 
-The command copies the selected example to a disposable directory, so edits do
-not affect the installed ontology or source checkout:
+Where the example opens from depends on how the ontology resolves. An **installed
+package** under `node_modules` is copied to a disposable directory, so edits never touch
+the dependency. A **local checkout** is served **in place**, so edits are real — the path
+is printed on startup. Pass `--read-only` to force the disposable copy either way:
 
 ```bash
 memo-architect --example gpca
 memo-architect --example standard-sysml-diagrams
+memo-architect --example gpca --read-only
 ```
 
 The examples are the quickest way to learn the workbench before opening your

@@ -15,7 +15,7 @@ The DSM tool is used to visualize and analyze dependencies between functional an
 - **Clustering:** MEMO uses a built-in clustering algorithm (Union-Find) to detect connected components. This helps identify high-coupling areas that may require design refinement.
 
 ### Usage
-1. Click the **DSM** icon in the toolbar.
+1. Open **Tools → Design Structure Matrix**.
 2. Select the **Kinds** you want to analyze (e.g., `Function`).
 3. Select the **Relationship Types** to include (e.g., `flow`).
 4. Click **Cluster** to auto-reorder the matrix into logical groupings.
@@ -35,7 +35,7 @@ The Consistency Panel provides real-time feedback on logical gaps in your model 
 - **Requirement Orphans:** Identification of requirements that do not have a parent (Need) or a child (Design Output).
 
 ### Usage
-- Click the **Compliance** icon in the toolbar.
+- Open **Tools → Compliance Wizard**.
 - The **Problems** panel at the bottom will display a list of consistency violations.
 - Click any violation to navigate to the offending element in the **Model Explorer**.
 

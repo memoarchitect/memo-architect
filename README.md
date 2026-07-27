@@ -101,7 +101,7 @@ docs/                          public user, developer, architecture, and design 
 
 ## Development quick start
 
-Requires Node.js 24 LTS and pnpm 9 or later.
+Requires Node.js 26 or later (see `engines` in `package.json`) and pnpm 9 or later.
 
 ```bash
 git clone https://github.com/memoarchitect/memo-architect.git

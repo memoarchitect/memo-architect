@@ -31,12 +31,19 @@ pnpm memo --version
 pnpm memo --help
 ```
 
-To run a bundled example in a disposable copy:
+To run a bundled example from the checkout, use the `architect` script. A checkout does
+not put `memo-architect` on your `PATH`, so calling it directly would run a globally
+installed copy instead of the one you just built:
 
 ```bash
-memo-architect --example gpca
-memo-architect --example standard-sysml-diagrams
+pnpm architect --example gpca
+pnpm architect --example standard-sysml-diagrams
 ```
+
+In a standalone clone the ontology resolves from `node_modules`, so the example opens in
+a disposable copy and your edits are discarded on exit. In the `memo-meta` workspace the
+ontology is a linked checkout, so the same command edits the example in place — pass
+`--read-only` if you only want to look around.
 
 ## Work in any folder
 

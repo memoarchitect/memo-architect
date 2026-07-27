@@ -15,20 +15,24 @@ theme:
       accent: custom
       toggle:
         icon: material/brightness-4
-        name: Switch to dark mode
+        name: Use dark mode
     - scheme: slate
       primary: custom
       accent: custom
       toggle:
         icon: material/brightness-7
-        name: Switch to light mode
+        name: Use light mode
   logo: images/logo-brain.svg
   favicon: images/favicon.svg
   features:
+    # navigation.sections is deliberately absent: it renders second-level
+    # groups as flat bold headers. Without it the groups collapse and expand,
+    # which is what lets Learn the Model, Use the Workbench, and Practical
+    # Guides nest. Matches the memo ontology docs.
     - navigation.tabs
-    - navigation.sections
-    - navigation.expand
+    - navigation.indexes
     - navigation.top
+    - toc.follow
     - content.code.copy
     - content.code.annotate
     - search.highlight
@@ -39,11 +43,19 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - javascripts/image-zoom.js
+
 markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:
+        # SysML v2 has no Pygments lexer. sysml_highlight.py supplies a small
+        # dependency-free formatter, shared with the memo ontology docs.
+        - name: sysml
+          class: sysml
+          format: !!python/name:sysml_highlight.sysml_fence_format
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
@@ -61,6 +73,7 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      toc_depth: 2
 
 docs_dir: docs/src
 site_dir: docs/dist
@@ -70,7 +83,9 @@ plugins:
 
 nav:
   - Start Here:
-      - What MEMO Architect Is: index.md
+      # A bare index.md is the section landing page under navigation.indexes,
+      # the same shape the memo ontology docs use for Home.
+      - index.md
       - Choose the Right MEMO Product: users/choose-layer.md
       - Prerequisites: users/prerequisites.md
       - Installation: users/installation.md
@@ -89,6 +104,7 @@ nav:
           - Analysis Tools: users/analysis-tools.md
           - DHF Workbench: users/dhf-workbench.md
           - Intelligence and AI: users/ai-features.md
+          - AI Coding Tools (MCP): users/mcp-cursor.md
       - Practical Guides:
           - Guide Map: users/guides-index.md
           - Start a New Project: users/new-project.md
@@ -98,8 +114,10 @@ nav:
           - Command Line Usage: users/cli-usage.md
   - Concepts and Design:
       - How Architect Works: concepts/architect.md
+      - Codebase Overview: developers/codebase-overview.md
       - Modeling Configuration: developers/config/medical-domain.md
       - Viewpoint Configuration: developers/config/reference.md
   - Contribute:
       - Contributing: developers/development/contributing.md
       - Extend with a Plugin: developers/plugin-development.md
+      - SysIDE Configuration: developers/syside-configuration.md

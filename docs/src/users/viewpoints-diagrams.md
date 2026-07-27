@@ -60,10 +60,22 @@ MEMO supports SysML v2 diagram types. Each type has a specific purpose:
 | **IBD** | Internal Block Diagram | Teal | Internal connections and flows |
 | **REQ** | Requirements Diagram | Blue | Requirements hierarchy and traceability |
 | **UCD** | Use Case Diagram | Orange | Actor-system interactions |
+| **CTX** | System Context Diagram | Light blue | The system and everything outside it |
 | **ACT** | Activity Diagram | Yellow | Workflows and processes |
+| **AFD** | Action Flow Diagram | Coral | Action sequences and control flow |
+| **OFD** | Operational Flow Diagram | Yellow | Operational activity flow |
+| **FFD** | Functional Flow Diagram | Yellow | Functional chain flow |
 | **PKG** | Package Diagram | Gray | Package organization |
 | **PAR** | Parametric Diagram | Green | Constraint relationships |
+| **STM** | State Transition Diagram | Coral | Modal behaviour and state changes |
+| **SEQ** | Sequence Diagram | Blue | Interaction ordering between parts |
 | **RISK** | Risk Diagram | Red | Hazard chains (medical extension) |
+| **FMEA** | FMEA Matrix | Red | Failure modes and effects (tabular) |
+| **ALLOC** | Allocation Matrix | Orange | Function-to-component allocation (tabular) |
+| **THREAT** | Threat Model Diagram | Dark red | Cybersecurity threats (medical extension) |
+
+FMEA and Allocation render as matrices rather than node-and-edge diagrams; the rest
+render on the canvas.
 
 ## Reading Nested Behaviour
 
@@ -207,7 +219,7 @@ diagram definitions — useful for custom tooling or reports.
 Define custom viewpoints in your `memo.config.yaml`:
 
 ```yaml
-extends: "@memo/medical-modeling-profile"
+extends: "@memoarchitect/medical-modeling-profile"
 
 viewpoints:
   - id: my-custom-view

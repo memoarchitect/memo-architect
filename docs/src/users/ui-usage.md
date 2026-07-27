@@ -11,10 +11,14 @@ The workbench gives the same model three complementary entry points:
 
 | Area | Use it for | Good first action |
 |---|---|---|
-| **Model Explorer** | Find elements by layer, kind, or name | Open one known requirement, function, or hazard |
-| **View Explorer** | Select the viewpoint for a review question | Choose context, risk, requirements, or verification |
+| **Model Explorer** (top nav) | Find elements by layer, kind, or name | Open one known requirement, function, or hazard |
+| **Diagrams** (top nav) | Select the viewpoint for a review question | Choose context, risk, requirements, or verification |
 | **Main view** | Read the selected diagram, table, or analysis | Follow one relationship at a time |
 | **Details and findings** | Inspect attributes, links, and validation messages | Decide whether a gap is real, intentional, or a modeling error |
+
+The top navigation also carries **DHF**, **Scenarios**, **Ontology**, **Import**, and a
+**Tools** menu holding the cross-cutting analyses (Design Structure Matrix, Traceability
+Matrix, Statistics Dashboard, Compliance Wizard, and Model Diff).
 
 ## A five-minute review
 
@@ -34,18 +38,17 @@ copy of the model.
 
 ## Explore the current vocabulary
 
-Use the **Ontology Viewer** when you are unsure which element kind or
-relationship belongs in a model. It shows the vocabulary selected by the
-project's active profile; it is a reference, not a second place to author
-project meaning.
+Open the **Ontology** tab when you are unsure which element kind or relationship
+belongs in a model. It shows the vocabulary selected by the project's active profile;
+it is a reference, not a second place to author project meaning.
 
 ![Ontology Viewer](../images/screenshots/ontology-viewer.png)
 
 ## Find dependencies and gaps
 
-The **DSM** highlights dependency patterns. Use it to prepare a technical
-discussion, then return to the connected elements to understand the engineering
-reason for a dependency.
+**Tools → Design Structure Matrix** highlights dependency patterns. Use it to prepare a
+technical discussion, then return to the connected elements to understand the
+engineering reason for a dependency.
 
 ![DSM Matrix](../images/screenshots/dsm-matrix.png)
 
@@ -58,9 +61,12 @@ boundary.
 
 ## Optional assistance
 
-Where enabled for a project, the command palette can help draft or query model
-content. Review generated text and all source changes as carefully as any other
-engineering input; assistance does not approve a requirement, risk control, or
-evidence claim.
+Where a provider is configured, the **AI Tools** section under the **DHF** tab can help
+query or draft model content. Review generated text and all source changes as carefully
+as any other engineering input; assistance does not approve a requirement, risk control,
+or evidence claim.
 
-![AI Interface](../images/screenshots/ai-interface.png)
+The assistant cannot write to the model on its own. Edits it suggests are staged as
+proposals and are written only when you approve them. See
+[Intelligence & AI](ai-features.md) for setup and behaviour, and
+[AI Coding Tools (MCP)](mcp-cursor.md) to use the model from Cursor or Claude Code.
