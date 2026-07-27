@@ -13,7 +13,7 @@ import type {
     DiagramLayout,
     RestartRequiredMessage,
 } from '@memoarchitect/tools/browser';
-import type { ValidationResult, CompletenessReport } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -395,6 +395,9 @@ export interface ModelState {
     llmModel: string | undefined;
     /** Pending LLM request IDs and their resolve/reject functions */
     llmPending: Map<string, { resolve: (value: any) => void; reject: (err: Error) => void }>;
+    /** Provider/model/key-origin as resolved by the server. Never holds the key. */
+    llmSettings: LlmSettingsStatus | null;
+    setLlmSettings: (settings: LlmSettingsStatus) => void;
     setLlmStatus: (available: boolean, provider?: string, model?: string) => void;
     registerLlmRequest: (requestId: string, resolve: (v: any) => void, reject: (e: Error) => void) => void;
     resolveLlmRequest: (requestId: string, value: any) => void;
@@ -507,6 +510,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
     llmProvider: undefined,
     llmModel: undefined,
     llmPending: new Map(),
+    llmSettings: null,
+    setLlmSettings: (settings) => set({
+        llmSettings: settings,
+        // Keep the coarse flags in step so existing consumers stay correct.
+        llmAvailable: settings.configured,
+        llmProvider: settings.provider,
+        llmModel: settings.model,
+    }),
     setLlmStatus: (available, provider, model) => set({ llmAvailable: available, llmProvider: provider, llmModel: model }),
     registerLlmRequest: (requestId, resolve, reject) => set((s) => {
         const next = new Map(s.llmPending);

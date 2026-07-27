@@ -1908,8 +1908,8 @@ function DhfExplorerContent() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <AiToolButton
-                            label="Model Q&A"
-                            description="Ask questions about your model"
+                            label="Model Assistant"
+                            description="Ask questions and propose edits"
                             active={activeView.type === 'ask'}
                             onClick={() => setActiveView({ type: 'ask' })}
                         />

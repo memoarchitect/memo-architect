@@ -14,6 +14,7 @@ import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
 } from '@memoarchitect/tools/browser';
+import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
 
 /** Embedded data injected by `memo-architect build` */
 interface EmbeddedData {
@@ -272,11 +273,43 @@ function handleMessage(msg: ServerMessage): void {
         case 'llm:status':
             store.setLlmStatus(msg.payload.available, msg.payload.provider, msg.payload.model);
             break;
+        case 'llm:settings':
+            store.setLlmSettings(msg.payload.settings);
+            break;
         case 'llm:ask:result':
             if (msg.payload.error) {
                 store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
             } else {
                 store.resolveLlmRequest(msg.payload.requestId, msg.payload.answer);
+            }
+            break;
+        case 'llm:chat:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, {
+                    answer: msg.payload.answer,
+                    proposedChanges: msg.payload.proposedChanges ?? [],
+                    messages: msg.payload.messages ?? [],
+                    truncated: msg.payload.truncated,
+                });
+            }
+            break;
+        case 'llm:chat:apply:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, {
+                    applied: msg.payload.applied ?? [],
+                    failed: msg.payload.failed ?? [],
+                });
+            }
+            break;
+        case 'llm:settings:save:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, msg.payload.settings);
             }
             break;
         case 'llm:generate:result':
@@ -580,6 +613,40 @@ export function sendCsvImport(payload: CsvImportMessage['payload']): void {
 export function sendLlmAsk(requestId: string, question: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'llm:ask', payload: { requestId, question } }));
+    }
+}
+
+/**
+ * Send one turn of a model conversation.
+ *
+ * `history` is the transcript the previous turn returned — the server keeps no
+ * per-conversation state, so the client owns it.
+ */
+export function sendLlmChat(
+    requestId: string,
+    question: string,
+    history: ChatMessage[],
+    allowEdits: boolean,
+): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:chat', payload: { requestId, question, history, allowEdits } }));
+    }
+}
+
+/** Apply the proposed changes the engineer approved. */
+export function sendLlmApply(requestId: string, changes: ProposedChange[]): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:chat:apply', payload: { requestId, changes } }));
+    }
+}
+
+/** Save LLM settings. The key is written server-side, outside the project. */
+export function sendLlmSettingsSave(
+    requestId: string,
+    payload: { provider?: string; model?: string; baseUrl?: string; apiKey?: string },
+): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'llm:settings:save', payload: { requestId, ...payload } }));
     }
 }
 
