@@ -8,12 +8,12 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, VALID_ONTOLOGY_KINDS_SORTED, BUILDER_SYNTHESIZED_KINDS, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
-import type { MemoElement, DiagramDTO } from '@memoarchitect/tools/browser';
+import type { MemoElement, DiagramDTO, KindDefinitionDTO } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -86,8 +86,16 @@ interface CtxMenuState {
 
 function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: string; currentKind: string; onClose: () => void }) {
     const updateElementKind = useModelStore(s => s.updateElementKind);
+    const model = useModelStore(s => s.model);
     const [selected, setSelected] = useState(currentKind);
     const ref = useRef<HTMLDivElement>(null);
+    const ontologyKinds = useMemo(
+        () => (model?.registries?.kinds ?? [])
+            .filter(kind => !kind.isAbstract)
+            .map(kind => kind.name)
+            .sort((a, b) => a.localeCompare(b)),
+        [model],
+    );
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -119,7 +127,7 @@ function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: strin
                 className="w-full px-3 py-2 rounded-lg mb-3 focus:outline-none"
                 style={{ background: '#F9F9F8', border: '1px solid #E5E7EB', color: '#1B3A4B', fontSize: '13px' }}
             >
-                {VALID_ONTOLOGY_KINDS_SORTED.map(k => (
+                {ontologyKinds.map(k => (
                     <option key={k} value={k}>{k}</option>
                 ))}
             </select>
@@ -141,8 +149,6 @@ function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: strin
 
 function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
     const model = useModelStore(s => s.model);
-    const availableOntologies = useModelStore(s => s.availableOntologies);
-    const selectedOntologies = useModelStore(s => s.selectedOntologies);
     const selectElement = useModelStore(s => s.selectElement);
     const addElement = useModelStore(s => s.addElement);
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
@@ -171,9 +177,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         // Canonical types are supplied by MEMO at runtime. The old static
         // display palette is deliberately not an ontology validator: it would
         // mislabel valid derived types such as User and HardwareAssembly.
-        const isUndefinedKind = !availableOntologies.some(pkg =>
-            selectedOntologies.has(pkg.name) && pkg.layers.some(layer => layer.kinds.some(kind => kind.name === el.kind)),
-        ) && !BUILDER_SYNTHESIZED_KINDS.has(el.kind);
+        const isUndefinedKind = !(model.registries?.kinds ?? []).some(kind => kind.name === el.kind);
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
             {
@@ -589,47 +593,44 @@ function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackag
 }
 
 /** Build ordered layer groups from the currently selected ontology packages. */
-function buildLayerGroupsFromOntologies(
+function buildLayerGroupsFromRegistry(
+    registryKinds: KindDefinitionDTO[],
     availableOntologies: OntologyPackageInfo[],
-    selectedOntologies: Set<string>,
 ): LayerGroup[] {
     const layerMap = new Map<string, LayerGroup>();
+    const metadata = new Map<string, { label: string; color: string }>();
     for (const pkg of availableOntologies) {
-        if (!selectedOntologies.has(pkg.name)) continue;
         for (const layer of pkg.layers) {
-            if (!layerMap.has(layer.id)) {
-                layerMap.set(layer.id, {
-                    id: layer.id,
-                    label: layer.label,
-                    color: layer.color ?? (LAYER_COLORS as Record<string, string>)[layer.id] ?? '#6B7280',
-                    kinds: layer.kinds.map(k => k.name),
-                });
-            } else {
-                // Merge kinds from duplicate layer ids across packages
-                const existing = layerMap.get(layer.id)!;
-                for (const k of layer.kinds) {
-                    if (!existing.kinds.includes(k.name)) existing.kinds.push(k.name);
-                }
-            }
+            if (!metadata.has(layer.id)) metadata.set(layer.id, layer);
         }
     }
-    // Preserve the order and labels supplied by the selected ontology.
+
+    for (const kind of registryKinds) {
+        const id = kind.namespace?.[0] ?? kind.layer;
+        if (!id || id === 'unknown') continue;
+        let group = layerMap.get(id);
+        if (!group) {
+            const display = metadata.get(id);
+            group = {
+                id,
+                label: display?.label ?? subGroupLabel(id),
+                color: display?.color ?? (LAYER_COLORS as Record<string, string>)[id] ?? '#6B7280',
+                kinds: [],
+            };
+            layerMap.set(id, group);
+        }
+        if (!group.kinds.includes(kind.name)) group.kinds.push(kind.name);
+    }
     return [...layerMap.values()];
 }
 
-/** Build kind-name → layer-id map from selected ontology packages. */
+/** Build kind-name → source-area map from the ontology registry. */
 function buildKindToLayerIdMap(
-    availableOntologies: OntologyPackageInfo[],
-    selectedOntologies: Set<string>,
+    registryKinds: KindDefinitionDTO[],
 ): Record<string, string> {
     const map: Record<string, string> = {};
-    for (const pkg of availableOntologies) {
-        if (!selectedOntologies.has(pkg.name)) continue;
-        for (const layer of pkg.layers) {
-            for (const kind of layer.kinds) {
-                map[kind.name] = layer.id;
-            }
-        }
+    for (const kind of registryKinds) {
+        map[kind.name] = kind.namespace?.[0] ?? kind.layer;
     }
     return map;
 }
@@ -640,34 +641,24 @@ function buildKindToLayerIdMap(
  * under a layer directory carry no sub-group.
  */
 function buildKindToSubGroupMap(
-    availableOntologies: OntologyPackageInfo[],
-    selectedOntologies: Set<string>,
+    registryKinds: KindDefinitionDTO[],
 ): Record<string, string | undefined> {
     const map: Record<string, string | undefined> = {};
-    for (const pkg of availableOntologies) {
-        if (!selectedOntologies.has(pkg.name)) continue;
-        for (const layer of pkg.layers) {
-            for (const kind of layer.kinds) {
-                map[kind.name] = kind.group;
-            }
-        }
+    for (const kind of registryKinds) {
+        map[kind.name] = kind.namespace?.[1];
     }
     return map;
 }
 
 /** Immediate ontology parent used as the Explorer's type folder. */
 function buildKindToParentMap(
-    availableOntologies: OntologyPackageInfo[],
-    selectedOntologies: Set<string>,
+    registryKinds: KindDefinitionDTO[],
 ): Record<string, string | undefined> {
     const map: Record<string, string | undefined> = {};
     const abstractKinds = new Set<string>();
-    for (const pkg of availableOntologies) {
-        if (!selectedOntologies.has(pkg.name)) continue;
-        for (const layer of pkg.layers) {
-            for (const kind of layer.kinds) if (kind.isAbstract) abstractKinds.add(kind.name);
-            for (const kind of layer.kinds) map[kind.name] = kind.derivesFrom;
-        }
+    for (const kind of registryKinds) {
+        if (kind.isAbstract) abstractKinds.add(kind.name);
+        map[kind.name] = kind.superType;
     }
     for (const [kind, parent] of Object.entries(map)) {
         if (parent && abstractKinds.has(parent)) map[kind] = undefined;
@@ -715,18 +706,18 @@ export interface ExplorerSubGroup {
 export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
+    registryKinds: KindDefinitionDTO[],
     availableOntologies: OntologyPackageInfo[],
-    selectedOntologies: Set<string>,
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
     // Derive groups and kind→layer map from the currently selected ontology packages.
     // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
     const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
-    const kindToLayerId = buildKindToLayerIdMap(availableOntologies, selectedOntologies);
-    const kindToSubGroup = buildKindToSubGroupMap(availableOntologies, selectedOntologies);
-    const kindToParent = buildKindToParentMap(availableOntologies, selectedOntologies);
-    const layerGroups = buildLayerGroupsFromOntologies(availableOntologies, selectedOntologies)
+    const kindToLayerId = buildKindToLayerIdMap(registryKinds);
+    const kindToSubGroup = buildKindToSubGroupMap(registryKinds);
+    const kindToParent = buildKindToParentMap(registryKinds);
+    const layerGroups = buildLayerGroupsFromRegistry(registryKinds, availableOntologies)
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
@@ -812,7 +803,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const moveFolder = useModelStore(s => s.moveFolder);
     const validation = useModelStore(s => s.validation);
     const availableOntologies = useModelStore(s => s.availableOntologies);
-    const selectedOntologies = useModelStore(s => s.selectedOntologies);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
@@ -848,10 +838,15 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, []);
 
-    // Build group tree from selected ontology layers (dynamic — not hardcoded SEMANTIC_GROUPS)
+    // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
-        () => model ? computeExplorerGroupTree(Object.values(model.elements), searchTerm, availableOntologies, selectedOntologies) : [],
-        [model, searchTerm, availableOntologies, selectedOntologies],
+        () => model ? computeExplorerGroupTree(
+            Object.values(model.elements),
+            searchTerm,
+            model.registries?.kinds ?? [],
+            availableOntologies,
+        ) : [],
+        [model, searchTerm, availableOntologies],
     );
 
     // ─── DnD Handlers ───

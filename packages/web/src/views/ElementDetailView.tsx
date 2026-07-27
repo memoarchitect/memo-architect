@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
-import { LAYER_COLORS, KIND_TO_GROUP } from '../constants';
+import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR, SHADOW } from '../styles/tokens';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
@@ -180,7 +180,8 @@ export function ElementDetailView() {
     }
 
     const layerColor = LAYER_COLORS[element.layer] || COLOR.muted;
-    const group = KIND_TO_GROUP[element.kind];
+    const kindDefinition = model?.registries?.kinds.find(kind => kind.name === element.kind);
+    const groupLabel = kindDefinition?.namespace?.[1] ?? kindDefinition?.namespace?.[0];
     const pendingEdit = pendingEdits.get(elementId);
     const currentDoc = pendingEdit?.doc ?? element.doc ?? '';
     const hasPendingChanges = pendingEdits.has(elementId);
@@ -218,16 +219,16 @@ export function ElementDetailView() {
                             <span
                                 className="px-2 py-1 rounded"
                                 style={{
-                                    background: (group?.color || COLOR.muted) + '12',
-                                    color: group?.color || COLOR.muted,
+                                    background: layerColor + '12',
+                                    color: layerColor,
                                     fontSize: FONT.xs,
                                 }}
                             >
                                 {element.layer}
                             </span>
-                            {group && (
+                            {groupLabel && (
                                 <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>
-                                    {group.label}
+                                    {groupLabel.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                                 </span>
                             )}
                         </div>

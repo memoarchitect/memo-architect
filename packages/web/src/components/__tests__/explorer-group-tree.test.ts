@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeExplorerGroupTree } from '../ExplorerPanel';
-import type { MemoElement } from '@memoarchitect/tools/browser';
+import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
 // Mirrors the vendored @memoarchitect/ontology package shape: layer ids are the
@@ -36,7 +36,17 @@ function el(id: string, kind: string, layer: string): MemoElement {
     return { id, name: id, kind, construct: 'part', layer, file: 'model/test.sysml', attributes: {} } as MemoElement;
 }
 
-const SELECTED = new Set(['@memoarchitect/ontology']);
+function registryFromOntology(ontology: OntologyPackageInfo): KindDefinitionDTO[] {
+    return ontology.layers.flatMap(layer => layer.kinds.map(kind => ({
+        name: kind.name,
+        label: kind.label,
+        layer: kind.layer,
+        construct: kind.construct,
+        superType: kind.derivesFrom,
+        isAbstract: kind.isAbstract,
+        namespace: [layer.id, kind.group].filter((value): value is string => Boolean(value)),
+    })));
+}
 
 /** All kind names across a group's sub-groups. */
 function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): string[] {
@@ -45,7 +55,9 @@ function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): stri
 
 describe('computeExplorerGroupTree', () => {
     it('groups ontology-declared kinds under their package layer', () => {
-        const groups = computeExplorerGroupTree([el('h1', 'Hazard', 'risk')], '', [ONTOLOGY], SELECTED);
+        const groups = computeExplorerGroupTree(
+            [el('h1', 'Hazard', 'risk')], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
+        );
         expect(groups.map(g => g.group.id)).toEqual(['architecture']);
     });
 
@@ -56,7 +68,7 @@ describe('computeExplorerGroupTree', () => {
             el('r1', 'Requirement', 'requirements'),
             el('bm1', 'StateMachine', 'architecture'),
         ];
-        const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
+        const groups = computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
         const arch = groups.find(g => g.group.id === 'architecture');
         expect(arch).toBeDefined();
         expect(arch!.subGroups.map(sg => sg.id)).toEqual(['functional', 'requirements', 'safety-risk']);
@@ -73,13 +85,39 @@ describe('computeExplorerGroupTree', () => {
             el('acquireSensors', 'ActionUsage', 'behavior'),
             el('SensorStatusVector', 'ItemDefinition', 'behavior'),
         ];
-        const groups = computeExplorerGroupTree(elements, '', [ONTOLOGY], SELECTED);
+        const groups = computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
         expect(groups).toEqual([]);
     });
 
     it('still flags genuinely unknown kinds as Undefined', () => {
-        const groups = computeExplorerGroupTree([el('x1', 'MysteryKind', 'unknown')], '', [ONTOLOGY], SELECTED);
+        const groups = computeExplorerGroupTree(
+            [el('x1', 'MysteryKind', 'unknown')], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
+        );
         expect(groups.map(g => g.group.id)).toEqual(['undefined']);
+    });
+
+    it('uses the complete ontology registry instead of an incomplete UI package projection', () => {
+        const registry: KindDefinitionDTO[] = [
+            ...registryFromOntology(ONTOLOGY),
+            {
+                name: 'FMEAWorksheet',
+                label: 'FMEA Worksheet',
+                layer: 'safety_risk',
+                construct: 'item def',
+                superType: 'AnalysisArtifact',
+                namespace: ['assurance', 'safety_risk', 'analysis'],
+            },
+        ];
+        const groups = computeExplorerGroupTree(
+            [el('fmea', 'FMEAWorksheet', 'safety_risk')],
+            '',
+            registry,
+            [ONTOLOGY],
+        );
+
+        expect(groups.map(group => group.group.id)).toEqual(['assurance']);
+        expect(groups.some(group => group.group.id === 'undefined')).toBe(false);
+        expect(groups[0].subGroups.map(group => group.id)).toEqual(['safety_risk']);
     });
 
     it('accepts MEMO-derived canonical types instead of marking them undefined', () => {
@@ -96,7 +134,7 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree([
             el('user', 'User', 'context'),
             el('assembly', 'HardwareAssembly', 'implementation'),
-        ], '', [memoOntology], SELECTED);
+        ], '', registryFromOntology(memoOntology), [memoOntology]);
         expect(groups.map(group => group.group.id)).toEqual(['architecture']);
         // The concrete elements nest below their ontology bases; critically,
         // they stay in the MEMO architecture group rather than Undefined.
@@ -116,7 +154,9 @@ describe('computeExplorerGroupTree', () => {
                 },
             ],
         } as OntologyPackageInfo;
-        const groups = computeExplorerGroupTree([el('a1', 'ActionDefinition', 'behavior')], '', [withAction], SELECTED);
+        const groups = computeExplorerGroupTree(
+            [el('a1', 'ActionDefinition', 'behavior')], '', registryFromOntology(withAction), [withAction],
+        );
         expect(groups).toEqual([]);
     });
 
@@ -131,7 +171,9 @@ describe('computeExplorerGroupTree', () => {
                 ],
             }],
         } as OntologyPackageInfo;
-        const groups = computeExplorerGroupTree([el('rr1', 'ResidualRisk', 'risk')], '', [withAbstractBase], SELECTED);
+        const groups = computeExplorerGroupTree(
+            [el('rr1', 'ResidualRisk', 'risk')], '', registryFromOntology(withAbstractBase), [withAbstractBase],
+        );
         const risk = groups[0].subGroups.find(group => group.id === 'safety-risk')!;
         expect(risk.kinds.has('ResidualRisk')).toBe(true);
         expect(risk.kinds.has('AbstractRisk')).toBe(false);

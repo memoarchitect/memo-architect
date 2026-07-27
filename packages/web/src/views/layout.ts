@@ -8,7 +8,7 @@ import type { Node, Edge } from '@xyflow/react';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { LayoutGraph, LayoutRunOptions } from '../diagram/layout-provider';
 import { runLayoutProvider } from '../diagram/layout-providers';
-import { LAYER_COLORS, REL_COLORS, SEMANTIC_GROUPS, CONTAINMENT_DEPTH_COLORS } from '../constants';
+import { LAYER_COLORS, REL_COLORS, CONTAINMENT_DEPTH_COLORS } from '../constants';
 import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import { pickCompartmentEntries } from './templates/composition-tree';
@@ -1044,14 +1044,6 @@ export async function computeLayout(
 // then renders as either IBD (nested boxes) or Tree (hierarchy with edges).
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Structural element kinds eligible for decomposition diagrams */
-const STRUCTURAL_KINDS = new Set<string>();
-for (const g of SEMANTIC_GROUPS) {
-    if (['logical', 'physical'].includes(g.id)) {
-        for (const k of g.kinds) STRUCTURAL_KINDS.add(k);
-    }
-}
-
 export interface DecompositionTree {
     roots: string[];
     childrenMap: Map<string, string[]>;
@@ -1059,9 +1051,15 @@ export interface DecompositionTree {
 }
 
 export function buildDecompositionTree(model: MemoModelDTO): DecompositionTree {
+    const structuralKinds = new Set(
+        (model.registries?.kinds ?? [])
+            .filter(kind => kind.namespace?.some(segment =>
+                segment === 'logical' || segment === 'implementation' || segment === 'realization'))
+            .map(kind => kind.name),
+    );
     const elements = new Map<string, MemoElement>();
     for (const el of Object.values(model.elements)) {
-        if (STRUCTURAL_KINDS.has(el.kind)) {
+        if (structuralKinds.has(el.kind)) {
             elements.set(el.id, el);
         }
     }
@@ -1611,14 +1609,6 @@ export function computeContainmentLayout(
 // Function) linked by decomposedBy/composedOf relationships.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Functional kinds eligible for FBS diagrams */
-const FUNCTIONAL_KINDS = new Set<string>();
-for (const g of SEMANTIC_GROUPS) {
-    if (g.id === 'functions') {
-        for (const k of g.kinds) FUNCTIONAL_KINDS.add(k);
-    }
-}
-
 export interface FunctionalTree {
     roots: string[];
     childrenMap: Map<string, string[]>;
@@ -1626,9 +1616,14 @@ export interface FunctionalTree {
 }
 
 export function buildFunctionalTree(model: MemoModelDTO): FunctionalTree {
+    const functionalKinds = new Set(
+        (model.registries?.kinds ?? [])
+            .filter(kind => kind.namespace?.includes('functional'))
+            .map(kind => kind.name),
+    );
     const elements = new Map<string, MemoElement>();
     for (const el of Object.values(model.elements)) {
-        if (FUNCTIONAL_KINDS.has(el.kind)) {
+        if (functionalKinds.has(el.kind)) {
             elements.set(el.id, el);
         }
     }
