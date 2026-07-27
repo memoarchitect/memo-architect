@@ -1,6 +1,6 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
@@ -34,8 +34,8 @@
     "setup": "pnpm install && pnpm run build && pdm install"
   },
   "dependencies": {
-    "@memoarchitect/tools": "0.6.2",
-    "@memoarchitect/ontology": "0.6.1",
+    "@memoarchitect/tools": "0.6.3",
+    "@memoarchitect/ontology": "0.6.2",
     "commander": "^12.1.0"
   },
   "devDependencies": {

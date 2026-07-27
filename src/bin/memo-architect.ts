@@ -10,7 +10,7 @@ const program = new Command();
 program
     .name('memo-architect')
     .description('MEMO Architect — interactive and distributable model workbench')
-    .version('0.6.1')
+    .version('0.6.2')
     .option('--example <name>', 'Open a bundled example project (e.g. gpca, standard-sysml-diagrams). A local checkout is opened in place; an installed package is opened read-only in a disposable copy')
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
     .option('-p, --port <port>', 'Server port', '3000')
