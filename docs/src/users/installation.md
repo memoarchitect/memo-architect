@@ -1,10 +1,6 @@
 # Installation
 
-## Prerequisites
-
-- Node.js 26 or later
-- pnpm 9.15 or later
-- Python 3.12 and PDM only when building the documentation site
+[Check the prerequisites](prerequisites.md) before installing Architect.
 
 ## Development checkout
 

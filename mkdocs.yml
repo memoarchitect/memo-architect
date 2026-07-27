@@ -72,6 +72,7 @@ nav:
   - Start Here:
       - What MEMO Architect Is: index.md
       - Choose the Right MEMO Product: users/choose-layer.md
+      - Prerequisites: users/prerequisites.md
       - Installation: users/installation.md
       - Running a Project: users/running.md
       - First Workbench Session: users/first-session.md
