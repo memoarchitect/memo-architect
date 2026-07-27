@@ -12,7 +12,22 @@ memo ontology show
 memo validate .
 ```
 
-`ontology show` lists the active element kinds, relationships, and rules.
+The generated project contains:
+
+```text
+package.json
+memo.package.yaml
+memo.lock.yaml
+syside.toml
+src/
+  architecture/
+  assurance/
+  artifacts/
+node_modules/@memoarchitect/ontology/
+```
+
+`syside.toml` lets SysIDE resolve the project source and the installed ontology
+as one model.
 
 ## 2. Establish scope
 
@@ -48,21 +63,8 @@ requirement detectFault : Requirement {
 
 ## 4. Organize for review
 
-```text
-model/
-  context/
-  operations/
-  requirements/
-  functions/
-  architecture/
-  risk/
-  assurance/
-  traceability/
-  views/
-```
-
-The element kind determines semantic ownership; the folder supports human
-ownership and review.
+Add architecture definitions under `src/architecture`, assurance definitions
+under `src/assurance`, and model-backed outputs under `src/artifacts`.
 
 ## 5. Review in Architect
 

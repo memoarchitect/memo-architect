@@ -19,7 +19,7 @@ The build compiles Architect against the exact `@memoarchitect/tools` and
 `@memoarchitect/ontology` versions in `package.json`. Maintainers use the
 separate `memo-meta` sibling workspace when changing all three together.
 
-The repositories share a `MAJOR.MINOR` compatibility line. Any `0.5.x` releases
+The repositories share a `MAJOR.MINOR` compatibility line. Any `0.6.x` releases
 are intended to work together; patch versions can advance independently.
 
 ## Verify the checkout
@@ -47,8 +47,10 @@ npm install @memoarchitect/tools
 npm install @memoarchitect/architect
 ```
 
-`@memoarchitect/tools` installs `@memoarchitect/ontology`; `@memoarchitect/architect` installs both lower
-layers. Then initialize a product model in its own directory:
+`memo init` creates a project `package.json` and installs
+`@memoarchitect/ontology` in that project's `node_modules`. It also creates
+`syside.toml`, which indexes the project source and the installed ontology
+source. Then initialize a product model in its own directory:
 
 ```bash
 mkdir my-device
@@ -58,6 +60,4 @@ memo validate .
 memo-architect dev
 ```
 
-Product files remain in `my-device`; MEMO implementation code remains in the
-installed packages. See [Command Line Usage](cli-usage.md) for the complete
-command surface and [Running MEMO](running.md) for server options.
+Open `http://localhost:3000` if the browser does not open automatically.

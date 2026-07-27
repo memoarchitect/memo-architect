@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@memoarchitect/ontology':
-        specifier: 0.6.0
-        version: 0.6.0
+        specifier: 0.6.1
+        version: 0.6.1
       '@memoarchitect/tools':
-        specifier: 0.6.0
-        version: 0.6.0
+        specifier: 0.6.2
+        version: 0.6.2
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -749,10 +749,12 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
-  '@memoarchitect/ontology@0.6.0':
+  '@memoarchitect/ontology@0.6.1':
+    resolution: {integrity: sha512-6rmcXIZlrYgfnJMK1f7/VbpBAYNqkSaUNJYdTSQtFvAy2zfyjVGwIYaXCHgFWw3HdpoDZ72SFwjJHfpyV6vpcg==}
     engines: {node: '>=26.0.0'}
 
-  '@memoarchitect/tools@0.6.0':
+  '@memoarchitect/tools@0.6.2':
+    resolution: {integrity: sha512-q8dyu1An+fOC0CtNSjuVLR+FtfeIkicmBxUN60dZk4c+hjRNOOCikjBCA+iasWQziMSUx83HKiM5hmpZ3vSNfw==}
     engines: {node: '>=26.0.0'}
     hasBin: true
 
@@ -2628,11 +2630,11 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
-  '@memoarchitect/ontology@0.6.0': {}
+  '@memoarchitect/ontology@0.6.1': {}
 
-  '@memoarchitect/tools@0.6.0':
+  '@memoarchitect/tools@0.6.2':
     dependencies:
-      '@memoarchitect/ontology': 0.6.0
+      '@memoarchitect/ontology': 0.6.1
       chalk: 5.6.2
       chokidar: 4.0.3
       commander: 12.1.0
