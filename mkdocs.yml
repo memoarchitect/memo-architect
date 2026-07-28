@@ -122,3 +122,8 @@ nav:
       - Contributing: developers/development/contributing.md
       - Extend with a Plugin: developers/plugin-development.md
       - SysIDE Configuration: developers/syside-configuration.md
+  - MEMO Family:
+      - Product website: https://memoarchitect.com/
+      - Ontology documentation: https://memoarchitect.com/memo/
+      - Tools documentation: https://memoarchitect.com/memo-tools/
+      - Architect documentation: https://memoarchitect.com/memo-architect/
