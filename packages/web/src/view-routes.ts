@@ -28,7 +28,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     dsm: '/dsm',
     ontology: '/ontology',
     traceability: '/traceability',
-    'scenario-editor': '/scenarios',
+    'scenario-editor': '/use-cases',
     'model-diff': '/diff',
     'compliance-wizard': '/compliance',
     statistics: '/statistics',
@@ -48,6 +48,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
  */
 const ALIAS_PATHS: Record<string, string> = {
     '/dashboard': 'dashboard',
+    '/scenarios': 'scenario-editor',
 };
 
 /** Reverse of STATIC_VIEW_PATHS, plus the aliases. Built once. */

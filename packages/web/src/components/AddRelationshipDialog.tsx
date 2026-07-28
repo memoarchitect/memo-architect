@@ -40,6 +40,8 @@ export interface AddRelationshipDialogProps {
         targetId: string;
         direction: RelationshipDirection;
     }) => void;
+    /** Full-screen legacy shell or an embedded relationship browser. */
+    presentation?: 'modal' | 'inline';
 }
 
 type Flow = 'relationship-first' | 'target-first';
@@ -49,8 +51,9 @@ const BORDER = '#E5E5E0';
 const ACCENT = '#2DD4A8';
 
 export function AddRelationshipDialog({
-    element, model, registries, onCancel, onConfirm,
+    element, model, registries, onCancel, onConfirm, presentation = 'modal',
 }: AddRelationshipDialogProps) {
+    const inline = presentation === 'inline';
     const [flow, setFlow] = useState<Flow>('relationship-first');
     const [direction, setDirection] = useState<RelationshipDirection | null>(null);
     const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -193,24 +196,28 @@ export function AddRelationshipDialog({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: 'rgba(15,23,42,0.35)' }}
-            onClick={onCancel}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Add relationship"
+            className={inline ? 'mt-3' : 'fixed inset-0 z-50 flex items-center justify-center'}
+            style={inline ? undefined : { background: 'rgba(15,23,42,0.35)' }}
+            onClick={inline ? undefined : onCancel}
+            role={inline ? 'region' : 'dialog'}
+            aria-modal={inline ? undefined : true}
+            aria-label={inline ? 'Browse allowed relationships' : 'Add relationship'}
         >
             <div
                 className="flex flex-col rounded-xl overflow-hidden"
                 style={{
-                    width: 560, maxHeight: '80vh', background: PANEL_BG,
-                    border: `1px solid ${BORDER}`, boxShadow: '0 16px 48px rgba(0,0,0,0.22)',
+                    width: inline ? '100%' : 560,
+                    maxHeight: inline ? 'none' : '80vh', background: PANEL_BG,
+                    border: `1px solid ${BORDER}`,
+                    boxShadow: inline ? 'none' : '0 16px 48px rgba(0,0,0,0.22)',
                 }}
-                onClick={e => e.stopPropagation()}
+                onClick={inline ? undefined : e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="px-4 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>Add Relationship</div>
+                    <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>
+                        {inline ? 'Browse Allowed Relationships' : 'Add Relationship'}
+                    </div>
                     <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
                         from <span style={{ fontWeight: 500, color: '#374151' }}>{element.name}</span>
                         {' '}<span style={{ color: '#9CA3AF' }}>({element.kind})</span>

@@ -54,6 +54,7 @@ export interface SceneEdgeSpec {
     strokeWidth: number;
     dashed: boolean;
     animated: boolean;
+    routing?: string;
     /** Interior waypoints in absolute coordinates (terminal points excluded). */
     points: Array<{ x: number; y: number }>;
 }
@@ -154,6 +155,7 @@ export function buildScene(nodes: readonly FlowishNode[], edges: readonly Flowis
                 strokeWidth: toNumber(style.strokeWidth) ?? 1.5,
                 dashed: typeof style.strokeDasharray === 'string' && style.strokeDasharray.length > 0,
                 animated: edge.animated === true,
+                ...(typeof edge.data?.routing === 'string' ? { routing: edge.data.routing } : {}),
                 // Terminals re-attach to cell perimeters in retained-mode
                 // engines; only interior bends are meaningful waypoints.
                 points: rawPoints.length > 2 ? rawPoints.slice(1, -1) : [],

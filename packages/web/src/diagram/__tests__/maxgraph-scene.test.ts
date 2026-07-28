@@ -69,12 +69,12 @@ describe('buildScene', () => {
                 label: 'flow',
                 animated: true,
                 style: { stroke: '#3498DB', strokeWidth: 2, strokeDasharray: '5 3' },
-                data: { points: [{ x: 0, y: 0 }, { x: 150, y: 40 }, { x: 300, y: 0 }] },
+                data: { routing: 'straight', points: [{ x: 0, y: 0 }, { x: 150, y: 40 }, { x: 300, y: 0 }] },
             },
         ]);
         expect(edges).toEqual([{
             id: 'e1', sourceId: 'a', targetId: 'b', label: 'flow',
-            color: '#3498DB', strokeWidth: 2, dashed: true, animated: true,
+            color: '#3498DB', strokeWidth: 2, dashed: true, animated: true, routing: 'straight',
             points: [{ x: 150, y: 40 }],
         }]);
     });

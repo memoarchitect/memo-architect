@@ -1,296 +1,107 @@
-# Viewpoints & Diagrams
+# Viewpoints and views
 
-MEMO organizes your model into **viewpoints** — focused lenses that show only
-the elements and relationships relevant to a specific concern. Each viewpoint
-supports specific **SysML v2 diagram types** for documentation and review.
+MEMO follows ISO/IEC/IEEE 42010: a **viewpoint** defines the concerns, audience,
+allowed model content, and presentation choices for a review; a **view** is an
+authored representation that conforms to one viewpoint.
 
-## What Are Viewpoints?
+Both are modeled in SysML v2 and supplied by the selected ontology and
+methodology packages. A device project's YAML does not redefine them.
 
-A viewpoint filters your model to show a subset of elements and relationships.
-Instead of looking at the entire model at once, you focus on one concern:
+## What appears in Architect
 
-| Viewpoint | Focus | Diagram Types |
-|-----------|-------|---------------|
-| **Model** (auto) | Everything — complete model | BDD |
-| **System Architecture** | Logical & physical decomposition | BDD, IBD, ACT, PKG |
-| **Requirements Traceability** | Requirements chain (needs → sys → sw) | REQ, PKG |
-| **Use Case View** | Actors, use cases, scenarios | UCD, ACT, PKG |
-| **Verification & Validation** | Tests and requirement coverage | REQ, PAR, PKG |
-| **Risk Overview** | ISO 14971 hazard chain | RISK, REQ, PKG |
-| **Software Architecture** | Software decomposition | BDD, IBD, PKG |
-| **Physical Architecture** | Hardware and physical BOM | BDD, IBD, PKG |
+Open **Viewpoints** in the top navigation. The left explorer shows one
+authoritative hierarchy:
 
-## Semantic Home vs Viewpoint
-
-Organize ontology packages and model files by each kind's semantic home.
-Use viewpoints as review and navigation slices that cut across those homes.
-
-| Semantic Home | Typical Kinds | Common Viewpoints |
-|-----------|-----------|-----------|
-| **Purpose** | Actor, Stakeholder, Goal, Concern | Use Case View, Requirements Traceability |
-| **Requirements** | Need, Requirement, UserInterfaceRequirement | Requirements Traceability, Software Architecture, Usability Engineering |
-| **Functional / Operational** | UseCase, Scenario, SystemFunction, Procedure, UserActivity | System Architecture, Usability Engineering, Safety Analysis |
-| **Logical / Physical** | System, Subsystem, LogicalComponent, PhysicalComponent, Microcontroller | System Architecture, Physical Architecture, Lifecycle Operations |
-| **Software / Interfaces** | SoftwareComponent, Firmware, DataInterface, Message, RosNode | Software Architecture, Data & Messaging, Cybersecurity & Interoperability |
-| **Risk / Safety** | Hazard, Harm, RiskControlMeasure, EssentialPerformance, SafetyFunction | Risk Overview, Risk Analysis, Safety Analysis, Usability Engineering |
-| **QMS / Lifecycle** | DesignHistoryRecord, SoftwareWorkProduct, RiskManagementReport | Software Architecture, Clinical Evidence & Claims, Lifecycle Operations |
-| **UI** | UIElement, UIScreen, UIPanel | Usability Engineering, Safety Analysis |
-
-## Using Viewpoints in the Web UI
-
-1. Launch the dev server: `pnpm architect -- dev --port 3000`
-2. Open the **Viewpoint Browser** (left sidebar)
-3. Click a viewpoint to filter the diagram
-4. Click a diagram within the viewpoint to see a specific view
-
-### Viewpoint Browser Features
-
-- **Viewpoint sections** — expandable groups with diagram lists
-- **Diagram type badges** — colored labels (BDD, REQ, RISK, etc.)
-- **Auto indicators** — marks auto-generated diagrams
-- **Element count** — shows how many elements are visible
-
-## Diagram Types
-
-MEMO supports SysML v2 diagram types. Each type has a specific purpose:
-
-| Type | Full Name | Color | Use For |
-|------|-----------|-------|---------|
-| **BDD** | Block Definition Diagram | Purple | System structure, component hierarchy |
-| **IBD** | Internal Block Diagram | Teal | Internal connections and flows |
-| **REQ** | Requirements Diagram | Blue | Requirements hierarchy and traceability |
-| **UCD** | Use Case Diagram | Orange | Actor-system interactions |
-| **CTX** | System Context Diagram | Light blue | The system and everything outside it |
-| **ACT** | Activity Diagram | Yellow | Workflows and processes |
-| **AFD** | Action Flow Diagram | Coral | Action sequences and control flow |
-| **OFD** | Operational Flow Diagram | Yellow | Operational activity flow |
-| **FFD** | Functional Flow Diagram | Yellow | Functional chain flow |
-| **PKG** | Package Diagram | Gray | Package organization |
-| **PAR** | Parametric Diagram | Green | Constraint relationships |
-| **STM** | State Transition Diagram | Coral | Modal behaviour and state changes |
-| **SEQ** | Sequence Diagram | Blue | Interaction ordering between parts |
-| **RISK** | Risk Diagram | Red | Hazard chains (medical extension) |
-| **FMEA** | FMEA Matrix | Red | Failure modes and effects (tabular) |
-| **ALLOC** | Allocation Matrix | Orange | Function-to-component allocation (tabular) |
-| **THREAT** | Threat Model Diagram | Dark red | Cybersecurity threats (medical extension) |
-
-FMEA and Allocation render as matrices rather than node-and-edge diagrams; the rest
-render on the canvas.
-
-## Reading Nested Behaviour
-
-State machines and activity diagrams both nest: a composite state owns
-substates, a composite action owns steps. A real model nests several levels
-deep — GPCA's mode machine is four — and drawing all of it at once is
-unreadable. Both diagrams give you the same two moves, and neither changes the
-model. They change only what is on screen.
-
-### Fold in place
-
-Every composite carries a **`−` / `+`** button.
-
-- **State machine** — folding draws the composite as a single box with a
-  `⊞ n` badge counting the substates it is hiding. Transitions that pointed
-  into those substates re-attach to the composite, so no connection
-  disappears. Transitions that become internal to the fold are dropped; the
-  badge already tells you there is hidden structure.
-- **Activity diagram** — folding collapses a composite action back to one
-  step in the flow.
-
-The toolbar has **expand-all** and **collapse-all** for the whole diagram.
-
-### Drill down
-
-Every composite also carries a **`↳`** button — or double-click it.
-
-The diagram re-roots at that composite: you see its contents alone, as their
-own diagram. A breadcrumb appears in the toolbar:
-
-```
-← Parent   ⌂ All › Pump Operating Modes › Infusing
+```text
+Viewpoint title                         VP-LOG
+  View title                           VIEW-BHV-003
+  View title                           VIEW-LOG-001
 ```
 
-`← Parent` steps up one level, `⌂ All` returns to the whole diagram, and any
-ancestor in the trail is clickable. Connections reaching outside the
-drilled-into scope are not drawn — you are reading one sub-machine, not a
-fragment of the parent.
+The ID is the stable identity used by source, routing, persistence, and review
+references. The title is the readable label. A view URL therefore ends in its
+authored ID, for example:
 
-### Inline or nested steps (activity diagrams)
+```text
+/diagrams/afd/VIEW-BHV-003
+```
 
-The activity diagram has one extra control, **Steps: Inline | Nested**,
-governing what an *expanded* composite looks like:
+“Unassigned Views” appears only when a view has no `viewpointDefinition`
+binding. Architect does not infer a “Document Views” viewpoint from the
+presentation kind.
 
-| Mode | What you get |
+## Ontology source
+
+A viewpoint usage defines its ID, title, purpose, audience, concerns, layers,
+and allowed kinds:
+
+```sysml
+part logicalArchitectureViewpoint : Viewpoint {
+    attribute :>> id = "VP-LOG";
+    attribute :>> title = "Logical Viewpoint";
+    attribute :>> purpose = "Describe the system's logical decomposition.";
+}
+```
+
+A view binds to that viewpoint and owns a separate stable ID:
+
+```sysml
+view gpcaActionFlowView : MemoDiagramView {
+    attribute :>> id = "VIEW-BHV-003";
+    attribute :>> name = "GPCA_InfusionDeliveryActionFlowView";
+    attribute :>> title = "GPCA Infusion Delivery Action Flow";
+    attribute :>> diagramType = "afd";
+    part :>> viewpointDefinition = logicalArchitectureViewpoint;
+}
+```
+
+`name` is a model attribute; it is not used as the URL identity.
+
+## Presentation types
+
+All authored views resolve to one of the eight SysML v2 presentation kinds
+used by Architect:
+
+| View kind | Typical presentation |
 |---|---|
-| **Inline** | The composite is replaced by its steps, which join the parent flow in sequence. Best for reading one continuous path. |
-| **Nested** | The composite stays as a frame with its steps drawn inside it, the way a state machine draws substates. Best for seeing which steps belong to which composite. |
+| General | structure, decomposition, packages |
+| Interconnection | parts, ports, interfaces, exchanges |
+| Action flow | activity, operative flow, function flow |
+| State transition | state machines and transitions |
+| Sequence | ordered interactions and messages |
+| Grid | matrices and tabular analysis |
+| Browser | document-backed or hierarchical model browsing |
+| Geometry | reserved by the model; renderer support is deferred |
 
-!!! note "Nested mode turns swimlanes off"
-    A nested frame owns its children's positions; swimlane banding rewrites
-    absolute positions. The two cannot describe the same canvas, so nesting
-    wins. Lane colours stay on the action cards, so allocation is still
-    readable.
+Legacy diagram codes such as `bdd`, `ibd`, `afd`, `ofd`, `ffd`, `stm`, and
+`seq` select a concrete presentation template within those kinds.
 
-## Default Diagrams
+## Behaviour navigation
 
-Each viewpoint comes with a default diagram that shows all relevant elements.
-The medical config provides these out of the box:
+Composite state and activity views support folding and drill-down without
+changing the model. Activity views also offer inline or nested steps. Operative
+flows, function flows, and sequence views remain separate authored views of a
+scenario; they are not renderer modes of one diagram.
 
-### Architecture View
+## Export
 
-- **Architecture Allocation** (BDD) — shows system decomposition with
-  allocation relationships
-
-### Requirements Traceability
-
-- **Requirements Traceability** (REQ) — full trace from user needs through
-  system and software requirements
-
-### Use Case View
-
-- **Use Case Overview** (UCD) — actors connected to use cases and scenarios
-
-### Verification & Validation
-
-- **V&V Coverage** (REQ) — requirements with their verification tests
-
-### Risk Overview (ISO 14971)
-
-- **Risk Mitigation Chain** (RISK) — hazards → hazardous situations → harms,
-  with risk controls and their mitigations
-
-### Software Architecture
-
-- **Software Decomposition** (BDD) — software components and their structure
-
-### Physical Architecture
-
-- **Physical BOM** (BDD) — hardware components bill of materials
-
-## Auto-Generated Diagrams
-
-The **Model Viewpoint** automatically generates diagrams that show the full
-model:
-
-- **Model Context** (BDD) — top-level system context
-- **Model Decomposition** (BDD) — complete element hierarchy
-
-These update automatically as you add elements — no manual curation needed.
-
-## Exporting Diagrams
-
-### Graphviz DOT
+Build a distributable viewer with Architect:
 
 ```bash
-# Export full model
-pnpm memo export dot -o model.dot
-
-# Export specific viewpoint
-pnpm memo export dot -o risk-view.dot --viewpoint risk-overview
+memo-architect build --output dist
+memo-architect build --output review-viewer --standalone
 ```
 
-Render with Graphviz:
+Export model data or Graphviz through MEMO Tools:
 
 ```bash
-dot -Tpng model.dot -o model.png
-dot -Tsvg model.dot -o model.svg
+memo export json --output model.json
+memo export dot --output model.dot --viewpoint VP-LOG
 ```
 
-### Static HTML
+## Add a view
 
-```bash
-pnpm architect -- build -o dist
-```
-
-This generates a self-contained HTML file with the interactive viewer
-embedded — useful for sharing with stakeholders who don't have MEMO installed.
-
-### JSON Export
-
-```bash
-pnpm memo export json -o model.json
-```
-
-The JSON includes all elements, relationships, viewpoint assignments, and
-diagram definitions — useful for custom tooling or reports.
-
-## Custom Viewpoints
-
-Define custom viewpoints in your `memo.config.yaml`:
-
-```yaml
-extends: "@memoarchitect/medical-modeling-profile"
-
-viewpoints:
-  - id: my-custom-view
-    name: "Electrical Safety Review"
-    visibleKinds:
-      - ElectricalComponent
-      - Hazard
-      - RiskControlMeasure
-      - Test
-    visibleRelationships:
-      - mitigates
-      - verify
-    supportedDiagramTypes: [bdd, req]
-    diagrams:
-      - id: diag-electrical-safety
-        name: "Electrical Safety Chain"
-        diagramType: bdd
-        viewpointId: my-custom-view
-        auto: true
-        description: "Electrical hazards with their controls and verification"
-```
-
-### Viewpoint Configuration
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique viewpoint identifier |
-| `name` | Yes | Display name |
-| `visibleKinds` | Yes | Which element kinds to show |
-| `visibleRelationships` | No | Which relationship types to show |
-| `visibleLayers` | No | Which CoSMA layers to include |
-| `supportedDiagramTypes` | No | Which diagram types can be created |
-| `diagrams` | No | Pre-defined diagrams |
-
-### Diagram Configuration
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique diagram identifier |
-| `name` | Yes | Display name |
-| `diagramType` | Yes | One of: bdd, ibd, req, ucd, act, pkg, par, risk |
-| `viewpointId` | Yes | Which viewpoint this belongs to |
-| `auto` | Yes | Auto-populated (`true`) or manually curated (`false`) |
-| `description` | No | Documentation for the diagram |
-| `properties` | No | Metadata key-value pairs (for doc generation) |
-| `elementIds` | No | Specific elements to include (manual diagrams only) |
-| `relationshipTypes` | No | Override visible relationship types |
-
-## Tips
-
-!!! tip "Start with auto diagrams"
-    Use `auto: true` diagrams initially. They show everything in the viewpoint
-    without manual curation. As your model grows, create focused manual diagrams
-    for design reviews.
-
-!!! tip "One diagram per design review topic"
-    Create specific diagrams for each review topic: "Alarm Subsystem Safety",
-    "Data Flow Architecture", "Battery Management Verification". This makes
-    design review meetings more focused.
-
-!!! tip "Use properties for doc generation"
-    Add metadata to diagrams via `properties` for future document generation:
-    ```yaml
-    properties:
-      documentSection: "4.2.1"
-      reviewStatus: "Approved"
-      lastReviewed: "2026-03-01"
-    ```
-
-## Next Steps
-
-- [Starting a New Project](new-project.md) — set up from scratch
-- [Importing Existing Data](importing-data.md) — bring in existing work
-- [Validation & Closure Rules](validation.md) — check completeness
+Create or specialize a `MemoView`/`MemoDiagramView` in a SysML source file,
+give it an `id`, `name`, and `title`, and bind `viewpointDefinition` to an
+ontology-defined viewpoint. Restarting Architect is not required for project
+source changes; the project watcher rebuilds the model and refreshes the view.

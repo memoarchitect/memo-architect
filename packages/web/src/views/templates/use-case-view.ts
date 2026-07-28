@@ -65,7 +65,7 @@ export function useCaseViewOptions(properties?: Record<string, string>): Pick<Us
     return {
         level: levelMatch?.[1] === 'all' ? 'all' : levelMatch ? Number(levelMatch[1]) : 'all',
         edgeStyle: ({ orthogonal: 'elbow' }[edgeMatch?.[1]?.toLowerCase() ?? ''] as UseCaseEdgeStyle | undefined)
-            ?? (edgeMatch?.[1]?.toLowerCase() as UseCaseEdgeStyle | undefined) ?? 'rounded',
+            ?? (edgeMatch?.[1]?.toLowerCase() as UseCaseEdgeStyle | undefined) ?? 'straight',
     };
 }
 
@@ -135,6 +135,17 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
     // relationship stays a short local hop and it can never land on the row of
     // a neighbouring case.
     const ranks: MemoElement[][] = levels.map(caseLevel => [...(casesByLevel.get(caseLevel) ?? [])]);
+    // A common use-case view has several independent root cases and no include
+    // hierarchy. Treating depth as the only rank then creates one extremely
+    // tall column with a mostly empty system boundary. Balance that flat case
+    // into up to three columns; hierarchical views keep their semantic ranks.
+    if (ranks.length === 1 && ranks[0].length > 4) {
+        const roots = ranks[0];
+        const columnCount = Math.min(3, Math.ceil(roots.length / 4));
+        const rowsPerColumn = Math.ceil(roots.length / columnCount);
+        ranks.splice(0, 1, ...Array.from({ length: columnCount }, (_, column) =>
+            roots.slice(column * rowsPerColumn, (column + 1) * rowsPerColumn)));
+    }
     const rankOf = new Map<string, number>();
     ranks.forEach((rank, index) => rank.forEach(element => rankOf.set(element.id, index)));
     const extensionsOfBase = new Map<string, MemoElement[]>();
@@ -255,7 +266,7 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             });
         }
     }
-    const routing = options.edgeStyle ?? 'rounded';
+    const routing = options.edgeStyle ?? 'straight';
     const edgeDrafts = relationships
         .filter(rel => shown.has(rel.sourceId) && shown.has(rel.targetId))
         .map(rel => {

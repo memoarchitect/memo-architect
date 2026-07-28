@@ -239,7 +239,7 @@ export function MaxGraphCanvas() {
         }).catch((error: unknown) => {
             if (cancelled) return;
             console.error('maxGraph scene error:', error);
-            setSceneError('The diagram could not be laid out. Switch to the ReactFlow renderer or reduce the visible hierarchy.');
+            setSceneError('The diagram could not be laid out. Reduce the visible hierarchy or reset the layout.');
             setIsComputing(false);
         });
         return () => { cancelled = true; };
@@ -345,7 +345,9 @@ export function MaxGraphCanvas() {
                     fontColor: '#6B7280',
                     fontSize: 10,
                     labelBackgroundColor: '#FFFFFF',
-                    ...(edge.points.length === 0 ? { edgeStyle: 'orthogonalEdgeStyle' } : {}),
+                    ...(edge.points.length === 0 && edge.routing !== 'straight'
+                        ? { edgeStyle: 'orthogonalEdgeStyle' }
+                        : {}),
                 };
                 const cell = graph.insertEdge({
                     parent,

@@ -12,8 +12,8 @@ importers:
         specifier: 0.6.2
         version: 0.6.2
       '@memoarchitect/tools':
-        specifier: 0.6.3
-        version: 0.6.3
+        specifier: 0.6.4
+        version: 0.6.4
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -753,8 +753,8 @@ packages:
     resolution: {integrity: sha512-VvIfMQFzoLYOlP1VVMhzm7w063jIPNDLaHscgCk2WOLIF7TJuS6BasxMml6hFg8Q7/nxFL+5GJOSVv9GesE0Hg==}
     engines: {node: '>=26.0.0'}
 
-  '@memoarchitect/tools@0.6.3':
-    resolution: {integrity: sha512-JQziVSq0DZ2GoyPMEdUmXNw3oOTY5s+haZ/pge5foEas/B6uDlbG2+r18kHpRaW8BJg7tUu5BC6IPMyMnJkHdg==}
+  '@memoarchitect/tools@0.6.4':
+    resolution: {integrity: sha512-GcXxIQwmW4b+jMG2DfbNp9pe6mvtYpw0mgwqbID5wFrIzwTAhhVlFkLhiIEYMWIWZQKHg5fKNO4gcebFMkWyGg==}
     engines: {node: '>=26.0.0'}
     hasBin: true
 
@@ -2632,7 +2632,7 @@ snapshots:
 
   '@memoarchitect/ontology@0.6.2': {}
 
-  '@memoarchitect/tools@0.6.3':
+  '@memoarchitect/tools@0.6.4':
     dependencies:
       '@memoarchitect/ontology': 0.6.2
       chalk: 5.6.2

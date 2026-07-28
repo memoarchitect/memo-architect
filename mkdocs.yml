@@ -1,5 +1,5 @@
-site_name: MEMO — Medical Engineering Modelling Ontology
-site_description: SysML v2 platform for medical device architecture, analysis, and documentation
+site_name: MEMO Architect
+site_description: Interactive and distributable workbench for MEMO SysML v2 projects
 site_author: Somesh Kashyap
 repo_url: https://github.com/memoarchitect/memo-architect
 repo_name: memoarchitect/memo-architect

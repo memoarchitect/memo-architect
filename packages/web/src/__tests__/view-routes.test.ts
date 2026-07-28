@@ -53,7 +53,9 @@ describe('viewToPath / pathToView round trip', () => {
             expect(view, `no view for ${path}`).not.toBeNull();
             // '/dashboard' is an alias that normalises to '/', so it is the one
             // path that does not serialise back to itself.
-            const expected = path === '/dashboard' ? '/' : path;
+            const expected = path === '/dashboard' ? '/'
+                : path === '/scenarios' ? '/use-cases'
+                : path;
             expect(viewToPath(view!)).toBe(expected);
         }
     });

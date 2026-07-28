@@ -5,8 +5,8 @@
 // then choose from the relationship types the ontology allows between the two.
 // Confirming writes a typed connection usage into project SysML.
 //
-// The full AddRelationshipDialog remains the surface for browsing by
-// relationship first, or filtering a large model by layer and package. This is
+// The expanded inline browser remains the surface for browsing by relationship
+// first, or filtering a large model by layer and package. This is
 // the fast path for the common case: "link this to that."
 //
 // Legality comes entirely from the ontology registries via the shared resolver
@@ -46,8 +46,6 @@ export interface RelationshipQuickAddProps {
         targetId: string;
         direction: RelationshipDirection;
     }) => void;
-    /** Escape hatch to the full dialog for filtering and relationship-first flows. */
-    onOpenFullDialog: () => void;
 }
 
 /** One kind's worth of matches, so the list reads as groups rather than a wall. */
@@ -116,7 +114,7 @@ export function groupMatchesByKind(matches: MemoElement[]): MatchGroup[] {
 }
 
 export function RelationshipQuickAdd({
-    element, model, registries, enabled, onCreate, onOpenFullDialog,
+    element, model, registries, enabled, onCreate,
 }: RelationshipQuickAddProps) {
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
@@ -275,13 +273,7 @@ export function RelationshipQuickAdd({
                         )}
                         {matches.length === MAX_MATCHES && (
                             <div className="px-2 py-1" style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                                Showing the first {MAX_MATCHES} matches — keep typing to narrow, or{' '}
-                                <button
-                                    onMouseDown={event => { event.preventDefault(); onOpenFullDialog(); }}
-                                    style={{ background: 'none', border: 'none', padding: 0, color: '#2563EB', cursor: 'pointer', fontSize: '10px' }}
-                                >
-                                    filter in the full dialog
-                                </button>.
+                                Showing the first {MAX_MATCHES} matches — keep typing to narrow.
                             </div>
                         )}
                     </div>

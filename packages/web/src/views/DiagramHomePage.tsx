@@ -1,7 +1,7 @@
 // ─── Diagram Home Page ────────────────────────────────────────────────────────
 //
-// Renders at /diagrams — the index of every diagram in the model, grouped by
-// viewpoint. Clicking Diagrams used to leave the main pane on the generic app
+// Renders at /diagrams — the index of every model view, grouped by
+// viewpoint. Clicking Viewpoints used to leave the main pane on the generic app
 // splash, with the diagram list only reachable in the side explorer; this gives
 // the mode a real landing page, and each card is a permalink.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,22 +18,27 @@ export function DiagramHomePage() {
     const model = useModelStore(s => s.model);
     const navigate = useNavigate();
 
-    /** Diagrams grouped by their viewpoint, biggest group first. */
+    /** Model views grouped by their viewpoint, biggest group first. */
     const groups = useMemo(() => {
         const diagrams = model?.diagrams ?? [];
-        const byViewpoint = new Map<string, DiagramDTO[]>();
+        const byViewpoint = new Map<string, { id: string; label: string; items: DiagramDTO[] }>();
         for (const diagram of diagrams) {
-            // '__model' is the synthetic viewpoint auto-derived diagrams carry.
-            const key = diagram.viewpointId === '__model' ? 'Model' : diagram.viewpointId;
-            const list = byViewpoint.get(key);
-            if (list) list.push(diagram); else byViewpoint.set(key, [diagram]);
+            // '__model' is the synthetic bucket for views that are not assigned
+            // to a named viewpoint. Named buckets display their user-facing
+            // label, not the storage id.
+            const viewpoint = model?.viewpoints?.find(candidate => candidate.id === diagram.viewpointId);
+            const key = diagram.viewpointId;
+            const group = byViewpoint.get(key);
+            if (group) group.items.push(diagram);
+            else byViewpoint.set(key, {
+                id: key,
+                label: viewpoint?.label ?? (key === '__model' || key === '__unassigned' ? 'Unassigned Views' : key),
+                items: [diagram],
+            });
         }
-        return [...byViewpoint.entries()]
-            .map(([viewpoint, items]) => ({
-                viewpoint,
-                items: [...items].sort((a, b) => a.name.localeCompare(b.name)),
-            }))
-            .sort((a, b) => b.items.length - a.items.length || a.viewpoint.localeCompare(b.viewpoint));
+        return [...byViewpoint.values()]
+            .map(group => ({ ...group, items: [...group.items].sort((a, b) => a.name.localeCompare(b.name)) }))
+            .sort((a, b) => a.label.localeCompare(b.label));
     }, [model]);
 
     if (!model) {
@@ -49,27 +54,28 @@ export function DiagramHomePage() {
     return (
         <div style={{ flex: 1, overflow: 'auto', background: '#F7F7F5', padding: '32px 40px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: 700, color: COLOR.primary, marginBottom: '4px', marginTop: 0 }}>
-                Diagrams
+                Viewpoints
             </h1>
             <p style={{ color: COLOR.muted, fontSize: FONT.sm, marginTop: 0, marginBottom: '24px' }}>
-                {total} {total === 1 ? 'diagram' : 'diagrams'} across {groups.length}{' '}
+                {total} model {total === 1 ? 'view' : 'views'} across {groups.length}{' '}
                 {groups.length === 1 ? 'viewpoint' : 'viewpoints'}
             </p>
 
             {total === 0 && (
                 <p style={{ color: COLOR.muted, fontSize: FONT.sm }}>
-                    This model defines no diagrams yet.
+                    This model defines no model views yet.
                 </p>
             )}
 
             {groups.map(group => (
-                <section key={group.viewpoint} style={{ marginBottom: '28px' }}>
+                <section key={group.id} style={{ marginBottom: '28px' }}>
                     <h2 style={{
                         fontSize: '11px', fontWeight: 700, color: COLOR.muted,
                         textTransform: 'uppercase', letterSpacing: '0.06em',
                         margin: '0 0 10px 0',
                     }}>
-                        {group.viewpoint}
+                        {group.label}
+                        <code style={{ marginLeft: 8, color: COLOR.faint, textTransform: 'none' }}>{group.id}</code>
                         <span style={{ marginLeft: 8, fontWeight: 400 }}>{group.items.length}</span>
                     </h2>
                     <div style={{
@@ -130,6 +136,9 @@ function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () =>
             </div>
             <div style={{ fontWeight: 600, fontSize: '14px', color: COLOR.primary, marginBottom: 4 }}>
                 {diagram.name}
+            </div>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '10px', color: COLOR.faint, marginBottom: 4 }}>
+                {diagram.id}
             </div>
             <div style={{ fontSize: '11px', color: COLOR.muted, lineHeight: 1.5 }}>
                 {meta?.fullName ?? diagram.diagramType}

@@ -421,7 +421,7 @@ export function Dashboard() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); }} />
-                            <QuickActionButton icon="📊" label="View Diagrams" onClick={() => setExplorerTab('views')} />
+                            <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => setExplorerTab('views')} />
                             <QuickActionButton icon="↔️" label="Traceability Matrix" onClick={() => setActiveView({ type: 'traceability' })} />
                             <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
                             <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
@@ -438,7 +438,7 @@ export function Dashboard() {
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                                {stats.diagramCount} diagram{stats.diagramCount !== 1 ? 's' : ''} in this project
+                                {stats.diagramCount} model view{stats.diagramCount !== 1 ? 's' : ''} in this project
                             </div>
                             <button
                                 onClick={() => setExplorerTab('views')}
@@ -447,7 +447,7 @@ export function Dashboard() {
                                     cursor: 'pointer', fontWeight: 600,
                                 }}
                             >
-                                Browse diagrams →
+                                Browse viewpoints →
                             </button>
                         </div>
                     </div>

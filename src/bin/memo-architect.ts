@@ -3,14 +3,16 @@
 import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { architectDevCommand } from '../commands/dev.js';
-import { architectExampleCommand } from '../commands/example.js';
+import {
+    architectExampleCommand, listArchitectExamples, listArchitectTemplates,
+} from '../commands/example.js';
 
 const program = new Command();
 
 program
     .name('memo-architect')
     .description('MEMO Architect — interactive and distributable model workbench')
-    .version('0.6.2')
+    .version('0.6.3')
     .option('--example <name>', 'Open a bundled example project (e.g. gpca, standard-sysml-diagrams). A local checkout is opened in place; an installed package is opened read-only in a disposable copy')
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
     .option('-p, --port <port>', 'Server port', '3000')
@@ -53,6 +55,24 @@ program
         const port = resolveOption(this, 'port', options.port);
         const open = resolveOption(this, 'open', options.open);
         await architectDevCommand({ port: Number.parseInt(String(port), 10), open });
+    });
+
+program
+    .command('examples')
+    .description('List bundled example IDs accepted by --example')
+    .action(() => {
+        console.log('Available examples:');
+        for (const id of listArchitectExamples()) console.log(`  ${id}`);
+        console.log('\nOpen one with: memo-architect --example <id>');
+    });
+
+program
+    .command('templates')
+    .description('List project templates available through MEMO Tools')
+    .action(() => {
+        console.log('Available project templates:');
+        for (const id of listArchitectTemplates()) console.log(`  ${id}`);
+        console.log('\nCreate one with: memo init <project> --template <id>');
     });
 
 program

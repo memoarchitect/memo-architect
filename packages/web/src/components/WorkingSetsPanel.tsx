@@ -64,7 +64,7 @@ export function WorkingSetsPanel() {
             case 'dsm': return 'DSM';
             case 'traceability': return 'Trace Matrix';
             case 'ontology': return 'Ontology';
-            case 'scenario-editor': return 'Scenarios';
+            case 'scenario-editor': return 'Use Cases';
             case 'model-diff': return 'Diff';
             case 'compliance-wizard': return 'Compliance';
             case 'statistics': return 'Stats';

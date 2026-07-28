@@ -53,21 +53,30 @@ function resolveExampleDir(ontologyRoot: string, name: string): string {
     );
 }
 
-/** List the example keys the manifest advertises, for a helpful error/usage hint. */
-function listExampleKeys(ontologyRoot: string): string[] {
+function listManifestKeys(ontologyRoot: string, section: 'examples' | 'templates'): string[] {
     const manifestPath = resolve(ontologyRoot, 'memo.manifest.yaml');
     if (!existsSync(manifestPath)) return [];
     const lines = readFileSync(manifestPath, 'utf-8').split(/\r?\n/);
     const keys: string[] = [];
-    let inExamples = false;
+    let inSection = false;
     for (const line of lines) {
-        if (/^examples:\s*$/.test(line)) { inExamples = true; continue; }
-        if (!inExamples) continue;
+        if (line === `${section}:`) { inSection = true; continue; }
+        if (!inSection) continue;
         if (/^\S/.test(line)) break; // dedent ends the mapping
         const m = line.match(/^\s+([A-Za-z0-9._-]+):/);
         if (m) keys.push(m[1]);
     }
     return keys;
+}
+
+/** IDs accepted by `memo-architect --example`. */
+export function listArchitectExamples(): string[] {
+    return listManifestKeys(resolveOntologyRoot(), 'examples');
+}
+
+/** Project templates supplied by the same ontology content package. */
+export function listArchitectTemplates(): string[] {
+    return listManifestKeys(resolveOntologyRoot(), 'templates');
 }
 
 /**
@@ -116,7 +125,7 @@ export async function architectExampleCommand(options: {
     try {
         exampleDir = resolveExampleDir(ontologyRoot, options.name);
     } catch (error) {
-        const keys = listExampleKeys(ontologyRoot);
+        const keys = listManifestKeys(ontologyRoot, 'examples');
         const hint = keys.length ? `\nAvailable examples: ${keys.join(', ')}` : '';
         throw new Error(`${(error as Error).message}${hint}`);
     }

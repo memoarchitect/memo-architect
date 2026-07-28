@@ -35,8 +35,7 @@ export function familyUrl(family: string): string {
 /** Build the URL for a diagram detail page. */
 export function diagramUrl(diagramType: string, diagramId: string): string {
     const typeSlug = diagramType.toLowerCase().replace(/\s+/g, '-');
-    const idSlug = diagramId.toLowerCase().replace(/\s+/g, '-');
-    return `/diagrams/${typeSlug}/${idSlug}`;
+    return `/diagrams/${typeSlug}/${encodeURIComponent(diagramId)}`;
 }
 
 /** Build the URL for a diagram-type collection page. */

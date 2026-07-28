@@ -3,81 +3,16 @@ import {
     useModelStore, getRelationshipsForElement, getDiagram, getRegistries,
     getElementSourceFiles, sourceChangeAffects,
 } from '../store/model-store';
-import type { PendingRelationship } from '../store/model-store';
-import { findRelationshipDefinition } from '@memoarchitect/tools/browser';
-import type {
-    MemoElement, MemoModelDTO, MemoRelationship,
-    OntologyRegistriesDTO, RelationshipDirection,
-} from '@memoarchitect/tools/browser';
-import { AddRelationshipDialog } from './AddRelationshipDialog';
-import { RelationshipQuickAdd } from './RelationshipQuickAdd';
+import type { MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
+import { ElementRelationships } from './element-profile/ElementRelationships';
+import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
+import { attributeEditability, isEditable } from './element-profile/editability';
+import type { Density } from './element-profile/density';
 
-// ─── Inline Editable Field ──────────────────────────────────────────────────
-
-function EditableField({ value, onSave, multiline, forceEdit }: {
-    value: string;
-    onSave: (newValue: string) => void;
-    multiline?: boolean;
-    forceEdit?: boolean;
-}) {
-    const [editing, setEditing] = useState(false);
-    const [draft, setDraft] = useState(value);
-
-    useEffect(() => { setDraft(value); }, [value]);
-
-    const handleSave = useCallback(() => {
-        setEditing(false);
-        if (draft !== value) onSave(draft);
-    }, [draft, value, onSave]);
-
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !multiline) { handleSave(); }
-        if (e.key === 'Escape') { setDraft(value); setEditing(false); }
-    }, [handleSave, multiline, value]);
-
-    if (!editing && !forceEdit) {
-        return (
-            <span
-                className="cursor-pointer rounded px-1 py-0.5 transition-colors"
-                style={{ color: '#1a1a1a' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                onClick={() => { setDraft(value); setEditing(true); }}
-                title="Click to edit"
-            >
-                {value || <span style={{ color: '#D1D5DB', fontStyle: 'italic' }}>empty</span>}
-            </span>
-        );
-    }
-
-    if (multiline) {
-        return (
-            <textarea
-                value={draft}
-                onChange={e => setDraft(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={handleKeyDown}
-                autoFocus
-                className="w-full px-2 py-1 text-xs rounded focus:outline-none"
-                style={{ border: '1px solid #2DD4A8', background: '#FAFAF8', color: '#1a1a1a', resize: 'vertical', minHeight: '48px' }}
-            />
-        );
-    }
-
-    return (
-        <input
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            className="w-full px-2 py-1 text-xs rounded focus:outline-none"
-            style={{ border: '1px solid #2DD4A8', background: '#FAFAF8', color: '#1a1a1a' }}
-        />
-    );
-}
+/** This panel is the compact rendering of the same profile as ElementDetailView. */
+const PANEL_DENSITY: Density = 'panel';
 
 // ─── Collapsible Section (mirrors ModelExplorer layer header) ──────────────
 
@@ -253,420 +188,6 @@ function DiagramProperties() {
  * Every relationship shown here is a semantic model fact backed by project
  * SysML — pending rows are marked as such and are never mistaken for one.
  */
-function RelationshipsSection({ element, outgoing, incoming }: {
-    element: MemoElement;
-    outgoing: MemoRelationship[];
-    incoming: MemoRelationship[];
-}) {
-    const model = useModelStore(s => s.model);
-    const connected = useModelStore(s => s.connected);
-    const selectElement = useModelStore(s => s.selectElement);
-    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
-    const pendingRelationships = useModelStore(s => s.pendingRelationships);
-    const createRelationship = useModelStore(s => s.createRelationship);
-    const deleteRelationship = useModelStore(s => s.deleteRelationship);
-    const dismissPendingRelationship = useModelStore(s => s.dismissPendingRelationship);
-    const addElementToDiagram = useModelStore(s => s.addElementToDiagram);
-
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [status, setStatus] = useState<RelationshipStatus | null>(null);
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-    const registries = useMemo(() => getRegistries(model), [model]);
-
-    // Reset transient state whenever the inspected element changes.
-    useEffect(() => { setStatus(null); setConfirmDelete(null); setDialogOpen(false); }, [element.id]);
-
-    const mine = pendingRelationships.filter(p =>
-        p.sourceId === element.id || p.targetId === element.id);
-
-    const total = outgoing.length + incoming.length;
-
-    const handleConfirm = useCallback(async (request: {
-        type: string; sourceId: string; targetId: string; direction: RelationshipDirection;
-    }) => {
-        setDialogOpen(false);
-        setStatus(null);
-        const outcome = await createRelationship({
-            ...request,
-            selectedElementId: element.id,
-            diagramId: selectedDiagramId ?? undefined,
-        });
-
-        if (!outcome.success) {
-            setStatus({ kind: 'error', message: outcome.error ?? 'The relationship could not be created.' });
-            return;
-        }
-
-        // The opposite endpoint may sit outside the current view. Offer to add
-        // it, but never change an authored view's selection unprompted.
-        const oppositeId = request.sourceId === element.id ? request.targetId : request.sourceId;
-        const diagram = getDiagram(model, selectedDiagramId);
-        const profileBlocked = outcome.diagnostics?.find(d => d.code === 'REL-005');
-        const outsideView = !!diagram
-            && !!diagram.elementIds
-            && diagram.elementIds.length > 0
-            && !diagram.elementIds.includes(oppositeId);
-
-        setStatus({
-            kind: 'success',
-            message: `Relationship created in ${outcome.sourceFile ?? 'the model'}.`,
-            profileMessage: profileBlocked?.message,
-            offerAddToView: outsideView && !profileBlocked && !!selectedDiagramId
-                ? { elementId: oppositeId, diagramId: selectedDiagramId }
-                : undefined,
-        });
-    }, [createRelationship, element.id, selectedDiagramId, model]);
-
-    const handleDelete = useCallback(async (relationshipId: string) => {
-        setConfirmDelete(null);
-        const outcome = await deleteRelationship(relationshipId);
-        setStatus(outcome.success
-            ? { kind: 'success', message: `Relationship removed from ${outcome.sourceFile ?? 'the model'}.` }
-            : { kind: 'error', message: outcome.error ?? 'The relationship could not be deleted.' });
-    }, [deleteRelationship]);
-
-    if (!model) return null;
-
-    return (
-        <>
-            <Section
-                title="Relationships"
-                count={total}
-                defaultOpen
-                actions={
-                    <button
-                        onClick={() => { setStatus(null); setDialogOpen(true); }}
-                        disabled={!connected}
-                        className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                            background: connected ? '#F0F0ED' : '#F7F7F5',
-                            color: connected ? '#374151' : '#D1D5DB',
-                            border: 'none', cursor: connected ? 'pointer' : 'not-allowed',
-                        }}
-                        title={connected
-                            ? 'Browse every relationship type and filter candidate elements'
-                            : 'Connect to the dev server to author relationships'}
-                    >
-                        Browse…
-                    </button>
-                }
-            >
-                {total === 0 && mine.length === 0 && (
-                    <div className="text-xs py-1" style={{ color: '#9CA3AF' }}>
-                        No relationships yet.
-                    </div>
-                )}
-
-                {outgoing.map(rel => (
-                    <RelationshipRow
-                        key={rel.id}
-                        relationship={rel}
-                        direction="outgoing"
-                        model={model}
-                        registries={registries}
-                        confirming={confirmDelete === rel.id}
-                        onNavigate={() => selectElement(rel.targetId)}
-                        onRequestDelete={() => setConfirmDelete(rel.id)}
-                        onCancelDelete={() => setConfirmDelete(null)}
-                        onConfirmDelete={() => handleDelete(rel.id)}
-                        deletable={connected}
-                    />
-                ))}
-
-                {incoming.map(rel => (
-                    <RelationshipRow
-                        key={rel.id}
-                        relationship={rel}
-                        direction="incoming"
-                        model={model}
-                        registries={registries}
-                        confirming={confirmDelete === rel.id}
-                        onNavigate={() => selectElement(rel.sourceId)}
-                        onRequestDelete={() => setConfirmDelete(rel.id)}
-                        onCancelDelete={() => setConfirmDelete(null)}
-                        onConfirmDelete={() => handleDelete(rel.id)}
-                        deletable={connected}
-                    />
-                ))}
-
-                {mine.map(pending => (
-                    <PendingRelationshipRow
-                        key={pending.pendingId}
-                        pending={pending}
-                        model={model}
-                        onDismiss={() => dismissPendingRelationship(pending.pendingId)}
-                    />
-                ))}
-
-                <RelationshipQuickAdd
-                    element={element}
-                    model={model}
-                    registries={registries}
-                    enabled={connected}
-                    onCreate={handleConfirm}
-                    onOpenFullDialog={() => { setStatus(null); setDialogOpen(true); }}
-                />
-
-                {status && (
-                    <StatusBanner
-                        status={status}
-                        onAddToView={() => {
-                            if (!status.offerAddToView) return;
-                            addElementToDiagram(status.offerAddToView.diagramId, status.offerAddToView.elementId);
-                            setStatus({ kind: 'success', message: 'Element added to this view.' });
-                        }}
-                        onDismiss={() => setStatus(null)}
-                        model={model}
-                    />
-                )}
-            </Section>
-
-            {dialogOpen && (
-                <AddRelationshipDialog
-                    element={element}
-                    model={model}
-                    registries={registries}
-                    diagramId={selectedDiagramId ?? undefined}
-                    onCancel={() => setDialogOpen(false)}
-                    onConfirm={handleConfirm}
-                />
-            )}
-        </>
-    );
-}
-
-/** Outcome banner shown under the relationship list after a mutation. */
-interface RelationshipStatus {
-    kind: 'success' | 'error';
-    message: string;
-    /** Set when the model accepted the link but the view profile hides it. */
-    profileMessage?: string;
-    /** Set when the opposite endpoint is not in the current view. */
-    offerAddToView?: { elementId: string; diagramId: string };
-}
-
-function StatusBanner({ status, onAddToView, onDismiss, model }: {
-    status: RelationshipStatus;
-    onAddToView: () => void;
-    onDismiss: () => void;
-    model: MemoModelDTO;
-}) {
-    const success = status.kind === 'success';
-    const elementName = status.offerAddToView
-        ? model.elements[status.offerAddToView.elementId]?.name ?? status.offerAddToView.elementId
-        : null;
-    return (
-        <div
-            className="text-xs p-2 rounded-lg mt-2"
-            style={{
-                background: success ? '#F0FDF4' : '#FEF2F2',
-                border: `1px solid ${success ? '#BBF7D0' : '#FECACA'}`,
-                color: success ? '#166534' : '#DC2626',
-            }}
-        >
-            <div className="flex items-start gap-1.5">
-                <span className="flex-1">{status.message}</span>
-                <button
-                    onClick={onDismiss}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', lineHeight: 1 }}
-                    aria-label="Dismiss"
-                >
-                    ×
-                </button>
-            </div>
-            {status.profileMessage && (
-                <div className="mt-1" style={{ color: '#92400E' }}>
-                    Relationship created in the model, but this view profile does not display this
-                    relationship type.
-                </div>
-            )}
-            {status.offerAddToView && (
-                <button
-                    onClick={onAddToView}
-                    className="mt-1.5 px-2 py-0.5 rounded"
-                    style={{ background: '#FFFFFF', border: '1px solid #BBF7D0', color: '#166534', cursor: 'pointer', fontSize: FONT.xs }}
-                >
-                    Relationship created. Add {elementName} to this view?
-                </button>
-            )}
-        </div>
-    );
-}
-
-/** One existing relationship: endpoint, type, direction, roles and source file. */
-function RelationshipRow({
-    relationship, direction, model, registries, deletable,
-    confirming, onNavigate, onRequestDelete, onCancelDelete, onConfirmDelete,
-}: {
-    relationship: MemoRelationship;
-    direction: RelationshipDirection;
-    model: MemoModelDTO;
-    registries: OntologyRegistriesDTO;
-    deletable: boolean;
-    confirming: boolean;
-    onNavigate: () => void;
-    onRequestDelete: () => void;
-    onCancelDelete: () => void;
-    onConfirmDelete: () => void;
-}) {
-    const oppositeId = direction === 'outgoing' ? relationship.targetId : relationship.sourceId;
-    const opposite = model.elements[oppositeId];
-    const color = opposite ? (LAYER_COLORS[opposite.layer] || '#666') : '#666';
-    const definition = findRelationshipDefinition(relationship.type, registries);
-    const [expanded, setExpanded] = useState(false);
-
-    // Only a named connection usage can be addressed for deletion; anonymous
-    // ones have no stable identity in the source.
-    const removable = deletable && relationship.named === true;
-
-    return (
-        <div style={{ borderBottom: '1px solid #F7F7F5' }}>
-            <div className="flex items-center gap-1.5 ml-2" style={{ padding: '4px 8px', fontSize: FONT.xs }}>
-                <span style={{ color: '#9CA3AF' }}>{direction === 'outgoing' ? '→' : '←'}</span>
-                <span
-                    className="px-1 py-0.5 rounded flex-shrink-0"
-                    style={{
-                        background: (direction === 'outgoing' ? '#2563EB' : '#10B981') + '18',
-                        color: direction === 'outgoing' ? '#2563EB' : '#10B981',
-                        fontSize: FONT.xs,
-                    }}
-                >
-                    {definition?.label ?? relationship.type}
-                </span>
-                <button
-                    onClick={onNavigate}
-                    className="truncate text-left"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#374151', flex: 1, minWidth: 0 }}
-                    title={`Go to ${opposite?.name ?? oppositeId}`}
-                >
-                    {opposite?.name ?? oppositeId}
-                </button>
-                <button
-                    onClick={() => setExpanded(e => !e)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D1D5DB' }}
-                    aria-label={expanded ? 'Hide relationship details' : 'Show relationship details'}
-                >
-                    {expanded ? '▾' : '▸'}
-                </button>
-            </div>
-
-            {expanded && (
-                <div className="ml-4 pb-2 space-y-1" style={{ fontSize: '10px', color: '#6B7280' }}>
-                    <DetailLine label="Kind" value={opposite?.kind ?? '—'} valueColor={color} />
-                    <DetailLine
-                        label="Roles"
-                        value={`${relationship.sourceEnd || definition?.sourceEnd.name || 'source'} → ${
-                            relationship.targetEnd || definition?.targetEnd.name || 'target'}`}
-                    />
-                    <DetailLine label="ID" value={relationship.id} mono />
-                    <DetailLine label="Source" value={relationship.file || '—'} mono />
-                    {!relationship.named && (
-                        <div style={{ color: '#D97706' }}>
-                            Anonymous connection — name it in SysML to allow deletion from here.
-                        </div>
-                    )}
-                    {removable && !confirming && (
-                        <button
-                            onClick={onRequestDelete}
-                            className="px-1.5 py-0.5 rounded"
-                            style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', cursor: 'pointer', fontSize: '10px' }}
-                        >
-                            Remove relationship
-                        </button>
-                    )}
-                    {confirming && (
-                        <div className="p-1.5 rounded" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                            <div style={{ color: '#DC2626' }}>
-                                Remove {definition?.label ?? relationship.type} to {opposite?.name ?? oppositeId}?
-                                Both elements are kept.
-                            </div>
-                            <div className="flex gap-1 mt-1">
-                                <button
-                                    onClick={onConfirmDelete}
-                                    className="px-1.5 py-0.5 rounded"
-                                    style={{ background: '#DC2626', color: '#FFFFFF', border: 'none', cursor: 'pointer', fontSize: '10px' }}
-                                >
-                                    Remove
-                                </button>
-                                <button
-                                    onClick={onCancelDelete}
-                                    className="px-1.5 py-0.5 rounded"
-                                    style={{ background: '#FFFFFF', color: '#374151', border: '1px solid #E5E5E0', cursor: 'pointer', fontSize: '10px' }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function DetailLine({ label, value, mono, valueColor }: {
-    label: string; value: string; mono?: boolean; valueColor?: string;
-}) {
-    return (
-        <div className="flex gap-1.5">
-            <span style={{ minWidth: 48, color: '#9CA3AF' }}>{label}</span>
-            <span
-                className={`truncate ${mono ? 'font-mono' : ''}`}
-                style={{ color: valueColor ?? '#374151' }}
-                title={value}
-            >
-                {value}
-            </span>
-        </div>
-    );
-}
-
-/** A relationship the server has not answered on yet — never a model fact. */
-function PendingRelationshipRow({ pending, model, onDismiss }: {
-    pending: PendingRelationship;
-    model: MemoModelDTO;
-    onDismiss: () => void;
-}) {
-    const oppositeId = pending.direction === 'outgoing' ? pending.targetId : pending.sourceId;
-    const opposite = model.elements[oppositeId];
-    const failed = pending.status === 'failed';
-    return (
-        <div
-            className="flex items-center gap-1.5 ml-2 rounded"
-            style={{
-                padding: '4px 8px',
-                fontSize: FONT.xs,
-                background: failed ? '#FEF2F2' : '#F9FAFB',
-                color: failed ? '#DC2626' : '#6B7280',
-                fontStyle: failed ? 'normal' : 'italic',
-            }}
-        >
-            <span>{pending.direction === 'outgoing' ? '→' : '←'}</span>
-            <span className="px-1 py-0.5 rounded flex-shrink-0" style={{ background: '#E5E7EB', color: '#6B7280', fontSize: FONT.xs }}>
-                {pending.label}
-            </span>
-            <span className="truncate flex-1">{opposite?.name ?? oppositeId}</span>
-            {failed ? (
-                <>
-                    <span className="truncate" style={{ fontSize: '10px', maxWidth: 90 }} title={pending.error}>
-                        {pending.error}
-                    </span>
-                    <button
-                        onClick={onDismiss}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
-                        aria-label="Dismiss failed relationship"
-                    >
-                        ×
-                    </button>
-                </>
-            ) : (
-                <span style={{ fontSize: '10px' }}>saving…</span>
-            )}
-        </div>
-    );
-}
-
 // ─── Source freshness ───────────────────────────────────────────────────────
 
 /** How long the reload confirmation stays on screen. */
@@ -754,7 +275,7 @@ function ElementProperties() {
     const layerColor = LAYER_COLORS[element.layer] || '#666';
 
     const violations = validation?.violations.filter(v => v.elementId === selectedElementId) || [];
-    const attrs = Object.entries(element.attributes).filter(([k]) => k !== 'name');
+    const attrs = Object.entries(element.attributes).filter(([k]) => k !== 'name' && k !== 'id');
 
     const handleDocSave = (newDoc: string) => {
         updateElementField(selectedElementId, 'doc', newDoc);
@@ -778,7 +299,6 @@ function ElementProperties() {
                     <span className="px-2 py-0.5 rounded-md font-medium" style={{ background: layerColor + '18', color: layerColor }}>
                         {element.kind}
                     </span>
-                    <span style={{ color: '#6B7280' }}>{element.construct}</span>
                 </div>
                 <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>{element.layer} layer</div>
             </div>
@@ -786,7 +306,13 @@ function ElementProperties() {
             <div className="flex-1 overflow-y-auto">
                 <Section title="Description" defaultOpen>
                     <div className="text-xs leading-relaxed">
-                        <EditableField value={element.doc || ''} onSave={handleDocSave} multiline />
+                        <EditableValue
+                            value={element.doc || ''}
+                            onSave={handleDocSave}
+                            density={PANEL_DENSITY}
+                            multiline
+                            placeholder="Click to add a description…"
+                        />
                     </div>
                 </Section>
 
@@ -822,44 +348,43 @@ function ElementProperties() {
                 )}
 
                 {attrs.length > 0 && (
-                    <Section
-                        title="Attributes"
-                        count={attrs.length}
-                        defaultOpen
-                        actions={
-                            <button
-                                onClick={() => {
-                                    if (attrEditMode && selectedElementId) applyEdit(selectedElementId);
-                                    setAttrEditMode(m => !m);
-                                }}
-                                className="px-2 py-0.5 rounded text-xs font-medium"
-                                style={{
-                                    background: attrEditMode ? '#2DD4A8' : '#F0F0ED',
-                                    color: attrEditMode ? '#FFFFFF' : '#6B7280',
-                                    border: 'none', cursor: 'pointer',
-                                }}
-                                title={attrEditMode ? 'Save (Ctrl+S)' : 'Edit attributes'}
-                            >
-                                {attrEditMode ? '✓ Save' : '✏ Edit'}
-                            </button>
-                        }
-                    >
+                    <Section title="Attributes" count={attrs.length} defaultOpen>
                         <div className="space-y-1.5">
-                            {attrs.map(([key, value]) => (
-                                <div key={key} className="flex text-xs items-start">
-                                    <span className="min-w-[80px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
-                                    <EditableField
-                                        value={value}
-                                        onSave={(newVal) => handleAttrSave(key, newVal)}
-                                        forceEdit={attrEditMode}
-                                    />
-                                </div>
-                            ))}
+                            {attrs.map(([key, value]) => {
+                                const editability = attributeEditability(key);
+                                return (
+                                    <div key={key} className="flex text-xs items-start gap-1.5">
+                                        <span className="min-w-[80px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            {isEditable(editability) ? (
+                                                <EditableValue
+                                                    value={String(value ?? '')}
+                                                    onSave={newVal => handleAttrSave(key, newVal)}
+                                                    density={PANEL_DENSITY}
+                                                    placeholder="Click to set…"
+                                                />
+                                            ) : (
+                                                <ReadOnlyValue
+                                                    value={String(value ?? '')}
+                                                    editability={editability}
+                                                    density={PANEL_DENSITY}
+                                                    mono
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </Section>
                 )}
 
-                <RelationshipsSection element={element} outgoing={outgoing} incoming={incoming} />
+                <ElementRelationships
+                    element={element}
+                    outgoing={outgoing}
+                    incoming={incoming}
+                    density={PANEL_DENSITY}
+                />
 
                 {violations.length > 0 && (
                     <Section title="Guidance" count={violations.length} defaultOpen>

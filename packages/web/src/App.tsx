@@ -516,7 +516,7 @@ function DiagramPermalinkRoute() {
     useEffect(() => {
         if (!model) return;
         const diagram = model.diagrams?.find(
-            d => d.id === diagramId || d.id.toLowerCase().replace(/\s+/g, '-') === diagramId
+            d => d.id === diagramId || d.id.toLowerCase() === diagramId.toLowerCase()
         );
         if (diagram) {
             selectDiagram(diagram.id);
@@ -603,7 +603,7 @@ function UrlNavigationSync() {
         } else if (activeView.type === 'diagram' && model) {
             const diagram = model.diagrams?.find(d => d.id === activeView.diagramId);
             // Diagram permalinks need the type slug, which only the model knows.
-            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${slug(diagram.id)}`;
+            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.id)}`;
         } else {
             url = viewToPath(activeView);
         }

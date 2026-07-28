@@ -7,8 +7,8 @@
 //   4. DEFAULT_RENDERER_ID    memo.renderer.reactflow
 //
 // Short names are accepted everywhere: 'maxgraph' → 'memo.renderer.maxgraph'.
-// Runtime switches persist to localStorage and notify subscribers so React
-// surfaces re-render via useSyncExternalStore.
+// Internal runtime configuration changes notify subscribers so React surfaces
+// re-render via useSyncExternalStore. No renderer engine is exposed in view UI.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_RENDERER_ID } from './renderer-provider';
@@ -59,7 +59,7 @@ export function selectedRendererId(): string {
     return fromUrl() ?? fromStorage() ?? fromEnv() ?? DEFAULT_RENDERER_ID;
 }
 
-/** Persist a user renderer choice and notify subscribers. */
+/** Persist an internal runtime renderer choice and notify subscribers. */
 export function setSelectedRendererId(id: string): void {
     const normalized = normalizeRendererId(id) ?? DEFAULT_RENDERER_ID;
     try {

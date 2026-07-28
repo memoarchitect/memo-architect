@@ -1,6 +1,6 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
@@ -23,7 +23,8 @@
     "build:cli": "tsc -p tsconfig.architect.json",
     "check:cache": "bash scripts/check-no-ontology-cache.sh",
     "check:bundle": "bash scripts/check-no-bare-imports.sh",
-    "dev": "vite --config packages/web/vite.config.ts",
+    "dev": "pnpm run example:dev",
+    "dev:web": "vite --config packages/web/vite.config.ts",
     "test": "cd packages/web && vitest run",
     "test:coverage": "cd packages/web && vitest run --coverage",
     "type-check": "tsc -p packages/web/tsconfig.json --noEmit && tsc -p tsconfig.architect.json --noEmit",
@@ -35,7 +36,7 @@
     "setup": "pnpm install && pnpm run build && pdm install"
   },
   "dependencies": {
-    "@memoarchitect/tools": "0.6.3",
+    "@memoarchitect/tools": "0.6.4",
     "@memoarchitect/ontology": "0.6.2",
     "commander": "^12.1.0"
   },

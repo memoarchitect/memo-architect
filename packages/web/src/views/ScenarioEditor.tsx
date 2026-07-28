@@ -5,6 +5,20 @@ import { LAYER_COLORS } from '../constants';
 import { FONT, SHADOW, RADIUS } from '../styles/tokens';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
+const SCENARIO_VIEW_GROUPS = [
+    { label: 'Activity diagram', types: new Set(['act']) },
+    { label: 'Operative flow', types: new Set(['afd', 'ofd']) },
+    { label: 'Function flow', types: new Set(['ffd']) },
+    { label: 'Sequence diagram', types: new Set(['seq']) },
+] as const;
+
+function groupScenarioViews<T extends { diagramType: string }>(views: T[]) {
+    return SCENARIO_VIEW_GROUPS.map(group => {
+        const items = views.filter(view => group.types.has(view.diagramType.toLowerCase()));
+        return { label: group.label, items };
+    }).filter(group => group.items.length > 0);
+}
+
 // ─── Scenario Step (parsed from doc field) ──────────────────────────────────
 
 interface ScenarioStep {
@@ -45,7 +59,12 @@ export function ScenarioEditor() {
         if (!model) return [];
         const elements = Object.values(model.elements);
         const byId = model.elements;
-        const byType = (type: string) => model.relationships.filter(r => r.type === type);
+        const byType = (...types: string[]) => {
+            const accepted = new Set(types.map(type => type.toLowerCase()));
+            return model.relationships.filter(r => accepted.has(r.type.toLowerCase()));
+        };
+        const refMatches = (value: unknown, id: string) => typeof value === 'string'
+            && value.split('::').at(-1)?.trim() === id;
         const useCases = elements.filter(e => e.kind.endsWith('UseCase'));
         const matchesSearch = (el: MemoElement) => !searchTerm
             || el.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,45 +72,68 @@ export function ScenarioEditor() {
 
         return useCases
             .map(useCase => {
-                const workflows = byType('supportsUseCase')
+                const supportedWorkflows = byType('Supports', 'supportsUseCase')
                     .filter(r => r.targetId === useCase.id)
                     .map(r => byId[r.sourceId])
+                    .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow');
+                const scenarioElements = elements
+                    .filter(candidate => candidate.kind.endsWith('Scenario'))
+                    .filter(candidate => refMatches(candidate.attributes.parentUseCase, useCase.id)
+                        || byType('Realizes', 'scenarioRealizesUseCase').some(r => r.sourceId === candidate.id && r.targetId === useCase.id));
+                const parentWorkflows = scenarioElements
+                    .map(scenario => elements.find(candidate => refMatches(scenario.attributes.parentWorkflow, candidate.id)))
                     .filter((el): el is MemoElement => Boolean(el));
-                const scenarios = byType('scenarioRealizesUseCase')
-                    .filter(r => r.targetId === useCase.id)
-                    .map(r => byId[r.sourceId])
-                    .filter((el): el is MemoElement => Boolean(el))
+                const workflowElements = [...new Map([...supportedWorkflows, ...parentWorkflows].map(workflow => [workflow.id, workflow])).values()];
+                const scenarioDetails = scenarioElements
                     .map(scenario => {
-                        const activities = byType('scenarioComprisesActivity')
+                        const activities = byType('Composes', 'scenarioComprisesActivity')
                             .filter(r => r.sourceId === scenario.id)
                             .map(r => byId[r.targetId])
                             .filter((el): el is MemoElement => Boolean(el));
-                        const functionalScenarios = byType('functionalRealizesOperative')
+                        const functionalScenarios = byType('Realizes', 'functionalRealizesOperative')
                             .filter(r => r.targetId === scenario.id)
                             .map(r => byId[r.sourceId])
-                            .filter((el): el is MemoElement => Boolean(el));
+                            .filter((el): el is MemoElement => Boolean(el) && el.layer === 'functional');
                         const uiScenarios = functionalScenarios.flatMap(functional =>
-                            byType('uIRealizesFunctional')
+                            byType('Realizes', 'uIRealizesFunctional')
                                 .filter(r => r.targetId === functional.id)
                                 .map(r => byId[r.sourceId])
-                                .filter((el): el is MemoElement => Boolean(el))
+                                .filter((el): el is MemoElement => Boolean(el) && el.layer === 'usability')
                         );
+                        // A diagram normally selects the nested actions owned by the
+                        // scenario's activity, not the activity container itself.
+                        // Include that complete ownership tree when matching views.
+                        const scenarioElementIds = new Set([scenario.id, ...activities.map(activity => activity.id)]);
+                        let addedDescendant = true;
+                        while (addedDescendant) {
+                            addedDescendant = false;
+                            for (const candidate of elements) {
+                                if (candidate.parentAction && scenarioElementIds.has(candidate.parentAction)
+                                    && !scenarioElementIds.has(candidate.id)) {
+                                    scenarioElementIds.add(candidate.id);
+                                    addedDescendant = true;
+                                }
+                            }
+                        }
                         const views = (model.diagrams ?? []).filter(d =>
-                            d.elementIds?.includes(scenario.id)
-                            || d.elementIds?.some(id => activities.some(a => a.id === id))
+                            d.elementIds?.some(id => scenarioElementIds.has(id))
                             || d.name.toLowerCase().includes(scenario.name.toLowerCase())
                         );
                         return { scenario, activities, functionalScenarios, uiScenarios, views };
                     });
-                return { useCase, workflows, scenarios };
+                const workflows = workflowElements.map(workflow => ({
+                    workflow,
+                    scenarios: scenarioDetails.filter(({ scenario }) => refMatches(scenario.attributes.parentWorkflow, workflow.id)),
+                }));
+                return { useCase, workflows };
             })
             .filter(branch => matchesSearch(branch.useCase)
-                || branch.workflows.some(matchesSearch)
-                || branch.scenarios.some(({ scenario, activities, functionalScenarios, uiScenarios }) =>
-                    matchesSearch(scenario)
-                    || activities.some(matchesSearch)
-                    || functionalScenarios.some(matchesSearch)
-                    || uiScenarios.some(matchesSearch)));
+                || branch.workflows.some(({ workflow, scenarios }) => matchesSearch(workflow)
+                    || scenarios.some(({ scenario, activities, functionalScenarios, uiScenarios }) =>
+                        matchesSearch(scenario)
+                        || activities.some(matchesSearch)
+                        || functionalScenarios.some(matchesSearch)
+                        || uiScenarios.some(matchesSearch))));
     }, [model, searchTerm]);
 
     const selectedElement = selectedElementId && model ? model.elements[selectedElementId] : null;
@@ -165,6 +207,9 @@ export function ScenarioEditor() {
             {/* Left: Scenario list */}
             <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
                 <div className="px-3 py-2" style={{ borderBottom: '1px solid #E5E5E0' }}>
+                    <div style={{ color: '#1B3A4B', fontSize: '12px', fontWeight: 700, marginBottom: 7 }}>
+                        Use Case Browser
+                    </div>
                     <input
                         type="text"
                         placeholder={'Search ' + scenarioTree.length + ' use cases...'}
@@ -175,7 +220,7 @@ export function ScenarioEditor() {
                     />
                 </div>
                 <div className="flex-1 overflow-y-auto text-xs py-1">
-                    {scenarioTree.map(({ useCase, workflows, scenarios }) => {
+                    {scenarioTree.map(({ useCase, workflows }) => {
                         const useCaseKey = 'use-case:' + useCase.id;
                         const collapsed = collapsedGroups.has(useCaseKey);
                         return (
@@ -194,18 +239,17 @@ export function ScenarioEditor() {
                                 </div>
                                 {!collapsed && (
                                     <div className="ml-5 border-l pl-2" style={{ borderColor: '#E5E5E0' }}>
-                                        <div className="px-2 py-1 font-semibold uppercase tracking-wider" style={{ color: '#6B7280', fontSize: '10px' }}>Workflows</div>
-                                        {workflows.map(workflow => (
-                                            <button key={workflow.id} onClick={() => { selectElement(workflow.id); setEditingSteps(null); }}
-                                                className="block w-full px-2 py-1 text-left truncate rounded" style={{ color: '#374151' }}>{workflow.name}</button>
-                                        ))}
-                                        <div className="px-2 pt-2 py-1 font-semibold uppercase tracking-wider" style={{ color: '#6B7280', fontSize: '10px' }}>Scenarios</div>
-                                        {scenarios.map(({ scenario, activities, functionalScenarios, uiScenarios, views }) => (
-                                            <div key={scenario.id} className="mb-1">
+                                        {workflows.map(({ workflow, scenarios }) => (
+                                            <div key={workflow.id} className="mb-1">
+                                                <button onClick={() => { selectElement(workflow.id); setEditingSteps(null); }}
+                                                    className="block w-full px-2 py-1 text-left truncate rounded" style={{ color: '#374151', fontWeight: 600 }}>{workflow.name}</button>
+                                                <div className="ml-3 border-l pl-2" style={{ borderColor: '#D8E2E9' }}>
+                                                {scenarios.map(({ scenario, activities, functionalScenarios, uiScenarios, views }) => (
+                                                    <div key={scenario.id} className="mb-1">
                                                 <button onClick={() => { selectElement(scenario.id); setEditingSteps(null); }}
                                                     className="block w-full px-2 py-1 text-left truncate rounded" style={{ color: '#1B3A4B', fontWeight: 500 }}>{scenario.name}</button>
                                                 <div className="ml-3 border-l pl-2" style={{ borderColor: '#E5E5E0' }}>
-                                                    {([['Operational', activities], ['Functional', functionalScenarios], ['UI', uiScenarios]] as const)
+                                                    {([['Activity diagram', activities], ['Function flow', functionalScenarios], ['Interaction sequence', uiScenarios]] as const)
                                                         .filter(([, nodes]) => nodes.length > 0)
                                                         .map(([label, nodes]) => (
                                                             <div key={label}>
@@ -214,11 +258,25 @@ export function ScenarioEditor() {
                                                                     className="block w-full px-1 py-0.5 text-left truncate rounded" style={{ color: '#4B5563' }}>{node.name}</button>)}
                                                             </div>
                                                         ))}
-                                                    {views.length > 0 && <div>
-                                                        <div className="pt-1" style={{ color: '#6B7280', fontSize: '10px' }}>Views</div>
-                                                        {views.map(view => <button key={view.id} onClick={() => { setActiveMode('diagram'); setActiveView({ type: 'diagram', diagramId: view.id }); }}
-                                                            className="block w-full px-1 py-0.5 text-left truncate rounded" style={{ color: '#2563EB' }}>{view.name}</button>)}
-                                                    </div>}
+                                                    {groupScenarioViews(views).map(group => (
+                                                        <div key={group.label}>
+                                                            <div className="pt-1" style={{ color: '#6B7280', fontSize: '10px' }}>{group.label}</div>
+                                                            {group.items.map(view => (
+                                                                <button
+                                                                    key={view.id}
+                                                                    onClick={() => { setActiveMode('diagram'); setActiveView({ type: 'diagram', diagramId: view.id }); }}
+                                                                    className="block w-full px-1 py-0.5 text-left truncate rounded"
+                                                                    style={{ color: '#2563EB' }}
+                                                                >
+                                                                    {view.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                    </div>
+                                                ))}
+                                                {scenarios.length === 0 && <div className="px-2 py-1" style={{ color: '#9CA3AF', fontSize: '10px' }}>No scenarios</div>}
                                                 </div>
                                             </div>
                                         ))}

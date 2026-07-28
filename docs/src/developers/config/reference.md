@@ -1,202 +1,69 @@
-# memo.config.yaml Reference
+# Project Configuration Reference
 
-Complete reference for all fields in `memo.config.yaml`.
+MEMO Architect device projects use one minimal `memo.config.yaml` file at the
+project root. It selects the modeling profile and optional ontology extensions;
+modeling kinds, rendering layers, relationships, rules, and viewpoints belong
+to those packages rather than to the device project.
 
-## Top-Level Fields
-
-```yaml
-projectName: string          # Project name (required)
-projectType: ontology|profile|library|device # "ontology" for shared types, "profile" for rules/viewpoints, "library" for reusable elements, "device" for projects
-extends: string              # Parent config package (e.g., "@memoarchitect/medical-modeling-profile")
-ontologies:                  # Referenced ontology packages
-  - name: string
-    version: string
-```
-
-## `cosmaLayers`
-
-Defines visualization layers for grouping entities.
+## Device project: `memo.config.yaml`
 
 ```yaml
-cosmaLayers:
-  - id: string       # Unique layer ID (e.g., "risk")
-    label: string     # Human-readable label (e.g., "Risk Management")
-    color: string     # Hex color (e.g., "#E74C3C")
-```
-
-Used for: diagram node coloring, sidebar grouping, completeness tracking.
-
-## `kinds`
-
-Defines entity types available in the model. Each kind maps a domain concept to a SysML v2 construct.
-
-```yaml
-kinds:
-  Hazard:                          # Kind key (used in :> specialization)
-    label: Hazard                  # Human-readable label
-    layer: risk                    # CoSMA layer ID
-    sysmlConstruct: part def       # SysML v2 construct
-    icon: alert-triangle           # Optional icon identifier
-    template: hazard.sysml         # Optional template file
-    defaultAttributes:             # Optional default attributes
-      severity: ""
-      likelihood: ""
-```
-
-### Supported SysML Constructs
-
-| Construct | Typical Use |
-|---|---|
-| `part def` | Physical/logical elements, hazards, risk controls |
-| `requirement def` | Requirements at all levels |
-| `action def` | Functions, use cases, behaviors |
-| `port def` | Interfaces, ports, data types |
-| `interface def` | Interface specifications |
-| `connection def` | Relationship types |
-| `attribute def` | Data types |
-| `enum def` | Enumerations |
-
-## `relationshipTypes`
-
-Defines typed connections between elements.
-
-```yaml
-relationshipTypes:
-  - name: mitigates          # Relationship identifier
-    label: Mitigates          # Human-readable label
-    layer: risk               # CoSMA layer
-    color: "#E74C3C"          # Visualization color
-```
-
-Relationships are used in SysML as:
-
-```sysml
-connection : mitigates connect FlowSensor to OverInfusion;
-```
-
-## `closureRules`
-
-Defines validation rules enforced against the model.
-
-```yaml
-closureRules:
-  - id: CR-MED-001                    # Unique rule ID
-    description: "Description"         # Human-readable
-    entity: Hazard                     # Kind this applies to
-    rule:
-      type: requireRelationship        # Rule type
-      relationship: mitigates          # Relationship to check
-      direction: incoming|outgoing|any # Direction to check
-      min: 1                           # Minimum required count
-    severity: error|warning|info       # Violation severity
-    completenessLayer: risk            # Layer for completeness tracking
-```
-
-### Rule Types
-
-Currently supported:
-
-| Type | Description |
-|---|---|
-| `requireRelationship` | Element must have N+ relationships of a given type |
-
-### Direction Options
-
-| Direction | Meaning |
-|---|---|
-| `incoming` | Relationships where this element is the **target** |
-| `outgoing` | Relationships where this element is the **source** |
-| `any` | Either direction counts |
-
-## `viewpoints`
-
-Defines diagram filter presets.
-
-```yaml
-viewpoints:
-  - id: risk-overview               # Unique viewpoint ID
-    label: Risk Overview (ISO 14971) # Display label
-    visibleKinds:                    # Show elements of these kinds
-      - Hazard
-      - RiskControlMeasure
-    visibleRelationships:            # Show these relationship types
-      - mitigates
-      - causes
-    visibleLayers:                   # Show elements from these layers
-      - risk
-```
-
-Elements are visible if they match `visibleKinds` OR belong to a `visibleLayers` layer. Relationships are visible only if both endpoints are visible.
-
-## Methodology workflows
-
-Methodology SysML packages define workflow steps, review gates, and scope.
-Project configuration selects the applicable methodology package; workflow
-content is not defined as an inline YAML list.
-
-## `firstRun`
-
-Configuration for `memo init` scaffolding.
-
-```yaml
-firstRun:
-  template: infusion-pump        # Template name
-  promptForMetadata: true        # Ask for project metadata
-  scaffoldFiles:
-    - infusion-pump.sysml        # Files to create
-```
-
-## Full Example
-
-```yaml
-projectName: "@memoarchitect/medical-modeling-profile"
+projectName: gpca-pump
 projectType: device
+
 extends: "@memoarchitect/medical-modeling-profile"
 
 ontologies:
   - name: "@memoarchitect/ontology"
     version: "^0.6.0"
-
-cosmaLayers:
-  - id: risk
-    label: Risk Management
-    color: "#E74C3C"
-  - id: requirements
-    label: Requirements
-    color: "#4A90D9"
-
-kinds:
-  Hazard:
-    label: Hazard
-    layer: risk
-    sysmlConstruct: requirement def
-  Requirement:
-    label: Requirement
-    layer: requirements
-    sysmlConstruct: requirement def
-
-relationshipTypes:
-  - name: mitigates
-    label: Mitigates
-    layer: risk
-    color: "#E74C3C"
-
-closureRules:
-  - id: CR-001
-    description: "Every Hazard must be mitigated"
-    entity: Hazard
-    rule:
-      type: requireRelationship
-      relationship: mitigates
-      direction: incoming
-      min: 1
-    severity: error
-    completenessLayer: risk
-
-viewpoints:
-  - id: risk-overview
-    label: Risk Overview
-    visibleKinds: [Hazard, RiskControlMeasure]
-    visibleRelationships: [mitigates]
-    visibleLayers: [risk]
 ```
+
+| Field | Required | Description |
+|---|---:|---|
+| `projectName` | Yes | Human-readable project identifier. |
+| `projectType` | Yes | Must be `device` for an end project. |
+| `extends` | Yes | Modeling profile inherited by the project. |
+| `ontologies` | No | Additional ontology packages, each with `name` and `version`. |
+
+Run the workbench from the directory containing this file:
+
+```bash
+memo-architect dev
+```
+
+## What does not belong in project configuration
+
+Do not put these blocks in a device project's `memo.config.yaml`:
+
+- `cosmaLayers`
+- `kinds`
+- `relationshipTypes`
+- `closureRules`
+- `viewpoints`
+
+Those were part of an obsolete exploratory configuration format. The current
+ownership model is:
+
+| Concern | Canonical owner |
+|---|---|
+| Kinds and relationship definitions | SysML files in ontology packages |
+| Layer labels, colors, and icons | `memo.rendering.yaml` in an ontology package |
+| Validation and completeness rules | `memo.rules.yaml` in a profile package |
+| Viewpoints and methodology workflow | SysML files in a methodology/profile package |
+
+## Ontology and profile packages
+
+Package authors use `memo.package.yaml`, not the device-project format:
+
+```yaml
+name: "@memoarchitect/ontology-example"
+version: "0.1.0"
+type: ontology
+description: "Example ontology extension"
+```
+
+An ontology package may also provide `memo.rendering.yaml`; a profile package
+may provide `memo.rules.yaml`. Kinds and relationships remain defined in SysML.
+
+This separation keeps device projects configuration-light and prevents local
+project YAML from overriding the canonical ontology.

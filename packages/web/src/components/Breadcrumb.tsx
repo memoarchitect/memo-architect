@@ -19,14 +19,15 @@ export function Breadcrumb() {
             const diagram = getDiagram(model, activeView.diagramId);
             if (diagram) {
                 const vpLabel = diagram.viewpointId === '__model'
-                    ? 'Model Viewpoint'
+                    ? 'Unassigned Views'
                     : model?.viewpoints?.find(v => v.id === diagram.viewpointId)?.label || diagram.viewpointId;
-                crumbs.push({ label: vpLabel });
+                const vp = model?.viewpoints?.find(v => v.id === diagram.viewpointId);
+                crumbs.push({ label: vp ? `${vp.id} · ${vpLabel}` : vpLabel });
                 // Spec view kind label wins over the legacy diagramType code
                 const kindMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
                 const typeMeta = DIAGRAM_TYPE_META[diagram.diagramType];
                 const code = kindMeta?.label ?? typeMeta?.code ?? diagram.diagramType;
-                crumbs.push({ label: `${code}: ${diagram.name}` });
+                crumbs.push({ label: `${diagram.id} · ${code}: ${diagram.name}` });
             }
             break;
         }

@@ -10,9 +10,9 @@ const DOCS_URL = '/help/';
 const NAV_MODES = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
     { id: 'catalog', label: 'Model Explorer', icon: '☰' },
-    { id: 'diagram', label: 'Diagrams', icon: '⊟' },
-    { id: 'dhf', label: 'DHF', icon: '⊞' },
-    { id: 'scenario', label: 'Scenarios', icon: '▶' },
+    { id: 'diagram', label: 'Viewpoints', icon: '⊟' },
+    { id: 'dhf', label: 'Documents', icon: '⊞' },
+    { id: 'scenario', label: 'Use Cases', icon: '▶' },
     { id: 'ontology', label: 'Ontology', icon: '◉' },
     { id: 'import', label: 'Import', icon: '↓' },
 ] as const;
@@ -177,7 +177,7 @@ export function ModeSwitcher() {
                 navigate('/catalog');
                 break;
             case 'diagram':
-                // Show views tab in explorer so user can pick a diagram
+                // Show the viewpoint explorer so the user can pick a model view.
                 setExplorerTab('views');
                 setActiveView({ type: 'welcome' });
                 navigate('/diagrams');

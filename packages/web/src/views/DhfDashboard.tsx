@@ -150,10 +150,10 @@ export function DhfDashboard() {
             {/* Header */}
             <div style={{ marginBottom: '24px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A4B', margin: 0 }}>
-                    Design History File Dashboard
+                    Documents
                 </h2>
                 <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px' }}>
-                    {summary.total} documents | {summary.complete} complete | {summary.partial} partial | {summary.empty} empty
+                    Design history file · {summary.total} documents | {summary.complete} complete | {summary.partial} partial | {summary.empty} empty
                     {completeness && ` | Overall completeness: ${completeness.overall}%`}
                 </p>
             </div>

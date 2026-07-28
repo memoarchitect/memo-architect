@@ -547,7 +547,7 @@ function DiagramCanvasInner() {
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
     const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
-    const [useCaseEdgeStyle, setUseCaseEdgeStyle] = useState<UseCaseEdgeStyle>('rounded');
+    const [useCaseEdgeStyle, setUseCaseEdgeStyle] = useState<UseCaseEdgeStyle>('straight');
     const [hiddenUseCaseActorIds, setHiddenUseCaseActorIds] = useState<Set<string>>(new Set());
     const useCaseDepth = useMemo(() => model ? useCaseMaxDepth(model) : 0, [model]);
     const useCaseActors = useMemo(() => model ? useCaseActorOptions(model) : [], [model]);
@@ -664,7 +664,7 @@ function DiagramCanvasInner() {
         setLayoutEditVersion(0);
         setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
-        setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'rounded');
+        setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');

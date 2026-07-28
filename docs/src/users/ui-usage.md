@@ -12,11 +12,11 @@ The workbench gives the same model three complementary entry points:
 | Area | Use it for | Good first action |
 |---|---|---|
 | **Model Explorer** (top nav) | Find elements by layer, kind, or name | Open one known requirement, function, or hazard |
-| **Diagrams** (top nav) | Select the viewpoint for a review question | Choose context, risk, requirements, or verification |
+| **Viewpoints** (top nav) | Select an ontology-defined viewpoint and one of its views | Choose context, risk, requirements, or verification |
 | **Main view** | Read the selected diagram, table, or analysis | Follow one relationship at a time |
 | **Details and findings** | Inspect attributes, links, and validation messages | Decide whether a gap is real, intentional, or a modeling error |
 
-The top navigation also carries **DHF**, **Scenarios**, **Ontology**, **Import**, and a
+The top navigation also carries **Documents**, **Use Cases**, **Ontology**, **Import**, and a
 **Tools** menu holding the cross-cutting analyses (Design Structure Matrix, Traceability
 Matrix, Statistics Dashboard, Compliance Wizard, and Model Diff).
 

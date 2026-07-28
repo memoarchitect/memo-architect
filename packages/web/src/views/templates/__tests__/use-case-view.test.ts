@@ -5,6 +5,23 @@ const el = (id: string, kind: string, name = id) => ({ id, kind, name, construct
 const model = (elements: Record<string, any>, relationships: any[] = []) => ({ elements, relationships, errors: [] }) as any;
 
 describe('use-case view template', () => {
+    it('balances a flat set of root use cases into readable columns', () => {
+        const actor = el('actor', 'Actor');
+        const cases = Object.fromEntries(Array.from({ length: 8 }, (_, index) => {
+            const useCase = el(`case-${index}`, 'UseCase', `Use case ${index + 1}`);
+            return [useCase.id, useCase];
+        }));
+        const relationships = Object.keys(cases).map((id, index) => ({
+            id: `rel-${index}`, type: 'participatesIn', sourceId: actor.id, targetId: id,
+        }));
+        const layout = computeUseCaseViewLayout(model({ actor, ...cases }, relationships));
+        const useCaseNodes = layout.nodes.filter(node => node.type === 'useCase');
+
+        expect(new Set(useCaseNodes.map(node => node.position.x)).size).toBe(2);
+        const boundary = layout.nodes.find(node => node.id === '__use_case_boundary__');
+        expect(Number(boundary?.style?.height)).toBeLessThan(700);
+    });
+
     it('recognizes actors and native use cases', () => {
         expect(isUseCaseActor(el('nurse', 'User'))).toBe(true);
         expect(isUseCaseActor(el('device', 'LogicalComponent'))).toBe(false);
@@ -58,6 +75,7 @@ describe('use-case view template', () => {
     });
 
     it('reads depth and routing from model-owned presentation hints', () => {
+        expect(useCaseViewOptions()).toEqual({ level: 'all', edgeStyle: 'straight' });
         expect(useCaseViewOptions({ layoutHint: 'usecase:level=1;edge=straight' }))
             .toEqual({ level: 1, edgeStyle: 'straight' });
     });
@@ -66,6 +84,7 @@ describe('use-case view template', () => {
         const actor = el('actor', 'User');
         const useCase = el('useCase', 'UseCase');
         const fixture = model({ actor, useCase }, [{ id: 'a', type: 'initiates', sourceId: 'actor', targetId: 'useCase' }]);
+        expect(computeUseCaseViewLayout(fixture).edges[0]).toMatchObject({ data: { routing: 'straight' } });
         expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'straight' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'straight' } });
         expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'elbow' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'elbow' } });
         expect(computeUseCaseViewLayout(fixture, { edgeStyle: 'rounded' }).edges[0]).toMatchObject({ type: 'useCaseEdge', data: { routing: 'rounded' } });
@@ -101,7 +120,7 @@ describe('use-case view template', () => {
         ]));
         expect(layout.nodes.filter(node => node.type === 'useCaseActor')).toHaveLength(1);
         expect(layout.edges).toHaveLength(3);
-        expect((layout.edges[1].data?.points as Array<unknown>).length).toBeGreaterThanOrEqual(2);
+        expect(layout.edges[1].data).toMatchObject({ routing: 'straight', points: [] });
         // An association leaves the actor's facing side and enters the case's,
         // both at mid-height, so the run is a straight horizontal.
         const actor = layout.nodes.find(node => node.id === 'clinician')!;

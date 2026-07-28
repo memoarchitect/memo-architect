@@ -25,22 +25,22 @@ export const FONT = {
 /** Semantic text colors — ensures consistent contrast throughout the UI */
 export const COLOR = {
     /** Primary text — headings, element names */
-    primary: '#1a1a1a',
+    primary: '#082744',
     /** Secondary text — descriptions, sub-labels */
-    secondary: '#4B5563',
+    secondary: '#324E67',
     /** Muted text — metadata, inactive items */
-    muted: '#6B7280',
+    muted: '#5C7188',
     /** Faint text — placeholders, disabled */
-    faint: '#9CA3AF',
+    faint: '#8CA0B1',
     /** Surface backgrounds */
     surface: '#FFFFFF',
-    surfaceAlt: '#F7F7F5',
+    surfaceAlt: '#EEF4F7',
     /** Borders */
-    border: '#E5E5E0',
-    borderLight: '#EDEDEA',
+    border: '#D8E2E9',
+    borderLight: '#E6EDF2',
     /** Accent */
     accent: '#2DD4A8',
-    accentDark: '#1B3A4B',
+    accentDark: '#0B1E2D',
 } as const;
 
 /** Tree icons for file-explorer style */
