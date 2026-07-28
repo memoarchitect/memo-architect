@@ -17,6 +17,7 @@ vi.mock('../ws-client', () => ({
 
 const {
     useModelStore, getDiagramSourceFiles, getElementSourceFiles, sourceChangeAffects,
+    getDiagramsForViewpoint,
 } = await import('../model-store');
 
 function element(id: string, file: string): MemoElement {
@@ -102,6 +103,19 @@ describe('getDiagramSourceFiles', () => {
 
     it('reports nothing for an unknown diagram', () => {
         expect(getDiagramSourceFiles(model, 'diag-missing')).toEqual([]);
+    });
+});
+
+describe('getDiagramsForViewpoint', () => {
+    it('returns one reusable view from each of its linked viewpoints', () => {
+        const reusable = {
+            id: 'diag-reusable', name: 'Reusable', diagramType: 'bdd',
+            viewpointId: 'vp-software', viewpointIds: ['vp-software', 'vp-safety'], auto: true,
+        };
+        const reusableModel = { ...model, diagrams: [reusable] } as MemoModelDTO;
+
+        expect(getDiagramsForViewpoint(reusableModel, 'vp-software').map(d => d.id)).toEqual(['diag-reusable']);
+        expect(getDiagramsForViewpoint(reusableModel, 'vp-safety').map(d => d.id)).toEqual(['diag-reusable']);
     });
 });
 

@@ -26,15 +26,17 @@ export function DiagramHomePage() {
             // '__model' is the synthetic bucket for views that are not assigned
             // to a named viewpoint. Named buckets display their user-facing
             // label, not the storage id.
-            const viewpoint = model?.viewpoints?.find(candidate => candidate.id === diagram.viewpointId);
-            const key = diagram.viewpointId;
-            const group = byViewpoint.get(key);
-            if (group) group.items.push(diagram);
-            else byViewpoint.set(key, {
-                id: key,
-                label: viewpoint?.label ?? (key === '__model' || key === '__unassigned' ? 'Unassigned Views' : key),
-                items: [diagram],
-            });
+            const viewpointIds = (diagram as DiagramDTO & { viewpointIds?: string[] }).viewpointIds;
+            for (const key of viewpointIds?.length ? viewpointIds : [diagram.viewpointId]) {
+                const viewpoint = model?.viewpoints?.find(candidate => candidate.id === key);
+                const group = byViewpoint.get(key);
+                if (group) group.items.push(diagram);
+                else byViewpoint.set(key, {
+                    id: key,
+                    label: viewpoint?.label ?? (key === '__model' || key === '__unassigned' ? 'Unassigned Views' : key),
+                    items: [diagram],
+                });
+            }
         }
         return [...byViewpoint.values()]
             .map(group => ({ ...group, items: [...group.items].sort((a, b) => a.name.localeCompare(b.name)) }))

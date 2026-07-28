@@ -1322,6 +1322,24 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         ))
     );
 
+    const renderGroupedDiagramList = (diagrams: DiagramDTO[], vpId: string) => {
+        const groupOf = (diagram: DiagramDTO) => (diagram as DiagramDTO & { group?: string }).group;
+        if (!diagrams.some(diagram => groupOf(diagram))) return renderDiagramList(diagrams, vpId);
+        const groups = new Map<string, DiagramDTO[]>();
+        for (const diagram of diagrams) {
+            const group = groupOf(diagram) || 'Other';
+            groups.set(group, [...(groups.get(group) ?? []), diagram]);
+        }
+        return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([group, items]) => (
+            <div key={group} style={{ margin: '5px 4px 2px' }}>
+                <div className="px-2 py-1 font-semibold" style={{ color: COLOR.muted, fontSize: FONT.xs }}>
+                    {group}
+                </div>
+                <div style={{ marginLeft: '8px' }}>{renderDiagramList(items, vpId)}</div>
+            </div>
+        ));
+    };
+
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
             {/* Views not assigned to a named viewpoint */}
@@ -1390,7 +1408,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
-                                {renderDiagramList(authoredDiags, vp.id)}
+                                {renderGroupedDiagramList(authoredDiags, vp.id)}
                                 <button
                                     className="flex items-center gap-1 px-2 py-1 w-full text-left"
                                     style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
@@ -1487,42 +1505,6 @@ function DhfExplorerContent() {
     const addDhfDocument = useModelStore(s => s.addDhfDocument);
     const removeDhfDocument = useModelStore(s => s.removeDhfDocument);
     const dhfSettings = useModelStore(s => s.dhfSettings);
-    const methodology = useModelStore(s => s.methodology);
-
-    // ─── Phase D4: methodology-pinned DHF documents ─────────────────────────
-    const methodologyDhfBindings = useMemo(() => {
-        if (!methodology) return [];
-        const out: {
-            id: string; partName: string; documentTitle: string; groupLabel: string;
-            templateId: string; viewKind: string; regulatoryReference: string;
-            required: boolean; folder: string;
-        }[] = [];
-        for (const folder of methodology.folders) {
-            const bindings = folder.parts['DhfDocumentBinding'] ?? [];
-            for (const b of bindings) {
-                const a = b.attributes;
-                const idAttr = a['id'];
-                const titleAttr = a['documentTitle'];
-                const groupAttr = a['groupLabel'];
-                const templateAttr = a['templateId'];
-                const viewKindAttr = a['viewKind'];
-                const regAttr = a['regulatoryReference'];
-                const reqAttr = a['required'];
-                out.push({
-                    id: typeof idAttr === 'string' ? idAttr : b.partName,
-                    partName: b.partName,
-                    documentTitle: typeof titleAttr === 'string' ? titleAttr : b.partName,
-                    groupLabel: typeof groupAttr === 'string' ? groupAttr : '',
-                    templateId: typeof templateAttr === 'string' ? templateAttr : '',
-                    viewKind: typeof viewKindAttr === 'string' ? viewKindAttr : '',
-                    regulatoryReference: typeof regAttr === 'string' ? regAttr : '',
-                    required: typeof reqAttr === 'boolean' ? reqAttr : false,
-                    folder: folder.name,
-                });
-            }
-        }
-        return out;
-    }, [methodology]);
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
         new Set(DHF_GROUPS.map(g => g.id))
@@ -1599,19 +1581,6 @@ function DhfExplorerContent() {
         return () => window.removeEventListener('click', handler);
     }, [contextMenu]);
 
-    function createFromBinding(b: typeof methodologyDhfBindings[number]) {
-        const existingDoc = dhfDocuments.find(d => d.templateId === b.templateId);
-        if (existingDoc) {
-            setActiveView({ type: 'dhf-document', docId: existingDoc.id });
-            return;
-        }
-        const group = DHF_GROUPS.find(g => g.templates.some(t => t.id === b.templateId));
-        const tmpl = group?.templates.find(t => t.id === b.templateId);
-        if (group && tmpl) {
-            createDocuments([{ title: tmpl.title, prefix: tmpl.prefix, templateId: tmpl.id, groupLabel: group.label, content: null }]);
-        }
-    }
-
     return (
         <>
             <div className="flex-1 overflow-y-auto py-1">
@@ -1631,53 +1600,6 @@ function DhfExplorerContent() {
                         <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Document
                     </button>
                 </div>
-
-                {/* Phase D4: Methodology DHF documents — driven by methodology.dhf_documents */}
-                {methodologyDhfBindings.length > 0 && (
-                    <div style={{ marginBottom: '6px', borderBottom: `1px solid ${COLOR.border}`, paddingBottom: '6px' }}>
-                        <div className="px-3 py-1" style={{
-                            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
-                            letterSpacing: '0.08em', color: COLOR.muted,
-                        }}>
-                            Methodology Documents
-                        </div>
-                        {methodologyDhfBindings.map(b => {
-                            const existingDoc = dhfDocuments.find(d => d.templateId === b.templateId);
-                            const isActive = existingDoc != null && activeDocId === existingDoc.id;
-                            const tmplKnown = DHF_GROUPS.some(g => g.templates.some(t => t.id === b.templateId));
-                            return (
-                                <div
-                                    key={`mdhf::${b.id}`}
-                                    onClick={() => createFromBinding(b)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        padding: '5px 12px',
-                                        cursor: tmplKnown ? 'pointer' : 'default',
-                                        background: isActive ? '#EEF2FF' : 'transparent',
-                                        borderLeft: isActive ? '2px solid #6366F1' : '2px solid transparent',
-                                    }}
-                                    title={`${b.regulatoryReference || ''} · template: ${b.templateId}${tmplKnown ? '' : ' (unknown — no built-in template)'}`}
-                                    onMouseEnter={e => { if (!isActive && tmplKnown) e.currentTarget.style.background = COLOR.surfaceAlt; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = isActive ? '#EEF2FF' : 'transparent'; }}
-                                >
-                                    <span style={{
-                                        fontSize: '9px', fontFamily: 'monospace',
-                                        color: b.required ? '#DC2626' : COLOR.faint,
-                                        fontWeight: 700,
-                                    }}>{b.id}</span>
-                                    <span style={{ flex: 1, fontSize: FONT.explorer.element, color: COLOR.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {b.documentTitle}
-                                    </span>
-                                    {existingDoc ? (
-                                        <span style={{ fontSize: '9px', color: '#059669', fontWeight: 700 }}>✓</span>
-                                    ) : (
-                                        <span style={{ fontSize: '9px', color: COLOR.faint }}>+</span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
 
                 {/* Only categories that contain documents — creation goes through the wizard */}
                 {DHF_GROUPS.filter(g => dhfDocuments.some(d => d.group === g.label)).map(group => {
@@ -1836,7 +1758,7 @@ function DhfExplorerContent() {
                 {/* Hint */}
                 {dhfDocuments.length === 0 && (
                     <div style={{ padding: '16px 14px', fontSize: '11px', color: '#9CA3AF', lineHeight: '1.6' }}>
-                        No documents yet. Use <strong>+ New Document</strong> to create one from a meMO template, a blank page, or a markdown file in this repository.
+                        No documents yet. Use <strong>+ New Document</strong> to create one from a meMO template, a reusable project template, a new template, or a blank page.
                     </div>
                 )}
 

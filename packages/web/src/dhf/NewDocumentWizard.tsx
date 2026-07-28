@@ -2,8 +2,8 @@
 //
 // Guided three-step flow for creating DHF documents:
 //   1. Category  — the built-in groups plus a custom "Other" category
-//   2. Template  — meMO templates in the category, a blank document, or any
-//                  markdown file from the project git repo
+//   2. Template  — meMO templates, reusable project templates, a newly added
+//                  project template, or a blank document
 //   3. Confirm   — preview computed document IDs, adjust titles, create
 //
 // Repo templates are listed/read through the dev server (dhf:templates:*).
@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useModelStore } from '../store/model-store';
 import type { DhfDoc } from '../store/model-store';
-import { sendDhfTemplatesList, sendDhfTemplateRead } from '../store/ws-client';
+import { sendDhfTemplatesList, sendDhfTemplateRead, sendDhfTemplateSave } from '../store/ws-client';
 import type { DhfRepoTemplateInfo } from '@memoarchitect/tools/browser';
 import {
     DHF_GROUPS, OTHER_GROUP_ID, OTHER_GROUP_COLOR,
@@ -76,6 +76,9 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
     const [blankTitle, setBlankTitle] = useState('Untitled Document');
     const [repoTemplates, setRepoTemplates] = useState<DhfRepoTemplateInfo[] | null>(null);
     const [repoError, setRepoError] = useState<string | null>(null);
+    const [addTemplate, setAddTemplate] = useState(false);
+    const [newTemplateTitle, setNewTemplateTitle] = useState('');
+    const [newTemplateContent, setNewTemplateContent] = useState('');
     const [titleOverrides, setTitleOverrides] = useState<Record<string, string>>({});
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
@@ -83,7 +86,6 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
     const isOther = group === null && step > 0;
     const groupLabel = isOther ? (customLabel.trim() || 'Other') : group?.label ?? '';
     const groupColor = group?.color ?? OTHER_GROUP_COLOR;
-    const existingTemplateIds = useMemo(() => new Set(existingDocs.map(d => d.templateId)), [existingDocs]);
 
     // Load repo templates when the template step opens
     useEffect(() => {
@@ -108,13 +110,18 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
         if (picks.blank) {
             out.push({ key: 'blank', defaultTitle: blankTitle.trim() || 'Untitled Document', prefix: prefixFromTitle(blankTitle), templateId: 'blank' });
         }
+        if (addTemplate && newTemplateTitle.trim()) {
+            const title = newTemplateTitle.trim();
+            out.push({ key: 'new-template', defaultTitle: title, prefix: prefixFromTitle(title), templateId: 'new-template' });
+        }
         return out;
-    }, [picks, group, repoTemplates, blankTitle]);
+    }, [picks, group, repoTemplates, blankTitle, addTemplate, newTemplateTitle]);
 
     const draftTitle = (d: Draft) => (titleOverrides[d.key] ?? d.defaultTitle);
     /** Built-ins keep their registry prefix; blank/repo docs derive one from the title */
     const draftPrefix = (d: Draft) =>
-        d.templateId === 'blank' || d.templateId.startsWith('repo:') ? prefixFromTitle(draftTitle(d)) : d.prefix;
+        d.templateId === 'blank' || d.templateId === 'new-template' || d.templateId.startsWith('repo:')
+            ? prefixFromTitle(draftTitle(d)) : d.prefix;
 
     /** Preview IDs with the same numbering rule used at creation */
     const previewIds = useMemo(() => {
@@ -138,6 +145,16 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                 let content: string | null = null;
                 if (d.templateId.startsWith('repo:')) {
                     content = await requestFromServer<string>(id => sendDhfTemplateRead(id, d.templateId.slice(5)));
+                } else if (d.templateId === 'new-template') {
+                    const templateBody = newTemplateContent.trim() || `# ${draftTitle(d)}\n\n_[TODO: Add template content]_\n`;
+                    const saved = await requestFromServer<{ path: string }>(id =>
+                        sendDhfTemplateSave(id, draftTitle(d), templateBody)
+                    );
+                    specs.push({
+                        title: draftTitle(d), prefix: draftPrefix(d),
+                        templateId: `repo:${saved.path}`, groupLabel, content: templateBody,
+                    });
+                    continue;
                 } else if (d.templateId === 'blank') {
                     content = `# ${draftTitle(d)}\n\n_[TODO: Add content]_\n`;
                 }
@@ -215,8 +232,6 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                                     <PickRow key={t.id}
                                         label={t.title} sub={t.id} color={groupColor}
                                         checked={picks.builtIn.has(t.id)}
-                                        disabled={existingTemplateIds.has(t.id)}
-                                        disabledNote="exists"
                                         onToggle={() => setPicks(p => {
                                             const next = new Set(p.builtIn);
                                             next.has(t.id) ? next.delete(t.id) : next.add(t.id);
@@ -238,11 +253,11 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                             </PickRow>
                         </Section>
 
-                        <Section title="From repository" hint="Any markdown file in this project">
-                            {!connected && <Note text="Dev server not connected — repository templates unavailable." />}
+                        <Section title="Project templates" hint="Reusable templates in dhf/templates/">
+                            {!connected && <Note text="Dev server not connected — project templates unavailable." />}
                             {connected && repoError && <Note text={repoError} error />}
-                            {connected && !repoError && repoTemplates === null && <Note text="Loading repository files…" />}
-                            {connected && repoTemplates?.length === 0 && <Note text="No markdown files found in this project." />}
+                            {connected && !repoError && repoTemplates === null && <Note text="Loading project templates…" />}
+                            {connected && repoTemplates?.length === 0 && <Note text="No project templates yet." />}
                             {connected && repoTemplates?.map(t => (
                                 <PickRow key={t.path}
                                     label={t.title} sub={t.path} color={groupColor}
@@ -253,6 +268,22 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                                         return { ...p, repo: next };
                                     })} />
                             ))}
+                            <PickRow label="Add new template" sub="Save and reuse in this project" color={groupColor}
+                                checked={addTemplate}
+                                disabled={!connected}
+                                disabledNote={!connected ? 'server unavailable' : undefined}
+                                onToggle={() => setAddTemplate(value => !value)} />
+                            {addTemplate && (
+                                <div style={{ marginLeft: '22px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <input value={newTemplateTitle} onChange={e => setNewTemplateTitle(e.target.value)}
+                                        placeholder="Template title"
+                                        style={{ padding: '6px 8px', border: '1px solid #D1D5DB', borderRadius: '5px', fontSize: '12px', color: '#1B3A4B', outline: 'none' }} />
+                                    <textarea value={newTemplateContent} onChange={e => setNewTemplateContent(e.target.value)}
+                                        placeholder="Template Markdown (headings, instructions, and model queries)"
+                                        rows={4}
+                                        style={{ padding: '6px 8px', border: '1px solid #D1D5DB', borderRadius: '5px', fontSize: '11px', fontFamily: 'monospace', color: '#1B3A4B', outline: 'none', resize: 'vertical' }} />
+                                </div>
+                            )}
                         </Section>
                     </div>
                 )}
@@ -271,7 +302,7 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                                     onChange={e => setTitleOverrides(o => ({ ...o, [d.key]: e.target.value }))}
                                     style={{ flex: 1, padding: '4px 8px', border: '1px solid #E5E7EB', borderRadius: '5px', fontSize: '12px', color: '#1B3A4B', outline: 'none' }} />
                                 <span style={{ fontSize: '10px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>
-                                    {d.templateId === 'blank' ? 'blank' : d.templateId.startsWith('repo:') ? 'repo' : 'meMO'}
+                                    {d.templateId === 'blank' ? 'blank' : d.templateId === 'new-template' ? 'new template' : d.templateId.startsWith('repo:') ? 'project' : 'meMO'}
                                 </span>
                             </div>
                         ))}

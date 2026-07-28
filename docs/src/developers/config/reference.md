@@ -65,5 +65,24 @@ description: "Example ontology extension"
 An ontology package may also provide `memo.rendering.yaml`; a profile package
 may provide `memo.rules.yaml`. Kinds and relationships remain defined in SysML.
 
+Extensions participate through ordinary SysML specialization. For example, a
+user ontology can define:
+
+```sysml
+package my_company_software {
+    private import memo_architecture_implementation_software_runtime::*;
+
+    part def FirmwareComponent specializes SoftwareComponent {
+        attribute bootloaderVersion : String;
+    }
+}
+```
+
+After adding that package under `ontologies`, Memo Architect loads its kinds
+into the same registry as MEMO. View selection, palette eligibility, and
+relationship checks walk the transitive specialization chain, so a viewpoint
+or rule targeting `SoftwareComponent` also recognizes `FirmwareComponent`.
+The extension does not need to copy or patch the base viewpoint.
+
 This separation keeps device projects configuration-light and prevents local
 project YAML from overriding the canonical ontology.

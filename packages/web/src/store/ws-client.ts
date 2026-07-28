@@ -16,6 +16,11 @@ import type {
 } from '@memoarchitect/tools/browser';
 import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
 
+type ExtendedServerMessage = ServerMessage | {
+    type: 'dhf:template:save:result';
+    payload: { requestId: string; path?: string; error?: string };
+};
+
 /** Embedded data injected by `memo-architect build` */
 interface EmbeddedData {
     model: any;
@@ -168,7 +173,7 @@ export function connectWebSocket(url?: string): void {
 
     ws.onmessage = (event) => {
         try {
-            const msg: ServerMessage = JSON.parse(event.data);
+            const msg: ExtendedServerMessage = JSON.parse(event.data);
             handleMessage(msg);
         } catch {
             // Ignore malformed messages
@@ -191,7 +196,7 @@ export function connectWebSocket(url?: string): void {
     };
 }
 
-function handleMessage(msg: ServerMessage): void {
+function handleMessage(msg: ExtendedServerMessage): void {
     const store = useModelStore.getState();
 
     switch (msg.type) {
@@ -356,6 +361,13 @@ function handleMessage(msg: ServerMessage): void {
                 store.resolveLlmRequest(msg.payload.requestId, msg.payload.content);
             }
             break;
+        case 'dhf:template:save:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, { path: msg.payload.path });
+            }
+            break;
     }
 }
 
@@ -433,6 +445,11 @@ export function sendDhfTemplatesList(requestId: string): void {
 /** Request the content of one repo template file */
 export function sendDhfTemplateRead(requestId: string, path: string): void {
     sendRaw({ type: 'dhf:template:read', payload: { requestId, path } });
+}
+
+/** Add a reusable project template under dhf/templates. */
+export function sendDhfTemplateSave(requestId: string, title: string, content: string): void {
+    sendRaw({ type: 'dhf:template:save', payload: { requestId, title, content } });
 }
 
 export type { DhfRepoTemplateInfo };

@@ -2,7 +2,9 @@
 
 MEMO follows ISO/IEC/IEEE 42010: a **viewpoint** defines the concerns, audience,
 allowed model content, and presentation choices for a review; a **view** is an
-authored representation that conforms to one viewpoint.
+authored representation that conforms to one or more viewpoints. The
+relationship is many-to-many: a view can be reused across viewpoints, and a
+viewpoint can govern many views.
 
 Both are modeled in SysML v2 and supplied by the selected ontology and
 methodology packages. A device project's YAML does not redefine them.
@@ -26,9 +28,9 @@ authored ID, for example:
 /diagrams/afd/VIEW-BHV-003
 ```
 
-“Unassigned Views” appears only when a view has no `viewpointDefinition`
-binding. Architect does not infer a “Document Views” viewpoint from the
-presentation kind.
+“Unassigned Views” can appear temporarily while editing, but validation reports
+`VW-003` as an error when a view has no `viewpointDefinition` binding.
+Architect does not infer a “Document Views” viewpoint from presentation kind.
 
 ## Ontology source
 
@@ -40,8 +42,21 @@ part logicalArchitectureViewpoint : Viewpoint {
     attribute :>> id = "VP-LOG";
     attribute :>> title = "Logical Viewpoint";
     attribute :>> purpose = "Describe the system's logical decomposition.";
+    attribute :>> group = "Architect & Realize";
 }
 ```
+
+To reuse the same view, bind the inherited feature more than once:
+
+```sysml
+part :>> viewpointDefinition = logicalArchitectureViewpoint;
+part :>> viewpointDefinition = softwareViewpoint;
+```
+
+Architect lists the same stable view under both viewpoints; it does not clone
+the view. An optional `group` attribute on a view creates labeled sections
+inside each viewpoint, which keeps a large view catalog navigable while the
+grouping remains ontology-authored metadata.
 
 A view binds to that viewpoint and owns a separate stable ID:
 
@@ -102,6 +117,7 @@ memo export dot --output model.dot --viewpoint VP-LOG
 ## Add a view
 
 Create or specialize a `MemoView`/`MemoDiagramView` in a SysML source file,
-give it an `id`, `name`, and `title`, and bind `viewpointDefinition` to an
-ontology-defined viewpoint. Restarting Architect is not required for project
-source changes; the project watcher rebuilds the model and refreshes the view.
+give it an `id`, `name`, and `title`, and bind `viewpointDefinition` to at least
+one ontology-defined viewpoint. Restarting Architect is not required for
+project source changes; the project watcher rebuilds the model and refreshes
+the view.

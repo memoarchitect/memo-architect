@@ -29,6 +29,18 @@ Regulatory standards require you to maintain a history of changes.
 
 ## Workflow
 
+### Documents and templates
+
+The DHF explorer lists only documents that currently exist in the project
+under `dhf/documents/`. Methodology bindings and template definitions do not
+appear as documents.
+
+Use **+ New Document** to create a document from a built-in meMO template, a
+reusable project template, or a blank page. Project templates live separately
+under `dhf/templates/`. Choose **Add new template** in the creation wizard to
+save a reusable Markdown template there and create the first document from it.
+Templates remain reusable and can create more than one document.
+
 ### Reviewing Status
 Open the **DHF Dashboard** from the top toolbar to see the status of your entire file.
 - **Complete:** All required sections have been populated with model data.

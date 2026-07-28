@@ -1300,5 +1300,8 @@ export function sourceChangeAffects(
 /** Get diagrams for a specific viewpoint */
 export function getDiagramsForViewpoint(model: MemoModelDTO | null, viewpointId: string): DiagramDTO[] {
     if (!model?.diagrams) return [];
-    return model.diagrams.filter(d => d.viewpointId === viewpointId);
+    return model.diagrams.filter(d =>
+        d.viewpointId === viewpointId
+        || (d as DiagramDTO & { viewpointIds?: string[] }).viewpointIds?.includes(viewpointId)
+    );
 }
