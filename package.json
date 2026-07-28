@@ -17,11 +17,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm run check:cache && pnpm run build:client && pnpm run build:cli",
+    "build": "pnpm run check:cache && pnpm run build:client && pnpm run check:bundle && pnpm run build:cli",
     "prepack": "pnpm run clean && pnpm run build",
     "build:client": "vite build --config packages/web/vite.config.ts",
     "build:cli": "tsc -p tsconfig.architect.json",
     "check:cache": "bash scripts/check-no-ontology-cache.sh",
+    "check:bundle": "bash scripts/check-no-bare-imports.sh",
     "dev": "vite --config packages/web/vite.config.ts",
     "test": "cd packages/web && vitest run",
     "test:coverage": "cd packages/web && vitest run --coverage",

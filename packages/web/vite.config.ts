@@ -17,7 +17,15 @@ export default defineConfig({
                     // Split heavy dependencies into separate chunks
                     'react-vendor': ['react', 'react-dom'],
                     'reactflow': ['@xyflow/react'],
-                    'elk': ['elkjs'],
+                    // The exact module the app imports, not the package name.
+                    // Bare 'elkjs' resolves to lib/main (elk-api), which nothing
+                    // imports and which requires 'web-worker' — a Node-only
+                    // optional dependency that is not installed. Rollup left it
+                    // as a bare `import "web-worker"` in the chunk, and since the
+                    // diagram bundles depend on it statically, the browser threw
+                    // on an unresolvable specifier and every diagram route
+                    // rendered blank.
+                    'elk': ['elkjs/lib/elk.bundled.js'],
                     'zustand': ['zustand'],
                 },
             },
