@@ -9,6 +9,18 @@ Architect is the highest layer of the MEMO product family. The
 **Ontology** supplies meaning and methodology; **Tools** reads and validates the
 source; **Architect** makes that shared model easier to explore and review.
 
+!!! warning "Experimental before 1.0"
+    MEMO Architect, Tools, and ontology semantics may change before version 1.0.
+    Use a [tagged release](https://github.com/memoarchitect/memo-architect/releases)
+    and an exact npm version rather than `main` or a floating range for reproducible work.
+
+## Project links
+
+- [MEMO Architect GitHub repository](https://github.com/memoarchitect/memo-architect)
+- [MEMO Ontology documentation](https://memoarchitect.com/memo/) · [GitHub repository](https://github.com/memoarchitect/memo)
+- [MEMO Tools documentation](https://memoarchitect.com/memo-tools/) · [GitHub repository](https://github.com/memoarchitect/memo-tools)
+- [MEMO product website](https://memoarchitect.com/)
+
 ## Start with what you need to accomplish
 
 | Your goal | Start here |

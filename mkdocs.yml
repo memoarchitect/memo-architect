@@ -1,6 +1,7 @@
 site_name: MEMO Architect
 site_description: Interactive and distributable workbench for MEMO SysML v2 projects
 site_author: Somesh Kashyap
+site_url: https://memoarchitect.com/memo-architect/
 repo_url: https://github.com/memoarchitect/memo-architect
 repo_name: memoarchitect/memo-architect
 
