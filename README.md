@@ -9,8 +9,15 @@
 </p>
 
 <p align="center">
-  <code>memo-architect 0.6.3</code> &middot; MIT &middot; SysML v2 &middot;
+  <code>memo-architect 0.6.4</code> &middot; MIT &middot; SysML v2 &middot;
   ISO 14971 &middot; IEC 62304 &middot; ISO/IEC/IEEE 42010
+</p>
+
+<p align="center">
+  <a href="https://memoarchitect.com/memo-architect.html">Product website</a> &middot;
+  <a href="https://memoarchitect.com/memo-architect/">MkDocs documentation</a> &middot;
+  <a href="https://github.com/memoarchitect/memo-architect">GitHub repository</a> &middot;
+  <a href="https://www.npmjs.com/package/@memoarchitect/architect">npm package</a>
 </p>
 
 ---
@@ -22,12 +29,12 @@
 
 | Layer | Capability | Repository |
 |---|---|---|
-| 01–02 | Portable ontology and methodology for any SysML v2 editor | [memo](https://github.com/memoarchitect/memo) |
-| 03 | Reusable engine libraries and the `memo` CLI | [memo-tools](https://github.com/memoarchitect/memo-tools) |
-| 04 | Complete visual workbench | **memo-architect** (this repository) |
+| 01–02 | Portable ontology and methodology for any SysML v2 editor | [Docs](https://memoarchitect.com/memo/) · [Repository](https://github.com/memoarchitect/memo) |
+| 03 | Reusable engine libraries and the `memo` CLI | [Docs](https://memoarchitect.com/memo-tools/) · [Repository](https://github.com/memoarchitect/memo-tools) |
+| 04 | Complete visual workbench | [Docs](https://memoarchitect.com/memo-architect/) · [Repository](https://github.com/memoarchitect/memo-architect) |
 
-All three products share a `MAJOR.MINOR` compatibility line. Any `0.5.x`
-release is intended to work with the other `0.5.x` products; patch versions
+All three products share a `MAJOR.MINOR` compatibility line. Any `0.6.x`
+release is intended to work with the other `0.6.x` products; patch versions
 may advance independently for fixes and additive changes.
 
 Architect reuses the parser, semantic model, validation, document, and project
@@ -141,7 +148,9 @@ To open a bundled example, see [Try it on a bundled example](#try-it-on-a-bundle
 
 ## Documentation
 
-- [Start here](docs/src/index.md)
+- [Published MkDocs documentation](https://memoarchitect.com/memo-architect/)
+- [Product website](https://memoarchitect.com/memo-architect.html)
+- [Start here in the documentation source](docs/src/index.md)
 - [Layers and their questions](docs/src/users/layers.md)
 - [Choosing elements](docs/src/users/elements.md)
 - [Connecting elements](docs/src/users/relationships.md)
