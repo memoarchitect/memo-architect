@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://memoarchitect.com/memo-architect.html">Product website</a> &middot;
-  <a href="https://memoarchitect.com/memo-architect/">MkDocs documentation</a> &middot;
+  <a href="https://memoarchitect.com/memo-architect/">Documentation</a> &middot;
   <a href="https://github.com/memoarchitect/memo-architect">GitHub repository</a> &middot;
   <a href="https://www.npmjs.com/package/@memoarchitect/architect">npm package</a>
 </p>
@@ -153,7 +153,7 @@ To open a bundled example, see [Try it on a bundled example](#try-it-on-a-bundle
 
 ## Documentation
 
-- [Published MkDocs documentation](https://memoarchitect.com/memo-architect/)
+- [Published documentation](https://memoarchitect.com/memo-architect/)
 - [Product website](https://memoarchitect.com/memo-architect.html)
 - [Start here in the documentation source](docs/src/index.md)
 - [Layers and their questions](docs/src/users/layers.md)
