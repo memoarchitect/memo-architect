@@ -13,34 +13,51 @@ import { useModelStore } from '../store/model-store';
 import { DIAGRAM_TYPE_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
+import { UNCATEGORIZED_ID, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
 
 export function DiagramHomePage() {
     const model = useModelStore(s => s.model);
     const navigate = useNavigate();
 
-    /** Model views grouped by their viewpoint, biggest group first. */
+    /** Model views grouped by the viewpoint they conform to, Uncategorized last. */
     const groups = useMemo(() => {
         const diagrams = model?.diagrams ?? [];
         const byViewpoint = new Map<string, { id: string; label: string; items: DiagramDTO[] }>();
+        const viewpointLayers = new Map<string, string[]>(
+            (model?.viewpoints ?? []).map(vp => [vp.id, vp.declaredLayers?.length ? vp.declaredLayers : (vp.visibleLayers ?? [])]));
         for (const diagram of diagrams) {
-            // '__model' is the synthetic bucket for views that are not assigned
-            // to a named viewpoint. Named buckets display their user-facing
-            // label, not the storage id.
             const viewpointIds = (diagram as DiagramDTO & { viewpointIds?: string[] }).viewpointIds;
-            for (const key of viewpointIds?.length ? viewpointIds : [diagram.viewpointId]) {
-                const viewpoint = model?.viewpoints?.find(candidate => candidate.id === key);
+            for (const rawKey of viewpointIds?.length ? viewpointIds : [diagram.viewpointId]) {
+                const viewpoint = model?.viewpoints?.find(candidate => candidate.id === rawKey);
+                // Anything no real viewpoint claims is Uncategorized — the
+                // synthetic '__model' / '__unassigned' buckets, and a key that
+                // resolves to nothing. Matches the Explorer tree; showing a raw
+                // storage id as if it were a viewpoint label helps nobody.
+                const key = viewpoint ? rawKey : UNCATEGORIZED_ID;
                 const group = byViewpoint.get(key);
                 if (group) group.items.push(diagram);
                 else byViewpoint.set(key, {
                     id: key,
-                    label: viewpoint?.label ?? (key === '__model' || key === '__unassigned' ? 'Unassigned Views' : key),
+                    label: viewpoint?.label ?? 'Uncategorized',
                     items: [diagram],
                 });
             }
         }
-        return [...byViewpoint.values()]
-            .map(group => ({ ...group, items: [...group.items].sort((a, b) => a.name.localeCompare(b.name)) }))
-            .sort((a, b) => a.label.localeCompare(b.label));
+        // Order and label exactly as the Explorer tree does, so the two agree.
+        const named = sortViewpointsByOntologyLayer(
+            [...byViewpoint.values()]
+                .filter(g => g.id !== UNCATEGORIZED_ID)
+                .map(g => ({ ...g, declaredLayers: viewpointLayers.get(g.id) ?? [] })) as any,
+        ) as unknown as (typeof byViewpoint extends Map<string, infer V> ? V : never)[];
+        const labels = stripSharedLabelPrefix(named.map(g => g.label));
+        const ordered = named.map((g, i) => ({
+            ...g, label: labels[i],
+            items: [...g.items].sort((a, b) => a.name.localeCompare(b.name)),
+        }));
+        const leftover = byViewpoint.get(UNCATEGORIZED_ID);
+        return leftover
+            ? [...ordered, { ...leftover, items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)) }]
+            : ordered;
     }, [model]);
 
     if (!model) {
@@ -77,7 +94,11 @@ export function DiagramHomePage() {
                         margin: '0 0 10px 0',
                     }}>
                         {group.label}
-                        <code style={{ marginLeft: 8, color: COLOR.faint, textTransform: 'none' }}>{group.id}</code>
+                        {/* The Uncategorized key is ours, not the model's — show
+                            why the views are here instead of an internal id. */}
+                        <code style={{ marginLeft: 8, color: COLOR.faint, textTransform: 'none' }}>
+                            {group.id === UNCATEGORIZED_ID ? 'no viewpoint' : group.id}
+                        </code>
                         <span style={{ marginLeft: 8, fontWeight: 400 }}>{group.items.length}</span>
                     </h2>
                     <div style={{

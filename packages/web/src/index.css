@@ -72,6 +72,34 @@ body {
     background: #9CA3AF;
 }
 
+.memo-explorer-resizer {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    bottom: 0;
+    z-index: 30;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    outline: none;
+}
+
+.memo-explorer-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 3px;
+    bottom: 0;
+    width: 2px;
+    background: transparent;
+    transition: background 120ms ease;
+}
+
+.memo-explorer-resizer:hover::after,
+.memo-explorer-resizer:focus-visible::after {
+    background: #38BDF8;
+}
+
 /* Never animate the transform used for direct manipulation. A transform
    transition makes the painted node trail its hit box during drag/resize. */
 .react-flow__node {

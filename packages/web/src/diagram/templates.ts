@@ -64,7 +64,7 @@ const builtIns: DiagramTemplateProvider[] = [
             description: 'Black-box system of interest with external actors and peer systems.',
         },
         matches: ctx => ctx.diagramType === 'context',
-        compute: (model, o) => computeContextViewLayout(model, o.contextSystemName),
+        compute: (model, o) => computeContextViewLayout(model, o.context.systemName, o.context),
     },
     {
         descriptor: {

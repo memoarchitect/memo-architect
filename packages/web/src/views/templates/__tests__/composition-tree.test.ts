@@ -53,6 +53,16 @@ describe('buildCompositionTree', () => {
         }
     });
 
+    it('accepts an authored hierarchy relation when a BDD declares one', () => {
+        const tree = buildCompositionTree(
+            [el('operate'), el('monitor')],
+            [rel('includes', 'operate', 'monitor')],
+            new Set(['includes']),
+        );
+        expect(tree.roots).toEqual(['operate']);
+        expect(tree.childrenMap.get('operate')).toEqual(['monitor']);
+    });
+
     it('ignores edges whose endpoints are outside the element set', () => {
         const tree = buildCompositionTree(
             [el('a'), el('b')],

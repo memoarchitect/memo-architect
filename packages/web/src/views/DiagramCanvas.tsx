@@ -770,7 +770,15 @@ function DiagramCanvasInner() {
     // not a forest of disconnected/floating elements (validateSingleTree).
     const bddTreeIssue = useMemo(() => {
         if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
-        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter));
+        const declaredTypes = selectedDiagram.relationshipTypes ?? [];
+        const usesComposition = declaredTypes.length === 0 || declaredTypes.every(type =>
+            COMPOSITION_REL_TYPES.has(type.charAt(0).toLowerCase() + type.slice(1)),
+        );
+        // A BDD may also present an authored semantic hierarchy (such as
+        // UseCase Includes). Those may intentionally have multiple roots, so
+        // the strict single-composition-tree rule does not apply.
+        if (!usesComposition) return null;
+        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes));
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
@@ -780,9 +788,9 @@ function DiagramCanvasInner() {
     const buildActiveTree = useCallback(() => {
         if (!model) return undefined;
         if (isFBSDiagram) return buildFunctionalTree(model);
-        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter);
+        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes);
         return buildDecompositionTree(model);
-    }, [model, isFBSDiagram, isGeneralTemplate, viewpointFilter]);
+    }, [model, isFBSDiagram, isGeneralTemplate, viewpointFilter, selectedDiagram?.relationshipTypes]);
 
     const toggleExpand = useCallback((nodeId: string) => {
         setExpandedNodes(prev => {
@@ -1094,7 +1102,11 @@ function DiagramCanvasInner() {
                     ...(selectedDiagram ? useCaseViewOptions(selectedDiagram.properties) : {}),
                     level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
                 },
-                contextSystemName: selectedDiagram?.name,
+                context: {
+                    systemName: selectedDiagram?.name,
+                    viewpointFilter,
+                    relationshipTypes: selectedDiagram?.relationshipTypes,
+                },
                 interconnection: {
                     viewpointFilter,
                     relationshipTypes: selectedDiagram?.relationshipTypes,
@@ -1132,6 +1144,7 @@ function DiagramCanvasInner() {
                     mode: generalMode, viewpointFilter, expandedNodes, nodeDirections,
                     callbacks: treeCallbacks,
                     positionCache: positionCacheRef.current,
+                    hierarchyRelationshipTypes: selectedDiagram?.relationshipTypes,
                     layoutProviderId,
                 },
                 standard: {

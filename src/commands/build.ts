@@ -9,6 +9,7 @@ import {
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildProjectSnapshot, serializeForInlineScript } from '@memoarchitect/tools';
+import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
 
 function architectPackageRoot(): string {
     return resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -35,6 +36,8 @@ function inlineEntryAssets(html: string, outputDir: string): string {
 export async function architectBuildCommand(options: {
     output?: string;
     standalone?: boolean;
+    /** Baked into the viewer, so a distributed build keeps the grants it was built with. */
+    featureGrants?: FeatureGrants;
 }): Promise<void> {
     const snapshot = await buildProjectSnapshot();
     const sourceDist = resolve(architectPackageRoot(), 'dist');
@@ -58,6 +61,7 @@ export async function architectBuildCommand(options: {
         completeness: snapshot.completeness,
     });
     html = html.replace('</head>', `<script>window.__MEMO_DATA__=${payload};</script>\n</head>`);
+    if (options.featureGrants) html = injectFeatureGrants(html, options.featureGrants);
     if (options.standalone) html = inlineEntryAssets(html, outputDir);
     writeFileSync(indexPath, html);
 

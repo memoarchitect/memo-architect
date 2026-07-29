@@ -49,8 +49,12 @@ export function visibleViewElements(
 export function buildGeneralViewTree(
     model: MemoModelDTO,
     viewpointFilter?: (el: MemoElement) => boolean,
+    hierarchyRelationshipTypes?: readonly string[],
 ): CompositionTree {
-    return buildCompositionTree(visibleViewElements(model, viewpointFilter), model.relationships);
+    const relationshipTypes = hierarchyRelationshipTypes?.length
+        ? new Set(hierarchyRelationshipTypes.map(type => type.charAt(0).toLowerCase() + type.slice(1)))
+        : undefined;
+    return buildCompositionTree(visibleViewElements(model, viewpointFilter), model.relationships, relationshipTypes);
 }
 
 export interface GeneralViewOptions {
@@ -58,6 +62,8 @@ export interface GeneralViewOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     /** Relationship types declared by the view (graph mode) */
     relationshipTypes?: string[];
+    /** Relationship types that define hierarchy in tree/containment mode. */
+    hierarchyRelationshipTypes?: string[];
     expandedNodes: Set<string>;
     nodeDirections: Map<string, 'vertical' | 'horizontal'>;
     callbacks: {
@@ -83,7 +89,7 @@ export async function computeGeneralViewLayout(
         });
     }
 
-    const tree = buildGeneralViewTree(model, options.viewpointFilter);
+    const tree = buildGeneralViewTree(model, options.viewpointFilter, options.hierarchyRelationshipTypes);
     if (options.mode === 'tree') {
         return computeDecompositionLayout(model, {
             expandedNodes: options.expandedNodes,

@@ -15,6 +15,7 @@
 import { memo, useState } from 'react';
 import { Handle, NodeResizer, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
+import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
@@ -353,6 +354,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     borderRadius: '7px 7px 0 0',
                     overflow: 'hidden',
                 }}>
+                    {isPersonKind(kind) && <PersonGlyph size={24} color={color} />}
                     <TypedLabel
                         name={label} kind={kind}
                         nameColor="#0F172A"

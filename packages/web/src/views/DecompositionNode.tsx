@@ -9,6 +9,7 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { MemoElement } from '@memoarchitect/tools/browser';
 import { FONT } from '../styles/tokens';
+import { isPersonKind, PersonGlyph } from './PersonGlyph';
 
 export interface DecompositionNodeData {
     element: MemoElement;
@@ -65,6 +66,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                 gap: '6px',
                 padding: isExpandedContainer ? '8px 12px' : '0',
             }}>
+                {isPersonKind(element.kind) && <PersonGlyph size={24} color={layerColor} />}
                 {/* Expand/Collapse button */}
                 {hasChildren && (
                     <button

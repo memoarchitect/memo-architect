@@ -13,6 +13,7 @@ import { memo, useCallback, useState, useRef } from 'react';
 import { Handle, Position, NodeResizer, type NodeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import type { CompartmentEntry } from './templates/composition-tree';
+import { isPersonKind, PersonGlyph } from './PersonGlyph';
 
 export interface DiagramInteractiveNodeData extends Record<string, unknown> {
     label: string;
@@ -109,41 +110,44 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
             )}
 
             {/* Kind badge + name */}
-            <div style={{ padding: '8px 12px', userSelect: 'none' }}>
-                <div style={{
+            <div style={{ padding: '8px 12px', userSelect: 'none', display: 'flex', gap: 8, alignItems: 'center' }}>
+                {isPersonKind(d.kind) && <PersonGlyph size={26} color={borderColor} />}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
                     fontSize: '9px', fontWeight: 700, color: borderColor,
                     textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2,
-                }}>
-                    {d.kind}
-                </div>
-
-                {editing ? (
-                    <input
-                        ref={inputRef}
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onBlur={commitEdit}
-                        onKeyDown={onKeyDown}
-                        onClick={e => e.stopPropagation()}
-                        autoFocus
-                        style={{
-                            fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
-                            background: 'transparent', border: 'none', outline: 'none',
-                            width: '100%', padding: 0,
-                        }}
-                    />
-                ) : (
-                    <div style={{
-                        fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
-                        lineHeight: 1.3, wordBreak: 'break-word',
                     }}>
-                        {d.label || d.kind}
+                        {d.kind}
                     </div>
-                )}
 
-                {d.isNew && (
-                    <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: 2 }}>saving…</div>
-                )}
+                    {editing ? (
+                        <input
+                            ref={inputRef}
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={onKeyDown}
+                            onClick={e => e.stopPropagation()}
+                            autoFocus
+                            style={{
+                                fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
+                                background: 'transparent', border: 'none', outline: 'none',
+                                width: '100%', padding: 0,
+                            }}
+                        />
+                    ) : (
+                        <div style={{
+                            fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
+                            lineHeight: 1.3, wordBreak: 'break-word',
+                        }}>
+                            {d.label || d.kind}
+                        </div>
+                    )}
+
+                    {d.isNew && (
+                        <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: 2 }}>saving…</div>
+                    )}
+                </div>
             </div>
 
             {/* Attribute compartment (General view template) */}

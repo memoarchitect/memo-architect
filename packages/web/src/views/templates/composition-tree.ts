@@ -35,6 +35,7 @@ export interface CompositionTree {
 export function buildCompositionTree(
     elements: Iterable<MemoElement>,
     relationships: MemoRelationship[],
+    hierarchyRelationshipTypes: ReadonlySet<string> = COMPOSITION_REL_TYPES,
 ): CompositionTree {
     const elementMap = new Map<string, MemoElement>();
     for (const el of elements) elementMap.set(el.id, el);
@@ -43,7 +44,7 @@ export function buildCompositionTree(
     const hasParent = new Set<string>();
 
     for (const rel of relationships) {
-        if (!COMPOSITION_REL_TYPES.has(rel.type)) continue;
+        if (!hierarchyRelationshipTypes.has(rel.type)) continue;
         if (!elementMap.has(rel.sourceId) || !elementMap.has(rel.targetId)) continue;
         if (rel.sourceId === rel.targetId) continue;
         // First composition edge wins — an element keeps a single parent

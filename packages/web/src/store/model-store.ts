@@ -122,7 +122,7 @@ export interface SourceChange {
 }
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
-export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import';
+export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai';
 
 /** Active view in the unified canvas */
 export type ActiveView =
@@ -140,8 +140,9 @@ export type ActiveView =
     | { type: 'dhf-dashboard' }
     | { type: 'dhf-document'; docId: string }
     | { type: 'dhf-dashboard-legacy' }   // legacy grid view
-    | { type: 'ask' }                    // E: model Q&A (#52)
-    | { type: 'sysml-generator' }        // E: NL → SysML (#54)
+    | { type: 'ai' }                     // E: AI workspace landing (gated: ai-tools)
+    | { type: 'ask' }                    // E: model Q&A (#52) (gated: ai-tools)
+    | { type: 'sysml-generator' }        // E: NL → SysML (#54) (gated: ai-tools)
     | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)

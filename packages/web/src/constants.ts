@@ -35,6 +35,30 @@ export const LAYER_LABELS: Record<string, string> = {
     ui: 'UI Wireframe',
 };
 
+/**
+ * Ontology order for the layers a *viewpoint* declares in `includedLayers`.
+ *
+ * This is a different vocabulary from LAYER_ORDER below, which orders the
+ * layers an *element* belongs to. Mixing them is why viewpoints used to sort
+ * arbitrarily: almost none of these names appear in LAYER_ORDER.
+ *
+ * The sequence is the ontology's own, read off the section order of the
+ * viewpoint catalog in memo/src/viewpoints/catalog/memo_viewpoint_catalog.sysml
+ * (VP-CAT-001…027): content and context → operational world → functional →
+ * logical → implementation → interaction and behavior → assurance.
+ */
+export const VIEWPOINT_LAYER_ORDER = [
+    'context',
+    'operational',
+    'system', 'system_of_systems',
+    'functions',
+    'logical_structure', 'logical', 'interfaces',
+    'software_structure', 'hardware_structure', 'physical',
+    'ui', 'behavior',
+    'requirements', 'risk', 'cybersecurity', 'human_factors',
+    'verification', 'assurance', 'architecture',
+] as const;
+
 export const LAYER_ORDER = [
     'operational', 'business', 'requirements', 'risk', 'functional', 'behavior', 'logical',
     'physical', 'software', 'interfaces', 'verification', 'ui',

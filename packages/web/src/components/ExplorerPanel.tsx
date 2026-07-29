@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import {
     useModelStore,
     getElementsByLayer,
@@ -8,12 +8,12 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, VIEWPOINT_LAYER_ORDER, DIAGRAM_TYPE_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
-import type { MemoElement, DiagramDTO, KindDefinitionDTO } from '@memoarchitect/tools/browser';
+import type { MemoElement, DiagramDTO, KindDefinitionDTO, MemoModelDTO, ViewpointDTO } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -1254,6 +1254,86 @@ function NewDiagramModal({ viewpointId, onClose }: { viewpointId: string; onClos
 
 // ─── Collapsible sub-section inside a viewpoint ──────────────────────────────
 
+/**
+ * Buckets the view deriver invents for views it cannot file under a real
+ * viewpoint: `__unassigned` for a missing viewpointDefinition binding,
+ * `__model` for renderer samples. Neither is authored in the model, so neither
+ * is shown as a viewpoint — both land in Uncategorized.
+ */
+const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
+
+/** Expansion key for the Uncategorized section; shared with the /diagrams page. */
+export const UNCATEGORIZED_ID = '__uncategorized';
+
+/**
+ * Order viewpoints by the ontology's own layer sequence.
+ *
+ * Ranked on the *first* layer the viewpoint declares, not the earliest one it
+ * mentions: `includedLayers` lists everything a viewpoint touches, so a
+ * traceability viewpoint naming ten layers would otherwise rank as whichever
+ * happens to sit earliest and land nowhere near the other assurance views. The
+ * first entry is the authored primary concern.
+ *
+ * Viewpoints that declare no known layer keep a stable alphabetical tail.
+ */
+export function sortViewpointsByOntologyLayer(viewpoints: ViewpointDTO[]): ViewpointDTO[] {
+    const rank = (vp: ViewpointDTO) => {
+        // What the viewpoint says it frames; what its views happen to draw is
+        // only a fallback for a viewpoint that declares nothing.
+        const layers = vp.declaredLayers?.length ? vp.declaredLayers : (vp.visibleLayers ?? []);
+        const index = VIEWPOINT_LAYER_ORDER.indexOf(layers[0] as typeof VIEWPOINT_LAYER_ORDER[number]);
+        return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+    };
+    return viewpoints.slice().sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label));
+}
+
+/**
+ * Drop the leading word every viewpoint label shares.
+ *
+ * Inside one product's model the system name is on every label ("Pump
+ * Cybersecurity Viewpoint", "Pump Functional Viewpoint", …) where it
+ * distinguishes nothing and costs the width that the actual subject needs. A
+ * prefix only counts as noise when *all* of them carry it, so a model with a
+ * genuine "Pump …" viewpoint alongside others is left alone.
+ */
+export function stripSharedLabelPrefix(labels: string[]): string[] {
+    if (labels.length < 2) return labels;
+    const first = labels[0].split(' ');
+    if (first.length < 2) return labels;
+    const prefix = first[0];
+    const shared = labels.every(l => {
+        const words = l.split(' ');
+        return words.length > 1 && words[0] === prefix;
+    });
+    return shared ? labels.map(l => l.slice(prefix.length + 1)) : labels;
+}
+
+/**
+ * Split the model's views into the viewpoints that claim them and everything
+ * left over.
+ *
+ * Uncategorized is computed by subtraction, not by looking for the synthetic
+ * ids: a view whose viewpointId resolves to no viewpoint at all is just as
+ * unfiled as one with no binding, and must not disappear from the tree.
+ */
+export function partitionViewsByViewpoint(model: MemoModelDTO | null): {
+    viewpoints: ViewpointDTO[];
+    uncategorized: DiagramDTO[];
+} {
+    const viewpoints = sortViewpointsByOntologyLayer(
+        (model?.viewpoints ?? []).filter(vp => !SYNTHETIC_VIEWPOINT_IDS.has(vp.id)),
+    );
+
+    const claimed = new Set<string>();
+    for (const vp of viewpoints) {
+        for (const diagram of getDiagramsForViewpoint(model, vp.id)) claimed.add(diagram.id);
+    }
+    return {
+        viewpoints,
+        uncategorized: (model?.diagrams ?? []).filter(diagram => !claimed.has(diagram.id)),
+    };
+}
+
 function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
@@ -1261,7 +1341,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
 
-    const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set(['__model']));
+    const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set([UNCATEGORIZED_ID]));
     const [newDiagramVp, setNewDiagramVp] = useState<string | null>(null);
 
     const toggleExpand = (id: string) => {
@@ -1273,7 +1353,19 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     };
 
-    const viewpoints = useMemo(() => model?.viewpoints ?? [], [model?.viewpoints]);
+    // Views are organised by the viewpoint they conform to. `__unassigned` and
+    // `__model` are synthetic buckets the deriver produces for views with no
+    // viewpoint binding and for renderer samples — neither is a real viewpoint,
+    // so both are folded into a single Uncategorized section rendered last.
+    const { viewpoints, uncategorized: uncategorizedDiagrams } = useMemo(
+        () => partitionViewsByViewpoint(model),
+        [model],
+    );
+    // Display labels only — vp.label stays the authored title everywhere else.
+    const viewpointLabels = useMemo(
+        () => stripSharedLabelPrefix(viewpoints.map(vp => vp.label)),
+        [viewpoints],
+    );
 
     const filterDiagrams = (diagrams: DiagramDTO[]): DiagramDTO[] => {
         if (!searchTerm) return diagrams;
@@ -1285,11 +1377,15 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     };
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
-    const modelDiagrams = getDiagramsForViewpoint(model, '__model');
-    const authoredModelDiags = filterDiagrams(modelDiagrams.filter(diagram => !diagram.id.startsWith('diag-layer-')));
-    const diagramsByLayer = useMemo(() => {
+
+    const authoredUncategorized = filterDiagrams(
+        uncategorizedDiagrams.filter(diagram => !diagram.id.startsWith('diag-layer-')),
+    );
+
+    /** Fallback clubbing for uncategorized views, which have no authored group. */
+    const uncategorizedByLayer = useMemo(() => {
         const groups = new Map<string, DiagramDTO[]>();
-        for (const diagram of authoredModelDiags) {
+        for (const diagram of authoredUncategorized) {
             const layers = (diagram.elementIds ?? [])
                 .map(id => model?.elements[id]?.layer)
                 .filter((layer): layer is string => Boolean(layer));
@@ -1305,7 +1401,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             const bIndex = LAYER_ORDER.indexOf(b as typeof LAYER_ORDER[number]);
             return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
         });
-    }, [authoredModelDiags, model?.elements]);
+    }, [authoredUncategorized, model?.elements]);
 
     const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
         diagrams.map(diag => (
@@ -1342,50 +1438,8 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-            {/* Views not assigned to a named viewpoint */}
-            {modelDiagrams.length > 0 && <div className="mb-0.5">
-                <div
-                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
-                    style={{ borderRadius: '4px', margin: '0 4px' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    onClick={() => { selectViewpoint(null); toggleExpand('__model'); }}
-                >
-                    <ChevronIcon expanded={expandedVps.has('__model')} size={14} color={COLOR.accent} />
-                    <FolderIcon open={expandedVps.has('__model')} color={COLOR.accent} />
-                    <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>Unassigned Views</span>
-                    <span style={{ color: COLOR.faint, fontSize: FONT.badge, fontFamily: 'monospace' }}>__model</span>
-                    <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{modelDiagrams.length}</span>
-                </div>
-                {expandedVps.has('__model') && (
-                    <div style={{ marginLeft: '16px' }}>
-                        {diagramsByLayer.map(([layer, diagrams]) => (
-                            <div key={layer} style={{ margin: '5px 4px 2px' }}>
-                                <div className="px-2 py-1 font-semibold" style={{
-                                    color: LAYER_COLORS[layer] ?? COLOR.muted, fontSize: FONT.xs,
-                                    borderLeft: `3px solid ${LAYER_COLORS[layer] ?? COLOR.border}`,
-                                }}>
-                                    {LAYER_LABELS[layer] ?? `${layer.charAt(0).toUpperCase()}${layer.slice(1)}`}
-                                </div>
-                                <div style={{ marginLeft: '8px' }}>{renderDiagramList(diagrams, '__model')}</div>
-                            </div>
-                        ))}
-                        {/* + New model view */}
-                        <button
-                            className="flex items-center gap-1 px-2 py-1 w-full text-left"
-                            style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
-                            onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            onClick={() => setNewDiagramVp('__model')}
-                        >
-                            <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New View
-                        </button>
-                    </div>
-                )}
-            </div>}
-
-            {/* Named viewpoints */}
-            {viewpoints.map(vp => {
+            {/* Named viewpoints — the primary organisation */}
+            {viewpoints.map((vp, vpIndex) => {
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const allDiagrams = getDiagramsForViewpoint(model, vp.id);
@@ -1402,7 +1456,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         >
                             <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
                             <FolderIcon open={isExpanded} color={vpColor} />
-                            <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{vp.label}</span>
+                            <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels[vpIndex]}</span>
                             <span style={{ color: COLOR.faint, fontSize: FONT.badge, fontFamily: 'monospace' }}>{vp.id}</span>
                             <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{allDiagrams.length}</span>
                         </div>
@@ -1423,6 +1477,57 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     </div>
                 );
             })}
+
+            {/* Everything no viewpoint claims, last. Gated on the authored
+                count, not the raw one: auto per-layer diagrams are filtered out
+                of the list below, so counting them would advertise views that
+                are not there. */}
+            {authoredUncategorized.length > 0 && <div className="mb-0.5">
+                <div
+                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                    style={{ borderRadius: '4px', margin: '0 4px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => { selectViewpoint(null); toggleExpand(UNCATEGORIZED_ID); }}
+                >
+                    <ChevronIcon expanded={expandedVps.has(UNCATEGORIZED_ID)} size={14} color={COLOR.muted} />
+                    <FolderIcon open={expandedVps.has(UNCATEGORIZED_ID)} color={COLOR.muted} />
+                    <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>Uncategorized</span>
+                    <span
+                        title="These views conform to no viewpoint. Bind one with viewpointDefinition to file them."
+                        style={{ color: COLOR.faint, fontSize: FONT.badge }}
+                    >
+                        no viewpoint
+                    </span>
+                    <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{authoredUncategorized.length}</span>
+                </div>
+                {expandedVps.has(UNCATEGORIZED_ID) && (
+                    <div style={{ marginLeft: '16px' }}>
+                        {authoredUncategorized.some(d => (d as DiagramDTO & { group?: string }).group)
+                            ? renderGroupedDiagramList(authoredUncategorized, UNCATEGORIZED_ID)
+                            : uncategorizedByLayer.map(([layer, diagrams]) => (
+                                <div key={layer} style={{ margin: '5px 4px 2px' }}>
+                                    <div className="px-2 py-1 font-semibold" style={{
+                                        color: LAYER_COLORS[layer] ?? COLOR.muted, fontSize: FONT.xs,
+                                        borderLeft: `3px solid ${LAYER_COLORS[layer] ?? COLOR.border}`,
+                                    }}>
+                                        {LAYER_LABELS[layer] ?? `${layer.charAt(0).toUpperCase()}${layer.slice(1)}`}
+                                    </div>
+                                    <div style={{ marginLeft: '8px' }}>{renderDiagramList(diagrams, UNCATEGORIZED_ID)}</div>
+                                </div>
+                            ))}
+                        <button
+                            className="flex items-center gap-1 px-2 py-1 w-full text-left"
+                            style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
+                            onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            onClick={() => setNewDiagramVp('__model')}
+                        >
+                            <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New View
+                        </button>
+                    </div>
+                )}
+            </div>}
 
             {/* New Diagram modal */}
             {newDiagramVp !== null && (
@@ -1762,26 +1867,8 @@ function DhfExplorerContent() {
                     </div>
                 )}
 
-                {/* AI Tools section */}
-                <div style={{ margin: '8px 10px 6px', padding: '8px', background: '#F0FDF9', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>✦</span> AI Tools
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <AiToolButton
-                            label="Model Assistant"
-                            description="Ask questions and propose edits"
-                            active={activeView.type === 'ask'}
-                            onClick={() => setActiveView({ type: 'ask' })}
-                        />
-                        <AiToolButton
-                            label="SysML Generator"
-                            description="Natural language → SysML v2"
-                            active={activeView.type === 'sysml-generator'}
-                            onClick={() => setActiveView({ type: 'sysml-generator' })}
-                        />
-                    </div>
-                </div>
+                {/* The AI tools used to sit here as an embedded card. They now
+                    live on the gated `✦ AI` nav mode — see views/AiWorkspace.tsx. */}
             </div>
 
             {/* Context menu */}
@@ -1827,28 +1914,38 @@ function DhfExplorerContent() {
 
 // ─── AI Tool Button ───────────────────────────────────────────────────────────
 
-function AiToolButton({ label, description, active, onClick }: {
-    label: string; description: string; active: boolean; onClick: () => void;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            style={{
-                display: 'flex', flexDirection: 'column', width: '100%', padding: '5px 8px',
-                borderRadius: '5px', border: 'none', textAlign: 'left', cursor: 'pointer',
-                background: active ? '#D1FAE5' : 'rgba(255,255,255,0.7)',
-                transition: 'background 0.1s',
-            }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.95)'; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.7)'; }}
-        >
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#065F46' }}>{label}</span>
-            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '1px' }}>{description}</span>
-        </button>
-    );
+// ─── Main ExplorerPanel ──────────────────────────────────────────────────────
+
+const EXPLORER_WIDTH_STORAGE_KEY = 'memo-explorer-width';
+const EXPLORER_DEFAULT_WIDTH = 300;
+const EXPLORER_MIN_WIDTH = 240;
+const EXPLORER_MAX_WIDTH = 720;
+/** Canvas space the Explorer must never eat into. */
+const EXPLORER_CANVAS_RESERVE = 320;
+
+/** Widest the Explorer may *render* right now, given the viewport. */
+function explorerMaxWidth(): number {
+    // innerWidth is 0 for a minimized/detached window; fall back to the absolute
+    // maximum so a transient zero never collapses the panel to its minimum.
+    if (typeof window === 'undefined' || !window.innerWidth) return EXPLORER_MAX_WIDTH;
+    return Math.max(EXPLORER_MIN_WIDTH, Math.min(EXPLORER_MAX_WIDTH, window.innerWidth - EXPLORER_CANVAS_RESERVE));
 }
 
-// ─── Main ExplorerPanel ──────────────────────────────────────────────────────
+/** Clamp a *preferred* width — viewport-independent, so a narrow window never destroys the preference. */
+function clampExplorerWidth(width: number): number {
+    if (!Number.isFinite(width)) return EXPLORER_DEFAULT_WIDTH;
+    return Math.min(EXPLORER_MAX_WIDTH, Math.max(EXPLORER_MIN_WIDTH, width));
+}
+
+function savedExplorerWidth(): number {
+    if (typeof window === 'undefined') return EXPLORER_DEFAULT_WIDTH;
+    try {
+        const saved = Number.parseInt(localStorage.getItem(EXPLORER_WIDTH_STORAGE_KEY) ?? '', 10);
+        return Number.isFinite(saved) ? clampExplorerWidth(saved) : EXPLORER_DEFAULT_WIDTH;
+    } catch {
+        return EXPLORER_DEFAULT_WIDTH;
+    }
+}
 
 export function ExplorerPanel() {
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
@@ -1859,6 +1956,70 @@ export function ExplorerPanel() {
     const model = useModelStore(s => s.model);
     const activeMode = useModelStore(s => s.activeMode);
     const activeView = useModelStore(s => s.activeView);
+    // `preferredWidth` is what the user asked for and what we persist; `sidebarWidth`
+    // is what fits on screen today. Keeping them apart means shrinking the window
+    // (or a transient zero-width one) narrows the panel without losing the preference.
+    const [preferredWidth, setPreferredWidth] = useState(savedExplorerWidth);
+    const [maxWidth, setMaxWidth] = useState(explorerMaxWidth);
+    const sidebarWidth = Math.min(preferredWidth, maxWidth);
+    const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+    // User-driven changes clamp to what actually fits, so the handle never runs
+    // ahead of the visible edge. Only window resizes leave the preference alone.
+    const setClampedSidebarWidth = useCallback((width: number) => {
+        setPreferredWidth(Math.max(EXPLORER_MIN_WIDTH, Math.min(explorerMaxWidth(), width)));
+    }, []);
+
+    const stopResize = useCallback(() => {
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
+    }, []);
+
+    const startResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        stopResize();
+
+        const startX = event.clientX;
+        const startWidth = sidebarWidth;
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handleMove = (moveEvent: PointerEvent) => {
+            setClampedSidebarWidth(startWidth + moveEvent.clientX - startX);
+        };
+        const cleanup = () => {
+            window.removeEventListener('pointermove', handleMove);
+            window.removeEventListener('pointerup', cleanup);
+            window.removeEventListener('pointercancel', cleanup);
+            document.body.style.cursor = previousCursor;
+            document.body.style.userSelect = previousUserSelect;
+            resizeCleanupRef.current = null;
+        };
+        resizeCleanupRef.current = cleanup;
+        window.addEventListener('pointermove', handleMove);
+        window.addEventListener('pointerup', cleanup);
+        window.addEventListener('pointercancel', cleanup);
+    }, [setClampedSidebarWidth, sidebarWidth, stopResize]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(EXPLORER_WIDTH_STORAGE_KEY, String(Math.round(preferredWidth)));
+        } catch {
+            // Storage may be disabled; resizing still works for this session.
+        }
+    }, [preferredWidth]);
+
+    useEffect(() => {
+        const handleWindowResize = () => setMaxWidth(explorerMaxWidth());
+        window.addEventListener('resize', handleWindowResize);
+        return () => {
+            window.removeEventListener('resize', handleWindowResize);
+            stopResize();
+        };
+    }, [stopResize]);
 
     // Keep explorerTab store in sync for components that read it (CommandPalette, WorkspaceManager, etc.)
     useEffect(() => {
@@ -1871,7 +2032,13 @@ export function ExplorerPanel() {
     if (sidebarCollapsed) return null;
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: COLOR.surface, borderRight: `1px solid ${COLOR.border}` }}>
+        <div
+            className="flex flex-col overflow-hidden flex-shrink-0"
+            style={{
+                position: 'relative', width: `${sidebarWidth}px`,
+                background: COLOR.surface, borderRight: `1px solid ${COLOR.border}`,
+            }}
+        >
 
             {/* Content driven entirely by top-nav mode — no redundant tab strip */}
             {activeMode === 'dashboard' ? (
@@ -1912,6 +2079,35 @@ export function ExplorerPanel() {
                     <ModelExplorerContent searchTerm={searchTerm} />
                 </>
             )}
+
+            <div
+                className="memo-explorer-resizer"
+                role="separator"
+                aria-label="Resize Model Explorer"
+                aria-orientation="vertical"
+                aria-valuemin={EXPLORER_MIN_WIDTH}
+                aria-valuemax={maxWidth}
+                aria-valuenow={Math.round(sidebarWidth)}
+                tabIndex={0}
+                title="Drag to resize · Double-click to reset"
+                onPointerDown={startResize}
+                onDoubleClick={() => setClampedSidebarWidth(EXPLORER_DEFAULT_WIDTH)}
+                onKeyDown={event => {
+                    if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        setClampedSidebarWidth(sidebarWidth - 20);
+                    } else if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        setClampedSidebarWidth(sidebarWidth + 20);
+                    } else if (event.key === 'Home') {
+                        event.preventDefault();
+                        setClampedSidebarWidth(EXPLORER_MIN_WIDTH);
+                    } else if (event.key === 'End') {
+                        event.preventDefault();
+                        setClampedSidebarWidth(maxWidth);
+                    }
+                }}
+            />
         </div>
     );
 }

@@ -6,6 +6,7 @@ import { architectDevCommand } from '../commands/dev.js';
 import {
     architectExampleCommand, listArchitectExamples, listArchitectTemplates,
 } from '../commands/example.js';
+import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 
 const program = new Command();
 
@@ -17,13 +18,17 @@ program
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
-    .action(async (options: { example?: string; port: string; open: boolean; readOnly?: boolean }) => {
+    .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
+    .action(async (options: {
+        example?: string; port: string; open: boolean; readOnly?: boolean; experimental?: boolean;
+    }) => {
         if (options.example) {
             await architectExampleCommand({
                 name: options.example,
                 port: Number.parseInt(options.port, 10),
                 open: options.open,
                 readOnly: options.readOnly,
+                featureGrants: resolveFeatureGrants(options),
             });
             return;
         }
@@ -51,10 +56,16 @@ program
     .description('Start Architect with live model reload')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
-    .action(async function (this: Command, options: { port: string; open: boolean }) {
+    .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
+    .action(async function (this: Command, options: { port: string; open: boolean; experimental?: boolean }) {
         const port = resolveOption(this, 'port', options.port);
         const open = resolveOption(this, 'open', options.open);
-        await architectDevCommand({ port: Number.parseInt(String(port), 10), open });
+        const experimental = resolveOption(this, 'experimental', options.experimental);
+        await architectDevCommand({
+            port: Number.parseInt(String(port), 10),
+            open,
+            featureGrants: resolveFeatureGrants({ experimental }),
+        });
     });
 
 program
@@ -80,8 +91,16 @@ program
     .description('Build a static Architect viewer with embedded project data')
     .option('-o, --output <dir>', 'Output directory', 'dist')
     .option('--standalone', 'Inline the entry JavaScript and CSS into index.html')
-    .action(async (options: { output: string; standalone?: boolean }) => {
-        await architectBuildCommand(options);
+    .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
+    .action(async function (this: Command, options: { output: string; standalone?: boolean; experimental?: boolean }) {
+        // `--experimental` is declared on the program too, so Commander binds a
+        // command-line flag to the parent and leaves this command holding its
+        // own default. Same trap as `--port` on `dev`.
+        const experimental = resolveOption(this, 'experimental', options.experimental);
+        await architectBuildCommand({
+            ...options,
+            featureGrants: resolveFeatureGrants({ experimental }),
+        });
     });
 
 program.parse();

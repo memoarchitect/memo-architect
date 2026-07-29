@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { architectDevCommand } from './dev.js';
+import type { FeatureGrants } from '../feature-grants.js';
 
 const require = createRequire(import.meta.url);
 
@@ -118,6 +119,7 @@ export async function architectExampleCommand(options: {
     open?: boolean;
     /** Force the disposable copy even for a local checkout. */
     readOnly?: boolean;
+    featureGrants?: FeatureGrants;
 }): Promise<void> {
     const ontologyRoot = resolveOntologyRoot();
 
@@ -139,7 +141,9 @@ export async function architectExampleCommand(options: {
         console.log(`Opening example '${options.name}' from ${target}`);
         console.log('Edits are saved to that directory.');
         process.chdir(target);
-        await architectDevCommand({ port: options.port, open: options.open });
+        await architectDevCommand({
+            port: options.port, open: options.open, featureGrants: options.featureGrants,
+        });
         return;
     }
 
@@ -158,5 +162,7 @@ export async function architectExampleCommand(options: {
     const why = options.readOnly ? '--read-only' : 'installed package';
     console.log(`Opening example '${options.name}' read-only (${why}: disposable copy; edits are discarded on exit).`);
     process.chdir(tempRoot);
-    await architectDevCommand({ port: options.port, open: options.open });
+    await architectDevCommand({
+        port: options.port, open: options.open, featureGrants: options.featureGrants,
+    });
 }

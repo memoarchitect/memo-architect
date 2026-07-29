@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense, useMemo, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { isPermalinkPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
+import { isFeatureEnabled } from './config/feature-flags';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
@@ -29,8 +30,7 @@ const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m =>
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
 const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ default: m.DhfWorkbench })));
-const ChatPanel = lazy(() => import('./views/ChatPanel').then(m => ({ default: m.ChatPanel })));
-const SysmlGenerator = lazy(() => import('./views/SysmlGenerator').then(m => ({ default: m.SysmlGenerator })));
+const AiWorkspace = lazy(() => import('./views/AiWorkspace').then(m => ({ default: m.AiWorkspace })));
 const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
@@ -79,10 +79,12 @@ function UnifiedCanvas() {
                 return <DhfWorkbench />;
             case 'dhf-dashboard-legacy':
                 return <DhfDashboard />;
+            case 'ai':
             case 'ask':
-                return <ChatPanel />;
             case 'sysml-generator':
-                return <SysmlGenerator />;
+                // Gated here too, not only in the nav: /ask and /generate are
+                // bookmarkable, so the flag has to hold at the view level.
+                return isFeatureEnabled('ai-tools') ? <AiWorkspace /> : <Dashboard />;
             case 'element-detail':
                 return <ElementDetailView />;
             case 'dashboard':
@@ -282,8 +284,13 @@ export function App() {
 
     // Only hide the explorer for views with their own full-page internal explorer,
     // or tool views that are self-contained (DSM has its own filter toolbar).
+    // The AI workspace is self-contained too: it owns its own tool switcher, and
+    // the model tree was only ever there because the entry point lived in it.
     const showExplorer = activeView.type !== 'scenario-editor'
-        && activeView.type !== 'dsm';
+        && activeView.type !== 'dsm'
+        && activeView.type !== 'ai'
+        && activeView.type !== 'ask'
+        && activeView.type !== 'sysml-generator';
 
     // Auto-open the sidebar whenever we switch to a view that needs it but it's
     // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).
@@ -443,6 +450,7 @@ export function App() {
                     && activeView.type !== 'scenario-editor'
                     && activeView.type !== 'ontology'
                     && activeView.type !== 'ontology-detail'
+                    && activeView.type !== 'ai'
                     && activeView.type !== 'ask'
                     && activeView.type !== 'sysml-generator'
                     && !isCatalogRoute

@@ -34,6 +34,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     statistics: '/statistics',
     'dhf-dashboard': '/dhf',
     'dhf-dashboard-legacy': '/dhf/legacy',
+    ai: '/ai',
     ask: '/ask',
     'sysml-generator': '/generate',
     'review-dashboard': '/review',

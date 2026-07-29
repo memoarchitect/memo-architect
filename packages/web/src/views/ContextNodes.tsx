@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { PersonGlyph } from './PersonGlyph';
 
 interface ContextNodeData extends Record<string, unknown> {
     label: string;
@@ -41,10 +42,11 @@ export const ContextExternalNode = memo(function ContextExternalNode({ data }: N
             ? { border: '#2563EB', fill: '#EFF6FF', text: '#1E3A8A', tag: 'ACTOR' }
             : { border: '#64748B', fill: '#F8FAFC', text: '#334155', tag: 'EXTERNAL SYSTEM' };
     return <div style={{
-        width: '100%', height: '100%', boxSizing: 'border-box', display: 'grid', placeItems: 'center',
+        width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
         padding: '10px 14px', textAlign: 'center', border: `1.5px solid ${palette.border}`, borderRadius: 7,
         background: palette.fill, color: palette.text, fontSize: 13, fontWeight: 650, lineHeight: 1.25,
     }}>
+        {d.category === 'person' && <PersonGlyph size={26} color={palette.border} />}
         <span><small style={{ display: 'block', marginBottom: 4, color: palette.border, fontSize: 9, letterSpacing: '.07em' }}>{palette.tag}</small>{d.label}</span>
         <Handles />
     </div>;

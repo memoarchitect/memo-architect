@@ -125,7 +125,10 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Diagra
     } else if (diagram?.diagramType === 'ucd') {
         result = computeUseCaseViewLayout(model, { systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
     } else if (diagram?.diagramType === 'context') {
-        result = computeContextViewLayout(model, diagram.name);
+        result = computeContextViewLayout(model, diagram.name, {
+            viewpointFilter,
+            relationshipTypes: diagram.relationshipTypes,
+        });
     } else if (viewKind === 'interconnection') {
         result = await computeInterconnectionLayout(model, {
             viewpointFilter,
@@ -159,10 +162,11 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Diagra
             result = await computeGeneralViewLayout(model, {
                 mode,
                 viewpointFilter,
-                expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter)),
+                expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes)),
                 nodeDirections: new Map(),
                 callbacks: NO_CALLBACKS,
                 positionCache,
+                hierarchyRelationshipTypes: diagram?.relationshipTypes,
                 layoutProviderId,
             });
         } else {

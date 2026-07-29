@@ -38,4 +38,41 @@ describe('system context view template', () => {
         expect(layout.nodes.map(node => node.id)).not.toContain('motor');
         expect(layout.nodes.map(node => node.id)).toEqual(expect.arrayContaining(['pump', 'patient']));
     });
+
+    it('places InteractsInContext participants on their authored sides and uses its verb label', () => {
+        const system = element('pump', 'OperationalEntity', 'Irrigation Pump', { contextRole: 'systemOfInterest' });
+        const surgeon = element('surgeon', 'User', 'Surgeon');
+        const mains = element('mains', 'OperationalEntity', 'Mains Power');
+        const hospital = element('hospital', 'UseEnvironment', 'Hospital Facility');
+        const use = element('use', 'UseContext', 'Clinical use constraints');
+        const layout = computeContextViewLayout(model({ system, surgeon, mains, hospital, use }, [
+            { id: 'actor', type: 'interactsInContext', sourceId: 'surgeon', targetId: 'pump', attributes: { contextSide: "ContextSideKind::'actor'", interactionLabel: 'Directs procedure' } },
+            { id: 'external', type: 'interactsInContext', sourceId: 'mains', targetId: 'pump', attributes: { contextSide: 'ContextSideKind::externalSystem', interactionLabel: 'Electrical power' } },
+            { id: 'environment', type: 'interactsInContext', sourceId: 'hospital', targetId: 'pump', attributes: { contextSide: 'ContextSideKind::environment', interactionLabel: 'Environmental conditions' } },
+            { id: 'constraint', type: 'interactsInContext', sourceId: 'use', targetId: 'pump', attributes: { contextSide: "ContextSideKind::'constraint'", interactionLabel: 'Intended use' } },
+        ]));
+        const node = (id: string) => layout.nodes.find(candidate => candidate.id === id)!;
+        const pump = node('pump');
+        expect(node('surgeon').position.x).toBeLessThan(pump.position.x);
+        expect(node('mains').position.x).toBeGreaterThan(pump.position.x);
+        expect(node('hospital').position.y).toBeLessThan(pump.position.y);
+        expect(node('use').position.y).toBeGreaterThan(pump.position.y);
+        expect(layout.edges.find(edge => edge.id === 'actor')?.label).toBe('Directs procedure');
+    });
+
+    it('honors the view selection instead of laying out unrelated context relationships', () => {
+        const pump = element('pump', 'OperationalEntity', 'Irrigation Pump', { contextRole: 'systemOfInterest' });
+        const clinician = element('clinician', 'User', 'Clinician');
+        const network = element('network', 'OperationalEntity', 'Hospital Network');
+        const layout = computeContextViewLayout(model({ pump, clinician, network }, [
+            { id: 'shown', type: 'interactsInContext', sourceId: 'clinician', targetId: 'pump' },
+            { id: 'hidden', type: 'interactsWith', sourceId: 'network', targetId: 'pump' },
+        ]), 'Pump Context', {
+            viewpointFilter: element => element.id !== 'network',
+            relationshipTypes: ['InteractsInContext'],
+        });
+        expect(layout.nodes.map(node => node.id)).toEqual(expect.arrayContaining(['pump', 'clinician']));
+        expect(layout.nodes.map(node => node.id)).not.toContain('network');
+        expect(layout.edges.map(edge => edge.id)).toEqual(['shown']);
+    });
 });

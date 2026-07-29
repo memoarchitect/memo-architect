@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { PersonGlyph } from './PersonGlyph';
 
 interface UseCaseData extends Record<string, unknown> { label: string; kind?: string; color?: string; side?: 'left' | 'right'; }
 
@@ -25,10 +26,7 @@ export const UseCaseActorNode = memo(function UseCaseActorNode({ data }: NodePro
         width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', color: '#334155', fontSize: 12, fontWeight: 600, textAlign: 'center', gap: 3,
     }}>
-        <svg width="38" height="54" viewBox="0 0 38 54" aria-hidden="true" fill="none" stroke={d.color ?? '#334155'} strokeWidth="2">
-            <circle cx="19" cy="8" r="6" fill="#FFFFFF" />
-            <path d="M19 14v18M6 23h26M19 32L8 49M19 32l11 17" strokeLinecap="round" />
-        </svg>
+        <PersonGlyph color={d.color ?? '#334155'} />
         <span>{d.label}</span>
         <Handle type="source" position={handleSide} style={hiddenHandle} />
         <Handle type="target" position={handleSide} style={hiddenHandle} />

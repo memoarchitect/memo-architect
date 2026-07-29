@@ -14,15 +14,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Edge, Node } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
     CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
     routeOrthogonalEdges, type LayoutResult, type RouteObstacle, type RoutePoint,
 } from '../layout';
 import { isPortElement } from './interconnection-view';
 
-const CONTEXT_RELATIONSHIPS = new Set(['interactswith', 'exchangeswith', 'appliesincontext', 'connectsphysically']);
-const ACTOR_KINDS = /(?:Actor|User)$/;
+const CONTEXT_RELATIONSHIPS = new Set(['interactsincontext', 'interactswith', 'exchangeswith', 'appliesincontext', 'connectsphysically']);
+const HUMAN_ACTOR_KINDS = new Set(['Actor', 'User']);
 
 const relationshipType = (type: string) => type.toLowerCase();
 const isEnvironment = (element: MemoElement) => element.kind === 'UseContext'
@@ -49,7 +49,25 @@ const MARGIN = 40;
 const externalWidth = (name: string): number =>
     Math.min(Math.max(name.length * 7.4 + 28, EXTERNAL_MIN_W), EXTERNAL_MAX_W);
 
-type Side = 'left' | 'right';
+type Side = 'left' | 'right' | 'top' | 'bottom';
+
+const contextSide = (relationship: MemoRelationship): Side | undefined => {
+    const value = String(relationship.attributes?.contextSide ?? '').toLowerCase().replace(/[^a-z]/g, '');
+    if (value.endsWith('actor')) return 'left';
+    if (value.endsWith('externalsystem')) return 'right';
+    if (value.endsWith('environment')) return 'top';
+    if (value.endsWith('constraint')) return 'bottom';
+    return undefined;
+};
+
+const contextLabel = (relationship: MemoRelationship): string =>
+    relationship.attributes?.interactionLabel || `«${relationshipType(relationship.type)}»`;
+
+export interface ContextViewOptions {
+    viewpointFilter?: (element: MemoElement) => boolean;
+    /** Relationship kinds selected by the authored view. */
+    relationshipTypes?: string[];
+}
 
 /**
  * Which flank an external entity belongs on: what it sends to the system puts
@@ -82,9 +100,20 @@ export function contextEntitySides(
  * Build a system-context view: one black-box system inside its scope boundary,
  * with only relevant external entities and boundary-crossing interactions.
  */
-export function computeContextViewLayout(model: MemoModelDTO, systemName?: string): LayoutResult {
-    const allElements = Object.values(model.elements);
-    const relationships = model.relationships.filter(rel => CONTEXT_RELATIONSHIPS.has(relationshipType(rel.type)));
+export function computeContextViewLayout(
+    model: MemoModelDTO,
+    systemName?: string,
+    options: ContextViewOptions = {},
+): LayoutResult {
+    const allElements = Object.values(model.elements)
+        .filter(element => !options.viewpointFilter || options.viewpointFilter(element));
+    const selectedRelationshipTypes = options.relationshipTypes?.length
+        ? new Set(options.relationshipTypes.map(relationshipType))
+        : undefined;
+    const relationships = model.relationships.filter(rel =>
+        CONTEXT_RELATIONSHIPS.has(relationshipType(rel.type))
+        && (!selectedRelationshipTypes || selectedRelationshipTypes.has(relationshipType(rel.type))),
+    );
     const referenced = new Set(relationships.flatMap(rel => [rel.sourceId, rel.targetId]));
     const elements = allElements.filter(element => referenced.has(element.id) && !isPortElement(element));
     if (elements.length === 0) return { nodes: [], edges: [] };
@@ -100,24 +129,39 @@ export function computeContextViewLayout(model: MemoModelDTO, systemName?: strin
     // ── Columns: direction decides the flank, then entities of a kind stay
     // together so the diagram reads as roles rather than a jumble ──
     const sides = contextEntitySides(external.map(element => element.id), exchanges, system.id);
-    const rank = (element: MemoElement) => ACTOR_KINDS.test(element.kind) ? 0 : isEnvironment(element) ? 1 : 2;
+    // InteractsInContext is intentionally a separate relation: its authored
+    // contextSide controls the diagram, rather than inferred data flow.  The
+    // source endpoint is the contextParticipant in the SysML definition.
+    for (const rel of exchanges) {
+        const side = contextSide(rel);
+        if (side) sides.set(rel.sourceId, side);
+    }
+    const rank = (element: MemoElement) => HUMAN_ACTOR_KINDS.has(element.kind) ? 0 : isEnvironment(element) ? 1 : 2;
     const column = (side: Side) => external
         .filter(element => sides.get(element.id) === side)
         .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-    const columns = { left: column('left'), right: column('right') };
+    const columns = {
+        left: column('left'), right: column('right'), top: column('top'), bottom: column('bottom'),
+    };
 
     const columnHeight = (items: MemoElement[]) =>
         items.length === 0 ? 0 : items.length * EXTERNAL_H + (items.length - 1) * COLUMN_GAP;
     const columnWidth = (items: MemoElement[]) =>
         items.length === 0 ? 0 : Math.max(...items.map(element => externalWidth(element.name)));
 
+    const rowWidth = (items: MemoElement[]) => items.length === 0
+        ? 0
+        : items.reduce((total, element) => total + externalWidth(element.name), 0) + (items.length - 1) * COLUMN_GAP;
     const boundaryWidth = SYSTEM_W + BOUNDARY_PAD_X * 2;
     const boundaryHeight = SYSTEM_H + BOUNDARY_PAD_Y * 2;
-    const centreY = MARGIN + Math.max(boundaryHeight, columnHeight(columns.left), columnHeight(columns.right)) / 2;
     const leftWidth = columnWidth(columns.left);
-    const boundaryX = MARGIN + (leftWidth > 0 ? leftWidth + SIDE_GAP : 0);
+    const centreX = MARGIN + (leftWidth > 0 ? leftWidth + SIDE_GAP : 0)
+        + Math.max(boundaryWidth, rowWidth(columns.top), rowWidth(columns.bottom)) / 2;
+    const centreY = MARGIN + (columns.top.length > 0 ? EXTERNAL_H + SIDE_GAP : 0)
+        + Math.max(boundaryHeight, columnHeight(columns.left), columnHeight(columns.right)) / 2;
+    const boundaryX = centreX - boundaryWidth / 2;
     const boundaryY = centreY - boundaryHeight / 2;
-    const rightX = boundaryX + boundaryWidth + SIDE_GAP;
+    const rightX = boundaryX + boundaryWidth + (columns.right.length > 0 ? SIDE_GAP : 0);
 
     const nodes: Node[] = [{
         id: '__context_boundary__', type: 'contextBoundary', position: { x: boundaryX, y: boundaryY },
@@ -141,11 +185,30 @@ export function computeContextViewLayout(model: MemoModelDTO, systemName?: strin
                 id: element.id, type: 'contextExternal', position: { x, y: cursor },
                 data: {
                     label: element.name, kind: element.kind,
-                    category: isEnvironment(element) ? 'environment' : ACTOR_KINDS.test(element.kind) ? 'person' : 'system',
+                    category: isEnvironment(element) ? 'environment' : HUMAN_ACTOR_KINDS.has(element.kind) ? 'person' : 'system',
                 },
                 style: { width, height: EXTERNAL_H },
             });
             cursor += EXTERNAL_H + COLUMN_GAP;
+        }
+    }
+    for (const side of ['top', 'bottom'] as const) {
+        const items = columns[side];
+        const width = rowWidth(items);
+        let cursor = centreX - width / 2;
+        const y = side === 'top' ? boundaryY - SIDE_GAP - EXTERNAL_H : boundaryY + boundaryHeight + SIDE_GAP;
+        for (const element of items) {
+            const itemWidth = externalWidth(element.name);
+            placed.set(element.id, { x: cursor, y, width: itemWidth, height: EXTERNAL_H, side });
+            nodes.push({
+                id: element.id, type: 'contextExternal', position: { x: cursor, y },
+                data: {
+                    label: element.name, kind: element.kind,
+                    category: isEnvironment(element) ? 'environment' : HUMAN_ACTOR_KINDS.has(element.kind) ? 'person' : 'system',
+                },
+                style: { width: itemWidth, height: EXTERNAL_H },
+            });
+            cursor += itemWidth + COLUMN_GAP;
         }
     }
 
@@ -153,7 +216,7 @@ export function computeContextViewLayout(model: MemoModelDTO, systemName?: strin
     // on, in the order of the entities they come from, so parallel exchanges
     // stay parallel instead of converging on the box centre ──
     const systemRect = { x: boundaryX + BOUNDARY_PAD_X, y: boundaryY + BOUNDARY_PAD_Y, width: SYSTEM_W, height: SYSTEM_H };
-    const faceOrder = { left: [] as string[], right: [] as string[] };
+    const faceOrder = { left: [] as string[], right: [] as string[], top: [] as string[], bottom: [] as string[] };
     for (const rel of exchanges) {
         const otherId = rel.sourceId === system.id ? rel.targetId : rel.sourceId;
         if (rel.sourceId !== system.id && rel.targetId !== system.id) continue;
@@ -173,20 +236,29 @@ export function computeContextViewLayout(model: MemoModelDTO, systemName?: strin
         const order = faceOrder[side];
         const index = Math.max(order.indexOf(relId), 0);
         return {
-            x: side === 'left' ? systemRect.x : systemRect.x + systemRect.width,
-            y: systemRect.y + systemRect.height * (index + 0.5) / Math.max(order.length, 1),
+            x: side === 'left' ? systemRect.x : side === 'right' ? systemRect.x + systemRect.width
+                : systemRect.x + systemRect.width * (index + 0.5) / Math.max(order.length, 1),
+            y: side === 'top' ? systemRect.y : side === 'bottom' ? systemRect.y + systemRect.height
+                : systemRect.y + systemRect.height * (index + 0.5) / Math.max(order.length, 1),
         };
     };
     const entityAnchor = (id: string, side: Side): RoutePoint => {
         const rect = placed.get(id)!;
+        if (side === 'top') return { x: rect.x + rect.width / 2, y: rect.y };
+        if (side === 'bottom') return { x: rect.x + rect.width / 2, y: rect.y + rect.height };
         return { x: side === 'left' ? rect.x : rect.x + rect.width, y: rect.y + rect.height / 2 };
     };
     /** The face each end of an exchange leaves from. */
     const endpointSide = (id: string, otherId: string): Side => {
-        if (id === system.id) return placed.get(otherId)?.side === 'right' ? 'right' : 'left';
+        if (id === system.id) return placed.get(otherId)?.side ?? 'left';
         const own = placed.get(id)!;
         // Entity to entity: face whichever way the other one lies.
         const other = otherId === system.id ? systemRect : placed.get(otherId)!;
+        const ownCentre = { x: own.x + own.width / 2, y: own.y + own.height / 2 };
+        const otherCentre = { x: other.x + other.width / 2, y: other.y + other.height / 2 };
+        if (Math.abs(otherCentre.y - ownCentre.y) > Math.abs(otherCentre.x - ownCentre.x)) {
+            return otherCentre.y < ownCentre.y ? 'top' : 'bottom';
+        }
         return other.x + (otherId === system.id ? systemRect.width : placed.get(otherId)!.width) / 2
             >= own.x + own.width / 2 ? 'right' : 'left';
     };
@@ -218,7 +290,7 @@ export function computeContextViewLayout(model: MemoModelDTO, systemName?: strin
     })), obstacles, 24);
     // Placed together, so two exchanges through the same corridor do not stack
     // their stereotype labels on top of one another.
-    const labels = new Map(drafts.map(draft => [draft.rel.id, `«${relationshipType(draft.rel.type)}»`]));
+    const labels = new Map(drafts.map(draft => [draft.rel.id, contextLabel(draft.rel)]));
     const labelPoints = placeConnectorLabels(
         drafts.flatMap(draft => {
             const points = routes.get(draft.rel.id);

@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
+import { isFeatureEnabled, type FeatureId } from '../config/feature-flags';
 import { WorkspaceManager } from './WorkspaceManager';
 
 const DOCS_URL = '/help/';
 
 // ─── Primary navigation modes ────────────────────────────────────────────────
 
+// `feature` gates the entry: the mode only renders when that flag is on.
 const NAV_MODES = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
     { id: 'catalog', label: 'Model Explorer', icon: '☰' },
@@ -15,7 +17,8 @@ const NAV_MODES = [
     { id: 'scenario', label: 'Use Cases', icon: '▶' },
     { id: 'ontology', label: 'Ontology', icon: '◉' },
     { id: 'import', label: 'Import', icon: '↓' },
-] as const;
+    { id: 'ai', label: 'AI', icon: '✦', feature: 'ai-tools' },
+] as const satisfies readonly { id: string; label: string; icon: string; feature?: FeatureId }[];
 
 type NavModeId = typeof NAV_MODES[number]['id'];
 
@@ -146,6 +149,7 @@ export function ModeSwitcher() {
         if (activeView.type === 'scenario-editor') return 'scenario';
         if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') return 'ontology';
         if (activeView.type === 'import') return 'import';
+        if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
         if (activeView.type === 'dashboard') return 'dashboard';
@@ -194,6 +198,9 @@ export function ModeSwitcher() {
             case 'import':
                 setActiveView({ type: 'import' });
                 break;
+            case 'ai':
+                setActiveView({ type: 'ai' });
+                break;
         }
     }
 
@@ -209,7 +216,7 @@ export function ModeSwitcher() {
             }}
         >
             {/* Primary nav modes */}
-            {NAV_MODES.map(mode => (
+            {NAV_MODES.filter(mode => !('feature' in mode) || isFeatureEnabled(mode.feature)).map(mode => (
                 <button
                     key={mode.id}
                     onClick={() => handleNavClick(mode.id)}

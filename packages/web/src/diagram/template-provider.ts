@@ -27,6 +27,7 @@ import type { computeActionFlowViewLayout } from '../views/templates/actionflow-
 import type { computeStateTransitionLayout } from '../views/templates/statetransition-view';
 import type { computeSequenceLayout } from '../views/templates/sequence-view';
 import type { computeUseCaseViewLayout } from '../views/templates/use-case-view';
+import type { computeContextViewLayout } from '../views/templates/context-view';
 
 /** Everything the selection predicate may discriminate on. */
 export interface TemplateSelectionContext {
@@ -49,8 +50,8 @@ export interface TemplateOptionSlices {
     decomposition: Parameters<typeof computeDecompositionLayout>[1];
     containment: Parameters<typeof computeContainmentLayout>[1];
     useCase: Parameters<typeof computeUseCaseViewLayout>[1];
-    /** Context view frames one named system. */
-    contextSystemName?: string;
+    /** Context view frames one named system and honors its authored selection. */
+    context: ContextTemplateOptions;
     interconnection: Parameters<typeof computeInterconnectionLayout>[1];
     actionflow: Parameters<typeof computeActionFlowViewLayout>[1];
     statetransition: Parameters<typeof computeStateTransitionLayout>[1];
@@ -58,6 +59,10 @@ export interface TemplateOptionSlices {
     general: Parameters<typeof computeGeneralViewLayout>[1];
     standard: Parameters<typeof computeLayout>[1];
 }
+
+type ContextTemplateOptions = Parameters<typeof computeContextViewLayout>[2] & {
+    systemName?: string;
+};
 
 export interface DiagramTemplateDescriptor {
     /** Stable id, e.g. 'memo.template.interconnection'. */
