@@ -17,7 +17,10 @@ const NAV_MODES = [
     { id: 'scenario', label: 'Use Cases', icon: '▶' },
     { id: 'ontology', label: 'Ontology', icon: '◉' },
     { id: 'import', label: 'Import', icon: '↓' },
-    { id: 'ai', label: 'AI', icon: '✦', feature: 'ai-tools' },
+    // Deliberately top-level while enabled: AI work is a distinct workspace,
+    // not a document action.  The feature gate keeps it absent by default and
+    // exposes it only when Architect was started with --experimental.
+    { id: 'ai', label: 'AI Tools', icon: '✦', feature: 'ai-tools' },
 ] as const satisfies readonly { id: string; label: string; icon: string; feature?: FeatureId }[];
 
 type NavModeId = typeof NAV_MODES[number]['id'];

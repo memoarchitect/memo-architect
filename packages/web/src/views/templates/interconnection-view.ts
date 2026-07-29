@@ -904,6 +904,11 @@ export async function computeInterconnectionLayout(
                 onPortMove: options?.onPortMove
                     ? (portId: string, y: number) => options.onPortMove!(partId, portId, y)
                     : undefined,
+                // Preserve this model-derived footprint while the user resizes
+                // a node.  A container cannot be shrunk across one of its
+                // children, and a leaf cannot crop its port-label gutters.
+                minWidth: l.width,
+                minHeight: l.height,
             },
             style: { width: l.width, height: l.height },
         });
@@ -1034,7 +1039,11 @@ export async function computeInterconnectionLayout(
             const l = layouts.get(n.id)!;
             return { id: n.id, x: abs.x, y: abs.y, width: l.width, height: l.height };
         });
-    const routes = routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles);
+    // IBDs often have a few long boundary flows alongside many local sibling
+    // exchanges.  Claiming local corridors first keeps the readable wiring
+    // near its parts; long flows then use distinct outer channels instead of
+    // cutting through the middle of the board.
+    const routes = routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles, 28, 'short-first');
     // Labelled connectors (typed flow items) share one placement pass so two
     // flows through the same corridor don't stack their labels.
     const labelPoints = placeConnectorLabels(

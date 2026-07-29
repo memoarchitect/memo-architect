@@ -136,15 +136,19 @@ export function routeOrthogonalEdges(
     requests: OrthogonalRouteRequest[],
     obstacles: RouteObstacle[],
     channelGap = 18,
+    priority: 'long-first' | 'short-first' = 'long-first',
 ): Map<string, RoutePoint[]> {
     const result = new Map<string, RoutePoint[]>();
     const occupied: Array<[RoutePoint, RoutePoint]> = [];
     const clearance = Math.max(12, channelGap * 0.75);
-    // Long connectors establish the scarce cross-board channels first; local
-    // edges can then take nearby alternatives without forcing long detours.
+    // Most diagrams benefit from long connectors establishing scarce
+    // cross-board channels first.  Interconnection diagrams reverse this:
+    // local part-to-part exchanges reserve their readable corridors before
+    // boundary flows are sent around the outside.
     const orderedRequests = [...requests].sort((a, b) =>
-        (Math.abs(b.source.x - b.target.x) + Math.abs(b.source.y - b.target.y))
-        - (Math.abs(a.source.x - a.target.x) + Math.abs(a.source.y - a.target.y)));
+        (priority === 'long-first' ? 1 : -1)
+        * ((Math.abs(b.source.x - b.target.x) + Math.abs(b.source.y - b.target.y))
+            - (Math.abs(a.source.x - a.target.x) + Math.abs(a.source.y - a.target.y))));
 
     for (const request of orderedRequests) {
         const { source: anchorSource, target: anchorTarget } = request;

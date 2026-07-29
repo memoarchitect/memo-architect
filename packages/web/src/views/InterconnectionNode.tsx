@@ -39,6 +39,9 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     implicitIn?: boolean;
     implicitOut?: boolean;
     onPortMove?: (portId: string, y: number) => void;
+    /** Content-derived lower bound emitted by the IBD template. */
+    minWidth?: number;
+    minHeight?: number;
 }
 
 const SIDE_TO_POSITION: Record<PortSide, Position> = {
@@ -277,7 +280,10 @@ function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
 
 function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
-    const { label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut, onPortMove, hasChildren, isCollapsed, onToggleCollapse } = d;
+    const {
+        label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
+        onPortMove, hasChildren, isCollapsed, onToggleCollapse, minWidth, minHeight,
+    } = d;
     const [hovered, setHovered] = useState(false);
 
     // The context frame is large — a hover/rest shadow on it reads as noise, so
@@ -312,8 +318,12 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 <NodeResizer
                     nodeId={id}
                     isVisible={selected}
-                    minWidth={180}
-                    minHeight={100}
+                    // A user can make a part as large as needed, but never
+                    // smaller than its title, port gutters, and (for a
+                    // container) its laid-out children.  This is the same
+                    // containment invariant used by desktop diagram tools.
+                    minWidth={minWidth ?? 180}
+                    minHeight={minHeight ?? 100}
                     color="#2563EB"
                     lineStyle={{ borderWidth: 1 }}
                     handleStyle={{ width: 10, height: 10, borderRadius: 2 }}

@@ -8,8 +8,8 @@ import { COLOR, FONT } from '../styles/tokens';
 // Sidebar shown when activeView.type === 'dashboard'. Replaces the full element
 // tree with a "Recently visited" feed driven by store.recentlyVisited.
 //
-// Falls back to a sample of the model when nothing has been visited yet.
-// Session-local — not persisted across reload.
+// Shows only session-local history — the dashboard must not turn a large model
+// into an unsolicited, scroll-heavy element browser on first load.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function DashboardSidebar() {
@@ -24,21 +24,11 @@ export function DashboardSidebar() {
             .filter(Boolean);
     }, [recentlyVisited, model]);
 
-    const sampleElements = useMemo(() => {
-        if (!model || recentElements.length > 0) return [];
-        const byKind = new Map<string, typeof model.elements[string]>();
-        for (const el of Object.values(model.elements)) {
-            if (!byKind.has(el.kind)) byKind.set(el.kind, el);
-            if (byKind.size >= 12) break;
-        }
-        return Array.from(byKind.values());
-    }, [model, recentElements.length]);
-
-    const items = recentElements.length > 0 ? recentElements : sampleElements;
-    const heading = recentElements.length > 0 ? 'Recently visited' : 'Sample elements';
+    const items = recentElements;
+    const heading = 'Recently visited';
     const subhead = recentElements.length > 0
         ? `${recentElements.length} item${recentElements.length === 1 ? '' : 's'} this session`
-        : 'Click any to start exploring';
+        : 'Items you inspect appear here';
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -60,7 +50,7 @@ export function DashboardSidebar() {
                         padding: '24px 16px', textAlign: 'center',
                         fontSize: '12px', color: COLOR.muted, lineHeight: '1.6',
                     }}>
-                        No elements in this model yet.
+                        Nothing visited yet. Use Model Explorer or Viewpoints to begin.
                     </div>
                 ) : items.map(el => {
                     const layerColor = LAYER_COLORS[el.layer] || COLOR.muted;
