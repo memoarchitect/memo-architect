@@ -37,6 +37,7 @@ const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => (
 const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
+const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -58,22 +59,22 @@ function UnifiedCanvas() {
             case 'diagram':
                 return <DiagramEditor diagramId={activeView.diagramId} />;
             case 'dsm':
-                return <DSMView />;
+                return isFeatureEnabled('model-tools') ? <DSMView /> : <Dashboard />;
             case 'traceability':
-                return <TraceabilityMatrix />;
+                return isFeatureEnabled('model-tools') ? <TraceabilityMatrix /> : <Dashboard />;
             case 'tabular':
                 return <TabularView />;
             case 'ontology':
             case 'ontology-detail':
-                return <OntologyViewer />;
+                return isFeatureEnabled('ontology') ? <OntologyViewer /> : <Dashboard />;
             case 'scenario-editor':
                 return <ScenarioEditor />;
             case 'model-diff':
-                return <ModelDiff />;
+                return isFeatureEnabled('model-tools') ? <ModelDiff /> : <Dashboard />;
             case 'compliance-wizard':
-                return <ComplianceWizard />;
+                return isFeatureEnabled('model-tools') ? <ComplianceWizard /> : <Dashboard />;
             case 'statistics':
-                return <StatisticsDashboard />;
+                return isFeatureEnabled('model-tools') ? <StatisticsDashboard /> : <Dashboard />;
             case 'dhf-dashboard':
             case 'dhf-document':
                 return <DhfWorkbench />;
@@ -90,11 +91,13 @@ function UnifiedCanvas() {
             case 'dashboard':
                 return <Dashboard />;
             case 'review-dashboard':
-                return <ReviewDashboard />;
+                return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
             case 'workflow-wizard':
-                return <WorkflowWizard />;
+                return isFeatureEnabled('model-tools') ? <WorkflowWizard /> : <Dashboard />;
             case 'import':
-                return <ImportView />;
+                return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
+            case 'analysis':
+                return isFeatureEnabled('analysis') ? <AnalysisWorkspace /> : <Dashboard />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;
@@ -290,7 +293,8 @@ export function App() {
         && activeView.type !== 'dsm'
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
-        && activeView.type !== 'sysml-generator';
+        && activeView.type !== 'sysml-generator'
+        && activeView.type !== 'analysis';
 
     // Auto-open the sidebar whenever we switch to a view that needs it but it's
     // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).
@@ -453,6 +457,7 @@ export function App() {
                     && activeView.type !== 'ai'
                     && activeView.type !== 'ask'
                     && activeView.type !== 'sysml-generator'
+                    && activeView.type !== 'analysis'
                     && !isCatalogRoute
                     && activeMode !== 'dhf'
                     && activeMode !== 'ontology' && (

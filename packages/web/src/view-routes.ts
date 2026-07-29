@@ -40,6 +40,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     'review-dashboard': '/review',
     'workflow-wizard': '/workflow',
     import: '/import',
+    analysis: '/analysis',
 };
 
 /**

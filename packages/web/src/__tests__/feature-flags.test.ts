@@ -33,6 +33,20 @@ describe('feature flag registry', () => {
         expect(isFeatureEnabled('ai-tools')).toBe(true);
     });
 
+    it('keeps advanced workspace surfaces hidden by default and enables them together experimentally', () => {
+        grant(undefined);
+        expect(isFeatureEnabled('ontology')).toBe(false);
+        expect(isFeatureEnabled('import')).toBe(false);
+        expect(isFeatureEnabled('model-tools')).toBe(false);
+        expect(isFeatureEnabled('analysis')).toBe(true);
+
+        grant({ experimental: true });
+        expect(isFeatureEnabled('ontology')).toBe(true);
+        expect(isFeatureEnabled('import')).toBe(true);
+        expect(isFeatureEnabled('model-tools')).toBe(true);
+        expect(isFeatureEnabled('analysis')).toBe(true);
+    });
+
     it('treats a non-true grant as absent, so a truthy string cannot unlock a feature', () => {
         grant({ experimental: 'false' });
         expect(isFeatureEnabled('ai-tools')).toBe(false);

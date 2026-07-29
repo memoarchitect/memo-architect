@@ -19,6 +19,11 @@ package.json
 memo.package.yaml
 memo.lock.yaml
 syside.toml
+analysis/
+  Samples/
+    README.md
+    01-model-overview.ipynb
+    ...
 src/
   architecture/
   assurance/
@@ -28,6 +33,11 @@ node_modules/@memoarchitect/ontology/
 
 `syside.toml` lets SysIDE resolve the project source and the installed ontology
 as one model.
+
+`analysis/Samples` contains seven model-independent Jupyter notebooks created by
+`memo init`, including charts, an SVG ownership graph, and an HTML/CSV inventory
+table. Start JupyterLab from the project's `analysis` directory, then use
+**Analysis → Jupyter Notebooks** in Architect to open it.
 
 ## 2. Establish scope
 

@@ -2,6 +2,31 @@
 
 MEMO includes a suite of advanced analysis tools for design verification, dependency management, and risk analysis. These tools are accessible from the top toolbar in the Workbench.
 
+## Jupyter notebooks
+
+**Analysis → Jupyter Notebooks** opens the project's live JupyterLab workspace
+at `http://127.0.0.1:8888`. New projects created with `memo init` contain an
+`analysis/Samples` folder with seven portable Syside notebooks:
+
+- model overview and semantic composition;
+- architecture hotspots and ownership depth;
+- model-quality diagnostics;
+- change-impact exploration;
+- bar and diagnostic donut charts;
+- an SVG ownership network graph;
+- an HTML inventory table with CSV export.
+
+The samples use standard SysML v2 types and automatically discover either the
+nearest `model/` or `src/` directory. Start the local service with:
+
+```bash
+source analysis/.venv/bin/activate
+cd analysis
+jupyter lab --port 8888
+```
+
+Syside must be installed and licensed in that environment.
+
 ## 1. Design Structure Matrix (DSM)
 
 The DSM tool is used to visualize and analyze dependencies between functional and physical elements in your system.

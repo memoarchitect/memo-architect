@@ -122,7 +122,7 @@ export interface SourceChange {
 }
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
-export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai';
+export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai' | 'analysis';
 
 /** Active view in the unified canvas */
 export type ActiveView =
@@ -147,6 +147,7 @@ export type ActiveView =
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
     | { type: 'import' }
+    | { type: 'analysis' }
     | { type: 'welcome' };
 
 /** A DHF document created by the user in the DHF Workbench */

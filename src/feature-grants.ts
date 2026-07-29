@@ -24,8 +24,8 @@ export function resolveFeatureGrants(options: { experimental?: boolean }): Featu
 
 /** Shared `--experimental` help text, so every subcommand says the same thing. */
 export const EXPERIMENTAL_FLAG_DESCRIPTION =
-    'Enable experimental surfaces (currently the AI Tools: Model Assistant and SysML Generator). '
-    + 'Off by default: generated content is unreviewed and carries no design-control provenance';
+    'Enable all experimental workbench surfaces (AI Tools, Ontology, Import, and Model Tools). '
+    + 'Off by default: advanced and generated content workflows carry no design-control provenance';
 
 /**
  * Splice grants into the client HTML shell.

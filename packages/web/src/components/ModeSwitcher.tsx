@@ -5,6 +5,7 @@ import { isFeatureEnabled, type FeatureId } from '../config/feature-flags';
 import { WorkspaceManager } from './WorkspaceManager';
 
 const DOCS_URL = '/help/';
+const JUPYTER_URL = 'http://127.0.0.1:8888/lab/tree/';
 
 // ─── Primary navigation modes ────────────────────────────────────────────────
 
@@ -15,8 +16,6 @@ const NAV_MODES = [
     { id: 'diagram', label: 'Viewpoints', icon: '⊟' },
     { id: 'dhf', label: 'Documents', icon: '⊞' },
     { id: 'scenario', label: 'Use Cases', icon: '▶' },
-    { id: 'ontology', label: 'Ontology', icon: '◉' },
-    { id: 'import', label: 'Import', icon: '↓' },
     // Deliberately top-level while enabled: AI work is a distinct workspace,
     // not a document action.  The feature gate keeps it absent by default and
     // exposes it only when Architect was started with --experimental.
@@ -26,7 +25,7 @@ const NAV_MODES = [
 type NavModeId = typeof NAV_MODES[number]['id'];
 
 // Tool view types — when one of these is active, no nav mode is highlighted
-const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff', 'review-dashboard', 'workflow-wizard']);
+const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff', 'review-dashboard', 'workflow-wizard', 'ontology', 'ontology-detail', 'import']);
 
 // ─── Tools dropdown items ────────────────────────────────────────────────────
 
@@ -37,7 +36,77 @@ interface ToolItem {
     view: ActiveView;
 }
 
+// ─── Analysis dropdown ───────────────────────────────────────────────────────
+
+function AnalysisDropdown() {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        if (open) document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button
+                onClick={() => setOpen(value => !value)}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                className="flex items-center gap-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all"
+                style={open
+                    ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
+                    : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }}
+            >
+                <span className="mr-0.5">◫</span>
+                Analysis
+                <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }}>▾</span>
+            </button>
+
+            {open && (
+                <div
+                    role="menu"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        zIndex: 100,
+                        background: '#132D3E',
+                        border: '1px solid rgba(45,212,168,0.2)',
+                        borderRadius: '8px',
+                        minWidth: '220px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <a
+                        href={JUPYTER_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        onClick={() => setOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                        <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>⌁</span>
+                        Jupyter Notebooks
+                    </a>
+                </div>
+            )}
+        </div>
+    );
+}
+
 const TOOLS: ToolItem[] = [
+    { id: 'ontology', label: 'Ontology Explorer', icon: '◉', view: { type: 'ontology' } },
+    { id: 'import', label: 'Import Model', icon: '↓', view: { type: 'import' } },
     { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', view: { type: 'dsm' } },
     { id: 'traceability', label: 'Traceability Matrix', icon: '☷', view: { type: 'traceability' } },
     { id: 'statistics', label: 'Statistics Dashboard', icon: '⊠', view: { type: 'statistics' } },
@@ -99,7 +168,10 @@ function ToolsDropdown({ activeViewType }: { activeViewType: string }) {
                         overflow: 'hidden',
                     }}
                 >
-                    {TOOLS.map((tool, i) => {
+                    {TOOLS.filter(tool =>
+                        (tool.id !== 'ontology' || isFeatureEnabled('ontology'))
+                        && (tool.id !== 'import' || isFeatureEnabled('import'))
+                    ).map((tool, i) => {
                         const isActive = activeViewType === tool.view.type;
                         return (
                             <button
@@ -150,8 +222,7 @@ export function ModeSwitcher() {
         if (TOOL_VIEW_TYPES.has(activeView.type)) return '';
         if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
         if (activeView.type === 'scenario-editor') return 'scenario';
-        if (activeView.type === 'ontology' || activeView.type === 'ontology-detail') return 'ontology';
-        if (activeView.type === 'import') return 'import';
+        if (activeView.type === 'analysis') return 'analysis';
         if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
@@ -195,12 +266,6 @@ export function ModeSwitcher() {
             case 'scenario':
                 setActiveView({ type: 'scenario-editor' });
                 break;
-            case 'ontology':
-                setActiveView({ type: 'ontology' });
-                break;
-            case 'import':
-                setActiveView({ type: 'import' });
-                break;
             case 'ai':
                 setActiveView({ type: 'ai' });
                 break;
@@ -235,11 +300,13 @@ export function ModeSwitcher() {
                 </button>
             ))}
 
+            {isFeatureEnabled('analysis') && <AnalysisDropdown />}
+
             {/* Divider */}
             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.12)', margin: '0 4px' }} />
 
             {/* Tools dropdown */}
-            <ToolsDropdown activeViewType={activeView.type} />
+            {isFeatureEnabled('model-tools') && <ToolsDropdown activeViewType={activeView.type} />}
 
             <div className="flex-1" />
 

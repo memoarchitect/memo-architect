@@ -93,6 +93,7 @@ nav:
       - Running a Project: users/running.md
       - First Workbench Session: users/first-session.md
   - Use Architect:
+      - Feature Tour: users/features.md
       - Learn the Model:
           - Layers and Their Questions: users/layers.md
           - Choosing Elements: users/elements.md

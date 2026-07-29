@@ -61,7 +61,25 @@ interaction; it does not maintain a second engineering model.
 - Review requirements, risk, software, verification, and assurance traceability.
 - Render BDD, IBD, action-flow, sequence, state, tree, DSM, and tabular views.
 - Author and export Design History File documents from the versioned model.
+- Open a live JupyterLab workspace with model-independent Syside sample notebooks.
 - Run the same validation and export operations through the CLI or the workbench.
+
+### Jupyter analysis
+
+Projects created with `memo init` include seven notebooks under
+`analysis/Samples/`: overview and quality reports, architecture hotspots,
+change-impact exploration, charts, an SVG ownership graph, and an inventory
+table with CSV export. Start JupyterLab from the project and select
+**Analysis → Jupyter Notebooks** in Architect:
+
+```bash
+source analysis/.venv/bin/activate
+cd analysis
+jupyter lab --port 8888
+```
+
+The notebooks use the licensed Syside Python API and automatically locate the
+project's nearest `model/` or `src/` tree.
 
 ## Try it on a bundled example
 
@@ -156,6 +174,7 @@ To open a bundled example, see [Try it on a bundled example](#try-it-on-a-bundle
 - [Published documentation](https://memoarchitect.com/memo-architect/)
 - [Product website](https://memoarchitect.com/memo-architect.html)
 - [Start here in the documentation source](docs/src/index.md)
+- [Feature tour](docs/src/users/features.md)
 - [Layers and their questions](docs/src/users/layers.md)
 - [Choosing elements](docs/src/users/elements.md)
 - [Connecting elements](docs/src/users/relationships.md)

@@ -28,6 +28,7 @@ source; **Architect** makes that shared model easier to explore and review.
 | Decide which MEMO product you need | [Choose Your MEMO Layer](users/choose-layer.md) |
 | Check what must be installed | [Prerequisites](users/prerequisites.md) |
 | Open the included pump model | [First Workbench Session](users/first-session.md) |
+| Understand every major Architect feature | [Feature Tour](users/features.md) |
 | Understand why the model has layers | [Layers and Their Questions](users/layers.md) |
 | Decide whether something is a requirement, function, component, or risk | [Choosing Elements](users/elements.md) |
 | Build traceability correctly | [Connecting Elements](users/relationships.md) |

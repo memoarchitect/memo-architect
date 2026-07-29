@@ -29,7 +29,7 @@ export interface FeatureFlag {
     stage: FeatureStage;
 }
 
-export type FeatureId = 'ai-tools';
+export type FeatureId = 'ai-tools' | 'ontology' | 'import' | 'model-tools' | 'analysis';
 
 export const FEATURE_FLAGS: readonly FeatureFlag[] = [
     {
@@ -40,6 +40,30 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
             + '(natural language → SysML v2). Generated content is unreviewed and '
             + 'carries no design-control provenance, so the surface stays off by default.',
         stage: 'experimental',
+    },
+    {
+        id: 'ontology',
+        label: 'Ontology Explorer',
+        description: 'Direct ontology browsing is an advanced workbench surface and stays off in the default regulated workspace.',
+        stage: 'experimental',
+    },
+    {
+        id: 'import',
+        label: 'Import',
+        description: 'Model import is an advanced transformation surface and stays off in the default regulated workspace.',
+        stage: 'experimental',
+    },
+    {
+        id: 'model-tools',
+        label: 'Model Tools',
+        description: 'Matrices, diagnostics, review, and workflow tools are available together only in the experimental workbench.',
+        stage: 'experimental',
+    },
+    {
+        id: 'analysis',
+        label: 'Analysis & Jupyter',
+        description: 'Analysis provides direct access to the user’s live local JupyterLab notebook workspace.',
+        stage: 'stable',
     },
 ];
 
