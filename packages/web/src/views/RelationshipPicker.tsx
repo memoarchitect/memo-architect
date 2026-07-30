@@ -28,6 +28,8 @@ export interface RelationshipChoice {
     targetId: string;
     /** Direction relative to the node the edge was drawn from. */
     direction: RelationshipDirection;
+    /** Optional label for the item, signal, material, or information carried. */
+    flowItem?: string;
 }
 
 interface RelationshipPickerProps {
@@ -38,15 +40,18 @@ interface RelationshipPickerProps {
     /** Element the edge was drawn to. */
     targetElement: MemoElement;
     registries: OntologyRegistriesDTO;
+    /** Relationship vocabulary declared by the active view. */
+    allowedTypes?: string[];
     onSelect: (choice: RelationshipChoice) => void;
     onCancel: () => void;
 }
 
 export function RelationshipPicker({
-    x, y, sourceElement, targetElement, registries, onSelect, onCancel,
+    x, y, sourceElement, targetElement, registries, allowedTypes, onSelect, onCancel,
 }: RelationshipPickerProps) {
     const ref = useRef<HTMLDivElement>(null);
     const [search, setSearch] = useState('');
+    const [flowItem, setFlowItem] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Focus search on mount
@@ -71,9 +76,13 @@ export function RelationshipPicker({
     }, [onCancel]);
 
     // Every legal link between the two kinds, in both directions.
-    const options = useMemo(
-        () => legalRelationshipTypes(sourceElement, targetElement, registries),
-        [sourceElement, targetElement, registries]);
+    const options = useMemo(() => {
+        const legal = legalRelationshipTypes(sourceElement, targetElement, registries);
+        if (!allowedTypes?.length) return legal;
+        const admitted = new Set(allowedTypes.map(type => type.toLowerCase()));
+        return legal.filter(option => admitted.has(option.definition.name.toLowerCase())
+            || admitted.has(option.definition.sysmlName.toLowerCase()));
+    }, [sourceElement, targetElement, registries, allowedTypes]);
 
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
@@ -119,6 +128,17 @@ export function RelationshipPicker({
                         border: '1px solid #E5E5E0', color: '#374151',
                     }}
                 />
+                <input
+                    value={flowItem}
+                    onChange={e => setFlowItem(e.target.value)}
+                    placeholder="Transported item / flow label (optional)"
+                    aria-label="Transported item or flow label"
+                    className="w-full px-2 py-1 rounded focus:outline-none"
+                    style={{
+                        marginTop: 6, fontSize: FONT.xs, background: '#F7F7F5',
+                        border: '1px solid #E5E5E0', color: '#374151',
+                    }}
+                />
             </div>
 
             {/* Options */}
@@ -131,7 +151,10 @@ export function RelationshipPicker({
                     return (
                         <button
                             key={`${definition.name}-${direction}`}
-                            onClick={() => onSelect({ type: definition.name, sourceId, targetId, direction })}
+                            onClick={() => onSelect({
+                                type: definition.name, sourceId, targetId, direction,
+                                flowItem: flowItem.trim() || undefined,
+                            })}
                             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left"
                             style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                             onMouseEnter={e => { e.currentTarget.style.background = '#F7F7F5'; }}

@@ -266,7 +266,7 @@ export interface ModelState {
     // ─── Sidecar layouts (per diagramId) ─────────────────────────────
     diagramLayouts: Record<string, DiagramLayout>;
     mergeDiagramLayouts: (layouts: Record<string, DiagramLayout>) => void;
-    setNodeLayout: (diagramId: string, nodeId: string, pos: { x: number; y: number; width?: number; height?: number; color?: string }) => void;
+    setNodeLayout: (diagramId: string, nodeId: string, pos: { x: number; y: number; width?: number; height?: number; color?: string; opacity?: number }) => void;
 
     // ─── Diagram parse errors (per diagramId) ─────────────────────────
     diagramParseErrors: Record<string, string[]>;

@@ -12,7 +12,7 @@ import {
     distributePorts, isPortElement, INTERCONNECTION_PORT_SIZE,
     classifyIbdFlow, PORT_DIR_COLORS, IBD_FLOW_COLORS,
     buildPortOwnership, projectPortForDisplay, declaredPortRole,
-    ibdLabelWidth, applyPortOrder, type PortSide,
+    ibdLabelWidth, applyPortOrder, portIdFromHandle, INNER_HANDLE_SUFFIX, summarizeConnectors, type PortSide,
 } from '../interconnection-view';
 import { compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
@@ -64,6 +64,20 @@ describe('isPortElement', () => {
     });
 });
 
+describe('connection density summary', () => {
+    it('bundles repeated projected endpoint pairs and preserves distinct pairs', () => {
+        const relationships = [
+            { id: 'r1', type: 'exchangesWith', sourceId: 'p1', targetId: 'p2', sourceEnd: '', targetEnd: '', file: '' },
+            { id: 'r2', type: 'exchangesWith', sourceId: 'p3', targetId: 'p4', sourceEnd: '', targetEnd: '', file: '' },
+            { id: 'r3', type: 'exchangesWith', sourceId: 'p3', targetId: 'other', sourceEnd: '', targetEnd: '', file: '' },
+        ];
+        const owners: Record<string, string> = { p1: 'a', p3: 'a', p2: 'b', p4: 'b' };
+        const summary = summarizeConnectors(relationships, id => owners[id] ?? id);
+        expect(summary).toHaveLength(2);
+        expect(summary.find(rel => rel.sourceId === 'p1')?.attributes?.bundleCount).toBe('2');
+    });
+});
+
 describe('partitionChildren', () => {
     const opts = (connected: string[], containers: string[], ported: string[]) => ({
         isConnected: (id: string) => connected.includes(id),
@@ -91,6 +105,7 @@ describe('partitionChildren', () => {
     });
 });
 
+
 describe('compactnessScore', () => {
     it('rejects equally sized horizontal and vertical strips', () => {
         const balanced = compactnessScore(600, 500);
@@ -105,8 +120,8 @@ describe('compactnessScore', () => {
 
 describe('ibdLabelWidth', () => {
     it('does not allow long engineering names to stretch a part card', () => {
-        expect(ibdLabelWidth('A')).toBe(132);
-        expect(ibdLabelWidth('Part With An Extremely Long Formal Engineering Name That Must Truncate')).toBe(216);
+        expect(ibdLabelWidth('A')).toBe(96);
+        expect(ibdLabelWidth('Part With An Extremely Long Formal Engineering Name That Must Truncate')).toBe(180);
     });
 });
 
@@ -570,5 +585,27 @@ describe('distributePorts (no-overlap invariant)', () => {
         const c2 = pos.get('in2')!.y + size / 2;
         const groupBottom = c1 + 2 * 20; // two nested rows below in1
         expect(c2).toBeGreaterThanOrEqual(groupBottom + 26 - 0.001);
+    });
+});
+
+describe('portIdFromHandle', () => {
+    it('recovers the port element id from an outer-face handle', () => {
+        expect(portIdFromHandle('portGpcaSwOut')).toBe('portGpcaSwOut');
+    });
+
+    it('recovers the port element id from an inner-face handle', () => {
+        expect(portIdFromHandle(`portSensorIn${INNER_HANDLE_SUFFIX}`)).toBe('portSensorIn');
+    });
+
+    it('returns undefined for a part box face, which is not an element', () => {
+        for (const face of ['left', 'right', 'top', 'bottom']) {
+            expect(portIdFromHandle(face)).toBeUndefined();
+        }
+    });
+
+    it('returns undefined when there is no handle', () => {
+        expect(portIdFromHandle(null)).toBeUndefined();
+        expect(portIdFromHandle(undefined)).toBeUndefined();
+        expect(portIdFromHandle('')).toBeUndefined();
     });
 });

@@ -83,10 +83,63 @@ export function collectActionFlowActions(
 }
 
 /**
+ * Which rendered steps each expanded composite is responsible for, in flat mode.
+ *
+ * Flat expansion splices a composite out and lets its steps join the parent
+ * succession inline. That left an expanded block with no representation on the
+ * canvas — and so no way to collapse that one block again, because the `−`
+ * button lives on the block. The composite is drawn back in as a boundary around
+ * the steps it contributed, which is what this map identifies.
+ *
+ * Keyed by composite; the values are the *rendered* descendants, so a composite
+ * whose own children are themselves expanded reaches through to the leaves that
+ * actually reached the canvas.
+ */
+export function flatExpandedGroups(
+    model: MemoModelDTO,
+    viewpointFilter?: (el: MemoElement) => boolean,
+    expandedActionIds: ReadonlySet<string> = new Set(),
+    focusActionId?: string,
+): Map<string, string[]> {
+    if (expandedActionIds.size === 0) return new Map();
+    const rendered = new Set(
+        collectActionFlowActions(model, viewpointFilter, expandedActionIds, focusActionId)
+            .map(action => action.id));
+    const all = Object.values(model.elements);
+    const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
+    const childrenOf = new Map<string, MemoElement[]>();
+    for (const el of visible) {
+        if (!el.parentAction) continue;
+        if (!childrenOf.has(el.parentAction)) childrenOf.set(el.parentAction, []);
+        childrenOf.get(el.parentAction)!.push(el);
+    }
+
+    const groups = new Map<string, string[]>();
+    const descendantsRendered = (id: string, seen: Set<string>): string[] => {
+        const out: string[] = [];
+        for (const child of childrenOf.get(id) ?? []) {
+            if (seen.has(child.id)) continue;
+            seen.add(child.id);
+            if (rendered.has(child.id)) out.push(child.id);
+            else out.push(...descendantsRendered(child.id, seen));
+        }
+        return out;
+    };
+    for (const compositeId of expandedActionIds) {
+        // An expanded composite that is itself still folded away inside another
+        // collapsed one contributes nothing to draw around.
+        if (rendered.has(compositeId)) continue;
+        const members = descendantsRendered(compositeId, new Set([compositeId]));
+        if (members.length > 0) groups.set(compositeId, members);
+    }
+    return groups;
+}
+
+/**
  * How a composite action reveals its steps.
  *
- * `flat` — the composite is replaced by its steps, which join the parent flow
- * inline (the original Action Flow behaviour).
+ * `flat` — the composite's steps join the parent flow inline, with the composite
+ * retained as a boundary around them so it stays collapsible.
  * `nested` — the composite stays on the canvas as a frame and its steps are
  * drawn inside it, the way a state machine draws substates.
  */
@@ -290,6 +343,10 @@ const ALLOC_BADGE_HEIGHT = 20;
 const LANE_PADDING = 36;
 const LANE_GAP = 16;
 const LANE_LABEL_WIDTH = 120;
+/** Breathing room between a retained composite's boundary and its steps. */
+const GROUP_PADDING = 18;
+/** Height reserved above the steps for the boundary's name and controls. */
+const GROUP_HEADER = 40;
 const LANE_LABEL_HEIGHT = 32;
 
 const CONTROL_BAR_LONG = 64;
@@ -705,8 +762,64 @@ export async function computeActionFlowViewLayout(
         }
     }
 
+    // ── Retained boundaries for flat-mode expanded composites ──
+    // Derived from the steps' final positions rather than laid out by ELK: a
+    // swimlane pass rewrites absolute positions, so a real container and a lane
+    // band cannot describe the same canvas. A boundary measured after banding
+    // composes with either. It is drawn behind the steps and is not selectable,
+    // so it reads as context while its header keeps the collapse control.
+    const groupNodes: Node[] = [];
+    if (nesting !== 'nested') {
+        const groups = flatExpandedGroups(
+            model, options?.viewpointFilter, options?.expandedActionIds, options?.focusActionId);
+        for (const [compositeId, memberIds] of groups) {
+            const composite = model.elements[compositeId];
+            const boxes = memberIds
+                .map(id => positions.get(id))
+                .filter((box): box is NonNullable<typeof box> => Boolean(box));
+            if (!composite || boxes.length === 0) continue;
+            const minX = Math.min(...boxes.map(b => b.x));
+            const minY = Math.min(...boxes.map(b => b.y));
+            const maxX = Math.max(...boxes.map(b => b.x + b.width));
+            const maxY = Math.max(...boxes.map(b => b.y + b.height));
+            const data: ActionFlowNodeData = {
+                element: composite,
+                label: composite.name,
+                nodeType: 'action',
+                laneColor: '#9CA3AF',
+                layerColor: LAYER_COLORS[composite.layer] || '#FF6B6B',
+                inPorts: [], outPorts: [],
+                hasChildren: true,
+                isExpanded: true,
+                isFrame: true,
+                onToggleExpand: options?.onToggleAction
+                    ? () => options.onToggleAction!(compositeId)
+                    : undefined,
+                onDrillIn: options?.onDrillInAction
+                    ? () => options.onDrillInAction!(compositeId)
+                    : undefined,
+                flowDirection: direction,
+            };
+            groupNodes.push({
+                id: `__group_${compositeId}`,
+                type: 'actionFlowNode',
+                position: { x: minX - GROUP_PADDING, y: minY - GROUP_HEADER },
+                style: {
+                    width: (maxX - minX) + GROUP_PADDING * 2,
+                    height: (maxY - minY) + GROUP_HEADER + GROUP_PADDING,
+                },
+                draggable: false,
+                selectable: false,
+                data: data as unknown as Record<string, unknown>,
+            });
+        }
+    }
+
     // ── ReactFlow nodes ──
-    const nodes: Node[] = [...laneNodes];
+    // Lanes, then retained boundaries, then the steps themselves: nodes at equal
+    // z paint in array order, so this is what puts a step above its boundary and
+    // a boundary above its lane band.
+    const nodes: Node[] = [...laneNodes, ...groupNodes];
     /** ReactFlow parenting for a node drawn inside a composite frame. */
     const parenting = (id: string) => {
         const frameId = frameOfNode.get(id);

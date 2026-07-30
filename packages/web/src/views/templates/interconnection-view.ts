@@ -24,7 +24,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Node, Edge } from '@xyflow/react';
-import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import {
@@ -40,6 +40,24 @@ import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree'
  * faces into the owner (inner). Shared with InterconnectionNode.
  */
 export const INNER_HANDLE_SUFFIX = '__inner';
+
+/**
+ * The port element a connection handle denotes, or undefined when the handle is
+ * one of a part box's own faces.
+ *
+ * A port is a handle on its owner's box rather than a node of its own, so a
+ * connector the user draws between two ports arrives carrying only the two owner
+ * node ids. Recovering the port from the handle id is what keeps the written
+ * relationship saying what the drawing says. The generic box faces
+ * ('left', 'right', 'top', 'bottom') are not elements and yield undefined.
+ */
+export function portIdFromHandle(handleId: string | null | undefined): string | undefined {
+    if (!handleId) return undefined;
+    if (['left', 'right', 'top', 'bottom'].includes(handleId)) return undefined;
+    return handleId.endsWith(INNER_HANDLE_SUFFIX)
+        ? handleId.slice(0, -INNER_HANDLE_SUFFIX.length)
+        : handleId;
+}
 
 // ─── Colour coding (shared with the node renderer + legend) ────────────────────
 
@@ -118,27 +136,27 @@ export const INTERCONNECTION_PORT_SIZE = PORT_SIZE;
 export const NESTED_PORT_SIZE = PORT_SIZE;
 const NESTED_PITCH = 30; // centre-to-centre spacing parent port → nested ports
 
-const HEADER_BAND = 70;   // two-line container title + separation
-const LEAF_HEADER = 62;   // supports a two-line engineering name
-const PAD_BOTTOM = 18;
+const HEADER_BAND = 48;   // compact container title + separation
+const LEAF_HEADER = 44;   // one compact header; long names truncate with a tooltip
+const PAD_BOTTOM = 12;
 const SIDE_MIN = 14;      // inner padding on a side with no boundary ports
-const SIDE_GUTTER = 128;  // opposing port labels need independent readable lanes
-const PORT_PITCH = 38;    // minimum port centre-to-centre spacing on one side
-const ORPHAN_GAP = 18;    // spacing inside the orphan grid
+const SIDE_GUTTER = 92;   // room for a port glyph and its short label
+const PORT_PITCH = 30;    // minimum port centre-to-centre spacing on one side
+const ORPHAN_GAP = 14;    // spacing inside the orphan grid
 const ROOT_GAP = 90;      // fallback spacing between disconnected roots
 
-const LEAF_MIN_W = 184;
-// Tall enough that the geometric centreline clears the title band.
-// This lets aligned components connect with genuinely straight port runs.
-const LEAF_MIN_H = 168;
+// IBD cards are content-sized, not uniform tiles. A port or a second title
+// line grows its owner; an unported leaf remains a compact, movable card.
+const LEAF_MIN_W = 112;
+const LEAF_MIN_H = 72;
 
 /** Rough text width for sizing (kept in step with the node's font sizes). */
 const textWidth = (s: string, px = 7.2) => s.length * px + 20;
 
 /** Stable card width contribution: labels truncate instead of stretching IBDs. */
 export const ibdLabelWidth = (name: string): number => Math.min(
-    Math.max(textWidth(name, 7.1), 132),
-    216,
+    Math.max(textWidth(name, 7.1), 96),
+    180,
 );
 
 // ─── Pure derivations (unit-tested; ELK layout itself needs the browser) ──────
@@ -197,6 +215,12 @@ export function partitionChildren(
     return { flowKids: kids.filter(k => !orphanSet.has(k)), orphanKids };
 }
 
+/**
+ * Every part that participates in at least one connector, including the
+ * containers that own a connected descendant. This lets an IBD call out a
+ * structural block that has no modeled interaction without falsely warning on
+ * an assembly whose child carries the actual port connection.
+ */
 // ─── Port ownership & display projection ─────────────────────────────────────
 
 export interface PortOwnership {
@@ -364,6 +388,8 @@ export interface InterconnectionOptions {
     /** Parts whose descendants are hidden while the boundary remains visible. */
     collapsedNodes?: ReadonlySet<string>;
     onToggleCollapse?: (id: string) => void;
+    /** Re-root the diagram on one part, for browsing the hierarchy downward. */
+    onDrillIn?: (id: string) => void;
     /** Drill-down: render only this part's own IBD as the context frame. */
     focusId?: string;
     /** Port visibility: 'all' (nested + top ports, default), 'ports' (top-level
@@ -373,6 +399,29 @@ export interface InterconnectionOptions {
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number) => void;
     layoutProviderId?: string;
+    /** Deliberate density control: bundle repeated rendered endpoint pairs,
+     * show every connector, or suppress wiring while inspecting structure. */
+    connectionDisplay?: 'summary' | 'all' | 'none';
+}
+
+/** Bundle repeated connectors after endpoint projection. The representative
+ * keeps one real connector's ports and carries a count for honest labelling. */
+export function summarizeConnectors(
+    connectors: MemoRelationship[],
+    liftEndpoint: (id: string) => string,
+): MemoRelationship[] {
+    return [...connectors.reduce((groups, rel) => {
+        const key = `${liftEndpoint(rel.sourceId)}\u0000${liftEndpoint(rel.targetId)}`;
+        const current = groups.get(key);
+        if (!current) groups.set(key, { rel, count: 1 });
+        else current.count++;
+        return groups;
+    }, new Map<string, { rel: MemoRelationship; count: number }>()).values()]
+        .map(({ rel, count }) => count === 1 ? rel : ({
+            ...rel,
+            id: `bundle-${rel.id}`,
+            attributes: { ...rel.attributes, bundleCount: String(count) },
+        }));
 }
 
 // ─── Layout result per part ────────────────────────────────────────────────────
@@ -456,16 +505,28 @@ export async function computeInterconnectionLayout(
         ? new Set(options.relationshipTypes.map(t => t.toLowerCase()))
         : undefined;
     const endpointVisible = (id: string) => portEls.has(id) || partVisible(id);
-    const connectors = model.relationships.filter(rel =>
+    const rawConnectors = model.relationships.filter(rel =>
         !COMPOSITION_REL_TYPES.has(rel.type)
         && (!declaredRelTypes || declaredRelTypes.has(rel.type.toLowerCase()))
         && endpointVisible(rel.sourceId) && endpointVisible(rel.targetId)
         && rel.sourceId !== rel.targetId
     );
+    /** The part box a connector endpoint anchors to (port → its owner). */
+    const liftToPart = (id: string): string => portOwner.get(id) ?? id;
+    const connectionDisplay = options?.connectionDisplay ?? 'summary';
+    const focusedBoundaryPorts = new Set(
+        [...portOwner].filter(([, owner]) => owner === options?.focusId).map(([portId]) => portId),
+    );
+    const summaryConnectors = focusedBoundaryPorts.size > 0
+        ? rawConnectors.filter(rel => focusedBoundaryPorts.has(rel.sourceId) || focusedBoundaryPorts.has(rel.targetId))
+        : rawConnectors;
+    const connectors = connectionDisplay === 'none' ? [] : connectionDisplay === 'all'
+        ? rawConnectors
+        : summarizeConnectors(summaryConnectors, liftToPart);
     // Render only ports that participate in the visible topology. A connected
     // nested port keeps its ancestor proxy port visible as the group boundary.
     const connectedPortIds = new Set<string>();
-    for (const rel of connectors) {
+    for (const rel of rawConnectors) {
         for (const endpoint of [rel.sourceId, rel.targetId]) {
             if (!portEls.has(endpoint)) continue;
             let current: string | undefined = endpoint;
@@ -478,11 +539,8 @@ export async function computeInterconnectionLayout(
     for (const [owner, ids] of portsByOwner) {
         portsByOwner.set(owner, ids.filter(id => connectedPortIds.has(id)));
     }
-    const implicitOutParts = new Set(connectors.filter(r => partVisible(r.sourceId)).map(r => r.sourceId));
-    const implicitInParts = new Set(connectors.filter(r => partVisible(r.targetId)).map(r => r.targetId));
-
-    /** The part box a connector endpoint anchors to (port → its owner). */
-    const liftToPart = (id: string): string => portOwner.get(id) ?? id;
+    const implicitOutParts = new Set(rawConnectors.filter(r => partVisible(r.sourceId)).map(r => r.sourceId));
+    const implicitInParts = new Set(rawConnectors.filter(r => partVisible(r.targetId)).map(r => r.targetId));
 
     /** part id → its composition parent (within the visible tree) */
     const parentOf = new Map<string, string>();
@@ -538,10 +596,10 @@ export async function computeInterconnectionLayout(
         for (const p of ports) {
             perSide[portSideOf(p)] += PORT_PITCH + (portWeight(p) - 1) * NESTED_PITCH;
         }
-        const bodyH = Math.max(perSide.left, perSide.right, 12);
-        const height = Math.max(LEAF_HEADER + bodyH + 10, LEAF_MIN_H);
+        const bodyH = Math.max(perSide.left, perSide.right, 0);
+        const height = Math.max(LEAF_HEADER + bodyH + 8, LEAF_MIN_H);
         const g = sideGutters(ports);
-        const contentW = Math.max(labelWidth(el), 118);
+        const contentW = labelWidth(el);
         const width = Math.max(g.left + contentW + g.right, LEAF_MIN_W);
         const portPos = distributePorts(ports, {
             width, bodyTop: LEAF_HEADER, bodyBottom: height - PAD_BOTTOM / 2,
@@ -898,6 +956,10 @@ export async function computeInterconnectionLayout(
                 onToggleCollapse: hasChildren && options?.onToggleCollapse
                     ? () => options.onToggleCollapse!(partId)
                     : undefined,
+                // The frame is the diagram's root; drilling into it is a no-op.
+                onDrillIn: hasChildren && !!parentId && options?.onDrillIn
+                    ? () => options.onDrillIn!(partId)
+                    : undefined,
                 ports: portInfoByOwner.get(partId) ?? [],
                 implicitIn: showPorts && implicitInParts.has(partId),
                 implicitOut: showPorts && implicitOutParts.has(partId),
@@ -954,7 +1016,8 @@ export async function computeInterconnectionLayout(
         const flowColor = IBD_FLOW_COLORS[flowKind];
         // Prefer the transported item as the label; the ubiquitous unlabelled
         // exchange edges stay clean.
-        const label = rel.flowItem
+        const bundleCount = Number(rel.attributes?.bundleCount ?? 0);
+        const label = bundleCount > 1 ? `${bundleCount} connections` : rel.flowItem
             || (rel.type.toLowerCase() === 'exchangeswith' ? undefined : rel.type);
         // Port endpoints anchor to the port's inner/outer face; a part endpoint
         // anchors to its right (source) / left (target) side so the connector

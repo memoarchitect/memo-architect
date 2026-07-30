@@ -1,27 +1,64 @@
-// ─── Diagram Elements Navigator ──────────────────────────────────────────────
-// Lists the actual elements included in the selected diagram, grouped by kind.
-// Selecting an entry drives the shared model selection and canvas highlight.
+// ─── Diagram Shapes + Elements Navigator ─────────────────────────────────────
+// Two sections. "Shapes" is the authoring palette: the kinds this view admits,
+// dragged onto the canvas to create an element (the canvas' onDrop reads the
+// `application/memo-kind` payload written here). "Diagram Elements" lists what
+// the view already contains; selecting an entry drives the shared model
+// selection and canvas highlight.
 
 import { useMemo, useState } from 'react';
 import type { MemoElement } from '@memoarchitect/tools/browser';
-import { useModelStore } from '../store/model-store';
+import { getRegistries, useModelStore } from '../store/model-store';
+import { usageConstruct } from '../authoring';
 import { LAYER_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';
+
+/** Drag payload the canvas' onDrop handler expects. */
+export const MEMO_KIND_MIME = 'application/memo-kind';
 
 interface DiagramPaletteProps {
     collapsed: boolean;
     onToggleCollapse: () => void;
     elementIds?: readonly string[];
-    /** Retained for call-site compatibility; contents are diagram elements. */
+    /**
+     * Kinds this view admits, already expanded through the ontology's
+     * specialization closure by the view deriver. These are exactly the kinds
+     * worth offering: a shape of any other kind would be created and then
+     * filtered straight back out of the view the user dropped it on.
+     */
     eligibleKinds?: Set<string>;
 }
 
-export function DiagramPalette({ collapsed, onToggleCollapse, elementIds = [] }: DiagramPaletteProps) {
+export function DiagramPalette({
+    collapsed, onToggleCollapse, elementIds = [], eligibleKinds,
+}: DiagramPaletteProps) {
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const inspectElement = useModelStore(s => s.inspectElement);
     const [search, setSearch] = useState('');
     const [collapsedKinds, setCollapsedKinds] = useState<Set<string>>(new Set());
+    const [shapesOpen, setShapesOpen] = useState(true);
+
+    /**
+     * The draggable shapes: every eligible kind that can actually be
+     * instantiated. Abstract kinds classify but are never instantiated, so
+     * offering one would produce a shape the model cannot hold.
+     */
+    const shapes = useMemo(() => {
+        if (!eligibleKinds?.size) return [];
+        const query = search.trim().toLowerCase();
+        return getRegistries(model).kinds
+            .filter(kind => eligibleKinds.has(kind.name) && !kind.isAbstract)
+            .filter(kind => !query
+                || kind.name.toLowerCase().includes(query)
+                || (kind.label ?? '').toLowerCase().includes(query))
+            .map(kind => ({
+                name: kind.name,
+                label: kind.label || kind.name,
+                layer: kind.layer ?? '',
+                construct: usageConstruct(kind.construct),
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }, [model, eligibleKinds, search]);
 
     const groups = useMemo(() => {
         if (!model) return [];
@@ -87,6 +124,58 @@ export function DiagramPalette({ collapsed, onToggleCollapse, elementIds = [] }:
             </div>
 
             <div className="flex-1 overflow-y-auto py-1">
+                {shapes.length > 0 && (
+                    <div style={{ borderBottom: '1px solid #E5E5E0', paddingBottom: 4, marginBottom: 4 }}>
+                        <button
+                            onClick={() => setShapesOpen(open => !open)}
+                            className="w-full flex items-center gap-1.5 px-2 py-1"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                            <span style={{ fontSize: 10, color: '#6B7280' }}>{shapesOpen ? '▼' : '▶'}</span>
+                            <span style={{ fontSize: 10, color: '#374151', fontWeight: 700, letterSpacing: '0.04em' }}>
+                                SHAPES
+                            </span>
+                            <span style={{ fontSize: 9, color: '#9CA3AF', marginLeft: 'auto' }}>{shapes.length}</span>
+                        </button>
+                        {shapesOpen && (
+                            <>
+                                <div className="px-3 pb-1" style={{ fontSize: 9, color: '#9CA3AF' }}>
+                                    Drag onto the canvas to create
+                                </div>
+                                {shapes.map(shape => {
+                                    const color = LAYER_COLORS[shape.layer] ?? '#6B7280';
+                                    return (
+                                        <div
+                                            key={shape.name}
+                                            draggable
+                                            onDragStart={event => {
+                                                event.dataTransfer.setData(MEMO_KIND_MIME, JSON.stringify({
+                                                    kind: shape.name,
+                                                    layer: shape.layer,
+                                                    construct: shape.construct,
+                                                }));
+                                                event.dataTransfer.effectAllowed = 'copy';
+                                            }}
+                                            title={`Drag to create a ${shape.label} (${shape.construct})`}
+                                            className="flex items-center gap-2 px-3 py-1.5"
+                                            style={{ cursor: 'grab', fontSize: FONT.xs, color: '#374151' }}
+                                        >
+                                            {/* The glyph previews the notation: a port is a small
+                                                square on a boundary, a part a filled card. */}
+                                            <span style={{
+                                                width: 12, height: 12, flexShrink: 0,
+                                                borderRadius: shape.construct === 'port' ? 2 : 3,
+                                                border: `2px solid ${color}`,
+                                                background: shape.construct === 'port' ? '#FFFFFF' : `${color}22`,
+                                            }} />
+                                            <span className="truncate flex-1">{shape.label}</span>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+                    </div>
+                )}
                 {groups.map(group => {
                     const isCollapsed = collapsedKinds.has(group.kind);
                     const color = LAYER_COLORS[group.elements[0]?.layer] ?? '#6B7280';

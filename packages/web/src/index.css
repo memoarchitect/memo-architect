@@ -146,3 +146,13 @@ body {
     opacity: 0 !important;
     pointer-events: none !important;
 }
+
+/* The outer face of a port is where a connector is drawn from, so it stays
+   interactive — but still invisible: the port square the user aims at is drawn
+   by the node itself, and revealing the handle over it only muddies the target.
+   The coincident source/target pair both show a crosshair, so hovering the
+   square cannot flicker between cursors the way the four anchors once did. */
+.react-flow__node:hover .react-flow__handle.ibd-port-connect,
+.react-flow__handle.ibd-port-connect {
+    opacity: 0 !important;
+}

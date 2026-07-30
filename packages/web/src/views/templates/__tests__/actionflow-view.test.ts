@@ -6,7 +6,7 @@ import {
     collectActionFlowActions, collectNestedActionFlowActions,
     actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
-    findFloatingActions,
+    findFloatingActions, flatExpandedGroups,
 } from '../actionflow-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -309,5 +309,66 @@ describe('floating actions', () => {
         }];
         const m = model([connected, other, floating], relationships);
         expect(findFloatingActions([connected, other, floating], m).map(action => action.id)).toEqual(['floating']);
+    });
+});
+
+describe('flatExpandedGroups', () => {
+    /**
+     * pipeline (view wrapper) > { sense, deliver } ; deliver > { compute, actuate }.
+     * With `deliver` expanded, flat mode splices it out and shows compute/actuate
+     * inline — so `deliver` needs a boundary drawn around exactly those two, or it
+     * has no `−` button and cannot be collapsed again.
+     */
+    const nested = () => model([
+        el('pipeline'),
+        el('sense', { parentAction: 'pipeline' }),
+        el('deliver', { parentAction: 'pipeline' }),
+        el('compute', { parentAction: 'deliver' }),
+        el('actuate', { parentAction: 'deliver' }),
+    ]);
+
+    it('is empty when nothing is expanded', () => {
+        expect(flatExpandedGroups(nested(), undefined, new Set()).size).toBe(0);
+    });
+
+    it('claims the steps an expanded composite contributed to the canvas', () => {
+        const groups = flatExpandedGroups(nested(), undefined, new Set(['deliver']));
+        expect([...groups.keys()]).toEqual(['deliver']);
+        expect(groups.get('deliver')!.sort()).toEqual(['actuate', 'compute']);
+    });
+
+    it('reaches through to the rendered leaves when a child is also expanded', () => {
+        const m = model([
+            el('pipeline'),
+            el('outer', { parentAction: 'pipeline' }),
+            el('inner', { parentAction: 'outer' }),
+            el('leaf', { parentAction: 'inner' }),
+        ]);
+        const groups = flatExpandedGroups(m, undefined, new Set(['outer', 'inner']));
+        // `inner` is spliced out too, so `outer` must claim the leaf that
+        // actually reached the canvas rather than the composite in between.
+        expect(groups.get('outer')).toEqual(['leaf']);
+        expect(groups.get('inner')).toEqual(['leaf']);
+    });
+
+    it('draws no boundary for a composite still folded inside a collapsed one', () => {
+        // `deliver` is expanded but `pipeline`'s steps are what render; if
+        // `deliver` itself is on the canvas as a card it carries its own button.
+        const groups = flatExpandedGroups(nested(), undefined, new Set(['pipeline']));
+        expect(groups.has('deliver')).toBe(false);
+    });
+
+    it('honours the viewpoint filter when resolving members', () => {
+        const groups = flatExpandedGroups(
+            nested(), el => el.id !== 'actuate', new Set(['deliver']));
+        expect(groups.get('deliver')).toEqual(['compute']);
+    });
+
+    it('terminates on a parentAction cycle', () => {
+        const m = model([
+            el('a', { parentAction: 'b' }),
+            el('b', { parentAction: 'a' }),
+        ]);
+        expect(() => flatExpandedGroups(m, undefined, new Set(['a', 'b']))).not.toThrow();
     });
 });

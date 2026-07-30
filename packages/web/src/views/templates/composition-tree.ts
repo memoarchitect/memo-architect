@@ -70,6 +70,30 @@ export function collectTreeIds(tree: CompositionTree): Set<string> {
     return ids;
 }
 
+/**
+ * Containers sitting at or below `minDepth`, where a root is depth 0.
+ *
+ * The IBD default-fold set. The frame stays open, while its immediate child
+ * containers start folded so the opening diagram is a readable system overview.
+ * The reader expands or drills into the one branch they need, instead of opening
+ * directly into every nested module and connector. Only containers are returned;
+ * folding a leaf means nothing.
+ */
+export function containersBelowDepth(tree: CompositionTree, minDepth: number): string[] {
+    const deep: string[] = [];
+    const visit = (id: string, depth: number, seen: Set<string>) => {
+        const kids = tree.childrenMap.get(id) ?? [];
+        if (kids.length > 0 && depth >= minDepth) deep.push(id);
+        for (const kid of kids) {
+            if (seen.has(kid)) continue;
+            seen.add(kid);
+            visit(kid, depth + 1, seen);
+        }
+    };
+    for (const rootId of tree.roots) visit(rootId, 0, new Set([rootId]));
+    return deep;
+}
+
 export interface SingleTreeIssue {
     rootIds: string[];
     disconnectedIds: string[];

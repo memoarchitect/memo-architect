@@ -33,6 +33,8 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     hasChildren?: boolean;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    /** Open this part's own internals as the diagram frame (nested browsing). */
+    onDrillIn?: () => void;
     /** Ports straddling this part's boundary */
     ports: PortInfo[];
     /** Visible proxy ports for relationships that target the part directly. */
@@ -42,6 +44,10 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     /** Content-derived lower bound emitted by the IBD template. */
     minWidth?: number;
     minHeight?: number;
+    /** Per-diagram fill override from the layout companion. */
+    bgColor?: string;
+    /** Per-diagram fill opacity 0..1 from the layout companion. */
+    fillOpacity?: number;
 }
 
 const SIDE_TO_POSITION: Record<PortSide, Position> = {
@@ -87,6 +93,21 @@ const handlePinStyle = (size: number): React.CSSProperties => ({
     // handles otherwise alternate their crosshair cursor with the port's move
     // cursor as subpixel hit testing changes during hover.
     pointerEvents: 'none',
+});
+
+/**
+ * The outer face of a port is where connectors are drawn from, so that handle
+ * has to take pointer events — but the port also drags vertically to reposition
+ * it. The two are separated by area rather than by modifier: this handle covers
+ * the port square exactly and sits above it, while the larger invisible hit
+ * target underneath keeps the surrounding ring for the move gesture. Draw from
+ * the square, slide the port by its ring.
+ */
+const connectableHandleStyle = (size: number): React.CSSProperties => ({
+    ...handlePinStyle(size),
+    pointerEvents: 'auto',
+    cursor: 'crosshair',
+    zIndex: 12,
 });
 
 function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) => void }) {
@@ -192,16 +213,24 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
             }}>
                 {portGlyph(port.direction, port.side)}
                 <span style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
-                {/* Anchor-only handles. The hit target owns all interaction. */}
+                {/* The outer face is connectable so a connector can be drawn
+                    port-to-port; the inner face stays an anchor for routing a
+                    pass-through connector to its owner's internals. */}
                 {([
-                    { suffix: '', pos: SIDE_TO_POSITION[port.side] },
-                    { suffix: INNER_HANDLE_SUFFIX, pos: SIDE_TO_POSITION[OPPOSITE_SIDE[port.side]] },
-                ] as const).flatMap(h => ([
-                    <Handle key={`s${h.suffix}`} className="ibd-port-anchor" type="source" id={`${port.id}${h.suffix}`} position={h.pos}
-                        style={handlePinStyle(size)} isConnectable={false} />,
-                    <Handle key={`t${h.suffix}`} className="ibd-port-anchor" type="target" id={`${port.id}${h.suffix}`} position={h.pos}
-                        style={handlePinStyle(size)} isConnectable={false} />,
-                ]))}
+                    { suffix: '', pos: SIDE_TO_POSITION[port.side], connectable: true },
+                    { suffix: INNER_HANDLE_SUFFIX, pos: SIDE_TO_POSITION[OPPOSITE_SIDE[port.side]], connectable: false },
+                ] as const).flatMap(h => {
+                    // The anchor class carries a `pointer-events: none` rule, so
+                    // the connectable face must not wear it.
+                    const cls = h.connectable ? 'ibd-port-connect' : 'ibd-port-anchor';
+                    const style = h.connectable ? connectableHandleStyle(size) : handlePinStyle(size);
+                    return [
+                        <Handle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
+                            style={style} isConnectable={h.connectable} />,
+                        <Handle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
+                            style={style} isConnectable={h.connectable} />,
+                    ];
+                })}
             </div>
         </div>
     );
@@ -258,6 +287,39 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false }: {
     );
 }
 
+/**
+ * Descend into a part's own internals, making it the diagram frame.
+ *
+ * Collapsing folds a part away to read around it; drilling in re-roots the
+ * diagram on it to read inside it. They are different questions, so the part
+ * carries both controls — the same pairing the action-flow and state nodes use,
+ * and the reason this button exists: the IBD had the drill-down behaviour but
+ * offered it only on double-click, where nobody finds it.
+ */
+function DrillInButton({ label, onDrillIn, color, onColor }: {
+    label: string; onDrillIn: () => void; color: string; onColor?: boolean;
+}) {
+    return (
+        <button
+            aria-label={`Drill into ${label}`}
+            title={`Open ${label} as its own internal block diagram`}
+            className="nodrag"
+            onClick={event => { event.stopPropagation(); onDrillIn(); }}
+            onDoubleClick={event => event.stopPropagation()}
+            style={{
+                width: 18, height: 18, padding: 0, borderRadius: 3, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: onColor ? '1px solid rgba(255,255,255,0.7)' : `1px solid ${color}88`,
+                background: onColor ? 'rgba(255,255,255,0.18)' : '#FFFFFF',
+                color: onColor ? '#FFFFFF' : color,
+                fontSize: 11, lineHeight: 1, cursor: 'pointer', fontWeight: 700,
+            }}
+        >
+            ↳
+        </button>
+    );
+}
+
 function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
     label: string; isCollapsed?: boolean; onToggle: () => void; color: string; onColor?: boolean;
 }) {
@@ -282,7 +344,8 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, hasChildren, isCollapsed, onToggleCollapse, minWidth, minHeight,
+        onPortMove, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        bgColor, fillOpacity,
     } = d;
     const [hovered, setHovered] = useState(false);
 
@@ -303,7 +366,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 boxSizing: 'border-box',
                 // Frame: thin border, no fill — it is the diagram boundary.
                 // Container part: faint layer tint. Leaf part: white card.
-                background: '#FFFFFF',
+                // A per-diagram fill override wins over all three: dimming or
+                // tinting a group of parts is how a reviewer marks up a board,
+                // and it must not be overridden by the notation defaults.
+                background: bgColor || '#FFFFFF',
+                opacity: fillOpacity ?? 1,
                 border: isFrame
                     ? '1.5px solid #94A3B8'
                     : `1px solid ${hovered ? color + '9A' : '#CBD5E1'}`,
@@ -349,6 +416,8 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 }}>
                     <span style={{ padding: '2px 6px', borderRadius: 4, background: color, color: '#FFFFFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em' }}>IBD</span>
                     <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame />
+                    {/* The frame is already the diagram's root, so it offers no
+                        drill-in — descending into it would change nothing. */}
                     {hasChildren && onToggleCollapse && (
                         <CollapseButton label={label} isCollapsed={isCollapsed} onToggle={onToggleCollapse} color={color} />
                     )}
@@ -370,6 +439,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         nameColor="#0F172A"
                         typeColor={isContainer ? color : '#64748B'}
                     />
+                    {/* Both controls sit on a part that owns parts, folded or
+                        not: a collapsed part is still worth descending into. */}
+                    {hasChildren && onDrillIn && (
+                        <DrillInButton label={label} onDrillIn={onDrillIn} color={color} />
+                    )}
                     {hasChildren && onToggleCollapse && (
                         <CollapseButton label={label} isCollapsed={isCollapsed} onToggle={onToggleCollapse} color={color} />
                     )}

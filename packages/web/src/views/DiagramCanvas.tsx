@@ -18,12 +18,13 @@ import {
 import {
     ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
     useNodesState, useEdgesState, useReactFlow, addEdge,
-    applyNodeChanges,
+    applyNodeChanges, NodeResizer,
     ConnectionMode,
     type Node as RFNode,
     type Edge as RFEdge,
     type Connection,
     type NodeChange,
+    type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -35,6 +36,12 @@ import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { sysmlIdentifier } from '../authoring';
+import { SelectionToolbar } from './SelectionToolbar';
+import {
+    alignBoxes, matchSize, distributeBoxes,
+    type ArrangeBox, type ArrangeResult, type AlignEdge, type SizeMatch, type DistributeAxis,
+} from './arrange';
 import { FONT, COLOR } from '../styles/tokens';
 import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges } from './layout';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
@@ -42,8 +49,18 @@ import {
     resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
-import { validateSingleTree, COMPOSITION_REL_TYPES } from './templates/composition-tree';
-import { PORT_DIR_COLORS, IBD_FLOW_COLORS, type PortDisplay } from './templates/interconnection-view';
+import {
+    validateSingleTree, buildCompositionTree, containersBelowDepth, COMPOSITION_REL_TYPES,
+} from './templates/composition-tree';
+
+/**
+ * The nesting level from which an IBD opens folded. The frame (0) always shows
+ * its immediate parts (1), while those parts start folded. An IBD needs to
+ * open as a readable system overview; its detailed internal wiring belongs in
+ * an intentional expand/drill-in interaction, not in the first frame.
+ */
+const IBD_FOLD_DEPTH = 1;
+import { PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, type PortDisplay } from './templates/interconnection-view';
 import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
@@ -61,7 +78,7 @@ import { ContextBoundaryNode, ContextExternalNode, ContextSystemNode } from './C
 import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
-import { DiagramPalette } from './DiagramPalette';
+import { DiagramPalette, MEMO_KIND_MIME } from './DiagramPalette';
 import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
@@ -106,6 +123,53 @@ function boundedLayout<T>(promise: Promise<T>, label: string): Promise<T> {
 // ─── Typed aliases to avoid DOM Node collision ───────────────────────────────
 type FlowNode = RFNode<Record<string, RFAny>>;
 type FlowEdge = RFEdge<Record<string, RFAny>>;
+
+type AnnotationKind = 'note' | 'text' | 'constraint';
+
+function AnnotationNode({ data, selected }: NodeProps<FlowNode>) {
+    const kind = data.kind as AnnotationKind;
+    const note = kind === 'note';
+    const constraint = kind === 'constraint';
+    return (
+        <div style={{
+            position: 'relative',
+            width: '100%', height: '100%', padding: note ? '12px 14px' : constraint ? '10px 12px' : '4px',
+            background: note ? String(data.color ?? '#FEF3C7') : constraint ? '#FFFFFF' : 'transparent',
+            border: constraint ? '1.5px dashed #7C3AED' : note ? '1px solid #F59E0B' : '1px solid transparent',
+            borderRadius: note ? 3 : constraint ? 5 : 0,
+            boxShadow: note ? '0 2px 6px rgba(0,0,0,.12)' : 'none',
+            color: '#292524', fontSize: 12, lineHeight: 1.4,
+        }}>
+            <NodeResizer isVisible={selected} minWidth={100} minHeight={48} color="#2563EB" />
+            <button
+                className="nodrag"
+                aria-label="Delete annotation"
+                title="Delete annotation"
+                onPointerDown={event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    data.onDelete?.();
+                }}
+                onClick={event => { event.stopPropagation(); data.onDelete?.(); }}
+                style={{
+                    position: 'absolute', top: 3, right: 5, border: 0, background: 'transparent',
+                    color: '#64748B', cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                    pointerEvents: 'all', zIndex: 30,
+                }}
+            >×</button>
+            {constraint && <div style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', marginBottom: 4 }}>constraint</div>}
+            <div
+                contentEditable
+                suppressContentEditableWarning
+                className="nodrag"
+                style={{ outline: 'none', whiteSpace: 'pre-wrap', minHeight: 20 }}
+                onBlur={event => data.onTextChange?.(event.currentTarget.textContent ?? '')}
+            >
+                {String(data.text ?? '')}
+            </div>
+        </div>
+    );
+}
 
 // ─── Undo/redo command pattern ────────────────────────────────────────────────
 
@@ -472,6 +536,63 @@ function DiagramCanvasInner() {
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
     const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
+    const persistAnnotationText = useCallback((annotationId: string, text: string) => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const annotation = previous.annotations?.[annotationId];
+        if (!annotation) return;
+        const layout: DiagramLayout = {
+            ...previous,
+            annotations: { ...previous.annotations, [annotationId]: { ...annotation, text } },
+        };
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+        setNodes(current => current.map(node => node.id === annotationId
+            ? { ...node, data: { ...node.data, text } } : node));
+    }, [selectedDiagramId, mergeDiagramLayouts, setNodes]);
+
+    const deleteAnnotation = useCallback((annotationId: string) => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const annotations = { ...previous.annotations };
+        delete annotations[annotationId];
+        const layout: DiagramLayout = { ...previous, annotations };
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+        setNodes(current => current.filter(node => node.id !== annotationId));
+    }, [selectedDiagramId, mergeDiagramLayouts, setNodes]);
+
+    const annotationNodes = useCallback((layout?: DiagramLayout): FlowNode[] =>
+        Object.entries(layout?.annotations ?? {}).map(([id, annotation]) => ({
+            id,
+            type: 'annotationNode',
+            zIndex: 1000,
+            position: { x: annotation.x, y: annotation.y },
+            style: { width: annotation.width ?? 180, height: annotation.height ?? 92 },
+            data: {
+                kind: annotation.kind,
+                text: annotation.text,
+                color: annotation.color,
+                onTextChange: (text: string) => persistAnnotationText(id, text),
+                onDelete: () => deleteAnnotation(id),
+            },
+        })), [persistAnnotationText, deleteAnnotation]);
+
+    const addAnnotation = useCallback((kind: AnnotationKind) => {
+        if (!selectedDiagramId) return;
+        const id = `annotation-${Date.now().toString(36)}`;
+        const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        const text = kind === 'constraint' ? '{constraint}' : kind === 'note' ? 'Note' : 'Text';
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const annotation = { kind, x: position.x, y: position.y, width: 180, height: kind === 'text' ? 56 : 92, text };
+        const layout: DiagramLayout = {
+            ...previous,
+            annotations: { ...previous.annotations, [id]: annotation },
+        };
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+        setNodes(current => [...current, ...annotationNodes(layout).filter(node => node.id === id)]);
+    }, [selectedDiagramId, screenToFlowPosition, mergeDiagramLayouts, setNodes, annotationNodes]);
     const markManualLayout = useCallback(() => {
         if (!selectedDiagramId) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -493,7 +614,7 @@ function DiagramCanvasInner() {
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
             const viewport = getViewport();
             const layout: DiagramLayout = {
-                nodes: Object.fromEntries(nodes.map(node => [node.id, {
+                nodes: Object.fromEntries(nodes.filter(node => node.type !== 'annotationNode').map(node => [node.id, {
                     ...(previous.nodes[node.id] ?? {}),
                     x: node.position.x,
                     y: node.position.y,
@@ -518,6 +639,15 @@ function DiagramCanvasInner() {
                             targetPortId: edge.data?.targetPortId as string | undefined,
                         }
                         : {}),
+                }])),
+                annotations: Object.fromEntries(nodes.filter(node => node.type === 'annotationNode').map(node => [node.id, {
+                    kind: node.data.kind as AnnotationKind,
+                    text: String(node.data.text ?? ''),
+                    color: node.data.color as string | undefined,
+                    x: node.position.x,
+                    y: node.position.y,
+                    width: Number(node.width ?? node.style?.width ?? 180),
+                    height: Number(node.height ?? node.style?.height ?? 92),
                 }])),
                 canvas: {
                     ...previous.canvas,
@@ -595,6 +725,7 @@ function DiagramCanvasInner() {
     const [collapsedInterconnectionNodes, setCollapsedInterconnectionNodes] = useState<Set<string>>(new Set());
     const [focusedInterconnectionId, setFocusedInterconnectionId] = useState<string | null>(null);
     const [interconnectionPortDisplay, setInterconnectionPortDisplay] = useState<PortDisplay>('all');
+    const [interconnectionConnectionDisplay, setInterconnectionConnectionDisplay] = useState<'summary' | 'all' | 'none'>('summary');
     const [interconnectionLegendOpen, setInterconnectionLegendOpen] = useState(false);
     const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
@@ -653,8 +784,7 @@ function DiagramCanvasInner() {
         if (!model) return [] as string[];
         return [...new Set(
             model.relationships
-                .filter(r => ['composes', 'composedof', 'aggregation', 'decomposedby']
-                    .includes(r.type.toLowerCase()))
+                .filter(r => COMPOSITION_REL_TYPES.has(r.type))
                 .map(r => r.sourceId),
         )];
     }, [model]);
@@ -678,6 +808,7 @@ function DiagramCanvasInner() {
         // them here too would race it and leave the diagram fully expanded.
         setFocusedInterconnectionId(null);
         setInterconnectionPortDisplay('all');
+        setInterconnectionConnectionDisplay('summary');
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
@@ -685,32 +816,6 @@ function DiagramCanvasInner() {
         setFocusedStateId(null);
         positionCacheRef.current.clear();
     }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint]);
-
-    /**
-     * A diagram that nests opens collapsed. A deep hierarchy drawn at full
-     * depth is unreadable — GPCA's mode machine is four levels — so the reader
-     * expands the one branch they came to look at.
-     *
-     * The action-flow and tree views already start collapsed, because they
-     * track which nodes are *expanded*. The state-machine and IBD views track
-     * the inverse, so an empty set means fully open and they have to be seeded.
-     * Seeded once per diagram: after that the set belongs to the user, and
-     * "expand all" must not be undone on the next render.
-     */
-    const seededCollapseRef = useRef<string | null>(null);
-    useEffect(() => {
-        if (!model) return;
-        const key = `${selectedDiagramId ?? ''}|${viewKind ?? ''}`;
-        if (seededCollapseRef.current === key) return;
-        if (viewKind === 'statetransition') {
-            if (compositeStateIds.length === 0) return;
-            setCollapsedStateNodes(new Set(compositeStateIds));
-        } else if (viewKind === 'interconnection') {
-            if (interconnectionContainerIds.length === 0) return;
-            setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds));
-        }
-        seededCollapseRef.current = key;
-    }, [model, selectedDiagramId, viewKind, compositeStateIds, interconnectionContainerIds]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -729,6 +834,7 @@ function DiagramCanvasInner() {
         contextExternal: ContextExternalNode,
         contextBoundary: ContextBoundaryNode,
         diagramNode: DiagramInteractiveNode,
+        annotationNode: AnnotationNode,
         decisionNode: DecisionNode,
         forkNode: ForkNode,
         startEndNode: StartEndNode,
@@ -765,6 +871,59 @@ function DiagramCanvasInner() {
             return true;
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
+
+    /**
+     * IBD containers deep enough to fold on open.
+     *
+     * An IBD exists to show internal structure, but its opening frame must be
+     * legible. The frame's immediate parts stay visible as the system overview;
+     * each part's own internals start folded. Expanding or drilling into one
+     * part then gives that subsystem its own usable canvas instead of trying to
+     * render every nested module and connector at once.
+     *
+     * Depth is measured over the *visible* elements, not the whole model: a view
+     * that exposes only a subtree makes that subtree's own root the frame, and
+     * its children must count as level 1 regardless of how deep they sit
+     * globally. Depth 1 is the first detail level inside that visible frame.
+     */
+    const interconnectionDeepContainerIds = useMemo(() => {
+        if (!model || viewKind !== 'interconnection') return [] as string[];
+        const all = Object.values(model.elements);
+        const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
+        return containersBelowDepth(
+            buildCompositionTree(visible, model.relationships),
+            IBD_FOLD_DEPTH,
+        );
+    }, [model, viewKind, viewpointFilter]);
+
+    /**
+     * A diagram that nests deeply opens folded. A deep hierarchy drawn at full
+     * depth is unreadable — GPCA's mode machine is four levels — so the reader
+     * expands the one branch they came to look at.
+     *
+     * The action-flow and tree views already start collapsed, because they
+     * track which nodes are *expanded*. The state-machine and IBD views track
+     * the inverse, so an empty set means fully open and they have to be seeded.
+     * A state machine folds every composite; an IBD folds only what sits below
+     * its first level (see interconnectionDeepContainerIds).
+     * Seeded once per diagram: after that the set belongs to the user, and
+     * "expand all" must not be undone on the next render.
+     */
+    const seededCollapseRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!model) return;
+        const key = `${selectedDiagramId ?? ''}|${viewKind ?? ''}`;
+        if (seededCollapseRef.current === key) return;
+        if (viewKind === 'statetransition') {
+            if (compositeStateIds.length === 0) return;
+            setCollapsedStateNodes(new Set(compositeStateIds));
+        } else if (viewKind === 'interconnection') {
+            // An IBD with nothing deep to fold opens fully expanded, which is
+            // the correct default — so this seeds an empty set and is done.
+            setCollapsedInterconnectionNodes(new Set(interconnectionDeepContainerIds));
+        }
+        seededCollapseRef.current = key;
+    }, [model, selectedDiagramId, viewKind, compositeStateIds, interconnectionDeepContainerIds]);
 
     // BDD integrity: a block definition diagram must be one connected hierarchy,
     // not a forest of disconnected/floating elements (validateSingleTree).
@@ -827,6 +986,15 @@ function DiagramCanvasInner() {
     const drillIntoAction = useCallback((nodeId: string) => {
         setFocusedActionId(nodeId);
         setExpandedActionNodes(new Set());
+        inspectElement(null);
+    }, [inspectElement]);
+
+    const drillIntoInterconnection = useCallback((nodeId: string) => {
+        setFocusedInterconnectionId(nodeId);
+        // The part being descended into becomes the frame, so whatever was
+        // folded in the wider diagram says nothing about what should be folded
+        // here — start the new level fully open, as the other two views do.
+        setCollapsedInterconnectionNodes(new Set());
         inspectElement(null);
     }, [inspectElement]);
 
@@ -921,9 +1089,13 @@ function DiagramCanvasInner() {
                 position: { x: pos.x, y: pos.y },
                 ...(pos.width ? { width: pos.width } : {}),
                 ...(pos.height ? { height: pos.height } : {}),
+                ...(pos.width || pos.height
+                    ? { style: { ...n.style, ...(pos.width ? { width: pos.width } : {}), ...(pos.height ? { height: pos.height } : {}) } }
+                    : {}),
                 data: {
                     ...n.data,
                     bgColor: pos.color || undefined,
+                    ...(pos.opacity !== undefined ? { fillOpacity: pos.opacity } : {}),
                     ...(pos.ports ? {
                         ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string }> }).ports ?? [])
                             .map(port => ({ ...port, ...(pos.ports?.[port.id] ?? {}) })),
@@ -1020,9 +1192,10 @@ function DiagramCanvasInner() {
             const savedLayout = selectedDiagramId
                 ? useModelStore.getState().diagramLayouts[selectedDiagramId]
                 : undefined;
-            const positioned = savedLayout && Object.keys(savedLayout.nodes).length > 0
+            const positionedModel = savedLayout && Object.keys(savedLayout.nodes).length > 0
                 ? buildNodesFromSidecar(n, savedLayout)
                 : n;
+            const positioned = [...positionedModel, ...annotationNodes(savedLayout)];
             const preparedEdges = e.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const attachmentMatches = !savedEdge?.source || (
@@ -1111,9 +1284,11 @@ function DiagramCanvasInner() {
                     viewpointFilter,
                     relationshipTypes: selectedDiagram?.relationshipTypes,
                     collapsedNodes: collapsedInterconnectionNodes,
+                    onDrillIn: drillIntoInterconnection,
                     onToggleCollapse: toggleInterconnectionCollapse,
                     focusId: focusedInterconnectionId ?? undefined,
                     portDisplay: interconnectionPortDisplay,
+                    connectionDisplay: interconnectionConnectionDisplay,
                     onPortMove: moveInterconnectionPort,
                     layoutProviderId,
                 },
@@ -1167,10 +1342,11 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
-        buildNodesFromSidecar, applyInteractiveData, moveInterconnectionPort, moveEdgeRoute, inspectRelationship, getViewport]);
+        drillIntoInterconnection,
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, inspectRelationship, getViewport]);
 
     // Re-fit after layout
     useEffect(() => {
@@ -1284,7 +1460,7 @@ function DiagramCanvasInner() {
 
     const onDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
-        const data = e.dataTransfer.getData('application/memo-kind');
+        const data = e.dataTransfer.getData(MEMO_KIND_MIME);
         if (!data) return;
 
         try {
@@ -1320,8 +1496,13 @@ function DiagramCanvasInner() {
         const construct = quickCreate.construct ?? 'part';
         const layerColor = LAYER_COLORS[layer] ?? '#6B7280';
 
-        // Optimistic node
-        const tempId = `_new_${Date.now()}`;
+        // The id is the SysML usage name the element is written under, so it has
+        // to be a legal identifier and must not collide with one already in the
+        // model. It also has to be decided here rather than server-side: the
+        // optimistic node, the diagram's element list and the layout companion
+        // all key on it, and a server-assigned id would leave those three
+        // pointing at a node the rebuild then replaces.
+        const tempId = sysmlIdentifier(name, Object.keys(model?.elements ?? {}));
         const newNode: FlowNode = {
             id: tempId,
             type: 'diagramNode',
@@ -1339,8 +1520,10 @@ function DiagramCanvasInner() {
         };
         setNodes(prev => [...prev, newNode]);
 
-        // Save to model via WebSocket
-        sendElementCreate({ name, kind, construct, attributes: { _layer: layer } });
+        // Save to model via WebSocket. The id is required: the persistor keys its
+        // find-or-append on it and throws without one, which is why a dropped
+        // shape used to vanish on the next rebuild.
+        sendElementCreate({ id: tempId, name, kind, construct, layer, attributes: { _layer: layer } });
 
         // Add to diagram's element list
         const currentIds = selectedDiagram?.elementIds ?? [];
@@ -1374,15 +1557,36 @@ function DiagramCanvasInner() {
         if (!connectionState?.isValid) return;
     }, []);
 
+    /**
+     * The model element an endpoint of a drawn edge denotes.
+     *
+     * On an IBD a port is a handle on its owner's box, not a node of its own, so
+     * the node id alone would turn every port-to-port connector the user draws
+     * into a part-to-part one — the drawing would say something the model does
+     * not. The handle id *is* the port's element id (suffixed for the inner
+     * face), so it is preferred whenever it resolves to a real element; the node
+     * id remains the fallback for the plain part-to-part case and for the
+     * generic top/bottom/left/right handles, which are not elements.
+     */
+    const connectionEndpoint = useCallback((nodeId: string, handleId?: string | null) => {
+        const portId = portIdFromHandle(handleId);
+        const portEl = portId ? model?.elements[portId] : undefined;
+        return portEl ?? model?.elements[nodeId];
+    }, [model]);
+
     const onConnect = useCallback((connection: Connection) => {
-        const { source, target } = connection;
+        const { source, target, sourceHandle, targetHandle } = connection;
         if (!source || !target) return;
 
-        const sourceEl = model?.elements[source];
-        const targetEl = model?.elements[target];
+        const sourceEl = connectionEndpoint(source, sourceHandle);
+        const targetEl = connectionEndpoint(target, targetHandle);
         // Both endpoints must be model elements — legality is resolved from
         // their kinds, so an edge to something unknown offers no types.
         if (!sourceEl || !targetEl) return;
+        // A port drawn back onto its own owner (or onto itself) is not a
+        // relationship; the writer would reject it and the picker would offer
+        // types for a link that cannot exist.
+        if (sourceEl.id === targetEl.id) return;
 
         // Show relationship picker at approximate mouse position
         setRelPicker({
@@ -1391,7 +1595,7 @@ function DiagramCanvasInner() {
             sourceElement: sourceEl,
             targetElement: targetEl,
         });
-    }, [model]);
+    }, [connectionEndpoint]);
 
     /**
      * Persist the chosen relationship, then draw it.
@@ -1410,6 +1614,7 @@ function DiagramCanvasInner() {
             sourceId: choice.sourceId,
             targetId: choice.targetId,
             direction: choice.direction,
+            flowItem: choice.flowItem,
             selectedElementId: drawnFromId,
             diagramId: selectedDiagramId,
         });
@@ -1420,6 +1625,14 @@ function DiagramCanvasInner() {
             console.warn(`[MEMO] Relationship rejected: ${outcome.error}`);
             return;
         }
+
+        // A port endpoint is a handle on its owner's box, not a node, so an edge
+        // keyed on it would reference a node that does not exist. Those views
+        // wait for the rebuild, which re-derives the connector against the
+        // owning boxes and the correct port handles.
+        const endpointsAreNodes = nodesRef.current.some(n => n.id === choice.sourceId)
+            && nodesRef.current.some(n => n.id === choice.targetId);
+        if (!endpointsAreNodes) return;
 
         const color = REL_COLORS[choice.type] ?? '#6B7280';
         const newEdge: FlowEdge = {
@@ -1458,8 +1671,10 @@ function DiagramCanvasInner() {
         suppressInspectUntilRef.current = Date.now() + 250;
         setLayoutEditVersion(version => version + 1);
         if (!selectedDiagramId) return;
-        markManualLayout();
         const { x, y } = node.position;
+
+        if (node.type === 'annotationNode') return;
+        markManualLayout();
 
         const prevPos = positionCacheRef.current.get(node.id);
         positionCacheRef.current.set(node.id, { x, y });
@@ -1487,9 +1702,13 @@ function DiagramCanvasInner() {
         // mount and settle, and must not turn a freshly opened diagram into a
         // manual, dirty document. Only a change the user is actively dragging
         // counts as taking the diagram off automatic layout.
-        if (changes.some(change => change.type === 'position' && change.dragging)) markManualLayout();
+        const isAnnotationChange = (change: NodeChange<FlowNode>) =>
+            'id' in change && nodesRef.current.find(node => node.id === change.id)?.type === 'annotationNode';
+        if (changes.some(change => change.type === 'position' && change.dragging && !isAnnotationChange(change))) markManualLayout();
         if (changes.some(change => change.type === 'dimensions' && change.resizing)) {
-            markManualLayout();
+            if (changes.some(change => change.type === 'dimensions' && change.resizing && !isAnnotationChange(change))) {
+                markManualLayout();
+            }
             setLayoutEditVersion(version => version + 1);
         }
         scheduleGeometryUpdate(applyNodeChanges(changes, nodesRef.current));
@@ -1512,15 +1731,32 @@ function DiagramCanvasInner() {
         });
     }, []);
 
-    const onNodeClick = useCallback((_: RFAny, node: FlowNode) => {
+    const onNodeClick = useCallback((event: RFAny, node: FlowNode) => {
         if (Date.now() < suppressInspectUntilRef.current) return;
+        // React Flow owns additive selection. Updating the single inspector
+        // selection on a modified click would immediately collapse the canvas
+        // selection back to one node in the highlight-sync effect.
+        const additive = event?.shiftKey || event?.metaKey || event?.ctrlKey
+            || event?.nativeEvent?.shiftKey || event?.nativeEvent?.metaKey || event?.nativeEvent?.ctrlKey
+            || event?.getModifierState?.('Shift') || event?.getModifierState?.('Meta') || event?.getModifierState?.('Control');
+        if (additive) {
+            // React Flow also emits its controlled selection change for this
+            // pointer-up. Apply the additive union after that queued update so
+            // the library cannot immediately replace it with the clicked node.
+            window.setTimeout(() => setNodes(previous => previous.map(candidate => ({
+                ...candidate,
+                selected: candidate.selected || candidate.id === selectedElementId || candidate.id === node.id,
+            }))), 0);
+            return;
+        }
+        if (node.type === 'annotationNode') return;
         const laneTarget = node.type === 'actionFlowLane'
             ? (node.data as { inspectElementId?: string }).inspectElementId
             : undefined;
         if (!laneTarget && (node.id.startsWith('__') || node.id.includes('__start') || node.id.includes('__done'))) return;
         inspectElement(laneTarget ?? node.id);
         if (selectedDiagramId) setActiveView({ type: 'diagram', diagramId: selectedDiagramId });
-    }, [inspectElement, selectedDiagramId, setActiveView]);
+    }, [inspectElement, selectedDiagramId, setActiveView, selectedElementId, setNodes]);
 
     const onNodeDoubleClick = useCallback((event: RFAny, node: FlowNode) => {
         event?.stopPropagation?.();
@@ -1541,13 +1777,13 @@ function DiagramCanvasInner() {
         }
         if (viewKind === 'interconnection') {
             // Drill into a container part's own IBD; a leaf just inspects.
-            const isContainer = Boolean((node.data as { isContainer?: boolean }).isContainer);
-            if (!isContainer) { inspectElement(node.id); return; }
-            setFocusedInterconnectionId(node.id);
-            setCollapsedInterconnectionNodes(new Set());
-            inspectElement(null);
+            // A collapsed container still owns parts, so it can be descended
+            // into; only a genuine leaf falls through to inspection.
+            const data = node.data as { isContainer?: boolean; hasChildren?: boolean };
+            if (!data.isContainer && !data.hasChildren) { inspectElement(node.id); return; }
+            drillIntoInterconnection(node.id);
         }
-    }, [viewKind, model?.elements, inspectElement, drillIntoAction, drillIntoState]);
+    }, [viewKind, model?.elements, inspectElement, drillIntoAction, drillIntoState, drillIntoInterconnection]);
 
     const onPaneClick = useCallback(() => {
         selectElement(null);
@@ -1606,6 +1842,110 @@ function DiagramCanvasInner() {
             ? { ...n, data: { ...n.data, bgColor: color || undefined } } : n));
 
     }, [selectedDiagramId, diagramLayouts, setNodeLayout, setNodes]);
+
+    // ─── Selection arrange / style ─────────────────────────────────────────────
+    //
+    // Board-tool tidying over a multi-selection. All of it is presentation, so it
+    // is staged into `nodes` and persisted to the layout companion by the
+    // debounced effect above — nothing here reaches SysML.
+
+    const selectedNodes = useMemo(
+        // Lanes and retained composite boundaries are computed backdrops whose
+        // geometry follows their members; arranging one directly would be undone
+        // on the next render.
+        () => nodes.filter(node => node.selected
+            && node.type !== 'actionFlowLane'
+            && !node.id.startsWith('__')),
+        [nodes],
+    );
+
+    /** Current geometry of the selection, in the units arrange.ts expects. */
+    const selectionBoxes = useCallback((): ArrangeBox[] => selectedNodes.map(node => ({
+        id: node.id,
+        x: node.position.x,
+        y: node.position.y,
+        width: Number(node.width ?? node.measured?.width ?? node.style?.width ?? 180),
+        height: Number(node.height ?? node.measured?.height ?? node.style?.height ?? 96),
+    })), [selectedNodes]);
+
+    /** Stage a geometry change and let the persist effect carry it to disk. */
+    const applyArrange = useCallback((changes: ArrangeResult) => {
+        if (changes.size === 0) return;
+        markManualLayout();
+        setNodes(previous => previous.map(node => {
+            const next = changes.get(node.id);
+            if (!next) return node;
+            return {
+                ...node,
+                position: {
+                    x: next.x ?? node.position.x,
+                    y: next.y ?? node.position.y,
+                },
+                ...(next.width !== undefined ? { width: next.width } : {}),
+                ...(next.height !== undefined ? { height: next.height } : {}),
+                // Node components size themselves from style, so a matched size
+                // has to reach both the measured box and the rendered one.
+                ...(next.width !== undefined || next.height !== undefined
+                    ? {
+                        style: {
+                            ...node.style,
+                            ...(next.width !== undefined ? { width: next.width } : {}),
+                            ...(next.height !== undefined ? { height: next.height } : {}),
+                        },
+                    }
+                    : {}),
+            };
+        }));
+        setLayoutEditVersion(version => version + 1);
+    }, [markManualLayout, setNodes]);
+
+    const alignSelection = useCallback((edge: AlignEdge) => {
+        applyArrange(alignBoxes(selectionBoxes(), edge));
+    }, [applyArrange, selectionBoxes]);
+
+    const matchSelectionSize = useCallback((match: SizeMatch) => {
+        applyArrange(matchSize(selectionBoxes(), match));
+    }, [applyArrange, selectionBoxes]);
+
+    const distributeSelection = useCallback((axis: DistributeAxis) => {
+        applyArrange(distributeBoxes(selectionBoxes(), axis));
+    }, [applyArrange, selectionBoxes]);
+
+    /** Fill and opacity ride in the layout companion beside position. */
+    const styleSelection = useCallback((patch: { color?: string; opacity?: number }) => {
+        if (!selectedDiagramId || selectedNodes.length === 0) return;
+        markManualLayout();
+        const layouts = useModelStore.getState().diagramLayouts[selectedDiagramId];
+        for (const node of selectedNodes) {
+            const existing = layouts?.nodes[node.id] ?? { x: node.position.x, y: node.position.y };
+            setNodeLayout(selectedDiagramId, node.id, {
+                ...existing,
+                // An empty colour clears the override rather than storing "".
+                ...(patch.color !== undefined ? { color: patch.color || undefined } : {}),
+                ...(patch.opacity !== undefined ? { opacity: patch.opacity } : {}),
+            });
+        }
+        const ids = new Set(selectedNodes.map(node => node.id));
+        setNodes(previous => previous.map(node => ids.has(node.id)
+            ? {
+                ...node,
+                data: {
+                    ...node.data,
+                    ...(patch.color !== undefined ? { bgColor: patch.color || undefined } : {}),
+                    ...(patch.opacity !== undefined ? { fillOpacity: patch.opacity } : {}),
+                },
+            }
+            : node));
+        setLayoutEditVersion(version => version + 1);
+    }, [selectedDiagramId, selectedNodes, markManualLayout, setNodeLayout, setNodes]);
+
+    /** Shown on the slider: the shared value, or full when the selection differs. */
+    const selectionOpacity = useMemo(() => {
+        const values = selectedNodes.map(node =>
+            Number((node.data as { fillOpacity?: number }).fillOpacity ?? 1));
+        if (values.length === 0) return 1;
+        return values.every(value => value === values[0]) ? values[0] : 1;
+    }, [selectedNodes]);
 
     const handleRemoveFromDiagram = useCallback((nodeId: string) => {
         if (!selectedDiagramId || !selectedDiagram) return;
@@ -1717,11 +2057,17 @@ function DiagramCanvasInner() {
                 collapsed={paletteCollapsed}
                 onToggleCollapse={() => setPaletteCollapsed(!paletteCollapsed)}
                 elementIds={selectedDiagram?.elementIds}
-                eligibleKinds={selectedDiagram?.viewpointId && model?.viewpoints
-                    ? new Set(
-                        model.viewpoints.find(v => v.id === selectedDiagram.viewpointId)?.visibleKinds ?? []
-                    )
-                    : undefined}
+                // The view's own admitted kinds when it declares them — a
+                // viewpoint pools the kinds of every view beneath it, which on an
+                // IBD would offer state-machine shapes. The viewpoint union is
+                // the fallback for a view with no selection query of its own.
+                eligibleKinds={selectedDiagram?.elementKinds?.length
+                    ? new Set(selectedDiagram.elementKinds)
+                    : selectedDiagram?.viewpointId && model?.viewpoints
+                        ? new Set(
+                            model.viewpoints.find(v => v.id === selectedDiagram.viewpointId)?.visibleKinds ?? []
+                        )
+                        : undefined}
             />
 
             {/* ── Canvas ── */}
@@ -1929,6 +2275,16 @@ function DiagramCanvasInner() {
                                         { value: 'none', label: 'Off', title: 'Hide ports; connectors run part to part' },
                                     ]}
                                 />
+                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Connections</span>
+                                <Segmented
+                                    value={interconnectionConnectionDisplay}
+                                    onChange={setInterconnectionConnectionDisplay}
+                                    options={[
+                                        { value: 'summary', label: 'Summary', title: 'Show focused-subsystem boundary flows and bundle repeated rendered endpoint pairs' },
+                                        { value: 'all', label: 'All', title: 'Show every model connector' },
+                                        { value: 'none', label: 'Off', title: 'Hide connectors while inspecting block structure' },
+                                    ]}
+                                />
                                 {/* Drill-down breadcrumb (double-click a part to descend) */}
                                 <DrillBreadcrumb
                                     path={interconnectionPath}
@@ -2131,6 +2487,19 @@ function DiagramCanvasInner() {
                         {selectedDiagramId && viewKind === 'interconnection' && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
+                                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
+                                    {(['note', 'text', 'constraint'] as const).map(kind => (
+                                        <button
+                                            key={kind}
+                                            onClick={() => addAnnotation(kind)}
+                                            className="px-2 py-0.5 text-xs font-medium capitalize"
+                                            style={{ background: '#FFFFFF', color: '#475569', border: 0 }}
+                                            title={`Add an editable ${kind} annotation to this IBD`}
+                                        >
+                                            + {kind}
+                                        </button>
+                                    ))}
+                                </div>
                                 <button
                                     aria-pressed={flowAnimationEnabled}
                                     onClick={() => {
@@ -2386,6 +2755,20 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {/* Arrange bar: only a real multi-selection has anything to align
+                    against, so a single selected block keeps the canvas clear. */}
+                {selectedNodes.length >= 2 && (
+                    <SelectionToolbar
+                        count={selectedNodes.length}
+                        opacity={selectionOpacity}
+                        onAlign={alignSelection}
+                        onMatchSize={matchSelectionSize}
+                        onDistribute={distributeSelection}
+                        onFill={color => styleSelection({ color })}
+                        onOpacity={opacity => styleSelection({ opacity })}
+                    />
+                )}
+
                 {/* ELK layout progress bar (#44) */}
                 {isLayouting && (
                     <div
@@ -2431,7 +2814,14 @@ function DiagramCanvasInner() {
                     zoomOnScroll
                     panOnScroll
                     panOnScrollMode={'free' as any}
-                    selectionOnDrag={false}
+                    // Board-tool convention: dragging empty canvas rubber-bands a
+                    // selection, and panning moves to the middle and right buttons
+                    // (trackpad two-finger scroll still pans, via panOnScroll).
+                    // Shift or Cmd/Ctrl extends a selection one block at a time.
+                    selectionOnDrag
+                    panOnDrag={[1, 2]}
+                    multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
+                    selectionKeyCode={null}
                     proOptions={RF_PRO_OPTIONS}
                     style={RF_STYLE}
                 >
@@ -2466,6 +2856,7 @@ function DiagramCanvasInner() {
                     sourceElement={relPicker.sourceElement}
                     targetElement={relPicker.targetElement}
                     registries={registries}
+                    allowedTypes={selectedDiagram?.relationshipTypes}
                     onSelect={confirmRelationship}
                     onCancel={() => setRelPicker(null)}
                 />

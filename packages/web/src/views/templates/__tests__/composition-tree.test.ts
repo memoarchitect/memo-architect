@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
-    buildCompositionTree, collectTreeIds, pickCompartmentEntries,
+    buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree,
 } from '../composition-tree';
 
@@ -149,5 +149,60 @@ describe('pickCompartmentEntries', () => {
             },
         }));
         expect(entries.map(e => e.key)).toEqual(['a1', 'a2', 'a3', 'a4']);
+    });
+});
+
+describe('containersBelowDepth', () => {
+    /**
+     * The GPCA device interconnect shape: a device frame owning assemblies,
+     * each of which owns leaves. The assemblies fold in the overview, leaving
+     * the device frame and its immediate parts readable.
+     */
+    const gpcaTree = () => buildCompositionTree(
+        ['device', 'sensors', 'airSensor', 'doorSensor', 'sw', 'tlm', 'alarm', 'board']
+            .map(id => el(id)),
+        [
+            rel('composes', 'device', 'sensors'),
+            rel('composes', 'device', 'sw'),
+            rel('composes', 'device', 'board'),
+            rel('composes', 'sensors', 'airSensor'),
+            rel('composes', 'sensors', 'doorSensor'),
+            rel('composes', 'sw', 'tlm'),
+            rel('composes', 'sw', 'alarm'),
+        ],
+    );
+
+    it('folds the immediate child containers while leaving the frame open', () => {
+        expect(containersBelowDepth(gpcaTree(), 1).sort()).toEqual(['sensors', 'sw']);
+    });
+
+    it('folds the containers at and below the given depth, never the leaves', () => {
+        // Depth 2 is the leaves below the assemblies, which own nothing.
+        expect(containersBelowDepth(gpcaTree(), 2)).toEqual([]);
+    });
+
+    it('folds every container including the root at depth 0', () => {
+        expect(containersBelowDepth(gpcaTree(), 0).sort()).toEqual(['device', 'sensors', 'sw']);
+    });
+
+    it('can fold a deeper container while leaving the overview open', () => {
+        // device > sw > subsystem > module: `subsystem` sits at depth 2.
+        const tree = buildCompositionTree(
+            ['device', 'sw', 'subsystem', 'module'].map(id => el(id)),
+            [
+                rel('composes', 'device', 'sw'),
+                rel('composes', 'sw', 'subsystem'),
+                rel('composes', 'subsystem', 'module'),
+            ],
+        );
+        expect(containersBelowDepth(tree, 2)).toEqual(['subsystem']);
+    });
+
+    it('terminates on a composition cycle', () => {
+        const tree = buildCompositionTree(
+            ['a', 'b'].map(id => el(id)),
+            [rel('composes', 'a', 'b'), rel('composes', 'b', 'a')],
+        );
+        expect(() => containersBelowDepth(tree, 2)).not.toThrow();
     });
 });

@@ -480,6 +480,7 @@ export function MaxGraphCanvas() {
             sourceId: choice.sourceId,
             targetId: choice.targetId,
             direction: choice.direction,
+            flowItem: choice.flowItem,
             selectedElementId: drawnFromId,
             diagramId: selectedDiagramId,
         });
@@ -613,6 +614,7 @@ export function MaxGraphCanvas() {
                     sourceElement={relPicker.sourceElement}
                     targetElement={relPicker.targetElement}
                     registries={getRegistries(model)}
+                    allowedTypes={selectedDiagram?.relationshipTypes}
                     onSelect={confirmRelationship}
                     onCancel={() => setRelPicker(null)}
                 />
