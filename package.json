@@ -1,7 +1,7 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.6.5",
-  "description": "MEMO Architect \u2014 interactive workbench and distributable viewer for medical device systems engineering",
+  "version": "0.6.6",
+  "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
     "memo-architect": "lib/bin/memo-architect.js"
@@ -40,8 +40,8 @@
     "test:cli": "vitest run --config vitest.cli.config.ts"
   },
   "dependencies": {
-    "@memoarchitect/tools": "0.6.5",
-    "@memoarchitect/ontology": "0.6.3",
+    "@memoarchitect/tools": "0.6.7",
+    "@memoarchitect/ontology": "0.6.5",
     "commander": "^12.1.0"
   },
   "devDependencies": {
