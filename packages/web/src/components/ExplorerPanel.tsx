@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import {
     useModelStore,
     getElementsByLayer,
@@ -13,11 +13,15 @@ import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
+import { ExplorerElementIdentity } from './ExplorerElementIdentity';
+import { ExplorerCountBadge } from './ExplorerCountBadge';
 import type { MemoElement, DiagramDTO, KindDefinitionDTO, MemoModelDTO, ViewpointDTO } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
 import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
+
+const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
 // ─── SVG Chevron Icons ───────────────────────────────────────────────────────
 
@@ -520,20 +524,7 @@ function RecursiveTree({
                                 onMouseLeave={e => { (e.currentTarget as HTMLInputElement).style.opacity = isChecked ? '1' : '0'; }}
                             />
                             <ItemIcon color={isUndefined ? '#F59E0B' : layerClr} />
-                            <span
-                                className="truncate flex-1"
-                                style={{
-                                    color: isSelected ? COLOR.accentDark : COLOR.primary,
-                                    fontSize: FONT.explorer.item,
-                                }}
-                            >
-                                {el.shortId && (
-                                    <span style={{ color: COLOR.muted, fontWeight: 500, marginRight: '4px' }}>
-                                        [{el.shortId}]
-                                    </span>
-                                )}
-                                {el.name}
-                            </span>
+                            <ExplorerElementIdentity element={el} selected={isSelected} />
                             {isUndefined && (
                                 <span title={`Kind "${el.kind}" is not defined in the ontology`}
                                     style={{ color: '#F59E0B', fontSize: '12px', flexShrink: 0 }}>⚠</span>
@@ -1457,8 +1448,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                             <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
                             <FolderIcon open={isExpanded} color={vpColor} />
                             <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels[vpIndex]}</span>
-                            <span style={{ color: COLOR.faint, fontSize: FONT.badge, fontFamily: 'monospace' }}>{vp.id}</span>
-                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{allDiagrams.length}</span>
+                            <ExplorerCountBadge count={allDiagrams.length} color={vpColor} title={`${allDiagrams.length} views`} />
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
@@ -1499,7 +1489,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     >
                         no viewpoint
                     </span>
-                    <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{authoredUncategorized.length}</span>
+                    <ExplorerCountBadge count={authoredUncategorized.length} color={COLOR.muted} title={`${authoredUncategorized.length} views`} />
                 </div>
                 {expandedVps.has(UNCATEGORIZED_ID) && (
                     <div style={{ marginLeft: '16px' }}>
@@ -2058,15 +2048,9 @@ export function ExplorerPanel() {
             ) : activeMode === 'ontology' ? (
                 <OntologyBrowserTab />
             ) : activeMode === 'scenario' ? (
-                <>
-                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                        <input type="text" placeholder="Search elements..." value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                    </div>
-                    <ModelExplorerContent searchTerm={searchTerm} />
-                </>
+                <Suspense fallback={<div className="p-3" style={{ color: COLOR.faint, fontSize: FONT.explorer.item }}>Loading use cases…</div>}>
+                    <ScenarioExplorer explorerOnly />
+                </Suspense>
             ) : (
                 /* catalog / dashboard / default */
                 <>

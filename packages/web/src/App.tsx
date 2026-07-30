@@ -289,8 +289,7 @@ export function App() {
     // or tool views that are self-contained (DSM has its own filter toolbar).
     // The AI workspace is self-contained too: it owns its own tool switcher, and
     // the model tree was only ever there because the entry point lived in it.
-    const showExplorer = activeView.type !== 'scenario-editor'
-        && activeView.type !== 'dsm'
+    const showExplorer = activeView.type !== 'dsm'
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
         && activeView.type !== 'sysml-generator'
@@ -553,6 +552,7 @@ function UrlNavigationSync() {
     const activeView = useModelStore(s => s.activeView);
     const model = useModelStore(s => s.model);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
     const navigate = useNavigate();
     const location = useLocation();
     const navigationType = useNavigationType();
@@ -576,6 +576,10 @@ function UrlNavigationSync() {
         if (!isInitial && navigationType !== 'POP') return;
 
         const view = pathToView(location.pathname, location.search);
+        // A direct /use-cases load must restore both halves of the workbench:
+        // the center view and its custom explorer, even when the persisted
+        // active view already happens to be scenario-editor.
+        if (view?.type === 'scenario-editor') setActiveMode('scenario');
         if (view && JSON.stringify(view) !== JSON.stringify(activeView)) {
             suppressPush.current = true;
             setActiveView(view);

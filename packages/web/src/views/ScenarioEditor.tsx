@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
 import { sendElementUpdate } from '../store/ws-client';
-import { LAYER_COLORS } from '../constants';
-import { FONT, SHADOW, RADIUS } from '../styles/tokens';
+import { DIAGRAM_TYPE_META, LAYER_COLORS, resolveActionFlowDiagramType } from '../constants';
+import { COLOR, FONT } from '../styles/tokens';
+import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
+import { ExplorerCountBadge } from '../components/ExplorerCountBadge';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
 const SCENARIO_VIEW_GROUPS = [
@@ -19,12 +21,55 @@ function groupScenarioViews<T extends { diagramType: string }>(views: T[]) {
     }).filter(group => group.items.length > 0);
 }
 
+function getScenarioDiagramMeta(diagram: { diagramType: string }) {
+    const diagramType = diagram.diagramType.toLowerCase();
+    const resolvedType = ['afd', 'ofd', 'ffd'].includes(diagramType)
+        ? resolveActionFlowDiagramType(diagram)
+        : diagramType;
+    return DIAGRAM_TYPE_META[resolvedType];
+}
+
+// Keep the scenario browser visually and behaviorally aligned with the Model
+// Explorer. This is intentionally local for now because scenarios use a
+// domain-specific hierarchy rather than the Explorer's ontology tree.
+function ChevronIcon({ expanded, color = COLOR.muted }: { expanded: boolean; color?: string }) {
+    return (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ transform: expanded ? 'rotate(90deg)' : undefined, transition: 'transform 150ms ease', flexShrink: 0 }}>
+            <path d="M6 4L10 8L6 12" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function FolderIcon({ open, color }: { open: boolean; color: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M1.5 3.5h4.8l1.2 1.5H14.5v8H1.5z" fill={color} opacity="0.15" stroke={color} strokeWidth="1" strokeLinejoin="round" />
+            {open && <path d="M1.5 5h13v8H1.5z" fill={color} opacity="0.08" />}
+        </svg>
+    );
+}
+
+function ItemIcon({ color }: { color: string }) {
+    return (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="2" y="1.5" width="12" height="13" rx="1.5" fill={color} opacity="0.1" stroke={color} strokeWidth="1" />
+            <line x1="5" y1="5.5" x2="11" y2="5.5" stroke={color} strokeWidth="0.8" opacity="0.5" />
+            <line x1="5" y1="8" x2="11" y2="8" stroke={color} strokeWidth="0.8" opacity="0.5" />
+        </svg>
+    );
+}
+
 // ─── Scenario Step (parsed from doc field) ──────────────────────────────────
 
 interface ScenarioStep {
     index: number;
     text: string;
     linkedElementId?: string;
+}
+
+interface ScenarioDetails {
+    scenario: MemoElement;
+    views: Array<{ id: string; name: string; diagramType: string }>;
 }
 
 function parseSteps(doc: string): ScenarioStep[] {
@@ -42,13 +87,13 @@ function serializeSteps(steps: ScenarioStep[]): string {
 
 // ─── Scenario Editor Component ──────────────────────────────────────────────
 
-export function ScenarioEditor() {
+export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolean }) {
     const model = useModelStore(s => s.model);
     const createRelationship = useModelStore(s => s.createRelationship);
     const inspectElement = useModelStore(s => s.inspectElement);
-    const selectedElementId = useModelStore(s => s.selectedElementId);
-    const setActiveMode = useModelStore(s => s.setActiveMode);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const selectedElementId = useModelStore(s => s.selectedElementId);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingSteps, setEditingSteps] = useState<ScenarioStep[] | null>(null);
     const [newStepText, setNewStepText] = useState('');
@@ -109,48 +154,12 @@ export function ScenarioEditor() {
                 const workflowElements = [...new Map([...supportedWorkflows, ...parentWorkflows].map(workflow => [workflow.id, workflow])).values()];
                 const scenarioDetails = scenarioElements
                     .map(scenario => {
-                        const composedActivities = byType('Composes', 'scenarioComprisesActivity')
-                            .filter(r => r.sourceId === scenario.id)
-                            .map(r => byId[r.targetId])
-                            .filter((el): el is MemoElement => Boolean(el));
-                        const referencedActivities = String(scenario.attributes.activities ?? '')
-                            .split(',')
-                            .map(value => value.split('::').at(-1)?.trim())
-                            .map(id => id ? byId[id] : undefined)
-                            .filter((el): el is MemoElement => Boolean(el));
-                        const activities = [...new Map(
-                            [...composedActivities, ...referencedActivities].map(activity => [activity.id, activity]),
-                        ).values()];
-                        const functionalScenarios = byType('Realizes', 'functionalRealizesOperative')
-                            .filter(r => r.targetId === scenario.id)
-                            .map(r => byId[r.sourceId])
-                            .filter((el): el is MemoElement => Boolean(el) && el.layer === 'functional');
-                        const uiScenarios = functionalScenarios.flatMap(functional =>
-                            byType('Realizes', 'uIRealizesFunctional')
-                                .filter(r => r.targetId === functional.id)
-                                .map(r => byId[r.sourceId])
-                                .filter((el): el is MemoElement => Boolean(el) && el.layer === 'usability')
-                        );
-                        // A diagram normally selects the nested actions owned by the
-                        // scenario's activity, not the activity container itself.
-                        // Include that complete ownership tree when matching views.
-                        const scenarioElementIds = new Set([scenario.id, ...activities.map(activity => activity.id)]);
-                        let addedDescendant = true;
-                        while (addedDescendant) {
-                            addedDescendant = false;
-                            for (const candidate of elements) {
-                                if (candidate.parentAction && scenarioElementIds.has(candidate.parentAction)
-                                    && !scenarioElementIds.has(candidate.id)) {
-                                    scenarioElementIds.add(candidate.id);
-                                    addedDescendant = true;
-                                }
-                            }
-                        }
-                        const views = (model.diagrams ?? []).filter(d =>
-                            d.elementIds?.some(id => scenarioElementIds.has(id))
-                            || d.name.toLowerCase().includes(scenario.name.toLowerCase())
-                        );
-                        return { scenario, activities, functionalScenarios, uiScenarios, views };
+                        // MEMO diagrams are linked to a scenario by an explicit
+                        // authored `scenario` reference. Do not infer a link
+                        // from selected elements or matching names.
+                        const views = (model.diagrams ?? [])
+                            .filter(d => d.scenarioIds?.includes(scenario.id));
+                        return { scenario, views };
                     });
                 const workflows = workflowElements.map(workflow => ({
                     workflow,
@@ -165,11 +174,7 @@ export function ScenarioEditor() {
             })
             .filter(branch => matchesSearch(branch.useCase)
                 || branch.workflows.some(({ workflow, scenarios }) => matchesSearch(workflow)
-                    || scenarios.some(({ scenario, activities, functionalScenarios, uiScenarios }) =>
-                        matchesSearch(scenario)
-                        || activities.some(matchesSearch)
-                        || functionalScenarios.some(matchesSearch)
-                        || uiScenarios.some(matchesSearch))));
+                    || scenarios.some(({ scenario }) => matchesSearch(scenario))));
     }, [model, searchTerm]);
 
     const selectedElement = selectedElementId && model ? model.elements[selectedElementId] : null;
@@ -229,108 +234,165 @@ export function ScenarioEditor() {
             .slice(0, 10);
     }, [model, linkSearch, selectedElementId]);
 
-    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+    // Match the other explorers: nothing is expanded until the user opens it.
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const toggleGroup = (g: string) => {
-        setCollapsedGroups(prev => {
+        setExpandedGroups(prev => {
             const next = new Set(prev);
             if (next.has(g)) next.delete(g); else next.add(g);
             return next;
         });
     };
+    const openElementProfile = (id: string) => {
+        setEditingSteps(null);
+        setActiveMode('scenario');
+        inspectElement(id);
+        setActiveView({ type: 'element-detail', elementId: id });
+    };
+
+    const ScenarioWorkflowBranch = ({ workflow, scenarios }: { workflow: MemoElement; scenarios: ScenarioDetails[] }) => {
+        const workflowKey = `workflow:${workflow.id}`;
+        const isExpanded = expandedGroups.has(workflowKey);
+        const toggleWorkflow = () => toggleGroup(workflowKey);
+        const openDiagram = (diagram: { id: string }) => {
+            // Keep the Use Cases mode active so ExplorerPanel retains this
+            // hierarchy while the app-level render region opens the diagram.
+            setActiveMode('scenario');
+            setActiveView({ type: 'diagram', diagramId: diagram.id });
+        };
+        const renderElementItem = (element: MemoElement, indent: number) => {
+            const isSelected = selectedElementId === element.id;
+            return (
+                <button
+                    key={element.id}
+                    type="button"
+                    onClick={() => openElementProfile(element.id)}
+                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left"
+                    style={{ borderRadius: '4px', margin: '0 4px', marginLeft: `${indent + 4}px`, width: `calc(100% - ${indent + 8}px)`, background: isSelected ? `${COLOR.accent}18` : 'transparent' }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isSelected ? `${COLOR.accent}18` : 'transparent'; }}
+                >
+                    <ItemIcon color={LAYER_COLORS[element.layer] || COLOR.muted} />
+                    <ExplorerElementIdentity element={element} selected={isSelected} />
+                </button>
+            );
+        };
+
+        return (
+            <div className="mb-0.5">
+                <div
+                    className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                    style={{ borderRadius: '4px', margin: '0 4px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => openElementProfile(workflow.id)}
+                >
+                    <button type="button" aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${workflow.name}`} onClick={event => { event.stopPropagation(); toggleWorkflow(); }}>
+                        <ChevronIcon expanded={isExpanded} color={COLOR.muted} />
+                    </button>
+                    <FolderIcon open={isExpanded} color={LAYER_COLORS.operational || '#4A90D9'} />
+                    <ExplorerElementIdentity element={workflow} fontSize={FONT.explorer.kind} fontWeight={600} />
+                    <ExplorerCountBadge count={scenarios.length} color={LAYER_COLORS.operational || '#4A90D9'} title={`${scenarios.length} scenarios`} />
+                </div>
+                {isExpanded && scenarios.map(({ scenario, views }) => {
+                    return (
+                        <div key={scenario.id} style={{ marginLeft: '16px' }}>
+                            {renderElementItem(scenario, 0)}
+                            <div style={{ marginLeft: '20px' }}>
+                                {views.length > 0 && (
+                                    <div className="pt-1">
+                                        {views.map(view => {
+                                            const meta = getScenarioDiagramMeta(view);
+                                            return (
+                                                <button key={view.id} type="button" onClick={() => openDiagram(view)} className="flex w-full items-center gap-2 px-2 py-1 text-left" style={{ borderRadius: '4px', margin: '0 4px', width: 'calc(100% - 8px)' }} onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title={meta?.fullName}>
+                                                    {meta && (
+                                                        <span className="px-1.5 py-0.5 rounded font-semibold" style={{ background: meta.color + '20', color: meta.color, fontSize: FONT.badge }}>
+                                                            {meta.code}
+                                                        </span>
+                                                    )}
+                                                    <span className="flex-1" style={{ minWidth: 0 }}>
+                                                        <span className="truncate block" style={{ color: COLOR.primary, fontSize: FONT.explorer.item }}>{view.name}</span>
+                                                        <span className="truncate block font-mono" style={{ color: COLOR.faint, fontSize: '9px', marginTop: 1 }}>{view.id}</span>
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+                {isExpanded && scenarios.length === 0 && <div className="px-2 py-1" style={{ color: COLOR.faint, fontSize: FONT.explorer.count, marginLeft: '20px' }}>No scenarios</div>}
+            </div>
+        );
+    };
 
     return (
         <div className="flex flex-1 overflow-hidden">
-            {/* Left: Scenario list */}
-            <div className="w-72 flex flex-col overflow-hidden" style={{ background: '#FFFFFF', borderRight: '1px solid #E5E5E0' }}>
+            {/* The hierarchy is rendered by ExplorerPanel; the workbench itself
+                owns only the center render region. */}
+            {explorerOnly && <div className="flex-1 flex flex-col overflow-hidden" style={{ background: COLOR.surface }}>
                 <div className="px-3 py-2" style={{ borderBottom: '1px solid #E5E5E0' }}>
-                    <div style={{ color: '#1B3A4B', fontSize: '12px', fontWeight: 700, marginBottom: 7 }}>
-                        Use-Case Hierarchy
-                    </div>
                     <input
                         type="text"
                         placeholder={'Search ' + scenarioTree.length + ' use cases...'}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none"
-                        style={{ background: '#F7F7F5', border: '1px solid #E5E5E0', color: '#1a1a1a' }}
+                        className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                        style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }}
                     />
                 </div>
-                <div className="flex-1 overflow-y-auto text-xs py-1">
-                    {scenarioTree.map(({ useCase, workflows, depth, hasChildren }) => {
+                <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+                    {scenarioTree.map(({ useCase, workflows, depth }) => {
                         const useCaseKey = 'use-case:' + useCase.id;
-                        const collapsed = collapsedGroups.has(useCaseKey);
+                        const isExpanded = expandedGroups.has(useCaseKey);
+                        const useCaseCount = workflows.reduce((total, { scenarios }) => total + scenarios.length, 0);
                         return (
                             <div key={useCase.id} className="mb-0.5">
                                 <div
-                                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer"
-                                    style={{ borderRadius: '6px', margin: '0 4px', marginLeft: 4 + depth * 14 }}
+                                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                                    style={{ borderRadius: '4px', margin: '0 4px', marginLeft: 4 + depth * 16 }}
                                     onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                    onClick={() => { inspectElement(useCase.id); setEditingSteps(null); toggleGroup(useCaseKey); }}
+                                    onClick={() => openElementProfile(useCase.id)}
                                 >
-                                    <span className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: LAYER_COLORS['functional'] || '#E67E22', borderRadius: '3px' }} />
-                                    <span className="font-medium flex-1" style={{ color: '#374151' }}>{useCase.name}</span>
-                                    <span style={{ color: '#9CA3AF' }}>{hasChildren ? 'Parent use case' : 'Leaf use case'}</span>
-                                    <span style={{ color: '#D1D5DB' }}>{collapsed ? '\u25B8' : '\u25BE'}</span>
+                                    <button type="button" aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${useCase.name}`} onClick={event => { event.stopPropagation(); toggleGroup(useCaseKey); }}>
+                                        <ChevronIcon expanded={isExpanded} color={LAYER_COLORS.functional || '#E67E22'} />
+                                    </button>
+                                    <FolderIcon open={isExpanded} color={LAYER_COLORS.functional || '#E67E22'} />
+                                    <ExplorerElementIdentity element={useCase} fontSize={FONT.explorer.group} fontWeight={600} />
+                                    <ExplorerCountBadge count={useCaseCount} color={LAYER_COLORS.functional || '#E67E22'} title={`${useCaseCount} scenarios`} />
                                 </div>
-                                {!collapsed && (
-                                    <div className="ml-5 border-l pl-2" style={{ borderColor: '#E5E5E0' }}>
+                                {isExpanded && (
+                                    <div style={{ marginLeft: 16 + depth * 16 }}>
                                         {workflows.map(({ workflow, scenarios }) => (
-                                            <div key={workflow.id} className="mb-1">
-                                                <button onClick={() => { inspectElement(workflow.id); setEditingSteps(null); }}
-                                                    className="block w-full px-2 py-1 text-left truncate rounded" style={{ color: '#374151', fontWeight: 600 }}>{workflow.name}</button>
-                                                <div className="ml-3 border-l pl-2" style={{ borderColor: '#D8E2E9' }}>
-                                                {scenarios.map(({ scenario, activities, functionalScenarios, uiScenarios, views }) => (
-                                                    <div key={scenario.id} className="mb-1">
-                                                <button onClick={() => { inspectElement(scenario.id); setEditingSteps(null); }}
-                                                    className="block w-full px-2 py-1 text-left truncate rounded" style={{ color: '#1B3A4B', fontWeight: 500 }}>{scenario.name}</button>
-                                                <div className="ml-3 border-l pl-2" style={{ borderColor: '#E5E5E0' }}>
-                                                    {([['Activity diagram', activities], ['Function flow', functionalScenarios], ['Interaction sequence', uiScenarios]] as const)
-                                                        .filter(([, nodes]) => nodes.length > 0)
-                                                        .map(([label, nodes]) => (
-                                                            <div key={label}>
-                                                                <div className="pt-1" style={{ color: '#6B7280', fontSize: '10px' }}>{label}</div>
-                                                                {nodes.map(node => <button key={node.id} onClick={() => { inspectElement(node.id); setEditingSteps(null); }}
-                                                                    className="block w-full px-1 py-0.5 text-left truncate rounded" style={{ color: '#4B5563' }}>{node.name}</button>)}
-                                                            </div>
-                                                        ))}
-                                                    {groupScenarioViews(views).map(group => (
-                                                        <div key={group.label}>
-                                                            <div className="pt-1" style={{ color: '#6B7280', fontSize: '10px' }}>{group.label}</div>
-                                                            {group.items.map(view => (
-                                                                <button
-                                                                    key={view.id}
-                                                                    onClick={() => { setActiveMode('diagram'); setActiveView({ type: 'diagram', diagramId: view.id }); }}
-                                                                    className="block w-full px-1 py-0.5 text-left truncate rounded"
-                                                                    style={{ color: '#2563EB' }}
-                                                                >
-                                                                    {view.name}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                    </div>
-                                                ))}
-                                                {scenarios.length === 0 && <div className="px-2 py-1" style={{ color: '#9CA3AF', fontSize: '10px' }}>No scenarios</div>}
-                                                </div>
-                                            </div>
+                                            <ScenarioWorkflowBranch
+                                                key={workflow.id}
+                                                workflow={workflow}
+                                                scenarios={scenarios}
+                                            />
                                         ))}
+                                        {workflows.length === 0 && (
+                                            <div className="px-2 py-1" style={{ color: COLOR.faint, fontSize: FONT.explorer.kind }}>No workflows</div>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         );
                     })}
                     {scenarioTree.length === 0 && (
-                        <div className="px-4 py-8 text-center" style={{ color: '#9CA3AF' }}>
+                        <div className="px-4 py-8 text-center" style={{ color: COLOR.faint }}>
                             No use-case scenario chains found.
                         </div>
                     )}
                 </div>
-            </div>
+            </div>}
 
-            {/* Center: Scenario detail + step editor */}
-            <div className="flex-1 overflow-y-auto p-6" style={{ background: '#F7F7F5' }}>
+            {/* Center render region. The selected diagram or profile replaces
+                this view through the app-level route dispatcher. */}
+            {!explorerOnly && <div className="flex-1 overflow-y-auto p-6" style={{ background: '#F7F7F5' }}>
+                <>
                 {!selectedElement && (
                     <div className="flex items-center justify-center h-full" style={{ color: '#9CA3AF' }}>
                         <div className="text-center">
@@ -509,7 +571,7 @@ export function ScenarioEditor() {
                                             style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}
                                             onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
                                             onMouseLeave={e => (e.currentTarget.style.background = '#FFFFFF')}
-                                            onClick={() => inspectElement(otherId)}
+                                            onClick={() => openElementProfile(otherId)}
                                         >
                                             <span style={{ color: '#9CA3AF' }}>{direction}</span>
                                             <span className="font-medium" style={{ color: '#2563EB' }}>{rel.type}</span>
@@ -529,7 +591,8 @@ export function ScenarioEditor() {
                         <div className="text-xs" style={{ color: '#D1D5DB' }}>{selectedElement.file}</div>
                     </div>
                 )}
-            </div>
+                </>
+            </div>}
         </div>
     );
 }

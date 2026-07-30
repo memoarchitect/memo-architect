@@ -214,7 +214,7 @@ export function ModeSwitcher() {
     const navigate = useNavigate();
 
     // Modes that have a left sidebar explorer
-    const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf'];
+    const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf', 'scenario'];
 
     // Determine which nav mode is "active" from the current view type
     // Returns '' when a tool is open so no nav button is highlighted
@@ -222,6 +222,9 @@ export function ModeSwitcher() {
         if (TOOL_VIEW_TYPES.has(activeView.type)) return '';
         if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
         if (activeView.type === 'scenario-editor') return 'scenario';
+        // Scenario diagrams retain their origin context; they are rendered
+        // in the center pane without entering the Viewpoints workbench.
+        if (activeMode === 'scenario' && activeView.type === 'diagram') return 'scenario';
         if (activeView.type === 'analysis') return 'analysis';
         if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';

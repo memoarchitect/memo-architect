@@ -143,7 +143,7 @@ function Connector({ color }: { color: string }) {
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export function ElementDetailView() {
+export function ElementDetailView({ elementId: requestedElementId }: { elementId?: string } = {}) {
     const activeView = useModelStore(s => s.activeView);
     const model = useModelStore(s => s.model);
     const validation = useModelStore(s => s.validation);
@@ -151,7 +151,9 @@ export function ElementDetailView() {
     const updateElementAttribute = useModelStore(s => s.updateElementAttribute);
     const applyEdit = useModelStore(s => s.applyEdit);
 
-    const elementId = activeView.type === 'element-detail' ? activeView.elementId : null;
+    // Scenario and other focused workbenches can host this same canonical
+    // profile without changing the application's primary navigation context.
+    const elementId = requestedElementId ?? (activeView.type === 'element-detail' ? activeView.elementId : null);
     const element = elementId && model ? model.elements[elementId] : null;
 
     const relationships = useMemo(() => {
