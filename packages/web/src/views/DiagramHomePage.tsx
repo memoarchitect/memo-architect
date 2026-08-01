@@ -8,9 +8,9 @@
 
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { DiagramDTO } from '@memoarchitect/tools/browser';
+import type { DiagramDTO, ViewKind } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
-import { DIAGRAM_TYPE_META } from '../constants';
+import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
 import { UNCATEGORIZED_ID, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
@@ -121,7 +121,10 @@ export function DiagramHomePage() {
 }
 
 function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () => void }) {
-    const meta = DIAGRAM_TYPE_META[diagram.diagramType];
+    const viewMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
+    const diagramMeta = DIAGRAM_TYPE_META[diagram.diagramType];
+    const meta = viewMeta ?? diagramMeta;
+    const badgeCode = viewMeta?.label ?? diagramMeta?.code;
     const color = meta?.color ?? '#6B7280';
     const elementCount = diagram.elementIds?.length ?? 0;
 
@@ -150,7 +153,7 @@ function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () =>
                         borderRadius: 4, padding: '1px 5px',
                         fontSize: '10px', fontWeight: 700,
                     }}>
-                        {meta.code}
+                        {badgeCode}
                     </span>
                 )}
                 {diagram.auto && (

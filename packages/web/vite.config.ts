@@ -5,6 +5,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
     root: fileURLToPath(new URL('.', import.meta.url)),
     plugins: [react()],
+    // The local memo-meta workspace links Architect beside the ontology and
+    // tools packages. Force peer dependencies such as ReactFlow to share the
+    // app's React instance even when Vite itself resolves from the workspace
+    // root; two React copies make diagram routes fail with an invalid hook call.
+    resolve: {
+        dedupe: ['react', 'react-dom'],
+    },
     server: {
         port: 3000,
     },

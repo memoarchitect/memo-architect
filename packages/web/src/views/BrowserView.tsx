@@ -11,6 +11,7 @@ import type { DiagramDTO, MemoElement, MemoModelDTO } from '@memoarchitect/tools
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, VIEW_KIND_META } from '../constants';
 import { FONT } from '../styles/tokens';
+import { ExplorerTreeRow } from '../components/ExplorerTreeRow';
 import {
     buildBrowserTree, filterBrowserTree, kindInitials, type BrowserNode,
 } from './templates/browser-view';
@@ -20,8 +21,6 @@ interface BrowserViewProps {
     model: MemoModelDTO;
     viewpointFilter?: (el: MemoElement) => boolean;
 }
-
-const ROW_HEIGHT = 26;
 
 function TreeRow({ node, depth, expanded, visible, forceExpanded, onToggle }: {
     node: BrowserNode;
@@ -33,6 +32,7 @@ function TreeRow({ node, depth, expanded, visible, forceExpanded, onToggle }: {
 }) {
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
+    const deleteModelElement = useModelStore(s => s.deleteModelElement);
 
     if (visible && !visible.has(node.id)) return null;
 
@@ -44,67 +44,23 @@ function TreeRow({ node, depth, expanded, visible, forceExpanded, onToggle }: {
 
     return (
         <>
-            <div
-                className="flex items-center gap-1.5"
-                style={{
-                    height: ROW_HEIGHT,
-                    paddingLeft: 8 + depth * 18,
-                    cursor: 'pointer',
-                    background: isSelected ? '#2DD4A818' : undefined,
-                    borderRadius: 6,
-                }}
-                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F0F0ED'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = isSelected ? '#2DD4A818' : 'transparent'; }}
+            <ExplorerTreeRow
+                id={node.id}
+                label={node.label}
+                depth={depth}
+                hasChildren={hasChildren}
+                expanded={isOpen}
+                selected={!!isSelected}
+                badge={isGroup ? (node.id.startsWith('pkg:') ? 'PKG' : 'GRP') : kindInitials(node.kind)}
+                badgeColor={color}
+                count={hasChildren ? node.count : undefined}
+                title={node.title ?? node.kind}
                 onClick={() => {
                     if (hasChildren) onToggle(node.id);
                     if (node.element) selectElement(node.id);
                 }}
-                title={node.title ?? node.kind}
-            >
-                <span
-                    style={{
-                        width: 12, textAlign: 'center', flexShrink: 0,
-                        fontSize: '9px', color: '#9CA3AF',
-                        transform: isOpen ? 'rotate(90deg)' : 'none',
-                        transition: 'transform 120ms ease',
-                        visibility: hasChildren ? 'visible' : 'hidden',
-                    }}
-                >
-                    ▶
-                </span>
-                {isGroup ? (
-                    <span style={{ fontSize: '10px', flexShrink: 0 }}>
-                        {node.id.startsWith('pkg:') ? '📦' : '▣'}
-                    </span>
-                ) : (
-                    <span
-                        style={{
-                            flexShrink: 0,
-                            width: 20, height: 16, borderRadius: 4,
-                            background: color + '22', color,
-                            fontSize: '8px', fontWeight: 800,
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            letterSpacing: '0.02em',
-                        }}
-                        title={node.kind}
-                    >
-                        {kindInitials(node.kind)}
-                    </span>
-                )}
-                <span
-                    style={{
-                        fontSize: FONT.xs,
-                        fontWeight: isGroup ? 700 : 500,
-                        color: isGroup ? '#1B3A4B' : '#374151',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}
-                >
-                    {node.label}
-                </span>
-                {hasChildren && (
-                    <span style={{ fontSize: '9px', color: '#9CA3AF' }}>{node.count}</span>
-                )}
-            </div>
+                onDelete={node.element ? () => deleteModelElement(node.id) : undefined}
+            />
             {isOpen && node.children.map(child => (
                 <TreeRow
                     key={child.id}

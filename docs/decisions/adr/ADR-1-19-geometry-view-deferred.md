@@ -1,6 +1,6 @@
 # ADR-1-19: Geometry View Kind Deferred
 
-**Status:** Accepted
+**Status:** Superseded — revisit trigger fired 2026-07-30 (see below)
 **Date:** 2026-07-10
 **Reference:** [sysmlv2-rulebook.md](../../design/sysmlv2-rulebook.md)
 
@@ -74,3 +74,40 @@ At that point the renderer joins `packages/web/src/views/templates/` as
 - Taxonomy + mapping lock: `memo-tools/packages/tools/src/model/view-kinds.ts`,
   `memo-tools/packages/tools/src/__tests__/view-kinds.test.ts`
 - Deferred placeholder: `packages/web/src/views/DiagramCanvas.tsx`
+
+---
+
+## Revisited — 2026-07-30
+
+**The revisit trigger fired.** The first condition named above now holds: the
+ontology gained geometry-bearing attributes for exactly the case anticipated —
+HMI layout for usability engineering.
+
+`memo_architecture_implementation_ui::UIElement` carries `bounds`
+(`RegionBounds`: x/y/width/height as `Real`, normalized **to the parent
+element**), plus `disclosureKind`, `boundaryColor`, and detection provenance.
+`ScreenCapture` carries the image with `imageUri`, `imageHash`, pixel
+dimensions, and `capturedBuild`. A geometry view therefore draws authored model
+facts, not invented layout — which was the sole objection recorded above.
+
+**What changed:**
+
+- `packages/web/src/views/templates/geometry-view.ts` — the KK-9 template, at
+  the path this ADR named. It resolves the backdrop through `CapturesScreen` and
+  walks the `Composes` tree accumulating transforms, because bounds are stated
+  against the parent rather than the frame.
+- `packages/web/src/views/ScreenLayoutView.tsx` — the renderer. Selection
+  isolates (unselected elements recede to hairlines); `overlay` and `transient`
+  elements draw on top unclipped; `NavigatesTo` is click-through with a
+  breadcrumb; unconfirmed automatic bounds render dashed with a confidence badge.
+- The deferred placeholders in `DiagramCanvas.tsx` and `MaxGraphCanvas.tsx` are
+  replaced by that renderer.
+
+**What did not change.** The KK-9 taxonomy lock stands: no legacy `diagramType`
+maps to `geometry`, and the kind is still reachable only by an explicit
+`viewKind = DiagramViewKind::geometry` declaration. A geometry view without
+authored bounds has nothing true to draw, so the original reasoning still holds
+for reaching the kind by accident.
+
+The consequence recorded above — "No `geometry-view.ts` template file exists
+until the revisit trigger fires" — is now discharged.

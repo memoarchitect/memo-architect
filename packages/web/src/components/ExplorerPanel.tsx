@@ -8,14 +8,14 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, VIEWPOINT_LAYER_ORDER, DIAGRAM_TYPE_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, VIEWPOINT_LAYER_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import type { MemoElement, DiagramDTO, KindDefinitionDTO, MemoModelDTO, ViewpointDTO } from '@memoarchitect/tools/browser';
+import type { MemoElement, DiagramDTO, KindDefinitionDTO, MemoModelDTO, ViewpointDTO, ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -158,6 +158,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const updateElementFolder = useModelStore(s => s.updateElementFolder);
     const moveFolder = useModelStore(s => s.moveFolder);
     const deleteFolder = useModelStore(s => s.deleteFolder);
+    const deleteModelElement = useModelStore(s => s.deleteModelElement);
     const [showChangeType, setShowChangeType] = useState<{ elementId: string; currentKind: string } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -192,6 +193,16 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }
             },
             { label: 'Copy ID', action: () => navigator.clipboard?.writeText(el.id) },
+            {
+                label: 'Delete element…',
+                danger: true,
+                action: () => {
+                    if (!window.confirm(`Delete “${el.name}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
+                    void deleteModelElement(el.id).then(result => {
+                        if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
+                    });
+                },
+            },
             ...(isUndefinedKind ? [{
                 label: '⚠ Change Type…',
                 action: () => setShowChangeType({ elementId: el.id, currentKind: el.kind }),
@@ -1167,6 +1178,17 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 // ─── View Explorer ───────────────────────────────────────────────────────────
 
 function DiagramTypeBadge({ diagram }: { diagram: DiagramDTO }) {
+    const viewMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
+    if (viewMeta) {
+        return (
+            <span className="px-1.5 py-0.5 rounded font-semibold"
+                style={{ background: viewMeta.color + '20', color: viewMeta.color, fontSize: FONT.badge }}
+                title={viewMeta.fullName}
+            >
+                {viewMeta.label}
+            </span>
+        );
+    }
     const resolvedType = ['afd', 'ofd', 'ffd'].includes(diagram.diagramType.toLowerCase())
         ? resolveActionFlowDiagramType(diagram)
         : diagram.diagramType;

@@ -24,6 +24,7 @@ import { RelationshipPicker, type RelationshipChoice } from '../../../views/Rela
 import { FONT } from '../../../styles/tokens';
 import { GridView } from '../../../views/GridView';
 import { BrowserView } from '../../../views/BrowserView';
+import { ScreenLayoutView } from '../../../views/ScreenLayoutView';
 import { selectedLayoutProviderId } from '../../layout-selection';
 import { commonDisplayLevels, type ActionFlowDisplayLevel, type ActionFlowKind, type ActionFlowLaneGrouping } from '../../../views/templates/actionflow-view';
 import {
@@ -522,12 +523,8 @@ export function MaxGraphCanvas() {
     if (selectedDiagram && model && nonCanvas === 'browser') {
         return <BrowserView diagram={selectedDiagram} model={model} viewpointFilter={buildViewpointFilter({ model, diagram: selectedDiagram, selectedViewpointId, hiddenLayers })} />;
     }
-    if (nonCanvas === 'geometry') {
-        return (
-            <div className="flex-1 flex items-center justify-center" style={{ background: CANVAS_BG, color: '#9CA3AF', fontSize: FONT.sm }}>
-                Geometry views are deferred (ADR-1-19).
-            </div>
-        );
+    if (selectedDiagram && model && nonCanvas === 'geometry') {
+        return <ScreenLayoutView diagram={selectedDiagram} model={model} viewpointFilter={buildViewpointFilter({ model, diagram: selectedDiagram, selectedViewpointId, hiddenLayers })} />;
     }
 
     const toolbarButton: React.CSSProperties = {

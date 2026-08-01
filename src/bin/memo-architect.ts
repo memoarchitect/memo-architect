@@ -13,14 +13,15 @@ const program = new Command();
 program
     .name('memo-architect')
     .description('MEMO Architect — interactive and distributable model workbench')
-    .version('0.6.3')
+    .version('0.6.6')
     .option('--example <name>', 'Open a bundled example project (e.g. gpca, standard-sysml-diagrams). A local checkout is opened in place; an installed package is opened read-only in a disposable copy')
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
+    .option('--keep-alive', 'Keep running after the last browser disconnects')
     .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
     .action(async (options: {
-        example?: string; port: string; open: boolean; readOnly?: boolean; experimental?: boolean;
+        example?: string; port: string; open: boolean; readOnly?: boolean; experimental?: boolean; keepAlive?: boolean;
     }) => {
         if (options.example) {
             await architectExampleCommand({
@@ -29,6 +30,7 @@ program
                 open: options.open,
                 readOnly: options.readOnly,
                 featureGrants: resolveFeatureGrants(options),
+                keepAlive: options.keepAlive,
             });
             return;
         }
@@ -56,15 +58,18 @@ program
     .description('Start Architect with live model reload')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
+    .option('--keep-alive', 'Keep running after the last browser disconnects')
     .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
-    .action(async function (this: Command, options: { port: string; open: boolean; experimental?: boolean }) {
+    .action(async function (this: Command, options: { port: string; open: boolean; experimental?: boolean; keepAlive?: boolean }) {
         const port = resolveOption(this, 'port', options.port);
         const open = resolveOption(this, 'open', options.open);
         const experimental = resolveOption(this, 'experimental', options.experimental);
+        const keepAlive = resolveOption(this, 'keepAlive', options.keepAlive);
         await architectDevCommand({
             port: Number.parseInt(String(port), 10),
             open,
             featureGrants: resolveFeatureGrants({ experimental }),
+            keepAlive: keepAlive === true,
         });
     });
 

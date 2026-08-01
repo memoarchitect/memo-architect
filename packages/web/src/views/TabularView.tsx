@@ -12,7 +12,7 @@ type SortKey = 'name' | 'kind' | 'layer' | 'status' | string;
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function StatusDot({ element }: { element: MemoElement }) {
-    const hasDoc = Boolean(element.doc?.trim());
+    const hasDoc = Boolean(element.attributes.description?.trim());
     const attrCount = Object.keys(element.attributes).length;
     // Simple completeness heuristic: doc + ≥1 attribute = complete
     const complete = hasDoc && attrCount >= 1;
@@ -82,6 +82,7 @@ export function TabularView() {
         const freq = new Map<string, number>();
         for (const el of scopedElements) {
             for (const key of Object.keys(el.attributes)) {
+                if (key === 'description' || key === 'shortDescription') continue;
                 freq.set(key, (freq.get(key) ?? 0) + 1);
             }
         }
@@ -117,7 +118,7 @@ export function TabularView() {
             else if (sortKey === 'status') {
                 // sort by completeness
                 const score = (el: MemoElement) => {
-                    const hasDoc = Boolean(el.doc?.trim());
+                    const hasDoc = Boolean(el.attributes.description?.trim());
                     const hasAttr = Object.keys(el.attributes).length >= 1;
                     return hasDoc && hasAttr ? 2 : hasDoc || hasAttr ? 1 : 0;
                 };
@@ -246,7 +247,7 @@ export function TabularView() {
                             <Th col="kind" label="Kind" />
                             <Th col="layer" label="Layer" />
                             <Th col="status" label="" width={40} />
-                            <Th col="doc" label="Description" />
+                            <Th col="shortDescription" label="Short description" />
                             {dynamicColumns.map(k => (
                                 <Th key={k} col={k} label={k} />
                             ))}
@@ -267,7 +268,7 @@ export function TabularView() {
                         {rows.map((el) => {
                             const isSelected = el.id === selectedElementId;
                             const layerColor = LAYER_COLORS[el.layer] ?? '#9CA3AF';
-                            const docExcerpt = el.doc?.trim().slice(0, 100) ?? '';
+                            const shortDescription = el.attributes.shortDescription?.trim() ?? '';
 
                             return (
                                 <tr
@@ -327,14 +328,15 @@ export function TabularView() {
                                         <StatusDot element={el} />
                                     </td>
 
-                                    {/* Doc excerpt */}
+                                    {/* The table uses the authored short register. Long
+                                        description is shown only in detail panels. */}
                                     <td className="px-3 py-2">
                                         <span style={{
                                             fontSize: FONT.xs, color: '#6B7280',
                                             display: '-webkit-box', WebkitLineClamp: 2,
                                             WebkitBoxOrient: 'vertical', overflow: 'hidden',
                                         } as React.CSSProperties}>
-                                            {docExcerpt}
+                                            {shortDescription}
                                         </span>
                                     </td>
 

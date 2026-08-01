@@ -77,6 +77,7 @@ import { UseCaseEdge } from './UseCaseEdge';
 import { ContextBoundaryNode, ContextExternalNode, ContextSystemNode } from './ContextNodes';
 import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
+import { ScreenLayoutView } from './ScreenLayoutView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
 import { DiagramPalette, MEMO_KIND_MIME } from './DiagramPalette';
 import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicker';
@@ -853,7 +854,7 @@ function DiagramCanvasInner() {
 
         const hasViewpoint = effectiveVpId && model?.viewpoints;
         const hasHidden = hiddenLayers.size > 0;
-        const diagramElementIds = selectedDiagram?.elementIds
+        const diagramElementIds = selectedDiagram?.elementIds?.length
             ? new Set(selectedDiagram.elementIds)
             : undefined;
 
@@ -867,7 +868,9 @@ function DiagramCanvasInner() {
         return (el: MemoElement) => {
             if (hiddenLayers.has(el.layer)) return false;
             if (diagramElementIds) return diagramElementIds.has(el.id);
-            if (vpKinds && vpLayers) return vpKinds.has(el.kind) || vpLayers.has(el.layer);
+            if ((vpKinds?.size ?? 0) > 0 || (vpLayers?.size ?? 0) > 0) {
+                return !!vpKinds?.has(el.kind) || !!vpLayers?.has(el.layer);
+            }
             return true;
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
@@ -1176,8 +1179,7 @@ function DiagramCanvasInner() {
         preservedViewportRef.current = modelRefresh ? getViewport() : null;
         previousLayoutModelRef.current = model;
         previousLayoutDiagramRef.current = selectedDiagramId;
-        // Grid and Browser kinds render their own non-canvas surface;
-        // Geometry is deferred (ADR-1-19) and renders a placeholder
+        // Grid, Browser, and Geometry render their own non-canvas surfaces.
         if (viewKind === 'grid' || viewKind === 'browser' || viewKind === 'geometry') return;
 
         // Guard against stale async completions: a slower earlier layout must
@@ -1972,7 +1974,7 @@ function DiagramCanvasInner() {
             ? { ...e, label: e.label ? '' : edgeId.split('_')[3] ?? '' } : e));
     }, [setEdges]);
 
-    // ─── Non-canvas view kinds (KK-7 Grid, KK-8 Browser) ───────────────────────
+    // ─── Non-canvas view kinds (KK-7 Grid, KK-8 Browser, KK-9 Geometry) ───────
 
     if (selectedDiagram && model && viewKind === 'grid') {
         return (
@@ -1992,29 +1994,13 @@ function DiagramCanvasInner() {
             />
         );
     }
-    // Geometry renderer is deferred (ADR-1-19): the ontology carries no
-    // geometric data, so an explicit placeholder beats a fake graph render
-    if (selectedDiagram && viewKind === 'geometry') {
-        const geoMeta = VIEW_KIND_META.geometry;
+    if (selectedDiagram && model && viewKind === 'geometry') {
         return (
-            <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
-                <div className="text-center" style={{ maxWidth: '380px' }}>
-                    <span
-                        className="inline-block px-2 py-0.5 rounded font-semibold"
-                        style={{ background: geoMeta.color + '20', color: geoMeta.color, fontSize: FONT.badge, marginBottom: '12px' }}
-                    >
-                        {geoMeta.label}
-                    </span>
-                    <h3 style={{ fontSize: FONT.lg, fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-                        {selectedDiagram.name}
-                    </h3>
-                    <p style={{ fontSize: FONT.md, color: '#9CA3AF', lineHeight: 1.6 }}>
-                        Geometry View rendering is deferred (ADR-1-19): the ontology
-                        carries no spatial data to draw. This view is recognized and
-                        validated, but has no renderer yet.
-                    </p>
-                </div>
-            </div>
+            <ScreenLayoutView
+                diagram={selectedDiagram}
+                model={model}
+                viewpointFilter={viewpointFilter}
+            />
         );
     }
 

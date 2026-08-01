@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene } from '../renderers/maxgraph/scene';
+import { buildViewpointFilter } from '../renderers/maxgraph/scene-source';
 
 describe('buildScene', () => {
     it('adapts ReactFlow-shaped nodes with explicit geometry and colors', () => {
@@ -85,5 +86,39 @@ describe('buildScene', () => {
             [{ id: 'e1', source: 'a', target: 'ghost' }],
         );
         expect(edges).toEqual([]);
+    });
+});
+
+describe('buildViewpointFilter', () => {
+    it('treats empty auto-populated membership as viewpoint-derived, not hide-all', () => {
+        const model = {
+            elements: {}, relationships: [], errors: [],
+            viewpoints: [{ id: 'vp-ui', visibleKinds: ['UIElement'], visibleLayers: ['implementation'] }],
+        } as any;
+        const diagram = {
+            id: 'UIE-001', name: 'Layout', diagramType: 'bdd', viewKind: 'geometry',
+            viewpointId: 'vp-ui', auto: true, elementIds: [],
+        } as any;
+        const filter = buildViewpointFilter({
+            model, diagram, selectedViewpointId: null, hiddenLayers: new Set(),
+        });
+
+        expect(filter?.({ id: 'region', kind: 'UIElement', layer: 'implementation' } as any)).toBe(true);
+    });
+
+    it('does not turn an empty viewpoint scope into a hide-all filter', () => {
+        const model = {
+            elements: {}, relationships: [], errors: [],
+            viewpoints: [{ id: 'vp-ui', visibleKinds: [], visibleLayers: [] }],
+        } as any;
+        const diagram = {
+            id: 'UIE-001', name: 'Layout', diagramType: 'bdd', viewKind: 'geometry',
+            viewpointId: 'vp-ui', auto: true, elementIds: [],
+        } as any;
+        const filter = buildViewpointFilter({
+            model, diagram, selectedViewpointId: null, hiddenLayers: new Set(),
+        });
+
+        expect(filter?.({ id: 'region', kind: 'UIElement', layer: 'implementation' } as any)).toBe(true);
     });
 });

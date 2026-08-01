@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import type { MemoElement, OntologyRegistriesDTO } from '@memoarchitect/tools/browser';
 import { legalRelationshipTypes } from '@memoarchitect/tools/browser';
-import { matchElements, groupMatchesByKind } from '../RelationshipQuickAdd';
+import { matchElements, groupMatchesByKind, matchLegalElements } from '../RelationshipQuickAdd';
 
 function element(
     id: string,
@@ -167,5 +167,24 @@ describe('relationship choices for a picked pair', () => {
             relationships: [registries.relationships[0]],
         };
         expect(legalRelationshipTypes(elements.sr104, elements.sr210, satisfiedByOnly)).toEqual([]);
+    });
+
+    it('filters typeahead results to MEMO-legal trace targets before applying the result cap', () => {
+        const manyIllegal = Object.fromEntries(Array.from({ length: 50 }, (_, index) => {
+            const item = element(`matchingRequirement${index}`, 'SoftwareRequirement', `Matching requirement ${index}`);
+            return [item.id, item];
+        }));
+        const legal = element('matchingController', 'SoftwareComponent', 'Matching controller');
+        const source = elements.sr104;
+        const candidates = { ...manyIllegal, [legal.id]: legal, [source.id]: source };
+
+        const satisfiedByOnly: OntologyRegistriesDTO = {
+            kinds: registries.kinds,
+            relationships: [registries.relationships[0]],
+        };
+
+        expect(matchLegalElements(candidates, {
+            query: 'matching', source, registries: satisfiedByOnly, limit: 5,
+        }).map(candidate => candidate.id)).toEqual(['matchingController']);
     });
 });

@@ -113,6 +113,27 @@ export function groupMatchesByKind(matches: MemoElement[]): MatchGroup[] {
     return [...byKind.values()];
 }
 
+/** Match only targets for which MEMO defines at least one authorable relationship. */
+export function matchLegalElements(
+    elements: Record<string, MemoElement>,
+    options: {
+        query: string;
+        source: MemoElement;
+        registries: OntologyRegistriesDTO;
+        limit?: number;
+    },
+): MemoElement[] {
+    return matchElements(elements, {
+        query: options.query,
+        excludeId: options.source.id,
+        // Filter legality before applying the visible cap, otherwise a large set
+        // of illegal lexical matches can hide legal results below it.
+        limit: Object.keys(elements).length,
+    })
+        .filter(candidate => legalRelationshipTypes(options.source, candidate, options.registries).length > 0)
+        .slice(0, options.limit ?? MAX_MATCHES);
+}
+
 export function RelationshipQuickAdd({
     element, model, registries, enabled, onCreate,
 }: RelationshipQuickAddProps) {
@@ -132,8 +153,8 @@ export function RelationshipQuickAdd({
     // ─── Live element matches, segregated by kind ───────────────────────────
 
     const matches = useMemo(
-        () => matchElements(model.elements, { query, excludeId: element.id }),
-        [model.elements, element.id, query]);
+        () => matchLegalElements(model.elements, { query, source: element, registries }),
+        [model.elements, element, query, registries]);
 
     /** Grouped for display, flat for keyboard navigation. */
     const groups = useMemo(() => groupMatchesByKind(matches), [matches]);
@@ -214,6 +235,17 @@ export function RelationshipQuickAdd({
     return (
         <div className="mt-1.5" style={{ opacity: enabled ? 1 : 0.6 }}>
             <div className="relative">
+                {target ? (
+                    <div className="flex items-center gap-1.5" style={{
+                        width: 'fit-content', maxWidth: '100%', minHeight: 28, padding: '3px 5px 3px 8px',
+                        borderRadius: 14, background: '#E1F5EE', border: `1px solid ${ACCENT}`, color: '#0F766E',
+                    }}>
+                        <span className="truncate" style={{ fontSize: FONT.xs, fontWeight: 650 }}>{target.name}</span>
+                        <span style={{ fontSize: 9, color: '#6B7280' }}>{target.kind}</span>
+                        <button type="button" aria-label={`Remove ${target.name} from new relationship`} onClick={reset}
+                            style={{ width: 18, height: 18, border: 0, borderRadius: 9, background: '#FFFFFFAA', color: '#0F766E', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                    </div>
+                ) : <>
                 <input
                     ref={inputRef}
                     value={query}
@@ -254,7 +286,7 @@ export function RelationshipQuickAdd({
                     >
                         {flatMatches.length === 0 ? (
                             <div className="px-2 py-2" style={{ fontSize: FONT.xs, color: '#9CA3AF' }}>
-                                No element matches “{query.trim()}”.
+                                No MEMO-legal trace target matches “{query.trim()}”.
                             </div>
                         ) : (
                             groups.map(group => (
@@ -278,6 +310,7 @@ export function RelationshipQuickAdd({
                         )}
                     </div>
                 )}
+                </>}
             </div>
 
             {target && (

@@ -342,6 +342,14 @@ function RelationshipRow({
                 >
                     {expanded ? '▾' : '▸'}
                 </button>
+                {removable && !confirming && (
+                    <button
+                        onClick={() => { setExpanded(true); onRequestDelete(); }}
+                        aria-label={`Remove ${definition?.label ?? relationship.type} relationship to ${opposite?.name ?? oppositeId}`}
+                        title="Remove relationship"
+                        style={{ width: 20, height: 20, padding: 0, border: 0, borderRadius: 10, background: '#FFFFFFAA', color: '#9CA3AF', cursor: 'pointer', lineHeight: 1 }}
+                    >×</button>
+                )}
             </div>
 
             {expanded && (

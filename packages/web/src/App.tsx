@@ -38,6 +38,7 @@ const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ 
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
+const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(m => ({ default: m.UiScreensWorkspace })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -98,6 +99,8 @@ function UnifiedCanvas() {
                 return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
             case 'analysis':
                 return isFeatureEnabled('analysis') ? <AnalysisWorkspace /> : <Dashboard />;
+            case 'ui-screens':
+                return <UiScreensWorkspace />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;
@@ -293,7 +296,8 @@ export function App() {
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
         && activeView.type !== 'sysml-generator'
-        && activeView.type !== 'analysis';
+        && activeView.type !== 'analysis'
+        && activeView.type !== 'ui-screens';
 
     // Auto-open the sidebar whenever we switch to a view that needs it but it's
     // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).

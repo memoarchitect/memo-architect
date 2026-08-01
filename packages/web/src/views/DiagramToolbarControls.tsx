@@ -32,6 +32,13 @@ export const Icon = {
     collapse: ({ size = 16 }: IconProps) => svg(size, <><path d="M14 10h5" /><path d="M19 10V5" /><path d="M10 14H5" /><path d="M5 14v5" /><path d="M20 4l-6 6" /><path d="M4 20l6-6" /></>),
     filter: ({ size = 16 }: IconProps) => svg(size, <path d="M4 5h16l-6.2 7.4V19l-3.6 1.8v-8.4z" />),
     back: ({ size = 16 }: IconProps) => svg(size, <><path d="M11 5l-6 7 6 7" /><path d="M5 12h14" /></>),
+    rectangle: ({ size = 16 }: IconProps) => svg(size, <><rect x="3.5" y="5" width="17" height="14" rx="2" /><path d="M8 5v14M16 5v14" strokeDasharray="2 2" /></>),
+    upload: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 16V4" /><path d="M7.5 8.5 12 4l4.5 4.5" /><path d="M4 15v4h16v-4" /></>),
+    capture: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M8 6l1.5-2h5L16 6" /><circle cx="12" cy="12.5" r="3.2" /></>),
+    info: ({ size = 16 }: IconProps) => svg(size, <><circle cx="12" cy="12" r="9" /><path d="M12 10.5v6" /><path d="M12 7.5h.01" /></>),
+    plus: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 5v14" /><path d="M5 12h14" /></>),
+    library: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="M17 5l3 14" /></>),
+    detect: ({ size = 16 }: IconProps) => svg(size, <><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" /><rect x="7" y="8" width="10" height="8" rx="1.5" strokeDasharray="2 2" /></>),
 };
 
 // ─── Divider between toolbar groups ──────────────────────────────────────────

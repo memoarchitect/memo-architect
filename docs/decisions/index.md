@@ -9,7 +9,7 @@ summarized in [../architecture/platform.md](../architecture/platform.md).
 | Decision | Status | Notes |
 |---|---|---|
 | [ADR-1-22](adr/ADR-1-22-npm-dependencies-meta-workspace.md) | Accepted | Exact npm dependencies in product repos; sibling workspace links in `memo-meta` |
-| [ADR-1-19](adr/ADR-1-19-geometry-view-deferred.md) | Accepted | Geometry view kind deferred — no renderer until the ontology carries geometric data; kind stays in the taxonomy, reachable only by explicit declaration, rendered as a deferred placeholder |
+| [ADR-1-19](adr/ADR-1-19-geometry-view-deferred.md) | Superseded 2026-07-30 | Geometry view kind deferred until the ontology carried geometric data; superseded once `UIElement.bounds` landed — the KK-9 renderer now draws captured screens, and the kind stays reachable only by explicit declaration |
 | [ADR-1-18](adr/ADR-1-18-kerml-expression-subset.md) | Accepted | Closed KerML boolean expression subset (navigation, collection ops, comparison/boolean/arithmetic, literals) for native `require/assert constraint { … }` bodies; grammar runs ahead of evaluator (EE-2 fills deferred forms) |
 | [ADR-1-17](adr/ADR-1-17-three-repo-split.md) | Accepted | Ontology, Tools, and Architect are separate product repositories |
 | [ADR-1-16](adr/ADR-1-16-view-presentation-syntax-fallbacks.md) | Accepted | View/template files use simple `view def`, bare imports, and repeated scalar `presentationKind` assignments until grammar support expands |

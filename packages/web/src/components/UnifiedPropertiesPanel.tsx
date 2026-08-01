@@ -90,6 +90,51 @@ function TreeRow({ label, kind, kindColor, onClick, arrow, typeBadge, typeColor,
     );
 }
 
+function RegionProperties({ element, onNameSave, onAttributeSave }: {
+    element: MemoElement;
+    onNameSave: (value: string) => void;
+    onAttributeSave: (key: string, value: string) => void;
+}) {
+    const rawColor = element.attributes.boundaryColor || '#14B8A6';
+    const color = /^#[0-9a-f]{6}$/i.test(rawColor) ? rawColor : '#14B8A6';
+    const rawOpacity = Number(element.attributes.boundaryOpacity ?? '0.12');
+    const opacity = Number.isFinite(rawOpacity) ? Math.max(0, Math.min(1, rawOpacity)) : 0.12;
+
+    return (
+        <Section title="Region" defaultOpen>
+            <div className="space-y-2 text-xs">
+                <label style={{ display: 'block', color: '#6B7280' }}>
+                    <span style={{ display: 'block', marginBottom: 3 }}>Name</span>
+                    <EditableValue value={element.name} onSave={onNameSave} density={PANEL_DENSITY} placeholder="Region name" />
+                </label>
+                <label style={{ display: 'block', color: '#6B7280' }}>
+                    <span style={{ display: 'block', marginBottom: 3 }}>Description</span>
+                    <EditableValue value={element.attributes.description || ''}
+                        onSave={value => onAttributeSave('description', value)} density={PANEL_DENSITY}
+                        multiline placeholder="Describe this region…" />
+                </label>
+                <div>
+                    <span style={{ display: 'block', marginBottom: 3, color: '#6B7280' }}>Boundary color</span>
+                    <div className="flex items-center gap-2">
+                        <input aria-label="Region boundary color" type="color" value={color}
+                            onChange={event => onAttributeSave('boundaryColor', event.target.value)}
+                            style={{ width: 34, height: 28, padding: 2, border: '1px solid #D8D8D2', borderRadius: 6, background: '#FFFFFF' }} />
+                        <EditableValue value={rawColor} onSave={value => onAttributeSave('boundaryColor', value)}
+                            density={PANEL_DENSITY} placeholder="#14B8A6" compact />
+                    </div>
+                </div>
+                <label style={{ display: 'block', color: '#6B7280' }}>
+                    <span className="flex justify-between" style={{ marginBottom: 3 }}>
+                        <span>Fill opacity</span><span>{Math.round(opacity * 100)}%</span>
+                    </span>
+                    <input aria-label="Region fill opacity" type="range" min="0" max="1" step="0.01" value={opacity}
+                        onChange={event => onAttributeSave('boundaryOpacity', event.target.value)} style={{ width: '100%' }} />
+                </label>
+            </div>
+        </Section>
+    );
+}
+
 // ─── Diagram Properties ─────────────────────────────────────────────────────
 
 function DiagramProperties() {
@@ -275,15 +320,20 @@ function ElementProperties() {
     const layerColor = LAYER_COLORS[element.layer] || '#666';
 
     const violations = validation?.violations.filter(v => v.elementId === selectedElementId) || [];
-    const attrs = Object.entries(element.attributes).filter(([k]) => k !== 'name' && k !== 'id');
-
-    const handleDocSave = (newDoc: string) => {
-        updateElementField(selectedElementId, 'doc', newDoc);
-        applyEdit(selectedElementId);
-    };
+    const regionProfileKeys = new Set(['description', 'boundaryColor', 'boundaryOpacity']);
+    const attrs = Object.entries(element.attributes).filter(([k]) =>
+        k !== 'name' && k !== 'id' && !(element.kind === 'UIElement' && regionProfileKeys.has(k))
+        && !(element.kind !== 'UIElement' && k === 'description'));
 
     const handleAttrSave = (key: string, newValue: string) => {
         updateElementAttribute(selectedElementId, key, newValue);
+        applyEdit(selectedElementId);
+    };
+
+    const handleNameSave = (newValue: string) => {
+        const name = newValue.trim();
+        if (!name || name === element.name) return;
+        updateElementField(selectedElementId, 'name', name);
         applyEdit(selectedElementId);
     };
 
@@ -304,17 +354,21 @@ function ElementProperties() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-                <Section title="Description" defaultOpen>
+                {element.kind === 'UIElement' && (
+                    <RegionProperties element={element} onNameSave={handleNameSave} onAttributeSave={handleAttrSave} />
+                )}
+
+                {element.kind !== 'UIElement' && <Section title="Description" defaultOpen>
                     <div className="text-xs leading-relaxed">
                         <EditableValue
-                            value={element.doc || ''}
-                            onSave={handleDocSave}
+                            value={element.attributes.description || ''}
+                            onSave={newValue => handleAttrSave('description', newValue)}
                             density={PANEL_DENSITY}
                             multiline
                             placeholder="Click to add a description…"
                         />
                     </div>
-                </Section>
+                </Section>}
 
                 {element.parameters && element.parameters.length > 0 && (
                     <Section title="Parameters" count={element.parameters.length}>
@@ -386,6 +440,8 @@ function ElementProperties() {
                     density={PANEL_DENSITY}
                 />
 
+                <AnnotationPanel subject={element} />
+
                 {violations.length > 0 && (
                     <Section title="Guidance" count={violations.length} defaultOpen>
                         <div className="space-y-2">
@@ -442,6 +498,137 @@ function ElementProperties() {
                 )}
             </div>
         </>
+    );
+}
+
+type AnnotationType = 'comment' | 'rationale' | 'note';
+
+const ANNOTATION_TYPES: Record<AnnotationType, {
+    kind: string; relation: string; label: string; placeholder: string;
+}> = {
+    comment: { kind: 'ModelComment', relation: 'CommentsOn', label: 'comment', placeholder: 'Comment' },
+    rationale: { kind: 'ModelRationale', relation: 'RationaleFor', label: 'rationale', placeholder: 'Engineering rationale' },
+    note: { kind: 'ModelNote', relation: 'NotesOn', label: 'note', placeholder: 'Note' },
+};
+
+export function AnnotationPanel({ subject }: { subject: MemoElement }) {
+    const model = useModelStore(s => s.model);
+    const createModelElement = useModelStore(s => s.createModelElement);
+    const createRelationship = useModelStore(s => s.createRelationship);
+    const persistElementAttributes = useModelStore(s => s.persistElementAttributes);
+    const [summary, setSummary] = useState('');
+    const [body, setBody] = useState('');
+    const [author, setAuthor] = useState('');
+    const [annotationType, setAnnotationType] = useState<AnnotationType>('comment');
+    const [qualifier, setQualifier] = useState('');
+    const [replyTo, setReplyTo] = useState<string | null>(null);
+    const [message, setMessage] = useState('');
+    if (!model) return null;
+
+    const relationTypes = new Set(Object.values(ANNOTATION_TYPES).map(value => value.relation.toLowerCase()));
+    const annotationIds = new Set(model.relationships
+        .filter(rel => relationTypes.has(rel.type.toLowerCase()) && rel.targetId === subject.id)
+        .map(rel => rel.sourceId));
+    const annotations = [...annotationIds].map(id => model.elements[id]).filter((value): value is MemoElement => !!value);
+    const replies = new Map<string, MemoElement[]>();
+    for (const rel of model.relationships.filter(rel => rel.type.toLowerCase() === 'composes')) {
+        if (model.elements[rel.sourceId]?.kind !== 'ModelComment' || model.elements[rel.targetId]?.kind !== 'ModelComment') continue;
+        replies.set(rel.sourceId, [...(replies.get(rel.sourceId) ?? []), model.elements[rel.targetId]]);
+    }
+
+    const saveAnnotation = async () => {
+        if (!body.trim()) return;
+        setMessage('Saving…');
+        const selectedType: AnnotationType = replyTo ? 'comment' : annotationType;
+        const config = ANNOTATION_TYPES[selectedType];
+        const title = summary.trim() || `Model ${config.label}`;
+        const id = createModelElement({
+            name: title,
+            kind: config.kind,
+            construct: 'part',
+            layer: subject.layer,
+            file: subject.file || 'model/generated.sysml',
+            doc: '',
+            attributes: {
+                shortDescription: title,
+                body: body.trim(),
+                author: author.trim() || 'currentReviewer',
+                createdAt: new Date().toISOString(),
+                ...(selectedType === 'comment' ? { commentStatus: 'CommentStatusKind::open' } : {}),
+                ...(selectedType === 'rationale' && qualifier.trim() ? { basis: qualifier.trim() } : {}),
+                ...(selectedType === 'note' && qualifier.trim() ? { noteKind: qualifier.trim() } : {}),
+            },
+        });
+        try {
+            const optimistic = useModelStore.getState().model?.elements[id];
+            const deadline = Date.now() + 10000;
+            while (useModelStore.getState().model?.elements[id] === optimistic && Date.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            const canonical = useModelStore.getState().model?.elements[id];
+            if (!canonical || canonical === optimistic) throw new Error('The saved annotation did not appear in the rebuilt model.');
+            const result = await createRelationship({
+                type: replyTo ? 'Composes' : config.relation,
+                sourceId: replyTo ?? id,
+                targetId: replyTo ? id : subject.id,
+                direction: 'outgoing',
+                selectedElementId: replyTo ?? id,
+            });
+            if (!result.success) throw new Error(result.error);
+            setSummary('');
+            setBody('');
+            setQualifier('');
+            setReplyTo(null);
+            setMessage('Saved.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : String(error));
+        }
+    };
+
+    const renderAnnotation = (annotation: MemoElement, reply = false) => {
+        const type: AnnotationType = annotation.kind === 'ModelRationale' ? 'rationale' : annotation.kind === 'ModelNote' ? 'note' : 'comment';
+        const color = type === 'rationale' ? '#7C3AED' : type === 'note' ? '#2563EB' : '#2DD4A8';
+        return <div key={annotation.id} style={{ marginLeft: reply ? 14 : 0, borderLeft: `2px solid ${reply ? '#D1D5DB' : color}`, padding: '5px 7px', marginBottom: 6 }}>
+            <div className="flex items-center gap-1 text-xs">
+                <span style={{ color, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>{type}</span>
+                <strong style={{ color: '#374151' }}>{annotation.attributes.author || 'Unknown'}</strong>
+                <span style={{ color: '#9CA3AF' }}>{annotation.attributes.createdAt || ''}</span>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#374151' }}>{annotation.attributes.shortDescription || annotation.name}</div>
+            <div style={{ fontSize: 11, color: '#4B5563', whiteSpace: 'pre-wrap' }}>{annotation.attributes.body}</div>
+            {type === 'rationale' && annotation.attributes.basis && <div style={{ fontSize: 10, color: '#7C3AED' }}>Basis: {annotation.attributes.basis}</div>}
+            {type === 'note' && annotation.attributes.noteKind && <div style={{ fontSize: 10, color: '#2563EB' }}>Kind: {annotation.attributes.noteKind}</div>}
+            {type === 'comment' && <div className="flex gap-2" style={{ marginTop: 3 }}>
+                {!reply && <button onClick={() => { setReplyTo(annotation.id); setAnnotationType('comment'); }} style={{ border: 0, background: 'transparent', color: '#2563EB', fontSize: 10, cursor: 'pointer' }}>Reply</button>}
+                {!annotation.attributes.commentStatus?.endsWith('resolved') && (
+                    <button onClick={() => persistElementAttributes(annotation.id, {
+                        commentStatus: 'CommentStatusKind::resolved',
+                        resolvedBy: author.trim() || 'currentReviewer',
+                        resolvedAt: new Date().toISOString(),
+                        resolution: 'Resolved in model review.',
+                    })} style={{ border: 0, background: 'transparent', color: '#0F766E', fontSize: 10, cursor: 'pointer' }}>Resolve</button>
+                )}
+            </div>}
+            {(replies.get(annotation.id) ?? []).map(child => renderAnnotation(child, true))}
+        </div>;
+    };
+
+    return (
+        <Section title="Annotations" count={annotations.length} defaultOpen>
+            {annotations.map(annotation => renderAnnotation(annotation))}
+            {replyTo && <div style={{ fontSize: 10, color: '#0F766E', marginBottom: 4 }}>Replying to {model.elements[replyTo]?.name} <button onClick={() => setReplyTo(null)}>cancel</button></div>}
+            {!replyTo && <select value={annotationType} onChange={event => setAnnotationType(event.target.value as AnnotationType)} aria-label="Annotation type" style={{ width: '100%', marginBottom: 4, fontSize: 11 }}>
+                <option value="comment">Comment</option>
+                <option value="rationale">Rationale</option>
+                <option value="note">Note</option>
+            </select>}
+            <input value={author} onChange={event => setAuthor(event.target.value)} placeholder="Author" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
+            <input value={summary} onChange={event => setSummary(event.target.value)} placeholder="Short summary" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
+            {!replyTo && annotationType !== 'comment' && <input value={qualifier} onChange={event => setQualifier(event.target.value)} placeholder={annotationType === 'rationale' ? 'Basis / evidence (optional)' : 'Note kind (optional)'} style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />}
+            <textarea value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Reply' : ANNOTATION_TYPES[annotationType].placeholder} rows={3} style={{ width: '100%', fontSize: 11 }} />
+            <button onClick={saveAnnotation} disabled={!body.trim()} style={{ marginTop: 4, fontSize: 11 }}>Add {replyTo ? 'reply' : ANNOTATION_TYPES[annotationType].label}</button>
+            {message && <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>{message}</div>}
+        </Section>
     );
 }
 

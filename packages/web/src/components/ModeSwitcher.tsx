@@ -14,6 +14,7 @@ const NAV_MODES = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
     { id: 'catalog', label: 'Model Explorer', icon: '☰' },
     { id: 'diagram', label: 'Viewpoints', icon: '⊟' },
+    { id: 'ui-screens', label: 'UI Screens', icon: '▣' },
     { id: 'dhf', label: 'Documents', icon: '⊞' },
     { id: 'scenario', label: 'Use Cases', icon: '▶' },
     // Deliberately top-level while enabled: AI work is a distinct workspace,
@@ -226,6 +227,7 @@ export function ModeSwitcher() {
         // in the center pane without entering the Viewpoints workbench.
         if (activeMode === 'scenario' && activeView.type === 'diagram') return 'scenario';
         if (activeView.type === 'analysis') return 'analysis';
+        if (activeView.type === 'ui-screens' || activeMode === 'ui-screens') return 'ui-screens';
         if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
@@ -262,6 +264,10 @@ export function ModeSwitcher() {
                 setExplorerTab('views');
                 setActiveView({ type: 'welcome' });
                 navigate('/diagrams');
+                break;
+            case 'ui-screens':
+                setActiveView({ type: 'ui-screens' });
+                navigate('/ui-screens');
                 break;
             case 'dhf':
                 setActiveView({ type: 'dhf-dashboard' });

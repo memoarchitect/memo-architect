@@ -120,6 +120,7 @@ export async function architectExampleCommand(options: {
     /** Force the disposable copy even for a local checkout. */
     readOnly?: boolean;
     featureGrants?: FeatureGrants;
+    keepAlive?: boolean;
 }): Promise<void> {
     const ontologyRoot = resolveOntologyRoot();
 
@@ -143,6 +144,7 @@ export async function architectExampleCommand(options: {
         process.chdir(target);
         await architectDevCommand({
             port: options.port, open: options.open, featureGrants: options.featureGrants,
+            keepAlive: options.keepAlive,
         });
         return;
     }
@@ -164,5 +166,6 @@ export async function architectExampleCommand(options: {
     process.chdir(tempRoot);
     await architectDevCommand({
         port: options.port, open: options.open, featureGrants: options.featureGrants,
+        keepAlive: options.keepAlive,
     });
 }

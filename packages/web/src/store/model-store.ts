@@ -24,7 +24,7 @@ import type {
 import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
-    requestRelationshipCreate, requestRelationshipDelete,
+    requestRelationshipCreate, requestRelationshipDelete, requestElementDelete,
 } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
 import type { ViewpointDTO } from '@memoarchitect/tools/browser';
@@ -122,7 +122,7 @@ export interface SourceChange {
 }
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
-export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai' | 'analysis';
+export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'ui-screens' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai' | 'analysis';
 
 /** Active view in the unified canvas */
 export type ActiveView =
@@ -148,6 +148,7 @@ export type ActiveView =
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
     | { type: 'import' }
     | { type: 'analysis' }
+    | { type: 'ui-screens' }
     | { type: 'welcome' };
 
 /** A DHF document created by the user in the DHF Workbench */
@@ -277,7 +278,7 @@ export interface ModelState {
 
     // ─── Editing ──────────────────────────────────────────────────────────
     editingElementId: string | null;
-    pendingEdits: Map<string, Partial<{ doc: string; attributes: Record<string, string> }>>;
+    pendingEdits: Map<string, Partial<{ name: string; doc: string; attributes: Record<string, string> }>>;
 
     // ─── Relationship authoring ───────────────────────────────────────────
     /**
@@ -288,6 +289,7 @@ export interface ModelState {
     pendingRelationships: PendingRelationship[];
     createRelationship: (request: RelationshipCreateInput) => Promise<RelationshipCreateOutcome>;
     deleteRelationship: (relationshipId: string) => Promise<RelationshipDeleteOutcome>;
+    deleteModelElement: (elementId: string) => Promise<{ success: boolean; error?: string }>;
     dismissPendingRelationship: (pendingId: string) => void;
 
     // ─── Actions ──────────────────────────────────────────────────────────
@@ -347,11 +349,13 @@ export interface ModelState {
 
     // Editing actions
     setEditingElement: (id: string | null) => void;
-    updateElementField: (elementId: string, field: 'doc', value: string) => void;
+    updateElementField: (elementId: string, field: 'name' | 'doc', value: string) => void;
     updateElementAttribute: (elementId: string, key: string, value: string) => void;
     updateElementFolder: (elementId: string, folderPath: string) => void;
     moveFolder: (kind: string, oldPath: string, newPath: string) => void;
     addElement: (kind: string, name: string, folderPath: string) => void;
+    createModelElement: (element: Omit<MemoElement, 'id'> & { id?: string }) => string;
+    persistElementAttributes: (elementId: string, attributes: Record<string, string>) => void;
     deleteFolder: (kind: string, folderPath: string) => void;
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
@@ -363,7 +367,15 @@ export interface ModelState {
     deleteUserViewpoint: (id: string) => void;
 
     // ─── Diagram actions ──────────────────────────────────────────────
-    createDiagram: (opts: { name: string; diagramType: string; viewpointId: string }) => void;
+    createDiagram: (opts: {
+        id?: string;
+        name: string;
+        diagramType: string;
+        viewKind?: string;
+        viewpointId: string;
+        elementIds?: string[];
+        activate?: boolean;
+    }) => string;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     addElementToDiagram: (diagramId: string, elementId: string) => void;
     deleteDiagram: (diagramId: string) => void;
@@ -629,6 +641,38 @@ export const useModelStore = create<ModelState>((set, get) => ({
                 }
                 : {}));
             return { success: true, sourceFile: result.sourceFile };
+        } catch (e) {
+            return { success: false, error: e instanceof Error ? e.message : String(e) };
+        }
+    },
+
+    /** Delete one element and eagerly remove every local reference to it. */
+    deleteModelElement: async (elementId) => {
+        try {
+            const result = await requestElementDelete(elementId);
+            if (!result.success) {
+                return { success: false, error: result.error ?? 'The element could not be deleted.' };
+            }
+            set(s => {
+                if (!s.model) return {};
+                const elements = { ...s.model.elements };
+                delete elements[elementId];
+                return {
+                    model: {
+                        ...s.model,
+                        elements,
+                        relationships: s.model.relationships.filter(rel =>
+                            rel.sourceId !== elementId && rel.targetId !== elementId),
+                        diagrams: (s.model.diagrams ?? []).map(diagram => ({
+                            ...diagram,
+                            elementIds: diagram.elementIds?.filter(id => id !== elementId),
+                        })),
+                    },
+                    selectedElementId: s.selectedElementId === elementId ? null : s.selectedElementId,
+                    selectedElementIds: new Set([...s.selectedElementIds].filter(id => id !== elementId)),
+                };
+            });
+            return { success: true };
         } catch (e) {
             return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
@@ -978,6 +1022,29 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
         sendElementCreate(newElement);
     },
+    createModelElement: (element) => {
+        const id = element.id ?? `${element.kind.toLowerCase().replace(/\W+/g, '_')}_${Math.random().toString(36).slice(2, 8)}`;
+        const created: MemoElement = { ...element, id };
+        set((state) => ({
+            model: state.model
+                ? { ...state.model, elements: { ...state.model.elements, [id]: created } }
+                : null,
+            selectedElementId: id,
+        }));
+        sendElementCreate(created);
+        return id;
+    },
+    persistElementAttributes: (elementId, attributes) => {
+        const element = get().model?.elements[elementId];
+        if (!element) return;
+        const updated = { ...element, attributes: { ...element.attributes, ...attributes } };
+        set((state) => ({
+            model: state.model
+                ? { ...state.model, elements: { ...state.model.elements, [elementId]: updated } }
+                : null,
+        }));
+        sendElementUpdate(updated);
+    },
     deleteFolder: (kind, folderPath) => {
         const s = get();
         if (!s.model) return;
@@ -1018,15 +1085,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
         userViewpoints: s.userViewpoints.filter(v => v.id !== id),
         selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
     })),
-    createDiagram: ({ name, diagramType, viewpointId }) => {
-        const id = `diag_${Math.random().toString(36).substr(2, 9)}`;
-        const diagram: DiagramDTO = { id, name, diagramType, viewpointId, auto: false, elementIds: [] };
+    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], activate = true }) => {
+        const id = requestedId ?? `diag_${Math.random().toString(36).substr(2, 9)}`;
+        const diagram: DiagramDTO = { id, name, diagramType, viewKind, viewpointId, auto: false, elementIds };
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
-            selectedDiagramId: id,
-            activeView: { type: 'diagram', diagramId: id },
+            selectedDiagramId: activate ? id : s.selectedDiagramId,
+            activeView: activate ? { type: 'diagram', diagramId: id } : s.activeView,
         }));
-        sendDiagramCreate({ id, name, diagramType, viewpointId, elementIds: [] });
+        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds });
+        return id;
     },
     /**
      * Add one element to a view's selection.
@@ -1112,6 +1180,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         const el = model.elements[elementId];
         if (!el) return;
         const updated = { ...el };
+        if (edit.name !== undefined) updated.name = edit.name;
         if (edit.doc !== undefined) updated.doc = edit.doc;
         if (edit.attributes) updated.attributes = { ...el.attributes, ...edit.attributes };
 

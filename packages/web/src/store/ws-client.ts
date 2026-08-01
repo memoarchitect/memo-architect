@@ -9,10 +9,11 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
+    ElementDeleteResultMessage,
 } from '@memoarchitect/tools/browser';
 import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
 
@@ -81,6 +82,8 @@ type RelationshipDeletePayload = RelationshipDeleteResultMessage['payload'];
 
 const relationshipCreateRequests = new Map<string, PendingRequest<RelationshipCreatePayload>>();
 const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDeletePayload>>();
+const elementDeleteRequests = new Map<string, PendingRequest<ElementDeleteResultMessage['payload']>>();
+const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
 
 /**
  * Resolve an in-flight mutation with the server's answer.
@@ -101,7 +104,7 @@ function settleRelationshipRequest<T extends { requestId: string }>(
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, elementDeleteRequests, screenCaptureUploadRequests]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -111,7 +114,7 @@ function rejectRelationshipRequests(message: string): void {
 }
 
 function sendRelationshipRequest<T extends { requestId: string }>(
-    type: 'relationship:create' | 'relationship:delete',
+    type: 'relationship:create' | 'relationship:delete' | 'element:delete',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -238,6 +241,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'relationship:delete:result':
             settleRelationshipRequest(msg.payload, relationshipDeleteRequests);
+            break;
+        case 'element:delete:result':
+            settleRelationshipRequest(msg.payload, elementDeleteRequests);
+            break;
+        case 'screen-capture:upload:result':
+            settleRelationshipRequest(msg.payload, screenCaptureUploadRequests);
             break;
         case 'ontology:packages': {
             const hash = (msg.payload as any).ontologyHash as string | undefined;
@@ -498,6 +507,34 @@ export function requestRelationshipDelete(
     request: Omit<RelationshipDeleteRequest, 'requestId'>,
 ): Promise<RelationshipDeleteResultMessage['payload']> {
     return sendRelationshipRequest('relationship:delete', request, relationshipDeleteRequests);
+}
+
+/** Delete a project-owned element and every relationship connected to it. */
+export function requestElementDelete(
+    elementId: string,
+): Promise<ElementDeleteResultMessage['payload']> {
+    return sendRelationshipRequest('element:delete', { elementId }, elementDeleteRequests);
+}
+
+/** Save a capture in model/assets/<viewName> and return its project-relative URI. */
+export function requestScreenCaptureUpload(request: {
+    viewName: string;
+    fileName: string;
+    base64: string;
+    mediaType: 'image/png' | 'image/jpeg' | 'image/webp';
+}): Promise<ScreenCaptureUploadResultMessage['payload']> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `screen-capture-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            screenCaptureUploadRequests.delete(requestId);
+            reject(new Error('The server did not answer the screen-capture upload request.'));
+        }, 30000);
+        screenCaptureUploadRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type: 'screen-capture:upload', payload: { ...request, requestId } }));
+    });
 }
 
 /** Send a new user diagram creation to the CLI server */

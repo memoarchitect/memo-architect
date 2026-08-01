@@ -22,6 +22,7 @@ import {
     EditabilityLegend, EditableValue, ProfileField, ProfileSection, ReadOnlyValue,
 } from '../components/element-profile/ProfileValue';
 import { ElementRelationships } from '../components/element-profile/ElementRelationships';
+import { AnnotationPanel } from '../components/UnifiedPropertiesPanel';
 import { fieldEditability } from '../components/element-profile/editability';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
@@ -289,8 +290,8 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                         />
                     ) : (
                         <EditableValue
-                            value={element.doc || ''}
-                            onSave={next => saveField('doc', next)}
+                            value={element.attributes.description || ''}
+                            onSave={next => saveAttribute('description', next)}
                             density={DENSITY}
                             multiline
                             placeholder="Click to add a description…"
@@ -346,6 +347,13 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                     incoming={relationships.incoming}
                     density={DENSITY}
                 />
+
+                {/* Comments, rationales, and notes are model content, so the
+                    full element profile must offer the same authoring surface
+                    as the diagram-side Properties panel. */}
+                <div style={{ background: COLOR.surface, borderRadius: 12, marginBottom: 16 }}>
+                    <AnnotationPanel subject={element} />
+                </div>
 
                 {/* ── Source ── */}
                 <ProfileSection title="Source" density={DENSITY} collapsible={false}>

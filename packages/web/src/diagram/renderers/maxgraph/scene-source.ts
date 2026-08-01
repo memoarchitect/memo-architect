@@ -64,7 +64,10 @@ export function buildViewpointFilter(request: SceneRequest): ((el: MemoElement) 
 
     const hasViewpoint = effectiveVpId && model.viewpoints;
     const hasHidden = hiddenLayers.size > 0;
-    const diagramElementIds = diagram?.elementIds ? new Set(diagram.elementIds) : undefined;
+    // An authored auto-populated view commonly carries an empty membership
+    // array. Empty means "derive from the viewpoint/query", not "hide every
+    // element"; only a non-empty explicit membership list constrains the view.
+    const diagramElementIds = diagram?.elementIds?.length ? new Set(diagram.elementIds) : undefined;
     if (!hasViewpoint && !hasHidden && !diagramElementIds) return undefined;
 
     const vp = hasViewpoint ? model.viewpoints!.find(v => v.id === effectiveVpId) : undefined;
@@ -74,7 +77,9 @@ export function buildViewpointFilter(request: SceneRequest): ((el: MemoElement) 
     return (el: MemoElement) => {
         if (hiddenLayers.has(el.layer)) return false;
         if (diagramElementIds) return diagramElementIds.has(el.id);
-        if (vpKinds && vpLayers) return vpKinds.has(el.kind) || vpLayers.has(el.layer);
+        if ((vpKinds?.size ?? 0) > 0 || (vpLayers?.size ?? 0) > 0) {
+            return !!vpKinds?.has(el.kind) || !!vpLayers?.has(el.layer);
+        }
         return true;
     };
 }

@@ -41,6 +41,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     'workflow-wizard': '/workflow',
     import: '/import',
     analysis: '/analysis',
+    'ui-screens': '/ui-screens',
 };
 
 /**
