@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -43,6 +43,9 @@ const MAX_RECONNECT_DELAY = 10000;
 let restartPending = false;
 /** Ontology hash received from the first ontology:packages message this session */
 let currentOntologyHash: string | null = null;
+let workspaceSessionId: string | null = null;
+let workspaceRevision: number | null = null;
+let awaitingWorkspaceSnapshot = false;
 const diagramSourceRequests = new Map<string, {
     resolve: (payload: DiagramSourceResultMessage['payload']) => void;
     reject: (error: Error) => void;
@@ -66,6 +69,34 @@ function rejectDiagramSourceRequests(message: string): void {
         pending.reject(new Error(message));
     }
     diagramSourceRequests.clear();
+}
+
+/** Apply a publication only if it continues the current workspace revision. */
+function acceptsWorkspaceRevision(revision: WorkspaceRevision | undefined): boolean {
+    // Static exports and older servers remain readable; live Tools servers
+    // attach this envelope to all model/validation/completeness publications.
+    if (!revision) return true;
+    if (revision.snapshot) {
+        workspaceSessionId = revision.workspaceSessionId;
+        workspaceRevision = revision.revision;
+        awaitingWorkspaceSnapshot = false;
+        return true;
+    }
+    if (awaitingWorkspaceSnapshot) return false;
+    if (workspaceSessionId !== revision.workspaceSessionId || workspaceRevision === null) {
+        awaitingWorkspaceSnapshot = true;
+        requestRefresh();
+        return false;
+    }
+    // The state triplet from one rebuild all bears this revision.
+    if (revision.revision === workspaceRevision) return true;
+    if (revision.baseRevision === workspaceRevision && revision.revision === workspaceRevision + 1) {
+        workspaceRevision = revision.revision;
+        return true;
+    }
+    awaitingWorkspaceSnapshot = true;
+    requestRefresh();
+    return false;
 }
 
 // ─── Relationship authoring requests ────────────────────────────────────────
@@ -167,6 +198,9 @@ export function connectWebSocket(url?: string): void {
         reconnectAttempts = 0;
         currentOntologyHash = null; // reset on each fresh connection
         restartPending = false;
+        workspaceSessionId = null;
+        workspaceRevision = null;
+        awaitingWorkspaceSnapshot = false;
         store.setRestartRequired(null);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
@@ -209,6 +243,7 @@ function handleMessage(msg: ExtendedServerMessage): void {
             return;
         case 'model:update':
             if (restartPending) return; // ignore stale updates from old server
+            if (!acceptsWorkspaceRevision(msg.revision)) return;
             store.setModel(msg.payload);
             break;
         case 'source:changed':
@@ -217,10 +252,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'validation:update':
             if (restartPending) return;
+            if (!acceptsWorkspaceRevision(msg.revision)) return;
             store.setValidation(msg.payload);
             break;
         case 'completeness:update':
             if (restartPending) return;
+            if (!acceptsWorkspaceRevision(msg.revision)) return;
             store.setCompleteness(msg.payload);
             break;
         case 'methodology:update':
