@@ -1,6 +1,7 @@
 # ADR-1-12: Namespace Canonicalization for SysML v2 Standard Tool Interop
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01. External descriptors are locators, not the semantic record: they may say where a package's source lives and may not say whether it is loaded.
 **Date:** 2026-05-02
 **Supersedes:** none (refines [ADR-1-11](ADR-1-11-single-canonical-ontology.md))
 **Reference:** [platform.md](../../architecture/platform.md)

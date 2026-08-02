@@ -1,8 +1,36 @@
 # ADR-1-8: Project Configuration Format Contract
 
-**Status:** Accepted
+**Status:** Superseded by the native semantic contract (2026-08-01)
 **Date:** 2026-04-08
-**Context:** Phase N0 — Product Contract Stabilization (#125)
+**Superseded:** 2026-08-01 — session 3 of the SysML-native design
+
+## Why this is superseded
+
+Everything below describes YAML that *selects model content*: which methodology
+a project uses, which ontologies it inherits, which optional modules load. That
+made a project's meaning depend on a file no conformant SysML v2 tool reads, so
+the same `.sysml` sources meant different things depending on a sidecar.
+
+The contract is now native:
+
+- a project's identity and method binding live in `model/catalog/project.sysml`,
+  as a `ProjectMethodBinding` whose `selectedMethodology` is a typed SysML
+  reference;
+- what a project depends on is its SysML import graph;
+- `memo.package.yaml` survives as a **locator**: name, version, description,
+  license, tags, and `sysmlDir`. Nothing else is read.
+
+`memo.config.yaml`, `memo.rules.yaml`, `memo.viewpoints.yaml`, and
+`memo.rendering.yaml` are no longer inputs of any kind. A project that still
+carries one is told so, with the native construct that replaced it named in the
+message — the field is rejected, never merged and never used as a fallback.
+
+See `docs/reference/native-project-format.md` in the ontology repository for the
+replacement contract, and section 16 of the SysML-native design for the
+file-by-file map.
+
+## Original decision (historical)
+
 
 ## Decision
 

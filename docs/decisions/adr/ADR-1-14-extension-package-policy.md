@@ -1,6 +1,7 @@
 # ADR-1-14: Extension Package Policy — Medical-Only Scope, Out-Of-Tree Extensions
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01. Selection is a native import plus methodology inclusion — never installed-package auto-discovery. A package a manifest points at but no import reaches contributes nothing.
 **Date:** 2026-05-02
 **Reference:** [ADR-1-12](ADR-1-12-namespace-canonicalization.md), [platform.md](../../architecture/platform.md)
 

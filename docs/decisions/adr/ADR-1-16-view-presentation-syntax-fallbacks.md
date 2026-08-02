@@ -1,6 +1,7 @@
 # ADR-1-16: View and Presentation Syntax Fallbacks
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Reviewed 2026-08-01. Constructs used by the native contract — `ref :>> targetRule : <ConstraintDef>`, `abstract constraint def`, nested `RulePolicy` parts — were verified in SysIDE before adoption.
 **Date:** 2026-05-03
 **Reference:** [platform.md](../../architecture/platform.md)
 

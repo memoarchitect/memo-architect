@@ -1,6 +1,7 @@
 # ADR-1-18: KerML Expression Subset for Native Constraints
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01. The section 4.1 verdict is Option P: `predicateExpression` remains the executable form, and rule policy governs identity and disposition rather than enforcement. Native constraint-body evaluation is a separately scoped follow-on with its own conformance work.
 **Date:** 2026-05-29
 **Reference:** [platform.md](../../architecture/platform.md), Epic EE (#497), EE-1 (#499)
 

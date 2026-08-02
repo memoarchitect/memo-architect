@@ -1,6 +1,7 @@
 # ADR-1-15: Methodology Scope Uses Explicit Lists
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained and sharpened 2026-08-01. Empty-list semantics are now unambiguous: under `scopeMode = explicit` an empty list selects nothing, and "everything" is only ever the deliberate `scopeMode = allAvailable`. The previous helper read an empty list as "allow everything", so a methodology that selected nothing and one that selected everything behaved identically.
 **Date:** 2026-05-03
 **Reference:** [platform.md](../../architecture/platform.md)
 

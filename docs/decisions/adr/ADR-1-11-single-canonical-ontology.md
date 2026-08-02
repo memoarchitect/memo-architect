@@ -1,6 +1,7 @@
 # ADR-1-11: Single Canonical Ontology with Multi-Dimensional Kinds
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01. Clarified: project-local definitions are project content, identified by the resolved root a file sits under rather than by a declared package `type:`, which no longer exists.
 **Date:** 2026-05-02
 **Supersedes:** earlier multi-ontology layouts (now pruned from the decision log)
 **Reference:** [platform.md](../../architecture/platform.md)

@@ -183,6 +183,8 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
     }
 
     const layerColor = LAYER_COLORS[element.layer] || COLOR.muted;
+    const declaration = element.provenance?.declaration;
+    const writable = declaration?.writable !== false;
     const kindDefinition = model?.registries?.kinds.find(kind => kind.name === element.kind);
     const groupLabel = kindDefinition?.namespace?.[1] ?? kindDefinition?.namespace?.[0];
 
@@ -282,19 +284,25 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                     density={DENSITY}
                     collapsible={false}
                 >
-                    {isScenario ? (
+                    {isScenario && writable ? (
                         <ScenarioFlowchart
                             element={element}
                             layerColor={layerColor}
                             onSave={next => saveField('doc', next)}
                         />
-                    ) : (
+                    ) : writable ? (
                         <EditableValue
                             value={element.attributes.description || ''}
                             onSave={next => saveAttribute('description', next)}
                             density={DENSITY}
                             multiline
                             placeholder="Click to add a description…"
+                        />
+                    ) : (
+                        <ReadOnlyValue
+                            value={element.attributes.description || element.doc || ''}
+                            editability={{ kind: 'derived', reason: `This ${declaration?.origin ?? 'library'} declaration is read-only.` }}
+                            density={DENSITY}
                         />
                     )}
                 </ProfileSection>
@@ -327,13 +335,17 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                         <div style={{ color: COLOR.secondary, fontSize: FONT.sm, fontWeight: 600 }}>{key}</div>
                                         <div style={{ color: COLOR.faint, fontSize: '10px' }}>Editable</div>
                                     </div>
-                                    <EditableValue
+                                    {writable ? <EditableValue
                                         value={String(value ?? '')}
                                         onSave={next => saveAttribute(key, next)}
                                         density={DENSITY}
                                         placeholder="Add value…"
                                         compact
-                                    />
+                                    /> : <ReadOnlyValue
+                                        value={String(value ?? '')}
+                                        editability={{ kind: 'derived', reason: `This ${declaration?.origin ?? 'library'} declaration is read-only.` }}
+                                        density={DENSITY}
+                                    />}
                                 </div>
                             ))}
                         </div>
@@ -355,8 +367,8 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                     <AnnotationPanel subject={element} />
                 </div>
 
-                {/* ── Source ── */}
-                <ProfileSection title="Source" density={DENSITY} collapsible={false}>
+                {/* ── Origin ── */}
+                <ProfileSection title="Origin" density={DENSITY} collapsible={false}>
                     <div style={{ maxWidth: 720 }}>
                         <ProfileField label="SysML source file" editability={fieldEditability('file')} density={DENSITY}>
                             <ReadOnlyValue
@@ -366,6 +378,17 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                 mono
                             />
                         </ProfileField>
+                        {declaration && <>
+                            <ProfileField label="Origin" editability={fieldEditability('origin')} density={DENSITY}>
+                                <ReadOnlyValue value={declaration.origin} editability={fieldEditability('origin')} density={DENSITY} />
+                            </ProfileField>
+                            <ProfileField label="Package" editability={fieldEditability('package')} density={DENSITY}>
+                                <ReadOnlyValue value={`${declaration.packageName}${declaration.packageVersion ? ` v${declaration.packageVersion}` : ''}`} editability={fieldEditability('package')} density={DENSITY} />
+                            </ProfileField>
+                            <ProfileField label="Access" editability={fieldEditability('access')} density={DENSITY}>
+                                <ReadOnlyValue value={declaration.writable ? 'Editable project content' : 'Read-only reusable content'} editability={fieldEditability('access')} density={DENSITY} />
+                            </ProfileField>
+                        </>}
                     </div>
                 </ProfileSection>
             </div>

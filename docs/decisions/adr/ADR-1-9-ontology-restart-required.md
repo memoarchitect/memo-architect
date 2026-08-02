@@ -1,6 +1,7 @@
 # ADR-1-9: Ontology Changes Require Dev Server Restart
 
 **Status:** Accepted  
+**Session-3 note (native semantic contract):** Expanded 2026-08-01: the frozen reusable environment is core, ontology, methodology, and extensions. Which of those a project resolves is decided by its SysML import graph, not by a settings `extends` chain.
 **Date:** 2026-04-20
 
 ## Context

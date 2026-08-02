@@ -1,6 +1,7 @@
 # ADR-1-22: Exact npm Dependencies with a Sibling Meta Workspace
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01 as an application/distribution concern. `memo.lock.yaml` records the packages the project's imports resolved to; it cannot introduce a package the import graph never named.
 **Date:** 2026-07-16
 **Owners:** Platform maintainers
 **Scope:** Repository dependency resolution and coordinated development
