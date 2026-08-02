@@ -18,6 +18,10 @@ function clientRoot(): string {
 
 export async function architectDevCommand(options: {
     port?: number; open?: boolean; featureGrants?: FeatureGrants; keepAlive?: boolean;
+    /** Parsed `--toolchain.*` options, passed straight through to MEMO Tools. */
+    toolchainOptions?: Record<string, unknown>;
+    /** The same flags as argv, so the supervised child runs the same toolchain. */
+    toolchainArgv?: string[];
 }): Promise<void> {
     if (process.env.MEMO_ARCHITECT_RUNTIME_CHILD !== '1') {
         const port = options.port ?? 3000;
@@ -33,6 +37,9 @@ export async function architectDevCommand(options: {
             const args = [process.argv[1], 'dev', '--port', String(port)];
             if (!firstStart || options.open === false) args.push('--no-open');
             if (options.keepAlive) args.push('--keep-alive');
+            // A relaunch that dropped these would silently switch the session
+            // back to the default toolchain mid-run.
+            args.push(...(options.toolchainArgv ?? []));
             child = spawn(process.execPath, args, {
                 cwd: process.cwd(), stdio: 'inherit',
                 env: {
@@ -60,6 +67,7 @@ export async function architectDevCommand(options: {
         clientRoot: clientRoot(),
         exitWhenIdle: !options.keepAlive,
         supervisedRuntime: true,
+        toolchainOptions: options.toolchainOptions,
         // Tools serves the shell; Architect decides what goes into it.
         transformClientHtml: options.featureGrants
             ? html => injectFeatureGrants(html, options.featureGrants!)
