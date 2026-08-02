@@ -223,6 +223,15 @@ export interface ModelState {
     restartRequired: RestartRequiredMessage | null;
     editConflict: EditConflictMessage['payload'] | null;
     methodology: import('@memoarchitect/tools/browser').MethodologyDescriptor | null;
+    /**
+     * The effective rule set: identity, disposition, severity, policy chain.
+     *
+     * Governance data, not enforcement evidence (section 10.4). It says which
+     * rules are active and how they got that way; whether a predicate fires is
+     * a separate question.
+     */
+    effectiveRules: any[];
+    ruleDiagnostics: any[];
     /** Last source-change notification from the dev server, or null. */
     lastSourceChange: SourceChange | null;
 
@@ -304,6 +313,7 @@ export interface ModelState {
     /** Record which source files the server just rebuilt from. */
     applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
     setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
+    setEffectiveRules: (rules: any[], diagnostics: any[]) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -432,6 +442,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     restartRequired: null,
     editConflict: null,
     methodology: null,
+    effectiveRules: [],
+    ruleDiagnostics: [],
     lastSourceChange: null,
 
     // UI state
@@ -693,6 +705,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
         lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
     })),
     setMethodology: (m) => set({ methodology: m }),
+    setEffectiveRules: (rules, diagnostics) =>
+        set({ effectiveRules: rules ?? [], ruleDiagnostics: diagnostics ?? [] }),
     setModel: (model) => set((s) => {
         let activeView = s.activeView;
         let selectedDiagramId = s.selectedDiagramId;

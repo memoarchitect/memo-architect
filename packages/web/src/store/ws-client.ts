@@ -116,6 +116,7 @@ const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDe
 const elementDeleteRequests = new Map<string, PendingRequest<ElementDeleteResultMessage['payload']>>();
 const elementMutationRequests = new Map<string, PendingRequest<ElementMutationResultMessage['payload']>>();
 const methodologySourceRequests = new Map<string, PendingRequest<MethodologySourceResultMessage['payload']>>();
+const rulePolicyWriteRequests = new Map<string, PendingRequest<any>>();
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
 
 /**
@@ -149,6 +150,11 @@ function rejectRelationshipRequests(message: string): void {
         pending.reject(new Error(message));
     }
     elementMutationRequests.clear();
+    for (const pending of rulePolicyWriteRequests.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error('The development server disconnected.'));
+    }
+    rulePolicyWriteRequests.clear();
     for (const pending of methodologySourceRequests.values()) {
         clearTimeout(pending.timer);
         pending.reject(new Error(message));
@@ -296,6 +302,13 @@ function handleMessage(msg: ExtendedServerMessage): void {
         case 'methodology:update':
             if (restartPending) return;
             store.setMethodology(msg.payload);
+            break;
+        case 'rules:update':
+            if (restartPending) return;
+            store.setEffectiveRules(msg.payload.rules, msg.payload.diagnostics);
+            break;
+        case 'rule:policy:write:result':
+            settleRelationshipRequest(msg.payload, rulePolicyWriteRequests);
             break;
         case 'error':
             console.error('[MEMO] Server error:', msg.payload.message);
@@ -846,4 +859,38 @@ export function sendLlmSuggest(requestId: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'llm:suggest', payload: { requestId } }));
     }
+}
+
+
+/**
+ * Ask the server to write a RulePolicy into methodology source.
+ *
+ * The browser sends the decision, never the SysML. Tools renders the policy and
+ * writes it through the same precondition-checked path as every other mutation,
+ * so a rule tailored here is subject to the same conflict handling as one typed
+ * in SysIDE.
+ */
+export function writeRulePolicy(request: {
+    targetRuleType: string;
+    disposition: 'enabled' | 'disabled' | 'replaced';
+    severityOverride?: 'error' | 'warning' | 'info';
+    replacementRuleType?: string;
+    rationaleText: string;
+    authority?: string;
+    approvalReference?: string;
+    sourceFile: string;
+    baseRevision: string;
+}): Promise<{ success: boolean; error?: string; code?: string; revision?: string; conflict?: boolean }> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `rule-policy-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            rulePolicyWriteRequests.delete(requestId);
+            reject(new Error('Timed out while writing the rule policy.'));
+        }, 15000);
+        rulePolicyWriteRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type: 'rule:policy:write', payload: { requestId, ...request } }));
+    });
 }

@@ -18,6 +18,7 @@ import type { ContextMenuTarget } from './OntologyContextMenu';
 import { OrphanWarningDialog } from '../views/ontology/OrphanWarningDialog';
 import type { OrphanedElement, OntologyKindInfo } from '../types/ontology';
 import { MethodologySourceEditor } from './MethodologySourceEditor';
+import { RulePolicyEditor } from './RulePolicyEditor';
 
 const TYPE_ICONS: Record<string, string> = {
     ontology: '\u{1F4E6}',  // 📦
@@ -382,6 +383,7 @@ export function OntologyBrowserTab() {
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden" style={{ fontSize: FONT.explorer.item }}>
+            <RulePolicyEditor />
             <MethodologySourceEditor />
             {/* Search input — same token style as ExplorerPanel's search */}
             <div className="px-3 py-2 sticky top-0 z-10" style={{ background: COLOR.surface, borderBottom: `1px solid ${COLOR.border}` }}>

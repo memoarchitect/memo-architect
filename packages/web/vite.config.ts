@@ -14,6 +14,27 @@ export default defineConfig({
     },
     server: {
         port: 3000,
+        watch: {
+            // Model source is NOT application source (design section 13.2).
+            //
+            // A model save must never trigger HMR, a route replacement, or a
+            // React remount: the WebSocket revision updates the affected stores
+            // in place, and a Vite reload on top of it would throw away the
+            // user's route, selection, drawing mode, and unsaved form state for
+            // a change the app already handled.
+            //
+            // Vite's root is `packages/web`, so a project outside it is not
+            // watched anyway. These patterns matter for the memo-meta
+            // workspace, where the ontology and a project can sit inside the
+            // watched tree, and they state the rule explicitly rather than
+            // leaving it to a directory layout that could change.
+            ignored: [
+                '**/model/catalog/**',
+                '**/*.sysml',
+                '**/.memo/**',
+                '**/memo.lock.yaml',
+            ],
+        },
     },
     build: {
         outDir: '../../dist',

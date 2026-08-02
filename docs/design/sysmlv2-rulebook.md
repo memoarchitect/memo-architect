@@ -116,10 +116,22 @@ And cascades: `<'UR1.1'>`, `<'URI1.2.1'>` in `HSUVRequirements.sysml`.
 
 ## 3. Definition / Usage rules (D)
 
-### D1 · Every concrete instance is a usage of a definition.
-**Source:** OMG `VehicleDefinitions.sysml` defines `part def Vehicle`; `VehicleUsages.sysml` declares `part vehicle_C1 : Vehicle`. Same shape across every example.
-**MEMO rule:** project files (`memo::projects::*`) MUST contain only usages, never new `… def`s of an ontology kind. Definitions live in `memo::arch::*` or `memo::process::*`.
-**Lint:** D1.
+### D1 · Ownership is decided by source origin, not by construct kind.
+**Source:** OMG `VehicleDefinitions.sysml` defines `part def Vehicle`; `VehicleUsages.sysml` declares `part vehicle_C1 : Vehicle`. Same shape across every example — but the split there is a *file organisation* convention, not a prohibition on downstream definitions.
+
+**MEMO rule:** a project MAY declare its own definitions. `action def ProjectAction` written in project source is a project-owned definition: editable, hot-reloaded, and never treated as ontology content. The same declaration inside a resolved ontology, extension, or methodology package is reusable content: read-only, and a change to it requires a runtime restart.
+
+What decides which is the **resolved dependency root the file sits under** — never the construct kind, the filename, or the directory. A project-local definition that specialises an ontology kind is normal modelling, not a violation; what it may not do is *redefine* an ontology definition's identity, which is a name-uniqueness question (see §18.6 of the native design: a name must resolve to exactly one type).
+
+> **Superseded 2026-08-02 (design §18.2 deliverable 7).** D1 previously read
+> "project files (`memo::projects::*`) MUST contain only usages, never new
+> `… def`s of an ontology kind." That contradicted the native design's
+> acceptance criterion that adding `action def ProjectAction` to project source
+> creates an editable project definition without triggering an ontology restart,
+> and it named namespaces (`memo::arch::*`, `memo::process::*`) that the lean
+> rearchitecture removed.
+
+**Lint:** D1 — flags a project definition whose name collides with a resolved one, not a project definition as such.
 
 ### D2 · Specialise with `:>` (subsetting kind), redefine with `redefines`, bind with `:>>`.
 **Source:** OMG `Requirement Definitions.sysml`:
