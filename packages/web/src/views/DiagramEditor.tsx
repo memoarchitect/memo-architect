@@ -23,7 +23,7 @@ import {
     useModelStore, getDiagram, getElementsByLayer,
     getDiagramSourceFiles, sourceChangeAffects,
 } from '../store/model-store';
-import { loadDiagramSource, saveDiagramSource, sendDiagramParse } from '../store/ws-client';
+import { loadDiagramSource, saveDiagramSource, sendDiagramParse, sendOpenFile } from '../store/ws-client';
 import type { DiagramDTO, MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
@@ -361,17 +361,15 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         setSaveError(null);
     };
 
-    const persistText = useCallback(async (text: string, options?: { force?: boolean }) => {
+    const persistText = useCallback(async (text: string) => {
         if (!diagram) return;
         const sequence = ++saveSequence.current;
         setIsSaving(true);
         setSaveError(null);
         try {
             if (diagram.sourceFile) {
-                // Omitting the base revision is what makes a save unconditional,
-                // and only an explicit overwrite may do that.
-                const result = await saveDiagramSource(
-                    diagramId, text, options?.force ? undefined : revisionRef.current);
+                if (!revisionRef.current) throw new Error('Reload the source before saving this edit.');
+                const result = await saveDiagramSource(diagramId, text, revisionRef.current);
 
                 if (result.conflict) {
                     setConflict({ theirs: result.text ?? '', revision: result.revision, at: Date.now() });
@@ -401,11 +399,19 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         void loadSource();
     }, [loadSource]);
 
-    /** Keep the local buffer and overwrite the newer file, deliberately. */
-    const handleOverwrite = useCallback(() => {
-        clearTimeout(saveTimer.current);
-        void persistText(textRef.current, { force: true });
-    }, [persistText]);
+    const handleCopyDraft = useCallback(() => {
+        void navigator.clipboard.writeText(textRef.current);
+    }, []);
+
+    const handleDownloadDraft = useCallback(() => {
+        const blob = new Blob([textRef.current], { type: 'text/plain;charset=utf-8' });
+        const href = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = href;
+        anchor.download = `${diagramId}-rejected.sysml`;
+        anchor.click();
+        URL.revokeObjectURL(href);
+    }, [diagramId]);
 
     useEffect(() => {
         localStorage.setItem('memo.diagramEditor.autoSave', String(autoSave));
@@ -445,10 +451,12 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
             {conflict && (
                 <SourceBanner
                     tone="conflict"
-                    message={`${diagram.sourceFile} changed on disk while you were editing. Saving now would discard those changes.`}
+                    message={`${diagram.sourceFile} changed on disk. Your rejected edit remains in this buffer and was not written.`}
                     actions={[
-                        { label: 'Reload from disk', onClick: handleTakeTheirs, hint: 'Discards your unsaved edits' },
-                        { label: 'Overwrite with mine', onClick: handleOverwrite, hint: 'Discards the changes on disk' },
+                        { label: 'Copy draft', onClick: handleCopyDraft, hint: 'Copy the rejected SysML edit' },
+                        { label: 'Download rejected edit', onClick: handleDownloadDraft, hint: 'Export the rejected SysML edit' },
+                        { label: 'Reveal file', onClick: () => sendOpenFile(diagram.sourceFile!), hint: 'Open the changed source file' },
+                        { label: 'Reload from disk', onClick: handleTakeTheirs, hint: 'Discard the draft and load current disk content' },
                     ]}
                 />
             )}

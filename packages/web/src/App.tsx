@@ -15,6 +15,7 @@ import { BulkImportModal } from './components/BulkImportModal';
 import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
 import { RestartRequiredBanner } from './components/RestartRequiredBanner';
+import { EditConflictNotice } from './components/EditConflictNotice';
 import { CatalogHomePage } from './views/CatalogHomePage';
 import { DiagramHomePage } from './views/DiagramHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
@@ -484,6 +485,7 @@ export function App() {
 
             {/* Ontology restart-required overlay — blocks UI on mid-session ontology change */}
             <RestartRequiredBanner />
+            <EditConflictNotice />
         </div>
     );
 }

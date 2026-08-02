@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -114,6 +114,8 @@ type RelationshipDeletePayload = RelationshipDeleteResultMessage['payload'];
 const relationshipCreateRequests = new Map<string, PendingRequest<RelationshipCreatePayload>>();
 const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDeletePayload>>();
 const elementDeleteRequests = new Map<string, PendingRequest<ElementDeleteResultMessage['payload']>>();
+const elementMutationRequests = new Map<string, PendingRequest<ElementMutationResultMessage['payload']>>();
+const methodologySourceRequests = new Map<string, PendingRequest<MethodologySourceResultMessage['payload']>>();
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
 
 /**
@@ -142,6 +144,16 @@ function rejectRelationshipRequests(message: string): void {
         }
         map.clear();
     }
+    for (const pending of elementMutationRequests.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error(message));
+    }
+    elementMutationRequests.clear();
+    for (const pending of methodologySourceRequests.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error(message));
+    }
+    methodologySourceRequests.clear();
 }
 
 function sendRelationshipRequest<T extends { requestId: string }>(
@@ -161,6 +173,18 @@ function sendRelationshipRequest<T extends { requestId: string }>(
         pending.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type, payload: { ...request, requestId } }));
     });
+}
+
+function sourcePrecondition(sourceFile: string, targetElementIds: string[]): ModelMutationPrecondition | undefined {
+    const model = useModelStore.getState().model;
+    if (!workspaceSessionId || workspaceRevision === null || !model) return undefined;
+    return {
+        workspaceSessionId,
+        baseRevision: workspaceRevision,
+        sourceFile,
+        expectedSourceHash: model.sourceHashes?.[sourceFile] ?? '',
+        targetElementIds,
+    };
 }
 
 /**
@@ -241,10 +265,19 @@ function handleMessage(msg: ExtendedServerMessage): void {
             restartPending = true;
             store.setRestartRequired(msg as RestartRequiredMessage);
             return;
+        case 'app:edit-conflict':
+            store.setEditConflict((msg as EditConflictMessage).payload);
+            return;
         case 'model:update':
             if (restartPending) return; // ignore stale updates from old server
             if (!acceptsWorkspaceRevision(msg.revision)) return;
-            store.setModel(msg.payload);
+            if (msg.revision?.modelDelta && !msg.revision.snapshot && store.model) {
+                const elements = { ...store.model.elements, ...msg.revision.modelDelta.upsertElements };
+                for (const id of msg.revision.modelDelta.removeElementIds) delete elements[id];
+                store.setModel({ ...store.model, ...msg.revision.modelDelta.patch, elements });
+            } else {
+                store.setModel(msg.payload);
+            }
             break;
         case 'source:changed':
             if (restartPending) return;
@@ -281,6 +314,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'element:delete:result':
             settleRelationshipRequest(msg.payload, elementDeleteRequests);
+            break;
+        case 'element:mutation:result':
+            settleRelationshipRequest(msg.payload, elementMutationRequests);
+            break;
+        case 'methodology:source:result':
+            settleRelationshipRequest(msg.payload, methodologySourceRequests);
             break;
         case 'screen-capture:upload:result':
             settleRelationshipRequest(msg.payload, screenCaptureUploadRequests);
@@ -507,23 +546,36 @@ export function requestRefresh(): void {
 }
 
 /** Send an element update to the CLI server for 2-way sync */
-export function sendElementUpdate(element: any): void {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: 'element:update',
-            payload: element,
-        }));
-    }
+export function sendElementUpdate(element: any): Promise<ElementMutationResultMessage['payload']> {
+    return sendElementMutation('element:update', element);
 }
 
 /** Send a new element creation to the CLI server */
-export function sendElementCreate(element: any): void {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: 'element:create',
-            payload: element,
-        }));
+export function sendElementCreate(element: any): Promise<ElementMutationResultMessage['payload']> {
+    return sendElementMutation('element:create', element);
+}
+
+function sendElementMutation(
+    type: 'element:update' | 'element:create', element: any,
+): Promise<ElementMutationResultMessage['payload']> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
     }
+    const requestId = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const model = useModelStore.getState().model;
+    const sourceFile = (element.file as string | undefined) ?? 'model/catalog/project.sysml';
+    const expectedSourceHash = model?.sourceHashes?.[sourceFile] ?? '';
+    const precondition = workspaceSessionId && workspaceRevision !== null
+        ? { workspaceSessionId, baseRevision: workspaceRevision, sourceFile, expectedSourceHash, targetElementIds: [element.id] }
+        : undefined;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            elementMutationRequests.delete(requestId);
+            reject(new Error('The server did not answer the element mutation.'));
+        }, 15000);
+        elementMutationRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type, payload: { ...element, file: sourceFile, requestId, precondition } }));
+    });
 }
 
 /**
@@ -536,21 +588,34 @@ export function sendElementCreate(element: any): void {
 export function requestRelationshipCreate(
     request: Omit<RelationshipCreateRequest, 'requestId'>,
 ): Promise<RelationshipCreateResultMessage['payload']> {
-    return sendRelationshipRequest('relationship:create', request, relationshipCreateRequests);
+    const owningFile = request.owningFile ?? 'model/catalog/relationships.sysml';
+    return sendRelationshipRequest('relationship:create', {
+        ...request, owningFile,
+        precondition: sourcePrecondition(owningFile, [request.sourceId, request.targetId]),
+    }, relationshipCreateRequests);
 }
 
 /** Ask the server to delete one relationship usage, and wait for its answer. */
 export function requestRelationshipDelete(
     request: Omit<RelationshipDeleteRequest, 'requestId'>,
 ): Promise<RelationshipDeleteResultMessage['payload']> {
-    return sendRelationshipRequest('relationship:delete', request, relationshipDeleteRequests);
+    const relationship = useModelStore.getState().model?.relationships.find(rel => rel.id === request.relationshipId);
+    const sourceFile = relationship?.file ?? request.sourceFile;
+    return sendRelationshipRequest('relationship:delete', {
+        ...request,
+        precondition: sourceFile ? sourcePrecondition(sourceFile, [relationship?.sourceId, relationship?.targetId].filter(Boolean) as string[]) : undefined,
+    }, relationshipDeleteRequests);
 }
 
 /** Delete a project-owned element and every relationship connected to it. */
 export function requestElementDelete(
     elementId: string,
 ): Promise<ElementDeleteResultMessage['payload']> {
-    return sendRelationshipRequest('element:delete', { elementId }, elementDeleteRequests);
+    const element = useModelStore.getState().model?.elements[elementId];
+    return sendRelationshipRequest('element:delete', {
+        elementId,
+        precondition: element?.file ? sourcePrecondition(element.file, [elementId]) : undefined,
+    }, elementDeleteRequests);
 }
 
 /** Save a capture in model/assets/<viewName> and return its project-relative URI. */
@@ -607,7 +672,7 @@ export function sendDiagramParse(diagramId: string, text: string): void {
 function sendDiagramSourceRequest(
     operation: 'load' | 'save',
     diagramId: string,
-    save?: { text: string; baseRevision?: string },
+    save?: { text: string; baseRevision: string },
 ): Promise<DiagramSourceResultMessage['payload']> {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         return Promise.reject(new Error('The development server is not connected.'));
@@ -637,14 +702,35 @@ export function loadDiagramSource(diagramId: string): Promise<DiagramSourceResul
  * `baseRevision` is the revision the edit started from. The server refuses the
  * write when the file has moved on since, and answers with `conflict` plus the
  * current contents — passing it is what stops a stale editor from discarding
- * someone else's work. Omit it only to overwrite deliberately.
+ * someone else's work. There is no unconditional overwrite route.
  */
 export function saveDiagramSource(
     diagramId: string,
     text: string,
-    baseRevision?: string,
+    baseRevision: string,
 ): Promise<DiagramSourceResultMessage['payload']> {
     return sendDiagramSourceRequest('save', diagramId, { text, baseRevision });
+}
+
+export function methodologySource(
+    operation: 'load' | 'save', sourceFile: string,
+    save?: { text: string; baseRevision: string },
+): Promise<MethodologySourceResultMessage['payload']> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `methodology-${operation}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            methodologySourceRequests.delete(requestId);
+            reject(new Error(`Timed out while trying to ${operation} methodology source.`));
+        }, 15000);
+        methodologySourceRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({
+            type: `methodology:source:${operation === 'load' ? 'request' : 'save'}`,
+            payload: { requestId, sourceFile, ...save },
+        }));
+    });
 }
 
 /** Send kind remapping to server — replaces orphaned kind references in SysML files */

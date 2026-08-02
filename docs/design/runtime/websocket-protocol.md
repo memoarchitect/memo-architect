@@ -100,7 +100,7 @@ Sent after completeness computation.
 
 ### `app:restart-required`
 
-Sent when the ontology source or selection changes on disk. The server **does not reload registries** — the client must restart the dev server (`Ctrl+C`, then `memo-architect dev`) to apply changes.
+Sent when reusable semantics change or a coherent project closure cannot be maintained. The runtime never hot-swaps frozen registries; the `memo-architect dev` supervisor relaunches the model child from disk.
 
 ```json
 {
@@ -117,10 +117,20 @@ Sent when the ontology source or selection changes on disk. The server **does no
 |----------|---------|
 | `ontology-source-changed` | File watcher detected a change in ontology or methodology SysML/package metadata |
 | `ontology-selection-changed` | User saved methodology or ontology selection via the UI |
+| `dependency-closure-uncomputable` | Changed project source no longer yields a coherent dependency closure |
+| `transaction-independence-uncomputable` | Repeated external writes overlap a pending server transaction |
 
-**Client behaviour:** On receipt, the web app shows a blocking modal overlay (`RestartRequiredBanner`) and stops accepting `model:update`, `validation:update`, and `completeness:update` messages. Clicking "Reload page" triggers `window.location.reload()` which reconnects to the freshly bootstrapped server.
+**Client behaviour:** On receipt, the web app shows a blocking reconnect overlay (`RestartRequiredBanner`) and stops accepting `model:update`, `validation:update`, and `completeness:update` messages from the old runtime. The supervising `memo-architect dev` process relaunches the model-runtime child; the existing browser reconnects and receives a new full snapshot without a page refresh or React remount.
 
 **Ontology hash field:** Every `model:update` and `ontology:packages` message carries an `ontologyHash` field (16-char hex sha256 of kind + relationship names). The web client stores the hash from the first `ontology:packages` received. If a later message carries a different hash (stale server race after restart), the client triggers `app:restart-required` locally.
+
+### `app:edit-conflict`
+
+Broadcast for a stale web edit to project-owned source. It names the source,
+target elements, base/current revisions and hashes, rejected command ID, and
+exportable rejected draft. No write is performed. Architect shows Copy draft,
+Download rejected edit, and Reveal file actions while unrelated files remain
+editable. Reusable-source conflicts use `app:restart-required` instead.
 
 ### `error`
 

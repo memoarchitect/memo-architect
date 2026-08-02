@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeExplorerGroupTree } from '../ExplorerPanel';
+import { artifactCategory, computeExplorerGroupTree } from '../ExplorerPanel';
 import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
@@ -54,6 +54,14 @@ function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): stri
 }
 
 describe('computeExplorerGroupTree', () => {
+    it('uses the required Artifacts child categories', () => {
+        expect(artifactCategory('RiskManagementReport', 'DocumentArtifact')).toBe('documents');
+        expect(artifactCategory('ScreenCapture', 'ModelOwnedArtifact')).toBe('assets');
+        expect(artifactCategory('DocumentTemplate', 'ModelOwnedArtifact')).toBe('templates');
+        expect(artifactCategory('AnalysisNotebook', 'ModelOwnedArtifact')).toBe('analyses');
+        expect(artifactCategory('ADRArtifact', 'ModelOwnedArtifact')).toBe('adrs');
+        expect(artifactCategory('DesignReview', 'ModelOwnedArtifact')).toBe('reviews');
+    });
     it('groups ontology-declared kinds under their package layer', () => {
         const groups = computeExplorerGroupTree(
             [el('h1', 'Hazard', 'risk')], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],

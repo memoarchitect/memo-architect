@@ -12,6 +12,7 @@ import type {
     DiagramDTO,
     DiagramLayout,
     RestartRequiredMessage,
+    EditConflictMessage,
 } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport, LlmSettingsStatus } from '@memoarchitect/tools/browser';
 import type {
@@ -220,6 +221,7 @@ export interface ModelState {
     completeness: CompletenessReport | null;
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
+    editConflict: EditConflictMessage['payload'] | null;
     methodology: import('@memoarchitect/tools/browser').MethodologyDescriptor | null;
     /** Last source-change notification from the dev server, or null. */
     lastSourceChange: SourceChange | null;
@@ -298,6 +300,7 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
+    setEditConflict: (conflict: EditConflictMessage['payload'] | null) => void;
     /** Record which source files the server just rebuilt from. */
     applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
     setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
@@ -427,6 +430,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     completeness: null,
     connected: false,
     restartRequired: null,
+    editConflict: null,
     methodology: null,
     lastSourceChange: null,
 
@@ -684,6 +688,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
+    setEditConflict: (editConflict) => set({ editConflict }),
     applySourceChange: (change) => set(s => ({
         lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
     })),
@@ -1185,11 +1190,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (edit.attributes) updated.attributes = { ...el.attributes, ...edit.attributes };
 
         // 1. Sync to server
-        if (elementId.startsWith('new_')) {
-            sendElementCreate(updated);
-        } else {
-            sendElementUpdate(updated);
-        }
+        const result = elementId.startsWith('new_')
+            ? await sendElementCreate(updated)
+            : await sendElementUpdate(updated);
+        // A rejected edit remains in pendingEdits as the exportable/copyable
+        // draft. Only the server's accepted write may clear it or update the
+        // canonical local model.
+        if (!result.success) return;
 
         // 2. Local update
         const newModel = { ...model, elements: { ...model.elements, [elementId]: updated } };

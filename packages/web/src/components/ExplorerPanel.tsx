@@ -698,6 +698,19 @@ export interface ExplorerSubGroup {
     kinds: Map<string, TreeNode[]>;
 }
 
+const ARTIFACT_CATEGORIES = ['documents', 'assets', 'templates', 'analyses', 'adrs', 'reviews'] as const;
+
+/** Stable user-facing artifact branch, independent of ontology source folders. */
+export function artifactCategory(kind: string, superType?: string): typeof ARTIFACT_CATEGORIES[number] {
+    const type = `${kind} ${superType ?? ''}`.toLowerCase();
+    if (/(review|approval)/.test(type)) return 'reviews';
+    if (/(adr|decision)/.test(type)) return 'adrs';
+    if (/(template|pattern)/.test(type)) return 'templates';
+    if (/(analysis|notebook|worksheet|matrix)/.test(type)) return 'analyses';
+    if (/(asset|capture|image|media|file)/.test(type)) return 'assets';
+    return 'documents';
+}
+
 /**
  * Group model elements by ontology layer, then by namespace sub-group, for
  * the Model Explorer tree (e.g. Architecture → Risk → Hazard → elements).
@@ -724,12 +737,14 @@ export function computeExplorerGroupTree(
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
     /** Bucket kind → elements into sub-groups, building each kind's tree. */
-    const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string): ExplorerSubGroup[] => {
+    const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string, layerId?: string): ExplorerSubGroup[] => {
         const buckets = new Map<string, Map<string, TreeNode[]>>();
         for (const [kind, els] of kindMap.entries()) {
             // An ontology kind without a namespace group sits directly in its
             // declared ontology layer.
-            const sub = kindToSubGroup[kind] ?? '';
+            const sub = layerId === 'artifacts'
+                ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
+                : (kindToSubGroup[kind] ?? '');
             const typeFolder = kindToParent[kind] ?? kind;
             if (!buckets.has(sub)) buckets.set(sub, new Map());
             const kinds = buckets.get(sub)!;
@@ -737,7 +752,9 @@ export function computeExplorerGroupTree(
             kinds.set(typeFolder, [...existing, ...buildTree(els)]);
         }
         return [...buckets.entries()]
-            .sort(([a], [b]) => a.localeCompare(b))
+            .sort(([a], [b]) => layerId === 'artifacts'
+                ? ARTIFACT_CATEGORIES.indexOf(a as any) - ARTIFACT_CATEGORIES.indexOf(b as any)
+                : a.localeCompare(b))
             .map(([id, kinds]) => ({
                 id,
                 label: id ? subGroupLabel(id) : '',
@@ -762,7 +779,7 @@ export function computeExplorerGroupTree(
             kindMap.get(el.kind)!.push(el);
         }
         if (kindMap.size > 0) {
-            groups.push({ group: lg, subGroups: toSubGroups(kindMap, lg.color) });
+            groups.push({ group: lg, subGroups: toSubGroups(kindMap, lg.color, lg.id) });
         }
     }
 

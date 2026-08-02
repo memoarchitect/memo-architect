@@ -10,9 +10,15 @@ export function RestartRequiredBanner() {
     const restartRequired = useModelStore(s => s.restartRequired);
     if (!restartRequired) return null;
 
-    const label = restartRequired.reason === 'ontology-selection-changed'
-        ? 'Ontology selection changed'
-        : 'Ontology source changed';
+    const closureFailure = restartRequired.reason === 'dependency-closure-uncomputable';
+    const transactionFailure = restartRequired.reason === 'transaction-independence-uncomputable';
+    const label = closureFailure
+        ? 'Dependency closure could not be rebuilt'
+        : transactionFailure
+            ? 'Concurrent writes could not be distinguished'
+        : restartRequired.reason === 'ontology-selection-changed'
+            ? 'Ontology selection changed'
+            : 'Ontology source changed';
 
     return (
         <div
@@ -53,22 +59,8 @@ export function RestartRequiredBanner() {
                 <div style={{ fontSize: '0.875rem', color: '#E2E8F0', marginBottom: '24px', lineHeight: 1.6 }}>
                     {restartRequired.instruction}
                 </div>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                    <button
-                        onClick={() => window.location.reload()}
-                        style={{
-                            background: '#F59E0B',
-                            color: '#0F172A',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '8px 20px',
-                            fontWeight: 600,
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Reload page
-                    </button>
+                <div style={{ fontSize: '0.8rem', color: '#FBBF24' }} role="status">
+                    {closureFailure ? 'Model mutations are locked — Relaunch Memo Architect after fixing the source.' : 'Reconnecting to the rebuilt runtime…'}
                 </div>
             </div>
         </div>
