@@ -1,7 +1,7 @@
 {
   "name": "@memoarchitect/architect",
   "version": "0.6.6",
-  "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
+  "description": "MEMO Architect \u2014 interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
     "memo-architect": "lib/bin/memo-architect.js"
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@memoarchitect/tools": "0.6.7",
+    "@memoarchitect/sysmlc": "0.6.7",
     "@memoarchitect/ontology": "0.6.5",
     "commander": "^12.1.0"
   },
