@@ -7,6 +7,7 @@ import type { MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 import { ElementRelationships } from './element-profile/ElementRelationships';
+import { RenameScopeNote } from './RenameScopeNote';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
 import type { Density } from './element-profile/density';
@@ -106,6 +107,7 @@ function RegionProperties({ element, onNameSave, onAttributeSave }: {
                 <label style={{ display: 'block', color: '#6B7280' }}>
                     <span style={{ display: 'block', marginBottom: 3 }}>Name</span>
                     <EditableValue value={element.name} onSave={onNameSave} density={PANEL_DENSITY} placeholder="Region name" />
+                    <RenameScopeNote identifier={element.id} />
                 </label>
                 <label style={{ display: 'block', color: '#6B7280' }}>
                     <span style={{ display: 'block', marginBottom: 3 }}>Description</span>
@@ -357,6 +359,16 @@ function ElementProperties() {
                 {element.kind === 'UIElement' && (
                     <RegionProperties element={element} onNameSave={handleNameSave} onAttributeSave={handleAttrSave} />
                 )}
+
+                {/* The SysML identifier is what other declarations reference.
+                    Showing it next to the rename caveat is the difference
+                    between "renaming is limited" and knowing what would break. */}
+                <Section title="Identity">
+                    <div className="text-xs" style={{ color: '#374151' }}>
+                        <code style={{ fontFamily: 'ui-monospace, monospace' }}>{element.id}</code>
+                        <RenameScopeNote />
+                    </div>
+                </Section>
 
                 {element.kind !== 'UIElement' && <Section title="Description" defaultOpen>
                     <div className="text-xs leading-relaxed">

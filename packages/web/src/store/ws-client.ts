@@ -181,6 +181,19 @@ function sendRelationshipRequest<T extends { requestId: string }>(
     });
 }
 
+/**
+ * The IR identity of an element in the revision currently on screen.
+ *
+ * What a write is addressed to (§6.2). Quoting it is how a write made against a
+ * model that has since changed is *detected* rather than applied to whatever
+ * now answers to the same name — the server refuses a stale one outright.
+ * Undefined for an element the current revision does not project, in which case
+ * the server falls back to its own lookup.
+ */
+function irIdentityOf(elementId: string): string | undefined {
+    return useModelStore.getState().model?.irIdentities?.[elementId];
+}
+
 function sourcePrecondition(sourceFile: string, targetElementIds: string[]): ModelMutationPrecondition | undefined {
     const model = useModelStore.getState().model;
     if (!workspaceSessionId || workspaceRevision === null || !model) return undefined;
@@ -598,7 +611,14 @@ function sendElementMutation(
             reject(new Error('The server did not answer the element mutation.'));
         }, 15000);
         elementMutationRequests.set(requestId, { resolve, reject, timer });
-        ws!.send(JSON.stringify({ type, payload: { ...element, file: sourceFile, requestId, precondition } }));
+        ws!.send(JSON.stringify({
+            type,
+            payload: {
+                ...element, file: sourceFile, requestId, precondition,
+                // Creation has no identity to quote; an update always does.
+                ...(type === 'element:update' ? { irIdentity: irIdentityOf(element.id) } : {}),
+            },
+        }));
     });
 }
 
@@ -615,6 +635,8 @@ export function requestRelationshipCreate(
     const owningFile = request.owningFile ?? 'model/catalog/relationships.sysml';
     return sendRelationshipRequest('relationship:create', {
         ...request, owningFile,
+        sourceIdentity: irIdentityOf(request.sourceId),
+        targetIdentity: irIdentityOf(request.targetId),
         precondition: sourcePrecondition(owningFile, [request.sourceId, request.targetId]),
     }, relationshipCreateRequests);
 }
