@@ -8,7 +8,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { ActivityNodeType, MemoElement, MemoModelDTO, MemoRelationship, OntologyRegistriesDTO } from '@memoarchitect/tools/browser';
+import { activityNodeType, isControlNode } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
@@ -16,47 +17,36 @@ import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
 
 /**
- * Activity control nodes flow through the graph like actions but do not belong
- * to a responsibility lane.  The aliases make the view tolerant of the names
- * emitted by different SysML v2 importers and libraries.
+ * Which activity symbol an element draws as.
+ *
+ * The classification is not this view's to make. It used to be — a ladder of
+ * `kind === 'decisionnodeusage'` comparisons lived here — which put a hardcoded
+ * list of SysML spellings inside a renderer, against the standing rule that
+ * memo-tools interprets and the ontology drives, and against §1.2.2's rule that
+ * Architect calls the toolchain rather than reimplementing it.
+ *
+ * It now comes from `model/activity-notation.ts` in memo-tools, where it is
+ * resolved against the generated SysML metamodel's generalization graph and the
+ * ontology's declared kind chain. Re-exported under the same names so this
+ * module's callers are unaffected.
  */
-export type ActivityNodeType = 'action' | 'accept' | 'send' | 'fork' | 'join' | 'decision' | 'merge' | 'activityFinal' | 'flowFinal';
-
-export function activityNodeType(el: MemoElement): ActivityNodeType | undefined {
-    const kind = el.kind.replace(/[ _-]/g, '').toLowerCase();
-    const construct = el.construct.toLowerCase();
-    const controlKind = el.attributes.controlKind?.toLowerCase();
-    if (controlKind === 'fork' || kind === 'forknode' || kind === 'forknodeusage') return 'fork';
-    if (controlKind === 'join' || kind === 'joinnode' || kind === 'joinnodeusage') return 'join';
-    if (kind === 'decisionnode' || kind === 'decisionnodeusage' || construct === 'decision') return 'decision';
-    if (kind === 'mergenode' || kind === 'mergenodeusage' || construct === 'merge') return 'merge';
-    if (kind === 'activityfinalnode' || kind === 'activityfinalnodeusage' || kind === 'terminateactionusage' || construct === 'terminate') return 'activityFinal';
-    if (kind === 'flowfinalnode' || kind === 'flowfinalnodeusage') return 'flowFinal';
-    if (kind === 'acceptactionusage' || kind === 'acceptaction') return 'accept';
-    if (kind === 'sendactionusage' || kind === 'sendaction') return 'send';
-    if (construct === 'action' || kind === 'actionusage' || kind === 'actiondefinition') return 'action';
-    return undefined;
-}
-
-export function isControlNode(el: MemoElement): boolean {
-    const type = activityNodeType(el);
-    return type === 'fork' || type === 'join' || type === 'decision' || type === 'merge'
-        || type === 'activityFinal' || type === 'flowFinal';
-}
+export type { ActivityNodeType };
+export { activityNodeType, isControlNode };
 
 /** Behavioral steps with no modeled flow or succession connection. */
 export function findFloatingActions(
     actions: MemoElement[],
     model: MemoModelDTO,
 ): MemoElement[] {
-    const actionIds = new Set(actions.filter(action => !isControlNode(action)).map(action => action.id));
+    const registries = model.registries;
+    const actionIds = new Set(actions.filter(action => !isControlNode(action, registries)).map(action => action.id));
     const connected = new Set<string>();
     for (const relationship of model.relationships) {
         if (relationship.type !== 'flow' && relationship.type !== 'succession') continue;
         if (actionIds.has(relationship.sourceId)) connected.add(relationship.sourceId);
         if (actionIds.has(relationship.targetId)) connected.add(relationship.targetId);
     }
-    return actions.filter(action => !isControlNode(action) && !connected.has(action.id));
+    return actions.filter(action => !isControlNode(action, registries) && !connected.has(action.id));
 }
 
 // ─── Element collection ──────────────────────────────────────────────────────
@@ -74,7 +64,7 @@ export function collectActionFlowActions(
 ): MemoElement[] {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-    const actions = visible.filter(el => activityNodeType(el) !== undefined);
+    const actions = visible.filter(el => activityNodeType(el, model.registries) !== undefined);
     const nested = actions.filter(el => el.parentAction);
     if (nested.length === 0) return actions;
 
@@ -186,7 +176,7 @@ export function collectNestedActionFlowActions(
 ): ActionFlowProjection {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-    const actions = visible.filter(el => activityNodeType(el) !== undefined);
+    const actions = visible.filter(el => activityNodeType(el, model.registries) !== undefined);
 
     const projected: MemoElement[] = [];
     const parentOf = new Map<string, string>();
@@ -326,7 +316,7 @@ export function assignLanes(
     const seen = new Map<string, LaneInfo>();
     for (const el of actions) {
         // Fork/join bars sit between lanes; they never define one of their own.
-        if (isControlNode(el)) continue;
+        if (isControlNode(el, model.registries)) continue;
         const allocatedLane = el.allocatedTo
             ? displayElementAtLevel(el.allocatedTo, model, displayLevel).id
             : UNALLOCATED_LANE;
@@ -374,8 +364,9 @@ function nodeSize(
     el: MemoElement,
     ports: { inPorts: string[]; outPorts: string[] },
     direction: 'horizontal' | 'vertical',
+    registries?: OntologyRegistriesDTO,
 ) {
-    const type = activityNodeType(el);
+    const type = activityNodeType(el, registries);
     if (type === 'decision' || type === 'merge') return { width: 56, height: 56 };
     if (type === 'activityFinal' || type === 'flowFinal') return { width: 28, height: 28 };
     if (type === 'fork' || type === 'join') {
@@ -546,7 +537,7 @@ export async function computeActionFlowViewLayout(
     const leafBox = (id: string) => {
         const el = actionById.get(id);
         return el
-            ? nodeSize(el, portsByAction.get(id)!, direction)
+            ? nodeSize(el, portsByAction.get(id)!, direction, model.registries)
             : { width: 28, height: 28 };
     };
     const buildElkActionNode = (id: string): ElkActionNode => {
@@ -612,7 +603,7 @@ export async function computeActionFlowViewLayout(
         // Order lanes by their actions' mean ELK y so banding follows the layout
         const laneY = new Map<string, number[]>();
         for (const el of actions) {
-            if (isControlNode(el)) continue;
+            if (isControlNode(el, model.registries)) continue;
             const p = positions.get(el.id)!;
             const laneId = laneOf.get(el.id)!;
             if (!laneY.has(laneId)) laneY.set(laneId, []);
@@ -722,7 +713,7 @@ export async function computeActionFlowViewLayout(
     // Nested frames put their contents in parent-relative coordinates, so the
     // cross-axis arithmetic below would compare points from different frames.
     // ELK's hierarchical pass has already placed them; leave them alone.
-    const controlNodes = nesting === 'nested' ? [] : actions.filter(isControlNode);
+    const controlNodes = nesting === 'nested' ? [] : actions.filter(action => isControlNode(action, model.registries));
     if (controlNodes.length > 0) {
         for (const ctrl of controlNodes) {
             const p = positions.get(ctrl.id)!;
@@ -760,7 +751,7 @@ export async function computeActionFlowViewLayout(
         if (centers.length === 0) continue;
         const mean = centers.reduce((sum, center) => sum + center, 0) / centers.length;
         const actionRects = actions
-            .filter(action => !isControlNode(action))
+            .filter(action => !isControlNode(action, model.registries))
             .map(action => positions.get(action.id))
             .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect));
         const isStart = id.endsWith('__start');
@@ -867,8 +858,8 @@ export async function computeActionFlowViewLayout(
         const p = positions.get(el.id)!;
         // Fork/join bars: no ports, no lane badge, drawn as a solid bar sized
         // by the ELK node box (thin across, long along the perpendicular axis).
-        const activityType = activityNodeType(el);
-        if (isControlNode(el)) {
+        const activityType = activityNodeType(el, model.registries);
+        if (isControlNode(el, model.registries)) {
             const controlData: ActionFlowNodeData = {
                 element: el,
                 label: el.name,
