@@ -85,6 +85,7 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
+import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1187,18 +1188,39 @@ function DiagramCanvasInner() {
         // (e.g. graph ELK resolving after a sync containment layout)
         let cancelled = false;
         const apply = (
-            { nodes: n, edges: e }: { nodes: FlowNode[]; edges: FlowEdge[] },
+            { nodes: n, edges: e }: { nodes: NotationLayoutNode[]; edges: NotationLayoutEdge[] },
             interactive = true,
         ) => {
             if (cancelled) return;
+            // Templates supply semantic projection and layout supplies geometry;
+            // the renderer consumes their renderer-neutral NotationScene. Keep
+            // existing ReactFlow interaction payloads only as event wiring.
+            const notation = projectLayoutToNotationScene(n as any[], e as any[]);
+            const notationNode = new Map(notation.nodes.map(node => [node.id, node]));
+            const notationEdge = new Map(notation.edges.map(edge => [edge.id, edge]));
+            const sceneNodes = n.map(node => {
+                const sceneNode = notationNode.get(node.id);
+                return sceneNode ? {
+                    ...node,
+                    position: { x: sceneNode.x, y: sceneNode.y },
+                    style: { ...node.style, width: sceneNode.width, height: sceneNode.height },
+                    parentId: sceneNode.parentId,
+                } : node;
+            });
+            const sceneEdges = e.filter(edge => notationEdge.has(edge.id)).map(edge => {
+                const sceneEdge = notationEdge.get(edge.id)!;
+                return { ...edge, source: sceneEdge.sourceId, target: sceneEdge.targetId, label: sceneEdge.label ?? edge.label };
+            });
+            const rendererNodes = sceneNodes as unknown as FlowNode[];
+            const rendererEdges = sceneEdges as unknown as FlowEdge[];
             const savedLayout = selectedDiagramId
                 ? useModelStore.getState().diagramLayouts[selectedDiagramId]
                 : undefined;
             const positionedModel = savedLayout && Object.keys(savedLayout.nodes).length > 0
-                ? buildNodesFromSidecar(n, savedLayout)
-                : n;
+                ? buildNodesFromSidecar(rendererNodes, savedLayout)
+                : rendererNodes;
             const positioned = [...positionedModel, ...annotationNodes(savedLayout)];
-            const preparedEdges = e.map(edge => {
+            const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const attachmentMatches = !savedEdge?.source || (
                     savedEdge.source === edge.source
@@ -1241,7 +1263,7 @@ function DiagramCanvasInner() {
         };
         const run = (
             label: string,
-            promise: Promise<{ nodes: FlowNode[]; edges: FlowEdge[] }>,
+            promise: Promise<{ nodes: NotationLayoutNode[]; edges: NotationLayoutEdge[] }>,
             interactive = true,
         ) => {
             setIsLayouting(true);
