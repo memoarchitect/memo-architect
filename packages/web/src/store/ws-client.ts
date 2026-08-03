@@ -419,10 +419,21 @@ function handleMessage(msg: ExtendedServerMessage): void {
             if (msg.payload.error) {
                 store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
             } else {
-                store.resolveLlmRequest(msg.payload.requestId, {
-                    sysml: msg.payload.sysml,
-                    explanation: msg.payload.explanation,
-                    suggestedFile: msg.payload.suggestedFile,
+                // The browser package can be older than the server during a
+                // rolling upgrade. Keep this additive protocol extension
+                // readable while the published tools types catch up.
+                const generated = msg.payload as typeof msg.payload & {
+                    initialSysml?: string; attempts?: number; diagnostics?: any[];
+                    changeRecord?: { guidanceVersion: string; compiler: { id: string; version?: string } };
+                };
+                store.resolveLlmRequest(generated.requestId, {
+                    sysml: generated.sysml,
+                    initialSysml: generated.initialSysml,
+                    explanation: generated.explanation,
+                    suggestedFile: generated.suggestedFile,
+                    attempts: generated.attempts,
+                    diagnostics: generated.diagnostics ?? [],
+                    changeRecord: generated.changeRecord,
                 });
             }
             break;

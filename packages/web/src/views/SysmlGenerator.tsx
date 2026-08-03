@@ -1,7 +1,8 @@
 // ─── SysML Generator Panel (#54) ──────────────────────────────────────────
 //
 // Natural language → SysML v2. User describes what they want to model;
-// LLM generates valid SysML that can be copied or saved to the project.
+// LLM generates a draft; the server validates it and may repair it before the
+// user copies or saves it. Diagnostics remain advisory, never a save gate.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useCallback } from 'react';
@@ -10,8 +11,12 @@ import { sendLlmGenerate } from '../store/ws-client';
 
 interface GenerateResult {
     sysml: string;
+    initialSysml?: string;
     explanation: string;
     suggestedFile?: string;
+    attempts?: number;
+    diagnostics: Array<{ domain: 'sysml' | 'memo-ingest' | 'memo-methodology'; severity: string; message: string; code?: string }>;
+    changeRecord?: { guidanceVersion: string; compiler: { id: string; version?: string } };
 }
 
 const EXAMPLES = [
@@ -62,6 +67,9 @@ export function SysmlGenerator() {
             setTimeout(() => setCopied(false), 2000);
         });
     };
+
+    const diagnosticsFor = (domain: GenerateResult['diagnostics'][number]['domain']) =>
+        result?.diagnostics.filter(diagnostic => diagnostic.domain === domain) ?? [];
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F7F5', overflow: 'hidden' }}>
@@ -221,6 +229,21 @@ export function SysmlGenerator() {
                             </pre>
                         </div>
 
+                        {/* These are deliberately separate: source changes are
+                            not validation findings, and MEMO findings are not
+                            a standards verdict. */}
+                        <details style={{ background: '#fff', border: '1px solid #E5E5E0', borderRadius: '8px', padding: '10px 12px' }}>
+                            <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Source diff{result.initialSysml === result.sysml ? ' (no repair changes)' : ''}</summary>
+                            <pre style={{ margin: '8px 0 0', fontSize: '11px', whiteSpace: 'pre-wrap' }}>{result.initialSysml ?? result.sysml}{result.initialSysml !== result.sysml ? `\n\n→ repaired to →\n\n${result.sysml}` : ''}</pre>
+                        </details>
+                        <DiagnosticPanel title="Standards diagnostics" diagnostics={diagnosticsFor('sysml')} empty="No standards diagnostics." />
+                        <DiagnosticPanel title="MEMO diagnostics" diagnostics={[...diagnosticsFor('memo-ingest'), ...diagnosticsFor('memo-methodology')]} empty="No MEMO diagnostics." />
+                        {result.changeRecord && (
+                            <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                                Change record: guidance {result.changeRecord.guidanceVersion} · compiler {result.changeRecord.compiler.id}{result.changeRecord.compiler.version ? ` ${result.changeRecord.compiler.version}` : ''}
+                            </div>
+                        )}
+
                         <div style={{ fontSize: '11px', color: '#9CA3AF', padding: '4px 0' }}>
                             Review the generated SysML before saving. Copy it into your project's <code>.sysml</code> files. The dev server will pick up the changes automatically.
                         </div>
@@ -238,6 +261,19 @@ export function SysmlGenerator() {
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function DiagnosticPanel(props: { title: string; diagnostics: GenerateResult['diagnostics']; empty: string }) {
+    return (
+        <div style={{ background: '#fff', border: '1px solid #E5E5E0', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>{props.title}</div>
+            {props.diagnostics.length === 0 ? <div style={{ fontSize: '12px', color: '#6B7280' }}>{props.empty}</div> : props.diagnostics.map((diagnostic, index) => (
+                <div key={`${diagnostic.code ?? diagnostic.message}-${index}`} style={{ fontSize: '12px', color: diagnostic.severity === 'error' ? '#B91C1C' : '#92400E', marginTop: '4px' }}>
+                    {diagnostic.code ? `[${diagnostic.code}] ` : ''}{diagnostic.message}
+                </div>
+            ))}
         </div>
     );
 }
