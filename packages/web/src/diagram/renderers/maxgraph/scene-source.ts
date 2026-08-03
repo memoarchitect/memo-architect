@@ -24,6 +24,7 @@ import { computeSequenceLayout } from '../../../views/templates/sequence-view';
 import { computeUseCaseViewLayout, useCaseViewOptions } from '../../../views/templates/use-case-view';
 import { computeContextViewLayout } from '../../../views/templates/context-view';
 import { projectLayoutToNotationScene, type NotationScene } from '../../notation-scene';
+import { projectIrSemantics } from '../../ir-scene-projection';
 
 export interface SceneRequest {
     model: MemoModelDTO;
@@ -187,7 +188,10 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Projection is intentionally above the renderer boundary. ReactFlow and
     // maxGraph receive the same semantic subjects and notation primitives.
-    const scene = projectLayoutToNotationScene(result.nodes as any[], result.edges as any[]);
+    const scene = projectIrSemantics(
+        projectLayoutToNotationScene(result.nodes as any[], result.edges as any[]),
+        (model.sysmlIr?.elements ?? []) as any[],
+    );
     // Session 3 conservation records are not legacy MemoElements. Give every
     // one a deterministic, inspectable place instead of silently shortening a
     // valid diagram. These remain visible when lowering is only partial.

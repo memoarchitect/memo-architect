@@ -17,7 +17,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm run check:cache && pnpm run build:client && pnpm run check:bundle && pnpm run build:cli",
+    "build": "pnpm run generate:notation && pnpm run check:cache && pnpm run build:client && pnpm run check:bundle && pnpm run build:cli",
+    "generate:notation": "node scripts/generate-notation-registry.mjs",
     "prepack": "pnpm run clean && pnpm run build",
     "build:client": "vite build --config packages/web/vite.config.ts",
     "build:cli": "tsc -p tsconfig.architect.json",

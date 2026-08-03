@@ -2,6 +2,8 @@
 // between semantic projection/layout and drawing engines; it deliberately has
 // no ReactFlow or maxGraph imports.
 
+import { resolveNotationGlyph } from './notation-registry';
+
 export type NotationGlyph = 'frame' | 'usage' | 'definition' | 'accept' | 'send' | 'decision' | 'merge' | 'fork' | 'join' | 'activity-final' | 'flow-final' | 'generic';
 export interface NotationPort { id: string; name: string; side: 'left' | 'right' | 'top' | 'bottom'; direction?: 'in' | 'out' | 'inout'; pin?: boolean; }
 export interface NotationCompartment { title?: string; entries: string[]; }
@@ -25,12 +27,6 @@ export interface NotationLayoutEdge<T = Record<string, any>> { id: string; sourc
 type FlowishNode = NotationLayoutNode<Record<string, unknown>>;
 type FlowishEdge = NotationLayoutEdge<Record<string, unknown>>;
 const number = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && Number.isFinite(Number.parseFloat(v)) ? Number.parseFloat(v) : undefined;
-const activityGlyph = (kind: string): NotationGlyph => {
-    const k = kind.replace(/[ _-]/g, '').toLowerCase();
-    if (k.includes('accept')) return 'accept'; if (k.includes('send')) return 'send'; if (k.includes('decision')) return 'decision'; if (k.includes('merge')) return 'merge';
-    if (k.includes('fork')) return 'fork'; if (k.includes('join')) return 'join'; if (k.includes('activityfinal') || k.includes('terminate')) return 'activity-final'; if (k.includes('flowfinal')) return 'flow-final';
-    return 'usage';
-};
 function order(nodes: readonly FlowishNode[]) { const byId = new Map(nodes.map(n => [n.id, n])); const out: FlowishNode[] = []; const seen = new Set<string>(); const visit = (n: FlowishNode) => { if (seen.has(n.id)) return; seen.add(n.id); if (n.parentId && byId.has(n.parentId)) visit(byId.get(n.parentId)!); out.push(n); }; nodes.forEach(visit); return out; }
 
 /** Convert the legacy layout carrier once; renderers only consume NotationScene. */
@@ -40,7 +36,7 @@ export function projectLayoutToNotationScene(nodes: readonly FlowishNode[], edge
         const d = n.data ?? {}; const label = typeof d.label === 'string' && d.label ? d.label : n.id; const kind = typeof d.kind === 'string' ? d.kind : n.type ?? '';
         const isDefinition = /definition$| def$/i.test(kind) || d.isDefinition === true;
         const nodeType = typeof d.nodeType === 'string' ? d.nodeType : kind;
-        const glyph: NotationGlyph = d.isFrame === true ? 'frame' : d.genericRecord === true ? 'generic' : isDefinition ? 'definition' : activityGlyph(nodeType);
+        const glyph: NotationGlyph = d.isFrame === true ? 'frame' : d.genericRecord === true ? 'generic' : resolveNotationGlyph({ metaclass: nodeType || kind, isDefinition, viewKind: typeof d.viewKind === 'string' ? d.viewKind : undefined });
         const explicitPorts = Array.isArray(d.ports) ? d.ports.filter((p): p is NotationPort => !!p && typeof p === 'object' && typeof (p as NotationPort).id === 'string') : [];
         const ports = explicitPorts.length ? explicitPorts : [
             ...(Array.isArray(d.inPorts) ? d.inPorts.filter((p): p is string => typeof p === 'string').map((name, i) => ({ id: `in:${name}`, name, side: 'left' as const, direction: 'in' as const, pin: true, _i: i })) : []),

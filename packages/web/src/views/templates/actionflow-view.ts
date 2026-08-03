@@ -945,6 +945,8 @@ export async function computeActionFlowViewLayout(
             id: rel.id,
             source: rel.sourceId,
             target: rel.targetId,
+            ...(rel.sourceEnd ? { sourceHandle: `out:${rel.sourceEnd}` } : {}),
+            ...(rel.targetEnd ? { targetHandle: `in:${rel.targetEnd}` } : {}),
             // Parameter names are already printed at the pins. Repeating the
             // item name on short connectors makes compact flows unreadable.
             label: undefined,
