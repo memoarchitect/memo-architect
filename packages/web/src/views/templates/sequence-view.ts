@@ -10,7 +10,7 @@
 // top-down, one row per step occurrence.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Node, Edge } from '@xyflow/react';
+import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { EDGE, FONT } from '../../styles/tokens';
 import type { LayoutResult } from '../layout';

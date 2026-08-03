@@ -30,7 +30,7 @@ import { commonDisplayLevels, type ActionFlowDisplayLevel, type ActionFlowKind, 
 import {
     buildViewpointFilter, computeDiagramScene, nonCanvasKind, resolveViewKind,
 } from './scene-source';
-import type { DiagramSceneSpec, SceneNodeSpec } from './scene';
+import { notationSceneToSvg, type NotationScene, type NotationNode } from '../../notation-scene';
 
 const CANVAS_BG = '#F7F7F5';
 const SCENE_TIMEOUT_MS = 8_000;
@@ -44,7 +44,7 @@ if (typeof document !== 'undefined' && !document.getElementById(LAYOUT_PROGRESS_
     document.head.appendChild(style);
 }
 
-function nodeStyle(spec: SceneNodeSpec): CellStyle {
+function nodeStyle(spec: NotationNode): CellStyle {
     if (spec.isFrame) {
         return {
             fillColor: 'none',
@@ -100,7 +100,7 @@ function fitWhenSized(graph: Graph, container: HTMLElement): () => void {
     return () => { cancelAnimationFrame(raf); observer.disconnect(); };
 }
 
-function applySavedLayout(scene: DiagramSceneSpec, saved?: DiagramLayout): DiagramSceneSpec {
+function applySavedLayout(scene: NotationScene, saved?: DiagramLayout): NotationScene {
     if (!saved || (Object.keys(saved.nodes).length === 0 && Object.keys(saved.edges).length === 0)) return scene;
     const nodes = scene.nodes.map(node => {
         const layout = saved.nodes[node.id];
@@ -122,7 +122,7 @@ function applySavedLayout(scene: DiagramSceneSpec, saved?: DiagramLayout): Diagr
         // geometry so a stale sidecar cannot leave actions outside their lane.
         nodes: nodes.map(node => {
             if (!node.isFrame || !node.memberIds?.length) return node;
-            const members = node.memberIds.map(id => nodeById.get(id)).filter(Boolean) as SceneNodeSpec[];
+            const members = node.memberIds.map(id => nodeById.get(id)).filter(Boolean) as NotationNode[];
             if (members.length === 0) return node;
             const minX = Math.min(...members.map(member => member.x));
             const minY = Math.min(...members.map(member => member.y));
@@ -169,7 +169,7 @@ export function MaxGraphCanvas() {
     const previousSceneModelRef = useRef(model);
     const previousSceneDiagramRef = useRef(selectedDiagramId);
     const preservedViewportRef = useRef<{ scale: number; x: number; y: number } | null>(null);
-    const [scene, setScene] = useState<DiagramSceneSpec | null>(null);
+    const [scene, setScene] = useState<NotationScene | null>(null);
     const [isComputing, setIsComputing] = useState(false);
     const [sceneError, setSceneError] = useState<string | null>(null);
     const [swimlanes, setSwimlanes] = useState(true);
@@ -502,19 +502,15 @@ export function MaxGraphCanvas() {
     }, [selectedDiagramId, mergeDiagramLayouts]);
 
     const exportSvg = useCallback(() => {
-        const svg = containerRef.current?.querySelector('svg');
-        if (!svg) return;
-        const clone = svg.cloneNode(true) as SVGSVGElement;
-        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        clone.style.backgroundColor = CANVAS_BG;
-        const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' });
+        if (!scene) return;
+        const blob = new Blob([notationSceneToSvg(scene)], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `${selectedDiagram?.name ?? 'diagram'}.svg`;
         link.click();
         URL.revokeObjectURL(url);
-    }, [selectedDiagram?.name]);
+    }, [scene, selectedDiagram?.name]);
 
     // ── Non-canvas kinds reuse their dedicated surfaces ───────────────────────
     if (selectedDiagram && model && nonCanvas === 'grid') {

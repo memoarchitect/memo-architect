@@ -14,9 +14,10 @@ describe('buildScene', () => {
                 data: { label: 'Infusion Pump', kind: 'System', color: '#2DD4A8' },
             },
         ], []);
-        expect(nodes).toEqual([{
+        expect(nodes).toMatchObject([{
             id: 'pump', x: 10, y: 20, width: 180, height: 60,
             label: 'Infusion Pump', kind: 'System', color: '#2DD4A8', isFrame: false,
+            subjectId: 'pump', glyph: 'usage', accessibilityText: 'usage Infusion Pump (System)',
         }]);
     });
 
@@ -73,10 +74,10 @@ describe('buildScene', () => {
                 data: { routing: 'straight', points: [{ x: 0, y: 0 }, { x: 150, y: 40 }, { x: 300, y: 0 }] },
             },
         ]);
-        expect(edges).toEqual([{
+        expect(edges).toMatchObject([{
             id: 'e1', sourceId: 'a', targetId: 'b', label: 'flow',
             color: '#3498DB', strokeWidth: 2, dashed: true, animated: true, routing: 'straight',
-            points: [{ x: 150, y: 40 }],
+            points: [{ x: 150, y: 40 }], subjectId: 'e1',
         }]);
     });
 

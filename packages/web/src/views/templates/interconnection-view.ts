@@ -23,7 +23,7 @@
 // something on a boundary.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Node, Edge } from '@xyflow/react';
+import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';

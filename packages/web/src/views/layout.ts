@@ -4,7 +4,7 @@
 // runs the layout algorithm, and returns positioned ReactFlow nodes/edges.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Node, Edge } from '@xyflow/react';
+import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../diagram/notation-scene';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { LayoutGraph, LayoutRunOptions } from '../diagram/layout-provider';
 import { runLayoutProvider } from '../diagram/layout-providers';

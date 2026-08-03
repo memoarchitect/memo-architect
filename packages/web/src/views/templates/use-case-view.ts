@@ -1,4 +1,4 @@
-import type { Edge, Node } from '@xyflow/react';
+import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import {
     CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,

@@ -23,7 +23,7 @@ import { computeStateTransitionLayout } from '../../../views/templates/statetran
 import { computeSequenceLayout } from '../../../views/templates/sequence-view';
 import { computeUseCaseViewLayout, useCaseViewOptions } from '../../../views/templates/use-case-view';
 import { computeContextViewLayout } from '../../../views/templates/context-view';
-import { buildScene, type DiagramSceneSpec } from './scene';
+import { projectLayoutToNotationScene, type NotationScene } from '../../notation-scene';
 
 export interface SceneRequest {
     model: MemoModelDTO;
@@ -103,7 +103,7 @@ function expandAll(tree: { roots: string[]; childrenMap: Map<string, string[]>; 
  * Compute the positioned scene for a diagram. Returns null for non-canvas
  * kinds (grid/browser/geometry) — callers render those surfaces themselves.
  */
-export async function computeDiagramScene(request: SceneRequest): Promise<DiagramSceneSpec | null> {
+export async function computeDiagramScene(request: SceneRequest): Promise<NotationScene | null> {
     const { model, diagram, layoutProviderId } = request;
     const viewKind = resolveViewKind(diagram);
     if (nonCanvasKind(viewKind)) return null;
@@ -185,7 +185,28 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Diagra
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return buildScene(result.nodes as any[], result.edges as any[]);
+    // Projection is intentionally above the renderer boundary. ReactFlow and
+    // maxGraph receive the same semantic subjects and notation primitives.
+    const scene = projectLayoutToNotationScene(result.nodes as any[], result.edges as any[]);
+    // Session 3 conservation records are not legacy MemoElements. Give every
+    // one a deterministic, inspectable place instead of silently shortening a
+    // valid diagram. These remain visible when lowering is only partial.
+    const generic = ((model.sysmlIr?.elements ?? []) as any[]).filter(record => record.kind === 'generic');
+    const existing = new Set(scene.nodes.map(node => node.subjectId));
+    const baseY = Math.max(24, ...scene.nodes.map(node => node.y + node.height + 32));
+    generic.forEach((record, index) => {
+        if (existing.has(record.identity?.id)) return;
+        const label = String(record.standardProperties?.name ?? record.identity?.declarationPath ?? 'Unmapped SysML element');
+        scene.nodes.push({
+            id: `generic:${record.identity.id}`, subjectId: record.identity.id,
+            x: 24 + (index % 4) * 170, y: baseY + Math.floor(index / 4) * 84,
+            width: 150, height: 56, label, kind: record.identity?.metaclass ?? 'SysML element',
+            glyph: 'generic', color: '#D97706', isDefinition: false, isFrame: false,
+            accessibilityText: `Unmapped SysML element ${label}`,
+            diagnostic: { domain: 'memo-ingest', severity: 'warning', message: record.unmappable ?? `Memo could not lower ${label}` },
+        });
+    });
+    return scene;
 }
 
 export function viewKindLabel(kind: ViewKind): string {
