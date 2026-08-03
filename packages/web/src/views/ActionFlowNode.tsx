@@ -16,7 +16,7 @@ import { SHADOW, RADIUS, FONT } from '../styles/tokens';
 export interface ActionFlowNodeData {
     element?: MemoElement;
     label: string;
-    nodeType: 'action' | 'start' | 'done' | 'fork' | 'join';
+    nodeType: 'action' | 'accept' | 'send' | 'start' | 'done' | 'fork' | 'join' | 'decision' | 'merge' | 'activityFinal' | 'flowFinal';
     parameters?: ActionParameter[];
     allocatedTo?: string;
     laneColor: string;
@@ -90,6 +90,35 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
         );
     }
 
+    // SysML v2 decision and merge nodes share the UML diamond notation. Their
+    // names are deliberately kept inside the glyph: guards belong on outgoing
+    // succession edges, not on the decision itself.
+    if (nodeType === 'decision' || nodeType === 'merge') {
+        const size = 56;
+        return (
+            <div title={nodeType === 'decision' ? 'Decision node' : 'Merge node'} style={{ width: size, height: size, position: 'relative' }}>
+                <svg width={size} height={size} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
+                    <polygon points="28,2 54,28 28,54 2,28" fill="#FFFFFF" stroke="#374151" strokeWidth="2" />
+                </svg>
+                <span style={{ position: 'absolute', inset: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 9, color: '#374151', overflow: 'hidden' }}>{label}</span>
+                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
+            </div>
+        );
+    }
+
+    // A flow final consumes just its incoming token; an activity final ends
+    // the activity.  The two distinct SysML semantics deserve distinct glyphs.
+    if (nodeType === 'activityFinal' || nodeType === 'flowFinal') {
+        const activityFinal = nodeType === 'activityFinal';
+        return (
+            <div title={activityFinal ? 'Activity final / terminate' : 'Flow final'} style={{ width: 28, height: 28, borderRadius: '50%', background: '#FFFFFF', border: '2px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {activityFinal ? <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} /> : <span style={{ color: '#374151', fontSize: 22, lineHeight: 1 }}>×</span>}
+                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+            </div>
+        );
+    }
+
     // Fork / join: a solid synchronization bar. One incoming + many outgoing
     // (fork) or many incoming + one outgoing (join); ReactFlow lets multiple
     // edges share a single handle, so the bar reads as a UML control node.
@@ -111,8 +140,11 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
         );
     }
 
-    // Action node: polished rounded card with ports
+    // Action node: polished rounded card with ports. Accept/send action usages
+    // retain their SysML semantic role instead of looking like generic work.
     const color = laneColor || layerColor || '#9CA3AF';
+    const actionStereotype = nodeType === 'accept' ? '«accept action»'
+        : nodeType === 'send' ? '«send action»' : undefined;
 
     // Composite frame: the steps inside are separate ReactFlow children, so
     // this draws only the boundary and its header — the same containment
@@ -199,6 +231,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
             }}>
+                {actionStereotype && <div style={{ fontSize: 10, color, fontStyle: 'italic', marginBottom: 2 }}>{actionStereotype}</div>}
                 {label}
                 {d.hasChildren && d.onDrillIn && (
                     <button

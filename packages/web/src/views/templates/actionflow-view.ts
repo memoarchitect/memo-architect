@@ -16,12 +16,32 @@ import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
 
 /**
- * Fork/join control nodes (builder kinds `ForkNode` / `JoinNode`). They flow
- * through the graph like actions but render as synchronization bars and never
- * form their own swimlane.
+ * Activity control nodes flow through the graph like actions but do not belong
+ * to a responsibility lane.  The aliases make the view tolerant of the names
+ * emitted by different SysML v2 importers and libraries.
  */
+export type ActivityNodeType = 'action' | 'accept' | 'send' | 'fork' | 'join' | 'decision' | 'merge' | 'activityFinal' | 'flowFinal';
+
+export function activityNodeType(el: MemoElement): ActivityNodeType | undefined {
+    const kind = el.kind.replace(/[ _-]/g, '').toLowerCase();
+    const construct = el.construct.toLowerCase();
+    const controlKind = el.attributes.controlKind?.toLowerCase();
+    if (controlKind === 'fork' || kind === 'forknode' || kind === 'forknodeusage') return 'fork';
+    if (controlKind === 'join' || kind === 'joinnode' || kind === 'joinnodeusage') return 'join';
+    if (kind === 'decisionnode' || kind === 'decisionnodeusage' || construct === 'decision') return 'decision';
+    if (kind === 'mergenode' || kind === 'mergenodeusage' || construct === 'merge') return 'merge';
+    if (kind === 'activityfinalnode' || kind === 'activityfinalnodeusage' || kind === 'terminateactionusage' || construct === 'terminate') return 'activityFinal';
+    if (kind === 'flowfinalnode' || kind === 'flowfinalnodeusage') return 'flowFinal';
+    if (kind === 'acceptactionusage' || kind === 'acceptaction') return 'accept';
+    if (kind === 'sendactionusage' || kind === 'sendaction') return 'send';
+    if (construct === 'action' || kind === 'actionusage' || kind === 'actiondefinition') return 'action';
+    return undefined;
+}
+
 export function isControlNode(el: MemoElement): boolean {
-    return el.kind === 'ForkNode' || el.kind === 'JoinNode';
+    const type = activityNodeType(el);
+    return type === 'fork' || type === 'join' || type === 'decision' || type === 'merge'
+        || type === 'activityFinal' || type === 'flowFinal';
 }
 
 /** Behavioral steps with no modeled flow or succession connection. */
@@ -54,8 +74,7 @@ export function collectActionFlowActions(
 ): MemoElement[] {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-    const actions = visible.filter(el =>
-        el.construct === 'action' || el.kind === 'ActionUsage' || el.kind === 'ActionDefinition');
+    const actions = visible.filter(el => activityNodeType(el) !== undefined);
     const nested = actions.filter(el => el.parentAction);
     if (nested.length === 0) return actions;
 
@@ -167,8 +186,7 @@ export function collectNestedActionFlowActions(
 ): ActionFlowProjection {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-    const actions = visible.filter(el =>
-        el.construct === 'action' || el.kind === 'ActionUsage' || el.kind === 'ActionDefinition');
+    const actions = visible.filter(el => activityNodeType(el) !== undefined);
 
     const projected: MemoElement[] = [];
     const parentOf = new Map<string, string>();
@@ -357,7 +375,10 @@ function nodeSize(
     ports: { inPorts: string[]; outPorts: string[] },
     direction: 'horizontal' | 'vertical',
 ) {
-    if (isControlNode(el)) {
+    const type = activityNodeType(el);
+    if (type === 'decision' || type === 'merge') return { width: 56, height: 56 };
+    if (type === 'activityFinal' || type === 'flowFinal') return { width: 28, height: 28 };
+    if (type === 'fork' || type === 'join') {
         // A bar drawn perpendicular to the reading direction.
         return direction === 'vertical'
             ? { width: CONTROL_BAR_LONG, height: CONTROL_BAR_THICK }
@@ -846,11 +867,12 @@ export async function computeActionFlowViewLayout(
         const p = positions.get(el.id)!;
         // Fork/join bars: no ports, no lane badge, drawn as a solid bar sized
         // by the ELK node box (thin across, long along the perpendicular axis).
+        const activityType = activityNodeType(el);
         if (isControlNode(el)) {
             const controlData: ActionFlowNodeData = {
                 element: el,
                 label: el.name,
-                nodeType: el.kind === 'ForkNode' ? 'fork' : 'join',
+                nodeType: activityType!,
                 laneColor: '#374151', layerColor: '#374151',
                 inPorts: [], outPorts: [],
                 flowDirection: direction,
@@ -873,7 +895,7 @@ export async function computeActionFlowViewLayout(
         const data: ActionFlowNodeData = {
             element: el,
             label: el.name,
-            nodeType: 'action',
+            nodeType: activityType ?? 'action',
             parameters: el.parameters,
             allocatedTo: allocatedName,
             laneColor: laneColor.get(laneId) ?? '#9CA3AF',
@@ -964,6 +986,7 @@ export async function computeActionFlowViewLayout(
             animated: false,
             style: { stroke: FLOW_COLORS.control, strokeWidth: 1.5 },
             markerEnd: { type: 'arrowclosed' as never, color: FLOW_COLORS.control, width: 12, height: 12 },
+            label: rel.sourceEnd?.startsWith('[') ? rel.sourceEnd : undefined,
             data: { flowCategory: 'control' satisfies ActionFlowKind },
         });
     }

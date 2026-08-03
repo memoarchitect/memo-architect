@@ -5,7 +5,7 @@ import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect
 import {
     collectActionFlowActions, collectNestedActionFlowActions,
     actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
-    classifyFlowItem, isControlNode, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
+    classifyFlowItem, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
     findFloatingActions, flatExpandedGroups,
 } from '../actionflow-view';
 
@@ -295,6 +295,30 @@ describe('control nodes (fork/join)', () => {
         expect(laneOf.has('splitPrep')).toBe(false);
         // No spurious "Unallocated" lane created for the fork bar
         expect(lanes.map(l => l.label)).toEqual(['Nurse']);
+    });
+});
+
+describe('SysML v2 activity-node audit', () => {
+    it('recognizes standard activity nodes and common importer aliases', () => {
+        expect(activityNodeType(el('route', { kind: 'DecisionNodeUsage', construct: 'decision' }))).toBe('decision');
+        expect(activityNodeType(el('afterRoute', { kind: 'MergeNode' }))).toBe('merge');
+        expect(activityNodeType(el('receive', { kind: 'AcceptActionUsage' }))).toBe('accept');
+        expect(activityNodeType(el('send', { kind: 'SendActionUsage' }))).toBe('send');
+        expect(activityNodeType(el('stop', { kind: 'TerminateActionUsage' }))).toBe('activityFinal');
+        expect(activityNodeType(el('discard', { kind: 'FlowFinalNode' }))).toBe('flowFinal');
+    });
+
+    it('keeps decisions, merges, and finals in the visible activity graph', () => {
+        const m = model([
+            el('activity'),
+            el('receive', { parentAction: 'activity', kind: 'AcceptActionUsage' }),
+            el('route', { parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision' }),
+            el('merge', { parentAction: 'activity', kind: 'MergeNodeUsage', construct: 'merge' }),
+            el('stop', { parentAction: 'activity', kind: 'ActivityFinalNodeUsage' }),
+        ]);
+        expect(collectActionFlowActions(m).map(node => node.id)).toEqual(['receive', 'route', 'merge', 'stop']);
+        expect(isControlNode(m.elements.route)).toBe(true);
+        expect(isControlNode(m.elements.stop)).toBe(true);
     });
 });
 
