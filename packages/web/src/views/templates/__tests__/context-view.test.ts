@@ -20,7 +20,7 @@ describe('system context view template', () => {
         const boundary = layout.nodes.find(node => node.id === '__context_boundary__')!;
         const systemNode = layout.nodes.find(node => node.id === 'pump')!;
         expect(boundary).toMatchObject({ type: 'contextBoundary', data: { isFrame: true } });
-        expect(systemNode.type).toBe('contextSystem');
+        expect(systemNode).toMatchObject({ type: 'contextSystem', parentId: '__context_boundary__', extent: 'parent' });
         expect(layout.nodes.filter(node => node.type === 'contextExternal')).toHaveLength(3);
         expect(layout.nodes.find(node => node.id === 'clinician')?.data).toMatchObject({ category: 'person' });
         expect(layout.nodes.find(node => node.id === 'home')?.data).toMatchObject({ category: 'environment' });

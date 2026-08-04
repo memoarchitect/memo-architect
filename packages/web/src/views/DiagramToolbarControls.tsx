@@ -39,6 +39,8 @@ export const Icon = {
     plus: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 5v14" /><path d="M5 12h14" /></>),
     library: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="M17 5l3 14" /></>),
     detect: ({ size = 16 }: IconProps) => svg(size, <><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" /><rect x="7" y="8" width="10" height="8" rx="1.5" strokeDasharray="2 2" /></>),
+    // Two connectors settling into parallel orthogonal lanes.
+    tidy: ({ size = 16 }: IconProps) => svg(size, <><path d="M3 7h6l4-4h8" /><path d="M3 17h6l4 4h8" /><circle cx="3" cy="7" r="1.3" /><circle cx="3" cy="17" r="1.3" /></>),
 };
 
 // ─── Divider between toolbar groups ──────────────────────────────────────────

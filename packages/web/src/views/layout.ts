@@ -131,6 +131,199 @@ const stepOffSide = (
     : side === 'top' ? { x: point.x, y: point.y - distance }
     : { x: point.x, y: point.y + distance };
 
+// ─── Uniform spatial buckets ─────────────────────────────────────────────────
+//
+// Both the obstacle boxes and the tracks already claimed by routed connectors
+// get bucketed into the same fixed grid, so a point or segment test only ever
+// touches what is genuinely near it. Scanning every box (and later, every
+// claimed track) for each candidate was what remained of the pass's cost once
+// the search space itself had been bounded. This is the `ObstacleMap` idea from
+// maxGraph's Manhattan router, applied to both collections.
+
+const CELL = 160;
+const cellKey = (cx: number, cy: number) => (cx * 73_856_093) ^ (cy * 19_349_663);
+
+/** Visit every bucket key the axis-aligned box or segment a→b touches. */
+function forEachCell(
+    minX: number, minY: number, maxX: number, maxY: number,
+    visit: (key: number) => void,
+): void {
+    const x0 = Math.floor(minX / CELL), x1 = Math.floor(maxX / CELL);
+    const y0 = Math.floor(minY / CELL), y1 = Math.floor(maxY / CELL);
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) visit(cellKey(cx, cy));
+}
+
+class ObstacleIndex {
+    private readonly buckets = new Map<number, RouteObstacle[]>();
+
+    constructor(obstacles: readonly RouteObstacle[], private readonly pad: number) {
+        for (const o of obstacles) {
+            forEachCell(o.x - pad, o.y - pad, o.x + o.width + pad, o.y + o.height + pad, key => {
+                const bucket = this.buckets.get(key);
+                if (bucket) bucket.push(o);
+                else this.buckets.set(key, [o]);
+            });
+        }
+    }
+
+    /** Does any obstacle's padded box contain this point? */
+    contains(point: RoutePoint): boolean {
+        const bucket = this.buckets.get(cellKey(Math.floor(point.x / CELL), Math.floor(point.y / CELL)));
+        if (!bucket) return false;
+        for (const o of bucket) {
+            if (point.x > o.x - this.pad && point.x < o.x + o.width + this.pad
+                && point.y > o.y - this.pad && point.y < o.y + o.height + this.pad) return true;
+        }
+        return false;
+    }
+
+    /** Does the axis-aligned segment a→b cut through any obstacle? */
+    blocks(a: RoutePoint, b: RoutePoint, pad: number): boolean {
+        let hit = false;
+        forEachCell(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y), key => {
+            if (hit) return;
+            const bucket = this.buckets.get(key);
+            if (!bucket) return;
+            for (const o of bucket) if (segmentIntersectsRect(a, b, o, pad)) { hit = true; return; }
+        });
+        return hit;
+    }
+}
+
+/** Cost added for laying a connector on top of, or across, an existing one. */
+const OVERLAP_PENALTY = 4_000;
+const CROSSING_PENALTY = 600;
+
+/**
+ * The tracks already claimed by connectors planned earlier in this pass. Keeps
+ * later connectors off them, which is what separates connectors into lanes.
+ * Bucketed because it is consulted on every edge relaxation of every remaining
+ * search, and a linear scan over it made that scan grow with the number of
+ * edges already routed.
+ */
+class ClaimedTracks {
+    private readonly buckets = new Map<number, Array<{ a: RoutePoint; b: RoutePoint; seen: number }>>();
+    private query = 0;
+
+    add(a: RoutePoint, b: RoutePoint): void {
+        const track = { a, b, seen: 0 };
+        forEachCell(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y), key => {
+            const bucket = this.buckets.get(key);
+            if (bucket) bucket.push(track);
+            else this.buckets.set(key, [track]);
+        });
+    }
+
+    /** Penalty for running a candidate segment a→b over or across claimed track. */
+    penalty(a: RoutePoint, b: RoutePoint): number {
+        // A track spanning several buckets appears in each; stamping keeps it
+        // from being charged more than once per query.
+        const stamp = ++this.query;
+        let total = 0;
+        forEachCell(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y), key => {
+            const bucket = this.buckets.get(key);
+            if (!bucket) return;
+            for (const track of bucket) {
+                if (track.seen === stamp) continue;
+                track.seen = stamp;
+                if (sameSegment(a, b, track.a, track.b)) total += OVERLAP_PENALTY;
+                else if (segmentsCrossOrthogonally(a, b, track.a, track.b)) total += CROSSING_PENALTY;
+            }
+        });
+        return total;
+    }
+}
+
+/**
+ * Ceiling on states expanded while planning one connector. Reached only on a
+ * board where the search would otherwise wander; the caller falls back to a
+ * deterministic elbow, exactly as maxGraph's Manhattan router falls back to its
+ * orthogonal connector after `maxLoops`.
+ */
+const MAX_ROUTE_EXPANSIONS = 20_000;
+
+// ─── Binary min-heap over the A* open set, keyed on f ────────────────────────
+
+function heapPush<T extends { f: number }>(heap: T[], item: T): void {
+    heap.push(item);
+    for (let i = heap.length - 1; i > 0;) {
+        const parent = (i - 1) >> 1;
+        if (heap[parent].f <= heap[i].f) break;
+        [heap[parent], heap[i]] = [heap[i], heap[parent]];
+        i = parent;
+    }
+}
+
+function heapPop<T extends { f: number }>(heap: T[]): T | undefined {
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length > 0 && last !== undefined) {
+        heap[0] = last;
+        for (let i = 0;;) {
+            const left = i * 2 + 1, right = left + 1;
+            let smallest = i;
+            if (left < heap.length && heap[left].f < heap[smallest].f) smallest = left;
+            if (right < heap.length && heap[right].f < heap[smallest].f) smallest = right;
+            if (smallest === i) break;
+            [heap[smallest], heap[i]] = [heap[i], heap[smallest]];
+            i = smallest;
+        }
+    }
+    return top;
+}
+
+/** Drop repeated and collinear interior points so every kept bend is a real corner. */
+function compactRoute(points: RoutePoint[]): RoutePoint[] {
+    const deduped = points.filter((p, i) => i === 0
+        || Math.abs(p.x - points[i - 1].x) > 0.01 || Math.abs(p.y - points[i - 1].y) > 0.01);
+    return deduped.filter((p, i) => i === 0 || i === deduped.length - 1
+        || !((deduped[i - 1].x === p.x && p.x === deduped[i + 1].x)
+            || (deduped[i - 1].y === p.y && p.y === deduped[i + 1].y)));
+}
+
+const isHorizontalSide = (side: OrthogonalRouteRequest['sourceSide']) =>
+    side === 'left' || side === 'right';
+
+/**
+ * Route one connector on its own: port to port, leaving each anchored side
+ * perpendicular, with at most one elbow. No obstacle avoidance, no awareness
+ * of other connectors, no search — a fixed handful of operations per edge.
+ *
+ * This is what runs while a block is being dragged, where the only thing that
+ * matters is that connectors stay glued to their ports and read as a straight
+ * or orthogonal run. Obstacle avoidance and lane separation are what the tidy
+ * pass (`routeOrthogonalEdges`) buys, and it is far too expensive to run on
+ * every frame, so it runs on demand instead.
+ */
+export function routeDirectOrthogonal(request: OrthogonalRouteRequest): RoutePoint[] {
+    const { source, target, sourceSide, targetSide } = request;
+    const span = Math.abs(source.x - target.x) + Math.abs(source.y - target.y);
+    const stub = Math.min(PORT_STUB, span / 3);
+    const s = sourceSide && stub > 0.5 ? stepOffSide(source, sourceSide, stub) : source;
+    const t = targetSide && stub > 0.5 ? stepOffSide(target, targetSide, stub) : target;
+    const between: RoutePoint[] =
+        // Already aligned on an axis: one straight run, no elbow needed.
+        Math.abs(s.x - t.x) < 0.5 || Math.abs(s.y - t.y) < 0.5 ? []
+        // Both ends leave along the same axis (or neither declares a side):
+        // split the gap so each end keeps its perpendicular approach.
+        : isHorizontalSide(sourceSide) === isHorizontalSide(targetSide)
+            ? (isHorizontalSide(sourceSide) || !sourceSide
+                ? [{ x: (s.x + t.x) / 2, y: s.y }, { x: (s.x + t.x) / 2, y: t.y }]
+                : [{ x: s.x, y: (s.y + t.y) / 2 }, { x: t.x, y: (s.y + t.y) / 2 }])
+        // Ends leave along different axes: a single corner serves both.
+        : isHorizontalSide(sourceSide)
+            ? [{ x: t.x, y: s.y }]
+            : [{ x: s.x, y: t.y }];
+    return compactRoute([source, s, ...between, t, target]);
+}
+
+/** Route every request independently with {@link routeDirectOrthogonal}. */
+export function routeDirectOrthogonalEdges(
+    requests: OrthogonalRouteRequest[],
+): Map<string, RoutePoint[]> {
+    return new Map(requests.map(request => [request.id, routeDirectOrthogonal(request)]));
+}
+
 /** Plan all routes together so later edges avoid occupied tracks and crossings. */
 export function routeOrthogonalEdges(
     requests: OrthogonalRouteRequest[],
@@ -139,7 +332,7 @@ export function routeOrthogonalEdges(
     priority: 'long-first' | 'short-first' = 'long-first',
 ): Map<string, RoutePoint[]> {
     const result = new Map<string, RoutePoint[]>();
-    const occupied: Array<[RoutePoint, RoutePoint]> = [];
+    const occupied = new ClaimedTracks();
     const clearance = Math.max(12, channelGap * 0.75);
     // Most diagrams benefit from long connectors establishing scarce
     // cross-board channels first.  Interconnection diagrams reverse this:
@@ -168,9 +361,22 @@ export function routeOrthogonalEdges(
         const encloses = (o: RouteObstacle, p: RoutePoint) =>
             p.x > o.x - clearance && p.x < o.x + o.width + clearance
             && p.y > o.y - clearance && p.y < o.y + o.height + clearance;
+        // Only boxes near this connector can shape it. A block on the far side
+        // of the board cannot obstruct an A→B run, yet every one of them used
+        // to contribute four candidate coordinates, so the grid grew with the
+        // size of the *diagram* rather than with the crossing this connector
+        // actually has to negotiate. The margin leaves room to detour around a
+        // blocked corridor; a route needing more than that falls back to the
+        // deterministic elbow, which is the right answer for such a case anyway.
+        const detourMargin = Math.max(240, span * 0.35);
+        const near = (o: RouteObstacle) =>
+            o.x + o.width >= Math.min(anchorSource.x, anchorTarget.x) - detourMargin
+            && o.x <= Math.max(anchorSource.x, anchorTarget.x) + detourMargin
+            && o.y + o.height >= Math.min(anchorSource.y, anchorTarget.y) - detourMargin
+            && o.y <= Math.max(anchorSource.y, anchorTarget.y) + detourMargin;
         const relevant = obstacles.filter(o =>
             o.id !== request.sourceNodeId && o.id !== request.targetNodeId
-            && !encloses(o, anchorSource) && !encloses(o, anchorTarget));
+            && near(o) && !encloses(o, anchorSource) && !encloses(o, anchorTarget));
         const xCoords = new Set<number>([s.x, t.x, (s.x + t.x) / 2, s.x - channelGap, s.x + channelGap, t.x - channelGap, t.x + channelGap]);
         const yCoords = new Set<number>([s.y, t.y, (s.y + t.y) / 2, s.y - channelGap, s.y + channelGap, t.y - channelGap, t.y + channelGap]);
         for (const obstacle of relevant) {
@@ -179,20 +385,20 @@ export function routeOrthogonalEdges(
             yCoords.add(obstacle.y - clearance);
             yCoords.add(obstacle.y + obstacle.height + clearance);
         }
-        // Existing tracks become candidate coordinates, allowing tidy parallel
-        // lanes while the cost function prevents coincident segments.
-        for (const [a, b] of occupied) {
-            xCoords.add(a.x); xCoords.add(b.x);
-            yCoords.add(a.y); yCoords.add(b.y);
-        }
+        // Note what is deliberately *not* here: the coordinates of segments
+        // already routed. Feeding those back in gave tidy parallel lanes, but
+        // it grew the search space with every edge planned so far, which made
+        // the pass cubic in edge count (measured: 16x the edges cost 866x the
+        // time). The cost function below still penalises coincident and
+        // crossing segments, so connectors still separate — they just no longer
+        // enlarge each other's grid to do it.
         const xs = [...xCoords].sort((a, b) => a - b);
         const ys = [...yCoords].sort((a, b) => a - b);
         const points: RoutePoint[] = [];
         const pointIndex = new Map<string, number>();
         const key = (x: number, y: number) => `${x.toFixed(3)}:${y.toFixed(3)}`;
-        const inside = (point: RoutePoint) => relevant.some(o =>
-            point.x > o.x - clearance && point.x < o.x + o.width + clearance
-            && point.y > o.y - clearance && point.y < o.y + o.height + clearance);
+        const index = new ObstacleIndex(relevant, clearance);
+        const inside = (point: RoutePoint) => index.contains(point);
         for (const y of ys) for (const x of xs) {
             const point = { x, y };
             if (inside(point) && key(x, y) !== key(s.x, s.y) && key(x, y) !== key(t.x, t.y)) continue;
@@ -205,7 +411,7 @@ export function routeOrthogonalEdges(
             if (!adjacency.has(b)) adjacency.set(b, []);
             adjacency.get(a)!.push(b); adjacency.get(b)!.push(a);
         };
-        const clear = (a: RoutePoint, b: RoutePoint) => !relevant.some(o => segmentIntersectsRect(a, b, o, clearance - 1));
+        const clear = (a: RoutePoint, b: RoutePoint) => !index.blocks(a, b, clearance - 1);
         for (const y of ys) {
             const row = xs.map(x => pointIndex.get(key(x, y))).filter((i): i is number => i !== undefined);
             for (let i = 1; i < row.length; i++) if (clear(points[row[i - 1]], points[row[i]])) link(row[i - 1], row[i]);
@@ -237,10 +443,18 @@ export function routeOrthogonalEdges(
                 : side === 'top' ? b.y <= a.y : b.y >= a.y);
         const startConstraint = stubbedSource ? keepsClear : leavesSide;
         const goalConstraint = stubbedTarget ? keepsClear : leavesSide;
+        let expansions = 0;
         while (open.length > 0) {
-            open.sort((a, b) => a.f - b.f);
-            const current = open.shift()!;
+            // A binary heap, not a re-sort per pop: the open set reaches tens of
+            // thousands of states on a dense board, and sorting all of them to
+            // take one was the second-largest cost in the pass.
+            const current = heapPop(open)!;
             if (current.node === goal) { found = current; break; }
+            // Bounded like every production orthogonal router (maxGraph caps at
+            // 2000 steps): a board with no clean route must not be allowed to
+            // stall the whole diagram. Giving up here falls through to the
+            // deterministic elbow below.
+            if (++expansions > MAX_ROUTE_EXPANSIONS) break;
             for (const nextNode of adjacency.get(current.node) ?? []) {
                 const a = points[current.node], b = points[nextNode];
                 if (current.node === start && !startConstraint(a, b, request.sourceSide)) continue;
@@ -248,10 +462,7 @@ export function routeOrthogonalEdges(
                 const dir: 'H' | 'V' = a.y === b.y ? 'H' : 'V';
                 const length = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
                 let penalty = current.dir !== 'N' && current.dir !== dir ? 90 : 0;
-                for (const [c, d] of occupied) {
-                    if (sameSegment(a, b, c, d)) penalty += 4_000;
-                    else if (segmentsCrossOrthogonally(a, b, c, d)) penalty += 600;
-                }
+                penalty += occupied.penalty(a, b);
                 // Prefer monotone progress, but never at the expense of routing
                 // through an obstacle (the visibility graph forbids that).
                 const before = Math.abs(a.x - t.x) + Math.abs(a.y - t.y);
@@ -261,11 +472,11 @@ export function routeOrthogonalEdges(
                 const nextKey = stateKey(nextNode, dir);
                 if (g >= (bestCost.get(nextKey) ?? Number.POSITIVE_INFINITY)) continue;
                 const next: SearchState = { node: nextNode, dir, g, f: g + after, parent: stateKey(current.node, current.dir) };
-                bestCost.set(nextKey, g); states.set(nextKey, next); open.push(next);
+                bestCost.set(nextKey, g); states.set(nextKey, next); heapPush(open, next);
             }
         }
 
-        let route: RoutePoint[] = [];
+        const route: RoutePoint[] = [];
         if (found) {
             let cursor: SearchState | undefined = found;
             while (cursor) {
@@ -273,20 +484,18 @@ export function routeOrthogonalEdges(
                 cursor = cursor.parent ? states.get(cursor.parent) : undefined;
             }
             route.reverse();
+            // Put the anchors back on: the plan runs stub-to-stub, the
+            // connector runs port-centre to port-centre.
+            if (stubbedSource) route.unshift(anchorSource);
+            if (stubbedTarget) route.push(anchorTarget);
         }
-        if (route.length < 2) {
-            const midX = (s.x + t.x) / 2;
-            route = [s, { x: midX, y: s.y }, { x: midX, y: t.y }, t];
-        }
-        // Put the anchors back on: the plan runs stub-to-stub, the connector
-        // runs port-centre to port-centre.
-        if (stubbedSource) route.unshift(anchorSource);
-        if (stubbedTarget) route.push(anchorTarget);
-        const compact = route.filter((p, i) => i === 0 || i === route.length - 1
-            || !((route[i - 1].x === p.x && p.x === route[i + 1].x)
-                || (route[i - 1].y === p.y && p.y === route[i + 1].y)));
+        // Nothing survived the search, or it ran out of budget. Fall back to
+        // the same elbow the live router draws: it ignores obstacles, but it
+        // leaves both ports perpendicular and stays orthogonal, where the old
+        // fallback drew a mid-split that ignored the port sides entirely.
+        const compact = route.length >= 2 ? compactRoute(route) : routeDirectOrthogonal(request);
         result.set(request.id, compact);
-        for (let i = 1; i < compact.length; i++) occupied.push([compact[i - 1], compact[i]]);
+        for (let i = 1; i < compact.length; i++) occupied.add(compact[i - 1], compact[i]);
     }
     return result;
 }

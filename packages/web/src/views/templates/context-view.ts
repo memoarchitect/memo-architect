@@ -168,8 +168,13 @@ export function computeContextViewLayout(
         data: { label: `${systemName ?? system.name} — System Boundary`, isFrame: true },
         style: { width: boundaryWidth, height: boundaryHeight }, draggable: false, selectable: false, zIndex: -1,
     }, {
+        // The system is a genuine child of its context boundary. React Flow can
+        // therefore enforce the same semantic rule the notation expresses: a
+        // system of interest cannot be dragged outside its own scope. The
+        // canvas rebases old absolute sidecars when it first reads them.
         id: system.id, type: 'contextSystem',
-        position: { x: boundaryX + BOUNDARY_PAD_X, y: boundaryY + BOUNDARY_PAD_Y },
+        parentId: '__context_boundary__', extent: 'parent',
+        position: { x: BOUNDARY_PAD_X, y: BOUNDARY_PAD_Y },
         data: { label: system.name, kind: system.kind }, style: { width: SYSTEM_W, height: SYSTEM_H },
     }];
 

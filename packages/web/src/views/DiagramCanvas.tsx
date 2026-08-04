@@ -43,7 +43,7 @@ import {
     type ArrangeBox, type ArrangeResult, type AlignEdge, type SizeMatch, type DistributeAxis,
 } from './arrange';
 import { FONT, COLOR } from '../styles/tokens';
-import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges } from './layout';
+import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
     resolveGeneralMode, buildGeneralViewTree,
@@ -66,6 +66,9 @@ import { isStateElement } from './templates/statetransition-view';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
+import {
+    hasContextChildCoordinates, rebaseLegacyContextChildPosition, withContextChildCoordinates,
+} from '../diagram/layout-coordinate-migration';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
@@ -180,8 +183,22 @@ interface UndoCommand {
     undo: () => void;
 }
 
+/**
+ * How connectors are planned for a geometry update.
+ *
+ * `direct` routes each connector on its own, port to port — a fixed cost per
+ * edge, cheap enough to run on every frame of a drag. `tidy` runs the shared
+ * obstacle-avoiding planner that separates connectors into lanes, which costs
+ * far more and therefore only runs when the user asks for it.
+ */
+type RouteQuality = 'direct' | 'tidy';
+
 /** Re-route explicit orthogonal edges after saved/user node positions overlay. */
-function reroutePositionedEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[] {
+function reroutePositionedEdges(
+    nodes: FlowNode[],
+    edges: FlowEdge[],
+    quality: RouteQuality = 'direct',
+): FlowEdge[] {
     const byId = new Map(nodes.map(n => [n.id, n]));
     const absolute = new Map<string, { x: number; y: number }>();
     const absOf = (id: string): { x: number; y: number } => {
@@ -228,9 +245,22 @@ function reroutePositionedEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[
         .filter(node => !(node.data as { isFrame?: boolean }).isFrame)
         .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }));
     const requestById = new Map(requests.map(request => [request.id, request]));
-    const automaticRequests = requests.filter(request => !edges.find(edge => edge.id === request.id)?.data?.manualRoute);
-    const routes = routeOrthogonalEdges(automaticRequests, obstacles);
-    return edges.map(edge => {
+    const manualRouted = new Set(edges.filter(edge => edge.data?.manualRoute).map(edge => edge.id));
+    const automaticRequests = requests.filter(request => !manualRouted.has(request.id));
+    const routes = quality === 'tidy'
+        ? routeOrthogonalEdges(automaticRequests, obstacles)
+        : routeDirectOrthogonalEdges(automaticRequests);
+    // A label anchor is a point on the route it belongs to. Once the route has
+    // been replanned the old anchor describes a line that no longer exists, and
+    // the label is left stranded in empty space. Drop it, and the edge falls
+    // back to anchoring on the longest segment of its current route. The tidy
+    // pass re-derives proper anchors below, where labels are placed together and
+    // can avoid each other.
+    const withRoute = (edge: FlowEdge, points: Array<{ x: number; y: number }>): FlowEdge => {
+        const { labelPoint: _stale, ...data } = edge.data ?? {};
+        return { ...edge, data: { ...data, points } };
+    };
+    const routed = edges.map(edge => {
         const request = requestById.get(edge.id);
         if (!request) return edge;
         if (edge.data?.manualRoute) {
@@ -238,11 +268,26 @@ function reroutePositionedEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[
             if (points.length >= 2) {
                 points[0] = request.source;
                 points[points.length - 1] = request.target;
-                return { ...edge, data: { ...edge.data, points } };
+                return withRoute(edge, points);
             }
         }
-        return routes.has(edge.id) ? { ...edge, data: { ...edge.data, points: routes.get(edge.id) } } : edge;
+        const points = routes.get(edge.id);
+        return points ? withRoute(edge, points) : edge;
     });
+    if (quality !== 'tidy') return routed;
+    const labelled = placeConnectorLabels(
+        routed.flatMap(edge => {
+            const points = edge.data?.points as Array<{ x: number; y: number }> | undefined;
+            const label = typeof edge.label === 'string' ? edge.label : '';
+            return points && points.length >= 2 && label
+                ? [{ id: edge.id, points, width: label.length * 6.2 + 16, height: 18 }]
+                : [];
+        }),
+        obstacles,
+    );
+    return routed.map(edge => labelled.has(edge.id)
+        ? { ...edge, data: { ...edge.data, labelPoint: labelled.get(edge.id) } }
+        : edge);
 }
 
 // ─── Quick create popup ───────────────────────────────────────────────────────
@@ -456,7 +501,16 @@ function DiagramCanvasInner() {
     const geometryFrameRef = useRef<number | null>(null);
     const nodeDragStartRef = useRef<{ id: string; x: number; y: number } | null>(null);
     const suppressInspectUntilRef = useRef(0);
-    useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+    // While a geometry frame is pending, `nodesRef` holds changes that have been
+    // applied but not yet rendered — a resize in progress, for instance. Syncing
+    // it back from the rendered `nodes` at that moment throws those changes
+    // away: a resize bumps `layoutEditVersion`, that re-renders with the old
+    // node array before the queued frame runs, and the half-finished resize is
+    // silently reverted every frame. Only adopt rendered state when nothing is
+    // in flight.
+    useEffect(() => {
+        if (geometryFrameRef.current === null) nodesRef.current = nodes;
+    }, [nodes]);
     useEffect(() => { edgesRef.current = edges; }, [edges]);
 
     const scheduleGeometryUpdate = useCallback((nextNodes: FlowNode[]) => {
@@ -615,7 +669,7 @@ function DiagramCanvasInner() {
         const timer = window.setTimeout(() => {
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
             const viewport = getViewport();
-            const layout: DiagramLayout = {
+            const layout = withContextChildCoordinates({
                 nodes: Object.fromEntries(nodes.filter(node => node.type !== 'annotationNode').map(node => [node.id, {
                     ...(previous.nodes[node.id] ?? {}),
                     x: node.position.x,
@@ -657,7 +711,7 @@ function DiagramCanvasInner() {
                     pan: { x: viewport.x, y: viewport.y },
                     autoLayout: false,
                 },
-            };
+            } as DiagramLayout);
             mergeDiagramLayouts({ [selectedDiagramId]: layout });
             sendDiagramLayoutUpdate(selectedDiagramId, layout);
             setLayoutEditVersion(0);
@@ -1085,12 +1139,23 @@ function DiagramCanvasInner() {
     const buildNodesFromSidecar = useCallback((
         rawNodes: FlowNode[], layout: DiagramLayout
     ): FlowNode[] => {
+        const legacyContextCoordinates = !hasContextChildCoordinates(layout);
+        const rawById = new Map(rawNodes.map(node => [node.id, node]));
         const positioned = rawNodes.map(n => {
             const pos = layout.nodes[n.id];
             if (!pos) return n;
+            const parent = n.parentId ? rawById.get(n.parentId) : undefined;
+            // Prior context boards saved the system in board coordinates. The
+            // boundary is now its React Flow parent, so rebase only that known
+            // legacy shape; other nested templates have always used local
+            // coordinates and are deliberately left alone.
+            const position = legacyContextCoordinates && n.type === 'contextSystem'
+                && parent?.type === 'contextBoundary'
+                ? rebaseLegacyContextChildPosition(pos, parent.position)
+                : { x: pos.x, y: pos.y };
             return {
                 ...n,
-                position: { x: pos.x, y: pos.y },
+                position,
                 ...(pos.width ? { width: pos.width } : {}),
                 ...(pos.height ? { height: pos.height } : {}),
                 ...(pos.width || pos.height
@@ -1171,6 +1236,26 @@ function DiagramCanvasInner() {
         });
     }, [markManualLayout, setEdges]);
 
+    /**
+     * Replan every connector with the obstacle-avoiding planner. Live edits use
+     * the cheap direct router, which keeps connectors attached and orthogonal
+     * but lets them cross each other and run over blocks; this is the explicit
+     * "make it read well" pass. It discards hand-drawn bends, which is the
+     * point of asking for a tidy.
+     */
+    const tidyConnectors = useCallback(() => {
+        markManualLayout();
+        setLayoutEditVersion(version => version + 1);
+        const cleared = edgesRef.current.map(edge => {
+            if (!edge.data?.manualRoute) return edge;
+            const { points: _points, manualRoute: _manualRoute, ...data } = edge.data;
+            return { ...edge, data };
+        });
+        const tidied = reroutePositionedEdges(nodesRef.current, cleared, 'tidy');
+        edgesRef.current = tidied;
+        setEdges(tidied);
+    }, [markManualLayout, setEdges]);
+
     // ─── Layout computation ────────────────────────────────────────────────────
 
     useEffect(() => {
@@ -1205,6 +1290,14 @@ function DiagramCanvasInner() {
                     position: { x: sceneNode.x, y: sceneNode.y },
                     style: { ...node.style, width: sceneNode.width, height: sceneNode.height },
                     parentId: sceneNode.parentId,
+                    // A block drawn inside another block cannot be dragged out
+                    // of it: the nesting *is* the containment statement, so
+                    // letting a child wander outside would draw something the
+                    // model does not say. Applied here rather than per template
+                    // so it holds wherever nesting appears — interconnection
+                    // parts, a contained-mode decomposition, a context boundary.
+                    // Tree-mode layouts nest nothing and are untouched.
+                    ...(sceneNode.parentId ? { extent: 'parent' as const } : {}),
                 } : node;
             });
             const sceneEdges = e.filter(edge => notationEdge.has(edge.id)).map(edge => {
@@ -1700,6 +1793,19 @@ function DiagramCanvasInner() {
         if (node.type === 'annotationNode') return;
         markManualLayout();
 
+        // Hand-drawn bends describe a route between two places. Once the block
+        // at either end has moved, they no longer describe anything, so the
+        // connector goes back to finding its own shortest path. Bends the user
+        // dragged on connectors that did *not* move are left untouched.
+        const moveInvalidated = edgesRef.current.map(edge => {
+            if (!edge.data?.manualRoute) return edge;
+            if (edge.source !== node.id && edge.target !== node.id) return edge;
+            const { points: _points, manualRoute: _manualRoute, ...data } = edge.data;
+            return { ...edge, data };
+        });
+        edgesRef.current = moveInvalidated;
+        scheduleGeometryUpdate(nodesRef.current);
+
         const prevPos = positionCacheRef.current.get(node.id);
         positionCacheRef.current.set(node.id, { x, y });
         setNodeLayout(selectedDiagramId, node.id, { x, y });
@@ -1717,7 +1823,7 @@ function DiagramCanvasInner() {
                 },
             });
         }
-    }, [selectedDiagramId, setNodeLayout, pushUndo, setNodes, markManualLayout]);
+    }, [selectedDiagramId, setNodeLayout, pushUndo, setNodes, markManualLayout, scheduleGeometryUpdate]);
 
     // ─── Node resize + live orthogonal re-routing ─────────────────────────────
 
@@ -1735,7 +1841,22 @@ function DiagramCanvasInner() {
             }
             setLayoutEditVersion(version => version + 1);
         }
-        scheduleGeometryUpdate(applyNodeChanges(changes, nodesRef.current));
+        // React Flow emits dimensions continuously while a resize handle moves,
+        // but marks only the last one `setAttributes`. `applyNodeChanges` quite
+        // correctly ignores the interim values; our controlled-node frame then
+        // wrote those old dimensions straight back and cancelled the resize.
+        // Apply every live dimension here, mirroring it to `style` because the
+        // custom nodes size themselves from style. The final committed value is
+        // therefore both visible during the drag and available to persist.
+        const resized = new Map(changes.flatMap(change =>
+            change.type === 'dimensions' && change.dimensions
+                ? [[change.id, change.dimensions] as const]
+                : []));
+        const applied = applyNodeChanges(changes, nodesRef.current).map(node => {
+            const size = resized.get(node.id);
+            return size ? { ...node, style: { ...node.style, width: size.width, height: size.height } } : node;
+        });
+        scheduleGeometryUpdate(applied);
     }, [scheduleGeometryUpdate, markManualLayout]);
 
     // ─── Context menu handlers ─────────────────────────────────────────────────
@@ -2112,6 +2233,16 @@ function DiagramCanvasInner() {
                                 });
                             }}
                             title="Show or hide the canvas grid and snapping (⌘⇧G)"
+                        />
+
+                        {/* Connectors stay direct while blocks move; this is the
+                            explicit pass that routes them around obstacles. */}
+                        <IconToggle
+                            icon={<Icon.tidy />}
+                            label="Tidy"
+                            active={false}
+                            onClick={tidyConnectors}
+                            title="Re-route connectors around blocks and into separate lanes. Replaces any bends you drew by hand."
                         />
 
                         {/* FBS controls */}

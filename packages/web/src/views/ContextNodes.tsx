@@ -1,14 +1,38 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react';
 import { PersonGlyph } from './PersonGlyph';
 
 interface ContextNodeData extends Record<string, unknown> {
     label: string;
     kind?: string;
     category?: 'person' | 'system' | 'environment';
+    minWidth?: number;
+    minHeight?: number;
 }
 
 const hiddenHandle = { opacity: 0, width: 1, height: 1 };
+
+/**
+ * Resize affordance shared by the two semantic context nodes, matching the
+ * handles used on interconnection parts so resizing feels the same wherever a
+ * block can be resized. The boundary marker is deliberately excluded: it is a
+ * drawn scope, not an element, and has nothing to size against.
+ */
+function ContextResizer({ nodeId, selected, data }: {
+    nodeId: string;
+    selected: boolean;
+    data: ContextNodeData;
+}) {
+    return <NodeResizer
+        nodeId={nodeId}
+        isVisible={selected}
+        minWidth={data.minWidth ?? 140}
+        minHeight={data.minHeight ?? 64}
+        color="#0F766E"
+        lineStyle={{ borderWidth: 1 }}
+        handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
+    />;
+}
 
 function Handles() {
     return <>
@@ -20,7 +44,7 @@ function Handles() {
 }
 
 /** The system-of-interest is deliberately a black box in a context diagram. */
-export const ContextSystemNode = memo(function ContextSystemNode({ data }: NodeProps) {
+export const ContextSystemNode = memo(function ContextSystemNode({ id, data, selected }: NodeProps) {
     const d = data as ContextNodeData;
     return <div style={{
         width: '100%', height: '100%', boxSizing: 'border-box', display: 'grid', placeItems: 'center',
@@ -28,13 +52,14 @@ export const ContextSystemNode = memo(function ContextSystemNode({ data }: NodeP
         background: '#F0FDFA', color: '#134E4A', fontSize: 15, fontWeight: 700, lineHeight: 1.25,
         boxShadow: '0 2px 7px rgba(15, 118, 110, 0.16)',
     }}>
+        <ContextResizer nodeId={id} selected={Boolean(selected)} data={d} />
         <span><small style={{ display: 'block', marginBottom: 5, color: '#0F766E', fontSize: 10, letterSpacing: '.08em' }}>SYSTEM OF INTEREST</small>{d.label}</span>
         <Handles />
     </div>;
 });
 
 /** An entity deliberately outside the system boundary. */
-export const ContextExternalNode = memo(function ContextExternalNode({ data }: NodeProps) {
+export const ContextExternalNode = memo(function ContextExternalNode({ id, data, selected }: NodeProps) {
     const d = data as ContextNodeData;
     const palette = d.category === 'environment'
         ? { border: '#7C3AED', fill: '#F5F3FF', text: '#4C1D95', tag: 'ENVIRONMENT' }
@@ -46,6 +71,7 @@ export const ContextExternalNode = memo(function ContextExternalNode({ data }: N
         padding: '10px 14px', textAlign: 'center', border: `1.5px solid ${palette.border}`, borderRadius: 7,
         background: palette.fill, color: palette.text, fontSize: 13, fontWeight: 650, lineHeight: 1.25,
     }}>
+        <ContextResizer nodeId={id} selected={Boolean(selected)} data={d} />
         {d.category === 'person' && <PersonGlyph size={26} color={palette.border} />}
         <span><small style={{ display: 'block', marginBottom: 4, color: palette.border, fontSize: 9, letterSpacing: '.07em' }}>{palette.tag}</small>{d.label}</span>
         <Handles />

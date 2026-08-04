@@ -381,21 +381,23 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 position: 'relative',
             }}
         >
-            {!isFrame && (
-                <NodeResizer
-                    nodeId={id}
-                    isVisible={selected}
-                    // A user can make a part as large as needed, but never
-                    // smaller than its title, port gutters, and (for a
-                    // container) its laid-out children.  This is the same
-                    // containment invariant used by desktop diagram tools.
-                    minWidth={minWidth ?? 180}
-                    minHeight={minHeight ?? 100}
-                    color="#2563EB"
-                    lineStyle={{ borderWidth: 1 }}
-                    handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
-                />
-            )}
+            {/* The IBD frame is also an authored block boundary. Let users grow
+                it around added parts just like any contained part; minWidth /
+                minHeight retain the layout-derived footprint so it cannot crop
+                its title bar, ports, or children. */}
+            <NodeResizer
+                nodeId={id}
+                isVisible={selected}
+                // A user can make a part as large as needed, but never
+                // smaller than its title, port gutters, and (for a
+                // container) its laid-out children.  This is the same
+                // containment invariant used by desktop diagram tools.
+                minWidth={minWidth ?? 180}
+                minHeight={minHeight ?? 100}
+                color="#2563EB"
+                lineStyle={{ borderWidth: 1 }}
+                handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
+            />
             {/* Fallback handles: part-to-part / part-to-box connectors anchor
                 to the right (source) and left (target) faces for clean runs. */}
             <Handle type="target" position={Position.Top} id="top" style={defaultHandleStyle} />
