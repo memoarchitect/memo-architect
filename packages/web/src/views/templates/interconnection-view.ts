@@ -1021,13 +1021,38 @@ export async function computeInterconnectionLayout(
     const renderedPort = (id: string): string | undefined =>
         portEls.has(id) ? projectPortForDisplay(id, portDisplay, parentPort) : undefined;
 
+    // Older models can contain a relationship between part properties rather
+    // than between their ports. Keep that semantic relationship intact while
+    // drawing it as a port-to-port connector whenever both visible parts own
+    // ports. New connections cannot use the generic box handles at all.
+    const visiblePortForPart = (ownerId: string, otherId: string, end: 'source' | 'target'): string | undefined => {
+        if (!showPorts) return undefined;
+        const candidates = portInfoByOwner.get(ownerId) ?? [];
+        if (!candidates.length) return undefined;
+        const owner = absolutePos.get(ownerId);
+        const other = absolutePos.get(otherId);
+        const desiredSide: PortSide | undefined = owner && other
+            ? Math.abs(other.x - owner.x) >= Math.abs(other.y - owner.y)
+                ? other.x >= owner.x ? 'right' : 'left'
+                : other.y >= owner.y ? 'bottom' : 'top'
+            : undefined;
+        const compatibleDirection = (direction: PortInfo['direction']) => end === 'source'
+            ? direction === 'out' ? 0 : direction === 'inout' ? 1 : 4
+            : direction === 'in' ? 0 : direction === 'inout' ? 1 : 4;
+        return [...candidates].sort((a, b) =>
+            compatibleDirection(a.direction) - compatibleDirection(b.direction)
+            || Number(a.side !== desiredSide) - Number(b.side !== desiredSide)
+            || a.id.localeCompare(b.id),
+        )[0]?.id;
+    };
+
     type EdgeDraft = { edge: Edge; route: OrthogonalRouteRequest };
     const edgeDrafts: EdgeDraft[] = connectors.flatMap((rel, i) => {
-        const sourcePort = renderedPort(rel.sourceId);
-        const targetPort = renderedPort(rel.targetId);
         const source = portEls.has(rel.sourceId) ? portOwner.get(rel.sourceId)! : rel.sourceId;
         const target = portEls.has(rel.targetId) ? portOwner.get(rel.targetId)! : rel.targetId;
         if (!layouts.has(source) || !layouts.has(target)) return [];
+        const sourcePort = renderedPort(rel.sourceId) ?? visiblePortForPart(source, target, 'source');
+        const targetPort = renderedPort(rel.targetId) ?? visiblePortForPart(target, source, 'target');
         // Colour by transported item; the legend explains the categories.
         const flowKind = classifyIbdFlow(rel.flowItem, rel.type);
         const flowColor = IBD_FLOW_COLORS[flowKind];
@@ -1075,6 +1100,9 @@ export async function computeInterconnectionLayout(
             targetHandle,
             type: 'interconnectionEdge',
             className: 'ibd-interconnection-edge',
+            // Keep connector corridors visible above the part body. Boundary
+            // ports remain their exact endpoints, not hidden under a card.
+            zIndex: 5,
             label,
             animated: rel.type === 'flow',
             style: { stroke: flowColor, strokeWidth: Math.max(2, EDGE.defaultWidth) },

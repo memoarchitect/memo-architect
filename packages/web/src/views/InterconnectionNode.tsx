@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { memo, useState } from 'react';
-import { Handle, NodeResizer, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
+import { NodeResizer, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
@@ -268,10 +268,6 @@ function ImplicitPort({ side, direction }: { side: 'left' | 'right'; direction: 
     );
 }
 
-const defaultHandleStyle: React.CSSProperties = {
-    width: 8, height: 8, background: '#2DD4A8', border: '1.5px solid #FFFFFF', opacity: 0,
-};
-
 /** Compact, non-wrapping SysML part-property identity. */
 function TypedLabel({ name, kind, nameColor, typeColor, frame = false }: {
     name: string; kind: string; nameColor: string; typeColor: string; frame?: boolean;
@@ -405,13 +401,6 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 lineStyle={{ borderWidth: 1 }}
                 handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
             />
-            {/* Fallback handles: part-to-part / part-to-box connectors anchor
-                to the right (source) and left (target) faces for clean runs. */}
-            <Handle type="target" position={Position.Top} id="top" style={defaultHandleStyle} />
-            <Handle type="source" position={Position.Bottom} id="bottom" style={defaultHandleStyle} />
-            <Handle type="target" position={Position.Left} id="left" style={defaultHandleStyle} />
-            <Handle type="source" position={Position.Right} id="right" style={defaultHandleStyle} />
-
             {isFrame ? (
                 /* Modern IBD frame bar: clear context identity without the
                    dated clipped-corner tab or text-driven frame width. */
