@@ -85,7 +85,7 @@ project's nearest `model/` or `src/` tree.
 
 The examples ship inside the ontology package, `@memoarchitect/ontology`, so
 they are already present once Architect is installed — there is nothing to
-clone or download. One command opens one:
+clone or download. In an installed environment, open one with:
 
 ```bash
 memo-architect --example gpca
@@ -93,6 +93,26 @@ memo-architect --example gpca
 
 ```bash
 memo-architect --example standard-sysml-diagrams
+```
+
+From an Architect development checkout, use the package script, which runs the
+locally built CLI:
+
+```bash
+pnpm architect examples
+pnpm architect --example standard-sysml-diagrams --keep-alive
+```
+
+`pnpm architect examples` prints every bundled example ID available in the
+resolved ontology package. `--keep-alive` keeps the development server running
+if the browser temporarily disconnects, such as when a tab is backgrounded or
+the computer sleeps. Without it, the server waits 10 seconds for a client to
+reconnect before shutting down. From the `memo-meta` workspace root, run the
+same commands through the Architect package:
+
+```bash
+pnpm --filter @memoarchitect/architect architect examples
+pnpm --filter @memoarchitect/architect architect --example standard-sysml-diagrams --keep-alive
 ```
 
 | Example | What it contains |
@@ -146,10 +166,12 @@ For coordinated changes across Ontology, Tools, and Architect, use the private
 `memo-meta` workspace. It checks out all three repositories as sibling
 submodules and links their matching npm package versions locally.
 
-Run the bundled GPCA reference model:
+List the available bundled examples, then run one in the local development
+server:
 
 ```bash
-pnpm run example:dev
+pnpm architect examples
+pnpm architect --example gpca --keep-alive
 # http://localhost:3000
 ```
 
