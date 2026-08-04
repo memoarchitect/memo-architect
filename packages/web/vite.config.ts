@@ -11,6 +11,9 @@ export default defineConfig({
     // root; two React copies make diagram routes fail with an invalid hook call.
     resolve: {
         dedupe: ['react', 'react-dom'],
+        alias: {
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+        },
     },
     server: {
         port: 3000,

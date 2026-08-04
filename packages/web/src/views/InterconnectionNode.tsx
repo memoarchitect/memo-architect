@@ -17,6 +17,7 @@ import { Handle, NodeResizer, Position, useReactFlow, useStore, type NodeProps }
 import { FONT, SHADOW } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
+import { BaseHandle } from '../components/base-handle';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
@@ -225,9 +226,9 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
                     const cls = h.connectable ? 'ibd-port-connect' : 'ibd-port-anchor';
                     const style = h.connectable ? connectableHandleStyle(size) : handlePinStyle(size);
                     return [
-                        <Handle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
+                        <BaseHandle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
                             style={style} isConnectable={h.connectable} />,
-                        <Handle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
+                        <BaseHandle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
                             style={style} isConnectable={h.connectable} />,
                     ];
                 })}
