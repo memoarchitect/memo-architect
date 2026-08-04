@@ -15,11 +15,12 @@ import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import type { MemoElement, DiagramDTO, KindDefinitionDTO, MemoModelDTO, ViewpointDTO, ViewKind } from '@memoarchitect/tools/browser';
+import { activityNodeType, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
 import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -584,14 +585,23 @@ function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?:
 
 function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
     return isDiagramOnlyElement(kind, sourceLayer, sourcePackage)
-        || kind === 'ForkNode'
-        || kind === 'JoinNode'
-        // Generic SysML action-flow notation belongs in a Diagram. A typed
-        // SystemAction or InterfaceItem remains visible through its ontology
-        // kind; an untyped action/item never becomes architecture by itself.
-        || kind === 'ActionDefinition'
-        || kind === 'ActionUsage'
+        // A generic item is not an activity-diagram node and is not a MEMO
+        // architecture element until a project gives it an ontology kind.
         || kind === 'ItemDefinition';
+}
+
+/**
+ * Native SysML activity notation is recognized by the generated SysML
+ * metamodel, not by a MEMO ontology declaration. Keep it visible as diagram
+ * content without calling it an undefined model kind.
+ */
+function isNativeSysmlDiagramElement(
+    element: MemoElement,
+    registryKinds: KindDefinitionDTO[],
+    registryKindNames: ReadonlySet<string>,
+): boolean {
+    return !registryKindNames.has(element.kind)
+        && activityNodeType(element, { kinds: registryKinds, relationships: [] }) !== undefined;
 }
 
 /** Build ordered layer groups from the currently selected ontology packages. */
@@ -714,8 +724,9 @@ export function artifactCategory(kind: string, superType?: string): typeof ARTIF
 /**
  * Group model elements by ontology layer, then by namespace sub-group, for
  * the Model Explorer tree (e.g. Architecture → Risk → Hazard → elements).
- * Elements whose kind no selected ontology declares land in
- * "Undefined — Not in Ontology". The client never invents their placement.
+ * Recognized native SysML activity notation is grouped separately as diagram
+ * content. Elements whose kind is neither native notation nor declared by a
+ * selected ontology land in "Undefined — Not in Ontology".
  * Exported for tests.
  */
 export function computeExplorerGroupTree(
@@ -732,6 +743,7 @@ export function computeExplorerGroupTree(
     const kindToLayerId = buildKindToLayerIdMap(registryKinds);
     const kindToSubGroup = buildKindToSubGroupMap(registryKinds);
     const kindToParent = buildKindToParentMap(registryKinds);
+    const registryKindNames = new Set(registryKinds.map(kind => kind.name));
     const layerGroups = buildLayerGroupsFromRegistry(registryKinds, availableOntologies)
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
@@ -783,8 +795,39 @@ export function computeExplorerGroupTree(
         }
     }
 
-    // Elements whose layer isn't in any selected ontology → "Not in Ontology"
+    // Native SysML activity notation is supported by the renderer but does not
+    // become a MEMO ontology kind just by being present in a project.
+    const standardDiagramMap = new Map<string, MemoElement[]>();
     const uncategorizedMap = new Map<string, MemoElement[]>();
+    for (const el of elements) {
+        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
+        const sourcePackage = kindToSubGroup[el.kind];
+        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
+        if (!isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) continue;
+        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
+        if (!standardDiagramMap.has(el.kind)) standardDiagramMap.set(el.kind, []);
+        standardDiagramMap.get(el.kind)!.push(el);
+    }
+    if (standardDiagramMap.size > 0) {
+        const standardColor = '#64748B';
+        groups.push({
+            group: {
+                id: 'standard-sysml-diagram-elements',
+                label: 'Other — SysML Diagram Elements',
+                color: standardColor,
+                kinds: [],
+            },
+            subGroups: [{
+                id: 'diagram-elements',
+                label: 'Diagram Elements',
+                color: standardColor,
+                kinds: new Map([...standardDiagramMap.entries()].map(([kind, entries]) => [kind, buildTree(entries)])),
+            }],
+        });
+    }
+
+    // Elements that are neither ontology kinds nor recognized standard SysML
+    // diagram notation → "Not in Ontology".
     for (const el of elements) {
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
@@ -792,6 +835,7 @@ export function computeExplorerGroupTree(
         const layerId = kindToLayerId[el.kind];
         if (layerId && knownLayerIds.has(layerId)) continue;
         if (layerId && NON_ELEMENT_LAYERS.has(layerId)) continue;
+        if (isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) continue;
         if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
         if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
         uncategorizedMap.get(el.kind)!.push(el);
@@ -825,6 +869,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
+    const registryKinds = model?.registries?.kinds ?? [];
 
     const selectElementAndNavigate = useCallback((id: string) => {
         selectElement(id);
@@ -1045,6 +1090,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 };
                                 const kindLayer = findLayer(nodes);
                                 const layerColor = isUndefinedGroup ? '#F59E0B' : (kindLayer ? (LAYER_COLORS[kindLayer] || group.color) : group.color);
+                                const hasOntologyKind = registryKinds.some(definition => definition.name === kind);
 
                                 // Flat list of all element IDs in this kind (for select-all)
                                 const collectIds = (ns: TreeNode[]): string[] =>
@@ -1059,7 +1105,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                         onDrop={e => handleDrop(e, '', kind)}
                                     >
                                         <div
-                                            className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                                            className="group flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
                                             style={{ borderRadius: '4px', margin: '0 4px' }}
                                             onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -1075,39 +1121,43 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 {kindFolderLabel(kind, kindElementIds.length)}
                                                 {isUndefinedGroup && <span style={{ color: '#F59E0B', marginLeft: '4px' }}>·</span>}
                                             </span>
-                                            {/* Select all in kind */}
-                                            <button
-                                                onClick={e => { e.stopPropagation(); selectAllElements(kindElementIds); }}
-                                                title="Select all in this category"
-                                                className="px-1 rounded"
-                                                style={{ color: COLOR.faint, fontSize: '10px', opacity: 0.6 }}
-                                                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                                                onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
-                                            >☑</button>
-                                            {/* View kind in ontology */}
-                                            {!isUndefinedGroup && (
+                                            {/* Context actions expand to the left on hover; the count stays aligned right. */}
+                                            <div className="flex max-w-0 items-center gap-1 overflow-hidden opacity-0 invisible pointer-events-none transition-all duration-150 group-hover:max-w-[4.5rem] group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                                                 <button
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        for (const pkg of availableOntologies) {
-                                                            for (const layer of pkg.layers) {
-                                                                if (layer.kinds.some(k => k.name === kind)) {
-                                                                    setSelectedOntologyKind(kind);
-                                                                    setExplorerTab('ontologies');
-                                                                    setActiveMode('ontology');
-                                                                    setActiveView({ type: 'ontology-detail', packageName: pkg.name, layerId: layer.id });
-                                                                    return;
+                                                    onClick={e => { e.stopPropagation(); selectAllElements(kindElementIds); }}
+                                                    title="Select all elements of this type"
+                                                    aria-label="Select all elements of this type"
+                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-slate-100"
+                                                    style={{ color: COLOR.faint, fontSize: '17px' }}
+                                                >☑</button>
+                                                {hasOntologyKind && isFeatureEnabled('ontology') && (
+                                                    <button
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            for (const pkg of availableOntologies) {
+                                                                for (const layer of pkg.layers) {
+                                                                    if (layer.kinds.some(k => k.name === kind)) {
+                                                                        setSelectedOntologyKind(kind);
+                                                                        setExplorerTab('ontologies');
+                                                                        setActiveMode('ontology');
+                                                                        setActiveView({ type: 'ontology-detail', packageName: pkg.name, layerId: layer.id });
+                                                                        return;
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                    }}
-                                                    title="View kind in Ontology"
-                                                    className="px-1 rounded"
-                                                    style={{ color: COLOR.faint, fontSize: '10px', opacity: 0.6 }}
-                                                    onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                                                    onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
-                                                >⬡</button>
-                                            )}
+                                                        }}
+                                                        title="View type in Ontology"
+                                                        aria-label="View type in Ontology"
+                                                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-slate-100"
+                                                        style={{ color: COLOR.faint, fontSize: '17px' }}
+                                                    >⬡</button>
+                                                )}
+                                            </div>
+                                            <ExplorerCountBadge
+                                                count={kindElementIds.length}
+                                                color={layerColor}
+                                                title={`${kindElementIds.length} ${kindElementIds.length === 1 ? 'element' : 'elements'}`}
+                                            />
                                         </div>
 
                                         {/* ── Recursive Tree Content ── */}

@@ -87,14 +87,16 @@ describe('computeExplorerGroupTree', () => {
         expect([...functional.kinds.keys()]).toEqual(['StateMachine']);
     });
 
-    it('keeps untyped action-flow notation out of the architecture Explorer', () => {
+    it('groups native SysML activity notation separately from ontology elements', () => {
         const elements = [
             el('AcquireSensorData', 'ActionDefinition', 'behavior'),
             el('acquireSensors', 'ActionUsage', 'behavior'),
             el('SensorStatusVector', 'ItemDefinition', 'behavior'),
         ];
         const groups = computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(groups).toEqual([]);
+        expect(groups.map(group => group.group.id)).toEqual(['standard-sysml-diagram-elements']);
+        expect(groups[0]!.subGroups.map(group => group.id)).toEqual(['diagram-elements']);
+        expect(allKinds(groups[0]!)).toEqual(['ActionDefinition', 'ActionUsage']);
     });
 
     it('still flags genuinely unknown kinds as Undefined', () => {
@@ -102,6 +104,20 @@ describe('computeExplorerGroupTree', () => {
             [el('x1', 'MysteryKind', 'unknown')], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
         expect(groups.map(g => g.group.id)).toEqual(['undefined']);
+    });
+
+    it('keeps native SysML notation and genuinely unknown kinds separate', () => {
+        const groups = computeExplorerGroupTree([
+            el('receive', 'AcceptActionUsage', 'behavior'),
+            el('route', 'DecisionNodeUsage', 'behavior'),
+            el('mystery', 'MysteryKind', 'unknown'),
+        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        expect(groups.map(group => group.group.id)).toEqual([
+            'standard-sysml-diagram-elements', 'undefined',
+        ]);
+        expect(groups[0]!.subGroups.map(group => group.id)).toEqual(['diagram-elements']);
+        expect(allKinds(groups[0]!)).toEqual(['AcceptActionUsage', 'DecisionNodeUsage']);
+        expect(allKinds(groups[1]!)).toEqual(['MysteryKind']);
     });
 
     it('uses the complete ontology registry instead of an incomplete UI package projection', () => {
@@ -149,7 +165,7 @@ describe('computeExplorerGroupTree', () => {
         expect(allKinds(groups[0])).toEqual(['Actor', 'PhysicalAssembly']);
     });
 
-    it('keeps generic action notation out of Explorer even when it is declared', () => {
+    it('uses an ontology-declared native kind in its declared layer', () => {
         const withAction: OntologyPackageInfo = {
             ...ONTOLOGY,
             layers: [
@@ -165,7 +181,8 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree(
             [el('a1', 'ActionDefinition', 'behavior')], '', registryFromOntology(withAction), [withAction],
         );
-        expect(groups).toEqual([]);
+        expect(groups.map(group => group.group.id)).toEqual(['architecture']);
+        expect(allKinds(groups[0]!)).toEqual(['ActionDefinition']);
     });
 
     it('does not nest concrete kinds under abstract ontology bases', () => {
