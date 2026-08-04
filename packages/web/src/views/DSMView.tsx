@@ -39,21 +39,19 @@ export function DSMView() {
     const [showClusters, setShowClusters] = useState(true);
     const [showAllocation, setShowAllocation] = useState(false);
     const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
-    const [filterKinds, setFilterKinds] = useState<'functional' | 'behavior' | 'all'>('functional');
+    const [rowKind, setRowKind] = useState('__all__');
+    const [columnKind, setColumnKind] = useState('__all__');
 
-    const kindsFilter = useMemo(() => {
-        switch (filterKinds) {
-            case 'functional': return ['Function', 'Function'];
-            case 'behavior': return ['ActionDefinition', 'ActionUsage'];
-            case 'all': return ['Function', 'Function', 'ActionDefinition', 'ActionUsage'];
-        }
-    }, [filterKinds]);
+    const availableKinds = useMemo(() => [...new Set(Object.values(model?.elements ?? {}).map(element => element.kind))].sort(), [model]);
+    const rowKinds = rowKind === '__all__' ? availableKinds : [rowKind];
+    const columnKinds = columnKind === '__all__' ? availableKinds : [columnKind];
+    const isSquareSelection = rowKind === columnKind;
 
     const dsm = useMemo<DSMResult | null>(() => {
         if (!model) return null;
-        const raw = computeDSM(model, { kinds: kindsFilter });
-        return showClusters ? reorderDSM(raw) : raw;
-    }, [model, showClusters, kindsFilter]);
+        const raw = computeDSM(model, { rowKinds, columnKinds });
+        return showClusters && isSquareSelection ? reorderDSM(raw) : raw;
+    }, [model, showClusters, rowKinds, columnKinds, isSquareSelection]);
 
     const consistency = useMemo(() => {
         if (!model) return null;
@@ -93,39 +91,40 @@ export function DSMView() {
         );
     }
 
-    if (dsm.elementIds.length === 0) {
+    if (dsm.rowElementIds.length === 0 || dsm.columnElementIds.length === 0) {
         return (
             <div className="flex-1 flex items-center justify-center" style={{ background: '#F7F7F5' }}>
                 <div className="text-center" style={{ maxWidth: '320px' }}>
                     <div style={{ fontSize: '40px', marginBottom: '16px', opacity: 0.4 }}>{'\u25A4'}</div>
                     <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
-                        No Functional Elements
+                        No Matching Elements
                     </h3>
                     <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.6 }}>
-                        Add Function or Function elements to your model to see the DSM.
+                        Choose row and column element types that exist in the model.
                     </p>
                 </div>
             </div>
         );
     }
 
-    const n = dsm.elementIds.length;
+    const rowCount = dsm.rowElementIds.length;
+    const columnCount = dsm.columnElementIds.length;
 
     // Cluster boundaries for visual grouping
     const clusterBoundaries = new Set<number>();
-    if (showClusters && dsm.clusters.size > 1) {
+    if (showClusters && isSquareSelection && dsm.clusters.size > 1) {
         let idx = 0;
         for (const [, members] of dsm.clusters) {
             idx += members.length;
-            if (idx < n) clusterBoundaries.add(idx);
+            if (idx < rowCount) clusterBoundaries.add(idx);
         }
     }
 
     // Hovered cell tooltip info
     const tooltipInfo = hoveredCell ? (() => {
         const cell = dsm.matrix[hoveredCell.row][hoveredCell.col];
-        const rowEl = dsm.elements[dsm.elementIds[hoveredCell.row]];
-        const colEl = dsm.elements[dsm.elementIds[hoveredCell.col]];
+        const rowEl = dsm.elements[dsm.rowElementIds[hoveredCell.row]];
+        const colEl = dsm.elements[dsm.columnElementIds[hoveredCell.col]];
         return { cell, rowEl, colEl };
     })() : null;
 
@@ -140,27 +139,25 @@ export function DSMView() {
                     Design Structure Matrix
                 </span>
                 <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                    {n} elements, {dsm.totalDependencies} dependencies
+                    {rowCount} rows × {columnCount} columns, {dsm.totalDependencies} dependencies
                 </span>
 
                 <div className="flex-1" />
 
-                {/* Kind filter */}
-                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
-                    {(['functional', 'behavior', 'all'] as const).map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFilterKinds(f)}
-                            className="px-2 py-0.5 text-xs font-medium"
-                            style={{
-                                background: filterKinds === f ? '#1B3A4B' : '#FFFFFF',
-                                color: filterKinds === f ? '#FFFFFF' : '#6B7280',
-                            }}
-                        >
-                            {f === 'functional' ? 'Functions' : f === 'behavior' ? 'Behavior' : 'All'}
-                        </button>
-                    ))}
-                </div>
+                <label className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                    Rows
+                    <select value={rowKind} onChange={event => setRowKind(event.target.value)} style={{ border: '1px solid #E5E5E0', borderRadius: 4, padding: '2px 5px', background: '#FFFFFF' }}>
+                        <option value="__all__">All element types</option>
+                        {availableKinds.map(kind => <option key={kind} value={kind}>{kind}</option>)}
+                    </select>
+                </label>
+                <label className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                    Columns
+                    <select value={columnKind} onChange={event => setColumnKind(event.target.value)} style={{ border: '1px solid #E5E5E0', borderRadius: 4, padding: '2px 5px', background: '#FFFFFF' }}>
+                        <option value="__all__">All element types</option>
+                        {availableKinds.map(kind => <option key={kind} value={kind}>{kind}</option>)}
+                    </select>
+                </label>
 
                 {/* Cluster toggle */}
                 <label className="flex items-center gap-1.5 text-xs" style={{ color: '#6B7280' }}>
@@ -168,9 +165,10 @@ export function DSMView() {
                         type="checkbox"
                         checked={showClusters}
                         onChange={e => setShowClusters(e.target.checked)}
+                        disabled={!isSquareSelection}
                         style={{ accentColor: '#2DD4A8' }}
                     />
-                    Cluster
+                    Cluster{!isSquareSelection ? ' (same type only)' : ''}
                 </label>
 
                 {/* Allocation overlay toggle */}
@@ -190,7 +188,7 @@ export function DSMView() {
                 <div style={{ display: 'inline-block', position: 'relative' }}>
                     {/* Column headers (rotated) */}
                     <div style={{ display: 'flex', marginLeft: LABEL_WIDTH, marginBottom: '4px' }}>
-                        {dsm.elementIds.map((id, colIdx) => {
+                        {dsm.columnElementIds.map((id, colIdx) => {
                             const el = dsm.elements[id];
                             const isHovered = hoveredCell?.col === colIdx;
                             return (
@@ -228,7 +226,7 @@ export function DSMView() {
                     </div>
 
                     {/* Rows */}
-                    {dsm.elementIds.map((rowId, rowIdx) => {
+                    {dsm.rowElementIds.map((rowId, rowIdx) => {
                         const rowEl = dsm.elements[rowId];
                         const isRowHovered = hoveredCell?.row === rowIdx;
                         const isSelected = selectedElementId === rowId;
@@ -292,9 +290,9 @@ export function DSMView() {
                                 </div>
 
                                 {/* Cells */}
-                                {dsm.elementIds.map((colId, colIdx) => {
+                                {dsm.columnElementIds.map((colId, colIdx) => {
                                     const cell = dsm.matrix[rowIdx][colIdx];
-                                    const isDiagonal = rowIdx === colIdx;
+                                    const isDiagonal = rowId === colId;
                                     const isCellHovered = hoveredCell?.row === rowIdx && hoveredCell?.col === colIdx;
                                     const isHighlighted = hoveredCell?.row === rowIdx || hoveredCell?.col === colIdx;
 

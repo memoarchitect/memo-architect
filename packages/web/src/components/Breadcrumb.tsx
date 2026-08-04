@@ -27,7 +27,7 @@ export function Breadcrumb() {
                 const kindMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
                 const typeMeta = DIAGRAM_TYPE_META[diagram.diagramType];
                 const code = kindMeta?.label ?? typeMeta?.code ?? diagram.diagramType;
-                crumbs.push({ label: `${diagram.id} · ${code}: ${diagram.name}` });
+                crumbs.push({ label: `${diagram.shortId ?? diagram.id} · ${code}: ${diagram.name}` });
             }
             break;
         }

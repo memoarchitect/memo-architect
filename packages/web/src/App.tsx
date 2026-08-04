@@ -274,8 +274,6 @@ export function App() {
     // Only catalog pages are self-contained full-page routes.
     const isCatalogRoute = pathname.startsWith('/catalog');
     const activeMode = useModelStore(s => s.activeMode);
-    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
-    const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const toggleGapBar = useModelStore(s => s.toggleGapBar);
 
     // Cmd+Shift+P toggles the GapBar (Problems/Completeness panel) (#20)
@@ -295,21 +293,12 @@ export function App() {
     // The AI workspace is self-contained too: it owns its own tool switcher, and
     // the model tree was only ever there because the entry point lived in it.
     const showExplorer = activeView.type !== 'dsm'
+        && activeView.type !== 'dashboard'
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
         && activeView.type !== 'sysml-generator'
         && activeView.type !== 'analysis'
         && activeView.type !== 'ui-screens';
-
-    // Auto-open the sidebar whenever we switch to a view that needs it but it's
-    // still collapsed from a previous non-explorer mode (e.g. Scenarios → element-detail).
-    useEffect(() => {
-        if (showExplorer && sidebarCollapsed) {
-            toggleSidebar();
-        }
-    // Only run when the view type changes — not on every sidebarCollapsed toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeView.type]);
 
     useEffect(() => {
         if (!loadEmbeddedData()) {
@@ -536,7 +525,9 @@ function DiagramPermalinkRoute() {
     useEffect(() => {
         if (!model) return;
         const diagram = model.diagrams?.find(
-            d => d.id === diagramId || d.id.toLowerCase() === diagramId.toLowerCase()
+            d => d.id === diagramId
+                || d.id.toLowerCase() === diagramId.toLowerCase()
+                || d.shortId?.toLowerCase() === diagramId.toLowerCase()
         );
         if (diagram) {
             selectDiagram(diagram.id);
@@ -628,7 +619,7 @@ function UrlNavigationSync() {
         } else if (activeView.type === 'diagram' && model) {
             const diagram = model.diagrams?.find(d => d.id === activeView.diagramId);
             // Diagram permalinks need the type slug, which only the model knows.
-            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.id)}`;
+            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.shortId ?? diagram.id)}`;
         } else {
             url = viewToPath(activeView);
         }

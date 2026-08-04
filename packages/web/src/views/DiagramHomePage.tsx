@@ -23,8 +23,7 @@ export function DiagramHomePage() {
     const groups = useMemo(() => {
         const diagrams = model?.diagrams ?? [];
         const byViewpoint = new Map<string, { id: string; label: string; items: DiagramDTO[] }>();
-        const viewpointLayers = new Map<string, string[]>(
-            (model?.viewpoints ?? []).map(vp => [vp.id, vp.declaredLayers?.length ? vp.declaredLayers : (vp.visibleLayers ?? [])]));
+        const viewpointMetadata = new Map((model?.viewpoints ?? []).map(vp => [vp.id, vp]));
         for (const diagram of diagrams) {
             const viewpointIds = (diagram as DiagramDTO & { viewpointIds?: string[] }).viewpointIds;
             for (const rawKey of viewpointIds?.length ? viewpointIds : [diagram.viewpointId]) {
@@ -47,7 +46,7 @@ export function DiagramHomePage() {
         const named = sortViewpointsByOntologyLayer(
             [...byViewpoint.values()]
                 .filter(g => g.id !== UNCATEGORIZED_ID)
-                .map(g => ({ ...g, declaredLayers: viewpointLayers.get(g.id) ?? [] })) as any,
+                .map(g => ({ ...g, ...viewpointMetadata.get(g.id) })) as any,
         ) as unknown as (typeof byViewpoint extends Map<string, infer V> ? V : never)[];
         const labels = stripSharedLabelPrefix(named.map(g => g.label));
         const ordered = named.map((g, i) => ({
@@ -110,7 +109,7 @@ export function DiagramHomePage() {
                             <DiagramCard
                                 key={diagram.id}
                                 diagram={diagram}
-                                onClick={() => navigate(diagramUrl(diagram.diagramType, diagram.id))}
+                                onClick={() => navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id))}
                             />
                         ))}
                     </div>
@@ -164,7 +163,7 @@ function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () =>
                 {diagram.name}
             </div>
             <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '10px', color: COLOR.faint, marginBottom: 4 }}>
-                {diagram.id}
+                {diagram.shortId ?? diagram.id}
             </div>
             <div style={{ fontSize: '11px', color: COLOR.muted, lineHeight: 1.5 }}>
                 {meta?.fullName ?? diagram.diagramType}

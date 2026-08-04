@@ -108,7 +108,6 @@ function AnalysisDropdown() {
 const TOOLS: ToolItem[] = [
     { id: 'ontology', label: 'Ontology Explorer', icon: '◉', view: { type: 'ontology' } },
     { id: 'import', label: 'Import Model', icon: '↓', view: { type: 'import' } },
-    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', view: { type: 'dsm' } },
     { id: 'traceability', label: 'Traceability Matrix', icon: '☷', view: { type: 'traceability' } },
     { id: 'statistics', label: 'Statistics Dashboard', icon: '⊠', view: { type: 'statistics' } },
     { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', view: { type: 'compliance-wizard' } },
@@ -213,6 +212,14 @@ export function ModeSwitcher() {
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [analysisOpen, setAnalysisOpen] = useState(false);
+
+    useEffect(() => {
+        const toggle = () => setDrawerOpen(open => !open);
+        window.addEventListener('memo:toggle-navigation', toggle);
+        return () => window.removeEventListener('memo:toggle-navigation', toggle);
+    }, []);
 
     // Modes that have a left sidebar explorer
     const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf', 'scenario'];
@@ -281,67 +288,31 @@ export function ModeSwitcher() {
         }
     }
 
-    return (
-        <div
-            className="flex items-center gap-1 px-5 py-3"
-            style={{
-                background: '#1B3A4B',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
-                overflow: 'visible',
-                position: 'relative',
-                zIndex: 10,
-            }}
-        >
-            {/* Primary nav modes */}
-            {NAV_MODES.filter(mode => !('feature' in mode) || isFeatureEnabled(mode.feature)).map(mode => (
-                <button
-                    key={mode.id}
-                    onClick={() => handleNavClick(mode.id)}
-                    className="px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                    style={
-                        activeNavMode === mode.id
-                            ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
-                            : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
-                    }
-                >
-                    <span className="mr-1.5">{mode.icon}</span>
-                    {mode.label}
-                </button>
-            ))}
-
-            {isFeatureEnabled('analysis') && <AnalysisDropdown />}
-
-            {/* Divider */}
-            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.12)', margin: '0 4px' }} />
-
-            {/* Tools dropdown */}
-            {isFeatureEnabled('model-tools') && <ToolsDropdown activeViewType={activeView.type} />}
-
-            <div className="flex-1" />
-
-            {/* Workspace Manager (#42) */}
-            <WorkspaceManager />
-
-            {/* Help */}
-            <a
-                href={DOCS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-            >
-                ? Help
-            </a>
-
-            {/* Logo */}
-            <img
-                src="/memo-top.png"
-                alt="MEMO"
-                className="ml-3"
-                style={{ height: 56, marginTop: -4, marginBottom: -10 }}
-            />
-        </div>
-    );
+    if (!drawerOpen) return null;
+    return <>
+        <div onClick={() => setDrawerOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(4, 18, 28, 0.35)' }} />
+        <aside aria-label="Main navigation" style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 296, zIndex: 81, background: '#0B1E2D', borderRight: '1px solid rgba(45,212,168,0.28)', boxShadow: '12px 0 32px rgba(0,0,0,0.32)', padding: '18px 12px', overflowY: 'auto' }}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 18 }}>
+                <button onClick={() => { setDrawerOpen(false); handleNavClick('dashboard'); }} style={{ color: '#2DD4A8', fontWeight: 700, fontSize: 18, letterSpacing: '0.04em', border: 'none', background: 'none', cursor: 'pointer' }}>MEMO Architect</button>
+                <button aria-label="Close navigation" onClick={() => setDrawerOpen(false)} style={{ width: 36, height: 36, color: '#2DD4A8', fontSize: 24, border: 'none', background: 'transparent', cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.09)', paddingTop: 8 }}>
+                {NAV_MODES.filter(mode => !('feature' in mode) || isFeatureEnabled(mode.feature)).map(mode => <button key={mode.id} onClick={() => { handleNavClick(mode.id); setDrawerOpen(false); }} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ border: 'none', cursor: 'pointer', fontSize: 15, background: activeNavMode === mode.id ? 'rgba(45,212,168,0.15)' : 'transparent', color: activeNavMode === mode.id ? '#2DD4A8' : 'rgba(255,255,255,0.78)' }}><span style={{ width: 20, textAlign: 'center' }}>{mode.icon}</span>{mode.label}</button>)}
+                {isFeatureEnabled('analysis') && <>
+                    <button onClick={() => setAnalysisOpen(open => !open)} aria-expanded={analysisOpen} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ border: 'none', cursor: 'pointer', fontSize: 15, background: analysisOpen ? 'rgba(45,212,168,0.10)' : 'transparent', color: 'rgba(255,255,255,0.78)' }}>
+                        <span style={{ width: 20, textAlign: 'center' }}>◫</span>Analysis<span style={{ marginLeft: 'auto', fontSize: 11 }}>{analysisOpen ? '▾' : '▸'}</span>
+                    </button>
+                    {analysisOpen && <div style={{ margin: '0 0 4px 36px', borderLeft: '1px solid rgba(45,212,168,0.25)' }}>
+                        <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>◫</span>Analysis workspace</button>
+                        {isFeatureEnabled('model-tools') && <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>}
+                        <a href={JUPYTER_URL} target="_blank" rel="noopener noreferrer" onClick={() => setDrawerOpen(false)} className="flex w-full items-center gap-2 px-3 py-2" style={{ color: 'rgba(255,255,255,0.68)', textDecoration: 'none', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</a>
+                    </div>}
+                </>}
+            </div>
+            <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '14px 4px' }} />
+            <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Workspaces</span><WorkspaceManager /></div>
+            {isFeatureEnabled('model-tools') && <div className="px-2 py-1"><ToolsDropdown activeViewType={activeView.type} /></div>}
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
+        </aside>
+    </>;
 }

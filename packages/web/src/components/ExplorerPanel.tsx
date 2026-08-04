@@ -8,7 +8,7 @@ import {
     type DhfDoc,
     FOLDER_ATTR,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, VIEWPOINT_LAYER_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
@@ -913,6 +913,28 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         [model, searchTerm, availableOntologies],
     );
 
+    useEffect(() => {
+        const expandSearchResults = () => {
+            if (!searchTerm.trim()) return;
+            const next = new Set<string>();
+            for (const { group, subGroups } of groupTree) {
+                next.add(`g:${group.id}`);
+                for (const sub of subGroups) {
+                    if (sub.id) next.add(`sg:${group.id}:${sub.id}`);
+                    for (const kind of sub.kinds.keys()) next.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
+                }
+            }
+            setExpanded(next);
+        };
+        const collapseTree = () => setExpanded(new Set());
+        window.addEventListener('memo:expand-explorer-search', expandSearchResults);
+        window.addEventListener('memo:collapse-explorer-tree', collapseTree);
+        return () => {
+            window.removeEventListener('memo:expand-explorer-search', expandSearchResults);
+            window.removeEventListener('memo:collapse-explorer-tree', collapseTree);
+        };
+    }, [groupTree, searchTerm]);
+
     // ─── DnD Handlers ───
 
     const handleDragStart = useCallback((e: React.DragEvent, node: TreeNode, kind: string) => {
@@ -1346,25 +1368,26 @@ const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
 export const UNCATEGORIZED_ID = '__uncategorized';
 
 /**
- * Order viewpoints by the ontology's own layer sequence.
- *
- * Ranked on the *first* layer the viewpoint declares, not the earliest one it
- * mentions: `includedLayers` lists everything a viewpoint touches, so a
- * traceability viewpoint naming ten layers would otherwise rank as whichever
- * happens to sit earliest and land nowhere near the other assurance views. The
- * first entry is the authored primary concern.
- *
- * Viewpoints that declare no known layer keep a stable alphabetical tail.
+ * Order viewpoints by their authored MEMO V-model placement. Architecture is
+ * read top-to-bottom, followed by the left-to-right assurance disciplines.
+ * Viewpoints outside those lanes remain alphabetic rather than receiving a
+ * UI-invented place in the ontology.
  */
 export function sortViewpointsByOntologyLayer(viewpoints: ViewpointDTO[]): ViewpointDTO[] {
-    const rank = (vp: ViewpointDTO) => {
-        // What the viewpoint says it frames; what its views happen to draw is
-        // only a fallback for a viewpoint that declares nothing.
-        const layers = vp.declaredLayers?.length ? vp.declaredLayers : (vp.visibleLayers ?? []);
-        const index = VIEWPOINT_LAYER_ORDER.indexOf(layers[0] as typeof VIEWPOINT_LAYER_ORDER[number]);
-        return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
-    };
-    return viewpoints.slice().sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label));
+    const laneRank = (viewpoint: ViewpointDTO) =>
+        viewpoint.explorerLane === 'architecture' ? 0
+            : viewpoint.explorerLane === 'assurance' ? 1
+                : 2;
+    return viewpoints.slice().sort((a, b) => {
+        const laneDifference = laneRank(a) - laneRank(b);
+        if (laneDifference !== 0) return laneDifference;
+        if (laneRank(a) < 2) {
+            const orderDifference = (a.explorerOrder ?? Number.MAX_SAFE_INTEGER)
+                - (b.explorerOrder ?? Number.MAX_SAFE_INTEGER);
+            if (orderDifference !== 0) return orderDifference;
+        }
+        return a.label.localeCompare(b.label);
+    });
 }
 
 /**
@@ -1421,7 +1444,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
 
-    const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set([UNCATEGORIZED_ID]));
+    // Viewpoint folders start collapsed, including Uncategorized: a project can
+    // contain many views and the Explorer should first present the hierarchy.
+    const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set());
     const [newDiagramVp, setNewDiagramVp] = useState<string | null>(null);
 
     const toggleExpand = (id: string) => {
@@ -1637,7 +1662,7 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             onClick={onSelect}
-            title={[meta?.fullName, diag.description].filter(Boolean).join(' \u2014 ')}
+            title={diag.description}
         >
             <DiagramTypeBadge diagram={diag} />
             {diag.auto && !diag.sourceFile && (
@@ -1647,8 +1672,9 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
                 </span>
             )}
             <span className="flex-1" style={{ minWidth: 0 }}>
-                <span className="truncate block" style={{ color: isSelected ? COLOR.accentDark : COLOR.primary }}>{diag.name}</span>
-                <span className="truncate block font-mono" style={{ color: COLOR.faint, fontSize: '9px', marginTop: 1 }}>{diag.id}</span>
+                <span className="truncate block" style={{ color: isSelected ? COLOR.accentDark : COLOR.primary }}>
+                    <span style={{ color: COLOR.muted }}>[{diag.shortId ?? diag.id}] </span>{diag.name}
+                </span>
             </span>
             {elCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full"
@@ -2028,6 +2054,7 @@ function savedExplorerWidth(): number {
 
 export function ExplorerPanel() {
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
+    const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const explorerTab = useModelStore(s => s.explorerTab);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const searchTerm = useModelStore(s => s.searchTerm);
@@ -2108,7 +2135,23 @@ export function ExplorerPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeView.type]);
 
-    if (sidebarCollapsed) return null;
+    if (sidebarCollapsed) {
+        return (
+            <button
+                type="button"
+                className="flex flex-col items-center flex-shrink-0"
+                onClick={toggleSidebar}
+                title="Expand Model Explorer"
+                aria-label="Expand Model Explorer"
+                style={{ width: 40, background: '#FAFAF8', border: 'none', borderRight: `1px solid ${COLOR.border}`, cursor: 'pointer' }}
+            >
+                <span style={{ color: COLOR.muted, fontSize: 20, lineHeight: 1, marginTop: 10 }}>▸</span>
+                <span style={{ color: COLOR.muted, fontSize: FONT.xs, fontWeight: 600, writingMode: 'vertical-rl', marginTop: 10, letterSpacing: '0.06em' }}>
+                    Model Explorer
+                </span>
+            </button>
+        );
+    }
 
     return (
         <div
@@ -2119,8 +2162,37 @@ export function ExplorerPanel() {
             }}
         >
 
-            {/* Content driven entirely by top-nav mode — no redundant tab strip */}
-            {activeMode === 'dashboard' ? (
+            <button
+                type="button"
+                onClick={toggleSidebar}
+                title="Collapse Model Explorer"
+                aria-label="Collapse Model Explorer"
+                style={{
+                    position: 'absolute', top: 5, right: 5, zIndex: 2, width: 28, height: 28,
+                    border: 'none', borderRadius: 5, background: 'transparent', color: COLOR.muted,
+                    cursor: 'pointer', fontSize: 20, lineHeight: 1,
+                }}
+            >
+                ◂
+            </button>
+
+            {/* A diagram always needs the model tree for inspection and
+                navigation, even when it was opened from the Dashboard. */}
+            {activeView.type === 'diagram' ? (
+                <>
+                    <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <div className="flex gap-1">
+                            <input type="text" placeholder="Search elements..."
+                                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') window.dispatchEvent(new Event('memo:expand-explorer-search')); }}
+                                className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
+                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                            <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" className="px-2 rounded-lg" style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}>⇱</button>
+                        </div>
+                    </div>
+                    <ModelExplorerContent searchTerm={searchTerm} />
+                </>
+            ) : activeMode === 'dashboard' ? (
                 <DashboardSidebar />
             ) : activeMode === 'dhf' ? (
                 <DhfExplorerContent />
@@ -2144,10 +2216,14 @@ export function ExplorerPanel() {
                 /* catalog / dashboard / default */
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
+                        <div className="flex gap-1">
                         <input type="text" placeholder="Search elements..."
                             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                            onKeyDown={e => { if (e.key === 'Enter') window.dispatchEvent(new Event('memo:expand-explorer-search')); }}
+                            className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                             style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                        <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" className="px-2 rounded-lg" style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}>⇱</button>
+                        </div>
                     </div>
                     <ModelExplorerContent searchTerm={searchTerm} />
                 </>

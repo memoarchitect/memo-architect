@@ -1,23 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 
-// Modes that have a left sidebar explorer
-const EXPLORER_MODES = new Set(['catalog', 'diagram', 'dhf']);
-
 export function WorkbenchToolbar() {
     const model = useModelStore(s => s.model);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setActiveMode = useModelStore(s => s.setActiveMode);
-    const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
-    const toggleSidebar = useModelStore(s => s.toggleSidebar);
-    const activeMode = useModelStore(s => s.activeMode);
     const navigate = useNavigate();
-
-    const showToggle = EXPLORER_MODES.has(activeMode);
+    const metadata = model?.metadata;
 
     function goHome() {
-        setActiveMode('catalog');
-        setActiveView({ type: 'welcome' });
+        setActiveMode('dashboard');
+        setActiveView({ type: 'dashboard' });
         navigate('/');
     }
 
@@ -26,22 +19,19 @@ export function WorkbenchToolbar() {
             className="flex items-center gap-3 px-4 py-2"
             style={{ background: '#0B1E2D', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 10 }}
         >
-            {/* Dedicated sidebar toggle — fixed position, consistent across modes */}
+            {/* Main navigation drawer */}
             <button
-                onClick={showToggle ? toggleSidebar : undefined}
-                title={sidebarCollapsed ? 'Show explorer' : 'Hide explorer'}
+                onClick={() => window.dispatchEvent(new Event('memo:toggle-navigation'))}
+                title="Open navigation"
                 style={{
-                    width: '28px', height: '28px', borderRadius: '6px',
-                    background: 'none', border: 'none', cursor: showToggle ? 'pointer' : 'default',
-                    color: showToggle
-                        ? (sidebarCollapsed ? 'rgba(255,255,255,0.35)' : '#2DD4A8')
-                        : 'rgba(255,255,255,0.12)',
+                    width: '40px', height: '40px', borderRadius: '8px',
+                    background: 'none', border: 'none', cursor: 'pointer', color: '#2DD4A8',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', flexShrink: 0,
+                    fontSize: '24px', flexShrink: 0,
                     transition: 'color 150ms',
                 }}
-                onMouseEnter={e => { if (showToggle) e.currentTarget.style.color = '#2DD4A8'; }}
-                onMouseLeave={e => { if (showToggle) e.currentTarget.style.color = sidebarCollapsed ? 'rgba(255,255,255,0.35)' : '#2DD4A8'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(45,212,168,0.12)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
             >
                 ☰
             </button>
@@ -58,6 +48,21 @@ export function WorkbenchToolbar() {
             </button>
 
             <div className="flex-1" />
+
+            {metadata?.gitUser && (
+                <span
+                    title="Current model Git revision"
+                    style={{ color: 'rgba(255,255,255,0.62)', fontSize: '12px', whiteSpace: 'nowrap' }}
+                >
+                    @{metadata.gitUser}
+                    {metadata.gitBranch && <> · {metadata.gitBranch}</>}
+                    {metadata.gitCommitShort && (
+                        <span style={{ marginLeft: 4, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                            {metadata.gitCommitShort}{metadata.gitDirty ? '*' : ''}
+                        </span>
+                    )}
+                </span>
+            )}
 
             <img
                 src="/logo.png"

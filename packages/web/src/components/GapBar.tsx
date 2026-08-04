@@ -41,20 +41,7 @@ export function GapBar() {
     const dragStartY = useRef(0);
     const dragStartHeight = useRef(0);
 
-    const metadata = model?.metadata;
     const count = model ? Object.keys(model.elements).length : 0;
-
-    const gitInfo = metadata?.gitUser ? (
-        <>
-            @{metadata.gitUser}
-            {metadata.gitBranch && <> &middot; {metadata.gitBranch}</>}
-            {metadata.gitCommitShort && (
-                <span style={{ marginLeft: '4px', fontFamily: 'monospace', fontSize: FONT.badge }}>
-                    {metadata.gitCommitShort}
-                </span>
-            )}
-        </>
-    ) : null;
 
     const errors = validation?.violations.filter(v => v.severity === 'error') ?? [];
     const warnings = validation?.violations.filter(v => v.severity === 'warning') ?? [];
@@ -189,7 +176,6 @@ export function GapBar() {
                             <strong style={{ color: COLOR.secondary, fontWeight: 700 }}>{model.relationships.length} rels</strong>
                         </>
                     )}
-                    {gitInfo && <span style={{ color: COLOR.faint }}> | {gitInfo}</span>}
                 </span>
             </div>
 

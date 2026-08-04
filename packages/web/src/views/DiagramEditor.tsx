@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
     useModelStore, getDiagram, getElementsByLayer,
     getDiagramSourceFiles, sourceChangeAffects,
@@ -246,6 +247,7 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
     const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
     const [saveDiagnostics, setSaveDiagnostics] = useState<string[]>([]);
     const [autoSave, setAutoSave] = useState(() => localStorage.getItem('memo.diagramEditor.autoSave') === 'true');
+    const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
     const saveTimer = useRef<ReturnType<typeof setTimeout>>();
     const textRef = useRef('');
     const saveSequence = useRef(0);
@@ -256,6 +258,17 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
     /** Latest dirty flag, readable from effects that must not depend on it. */
     const dirtyRef = useRef(false);
     useEffect(() => { dirtyRef.current = isDirty; }, [isDirty]);
+
+    // The visual canvas owns the bottom toolbar. Mount editing controls there
+    // when it is present; Text-only mode retains the same controls as a
+    // fallback bar below the editor.
+    useEffect(() => {
+        const findHost = () => setToolbarHost(document.getElementById('memo-diagram-editor-controls'));
+        findHost();
+        const observer = new MutationObserver(findHost);
+        observer.observe(document.body, { childList: true, subtree: true });
+        return () => observer.disconnect();
+    }, []);
 
     // Files whose change can alter what this view shows: its own source, the
     // files of the elements it displays, and everything those import.
@@ -535,85 +548,54 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         </div>
     );
 
+    const editorControls = (
+        <>
+            {toolbarHost && <span aria-hidden="true" style={{ color: '#E5E5E0' }}>|</span>}
+            <RefreshIndicator at={refreshedAt} />
+            {isLoadingSource && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Loading source…</span>}
+            {isSaving && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Saving…</span>}
+            {!isSaving && saveError && <span title={saveError} style={{ color: '#EF4444', fontSize: FONT.xs }}>Save failed</span>}
+            {!isSaving && !saveError && isDirty && <span style={{ color: '#B45309', fontSize: FONT.xs }}>Unsaved</span>}
+            {!isSaving && !isDirty && savedAt && <span style={{ color: '#15803D', fontSize: FONT.xs }}>Saved</span>}
+            {!isSaving && parseErrors.length > 0 && (
+                <span style={{ color: '#EF4444', fontSize: FONT.xs }}>{parseErrors.length} error{parseErrors.length > 1 ? 's' : ''}</span>
+            )}
+            {isTextEditable && (
+                <>
+                    <label className="flex items-center gap-1" style={{ color: COLOR.secondary, fontSize: FONT.xs }} title="Save changes 800ms after typing">
+                        <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)} style={{ accentColor: COLOR.accent }} />
+                        Auto-save
+                    </label>
+                    <button onClick={handleSave} disabled={!isDirty || isSaving || isLoadingSource} title="Save SysML (Ctrl/Cmd+S)"
+                        style={{ fontSize: FONT.xs, padding: '3px 10px', borderRadius: '5px', border: `1px solid ${COLOR.border}`,
+                            cursor: !isDirty || isSaving || isLoadingSource ? 'default' : 'pointer', background: isDirty ? COLOR.accent : '#F0F0ED',
+                            color: isDirty ? '#FFFFFF' : COLOR.faint, fontWeight: 600 }}>
+                        Save
+                    </button>
+                </>
+            )}
+            <label className="flex items-center gap-1" style={{ color: COLOR.secondary, fontSize: FONT.xs }}>
+                View
+                <select aria-label="Diagram editor view" value={mode} onChange={event => setMode(event.target.value as EditorMode)}
+                    style={{ fontSize: FONT.xs, padding: '3px 8px', borderRadius: '5px', border: `1px solid ${COLOR.border}`, background: '#FFFFFF', color: COLOR.primary }}>
+                    <option value="visual">Visual</option>
+                    <option value="split">Both</option>
+                    <option value="text">Text</option>
+                </select>
+            </label>
+        </>
+    );
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* ── Toolbar ── */}
             <div
-                className="flex items-center gap-2 px-3 py-1.5"
+                className="flex items-center justify-center px-3 py-2"
                 style={{ borderBottom: `1px solid ${COLOR.border}`, background: '#FAFAF8', flexShrink: 0 }}
             >
-                <span className="font-semibold truncate flex-1" style={{ color: COLOR.primary, fontSize: FONT.sm }}>
+                <span className="truncate" style={{ color: COLOR.primary, fontSize: FONT.md, fontWeight: 700 }}>
                     {diagram.name}
                 </span>
-                {diagram.sourceFile && (
-                    <span className="truncate" title={diagram.sourceFile} style={{ maxWidth: '220px', color: COLOR.faint, fontSize: FONT.xs }}>
-                        {diagram.sourceFile}
-                    </span>
-                )}
-                {(mode === 'text' || mode === 'split') && (
-                    <span title="Local, public Monaco editor with SysML highlighting and model-aware completion" style={{ color: '#4B6E80', fontSize: FONT.badge }}>
-                        Monaco · SysML
-                    </span>
-                )}
-                <RefreshIndicator at={refreshedAt} />
-                {isLoadingSource && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Loading source…</span>}
-                {isSaving && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Saving…</span>}
-                {!isSaving && saveError && <span title={saveError} style={{ color: '#EF4444', fontSize: FONT.xs }}>Save failed</span>}
-                {!isSaving && !saveError && isDirty && <span style={{ color: '#B45309', fontSize: FONT.xs }}>Unsaved</span>}
-                {!isSaving && !isDirty && savedAt && <span style={{ color: '#15803D', fontSize: FONT.xs }}>Saved</span>}
-                {!isSaving && parseErrors.length > 0 && (
-                    <span style={{ color: '#EF4444', fontSize: FONT.xs }}>{parseErrors.length} error{parseErrors.length > 1 ? 's' : ''}</span>
-                )}
-                {isTextEditable && (
-                    <>
-                        <label className="flex items-center gap-1" style={{ color: COLOR.secondary, fontSize: FONT.xs }} title="Save changes 800ms after typing">
-                            <input
-                                type="checkbox"
-                                checked={autoSave}
-                                onChange={e => setAutoSave(e.target.checked)}
-                                style={{ accentColor: COLOR.accent }}
-                            />
-                            Auto-save
-                        </label>
-                        <button
-                            onClick={handleSave}
-                            disabled={!isDirty || isSaving || isLoadingSource}
-                            title="Save SysML (Ctrl/Cmd+S)"
-                            style={{
-                                fontSize: FONT.xs, padding: '3px 10px', borderRadius: '5px',
-                                border: `1px solid ${COLOR.border}`,
-                                cursor: !isDirty || isSaving || isLoadingSource ? 'default' : 'pointer',
-                                background: isDirty ? COLOR.accent : '#F0F0ED',
-                                color: isDirty ? '#FFFFFF' : COLOR.faint,
-                                fontWeight: 600,
-                            }}
-                        >
-                            Save
-                        </button>
-                    </>
-                )}
-                {/* Mode switcher */}
-                <div
-                    className="flex overflow-hidden"
-                    style={{ border: `1px solid ${COLOR.border}`, borderRadius: '6px' }}
-                >
-                    {([['visual', '⬜ Visual'], ['split', '⧉ Split'], ['text', '</> Text']] as [EditorMode, string][]).map(([m, label]) => (
-                        <button
-                            key={m}
-                            onClick={() => setMode(m)}
-                            style={{
-                                fontSize: FONT.xs, padding: '3px 10px', border: 'none', cursor: 'pointer',
-                                background: mode === m ? COLOR.accent : 'transparent',
-                                color: mode === m ? '#FFFFFF' : COLOR.secondary,
-                                fontWeight: mode === m ? 600 : 400,
-                            }}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
             </div>
-
             {/* ── Body ── */}
             <div className="flex flex-1 overflow-hidden">
                 {mode === 'visual' && visualPanel}
@@ -629,6 +611,10 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                     </>
                 )}
             </div>
+
+            {toolbarHost
+                ? createPortal(<div className="flex items-center gap-2">{editorControls}</div>, toolbarHost)
+                : <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderTop: `1px solid ${COLOR.border}`, background: '#FAFAF8', flexShrink: 0 }}>{editorControls}</div>}
         </div>
     );
 }

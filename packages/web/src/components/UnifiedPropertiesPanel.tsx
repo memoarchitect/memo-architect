@@ -177,7 +177,7 @@ function DiagramProperties() {
                     <div className="space-y-1.5">
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>ID</span>
-                            <span className="truncate font-mono" style={{ color: '#1a1a1a', fontSize: FONT.xs }}>{diagram.id}</span>
+                            <span className="truncate font-mono" style={{ color: '#1a1a1a', fontSize: FONT.xs }}>{diagram.shortId ?? diagram.id}</span>
                         </div>
                         <div className="flex text-xs">
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Viewpoint</span>
@@ -187,6 +187,14 @@ function DiagramProperties() {
                             <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Type</span>
                             <span style={{ color: '#1a1a1a' }}>{diagram.diagramType}</span>
                         </div>
+                        {diagram.sourceFile && (
+                            <div className="flex text-xs">
+                                <span className="min-w-[80px]" style={{ color: '#6B7280' }}>Source file</span>
+                                <span className="truncate font-mono" title={diagram.sourceFile} style={{ color: '#1a1a1a', fontSize: FONT.xs }}>
+                                    {diagram.sourceFile}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </Section>
 

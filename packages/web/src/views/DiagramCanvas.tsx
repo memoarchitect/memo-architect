@@ -19,6 +19,7 @@ import {
     ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, MiniMap,
     useNodesState, useEdgesState, useReactFlow, addEdge,
     applyNodeChanges, NodeResizer,
+    getNodesBounds,
     ConnectionMode,
     type Node as RFNode,
     type Edge as RFEdge,
@@ -35,7 +36,7 @@ import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoar
 import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
-import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { sysmlIdentifier } from '../authoring';
 import { SelectionToolbar } from './SelectionToolbar';
 import {
@@ -774,7 +775,44 @@ function DiagramCanvasInner() {
     // screen at any cost meant a wide flow opened at a zoom where the step
     // names were illegible, and the first thing anyone did was zoom in.
     const fitMinZoom = viewKind === 'interconnection' ? 0.72 : 0.8;
-    const viewKindMeta = viewKind ? VIEW_KIND_META[viewKind] : null;
+
+    /**
+     * Frame a diagram according to how much of it fits at the readable minimum
+     * zoom. Smaller diagrams are centered. Taller diagrams retain a readable
+     * width and begin just below the top edge, so their first content is not
+     * hidden above the viewport.
+     */
+    const fitDiagramFrame = useCallback((duration = 0) => {
+        const container = canvasRef.current;
+        const visibleNodes = nodesRef.current.filter(node => !node.hidden);
+        if (!container || visibleNodes.length === 0) return;
+
+        const { width: viewportWidth, height: viewportHeight } = container.getBoundingClientRect();
+        const bounds = getNodesBounds(visibleNodes);
+        if (viewportWidth <= 0 || viewportHeight <= 0 || bounds.width <= 0 || bounds.height <= 0) return;
+
+        const sidePadding = 0.08;
+        const topPadding = 0.08;
+        const fullFitZoom = Math.min(
+            (viewportWidth * (1 - sidePadding * 2)) / bounds.width,
+            (viewportHeight * (1 - topPadding * 2)) / bounds.height,
+            2,
+        );
+        if (fullFitZoom >= fitMinZoom) {
+            fitView({ padding: sidePadding, minZoom: fitMinZoom, maxZoom: 2, duration });
+            return;
+        }
+
+        // The diagram is taller than a readable full fit. Preserve its width
+        // and anchor it at 8% from the top, leaving the remaining content to
+        // be reached by normal pan/zoom rather than clipping its beginning.
+        const zoom = Math.max(0.1, Math.min(2, (viewportWidth * (1 - sidePadding * 2)) / bounds.width));
+        setViewport({
+            x: viewportWidth * sidePadding - bounds.x * zoom,
+            y: viewportHeight * topPadding - bounds.y * zoom,
+            zoom,
+        }, { duration });
+    }, [fitMinZoom, fitView, setViewport]);
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
@@ -802,11 +840,6 @@ function DiagramCanvasInner() {
             .filter(element => included.has(element.id) && element.allocatedTo)
             .map(element => element.allocatedTo!);
         return commonDisplayLevels(targets, model);
-    }, [model, selectedDiagram]);
-    const actionFlowPresentation = useMemo(() => {
-        if (!model || !selectedDiagram) return 'Activity Diagram';
-        const resolvedType = resolveActionFlowDiagramType(selectedDiagram);
-        return DIAGRAM_TYPE_META[resolvedType].fullName;
     }, [model, selectedDiagram]);
     const actionFlowHasStages = useMemo(() => {
         if (!model || !selectedDiagram) return false;
@@ -1156,8 +1189,8 @@ function DiagramCanvasInner() {
         sendDiagramLayoutUpdate(selectedDiagramId, layout);
         positionCacheRef.current.clear();
         setRelayoutNonce(value => value + 1);
-        window.setTimeout(() => fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 300 }), 250);
-    }, [selectedDiagramId, mergeDiagramLayouts, fitView, fitMinZoom]);
+        window.setTimeout(() => fitDiagramFrame(300), 250);
+    }, [selectedDiagramId, mergeDiagramLayouts, fitDiagramFrame]);
 
     // ─── Apply interactive node data (context menu + inline edit callbacks) ───
 
@@ -1582,11 +1615,11 @@ function DiagramCanvasInner() {
             if (saved?.zoom !== undefined && saved.pan) {
                 setViewport({ x: saved.pan.x, y: saved.pan.y, zoom: saved.zoom }, { duration: 300 });
             } else {
-                fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 500 });
+                fitDiagramFrame(500);
             }
         }, 200);
         return () => clearTimeout(timer);
-    }, [layoutVersion, selectedDiagramId, fitView, fitMinZoom, setViewport]);
+    }, [layoutVersion, selectedDiagramId, fitDiagramFrame, setViewport]);
 
     // Highlight selected element
     useEffect(() => {
@@ -1662,12 +1695,12 @@ function DiagramCanvasInner() {
             }
             if (e.key === '0' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                fitView({ padding: 0.08, minZoom: fitMinZoom, maxZoom: 2, duration: 400 });
+                fitDiagramFrame(400);
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [fitView, fitMinZoom]);
+    }, [fitDiagramFrame]);
 
     // ─── Drag/drop from palette ───────────────────────────────────────────────
 
@@ -2324,7 +2357,7 @@ function DiagramCanvasInner() {
 
             {/* ── Canvas ── */}
             <div ref={canvasRef} className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
-                {/* Diagram header */}
+                {/* Diagram controls */}
                 {selectedDiagram && (
                     <div
                         // `relative` last would win over `absolute` and put this
@@ -2332,23 +2365,10 @@ function DiagramCanvasInner() {
                         // its own height while the canvas kept `height: 100%` — so
                         // the bottom of the canvas, and the zoom/fullscreen
                         // controls that live there, fell outside the window.
-                        className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+                        className="absolute bottom-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
                         style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                     >
-                        {viewKindMeta && (
-                            <span className="px-1.5 py-0.5 rounded font-semibold"
-                                style={{ background: viewKindMeta.color + '20', color: viewKindMeta.color, fontSize: FONT.badge }}
-                                title={`${viewKindMeta.fullName}${diagramMeta ? ` · ${diagramMeta.fullName}` : ''}`}>
-                                {viewKind === 'actionflow' ? actionFlowPresentation : viewKindMeta.label}
-                            </span>
-                        )}
-                        <span className="font-medium" style={{ color: '#1a1a1a' }}>{selectedDiagram.name}</span>
-                        {selectedDiagram.auto && (
-                            <span style={{ color: '#9CA3AF', fontSize: '9px' }}>auto</span>
-                        )}
-
                         {/* Snap toggle */}
-                        <ToolbarSep />
                         <IconToggle
                             icon={<Icon.grid />}
                             label="Grid"
@@ -2801,6 +2821,7 @@ function DiagramCanvasInner() {
                                 >
                                     Auto layout: {autoLayoutEnabled ? 'On' : 'Off'}
                                 </button>}
+                                <div id="memo-diagram-editor-controls" />
                             </>
                         )}
 
@@ -3147,7 +3168,7 @@ function DiagramCanvasInner() {
                 >
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <ConnectorHoverStyles />
-                    <Controls showFitView>
+                    <Controls position="bottom-right" showFitView style={{ marginBottom: 82 }}>
                         <ControlButton
                             title="Toggle fullscreen canvas"
                             aria-label="Toggle fullscreen canvas"

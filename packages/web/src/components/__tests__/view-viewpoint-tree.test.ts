@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { partitionViewsByViewpoint } from '../ExplorerPanel';
+import { partitionViewsByViewpoint, sortViewpointsByOntologyLayer } from '../ExplorerPanel';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 // ─── Views organised by viewpoint ───────────────────────────────────────────
@@ -23,6 +23,22 @@ function model(diagrams: any[], viewpoints: { id: string; label: string }[]): Me
 }
 
 describe('partitionViewsByViewpoint', () => {
+    it('follows the ontology-authored V-model lanes, then alphabetizes unplaced viewpoints', () => {
+        const ordered = sortViewpointsByOntologyLayer([
+            { id: 'other-z', label: 'Zeta', visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+            { id: 'assurance-risk', label: 'Risk', explorerLane: 'assurance', explorerOrder: 2, visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+            { id: 'architecture-logical', label: 'Logical', explorerLane: 'architecture', explorerOrder: 3, visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+            { id: 'assurance-req', label: 'Requirements', explorerLane: 'assurance', explorerOrder: 1, visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+            { id: 'architecture-operational', label: 'Operational', explorerLane: 'architecture', explorerOrder: 1, visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+            { id: 'other-a', label: 'Alpha', visibleKinds: [], visibleRelationships: [], visibleLayers: [] },
+        ]);
+        expect(ordered.map(viewpoint => viewpoint.id)).toEqual([
+            'architecture-operational', 'architecture-logical',
+            'assurance-req', 'assurance-risk',
+            'other-a', 'other-z',
+        ]);
+    });
+
     it('files a view under the viewpoint it conforms to', () => {
         const m = model(
             [view('v1', 'vp-risk'), view('v2', 'vp-context')],
