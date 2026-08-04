@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -297,6 +297,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             } else {
                 store.setModel(msg.payload);
             }
+            break;
+        case 'source:coherence':
+            // Deliberately not gated on restartPending: this is how a client
+            // learns the canvas it is showing is the last good one, and how it
+            // learns the source parses again. Neither involves a restart.
+            store.setSourceCoherence((msg as SourceCoherenceMessage).payload);
             break;
         case 'source:changed':
             if (restartPending) return;

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="#" height="#" viewBox="#">
+<g data-subject-id="f1">
+<polyline points="#" fill="none" stroke="#3498DB" stroke-width="#"/>
+</g>
+<g data-subject-id="s2">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s3">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+<text x="#" y="#" font-size="#">[true]</text>
+</g>
+<g data-subject-id="s4">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+<text x="#" y="#" font-size="#">[false]</text>
+</g>
+<g data-subject-id="s5">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s6">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s7">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s8">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s9">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s10">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s11">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s12">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="s13">
+<polyline points="#" fill="none" stroke="#4B5563" stroke-width="#"/>
+</g>
+<g data-subject-id="receiveOrder" aria-label="accept receiveOrder (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">receiveOrder</text>
+</g>
+<g data-subject-id="validateOrder" aria-label="usage validateOrder (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">validateOrder</text>
+</g>
+<g data-subject-id="routeOrder" aria-label="decision routeOrder (actionFlowNode)" fill="white" stroke="#374151" stroke-width="#">
+<polygon points="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">routeOrder</text>
+</g>
+<g data-subject-id="processOrder" aria-label="usage processOrder (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">processOrder</text>
+</g>
+<g data-subject-id="rejectOrder" aria-label="usage rejectOrder (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">rejectOrder</text>
+</g>
+<g data-subject-id="afterDecision" aria-label="merge afterDecision (actionFlowNode)" fill="white" stroke="#374151" stroke-width="#">
+<polygon points="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">afterDecision</text>
+</g>
+<g data-subject-id="parallelWork" aria-label="fork parallelWork (actionFlowNode)" fill="white" stroke="#374151" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#" fill="#111"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">parallelWork</text>
+</g>
+<g data-subject-id="prepareShipment" aria-label="usage prepareShipment (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">prepareShipment</text>
+</g>
+<g data-subject-id="createInvoice" aria-label="usage createInvoice (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">createInvoice</text>
+</g>
+<g data-subject-id="readyToNotify" aria-label="join readyToNotify (actionFlowNode)" fill="white" stroke="#374151" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#" fill="#111"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">readyToNotify</text>
+</g>
+<g data-subject-id="notifyCustomer" aria-label="usage notifyCustomer (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">notifyCustomer</text>
+</g>
+<g data-subject-id="sendReceipt" aria-label="send sendReceipt (actionFlowNode)" fill="white" stroke="#0F766E" stroke-width="#">
+<rect x="#" y="#" width="#" height="#" rx="#"/>
+<text x="#" y="#" text-anchor="middle" fill="#111" stroke="none" font-size="#">sendReceipt</text>
+</g>
+</svg>

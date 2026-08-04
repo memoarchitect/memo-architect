@@ -16,6 +16,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { OnboardingTour } from './components/OnboardingTour';
 import { RestartRequiredBanner } from './components/RestartRequiredBanner';
 import { EditConflictNotice } from './components/EditConflictNotice';
+import { StaleSceneNotice } from './components/StaleSceneNotice';
 import { CatalogHomePage } from './views/CatalogHomePage';
 import { DiagramHomePage } from './views/DiagramHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
@@ -485,6 +486,7 @@ export function App() {
 
             {/* Ontology restart-required overlay — blocks UI on mid-session ontology change */}
             <RestartRequiredBanner />
+            <StaleSceneNotice />
             <EditConflictNotice />
         </div>
     );

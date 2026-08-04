@@ -12,6 +12,7 @@ import type {
     DiagramDTO,
     DiagramLayout,
     RestartRequiredMessage,
+    SourceCoherenceMessage,
     EditConflictMessage,
 } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport, LlmSettingsStatus } from '@memoarchitect/tools/browser';
@@ -221,6 +222,15 @@ export interface ModelState {
     completeness: CompletenessReport | null;
     connected: boolean;
     restartRequired: RestartRequiredMessage | null;
+    /**
+     * Set while the project source does not parse.
+     *
+     * The server withholds the degraded model in that state, so `model` above
+     * is the last one that compiled and the canvas keeps drawing it. This is
+     * what tells the UI to say so rather than presenting stale content as
+     * current. Cleared by the next clean rebuild; never requires a restart.
+     */
+    sourceCoherence: SourceCoherenceMessage['payload'] | null;
     editConflict: EditConflictMessage['payload'] | null;
     methodology: import('@memoarchitect/tools/browser').MethodologyDescriptor | null;
     /**
@@ -309,6 +319,7 @@ export interface ModelState {
     setCompleteness: (completeness: CompletenessReport) => void;
     setConnected: (connected: boolean) => void;
     setRestartRequired: (msg: RestartRequiredMessage | null) => void;
+    setSourceCoherence: (payload: SourceCoherenceMessage['payload']) => void;
     setEditConflict: (conflict: EditConflictMessage['payload'] | null) => void;
     /** Record which source files the server just rebuilt from. */
     applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
@@ -440,6 +451,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     completeness: null,
     connected: false,
     restartRequired: null,
+    sourceCoherence: null,
     editConflict: null,
     methodology: null,
     effectiveRules: [],
@@ -700,6 +712,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Actions
     setRestartRequired: (msg) => set({ restartRequired: msg }),
+    setSourceCoherence: (payload) => set({ sourceCoherence: payload.coherent ? null : payload }),
     setEditConflict: (editConflict) => set({ editConflict }),
     applySourceChange: (change) => set(s => ({
         lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
