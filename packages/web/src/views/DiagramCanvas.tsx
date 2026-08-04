@@ -16,7 +16,7 @@ import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
 import {
-    ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
+    ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, MiniMap,
     useNodesState, useEdgesState, useReactFlow, addEdge,
     applyNodeChanges, NodeResizer,
     ConnectionMode,
@@ -499,6 +499,7 @@ function DiagramCanvasInner() {
     const previousLayoutDiagramRef = useRef(selectedDiagramId);
     const preservedViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
     const geometryFrameRef = useRef<number | null>(null);
+    const geometryNeedsRerouteRef = useRef(false);
     const nodeDragStartRef = useRef<{ id: string; x: number; y: number } | null>(null);
     const suppressInspectUntilRef = useRef(0);
     // While a geometry frame is pending, `nodesRef` holds changes that have been
@@ -513,12 +514,19 @@ function DiagramCanvasInner() {
     }, [nodes]);
     useEffect(() => { edgesRef.current = edges; }, [edges]);
 
-    const scheduleGeometryUpdate = useCallback((nextNodes: FlowNode[]) => {
+    const scheduleGeometryUpdate = useCallback((nextNodes: FlowNode[], reroute = true) => {
         nodesRef.current = nextNodes;
+        geometryNeedsRerouteRef.current ||= reroute;
         if (geometryFrameRef.current !== null) return;
         geometryFrameRef.current = requestAnimationFrame(() => {
             geometryFrameRef.current = null;
             const stableNodes = nodesRef.current;
+            const shouldReroute = geometryNeedsRerouteRef.current;
+            geometryNeedsRerouteRef.current = false;
+            if (!shouldReroute) {
+                setNodes(stableNodes);
+                return;
+            }
             const routedEdges = reroutePositionedEdges(stableNodes, edgesRef.current);
             edgesRef.current = routedEdges;
             setNodes(stableNodes);
@@ -1835,12 +1843,14 @@ function DiagramCanvasInner() {
         const isAnnotationChange = (change: NodeChange<FlowNode>) =>
             'id' in change && nodesRef.current.find(node => node.id === change.id)?.type === 'annotationNode';
         if (changes.some(change => change.type === 'position' && change.dragging && !isAnnotationChange(change))) markManualLayout();
-        if (changes.some(change => change.type === 'dimensions' && change.resizing)) {
+        const resizing = changes.some(change => change.type === 'dimensions' && change.resizing);
+        const resizeCommitted = changes.some(change => change.type === 'dimensions' && change.setAttributes);
+        if (resizing) {
             if (changes.some(change => change.type === 'dimensions' && change.resizing && !isAnnotationChange(change))) {
                 markManualLayout();
             }
-            setLayoutEditVersion(version => version + 1);
         }
+        if (resizeCommitted) setLayoutEditVersion(version => version + 1);
         // React Flow emits dimensions continuously while a resize handle moves,
         // but marks only the last one `setAttributes`. `applyNodeChanges` quite
         // correctly ignores the interim values; our controlled-node frame then
@@ -1854,9 +1864,29 @@ function DiagramCanvasInner() {
                 : []));
         const applied = applyNodeChanges(changes, nodesRef.current).map(node => {
             const size = resized.get(node.id);
-            return size ? { ...node, style: { ...node.style, width: size.width, height: size.height } } : node;
+            if (!size) return node;
+            const oldWidth = Number(node.width ?? node.style?.width ?? size.width);
+            const oldHeight = Number(node.height ?? node.style?.height ?? size.height);
+            const ports = (node.data as { ports?: Array<{ x: number; y: number; side?: string }> }).ports;
+            // A port is attached to a side, not to an old absolute coordinate.
+            // Carry it with the side as the owner grows: right/bottom ports move
+            // by the size delta while left/top ports stay anchored. This keeps
+            // both the glyph and its connector endpoint on the resized block.
+            const movedPorts = ports?.map(port => ({
+                ...port,
+                ...(port.side === 'right' ? { x: port.x + size.width - oldWidth } : {}),
+                ...(port.side === 'bottom' ? { y: port.y + size.height - oldHeight } : {}),
+            }));
+            return {
+                ...node,
+                style: { ...node.style, width: size.width, height: size.height },
+                ...(movedPorts ? { data: { ...node.data, ports: movedPorts } } : {}),
+            };
         });
-        scheduleGeometryUpdate(applied);
+        // Rerouting a non-trivial IBD on every pointer move is what made a
+        // resize stutter. The node resizes at display rate; edges replan once
+        // the pointer releases and the dimensions are committed.
+        scheduleGeometryUpdate(applied, !resizing || resizeCommitted);
     }, [scheduleGeometryUpdate, markManualLayout]);
 
     // ─── Context menu handlers ─────────────────────────────────────────────────
@@ -2966,7 +2996,20 @@ function DiagramCanvasInner() {
                 >
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <ConnectorHoverStyles />
-                    <Controls />
+                    <Controls showFitView>
+                        <ControlButton
+                            title="Toggle fullscreen canvas"
+                            aria-label="Toggle fullscreen canvas"
+                            onClick={event => {
+                                const canvas = event.currentTarget.closest('.react-flow');
+                                if (!canvas) return;
+                                if (document.fullscreenElement) void document.exitFullscreen();
+                                else void canvas.requestFullscreen?.();
+                            }}
+                        >
+                            ⛶
+                        </ControlButton>
+                    </Controls>
                     {nodes.length > 20 && (
                         <MiniMap
                             style={MINIMAP_STYLE}

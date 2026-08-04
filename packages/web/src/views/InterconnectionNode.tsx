@@ -119,6 +119,19 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
     const size = port.size ?? INTERCONNECTION_PORT_SIZE;
     const labelOffset = size + 5;
     const color = portColor(port.direction);
+    const beginMove = onMove ? (event: React.PointerEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const startClientY = event.clientY;
+        const startY = port.y;
+        const move = (next: PointerEvent) => onMove(startY + (next.clientY - startClientY) / getZoom());
+        const stop = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', stop);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop, { once: true });
+    } : undefined;
     // Label sits inside the owner, just ABOVE the port's centreline — the
     // connector enters the port horizontally at centre-y, so a vertically
     // centred label would be struck through by its own edge. A translucent
@@ -132,7 +145,12 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
         opacity: dimmed ? 0.45 : 1,
         transition: 'color 120ms ease, opacity 120ms ease',
         whiteSpace: 'normal',
-        pointerEvents: 'none',
+        // The caption is an explicit vertical drag grip. The square remains a
+        // clean React Flow connection handle, removing the prior hidden-ring
+        // ambiguity that made ports appear immovable.
+        pointerEvents: onMove ? 'auto' : 'none',
+        cursor: onMove ? 'ns-resize' : 'default',
+        touchAction: 'none',
         overflow: 'hidden',
         display: '-webkit-box',
         WebkitBoxOrient: 'vertical',
@@ -168,19 +186,7 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
             <div
                 onPointerEnter={() => setConnectorHover({ endpointIds: [port.id] })}
                 onPointerLeave={() => setConnectorHover(null)}
-                onPointerDown={onMove ? event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const startClientY = event.clientY;
-                    const startY = port.y;
-                    const move = (e: PointerEvent) => onMove(startY + (e.clientY - startClientY) / getZoom());
-                    const up = () => {
-                        window.removeEventListener('pointermove', move);
-                        window.removeEventListener('pointerup', up);
-                    };
-                    window.addEventListener('pointermove', move);
-                    window.addEventListener('pointerup', up, { once: true });
-                } : undefined}
+                onPointerDown={beginMove}
                 title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
                 style={{
                     position: 'absolute',
@@ -213,7 +219,7 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
                 transition: 'box-shadow 120ms ease, opacity 120ms ease',
             }}>
                 {portGlyph(port.direction, port.side)}
-                <span style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
+                <span onPointerDown={beginMove} style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
                 {/* The outer face is connectable so a connector can be drawn
                     port-to-port; the inner face stays an anchor for routing a
                     pass-through connector to its owner's internals. */}

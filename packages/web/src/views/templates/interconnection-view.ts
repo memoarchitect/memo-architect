@@ -136,7 +136,8 @@ export const INTERCONNECTION_PORT_SIZE = PORT_SIZE;
 export const NESTED_PORT_SIZE = PORT_SIZE;
 const NESTED_PITCH = 30; // centre-to-centre spacing parent port → nested ports
 
-const HEADER_BAND = 48;   // compact container title + separation
+export const INTERCONNECTION_HEADER_HEIGHT = 48; // compact container title + separation
+const HEADER_BAND = INTERCONNECTION_HEADER_HEIGHT;
 const LEAF_HEADER = 44;   // one compact header; long names truncate with a tooltip
 const PAD_BOTTOM = 12;
 const SIDE_MIN = 14;      // inner padding on a side with no boundary ports
@@ -698,11 +699,12 @@ export async function computeInterconnectionLayout(
                 graphPorts: ownPorts.map(portId => ({ id: portId, side: portSideOf(portId) })),
                 gapX: 54,
                 gapY: 58,
-                // An IBD reads as a left-to-right exchange. Scoring parts
-                // against a near-square footprint packs a three-stage flow into
-                // a snaking board and buys the compactness with a long return
-                // connector; a wider target keeps the stages in one run.
-                targetAspect: 2.4,
+                // IBDs are boards, not process lanes. Compare horizontal,
+                // vertical and compact candidates, favouring a square-ish
+                // footprint when routing costs are comparable.
+                targetAspect: 1.3,
+                directedFlowAxis: 'AUTO',
+                preferBalancedLayout: true,
                 layoutProviderId: options?.layoutProviderId,
             });
             for (const c of resolved.children) {
@@ -874,7 +876,9 @@ export async function computeInterconnectionLayout(
             edges: rootEdges,
             gapX: ROOT_GAP,
             gapY: ROOT_GAP,
-            directedFlowAxis: 'RIGHT',
+            targetAspect: 1.3,
+            directedFlowAxis: 'AUTO',
+            preferBalancedLayout: true,
             layoutProviderId: options?.layoutProviderId,
         });
         for (const c of resolved.children) rootPos.set(c.id, { x: c.x, y: c.y });
@@ -925,6 +929,8 @@ export async function computeInterconnectionLayout(
         parentId?: string,
         relPos?: { x: number; y: number },
         parentAbs = { x: 0, y: 0 },
+        parentBounds?: { width: number; height: number },
+        parentIsFrame = false,
     ) => {
         const el = tree.elements.get(partId)!;
         const l = layouts.get(partId)!;
@@ -943,7 +949,18 @@ export async function computeInterconnectionLayout(
             id: partId,
             type: 'interconnectionNode',
             position: pos,
-            ...(parentId ? { parentId, extent: 'parent' as const } : {}),
+            ...(parentId ? {
+                parentId,
+                // Direct children of the IBD frame must never overlap its
+                // title bar. Nested containers retain React Flow's standard
+                // full-parent extent.
+                extent: parentIsFrame && parentBounds
+                    ? [[0, INTERCONNECTION_HEADER_HEIGHT], [
+                        Math.max(0, parentBounds.width - l.width),
+                        Math.max(INTERCONNECTION_HEADER_HEIGHT, parentBounds.height - l.height),
+                    ]]
+                    : 'parent' as const,
+            } : {}),
             data: {
                 label: el.name,
                 kind: el.kind,
@@ -974,7 +991,7 @@ export async function computeInterconnectionLayout(
             },
             style: { width: l.width, height: l.height },
         });
-        for (const [cid, rel] of l.childPos) emitPart(cid, partId, rel, abs);
+        for (const [cid, rel] of l.childPos) emitPart(cid, partId, rel, abs, l, !parentId && isContainer);
     };
     for (const rootId of roots) emitPart(rootId);
 

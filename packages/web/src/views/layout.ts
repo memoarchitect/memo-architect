@@ -907,6 +907,8 @@ export async function resolveGraphLayout(options: {
     gapY?: number;
     /** Preserve a semantic flow axis when the view requires ordered lanes. */
     directedFlowAxis?: 'RIGHT' | 'DOWN' | 'AUTO';
+    /** Prefer the requested aspect ratio over a single long process lane. */
+    preferBalancedLayout?: boolean;
     /**
      * Ports on the enclosing boundary itself (a container's own ports). Edges
      * may name them as endpoints; their placed order comes back in
@@ -1089,9 +1091,21 @@ export async function resolveGraphLayout(options: {
             // worker is unavailable or a graph exposes an unsupported option.
         }
     }
+    const candidateScore = (candidate: ResolvedGraphLayout) => {
+        const baseScore = resolvedLayoutScore(candidate, edges, targetAspect);
+        if (!options.preferBalancedLayout) return baseScore;
+
+        // Routing rightly rewards straight horizontal edges, but that can
+        // outweigh the usability cost of an extremely wide board. Views that
+        // request this policy get an extra aspect penalty after all normal
+        // topology and routing costs have been considered.
+        const aspectPenalty = Math.abs(Math.log(
+            Math.max(candidate.width, 1) / Math.max(candidate.height, 1) / targetAspect,
+        ));
+        return baseScore + candidate.width * candidate.height * aspectPenalty * 2.8;
+    };
     return candidates.reduce((best, candidate) =>
-        resolvedLayoutScore(candidate, edges, targetAspect) < resolvedLayoutScore(best, edges, targetAspect)
-            ? candidate : best);
+        candidateScore(candidate) < candidateScore(best) ? candidate : best);
 }
 
 export async function computeLayout(
