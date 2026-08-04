@@ -7,7 +7,12 @@ import { buildViewpointFilter, computeDiagramScene } from '../renderers/maxgraph
 describe('buildScene', () => {
     it('lowers FulfillOrder and projects its real action-flow scene', async () => {
         const workspaceRoot = resolve(import.meta.dirname, '../../../../../../');
-        const fixture = resolve(workspaceRoot, 'sysml-v2-activity-example.sysml');
+        // The single copy of the activity fixture, in the sample project's
+        // model alongside the rest of its SysML.
+        const fixture = resolve(
+            workspaceRoot,
+            'memo/examples/sysml-diagram-samples/model/sysml_v2_activity_example.sysml',
+        );
         const parsed = await parseFiles([fixture], `${workspaceRoot}/`);
         expect(parsed.errors).toEqual([]);
         const model = modelToDTO(buildMemoModel(parsed.documents, { projectName: 'FulfillOrder' }, parsed.errors));

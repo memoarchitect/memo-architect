@@ -14,6 +14,7 @@ import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
+import { CONTROL_IN, CONTROL_OUT } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
 
 /**
@@ -359,12 +360,102 @@ const LANE_LABEL_HEIGHT = 32;
 
 const CONTROL_BAR_LONG = 64;
 const CONTROL_BAR_THICK = 10;
+/** Drawn size of a start/done marker — the circle, not a block box. */
+const PSEUDO_NODE_SIZE = 28;
+
+/**
+ * The lane's name as a node of its own, laid over the lane's header strip.
+ *
+ * Split out from the lane frame because that frame is background — `zIndex: -1`
+ * — so a name drawn inside it is painted behind every block. This node sits
+ * above them and takes no pointer events, leaving the lane itself clickable.
+ */
+function laneLabelNode(
+    lane: LaneInfo,
+    orientation: 'row' | 'column',
+    position: { x: number; y: number },
+    size: { width: number; height: number },
+): Node {
+    return {
+        id: `__lane_label_${lane.id}`,
+        type: 'actionFlowLaneLabel',
+        position,
+        data: { label: lane.label, color: lane.color, orientation, isFrame: true },
+        // Transparent to the pointer at the *node* level, not just inside it.
+        // This node covers the whole lane so the name can travel it; left
+        // hit-testable, its wrapper sits over every card in the lane and steals
+        // the hover, so cards lit up and went dark as the pointer crossed a
+        // boundary that is not visible.
+        style: { ...size, pointerEvents: 'none' as const },
+        draggable: false,
+        selectable: false,
+        zIndex: 5,
+    };
+}
+
+/** Card geometry: one dimension is uniform, the other absorbs the name. */
+const CARD_MIN_WIDTH = 140;
+/** Where a name stops widening the card and starts wrapping instead. */
+const CARD_MAX_WIDTH = 240;
+/** Width of one character of the card's title, near enough for line counting. */
+const TITLE_CHAR_WIDTH = 9;
+/** Height of one wrapped title line beyond the first. */
+const TITLE_LINE_HEIGHT = 20;
+/** Horizontal padding inside the card's header. */
+const TITLE_PADDING = 36;
+
+/** Width a name wants on a single line. */
+function preferredCardWidth(el: MemoElement): number {
+    return Math.max(el.name.length * TITLE_CHAR_WIDTH + TITLE_PADDING, CARD_MIN_WIDTH);
+}
+
+/**
+ * The card dimension every action shares, and which one it is.
+ *
+ * Cards are uniform *across* the reading direction and free along it: reading
+ * left-to-right, every card is the same width and a long name wraps onto more
+ * lines, making that card taller; reading top-to-bottom it is flipped, so
+ * heights match and a long name widens its card instead. Either way the steps
+ * line up on the axis the eye follows, and the lane grows to fit whichever
+ * dimension varies.
+ */
+function uniformCardExtent(
+    actions: MemoElement[],
+    portsByAction: Map<string, { inPorts: string[]; outPorts: string[] }>,
+    direction: 'horizontal' | 'vertical',
+    registries?: OntologyRegistriesDTO,
+): number {
+    const cards = actions.filter(el => {
+        const type = activityNodeType(el, registries);
+        return type !== 'decision' && type !== 'merge' && type !== 'fork'
+            && type !== 'join' && type !== 'activityFinal' && type !== 'flowFinal';
+    });
+    if (cards.length === 0) return CARD_MIN_WIDTH;
+    if (direction === 'horizontal') {
+        return Math.min(CARD_MAX_WIDTH, Math.max(...cards.map(preferredCardWidth)));
+    }
+    // Vertical: the shared dimension is height, so take the tallest card at its
+    // own natural width — no wrapping, since wrapping is what would make a card
+    // taller than the height they all share.
+    return Math.max(...cards.map(el => cardBodyHeight(portsByAction.get(el.id), el) + HEADER_HEIGHT));
+}
+
+/** Height below the title: port rows and the allocation badge. */
+function cardBodyHeight(
+    ports: { inPorts: string[]; outPorts: string[] } | undefined,
+    el: MemoElement,
+): number {
+    const portCount = Math.max(ports?.inPorts.length ?? 0, ports?.outPorts.length ?? 0, 0);
+    const rows = portCount * PORT_ROW_HEIGHT;
+    return rows + (rows > 0 ? 8 : 0) + (el.allocatedTo ? ALLOC_BADGE_HEIGHT : 0);
+}
 
 function nodeSize(
     el: MemoElement,
     ports: { inPorts: string[]; outPorts: string[] },
     direction: 'horizontal' | 'vertical',
     registries?: OntologyRegistriesDTO,
+    uniformExtent?: number,
 ) {
     const type = activityNodeType(el, registries);
     if (type === 'decision' || type === 'merge') return { width: 56, height: 56 };
@@ -375,12 +466,22 @@ function nodeSize(
             ? { width: CONTROL_BAR_LONG, height: CONTROL_BAR_THICK }
             : { width: CONTROL_BAR_THICK, height: CONTROL_BAR_LONG };
     }
-    const portCount = Math.max(ports.inPorts.length, ports.outPorts.length, 0);
-    const bodyHeight = portCount * PORT_ROW_HEIGHT;
+    const body = cardBodyHeight(ports, el);
+    if (direction === 'vertical') {
+        // Flipped: heights match and the name widens its own card.
+        return {
+            width: preferredCardWidth(el),
+            height: uniformExtent ?? HEADER_HEIGHT + body,
+        };
+    }
+    const width = uniformExtent ?? Math.min(CARD_MAX_WIDTH, preferredCardWidth(el));
+    // A name too long for the shared width wraps, and the card grows downward
+    // to hold the extra lines rather than widening out of alignment.
+    const lines = Math.max(1, Math.ceil(
+        (el.name.length * TITLE_CHAR_WIDTH) / Math.max(1, width - TITLE_PADDING)));
     return {
-        width: Math.max(el.name.length * 9 + 40, 140),
-        height: HEADER_HEIGHT + bodyHeight + (bodyHeight > 0 ? 8 : 0)
-            + (el.allocatedTo ? ALLOC_BADGE_HEIGHT : 0),
+        width,
+        height: HEADER_HEIGHT + (lines - 1) * TITLE_LINE_HEIGHT + body,
     };
 }
 
@@ -534,11 +635,14 @@ export async function computeActionFlowViewLayout(
         layoutOptions?: Record<string, string>;
     }
 
+    // One shared card dimension for the whole diagram, so steps line up on the
+    // axis the flow is read along.
+    const cardExtent = uniformCardExtent(actions, portsByAction, direction, model.registries);
     const leafBox = (id: string) => {
         const el = actionById.get(id);
         return el
-            ? nodeSize(el, portsByAction.get(id)!, direction, model.registries)
-            : { width: 28, height: 28 };
+            ? nodeSize(el, portsByAction.get(id)!, direction, model.registries, cardExtent)
+            : { width: PSEUDO_NODE_SIZE, height: PSEUDO_NODE_SIZE };
     };
     const buildElkActionNode = (id: string): ElkActionNode => {
         const childIds = frameChildren.get(id) ?? [];
@@ -660,6 +764,9 @@ export async function computeActionFlowViewLayout(
                 selectable: false,
                 zIndex: -1,
             });
+            laneNodes.push(laneLabelNode(lane, 'row',
+                { x: minX - LANE_LABEL_WIDTH, y: bandTop },
+                { width: (maxX - minX) + LANE_LABEL_WIDTH + LANE_PADDING, height: bandHeight }));
             bandTop += bandHeight + LANE_GAP;
         }
 
@@ -702,6 +809,9 @@ export async function computeActionFlowViewLayout(
                 selectable: false,
                 zIndex: -1,
             });
+            laneNodes.push(laneLabelNode(lane, 'column',
+                { x: columnLeft, y: minY - LANE_LABEL_HEIGHT },
+                { width: columnWidth, height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING }));
             columnLeft += columnWidth + LANE_GAP;
         }
 
@@ -850,6 +960,13 @@ export async function computeActionFlowViewLayout(
         nodes.push({
             id, type: 'actionFlowNode',
             position: { x: p.x, y: p.y },
+            // A start/done marker is a 28px circle and ELK laid it out as one.
+            // Left unstated, the scene projection falls back to a generic
+            // 130×52 block box, so the marker reserved space overlapping the
+            // first action — and the succession then left the far side of that
+            // phantom box and doubled back to reach a card that was already
+            // behind it.
+            style: { width: PSEUDO_NODE_SIZE, height: PSEUDO_NODE_SIZE },
             ...parenting(id),
             data: data as unknown as Record<string, unknown>,
         });
@@ -907,9 +1024,13 @@ export async function computeActionFlowViewLayout(
         nodes.push({
             id: el.id, type: 'actionFlowNode',
             position: { x: p.x, y: p.y },
-            // A frame is sized by ELK around its contents; a plain action card
-            // sizes itself from its own header and ports.
-            ...(isFrame ? { style: { width: p.width, height: p.height } } : {}),
+            // Drawn at the size the layout reserved. Letting the card size
+            // itself from its own content instead made every alignment in this
+            // template a lie: the box `nodeSize` reserved was taller than the
+            // card that appeared in it, so a marker centred on the box sat off
+            // the card's visible centre, and cards in one row ended up with
+            // different heights for the same shape of content.
+            style: { width: p.width, height: p.height },
             ...parenting(el.id),
             data: data as unknown as Record<string, unknown>,
         });
@@ -975,6 +1096,12 @@ export async function computeActionFlowViewLayout(
             id: rel.id,
             source: rel.sourceId,
             target: rel.targetId,
+            // Control flow enters and leaves at the card edge. Left implicit,
+            // ReactFlow resolves it to whichever handle it finds first, which
+            // on a card with parameter pins can be a pin in the middle of the
+            // block — the connector then loops back on itself to reach it.
+            sourceHandle: CONTROL_OUT,
+            targetHandle: CONTROL_IN,
             type: 'smoothstep',
             animated: false,
             style: { stroke: FLOW_COLORS.control, strokeWidth: 1.5 },

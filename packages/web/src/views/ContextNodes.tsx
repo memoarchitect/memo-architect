@@ -79,11 +79,27 @@ export const ContextExternalNode = memo(function ContextExternalNode({ id, data,
 });
 
 /** A visual scope marker, not a semantic element and therefore non-interactive. */
-export const ContextBoundaryNode = memo(function ContextBoundaryNode({ data }: NodeProps) {
+export const ContextBoundaryNode = memo(function ContextBoundaryNode({ id, data, selected }: NodeProps) {
     const d = data as ContextNodeData;
     return <div style={{
         width: '100%', height: '100%', boxSizing: 'border-box', border: '2px solid #0F766E', borderRadius: 12,
         background: 'rgba(240, 253, 250, 0.34)', padding: '12px 16px', color: '#0F766E', fontSize: 12,
         fontWeight: 750, letterSpacing: '.04em',
-    }}>{d.label}</div>;
+    }}>
+        {/* The scope is drawn, not modeled, but it is still the frame everything
+            in the diagram is read against, so it is sized and placed like any
+            other block. Its floor is the system of interest plus the padding
+            the template lays out around it — shrinking past that would clip the
+            black box it exists to contain. */}
+        <NodeResizer
+            nodeId={id}
+            isVisible={Boolean(selected)}
+            minWidth={d.minWidth ?? 240}
+            minHeight={d.minHeight ?? 140}
+            color="#0F766E"
+            lineStyle={{ borderWidth: 1 }}
+            handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
+        />
+        {d.label}
+    </div>;
 });

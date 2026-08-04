@@ -72,7 +72,7 @@ import {
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
-import { ActionFlowNode, ActionFlowLaneNode } from './ActionFlowNode';
+import { ActionFlowNode, ActionFlowLaneNode, ActionFlowLaneLabelNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
 import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
@@ -87,6 +87,7 @@ import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicke
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
+import { exportDiagram, type DiagramExportFormat } from '../diagram/export-diagram';
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
 import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
 
@@ -495,6 +496,11 @@ function DiagramCanvasInner() {
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const nodesRef = useRef<FlowNode[]>([]);
     const edgesRef = useRef<FlowEdge[]>([]);
+    /** Canvas root, captured by the image export. */
+    const canvasRef = useRef<HTMLDivElement>(null);
+    const [exportMenuOpen, setExportMenuOpen] = useState(false);
+    const [exportBusy, setExportBusy] = useState<DiagramExportFormat | null>(null);
+    const [exportError, setExportError] = useState<string | null>(null);
     const previousLayoutModelRef = useRef(model);
     const previousLayoutDiagramRef = useRef(selectedDiagramId);
     const preservedViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
@@ -657,6 +663,36 @@ function DiagramCanvasInner() {
         sendDiagramLayoutUpdate(selectedDiagramId, layout);
         setNodes(current => [...current, ...annotationNodes(layout).filter(node => node.id === id)]);
     }, [selectedDiagramId, screenToFlowPosition, mergeDiagramLayouts, setNodes, annotationNodes]);
+    /**
+     * Discard saved positions and lay the diagram out again from the template.
+     *
+     * Positions are only meaningful for the axis they were computed on, so
+     * anything that changes that axis has to start over rather than reuse them.
+     */
+    const relayoutFromScratch = useCallback(() => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
+        const layout: DiagramLayout = {
+            nodes: {}, edges: {},
+            canvas: { ...previous?.canvas, autoLayout: true },
+        };
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+        setRelayoutNonce(value => value + 1);
+    }, [selectedDiagramId, mergeDiagramLayouts]);
+
+    /**
+     * Flip the reading direction, and re-lay the diagram out.
+     *
+     * Keeping the saved positions across a flip left every step where the other
+     * axis had put it, so lanes — whose bands are measured from their members —
+     * came out overlapping each other instead of running as parallel tracks.
+     */
+    const changeActionFlowDirection = useCallback((next: 'horizontal' | 'vertical') => {
+        setActionFlowDirection(next);
+        relayoutFromScratch();
+    }, [relayoutFromScratch]);
+
     const markManualLayout = useCallback(() => {
         if (!selectedDiagramId) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -734,7 +770,10 @@ function DiagramCanvasInner() {
     // IBD text and ports must remain readable on first render. A board can be
     // panned like Miro; shrinking an entire architecture until labels become
     // dust is not a useful definition of "fit".
-    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : 0.1;
+    // A diagram opens at a size it can be read at. Fitting the whole graph on
+    // screen at any cost meant a wide flow opened at a zoom where the step
+    // names were illegible, and the first thing anyone did was zoom in.
+    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : 0.8;
     const viewKindMeta = viewKind ? VIEW_KIND_META[viewKind] : null;
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
@@ -887,6 +926,7 @@ function DiagramCanvasInner() {
         interconnectionNode: InterconnectionNode,
         actionFlowNode: ActionFlowNode,
         actionFlowLane: ActionFlowLaneNode,
+        actionFlowLaneLabel: ActionFlowLaneLabelNode,
         stateNode: StateNode,
         seqLifeline: SeqLifelineNode,
         seqSection: SeqSectionNode,
@@ -1184,25 +1224,58 @@ function DiagramCanvasInner() {
         // Swimlanes are calculated presentation frames. Their geometry must
         // follow saved action positions rather than retaining a stale layout
         // rectangle that leaves moved actions outside their responsibility lane.
-        return positioned.map(node => {
+        const laneNodes = positioned.filter(node => node.type === 'actionFlowLane');
+        const membersOf = (node: FlowNode) =>
+            ((node.data as { memberIds?: string[] }).memberIds ?? [])
+                .map(id => byId.get(id)).filter(Boolean) as FlowNode[];
+        const left = (n: FlowNode) => n.position.x;
+        const top = (n: FlowNode) => n.position.y;
+        const right = (n: FlowNode) => n.position.x + Number(n.width ?? n.style?.width ?? 180);
+        const bottom = (n: FlowNode) => n.position.y + Number(n.height ?? n.style?.height ?? 96);
+        // A lane runs the whole length of the flow — every lane starts and ends
+        // together, which is what makes them readable as parallel tracks. Only
+        // its thickness comes from its own members. Sized from its own members
+        // on both axes instead, each lane stopped at its own first and last
+        // step, so a lane with one action became a small box floating beside
+        // the others rather than a track running the length of the diagram.
+        const allMembers = laneNodes.flatMap(membersOf);
+        const spanMin = allMembers.length > 0
+            ? { x: Math.min(...allMembers.map(left)), y: Math.min(...allMembers.map(top)) }
+            : undefined;
+        const spanMax = allMembers.length > 0
+            ? { x: Math.max(...allMembers.map(right)), y: Math.max(...allMembers.map(bottom)) }
+            : undefined;
+
+        const laneRects = new Map<string, { position: { x: number; y: number }; width: number; height: number }>();
+        const synced = positioned.map(node => {
             if (node.type !== 'actionFlowLane') return node;
             const data = node.data as { memberIds?: string[]; orientation?: 'row' | 'column' };
-            const members = (data.memberIds ?? []).map(id => byId.get(id)).filter(Boolean) as FlowNode[];
-            if (members.length === 0) return node;
-            const minX = Math.min(...members.map(member => member.position.x));
-            const minY = Math.min(...members.map(member => member.position.y));
-            const maxX = Math.max(...members.map(member => member.position.x + Number(member.width ?? member.style?.width ?? 180)));
-            const maxY = Math.max(...members.map(member => member.position.y + Number(member.height ?? member.style?.height ?? 96)));
+            const members = membersOf(node);
+            if (members.length === 0 || !spanMin || !spanMax) return node;
             const column = data.orientation === 'column';
-            return {
-                ...node,
+            // Cross axis: this lane's own members. Flow axis: the whole diagram.
+            const minX = column ? Math.min(...members.map(left)) : spanMin.x;
+            const maxX = column ? Math.max(...members.map(right)) : spanMax.x;
+            const minY = column ? spanMin.y : Math.min(...members.map(top));
+            const maxY = column ? spanMax.y : Math.max(...members.map(bottom));
+            const rect = {
                 position: { x: column ? minX - 36 : minX - 120, y: column ? minY - 32 : minY - 36 },
-                style: {
-                    ...node.style,
-                    width: maxX - minX + (column ? 72 : 156),
-                    height: maxY - minY + (column ? 68 : 72),
-                },
+                width: maxX - minX + (column ? 72 : 156),
+                height: maxY - minY + (column ? 68 : 72),
             };
+            laneRects.set(node.id, rect);
+            return { ...node, position: rect.position, style: { ...node.style, ...{ width: rect.width, height: rect.height } } };
+        });
+        // A lane's name is a node of its own, laid over the lane so it can stay
+        // on screen while the lane is panned. It carries no members to measure,
+        // so it takes the rectangle its lane just settled on — left behind, it
+        // kept the rectangle the template computed and the names ended up
+        // detached from the bands they name.
+        return synced.map(node => {
+            if (node.type !== 'actionFlowLaneLabel') return node;
+            const rect = laneRects.get(node.id.replace('__lane_label_', '__lane_'));
+            if (!rect) return node;
+            return { ...node, position: rect.position, style: { ...node.style, width: rect.width, height: rect.height } };
         });
     }, []);
 
@@ -1251,6 +1324,26 @@ function DiagramCanvasInner() {
      * "make it read well" pass. It discards hand-drawn bends, which is the
      * point of asking for a tidy.
      */
+    /**
+     * Download the diagram as an image. Failures surface on the button rather
+     * than silently doing nothing — an export that produces no file and no
+     * message reads as a broken control.
+     */
+    const downloadDiagram = useCallback(async (format: DiagramExportFormat) => {
+        const container = canvasRef.current;
+        if (!container) return;
+        setExportMenuOpen(false);
+        setExportError(null);
+        setExportBusy(format);
+        try {
+            await exportDiagram(container, format, selectedDiagram?.name);
+        } catch (error) {
+            setExportError(error instanceof Error ? error.message : String(error));
+        } finally {
+            setExportBusy(null);
+        }
+    }, [selectedDiagram?.name]);
+
     const tidyConnectors = useCallback(() => {
         markManualLayout();
         setLayoutEditVersion(version => version + 1);
@@ -2230,11 +2323,16 @@ function DiagramCanvasInner() {
             />
 
             {/* ── Canvas ── */}
-            <div className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
+            <div ref={canvasRef} className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
                 {/* Diagram header */}
                 {selectedDiagram && (
                     <div
-                        className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs relative"
+                        // `relative` last would win over `absolute` and put this
+                        // toolbar back into the layout, pushing the canvas down by
+                        // its own height while the canvas kept `height: 100%` — so
+                        // the bottom of the canvas, and the zoom/fullscreen
+                        // controls that live there, fell outside the window.
+                        className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
                         style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                     >
                         {viewKindMeta && (
@@ -2274,6 +2372,59 @@ function DiagramCanvasInner() {
                             onClick={tidyConnectors}
                             title="Re-route connectors around blocks and into separate lanes. Replaces any bends you drew by hand."
                         />
+
+                        {/* Image export. The whole diagram is written at full
+                            extent, so the current pan and zoom do not decide
+                            what lands in the file. */}
+                        <div style={{ position: 'relative' }}>
+                            <IconToggle
+                                icon={<Icon.download />}
+                                label={exportBusy ? 'Exporting…' : 'Export'}
+                                active={exportMenuOpen}
+                                onClick={() => { setExportError(null); setExportMenuOpen(open => !open); }}
+                                title="Download this diagram as an image"
+                            />
+                            {exportMenuOpen && (
+                                <div
+                                    role="menu"
+                                    aria-label="Export diagram"
+                                    className="absolute z-20 rounded-lg overflow-hidden"
+                                    style={{
+                                        top: 'calc(100% + 6px)', left: 0, minWidth: 128,
+                                        background: '#FFFFFF', border: '1px solid #E2E1DB',
+                                        boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                                    }}
+                                >
+                                    {(['png', 'svg', 'pdf'] as const).map(format => (
+                                        <button
+                                            key={format}
+                                            role="menuitem"
+                                            onClick={() => { void downloadDiagram(format); }}
+                                            disabled={exportBusy !== null}
+                                            className="w-full text-left px-3 py-1.5 text-xs font-medium"
+                                            style={{
+                                                background: '#FFFFFF', color: '#374151', border: 0,
+                                                cursor: exportBusy ? 'default' : 'pointer',
+                                            }}
+                                        >
+                                            {format.toUpperCase()}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {exportError && (
+                                <div
+                                    role="alert"
+                                    className="absolute z-20 rounded-lg px-3 py-1.5 text-xs"
+                                    style={{
+                                        top: 'calc(100% + 6px)', left: 0, minWidth: 200,
+                                        background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA',
+                                    }}
+                                >
+                                    Export failed: {exportError}
+                                </div>
+                            )}
+                        </div>
 
                         {/* FBS controls */}
                         {isFBSDiagram && (
@@ -2337,7 +2488,7 @@ function DiagramCanvasInner() {
                                 {/* Reading direction — segmented control */}
                                 <Segmented
                                     value={actionFlowDirection}
-                                    onChange={setActionFlowDirection}
+                                    onChange={changeActionFlowDirection}
                                     options={[
                                         { value: 'horizontal', icon: <Icon.arrowRight />, title: 'Left-to-right flow' },
                                         { value: 'vertical', icon: <Icon.arrowDown />, title: 'Top-to-bottom flow' },

@@ -6,7 +6,7 @@ import {
     collectActionFlowActions, collectNestedActionFlowActions,
     actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
-    findFloatingActions, flatExpandedGroups,
+    findFloatingActions, flatExpandedGroups, computeActionFlowViewLayout,
 } from '../actionflow-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -394,5 +394,89 @@ describe('flatExpandedGroups', () => {
             el('b', { parentAction: 'a' }),
         ]);
         expect(() => flatExpandedGroups(m, undefined, new Set(['a', 'b']))).not.toThrow();
+    });
+});
+
+// ─── Edge handles must exist on the nodes they name ─────────────────────────
+//
+// Regression: item-flow edges addressed `out:<param>` / `in:<param>`, but the
+// action node drew its parameter pins as decorative spans and rendered only
+// unnamed default handles. React Flow drops an edge whose handle id it cannot
+// find, and because a succession is suppressed when a flow already connects
+// the same pair, those actions ended up joined by nothing at all. This pins
+// the naming half of the contract — an edge may only address a port its own
+// node declares. The other half, that the node actually renders a handle per
+// declared port, is what broke, and is guarded in
+// `views/__tests__/action-flow-node-handles.test.tsx`.
+describe('computeActionFlowViewLayout: edge handles', () => {
+    it('addresses only handles the node data declares', async () => {
+        const producer = el('produce', {
+            parameters: [{ name: 'payload', direction: 'out', type: 'DataPacket' }],
+        } as Partial<MemoElement>);
+        const consumer = el('consume', {
+            parameters: [{ name: 'payload', direction: 'in', type: 'DataPacket' }],
+        } as Partial<MemoElement>);
+        const flow: MemoRelationship = {
+            id: 'rel-flow-1', type: 'flow',
+            sourceId: 'produce', sourceEnd: 'payload',
+            targetId: 'consume', targetEnd: 'payload',
+            file: 'test.sysml', flowItem: 'DataPacket',
+        } as unknown as MemoRelationship;
+        const { nodes, edges } = await computeActionFlowViewLayout(
+            model([producer, consumer], [flow]));
+
+        const flowEdge = edges.find(edge => edge.id === 'rel-flow-1');
+        expect(flowEdge).toBeDefined();
+        expect(flowEdge!.sourceHandle).toBe('out:payload');
+        expect(flowEdge!.targetHandle).toBe('in:payload');
+
+        const portsOf = (id: string, side: 'inPorts' | 'outPorts') =>
+            (nodes.find(node => node.id === id)?.data as { inPorts: string[]; outPorts: string[] })[side];
+        for (const edge of edges) {
+            if (edge.sourceHandle) {
+                expect(portsOf(edge.source, 'outPorts'))
+                    .toContain(edge.sourceHandle.replace(/^out:/, ''));
+            }
+            if (edge.targetHandle) {
+                expect(portsOf(edge.target, 'inPorts'))
+                    .toContain(edge.targetHandle.replace(/^in:/, ''));
+            }
+        }
+    });
+});
+
+// ─── Card sizing: uniform across the reading direction ──────────────────────
+//
+// Steps line up on the axis the eye follows. Reading left-to-right every card
+// shares a width and a long name wraps, making that card taller; reading
+// top-to-bottom it flips, so heights match and the name widens its own card.
+// Before this, width came from name length alone, so a row of steps had ragged
+// edges and no two cards agreed on a size.
+describe('computeActionFlowViewLayout: card sizing', () => {
+    const long = 'Prime Pump And Load The Reservoir Before Infusion';
+    const cards = () => model([
+        el('short', { name: 'Act' }),
+        el('long', { name: long }),
+    ]);
+    const sizeOf = (nodes: Awaited<ReturnType<typeof computeActionFlowViewLayout>>['nodes'], id: string) => {
+        const style = nodes.find(node => node.id === id)?.style as { width: number; height: number };
+        return style;
+    };
+
+    it('gives every card one width when the flow reads left-to-right', async () => {
+        const { nodes } = await computeActionFlowViewLayout(cards(), { direction: 'horizontal' });
+        const short = sizeOf(nodes, 'short');
+        const wide = sizeOf(nodes, 'long');
+        expect(wide.width).toBe(short.width);
+        // The name that no longer fits wraps, and its card grows downward.
+        expect(wide.height).toBeGreaterThan(short.height);
+    });
+
+    it('flips to one height when the flow reads top-to-bottom', async () => {
+        const { nodes } = await computeActionFlowViewLayout(cards(), { direction: 'vertical' });
+        const short = sizeOf(nodes, 'short');
+        const wide = sizeOf(nodes, 'long');
+        expect(wide.height).toBe(short.height);
+        expect(wide.width).toBeGreaterThan(short.width);
     });
 });

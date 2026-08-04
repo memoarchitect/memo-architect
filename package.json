@@ -47,6 +47,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

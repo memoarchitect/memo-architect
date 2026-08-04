@@ -165,8 +165,21 @@ export function computeContextViewLayout(
 
     const nodes: Node[] = [{
         id: '__context_boundary__', type: 'contextBoundary', position: { x: boundaryX, y: boundaryY },
-        data: { label: `${systemName ?? system.name} — System Boundary`, isFrame: true },
-        style: { width: boundaryWidth, height: boundaryHeight }, draggable: false, selectable: false, zIndex: -1,
+        // Movable and resizable like any other block. It is a drawn scope
+        // rather than a modeled element, but it is the frame the whole diagram
+        // is read against, and its children travel with it the way nested parts
+        // do on an IBD — ReactFlow moves a `parentId` child with its parent, so
+        // the system of interest keeps its place inside the scope.
+        style: { width: boundaryWidth, height: boundaryHeight },
+        data: {
+            label: `${systemName ?? system.name} — System Boundary`,
+            isFrame: true,
+            // Floor: the black box it contains, plus the padding laid out
+            // around it. Smaller than this would clip the system of interest.
+            minWidth: SYSTEM_W + BOUNDARY_PAD_X * 2,
+            minHeight: SYSTEM_H + BOUNDARY_PAD_Y * 2,
+        },
+        zIndex: -1,
     }, {
         // The system is a genuine child of its context boundary. React Flow can
         // therefore enforce the same semantic rule the notation expresses: a

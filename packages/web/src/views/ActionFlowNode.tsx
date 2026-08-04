@@ -9,9 +9,34 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { memo, useState } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useStore, type NodeProps } from '@xyflow/react';
 import type { MemoElement, ActionParameter } from '@memoarchitect/tools/browser';
 import { SHADOW, RADIUS, FONT } from '../styles/tokens';
+
+/**
+ * Ids of the card-edge handles every activity node carries, one per direction.
+ *
+ * Control flow addresses these explicitly. It used to address nothing at all
+ * and let ReactFlow pick a handle, which worked only while a node had exactly
+ * one of each type; once parameter pins became real handles, a succession could
+ * be resolved to a pin in the middle of a card and the connector doubled back
+ * on itself to reach it. Naming the card edge removes the guess.
+ */
+export const CONTROL_IN = 'control-in';
+export const CONTROL_OUT = 'control-out';
+
+/**
+ * The card-edge handles are plumbing, not notation: the arrowhead already shows
+ * where a connector meets a block, so a dot drawn on the border adds nothing —
+ * and on a card with no parameters it read as a port that is not there. Kept
+ * transparent rather than removed, because edges attach to them.
+ */
+const HIDDEN_HANDLE = {
+    background: 'transparent',
+    border: 'none',
+    width: 8,
+    height: 8,
+} as const;
 
 export interface ActionFlowNodeData {
     element?: MemoElement;
@@ -70,7 +95,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 background: '#374151', border: '2px solid #374151',
                 boxShadow: SHADOW.sm,
             }}>
-                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle id={CONTROL_OUT} type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -85,7 +110,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 boxShadow: SHADOW.sm,
             }}>
                 <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} />
-                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -101,8 +126,8 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     <polygon points="28,2 54,28 28,54 2,28" fill="#FFFFFF" stroke="#374151" strokeWidth="2" />
                 </svg>
                 <span style={{ position: 'absolute', inset: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 9, color: '#374151', overflow: 'hidden' }}>{label}</span>
-                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
-                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={HIDDEN_HANDLE} />
+                <Handle id={CONTROL_OUT} type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -114,7 +139,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
         return (
             <div title={activityFinal ? 'Activity final / terminate' : 'Flow final'} style={{ width: 28, height: 28, borderRadius: '50%', background: '#FFFFFF', border: '2px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {activityFinal ? <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} /> : <span style={{ color: '#374151', fontSize: 22, lineHeight: 1 }}>×</span>}
-                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={{ background: '#374151', width: 6, height: 6 }} />
+                <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -132,10 +157,10 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     background: '#374151', borderRadius: 3, boxShadow: SHADOW.sm,
                 }}
             >
-                <Handle type="target" position={vertical ? Position.Top : Position.Left}
-                    style={{ background: '#374151', width: 6, height: 6, border: 'none' }} />
-                <Handle type="source" position={vertical ? Position.Bottom : Position.Right}
-                    style={{ background: '#374151', width: 6, height: 6, border: 'none' }} />
+                <Handle id={CONTROL_IN} type="target" position={vertical ? Position.Top : Position.Left}
+                    style={HIDDEN_HANDLE} />
+                <Handle id={CONTROL_OUT} type="source" position={vertical ? Position.Bottom : Position.Right}
+                    style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -193,10 +218,10 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                         </span>
                     )}
                 </div>
-                <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
-                    style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
-                <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
-                    style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
+                <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
+                    style={HIDDEN_HANDLE} />
+                <Handle id={CONTROL_OUT} type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
+                    style={HIDDEN_HANDLE} />
             </div>
         );
     }
@@ -229,7 +254,13 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 background: `${color}0D`,
                 borderBottom: bodyHeight > 0 ? '1px solid #E5E5E0' : 'none',
                 textAlign: 'center',
-                whiteSpace: 'nowrap',
+                // Reading left-to-right every card shares a width, so a long
+                // name wraps and its card grows taller. Reading top-to-bottom
+                // the cards share a height instead and the name widens its own
+                // card, where wrapping would break the shared height.
+                ...(d.flowDirection === 'vertical'
+                    ? { whiteSpace: 'nowrap' as const }
+                    : { whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.25 }),
             }}>
                 {actionStereotype && <div style={{ fontSize: 10, color, fontStyle: 'italic', marginBottom: 2 }}>{actionStereotype}</div>}
                 {label}
@@ -274,10 +305,20 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                                 fontSize: FONT.badge, color: '#6B7280', paddingLeft: '8px',
                                 display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
                             }}>
-                                <span style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    background: '#3498DB', flexShrink: 0,
-                                }} />
+                                {/* The pin *is* the handle. An item flow addresses
+                                    `in:<parameter>`, and React Flow drops any edge
+                                    naming a handle that does not exist — a decorative
+                                    dot here silently deletes every object flow. */}
+                                <Handle
+                                    id={`in:${port}`}
+                                    type="target"
+                                    position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
+                                    style={{
+                                        position: 'relative', transform: 'none', top: 'auto', left: 'auto',
+                                        width: '6px', height: '6px', minWidth: '6px', minHeight: '6px',
+                                        borderRadius: '50%', background: '#3498DB', border: 'none', flexShrink: 0,
+                                    }}
+                                />
                                 {port}
                             </div>
                         ))}
@@ -290,10 +331,16 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                                 display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
                             }}>
                                 {port}
-                                <span style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    background: '#E67E22', flexShrink: 0,
-                                }} />
+                                <Handle
+                                    id={`out:${port}`}
+                                    type="source"
+                                    position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
+                                    style={{
+                                        position: 'relative', transform: 'none', top: 'auto', right: 'auto',
+                                        width: '6px', height: '6px', minWidth: '6px', minHeight: '6px',
+                                        borderRadius: '50%', background: '#E67E22', border: 'none', flexShrink: 0,
+                                    }}
+                                />
                             </div>
                         ))}
                     </div>
@@ -312,10 +359,10 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
             )}
 
             {/* Handles for edges */}
-            <Handle type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
-                style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
-            <Handle type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
-                style={{ background: color, width: 8, height: 8, border: '2px solid #FFFFFF' }} />
+            <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
+                style={HIDDEN_HANDLE} />
+            <Handle id={CONTROL_OUT} type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
+                style={HIDDEN_HANDLE} />
         </div>
     );
 }
@@ -334,9 +381,44 @@ export interface ActionFlowLaneData {
     isFrame?: boolean;
 }
 
-function ActionFlowLaneNodeInner({ data, selected }: NodeProps) {
+/**
+ * How far the label must slide along the lane to stay on screen, in node
+ * coordinates.
+ *
+ * A lane label sits at the lane's leading edge — left for a row, top for a
+ * column. Zoom in or pan along the lane and that edge leaves the viewport,
+ * taking the only statement of which swimlane you are looking at with it. The
+ * label therefore tracks the visible edge instead, the way a sticky table
+ * header does, and stops at the lane's far edge so it never floats outside the
+ * band it names.
+ *
+ * Returns node-coordinate pixels: the label lives inside the scaled viewport,
+ * so the offset scales with zoom on its own.
+ */
+export function stickyLabelOffset(
+    laneStart: number,
+    laneExtent: number,
+    labelExtent: number,
+    translate: number,
+    zoom: number,
+): number {
+    const screenStart = laneStart * zoom + translate;
+    if (screenStart >= 0) return 0;
+    return Math.max(0, Math.min(-screenStart / zoom, laneExtent - labelExtent));
+}
+
+/** Room the label occupies along the lane, so it stops before the far edge. */
+const LANE_LABEL_EXTENT = 40;
+
+function ActionFlowLaneNodeInner({ data, selected, positionAbsoluteX, positionAbsoluteY, width, height }: NodeProps) {
     const d = data as unknown as ActionFlowLaneData;
     const column = d.orientation === 'column';
+    // Subscribed rather than read once: the label has to follow every pan and
+    // zoom frame, and there are only a handful of lanes on a canvas.
+    const [translateX, translateY, zoom] = useStore(state => state.transform);
+    const offset = column
+        ? stickyLabelOffset(positionAbsoluteY, height ?? 0, LANE_LABEL_EXTENT, translateY, zoom)
+        : stickyLabelOffset(positionAbsoluteX, width ?? 0, LANE_LABEL_EXTENT, translateX, zoom);
     return (
         <div
             style={{
@@ -353,20 +435,77 @@ function ActionFlowLaneNodeInner({ data, selected }: NodeProps) {
                 display: 'flex',
             }}
         >
+            {/* The header strip: space the lane owns, that no step is laid out
+                into. The name is drawn by `ActionFlowLaneLabelNode`, which is a
+                node of its own so it can paint above the action cards — this
+                frame sits at `zIndex: -1` and anything drawn inside it is behind
+                every block on the canvas. */}
+            <div
+                style={{
+                    ...(column
+                        ? { width: '100%', height: LANE_HEADER, borderBottom: `1px solid ${d.color}24` }
+                        : { width: LANE_HEADER_ROW, height: '100%', borderRight: `1px solid ${d.color}24` }),
+                    background: `${d.color}0F`,
+                    borderRadius: column ? `${RADIUS.md}px ${RADIUS.md}px 0 0` : `${RADIUS.md}px 0 0 ${RADIUS.md}px`,
+                    flexShrink: 0,
+                }}
+            />
+        </div>
+    );
+}
+
+export const ActionFlowLaneNode = memo(ActionFlowLaneNodeInner);
+
+/** Thickness of the header strip a lane reserves for its own name. */
+export const LANE_HEADER = 30;
+/** The same, along a row lane — wider, because the name is set vertically. */
+export const LANE_HEADER_ROW = 34;
+
+/**
+ * The lane's name, drawn as its own node so it paints above the action cards.
+ *
+ * It cannot live inside the lane frame: that frame is the diagram's background
+ * and sits at `zIndex: -1`, so a name drawn in it disappears behind any block
+ * that reaches it — which is exactly what happens once the label slides to
+ * follow the viewport. As a separate node it keeps the sticky behaviour and
+ * stays legible, and it never takes pointer events, so the lane underneath is
+ * still clickable.
+ */
+function ActionFlowLaneLabelNodeInner({ data, positionAbsoluteX, positionAbsoluteY, width, height }: NodeProps) {
+    const d = data as unknown as ActionFlowLaneData;
+    const column = d.orientation === 'column';
+    const [translateX, translateY, zoom] = useStore(state => state.transform);
+    const offset = column
+        ? stickyLabelOffset(positionAbsoluteY, height ?? 0, LANE_LABEL_EXTENT, translateY, zoom)
+        : stickyLabelOffset(positionAbsoluteX, width ?? 0, LANE_LABEL_EXTENT, translateX, zoom);
+    return (
+        <div
+            style={{
+                width: '100%', height: '100%', display: 'flex', pointerEvents: 'none',
+                // The node spans the whole lane so the name can travel its full
+                // length, but at rest the name hugs the header strip — the space
+                // the lane reserves for it — rather than centring over the lane,
+                // where it would sit on top of the flow's first step.
+                alignItems: column ? 'flex-start' : 'center',
+                justifyContent: column ? 'center' : 'flex-start',
+            }}
+        >
             <div
                 style={{
                     writingMode: column ? 'horizontal-tb' : 'vertical-rl',
                     transform: column ? undefined : 'rotate(180deg)',
-                    padding: column ? '7px 10px' : '10px 6px',
+                    padding: column ? '6px 12px' : '12px 6px',
                     fontSize: FONT.xs,
                     fontWeight: 700,
                     color: d.color,
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
-                    alignSelf: column ? 'flex-start' : 'center',
-                    width: column ? '100%' : undefined,
-                    textAlign: column ? 'center' : undefined,
                     whiteSpace: 'nowrap',
+                    // Opaque, because a stuck label leaves its reserved strip
+                    // and travels over the diagram.
+                    background: '#FFFFFFEE',
+                    borderRadius: 4,
+                    ...(column ? { marginTop: offset } : { marginLeft: offset }),
                 }}
             >
                 {d.label}
@@ -375,4 +514,4 @@ function ActionFlowLaneNodeInner({ data, selected }: NodeProps) {
     );
 }
 
-export const ActionFlowLaneNode = memo(ActionFlowLaneNodeInner);
+export const ActionFlowLaneLabelNode = memo(ActionFlowLaneLabelNodeInner);
