@@ -80,6 +80,30 @@ export const REL_COLORS: Record<string, string> = {
     succession: '#95A5A6',
 };
 
+/**
+ * A stable colour for any relationship type, named in REL_COLORS or not.
+ *
+ * The ontology declares far more relationships than the palette above names,
+ * and it grows: hardcoding the list would silently render every new relation
+ * the same grey, which in a matrix reads as "one kind of link" when it is not.
+ * Unnamed types hash into a fixed palette instead — arbitrary, but stable
+ * across reloads and distinct between neighbours, which is all a legend needs.
+ */
+const FALLBACK_REL_COLORS = [
+    '#2563EB', '#0891B2', '#7C3AED', '#DB2777', '#EA580C',
+    '#0D9488', '#65A30D', '#9333EA', '#C2410C', '#1D4ED8',
+];
+
+export function relationshipColor(type: string): string {
+    const named = REL_COLORS[type];
+    if (named) return named;
+    let hash = 0;
+    for (let index = 0; index < type.length; index++) {
+        hash = (hash * 31 + type.charCodeAt(index)) >>> 0;
+    }
+    return FALLBACK_REL_COLORS[hash % FALLBACK_REL_COLORS.length];
+}
+
 // ─── SysML v2 View Kind Metadata ────────────────────────────────────────────
 // The eight standard spec view kinds — every diagram resolves to exactly one
 // (Epic KK). The canonical diagramType → viewKind mapping lives in

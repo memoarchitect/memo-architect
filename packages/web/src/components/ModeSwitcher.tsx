@@ -113,6 +113,25 @@ function AnalysisDropdown() {
                         <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>▤</span>
                         Design Structure Matrix
                     </button>
+                    {/* Traceability is the DSM's sibling — same grid, for
+                        establishing trace rather than reading structure — so it
+                        belongs next to it. It stays behind the model-tools gate
+                        that its view checks, rather than offering a menu entry
+                        that would land on the dashboard. */}
+                    {isFeatureEnabled('model-tools') && (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { setActiveView({ type: 'traceability' }); setOpen(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                            style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>{'☷'}</span>
+                            Traceability Matrix
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -320,6 +339,7 @@ export function ModeSwitcher() {
                     {analysisOpen && <div style={{ margin: '0 0 4px 36px', borderLeft: '1px solid rgba(45,212,168,0.25)' }}>
                         <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>◫</span>Analysis workspace</button>
                         <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>
+                        {isFeatureEnabled('model-tools') && <button onClick={() => { setActiveView({ type: 'traceability' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>{'☷'}</span>Traceability Matrix</button>}
                         <a href={JUPYTER_URL} target="_blank" rel="noopener noreferrer" onClick={() => setDrawerOpen(false)} className="flex w-full items-center gap-2 px-3 py-2" style={{ color: 'rgba(255,255,255,0.68)', textDecoration: 'none', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</a>
                     </div>}
                 </>}

@@ -1,7 +1,40 @@
-import { useMemo, useState, useCallback } from 'react';
-import { useModelStore } from '../store/model-store';
-import { LAYER_COLORS } from '../constants';
-import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+// ─── Traceability Matrix ─────────────────────────────────────────────────────
+//
+// The sibling of the DSM, and deliberately a separate feature: the DSM is for
+// *reading* the dependency structure, this is for *establishing* trace. Same
+// hierarchical grid, but every cell is editable — click an empty one to link
+// the two elements, click a linked one to see and remove what joins them.
+//
+// Authoring goes through the ontology, never through a list kept here: the
+// types offered for a pair are the ones `legalRelationshipTypes` says are legal
+// between those two kinds, so a link this view offers is a link the server
+// accepts. Presets only pre-fill the pickers — the user can go anywhere from
+// there, which is what makes this usable outside the regulated templates.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    legalRelationshipTypes,
+    type LegalRelationshipOption,
+    type MemoRelationship,
+} from '@memoarchitect/tools/browser';
+import { getRegistries, useModelStore } from '../store/model-store';
+import {
+    computeHierarchicalDSM,
+    collectNodeIds,
+    elementKindsInModel,
+    layersInModel,
+    relationshipTypesInModel,
+    suggestTraceLayers,
+    type DsmAggregateCell,
+    type DsmAxisEntry,
+} from '../analysis/dsm-hierarchy';
+import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
+import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
+import { elementFilterOptions } from '../components/element-options';
+import { AxisScopeSelect, type AxisScope } from '../components/AxisScopeSelect';
+import { relationshipColor } from '../constants';
+import { COLOR, FONT } from '../styles/tokens';
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
 
@@ -10,256 +43,574 @@ interface MatrixPreset {
     label: string;
     description: string;
     rowKinds: string[];
-    colKinds: string[];
-    relationshipTypes: string[];
+    columnKinds: string[];
+    linkTypes: string[];
 }
 
+/**
+ * Starting points, not modes. Each one fills the three pickers; changing a
+ * picker afterwards simply leaves the preset behind.
+ */
 const PRESETS: MatrixPreset[] = [
     {
         id: 'risk-control',
-        label: 'ISO 14971: Risk \u2192 Control',
+        label: 'ISO 14971: Risk → Control',
         description: 'Hazards and hazardous situations traced to risk controls',
         rowKinds: ['Hazard', 'HazardousSituation'],
-        colKinds: ['RiskControlMeasure', 'SafetyGoal'],
-        relationshipTypes: ['mitigates', 'traceTo', 'causes', 'leadsTo'],
+        columnKinds: ['RiskControlMeasure', 'SafetyGoal'],
+        linkTypes: ['mitigates', 'tracesRisk', 'causes', 'leadsTo'],
     },
     {
         id: 'req-test',
-        label: 'IEC 62304: Requirement \u2192 Test',
+        label: 'IEC 62304: Requirement → Test',
         description: 'Software requirements traced to verification tests',
-        rowKinds: ['Requirement', 'Requirement', 'Requirement'],
-        colKinds: ['Test'],
-        relationshipTypes: ['verify', 'satisfy', 'traceTo'],
+        rowKinds: ['Requirement', 'SoftwareRequirement', 'SystemRequirement'],
+        columnKinds: ['Test', 'TestCase', 'VerificationActivity'],
+        linkTypes: ['verifiedBy', 'satisfiedBy', 'validates'],
     },
     {
         id: 'req-function',
-        label: 'Requirement \u2192 Function',
-        description: 'Requirements traced to system/component functions',
-        rowKinds: ['Requirement', 'Requirement', 'Requirement'],
-        colKinds: ['Function', 'Function'],
-        relationshipTypes: ['satisfy', 'traceTo', 'allocateTo'],
+        label: 'Requirement → Function',
+        description: 'Requirements traced to the functions that satisfy them',
+        rowKinds: ['Requirement', 'SystemRequirement'],
+        columnKinds: ['Function', 'SystemFunction'],
+        linkTypes: ['satisfiedBy', 'derivesFrom'],
     },
     {
         id: 'function-component',
-        label: 'Function \u2192 Component',
-        description: 'Functions allocated to logical/physical components',
-        rowKinds: ['Function', 'Function'],
-        colKinds: ['System', 'Subsystem', 'Component', 'LogicalComponent', 'SoftwareComponent', 'PhysicalComponent'],
-        relationshipTypes: ['allocateTo', 'traceTo', 'composedOf'],
+        label: 'Function → Component',
+        description: 'Functions allocated to logical and physical components',
+        rowKinds: ['Function', 'SystemFunction'],
+        columnKinds: ['LogicalComponent', 'SoftwareModule', 'MechanicalPart', 'Component'],
+        linkTypes: ['allocatedTo', 'realizes'],
     },
     {
-        id: 'all',
-        label: 'All Elements',
-        description: 'Full N\u00d7N matrix of all elements and relationships',
+        id: 'everything',
+        label: 'Everything',
+        description: 'Every element against every element, every relationship',
         rowKinds: [],
-        colKinds: [],
-        relationshipTypes: [],
+        columnKinds: [],
+        linkTypes: [],
     },
 ];
 
-// ─── Matrix Cell ─────────────────────────────────────────────────────────────
+// ─── View ────────────────────────────────────────────────────────────────────
 
-interface CellData {
-    rels: MemoRelationship[];
+interface CellFocus {
+    row: DsmAxisEntry;
+    column: DsmAxisEntry;
+    cell: DsmAggregateCell | null;
 }
 
-function MatrixCell({ cell, onClick }: { cell: CellData | null; onClick?: () => void }) {
-    if (!cell || cell.rels.length === 0) {
-        return <td className="border" style={{ borderColor: '#E5E5E0', width: '28px', height: '28px' }} />;
-    }
-
-    const types = [...new Set(cell.rels.map(r => r.type))];
-    const bg = cell.rels.length > 1 ? '#2DD4A830' : '#2DD4A818';
-
-    return (
-        <td
-            className="border text-center cursor-pointer"
-            style={{ borderColor: '#E5E5E0', background: bg, width: '28px', height: '28px' }}
-            title={types.join(', ')}
-            onClick={onClick}
-        >
-            <span className="text-xs font-semibold" style={{ color: '#1B3A4B', fontSize: '10px' }}>
-                {cell.rels.length}
-            </span>
-        </td>
-    );
-}
-
-// ─── TraceabilityMatrix ──────────────────────────────────────────────────────
+type Status = { kind: 'ok' | 'error'; message: string } | null;
 
 export function TraceabilityMatrix() {
     const model = useModelStore(s => s.model);
+    const connected = useModelStore(s => s.connected);
     const selectElement = useModelStore(s => s.selectElement);
-    const [activePreset, setActivePreset] = useState<string>('risk-control');
-    const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-    const [hoveredCol, setHoveredCol] = useState<string | null>(null);
+    const selectedElementId = useModelStore(s => s.selectedElementId);
+    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const createRelationship = useModelStore(s => s.createRelationship);
+    const deleteRelationship = useModelStore(s => s.deleteRelationship);
 
-    const preset = PRESETS.find(p => p.id === activePreset) || PRESETS[0];
+    const [rowScope, setRowScope] = useState<AxisScope>({});
+    const [columnScope, setColumnScope] = useState<AxisScope>({});
+    const [rowElements, setRowElements] = useState<string[]>([]);
+    const [columnElements, setColumnElements] = useState<string[]>([]);
+    const [linkTypes, setLinkTypes] = useState<string[]>([]);
+    const [editing, setEditing] = useState(false);
+    const [cellSize, setCellSize] = useState(26);
+    const [showColumnNames, setShowColumnNames] = useState(true);
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
+    const [focus, setFocus] = useState<CellFocus | null>(null);
+    const [status, setStatus] = useState<Status>(null);
+    const [linkQuery, setLinkQuery] = useState('');
+    const [busy, setBusy] = useState(false);
 
-    const { rows, cols, matrix } = useMemo(() => {
-        if (!model) return { rows: [], cols: [], matrix: new Map<string, CellData>() };
+    const registries = useMemo(() => getRegistries(model), [model]);
 
-        const elements = Object.values(model.elements);
+    const layers = useMemo(() => (model ? layersInModel(model) : []), [model]);
 
-        let rowEls: MemoElement[];
-        let colEls: MemoElement[];
+    const linkOptions = useMemo<TypeFilterOption[]>(() => {
+        if (!model) return [];
+        const counts = new Map<string, number>();
+        for (const rel of model.relationships) counts.set(rel.type, (counts.get(rel.type) ?? 0) + 1);
+        return relationshipTypesInModel(model).map(type => ({
+            value: type, hint: String(counts.get(type) ?? 0), color: relationshipColor(type),
+        }));
+    }, [model]);
 
-        if (preset.rowKinds.length === 0 && preset.colKinds.length === 0) {
-            // "All" preset: use all elements
-            rowEls = elements;
-            colEls = elements;
-        } else {
-            const rowKindSet = new Set(preset.rowKinds);
-            const colKindSet = new Set(preset.colKinds);
-            rowEls = elements.filter(e => rowKindSet.has(e.kind));
-            colEls = elements.filter(e => colKindSet.has(e.kind));
+    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
+    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
+
+    // Narrowing the kinds must narrow the picked elements with them, or the
+    // axis would keep showing something the kind filter no longer allows.
+    useEffect(() => {
+        const allowed = new Set(rowElementOptions.map(option => option.value));
+        setRowElements(current => current.every(id => allowed.has(id)) ? current : current.filter(id => allowed.has(id)));
+    }, [rowElementOptions]);
+    useEffect(() => {
+        const allowed = new Set(columnElementOptions.map(option => option.value));
+        setColumnElements(current => current.every(id => allowed.has(id)) ? current : current.filter(id => allowed.has(id)));
+    }, [columnElementOptions]);
+
+    const result = useMemo(() => {
+        if (!model) return null;
+        return computeHierarchicalDSM(model, {
+            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows },
+            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns },
+            dependencyTypes: linkTypes,
+            // Trace is read as a link between two elements, not as a direction:
+            // a requirement verified by a test and a test verifying a
+            // requirement are the same coverage fact.
+            symmetric: true,
+        });
+    }, [model, rowScope, columnScope, rowElements, columnElements, linkTypes, expandedRows, expandedColumns]);
+
+    // Trace is a cross-layer question, so the matrix opens on whichever two
+    // layers this model actually links across the most — requirements against
+    // verification in one project, functions against components in another.
+    const [seeded, setSeeded] = useState(false);
+    useEffect(() => {
+        if (seeded || !model) return;
+        const suggestion = suggestTraceLayers(model);
+        if (!suggestion.rows) return;
+        setRowScope({ layer: suggestion.rows });
+        setColumnScope({ layer: suggestion.columns });
+        setSeeded(true);
+    }, [model, seeded]);
+
+    const [expandedSeeded, setExpandedSeeded] = useState(false);
+    useEffect(() => {
+        if (expandedSeeded || !seeded || !result) return;
+        const rows = result.rowRoots.filter(node => node.children.length > 0).map(node => node.id);
+        const columns = result.columnRoots.filter(node => node.children.length > 0).map(node => node.id);
+        if (rows.length === 0 && columns.length === 0) return;
+        setExpandedRows(new Set(rows));
+        setExpandedColumns(new Set(columns));
+        setExpandedSeeded(true);
+    }, [result, seeded, expandedSeeded]);
+
+    /**
+     * A preset names kinds; the axis takes one. The first kind the model
+     * actually has wins, and the axis is set to that kind's own layer — so a
+     * preset can never assemble the mixed axis the pickers refuse to.
+     */
+    const scopeForKinds = useCallback((candidates: string[]): AxisScope | null => {
+        if (!model) return null;
+        for (const kind of candidates) {
+            const element = Object.values(model.elements).find(entry => entry.kind === kind);
+            if (element) return { layer: element.layer, kind };
         }
+        return null;
+    }, [model]);
 
-        // Sort by kind then name
-        rowEls.sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
-        colEls.sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
+    const applyPreset = useCallback((preset: MatrixPreset) => {
+        const types = new Set(model ? relationshipTypesInModel(model) : []);
+        const rows = scopeForKinds(preset.rowKinds);
+        const columns = scopeForKinds(preset.columnKinds);
+        if (rows) setRowScope(rows);
+        if (columns) setColumnScope(columns);
+        setLinkTypes(preset.linkTypes.filter(type => types.has(type)));
+        // A preset redefines what the axes are about, so any hand-picked
+        // elements from the previous configuration no longer apply.
+        setRowElements([]);
+        setColumnElements([]);
+        setFocus(null);
+    }, [model, scopeForKinds]);
 
-        // Build matrix
-        const mat = new Map<string, CellData>();
-        const relTypeSet = preset.relationshipTypes.length > 0 ? new Set(preset.relationshipTypes) : null;
-        const rowIdSet = new Set(rowEls.map(e => e.id));
-        const colIdSet = new Set(colEls.map(e => e.id));
+    // ── Editing ──────────────────────────────────────────────────────────────
 
-        for (const rel of model.relationships) {
-            if (relTypeSet && !relTypeSet.has(rel.type)) continue;
-
-            // Check both directions
-            if (rowIdSet.has(rel.sourceId) && colIdSet.has(rel.targetId)) {
-                const key = `${rel.sourceId}:${rel.targetId}`;
-                const existing = mat.get(key);
-                if (existing) existing.rels.push(rel);
-                else mat.set(key, { rels: [rel] });
-            }
-            if (rowIdSet.has(rel.targetId) && colIdSet.has(rel.sourceId)) {
-                const key = `${rel.targetId}:${rel.sourceId}`;
-                const existing = mat.get(key);
-                if (existing) existing.rels.push(rel);
-                else mat.set(key, { rels: [rel] });
-            }
+    /** The relationship objects behind a focused cell, in model order. */
+    const focusedRelationships = useMemo<MemoRelationship[]>(() => {
+        if (!model || !focus) return [];
+        // Resolved against the live model, not against the cell captured when
+        // the user clicked: adding or removing a link has to be visible in the
+        // panel that did it, and the matrix behind it has already moved on.
+        const rowId = focus.row.node.id;
+        const columnId = focus.column.node.id;
+        const leafPair = focus.row.node.children.length === 0 && focus.column.node.children.length === 0;
+        if (leafPair) {
+            const types = new Set(linkTypes);
+            return model.relationships.filter(rel =>
+                (types.size === 0 || types.has(rel.type))
+                && ((rel.sourceId === rowId && rel.targetId === columnId)
+                    || (rel.sourceId === columnId && rel.targetId === rowId)));
         }
+        // An aggregate mark has no single pair to resolve, so it keeps the
+        // relationship ids the roll-up gave it.
+        const ids = new Set(focus.cell?.relationshipIds ?? []);
+        return model.relationships.filter(rel => ids.has(rel.id));
+    }, [model, focus, linkTypes]);
 
-        return { rows: rowEls, cols: colEls, matrix: mat };
-    }, [model, preset]);
+    /**
+     * Link types legal between the focused pair. Only leaf-to-leaf cells can be
+     * authored: when either side is a collapsed subsystem the mark stands for
+     * several elements and there is no single pair for a new link to join.
+     */
+    const legalOptions = useMemo<LegalRelationshipOption[]>(() => {
+        if (!model || !focus || !registries) return [];
+        const source = model.elements[focus.row.node.id];
+        const target = model.elements[focus.column.node.id];
+        if (!source || !target || source.id === target.id) return [];
+        return legalRelationshipTypes(source, target, registries);
+    }, [model, focus, registries]);
 
-    // Coverage stats
-    const rowsWithTrace = useMemo(() => {
-        const traced = new Set<string>();
-        for (const [key] of matrix) {
-            const rowId = key.split(':')[0];
-            traced.add(rowId);
+    /**
+     * The ontology is generous: dozens of relations are legal between any two
+     * MemoParts, and an unranked list buries the one the user came for. The
+     * types the matrix is currently reading as trace go first and are marked,
+     * because those are the links that will actually show up in this view.
+     */
+    const traceTypes = useMemo(() => {
+        const names = new Set<string>();
+        for (const type of linkTypes) {
+            names.add(type);
+            names.add(type.charAt(0).toUpperCase() + type.slice(1));
         }
-        return traced.size;
-    }, [matrix]);
+        return names;
+    }, [linkTypes]);
 
-    if (!model) {
-        return <div className="flex-1 flex items-center justify-center text-xs" style={{ color: '#9CA3AF' }}>No model loaded</div>;
+    const rankedOptions = useMemo(() => {
+        const needle = linkQuery.trim().toLowerCase();
+        return legalOptions
+            .filter(option => !needle || option.definition.name.toLowerCase().includes(needle))
+            .sort((a, b) => {
+                const preference = Number(traceTypes.has(b.definition.name)) - Number(traceTypes.has(a.definition.name));
+                return preference !== 0 ? preference : a.definition.name.localeCompare(b.definition.name);
+            });
+    }, [legalOptions, linkQuery, traceTypes]);
+
+    const editable = Boolean(
+        focus
+        && focus.row.node.isElement
+        && focus.column.node.isElement
+        && !focus.row.expanded
+        && !focus.column.expanded
+        && focus.row.node.children.length === 0
+        && focus.column.node.children.length === 0,
+    );
+
+    const addLink = useCallback(async (option: LegalRelationshipOption) => {
+        setBusy(true);
+        setStatus(null);
+        const outcome = await createRelationship({
+            type: option.definition.name,
+            sourceId: option.sourceId,
+            targetId: option.targetId,
+            direction: option.direction,
+            diagramId: selectedDiagramId ?? undefined,
+        });
+        setBusy(false);
+        setStatus(outcome.success
+            ? { kind: 'ok', message: `Trace written to ${outcome.sourceFile ?? 'the model'}.` }
+            : { kind: 'error', message: outcome.error ?? 'The trace could not be created.' });
+    }, [createRelationship, selectedDiagramId]);
+
+    const removeLink = useCallback(async (relationshipId: string) => {
+        setBusy(true);
+        setStatus(null);
+        const outcome = await deleteRelationship(relationshipId);
+        setBusy(false);
+        setStatus(outcome.success
+            ? { kind: 'ok', message: `Trace removed from ${outcome.sourceFile ?? 'the model'}.` }
+            : { kind: 'error', message: outcome.error ?? 'The trace could not be removed.' });
+    }, [deleteRelationship]);
+
+    // ── Rendering ────────────────────────────────────────────────────────────
+
+    const renderCell = useCallback((cell: DsmAggregateCell | null, row: DsmAxisEntry, column: DsmAxisEntry): MatrixCellStyle => {
+        if (cell?.diagonal) return { text: String(cell.strength), color: COLOR.muted, background: '#E3E8EE' };
+        if (cell) {
+            const color = cell.types.length > 0 ? relationshipColor(cell.types[0]) : '#2DA98C';
+            const intensity = Math.min(0.16 + cell.strength * 0.14, 0.6);
+            return {
+                text: cell.aggregated ? String(cell.strength) : '✓',
+                color,
+                background: `${color}${Math.round(intensity * 255).toString(16).padStart(2, '0')}`,
+                title: `${row.node.name} ↔ ${column.node.name}\n${cell.types.join(', ')}${editing ? '\nClick to inspect or remove' : ''}`,
+            };
+        }
+        if (!editing) return {};
+        const linkable = row.node.isElement && column.node.isElement
+            && row.node.children.length === 0 && column.node.children.length === 0
+            && row.node.id !== column.node.id;
+        return linkable
+            ? { actionable: true, title: `Click to trace ${row.node.name} → ${column.node.name}` }
+            : {};
+    }, [editing]);
+
+    const coverage = useMemo(() => {
+        if (!result) return { traced: 0, total: 0 };
+        const leafRows = result.rows.filter(entry => entry.node.children.length === 0);
+        const traced = leafRows.filter((entry) => {
+            const index = result.rows.indexOf(entry);
+            return result.matrix[index].some(cell => cell && !cell.diagonal);
+        }).length;
+        return { traced, total: leafRows.length };
+    }, [result]);
+
+    if (!model || !result) {
+        return (
+            <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
+                No model loaded
+            </div>
+        );
     }
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8' }}>
-            {/* Preset selector */}
-            <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid #E5E5E0', background: '#FFFFFF' }}>
-                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Preset:</span>
-                {PRESETS.map(p => (
-                    <button
-                        key={p.id}
-                        onClick={() => setActivePreset(p.id)}
-                        className="px-2 py-1 text-xs rounded-md transition-colors"
-                        style={
-                            activePreset === p.id
-                                ? { background: '#2DD4A818', color: '#1B3A4B', fontWeight: 600 }
-                                : { color: '#6B7280' }
-                        }
-                        title={p.description}
-                    >
-                        {p.label}
-                    </button>
-                ))}
-                <div className="flex-1" />
-                <span className="text-xs" style={{ color: '#9CA3AF' }}>
-                    {rows.length} rows &times; {cols.length} cols &middot; {rowsWithTrace}/{rows.length} traced ({rows.length > 0 ? Math.round(rowsWithTrace / rows.length * 100) : 0}%)
-                </span>
-            </div>
+            {/* ── Toolbar ── */}
+            <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>Traceability</span>
+                    <span style={{ fontSize: '11px', color: COLOR.faint }}>
+                        {result.totalDependencies} link{result.totalDependencies === 1 ? '' : 's'} shown
+                        {coverage.total > 0 && ` · ${coverage.traced}/${coverage.total} rows traced (${Math.round(coverage.traced / coverage.total * 100)}%)`}
+                    </span>
+                    <div className="flex-1" />
+                    <AxisScopeSelect
+                        label="Rows" layers={layers} value={rowScope} onChange={setRowScope}
+                        describedAs="row scope"
+                        title="What the rows list — one architecture layer, or one element type within it"
+                    />
+                    <TypeFilterSelect
+                        label="of" allLabel={`All ${rowElementOptions.length} elements`} options={rowElementOptions}
+                        selected={rowElements} onChange={setRowElements} width={130} describedAs="row elements"
+                        placeholder="Filter by name, kind or id…"
+                        title="The individual elements listed down the side"
+                    />
+                    <AxisScopeSelect
+                        label="Columns" layers={layers} value={columnScope} onChange={setColumnScope}
+                        describedAs="column scope"
+                        title="What the columns list — one architecture layer, or one element type within it"
+                    />
+                    <TypeFilterSelect
+                        label="of" allLabel={`All ${columnElementOptions.length} elements`} options={columnElementOptions}
+                        selected={columnElements} onChange={setColumnElements} width={130} describedAs="column elements"
+                        placeholder="Filter by name, kind or id…"
+                        title="The individual elements listed across the top"
+                    />
+                    <TypeFilterSelect
+                        label="Trace via" allLabel="Any relationship" options={linkOptions}
+                        selected={linkTypes} onChange={setLinkTypes}
+                        title="Relationships counted as trace"
+                    />
+                </div>
 
-            {/* Matrix */}
-            <div className="flex-1 overflow-auto p-4">
-                {rows.length === 0 || cols.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-xs" style={{ color: '#9CA3AF' }}>
-                        No elements match the selected preset. Try a different preset or add more model elements.
+                <div className="flex items-center gap-2 px-4 pb-2" style={{ flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', color: COLOR.faint }}>Presets</span>
+                    {PRESETS.map(preset => (
+                        <button
+                            key={preset.id}
+                            onClick={() => applyPreset(preset)}
+                            title={preset.description}
+                            style={{
+                                padding: '3px 8px', borderRadius: '5px', fontSize: '11px',
+                                border: `1px solid ${COLOR.borderLight}`, background: COLOR.surface,
+                                color: COLOR.secondary, cursor: 'pointer',
+                            }}
+                        >
+                            {preset.label}
+                        </button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '16px', background: COLOR.borderLight, margin: '0 4px' }} />
+
+                    <button
+                        onClick={() => { if (result) { setExpandedRows(new Set(collectNodeIds(result.rowRoots))); setExpandedColumns(new Set(collectNodeIds(result.columnRoots))); } }}
+                        style={{ padding: '3px 8px', borderRadius: '5px', fontSize: '11px', border: `1px solid ${COLOR.border}`, background: COLOR.surface, color: COLOR.secondary, cursor: 'pointer' }}
+                    >
+                        Expand all
+                    </button>
+                    <button
+                        onClick={() => { setExpandedRows(new Set()); setExpandedColumns(new Set()); }}
+                        style={{ padding: '3px 8px', borderRadius: '5px', fontSize: '11px', border: `1px solid ${COLOR.border}`, background: COLOR.surface, color: COLOR.secondary, cursor: 'pointer' }}
+                    >
+                        Collapse all
+                    </button>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs, color: COLOR.muted }}>
+                        <input type="checkbox" checked={showColumnNames} onChange={event => setShowColumnNames(event.target.checked)} style={{ accentColor: COLOR.accent }} />
+                        Column names
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted }}>
+                        Zoom
+                        <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
+                    </label>
+
+                    <div className="flex-1" />
+
+                    <label
+                        title={connected
+                            ? 'Click cells to add or remove trace links. Only leaf-to-leaf cells can be edited.'
+                            : 'The dev server is unreachable, so nothing can be written to the model.'}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs,
+                            padding: '3px 9px', borderRadius: '5px',
+                            border: `1px solid ${editing ? COLOR.accent : COLOR.border}`,
+                            background: editing ? '#E8F8F3' : COLOR.surface,
+                            color: connected ? COLOR.primary : COLOR.faint,
+                            cursor: connected ? 'pointer' : 'not-allowed', fontWeight: 600,
+                        }}
+                    >
+                        <input
+                            type="checkbox" checked={editing} disabled={!connected}
+                            onChange={event => { setEditing(event.target.checked); setFocus(null); }}
+                            style={{ accentColor: COLOR.accent }}
+                        />
+                        Edit links
+                    </label>
+                </div>
+
+                {status && (
+                    <div style={{
+                        padding: '5px 16px', fontSize: '11px',
+                        color: status.kind === 'ok' ? '#0F766E' : '#B91C1C',
+                        background: status.kind === 'ok' ? '#ECFDF5' : '#FEF2F2',
+                        borderTop: `1px solid ${COLOR.borderLight}`,
+                    }}>
+                        {status.message}
                     </div>
-                ) : (
-                    <table className="border-collapse text-xs" style={{ borderColor: '#E5E5E0' }}>
-                        <thead>
-                            <tr>
-                                <th className="border px-2 py-1 sticky left-0 z-10" style={{ borderColor: '#E5E5E0', background: '#FFFFFF', minWidth: '140px' }} />
-                                {cols.map(col => {
-                                    const color = LAYER_COLORS[col.layer] || '#6B7280';
-                                    return (
-                                        <th
-                                            key={col.id}
-                                            className="border px-1 py-1"
-                                            style={{
-                                                borderColor: '#E5E5E0',
-                                                background: hoveredCol === col.id ? '#F0F0ED' : '#FFFFFF',
-                                                writingMode: 'vertical-rl', textOrientation: 'mixed',
-                                                maxWidth: '28px', fontSize: '10px', color: '#374151',
-                                                cursor: 'pointer',
-                                            }}
-                                            onMouseEnter={() => setHoveredCol(col.id)}
-                                            onMouseLeave={() => setHoveredCol(null)}
-                                            onClick={() => selectElement(col.id)}
-                                            title={`${col.name} (${col.kind})`}
-                                        >
-                                            <span className="truncate" style={{ maxHeight: '100px', display: 'block', overflow: 'hidden' }}>
-                                                {col.name}
-                                            </span>
-                                        </th>
-                                    );
-                                })}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map(row => {
-                                const rowColor = LAYER_COLORS[row.layer] || '#6B7280';
-                                return (
-                                    <tr key={row.id}>
-                                        <td
-                                            className="border px-2 py-1 sticky left-0 z-10 cursor-pointer truncate"
-                                            style={{
-                                                borderColor: '#E5E5E0',
-                                                background: hoveredRow === row.id ? '#F0F0ED' : '#FFFFFF',
-                                                maxWidth: '180px', fontSize: '11px', color: '#374151',
-                                                borderLeft: `3px solid ${rowColor}`,
-                                            }}
-                                            onMouseEnter={() => setHoveredRow(row.id)}
-                                            onMouseLeave={() => setHoveredRow(null)}
-                                            onClick={() => selectElement(row.id)}
-                                            title={`${row.name} (${row.kind})`}
-                                        >
-                                            {row.name}
-                                        </td>
-                                        {cols.map(col => {
-                                            const cell = matrix.get(`${row.id}:${col.id}`) || null;
-                                            return (
-                                                <MatrixCell
-                                                    key={col.id}
-                                                    cell={cell}
-                                                    onClick={cell ? () => selectElement(row.id) : undefined}
-                                                />
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
                 )}
             </div>
+
+            {/* ── Matrix ── */}
+            <HierarchicalMatrix
+                result={result}
+                onToggleRow={id => setExpandedRows(current => toggled(current, id))}
+                onToggleColumn={id => setExpandedColumns(current => toggled(current, id))}
+                onSelectElement={selectElement}
+                selectedElementId={selectedElementId}
+                renderCell={renderCell}
+                onCellClick={(row, column, cell) => { setFocus({ row, column, cell }); setLinkQuery(''); }}
+                cellSize={cellSize}
+                showColumnNames={showColumnNames}
+            />
+
+            {/* ── Link inspector / editor ── */}
+            {focus && (
+                <div style={{
+                    position: 'fixed', bottom: '76px', right: '20px', zIndex: 100,
+                    width: '330px', maxHeight: '52vh', overflowY: 'auto',
+                    padding: '12px 14px', borderRadius: '9px', background: COLOR.surface,
+                    border: `1px solid ${COLOR.border}`, boxShadow: '0 6px 22px rgba(0,0,0,0.14)',
+                    fontSize: FONT.xs,
+                }}>
+                    <div className="flex items-start justify-between gap-2">
+                        <div style={{ fontWeight: 600, color: COLOR.primary }}>
+                            {focus.row.node.name} {'↔'} {focus.column.node.name}
+                        </div>
+                        <button onClick={() => setFocus(null)} style={{ color: COLOR.faint, background: 'none', border: 'none', cursor: 'pointer' }}>{'✕'}</button>
+                    </div>
+
+                    {focusedRelationships.length > 0 ? (
+                        <div style={{ marginTop: '9px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {focusedRelationships.map(rel => (
+                                <div key={rel.id} className="flex items-center justify-between gap-2" style={{ padding: '4px 6px', borderRadius: '5px', background: COLOR.surfaceAlt }}>
+                                    <span style={{ color: relationshipColor(rel.type), fontWeight: 500 }}>{rel.type}</span>
+                                    <span style={{ flex: 1, color: COLOR.faint, fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {model.elements[rel.sourceId]?.name ?? rel.sourceId} {'→'} {model.elements[rel.targetId]?.name ?? rel.targetId}
+                                    </span>
+                                    {editing && (
+                                        <button
+                                            disabled={busy || rel.named === false}
+                                            onClick={() => void removeLink(rel.id)}
+                                            title={rel.named === false
+                                                ? 'This connection has no declared name, so it cannot be addressed for deletion. Name it in the source first.'
+                                                : 'Remove this trace link'}
+                                            style={{
+                                                fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
+                                                border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C',
+                                                cursor: busy || rel.named === false ? 'not-allowed' : 'pointer',
+                                                opacity: rel.named === false ? 0.5 : 1,
+                                            }}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ marginTop: '8px', color: COLOR.muted }}>No trace between these two.</div>
+                    )}
+
+                    {focus.cell?.aggregated && (
+                        <div style={{ marginTop: '8px', fontSize: '11px', color: COLOR.faint }}>
+                            This mark sums a collapsed subsystem. Expand both sides to edit individual links.
+                        </div>
+                    )}
+
+                    {editing && (
+                        <div style={{ marginTop: '11px', borderTop: `1px solid ${COLOR.borderLight}`, paddingTop: '9px' }}>
+                            <div style={{ fontSize: '11px', color: COLOR.muted, marginBottom: '6px' }}>Add a trace link</div>
+                            {!editable ? (
+                                <div style={{ fontSize: '11px', color: COLOR.faint }}>
+                                    Both sides must be individual elements. Expand the subsystems first.
+                                </div>
+                            ) : legalOptions.length === 0 ? (
+                                <div style={{ fontSize: '11px', color: COLOR.faint }}>
+                                    The ontology allows no relationship between {focus.row.node.kind} and {focus.column.node.kind}.
+                                </div>
+                            ) : (
+                                <>
+                                    {legalOptions.length > 8 && (
+                                        <input
+                                            value={linkQuery}
+                                            onChange={event => setLinkQuery(event.target.value)}
+                                            placeholder={`Filter ${legalOptions.length} legal types…`}
+                                            aria-label="Filter link types"
+                                            style={{
+                                                width: '100%', marginBottom: '7px', padding: '4px 7px',
+                                                border: `1px solid ${COLOR.border}`, borderRadius: '5px',
+                                                fontSize: '11px', outline: 'none', color: COLOR.primary,
+                                            }}
+                                        />
+                                    )}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                        {rankedOptions.map(option => {
+                                            const preferred = traceTypes.has(option.definition.name);
+                                            return (
+                                                <button
+                                                    key={`${option.definition.name}-${option.direction}`}
+                                                    disabled={busy}
+                                                    onClick={() => void addLink(option)}
+                                                    title={`${model.elements[option.sourceId]?.name ?? option.sourceId} → ${model.elements[option.targetId]?.name ?? option.targetId}`}
+                                                    style={{
+                                                        fontSize: '11px', padding: '3px 8px', borderRadius: '5px',
+                                                        border: `1px solid ${preferred ? COLOR.accent : COLOR.border}`,
+                                                        background: preferred ? '#E8F8F3' : COLOR.surface,
+                                                        color: COLOR.primary, cursor: busy ? 'wait' : 'pointer',
+                                                        fontWeight: preferred ? 600 : 400,
+                                                    }}
+                                                >
+                                                    {option.definition.name}
+                                                    <span style={{ color: COLOR.faint, marginLeft: '4px' }}>
+                                                        {option.direction === 'outgoing' ? '→' : '←'}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                        {rankedOptions.length === 0 && (
+                                            <span style={{ fontSize: '11px', color: COLOR.faint }}>
+                                                No legal type matches {'“'}{linkQuery}{'”'}.
+                                            </span>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
+}
+
+function toggled(current: Set<string>, id: string): Set<string> {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
 }

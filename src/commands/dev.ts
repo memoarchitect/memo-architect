@@ -16,13 +16,37 @@ function clientRoot(): string {
     return existsSync(resolve(sourceRoot, 'index.html')) ? sourceRoot : root;
 }
 
-export async function architectDevCommand(options: {
+export interface ArchitectDevOptions {
     port?: number; open?: boolean; featureGrants?: FeatureGrants; keepAlive?: boolean;
     /** Parsed `--toolchain.*` options, passed straight through to MEMO Tools. */
     toolchainOptions?: Record<string, unknown>;
     /** The same flags as argv, so the supervised child runs the same toolchain. */
     toolchainArgv?: string[];
-}): Promise<void> {
+}
+
+/**
+ * The argv the supervised child is launched with.
+ *
+ * The child, not this process, serves the client shell and holds the model
+ * runtime — so anything the session was started with has to be restated here
+ * or it is silently lost. That has bitten grants (the browser lost every
+ * experimental surface) and would bite the toolchain the same way, which is
+ * why this is one reviewable function rather than a line in a loop.
+ */
+export function supervisedChildArgs(
+    entry: string,
+    options: ArchitectDevOptions,
+    firstStart: boolean,
+): string[] {
+    const args = [entry, 'dev', '--port', String(options.port ?? 3000)];
+    if (!firstStart || options.open === false) args.push('--no-open');
+    if (options.keepAlive) args.push('--keep-alive');
+    if (options.featureGrants?.experimental === true) args.push('--experimental');
+    args.push(...(options.toolchainArgv ?? []));
+    return args;
+}
+
+export async function architectDevCommand(options: ArchitectDevOptions): Promise<void> {
     if (process.env.MEMO_ARCHITECT_RUNTIME_CHILD !== '1') {
         const port = options.port ?? 3000;
         let stopping = false;
@@ -34,12 +58,7 @@ export async function architectDevCommand(options: {
         process.once('SIGTERM', stop);
 
         while (!stopping) {
-            const args = [process.argv[1], 'dev', '--port', String(port)];
-            if (!firstStart || options.open === false) args.push('--no-open');
-            if (options.keepAlive) args.push('--keep-alive');
-            // A relaunch that dropped these would silently switch the session
-            // back to the default toolchain mid-run.
-            args.push(...(options.toolchainArgv ?? []));
+            const args = supervisedChildArgs(process.argv[1], { ...options, port }, firstStart);
             child = spawn(process.execPath, args, {
                 cwd: process.cwd(), stdio: 'inherit',
                 env: {
