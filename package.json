@@ -1,6 +1,6 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
@@ -42,8 +42,8 @@
   },
   "dependencies": {
     "@memoarchitect/ontology": "0.7.0",
-    "@memoarchitect/sysmlc": "0.7.0",
-    "@memoarchitect/tools": "0.7.0",
+    "@memoarchitect/sysmlc": "0.7.1",
+    "@memoarchitect/tools": "0.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",
