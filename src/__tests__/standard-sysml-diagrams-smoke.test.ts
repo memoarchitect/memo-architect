@@ -15,5 +15,9 @@ describe('memo-architect --example standard-sysml-diagrams', () => {
         expect(source).toContain('receiveOrder');
         expect(source).toContain('routeOrder');
         expect(source).toContain('readyToNotify');
+        expect(source).toContain('CustomerProcess');
+        expect(source).toContain('validUserDecision');
+        expect(source).toContain('shoppingDecision');
+        expect(source).toContain('creditDecision');
     });
 });

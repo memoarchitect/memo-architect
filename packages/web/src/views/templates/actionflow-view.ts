@@ -458,7 +458,9 @@ function nodeSize(
     uniformExtent?: number,
 ) {
     const type = activityNodeType(el, registries);
-    if (type === 'decision' || type === 'merge') return { width: 56, height: 56 };
+    // A decision's layout boundary is the diamond itself. Its name is a visual
+    // label below the glyph, not part of the flow-routing box.
+    if (type === 'decision' || type === 'merge') return { width: 64, height: 64 };
     if (type === 'activityFinal' || type === 'flowFinal') return { width: 28, height: 28 };
     if (type === 'fork' || type === 'join') {
         // A bar drawn perpendicular to the reading direction.
@@ -527,6 +529,54 @@ const FLOW_COLORS: Record<ActionFlowKind, string> = {
     energy: '#D97706',
     material: '#16A34A',
 };
+
+/**
+ * Find control-flow edges that close a cycle.
+ *
+ * A layered layout must rank the forward path without treating a loop-back as
+ * another prerequisite of the loop entry. We still render these relationships;
+ * they are omitted only from ELK's dependency graph and drawn as routed
+ * feedback connectors afterward.
+ */
+export function findFeedbackSuccessionIds(
+    relationships: readonly MemoRelationship[],
+    nodeIds: ReadonlySet<string>,
+): Set<string> {
+    const outgoing = new Map<string, MemoRelationship[]>();
+    const incoming = new Map<string, number>();
+    for (const id of nodeIds) incoming.set(id, 0);
+    for (const relationship of relationships) {
+        if (!nodeIds.has(relationship.sourceId) || !nodeIds.has(relationship.targetId)) continue;
+        if (!outgoing.has(relationship.sourceId)) outgoing.set(relationship.sourceId, []);
+        outgoing.get(relationship.sourceId)!.push(relationship);
+        incoming.set(relationship.targetId, (incoming.get(relationship.targetId) ?? 0) + 1);
+    }
+
+    const feedback = new Set<string>();
+    const state = new Map<string, 0 | 1 | 2>();
+    const visit = (id: string) => {
+        state.set(id, 1);
+        for (const relationship of outgoing.get(id) ?? []) {
+            const targetState = state.get(relationship.targetId) ?? 0;
+            if (targetState === 1) {
+                feedback.add(relationship.id);
+            } else if (targetState === 0) {
+                visit(relationship.targetId);
+            }
+        }
+        state.set(id, 2);
+    };
+
+    // Start from graph entries so the authored forward path establishes the
+    // ranks. Pure cycles have no entry, so the stable node order is the fallback.
+    for (const id of nodeIds) {
+        if ((incoming.get(id) ?? 0) === 0 && !state.has(id)) visit(id);
+    }
+    for (const id of nodeIds) {
+        if (!state.has(id)) visit(id);
+    }
+    return feedback;
+}
 
 export async function computeActionFlowViewLayout(
     model: MemoModelDTO,
@@ -602,6 +652,8 @@ export async function computeActionFlowViewLayout(
         && (!options?.visibleFlowKinds || options.visibleFlowKinds.has('control'))
         && !visibleFlowPairs.has(`${r.sourceId}\u0000${r.targetId}`)
     );
+    const feedbackSuccessionIds = findFeedbackSuccessionIds(visibleSuccs, graphIds);
+    const layoutSuccs = visibleSuccs.filter(rel => !feedbackSuccessionIds.has(rel.id));
 
     // ── ELK layered left-to-right layout ──
     const portsByAction = new Map(actions.map(el => [el.id, actionPortNames(el, model)]));
@@ -679,7 +731,7 @@ export async function computeActionFlowViewLayout(
             ...(nesting === 'nested' ? { 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' } : {}),
         },
         children: topLevelIds.map(buildElkActionNode),
-        edges: [...visibleFlows, ...visibleSuccs].map((rel, i) => ({
+        edges: [...visibleFlows, ...layoutSuccs].map((rel, i) => ({
             id: `afe-${i}`,
             sources: [rel.sourceId],
             targets: [rel.targetId],
@@ -703,6 +755,16 @@ export async function computeActionFlowViewLayout(
     // ── Swimlane banding: rows for horizontal flow, columns for vertical flow ──
     const laneColor = new Map(lanes.map(l => [l.id, l.color]));
     const laneNodes: Node[] = [];
+    const verticalLaneBounds = new Map<string, { left: number; width: number }>();
+    // In a top-to-bottom activity, initial/final markers belong to the same
+    // swimlane space as the actions they bound. Reserve real lane space for
+    // them before constructing the column frames; otherwise the later marker
+    // alignment pass places them above/below a frame that was sized only from
+    // action cards.
+    const hasStartMarker = [...pseudoIds].some(id => id.endsWith('__start'));
+    const hasDoneMarker = [...pseudoIds].some(id => id.endsWith('__done'));
+    const verticalStartRoom = hasStartMarker ? PSEUDO_NODE_SIZE + 24 : 0;
+    const verticalDoneRoom = hasDoneMarker ? PSEUDO_NODE_SIZE + 24 : 0;
     if (swimlanes && direction === 'horizontal') {
         // Order lanes by their actions' mean ELK y so banding follows the layout
         const laneY = new Map<string, number[]>();
@@ -789,6 +851,7 @@ export async function computeActionFlowViewLayout(
                     || positions.get(a.id)!.x - positions.get(b.id)!.x);
             const widestMember = Math.max(...members.map(el => positions.get(el.id)!.width));
             const columnWidth = widestMember + LANE_PADDING * 2;
+            verticalLaneBounds.set(lane.id, { left: columnLeft, width: columnWidth });
             for (const el of members) {
                 const p = positions.get(el.id)!;
                 positions.set(el.id, { ...p, x: columnLeft + (columnWidth - p.width) / 2 });
@@ -796,22 +859,27 @@ export async function computeActionFlowViewLayout(
             laneNodes.push({
                 id: `__lane_${lane.id}`,
                 type: 'actionFlowLane',
-                position: { x: columnLeft, y: minY - LANE_LABEL_HEIGHT },
+                position: { x: columnLeft, y: minY - LANE_LABEL_HEIGHT - verticalStartRoom },
                 data: {
                     label: lane.label, color: lane.color, orientation: 'column',
                     inspectElementId: lane.inspectElementId, memberIds: members.map(member => member.id), isFrame: true,
                 },
                 style: {
                     width: columnWidth,
-                    height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING,
+                    height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING
+                        + verticalStartRoom + verticalDoneRoom,
                 },
                 draggable: false,
                 selectable: false,
                 zIndex: -1,
             });
             laneNodes.push(laneLabelNode(lane, 'column',
-                { x: columnLeft, y: minY - LANE_LABEL_HEIGHT },
-                { width: columnWidth, height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING }));
+                { x: columnLeft, y: minY - LANE_LABEL_HEIGHT - verticalStartRoom },
+                {
+                    width: columnWidth,
+                    height: (maxY - minY) + LANE_LABEL_HEIGHT + LANE_PADDING
+                        + verticalStartRoom + verticalDoneRoom,
+                }));
             columnLeft += columnWidth + LANE_GAP;
         }
 
@@ -823,14 +891,24 @@ export async function computeActionFlowViewLayout(
     // Nested frames put their contents in parent-relative coordinates, so the
     // cross-axis arithmetic below would compare points from different frames.
     // ELK's hierarchical pass has already placed them; leave them alone.
-    const controlNodes = nesting === 'nested' ? [] : actions.filter(action => isControlNode(action, model.registries));
+    const controlNodes = nesting === 'nested' ? [] : actions.filter(action => {
+        const type = activityNodeType(action, model.registries);
+        return type === 'decision' || type === 'merge' || type === 'fork' || type === 'join';
+    });
     if (controlNodes.length > 0) {
         for (const ctrl of controlNodes) {
             const p = positions.get(ctrl.id)!;
+            const controlType = activityNodeType(ctrl, model.registries);
             const centers: number[] = [];
             for (const rel of [...visibleSuccs, ...visibleFlows]) {
-                const other = rel.sourceId === ctrl.id ? rel.targetId
-                    : rel.targetId === ctrl.id ? rel.sourceId : undefined;
+                // A decision/fork belongs on its incoming trunk; its branches
+                // fan out afterward. A merge/join belongs on its outgoing
+                // trunk; alternatives/concurrent paths converge before it.
+                // Averaging both sides pulled a decision halfway toward its
+                // side branch and made a vertical flow diagonal.
+                const other = controlType === 'decision' || controlType === 'fork'
+                    ? (rel.targetId === ctrl.id ? rel.sourceId : undefined)
+                    : (rel.sourceId === ctrl.id ? rel.targetId : undefined);
                 if (other === undefined) continue;
                 const op = positions.get(other);
                 if (!op) continue;
@@ -844,9 +922,49 @@ export async function computeActionFlowViewLayout(
         }
     }
 
-    // Start/done are boundary nodes, not lane members. Align each one to the
-    // center of the action or control node it actually connects to; centering
-    // against the entire lane stack placed them on arbitrary lane boundaries.
+    // A control/final node does not define a lane, but when every reachable
+    // action around it belongs to one lane, the symbol belongs inside that
+    // lane too. ELK can place a short terminal branch beyond a column's right
+    // edge because the lane width is derived from action cards only; clamp the
+    // symbol into the resolved lane without changing its vertical rank.
+    if (direction === 'vertical' && swimlanes && verticalLaneBounds.size > 0) {
+        const relationships = [...visibleSuccs, ...visibleFlows];
+        const actionMap = new Map(actions.map(action => [action.id, action]));
+        for (const control of actions.filter(action => isControlNode(action, model.registries))) {
+            const laneIds = new Set<string>();
+            const pending = [control.id];
+            const visited = new Set<string>();
+            while (pending.length > 0 && laneIds.size <= 1) {
+                const current = pending.pop()!;
+                if (visited.has(current)) continue;
+                visited.add(current);
+                for (const relationship of relationships) {
+                    const other = relationship.sourceId === current ? relationship.targetId
+                        : relationship.targetId === current ? relationship.sourceId : undefined;
+                    if (!other || visited.has(other)) continue;
+                    const neighbor = actionMap.get(other);
+                    if (!neighbor) continue;
+                    if (isControlNode(neighbor, model.registries)) pending.push(other);
+                    else {
+                        const laneId = laneOf.get(other);
+                        if (laneId) laneIds.add(laneId);
+                    }
+                }
+            }
+            if (laneIds.size !== 1) continue;
+            const bounds = verticalLaneBounds.get([...laneIds][0]);
+            const p = positions.get(control.id);
+            if (!bounds || !p) continue;
+            const inset = 12;
+            const minX = bounds.left + inset;
+            const maxX = bounds.left + bounds.width - p.width - inset;
+            positions.set(control.id, { ...p, x: Math.max(minX, Math.min(p.x, maxX)) });
+        }
+    }
+
+    // Align each start/done marker to the action or control node it actually
+    // connects to. In vertical mode the lane frame has reserved space for the
+    // markers, so they stay inside that frame instead of floating beyond it.
     for (const id of nesting === 'nested' ? [] : pseudoIds) {
         const p = positions.get(id);
         if (!p) continue;
@@ -871,7 +989,7 @@ export async function computeActionFlowViewLayout(
             positions.set(id, {
                 ...p,
                 x: mean - p.width / 2,
-                y: isStart ? minY - p.height - LANE_LABEL_HEIGHT - 16 : maxY + 24,
+                y: isStart ? minY - p.height - 16 : maxY + 16,
             });
         } else {
             const minX = Math.min(...actionRects.map(rect => rect.x));
@@ -1088,10 +1206,12 @@ export async function computeActionFlowViewLayout(
                 width: EDGE.arrowSize,
                 height: EDGE.arrowSize,
             },
+            zIndex: 2,
             data: { flowCategory: flowKind, flowItem: rel.flowItem },
         });
     }
     for (const rel of visibleSuccs) {
+        const isFeedback = feedbackSuccessionIds.has(rel.id);
         edges.push({
             id: rel.id,
             source: rel.sourceId,
@@ -1102,10 +1222,14 @@ export async function computeActionFlowViewLayout(
             // block — the connector then loops back on itself to reach it.
             sourceHandle: CONTROL_OUT,
             targetHandle: CONTROL_IN,
-            type: 'smoothstep',
+            // Forward vertical flow runs directly down the common centreline.
+            // A feedback edge deliberately routes around the ranked sequence
+            // to show the loop instead of cutting upward through its actions.
+            type: direction === 'vertical' && !isFeedback ? 'straight' : 'smoothstep',
             animated: false,
             style: { stroke: FLOW_COLORS.control, strokeWidth: 1.5 },
             markerEnd: { type: 'arrowclosed' as never, color: FLOW_COLORS.control, width: 12, height: 12 },
+            zIndex: 2,
             label: rel.sourceEnd?.startsWith('[') ? rel.sourceEnd : undefined,
             data: { flowCategory: 'control' satisfies ActionFlowKind },
         });

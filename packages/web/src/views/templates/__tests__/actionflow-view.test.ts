@@ -6,7 +6,7 @@ import {
     collectActionFlowActions, collectNestedActionFlowActions,
     actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
-    findFloatingActions, flatExpandedGroups, computeActionFlowViewLayout,
+    findFloatingActions, flatExpandedGroups, findFeedbackSuccessionIds, computeActionFlowViewLayout,
 } from '../actionflow-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -478,5 +478,121 @@ describe('computeActionFlowViewLayout: card sizing', () => {
         const wide = sizeOf(nodes, 'long');
         expect(wide.height).toBe(short.height);
         expect(wide.width).toBeGreaterThan(short.width);
+    });
+});
+
+describe('computeActionFlowViewLayout: vertical swimlane boundaries', () => {
+    it('keeps the initial marker inside the lane containing its first action', async () => {
+        const activity = el('activity');
+        const first = el('firstStep', { parentAction: 'activity' });
+        const succession: MemoRelationship = {
+            id: 'start-first', type: 'succession',
+            sourceId: 'activity__start', targetId: 'firstStep',
+            sourceEnd: '', targetEnd: '', file: 'test.sysml',
+        };
+        const { nodes } = await computeActionFlowViewLayout(
+            model([activity, first], [succession]),
+            { direction: 'vertical', swimlanes: true },
+        );
+        const lane = nodes.find(node => node.id.startsWith('__lane_')
+            && !node.id.startsWith('__lane_label_'))!;
+        const start = nodes.find(node => node.id === 'activity__start')!;
+        const laneHeight = (lane.style as { height: number }).height;
+
+        expect(start.position.y).toBeGreaterThanOrEqual(lane.position.y);
+        expect(start.position.y + 28).toBeLessThanOrEqual(lane.position.y + laneHeight);
+    });
+});
+
+describe('computeActionFlowViewLayout: feedback loops', () => {
+    const succession = (id: string, sourceId: string, targetId: string): MemoRelationship => ({
+        id, type: 'succession', sourceId, targetId,
+        sourceEnd: '', targetEnd: '', file: 'test.sysml',
+    });
+
+    it('removes only the loop-back from the layered dependency graph', () => {
+        const ids = new Set(['start', 'entry', 'work', 'choice', 'finish']);
+        const relationships = [
+            succession('s1', 'start', 'entry'),
+            succession('s2', 'entry', 'work'),
+            succession('s3', 'work', 'choice'),
+            succession('loop', 'choice', 'entry'),
+            succession('s4', 'choice', 'finish'),
+        ];
+        expect([...findFeedbackSuccessionIds(relationships, ids)]).toEqual(['loop']);
+    });
+
+    it('keeps successive decisions on separate vertical ranks', async () => {
+        const activity = el('activity');
+        const login = el('customerLogsIn', { parentAction: 'activity' });
+        const valid = el('validUserDecision', {
+            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+        });
+        const browse = el('browseCatalog', {
+            parentAction: 'activity', kind: 'MergeNodeUsage', construct: 'merge',
+        });
+        const view = el('viewBookStore', { parentAction: 'activity' });
+        const shopping = el('shoppingDecision', {
+            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+        });
+        const commit = el('commitOrder', { parentAction: 'activity' });
+        const relationships = [
+            succession('s0', 'activity__start', 'customerLogsIn'),
+            succession('s1', 'customerLogsIn', 'validUserDecision'),
+            succession('s2', 'validUserDecision', 'browseCatalog'),
+            succession('s3', 'browseCatalog', 'viewBookStore'),
+            succession('s4', 'viewBookStore', 'shoppingDecision'),
+            succession('loop', 'shoppingDecision', 'browseCatalog'),
+            succession('s5', 'shoppingDecision', 'commitOrder'),
+        ];
+        const { nodes, edges } = await computeActionFlowViewLayout(
+            model([activity, login, valid, browse, view, shopping, commit], relationships),
+            { direction: 'vertical', swimlanes: true },
+        );
+        const y = (id: string) => nodes.find(node => node.id === id)!.position.y;
+        const centerX = (id: string) => {
+            const node = nodes.find(candidate => candidate.id === id)!;
+            return node.position.x + (node.style as { width: number }).width / 2;
+        };
+
+        expect(y('customerLogsIn')).toBeLessThan(y('validUserDecision'));
+        expect(y('validUserDecision')).toBeLessThan(y('browseCatalog'));
+        expect(y('browseCatalog')).toBeLessThan(y('viewBookStore'));
+        expect(y('viewBookStore')).toBeLessThan(y('shoppingDecision'));
+        expect(y('shoppingDecision')).toBeLessThan(y('commitOrder'));
+        expect(centerX('validUserDecision')).toBe(centerX('customerLogsIn'));
+        expect(centerX('browseCatalog')).toBe(centerX('viewBookStore'));
+        expect(centerX('shoppingDecision')).toBe(centerX('viewBookStore'));
+        expect(edges.find(edge => edge.id === 'loop')?.type).toBe('smoothstep');
+    });
+
+    it('keeps a terminal branch inside its single resolved swimlane', async () => {
+        const activity = el('activity');
+        const login = el('login', { parentAction: 'activity' });
+        const choice = el('choice', {
+            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+        });
+        const proceed = el('proceed', { parentAction: 'activity' });
+        const rejected = el('rejected', {
+            parentAction: 'activity', kind: 'ActivityFinalNodeUsage',
+        });
+        const relationships = [
+            succession('s0', 'activity__start', 'login'),
+            succession('s1', 'login', 'choice'),
+            succession('s2', 'choice', 'proceed'),
+            succession('s3', 'choice', 'rejected'),
+        ];
+        const { nodes } = await computeActionFlowViewLayout(
+            model([activity, login, choice, proceed, rejected], relationships),
+            { direction: 'vertical', swimlanes: true },
+        );
+        const lane = nodes.find(node => node.id.startsWith('__lane_')
+            && !node.id.startsWith('__lane_label_'))!;
+        const final = nodes.find(node => node.id === 'rejected')!;
+        const laneWidth = (lane.style as { width: number }).width;
+        const finalWidth = (final.style as { width: number }).width;
+
+        expect(final.position.x).toBeGreaterThanOrEqual(lane.position.x);
+        expect(final.position.x + finalWidth).toBeLessThanOrEqual(lane.position.x + laneWidth);
     });
 });

@@ -115,19 +115,35 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
         );
     }
 
-    // SysML v2 decision and merge nodes share the UML diamond notation. Their
-    // names are deliberately kept inside the glyph: guards belong on outgoing
-    // succession edges, not on the decision itself.
+    // SysML v2 decision and merge nodes share the UML diamond notation. The
+    // decision name is a label *below* the glyph (as in standard activity
+    // diagrams), leaving the diamond itself clean and readable. Guards belong
+    // on the outgoing succession edges, not on the decision itself.
     if (nodeType === 'decision' || nodeType === 'merge') {
-        const size = 56;
+        // Keep the ReactFlow box exactly the size of the diamond. The external
+        // name may overflow below it, but it must not turn a decision into a
+        // large invisible rectangle that routes connectors to the wrong place.
+        const diamondSize = 64;
+        const half = diamondSize / 2;
+        const labelTop = diamondSize + 6;
+        const vertical = d.flowDirection === 'vertical';
+        // The node box includes the label, but control flow must meet the
+        // diamond itself. Explicit handle coordinates prevent a connector from
+        // terminating beside the label in vertical layouts.
+        const inHandleStyle = vertical
+            ? { ...HIDDEN_HANDLE, left: '50%', top: 0, right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' }
+            : { ...HIDDEN_HANDLE, left: 0, top: half, right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' };
+        const outHandleStyle = vertical
+            ? { ...HIDDEN_HANDLE, left: '50%', top: diamondSize, right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' }
+            : { ...HIDDEN_HANDLE, left: diamondSize, top: half, right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' };
         return (
-            <div title={nodeType === 'decision' ? 'Decision node' : 'Merge node'} style={{ width: size, height: size, position: 'relative' }}>
-                <svg width={size} height={size} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
-                    <polygon points="28,2 54,28 28,54 2,28" fill="#FFFFFF" stroke="#374151" strokeWidth="2" />
+            <div title={label || (nodeType === 'decision' ? 'Decision node' : 'Merge node')} style={{ width: diamondSize, height: diamondSize, position: 'relative', overflow: 'visible' }}>
+                <svg width={diamondSize} height={diamondSize} style={{ position: 'absolute', inset: 0, overflow: 'visible' }} aria-hidden="true">
+                    <polygon points={`${half},2 ${diamondSize - 2},${half} ${half},${diamondSize - 2} 2,${half}`} fill="#DDEFB8" stroke="#374151" strokeWidth="2.25" />
                 </svg>
-                <span style={{ position: 'absolute', inset: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 9, color: '#374151', overflow: 'hidden' }}>{label}</span>
-                <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={HIDDEN_HANDLE} />
-                <Handle id={CONTROL_OUT} type="source" position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right} style={HIDDEN_HANDLE} />
+                <span style={{ position: 'absolute', top: labelTop, left: -34, width: 132, display: 'block', textAlign: 'center', fontSize: 13, fontWeight: 600, lineHeight: 1.2, color: '#374151', overflowWrap: 'anywhere', pointerEvents: 'none' }}>{label}</span>
+                <Handle id={CONTROL_IN} type="target" position={vertical ? Position.Top : Position.Left} style={inHandleStyle} />
+                <Handle id={CONTROL_OUT} type="source" position={vertical ? Position.Bottom : Position.Right} style={outHandleStyle} />
             </div>
         );
     }
@@ -137,8 +153,13 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
     if (nodeType === 'activityFinal' || nodeType === 'flowFinal') {
         const activityFinal = nodeType === 'activityFinal';
         return (
-            <div title={activityFinal ? 'Activity final / terminate' : 'Flow final'} style={{ width: 28, height: 28, borderRadius: '50%', background: '#FFFFFF', border: '2px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div title={label || (activityFinal ? 'Activity final / terminate' : 'Flow final')} style={{ width: 28, height: 28, borderRadius: '50%', background: '#FFFFFF', border: '2px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'visible' }}>
                 {activityFinal ? <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#374151' }} /> : <span style={{ color: '#374151', fontSize: 22, lineHeight: 1 }}>×</span>}
+                {label && (
+                    <span style={{ position: 'absolute', top: 33, left: -46, width: 120, textAlign: 'center', fontSize: 12, fontWeight: 600, lineHeight: 1.2, color: '#374151', pointerEvents: 'none', overflowWrap: 'anywhere' }}>
+                        {label}
+                    </span>
+                )}
                 <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left} style={HIDDEN_HANDLE} />
             </div>
         );
@@ -313,11 +334,10 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                                     id={`in:${port}`}
                                     type="target"
                                     position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
-                                    style={{
-                                        position: 'relative', transform: 'none', top: 'auto', left: 'auto',
-                                        width: '6px', height: '6px', minWidth: '6px', minHeight: '6px',
-                                        borderRadius: '50%', background: '#3498DB', border: 'none', flexShrink: 0,
-                                    }}
+                                    // The coloured bullet is the port's visible label. The
+                                    // connection anchor itself stays at the card boundary so
+                                    // the arrowhead meets the border, not the text row.
+                                    style={HIDDEN_HANDLE}
                                 />
                                 {port}
                             </div>
@@ -335,11 +355,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                                     id={`out:${port}`}
                                     type="source"
                                     position={d.flowDirection === 'vertical' ? Position.Bottom : Position.Right}
-                                    style={{
-                                        position: 'relative', transform: 'none', top: 'auto', right: 'auto',
-                                        width: '6px', height: '6px', minWidth: '6px', minHeight: '6px',
-                                        borderRadius: '50%', background: '#E67E22', border: 'none', flexShrink: 0,
-                                    }}
+                                    style={HIDDEN_HANDLE}
                                 />
                             </div>
                         ))}
@@ -501,9 +517,12 @@ function ActionFlowLaneLabelNodeInner({ data, positionAbsoluteX, positionAbsolut
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
-                    // Opaque, because a stuck label leaves its reserved strip
-                    // and travels over the diagram.
-                    background: '#FFFFFFEE',
+                    // A label at its home position sits in the lane's reserved
+                    // header strip, so it must not mask the start/control edge
+                    // that crosses that strip in a vertical flow. Only give it
+                    // an opaque backing once it has actually become sticky and
+                    // is travelling across diagram content.
+                    background: offset > 0 ? '#FFFFFFEE' : 'transparent',
                     borderRadius: 4,
                     ...(column ? { marginTop: offset } : { marginLeft: offset }),
                 }}
