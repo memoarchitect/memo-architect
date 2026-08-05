@@ -9,6 +9,7 @@ import { FONT } from '../styles/tokens';
 import { detectBoundariesFromImage } from './templates/boundary-detection';
 import type { ScreenRegionProposal } from './ScreenLayoutView';
 import { ExplorerTreeRow } from '../components/ExplorerTreeRow';
+import { MemoBrandMark } from '../components/MemoBrandMark';
 
 const boundsAttributes = (bounds: Rect) => ({
     'bounds.x': String(Number(bounds.x.toFixed(5))),
@@ -643,7 +644,7 @@ export function UiScreensWorkspace() {
                     </>
                 ) : (
                     <div className="flex-1 flex items-center justify-center" style={{ color: '#6B7280', textAlign: 'center' }}>
-                        <div><h2 style={{ color: '#374151', fontSize: 18 }}>No screen-layout views</h2><p>Add a MemoScreenLayoutView to begin.</p></div>
+                        <div><div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><MemoBrandMark size={190} /></div><h2 style={{ color: '#374151', fontSize: 18 }}>No screen-layout views</h2><p>Add a MemoScreenLayoutView to begin.</p></div>
                     </div>
                 )}
             </main>

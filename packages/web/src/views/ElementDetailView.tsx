@@ -174,9 +174,18 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
     if (!element || !elementId) {
         return (
             <div className="flex-1 flex items-center justify-center" style={{ background: COLOR.surfaceAlt }}>
-                <div className="text-center" style={{ color: COLOR.faint }}>
-                    <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}>📄</div>
-                    <p style={{ fontSize: FONT.md }}>Select an element to view details</p>
+                <div className="text-center" style={{ color: COLOR.faint, marginTop: '-48px' }}>
+                    <div style={{ position: 'relative', width: '280px', maxWidth: '60vw', margin: '0 auto -32px' }}>
+                        <img
+                            src="/logo.png"
+                            alt="MEMO"
+                            style={{ width: '100%', display: 'block', opacity: 0.5, mixBlendMode: 'multiply' }}
+                        />
+                        <span style={{ position: 'absolute', left: '59%', top: '60%', color: '#8B949E', fontSize: '19px', fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                            Architect
+                        </span>
+                    </div>
+                    <p style={{ fontSize: FONT.md, margin: 0 }}>Select an element to view details</p>
                 </div>
             </div>
         );

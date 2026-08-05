@@ -17,7 +17,7 @@ import {
 } from 'react';
 import {
     ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, MiniMap,
-    useNodesState, useEdgesState, useReactFlow, addEdge,
+    useNodesState, useEdgesState, useReactFlow, useUpdateNodeInternals, addEdge,
     applyNodeChanges, NodeResizer,
     getNodesBounds,
     ConnectionMode,
@@ -88,6 +88,7 @@ import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicke
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
+import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 import { exportDiagram, type DiagramExportFormat } from '../diagram/export-diagram';
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
 import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
@@ -472,6 +473,7 @@ function DrillBreadcrumb({ path, nameOf, onFocus, rootLabel }: {
 // ─── Main canvas inner (inside ReactFlowProvider) ─────────────────────────────
 
 function DiagramCanvasInner() {
+    const updateNodeInternals = useUpdateNodeInternals();
     const model = useModelStore(s => s.model);
     const createRelationship = useModelStore(s => s.createRelationship);
     const registries = useMemo(() => getRegistries(model), [model]);
@@ -547,15 +549,47 @@ function DiagramCanvasInner() {
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
     const [relayoutNonce, setRelayoutNonce] = useState(0);
     const [paletteCollapsed, setPaletteCollapsed] = useState(true);
+    const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+    const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
+    const actionFlowToolbarPlacement: 'left' = 'left';
+
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(true);
+    // Action Flow template (KK-4): allocation lanes are on by default.
+    const [swimlanesOn, setSwimlanesOn] = useState(true);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
+    const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(true);
+    const [actionFlowLegendPlacement, setActionFlowLegendPlacement] = useState<'overlay' | 'above'>('overlay');
     const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>('allocation');
+
     const [actionFlowDisplayLevel, setActionFlowDisplayLevel] = useState<ActionFlowDisplayLevel>('all');
+    const [actionFlowLevelsOpen, setActionFlowLevelsOpen] = useState(false);
     const [flowFiltersOpen, setFlowFiltersOpen] = useState(false);
     const [visibleActionFlowKinds, setVisibleActionFlowKinds] = useState<Set<'control' | 'data' | 'energy' | 'material'>>(
         new Set(['control', 'data', 'energy', 'material']),
     );
+
+    // DiagramEditor owns the header; these events let its right-aligned panel
+    // icons toggle canvas-local panels without putting controls over the graph.
+    useEffect(() => {
+        const toggleToolbar = () => setToolbarCollapsed(value => !value);
+        const toggleElements = () => setPaletteCollapsed(value => !value);
+        window.addEventListener('memo:toggle-diagram-toolbar', toggleToolbar);
+        window.addEventListener('memo:toggle-diagram-elements', toggleElements);
+        return () => {
+            window.removeEventListener('memo:toggle-diagram-toolbar', toggleToolbar);
+            window.removeEventListener('memo:toggle-diagram-elements', toggleElements);
+        };
+    }, []);
+
+    useEffect(() => {
+        const syncFullscreenState = () => {
+            const fullscreenElement = document.fullscreenElement;
+            setIsCanvasFullscreen(Boolean(fullscreenElement && canvasRef.current?.contains(fullscreenElement)));
+        };
+        document.addEventListener('fullscreenchange', syncFullscreenState);
+        return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+    }, []);
 
     // Quick create popup state
     const [quickCreate, setQuickCreate] = useState<{
@@ -691,8 +725,11 @@ function DiagramCanvasInner() {
      */
     const changeActionFlowDirection = useCallback((next: 'horizontal' | 'vertical') => {
         setActionFlowDirection(next);
+        // The control handles move from left/right to top/bottom. React Flow
+        // caches their bounds, so refresh them before the re-laid edges draw.
+        requestAnimationFrame(() => updateNodeInternals(nodesRef.current.map(node => node.id)));
         relayoutFromScratch();
-    }, [relayoutFromScratch]);
+    }, [relayoutFromScratch, updateNodeInternals]);
 
     const markManualLayout = useCallback(() => {
         if (!selectedDiagramId) return;
@@ -768,6 +805,11 @@ function DiagramCanvasInner() {
     const viewKind: ViewKind | undefined = selectedDiagram
         ? ((selectedDiagram.viewKind as ViewKind | undefined) ?? diagramMeta?.viewKind ?? 'general')
         : undefined;
+    const toolbarOperations = useMemo(() => toolbarOperationsFor(viewKind), [viewKind]);
+    const supportsToolbarOperation = useCallback(
+        (operation: Parameters<typeof toolbarOperations.has>[0]) => toolbarOperations.has(operation),
+        [toolbarOperations],
+    );
     // IBD text and ports must remain readable on first render. A board can be
     // panned like Miro; shrinking an entire architecture until labels become
     // dust is not a useful definition of "fit".
@@ -787,9 +829,41 @@ function DiagramCanvasInner() {
         const visibleNodes = nodesRef.current.filter(node => !node.hidden);
         if (!container || visibleNodes.length === 0) return;
 
-        const { width: viewportWidth, height: viewportHeight } = container.getBoundingClientRect();
+        const { width: containerWidth, height: containerHeight } = container.getBoundingClientRect();
+        // When the legend is above the canvas, React Flow starts below that
+        // strip. Fit to its actual available height, not the outer work area.
+        const legendReserve = viewKind === 'actionflow' && actionFlowLegendOpen && actionFlowLegendPlacement === 'above'
+            ? 112
+            : 0;
+        // The tools dock is outside the drawing surface, so its dimensions do
+        // not consume or obscure the drawable viewport.
+        const viewportWidth = containerWidth;
+        const viewportHeight = containerHeight - legendReserve;
         const bounds = getNodesBounds(visibleNodes);
         if (viewportWidth <= 0 || viewportHeight <= 0 || bounds.width <= 0 || bounds.height <= 0) return;
+
+        // Allocation lanes are the primary reading structure of an action
+        // flow. A generic bounds fit makes a long horizontal flow tiny and
+        // leaves most of the canvas blank. Fill the cross-axis instead, then
+        // anchor the reading axis (left for horizontal, top for vertical).
+        if (viewKind === 'actionflow' && swimlanesOn) {
+            if (actionFlowDirection === 'horizontal') {
+                const zoom = Math.max(0.1, Math.min(2, viewportHeight * 0.72 / bounds.height));
+                setViewport({
+                    x: viewportWidth * 0.05 - bounds.x * zoom,
+                    y: (viewportHeight - bounds.height * zoom) / 2 - bounds.y * zoom,
+                    zoom,
+                }, { duration });
+            } else {
+                const zoom = Math.max(0.1, Math.min(2, viewportWidth * 0.78 / bounds.width));
+                setViewport({
+                    x: (viewportWidth - bounds.width * zoom) / 2 - bounds.x * zoom,
+                    y: viewportHeight * 0.06 - bounds.y * zoom,
+                    zoom,
+                }, { duration });
+            }
+            return;
+        }
 
         const sidePadding = 0.08;
         const topPadding = 0.08;
@@ -812,7 +886,7 @@ function DiagramCanvasInner() {
             y: viewportHeight * topPadding - bounds.y * zoom,
             zoom,
         }, { duration });
-    }, [fitMinZoom, fitView, setViewport]);
+    }, [actionFlowDirection, actionFlowLegendOpen, actionFlowLegendPlacement, actionFlowToolbarPlacement, fitMinZoom, fitView, isCanvasFullscreen, setViewport, swimlanesOn, toolbarCollapsed, viewKind]);
     // General template mode — legacy layoutStyle diagrams keep their own controls
     const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
@@ -831,8 +905,6 @@ function DiagramCanvasInner() {
         const filtered = GENERAL_VIEW_MODES.filter(m => wanted.has(m));
         return filtered.length ? filtered : GENERAL_VIEW_MODES;
     }, [declaredModes]);
-    // Action Flow template (KK-4): swimlane banding toggle
-    const [swimlanesOn, setSwimlanesOn] = useState(true);
     const actionFlowDisplayLevels = useMemo(() => {
         if (!model || !selectedDiagram) return [];
         const included = new Set(selectedDiagram.elementIds);
@@ -1612,14 +1684,26 @@ function DiagramCanvasInner() {
             const saved = selectedDiagramId
                 ? useModelStore.getState().diagramLayouts[selectedDiagramId]?.canvas
                 : undefined;
-            if (saved?.zoom !== undefined && saved.pan) {
+            // An action flow deliberately opens at its reading origin (left or
+            // top). Restoring a generic saved camera after its layout completed
+            // shifted the first visible step far to the right.
+            if (viewKind !== 'actionflow' && saved?.zoom !== undefined && saved.pan) {
                 setViewport({ x: saved.pan.x, y: saved.pan.y, zoom: saved.zoom }, { duration: 300 });
             } else {
                 fitDiagramFrame(500);
             }
         }, 200);
         return () => clearTimeout(timer);
-    }, [layoutVersion, selectedDiagramId, fitDiagramFrame, setViewport]);
+    }, [layoutVersion, selectedDiagramId, fitDiagramFrame, setViewport, viewKind]);
+
+    // Moving the legend into or out of its reserved strip changes the usable
+    // React Flow area. Reframe on the next paint so the lanes keep their
+    // intended left/top origin instead of retaining the old viewport height.
+    useEffect(() => {
+        if (viewKind !== 'actionflow' || layoutVersion === 0) return;
+        const frame = requestAnimationFrame(() => fitDiagramFrame(180));
+        return () => cancelAnimationFrame(frame);
+    }, [actionFlowLegendOpen, actionFlowLegendPlacement, actionFlowToolbarPlacement, fitDiagramFrame, isCanvasFullscreen, layoutVersion, toolbarCollapsed, viewKind]);
 
     // Highlight selected element
     useEffect(() => {
@@ -2355,23 +2439,42 @@ function DiagramCanvasInner() {
                         : undefined}
             />
 
-            {/* ── Canvas ── */}
-            <div ref={canvasRef} className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
+            {/* The dock is a sibling of the drawing surface.  Keeping controls
+                out of the canvas prevents it from covering nodes or edges. */}
+            <div className="flex-1 flex min-w-0">
                 {/* Diagram controls */}
-                {selectedDiagram && (
+                {!toolbarCollapsed && <aside
+                    aria-label="Diagram tools"
+                    className="flex shrink-0 flex-col border-r"
+                    style={{ width: 126, background: '#FAFAF8', borderColor: '#E5E5E0' }}
+                >
+                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#F0F0ED', borderBottom: '1px solid #E5E5E0' }}>
+                        <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151' }}>Toolbar</span>
+                        <button type="button" onClick={() => setToolbarCollapsed(true)} title="Hide Toolbar" aria-label="Hide Toolbar"
+                            style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 20, lineHeight: 1 }}>×</button>
+                    </div>
+                {selectedDiagram && !isCanvasFullscreen && (toolbarCollapsed ? (
+                    <button
+                        type="button"
+                        className="m-3 flex items-center justify-center rounded-lg"
+                        onClick={() => setToolbarCollapsed(false)}
+                        title="Show diagram tools"
+                        aria-label="Show diagram tools"
+                        style={{ width: 36, height: 36, background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #D8E0E4', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
+                    >
+                        <Icon.lanes />
+                    </button>
+                ) : (
                     <div
-                        // `relative` last would win over `absolute` and put this
-                        // toolbar back into the layout, pushing the canvas down by
-                        // its own height while the canvas kept `height: 100%` — so
-                        // the bottom of the canvas, and the zoom/fullscreen
-                        // controls that live there, fell outside the window.
-                        className="absolute bottom-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-                        style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                        className="memo-diagram-tools memo-diagram-tools--left m-3 grid content-start items-stretch justify-items-stretch rounded-lg text-xs"
+                        style={{
+                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: '38px', gridAutoFlow: 'row dense',
+                            background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                        }}
                     >
                         {/* Snap toggle */}
-                        <IconToggle
-                            icon={<Icon.grid />}
-                            label="Grid"
+                        {supportsToolbarOperation('grid') && <IconToggle
+                            icon={gridVisible ? <Icon.grid /> : <Icon.gridOff />}
                             active={gridVisible}
                             onClick={() => {
                                 setGridVisible(visible => {
@@ -2381,25 +2484,43 @@ function DiagramCanvasInner() {
                                 });
                             }}
                             title="Show or hide the canvas grid and snapping (⌘⇧G)"
-                        />
+                        />}
 
                         {/* Connectors stay direct while blocks move; this is the
                             explicit pass that routes them around obstacles. */}
-                        <IconToggle
+                        {supportsToolbarOperation('route') && <IconToggle
                             icon={<Icon.tidy />}
-                            label="Tidy"
                             active={false}
                             onClick={tidyConnectors}
                             title="Re-route connectors around blocks and into separate lanes. Replaces any bends you drew by hand."
-                        />
+                        />}
+                        {selectedDiagramId && supportsToolbarOperation('autoLayout') && <IconToggle
+                            icon={<Icon.arrange />}
+                            active={autoLayoutEnabled}
+                            onClick={() => {
+                                if (autoLayoutEnabled) {
+                                    markManualLayout();
+                                } else {
+                                    const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
+                                    const layout: DiagramLayout = {
+                                        nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },
+                                    };
+                                    mergeDiagramLayouts({ [selectedDiagramId]: layout });
+                                    sendDiagramLayoutUpdate(selectedDiagramId, layout);
+                                    setRelayoutNonce(value => value + 1);
+                                }
+                            }}
+                            title={autoLayoutEnabled
+                                ? 'Auto layout is on. Drag an item to preserve a manual layout.'
+                                : 'Auto layout is off. Click to recalculate the diagram.'}
+                        />}
 
                         {/* Image export. The whole diagram is written at full
                             extent, so the current pan and zoom do not decide
                             what lands in the file. */}
-                        <div style={{ position: 'relative' }}>
+                        {supportsToolbarOperation('export') && <div style={{ position: 'relative' }}>
                             <IconToggle
                                 icon={<Icon.download />}
-                                label={exportBusy ? 'Exporting…' : 'Export'}
                                 active={exportMenuOpen}
                                 onClick={() => { setExportError(null); setExportMenuOpen(open => !open); }}
                                 title="Download this diagram as an image"
@@ -2444,12 +2565,12 @@ function DiagramCanvasInner() {
                                     Export failed: {exportError}
                                 </div>
                             )}
-                        </div>
+                        </div>}
 
                         {/* FBS controls */}
-                        {isFBSDiagram && (
+                        {isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
                             <>
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
                                 <IconButton icon={<Icon.expand />} onClick={expandAll}
                                     title="Expand all nodes" ariaLabel="Expand all" />
                                 <IconButton icon={<Icon.collapse />} onClick={collapseAll}
@@ -2458,98 +2579,128 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* Action Flow template controls (KK-4) — iOS-style grouped toolbar */}
-                        {viewKind === 'actionflow' && (
+                        {viewKind === 'actionflow' && supportsToolbarOperation('flowSwimlanes') && (
                             <>
                                 {/* Display toggles: grid (above) + swimlanes read as one group */}
                                 <IconToggle
-                                    icon={<Icon.lanes />}
+                                    icon={swimlanesOn ? <Icon.lanes /> : <Icon.lanesOff />}
                                     active={swimlanesOn}
                                     onClick={() => setSwimlanesOn(s => !s)}
                                     title="Toggle allocation swimlanes"
                                 />
-                                {swimlanesOn && actionFlowHasStages && (
+                                {supportsToolbarOperation('flowSwimlanes') && swimlanesOn && actionFlowHasStages && (
                                     <IconToggle
                                         icon={<Icon.lanes />}
-                                        label="Stage"
+                                        label={actionFlowToolbarPlacement === 'left' ? undefined : 'Stage'}
                                         active={actionFlowLaneGrouping === 'stage'}
                                         onClick={() => setActionFlowLaneGrouping(current => current === 'stage' ? 'allocation' : 'stage')}
                                         title="Group this flow by its modeled stages"
                                     />
                                 )}
-                                {swimlanesOn && actionFlowLaneGrouping === 'allocation' && actionFlowDisplayLevels.length > 0 && (
-                                    <select
-                                        aria-label="Display hierarchy level"
-                                        title="Display responsibility lanes at a hierarchy level; the SysML allocation is unchanged"
-                                        value={actionFlowDisplayLevel}
-                                        onChange={event => setActionFlowDisplayLevel(event.target.value === 'all' ? 'all' : Number(event.target.value))}
-                                        className="text-xs font-semibold rounded-lg px-2 py-1"
-                                        style={{ color: '#5B6470', background: '#FFFFFF', border: '1px solid #E2E1DB' }}
-                                    >
-                                        <option value="all">All levels</option>
-                                        {actionFlowDisplayLevels.map(level => <option key={level} value={level}>L{level}</option>)}
-                                    </select>
+                                {supportsToolbarOperation('flowHierarchy') && swimlanesOn && actionFlowLaneGrouping === 'allocation' && actionFlowDisplayLevels.length > 0 && (
+                                    <div style={{ position: 'relative' }}>
+                                        <IconToggle
+                                            icon={<Icon.library />}
+                                            active={actionFlowLevelsOpen}
+                                            onClick={() => setActionFlowLevelsOpen(open => !open)}
+                                            title={`Responsibility hierarchy level: ${actionFlowDisplayLevel === 'all' ? 'all levels' : `level ${actionFlowDisplayLevel}`}`}
+                                        />
+                                        {actionFlowLevelsOpen && (
+                                            <div className="absolute z-30 rounded-lg p-1" style={{ top: 'calc(100% + 5px)', left: 0, width: 112, background: '#FFFFFF', border: '1px solid #D1D5DB', boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}>
+                                                {(['all', ...actionFlowDisplayLevels] as Array<ActionFlowDisplayLevel>).map(level => {
+                                                    const selected = actionFlowDisplayLevel === level;
+                                                    return <button key={String(level)} type="button" className="w-full rounded px-2 py-1 text-left text-xs font-semibold" style={{ background: selected ? '#E8FBF5' : 'transparent', color: selected ? '#0F766E' : '#475569' }} onClick={() => { setActionFlowDisplayLevel(level); setActionFlowLevelsOpen(false); }}>
+                                                        {level === 'all' ? 'All levels' : `Level ${level}`}
+                                                    </button>;
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
 
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
 
                                 {/* How an expanded composite action shows its steps */}
-                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Steps</span>
-                                <Segmented
-                                    value={actionFlowNesting}
-                                    onChange={setActionFlowNesting}
-                                    options={[
-                                        { value: 'flat', label: 'Inline', title: 'Expanded steps join the parent flow in place' },
-                                        { value: 'nested', label: 'Nested', title: 'Expanded steps are drawn inside their composite action (swimlanes off)' },
-                                    ]}
-                                />
+                                {supportsToolbarOperation('flowNesting') && <IconToggle
+                                    icon={actionFlowNesting === 'flat' ? <Icon.split /> : <Icon.rectangle />}
+                                    active={actionFlowNesting === 'nested'}
+                                    onClick={() => setActionFlowNesting(current => current === 'flat' ? 'nested' : 'flat')}
+                                    title={actionFlowNesting === 'flat'
+                                        ? 'Steps: inline. Click to show nested steps.'
+                                        : 'Steps: nested. Click to show inline steps.'}
+                                />}
 
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
 
                                 {/* Reading direction — segmented control */}
-                                <Segmented
-                                    value={actionFlowDirection}
-                                    onChange={changeActionFlowDirection}
-                                    options={[
-                                        { value: 'horizontal', icon: <Icon.arrowRight />, title: 'Left-to-right flow' },
-                                        { value: 'vertical', icon: <Icon.arrowDown />, title: 'Top-to-bottom flow' },
-                                    ]}
-                                />
+                                {supportsToolbarOperation('flowDirection') && <IconToggle
+                                    icon={actionFlowDirection === 'horizontal' ? <Icon.arrowRight /> : <Icon.arrowDown />}
+                                    active={actionFlowDirection === 'vertical'}
+                                    onClick={() => changeActionFlowDirection(actionFlowDirection === 'horizontal' ? 'vertical' : 'horizontal')}
+                                    title={actionFlowDirection === 'horizontal'
+                                        ? 'Flow direction: left to right. Click for top to bottom.'
+                                        : 'Flow direction: top to bottom. Click for left to right.'}
+                                />}
 
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
+
+                                {supportsToolbarOperation('flowLegend') && <IconToggle
+                                    icon={<Icon.lanes />}
+                                    active={actionFlowLegendOpen}
+                                    onClick={() => setActionFlowLegendOpen(open => !open)}
+                                    title={actionFlowLegendOpen ? 'Hide flow legend' : 'Show flow legend'}
+                                />}
+                                {supportsToolbarOperation('flowLegend') && actionFlowLegendOpen && (
+                                    <IconToggle
+                                        icon={actionFlowLegendPlacement === 'overlay' ? <Icon.overlay /> : <Icon.arrowUp />}
+                                        active={actionFlowLegendPlacement === 'above'}
+                                        onClick={() => setActionFlowLegendPlacement(current => current === 'overlay' ? 'above' : 'overlay')}
+                                        title={actionFlowLegendPlacement === 'overlay'
+                                            ? 'Legend over diagram. Click to place it above.'
+                                            : 'Legend above diagram. Click to overlay it.'}
+                                    />
+                                )}
+
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
 
                                 {/* Tree state — clustered expand / collapse */}
-                                <ToolbarCluster>
-                                    <IconButton
-                                        icon={<Icon.expand />}
-                                        title="Expand all sub-actions"
-                                        onClick={() => setExpandedActionNodes(new Set(
-                                            Object.values(model?.elements ?? {})
-                                                .map(element => element.parentAction)
-                                                .filter((id): id is string => Boolean(id)),
-                                        ))}
-                                    />
-                                    <IconButton
-                                        icon={<Icon.collapse />}
-                                        title="Collapse all sub-actions"
-                                        onClick={() => setExpandedActionNodes(new Set())}
-                                    />
-                                </ToolbarCluster>
+                                <IconToggle
+                                    icon={<Icon.expand />}
+                                    title="Expand all sub-actions"
+                                    onClick={() => setExpandedActionNodes(new Set(
+                                        Object.values(model?.elements ?? {})
+                                            .map(element => element.parentAction)
+                                            .filter((id): id is string => Boolean(id)),
+                                    ))}
+                                />
+                                <IconToggle
+                                    icon={<Icon.collapse />}
+                                    title="Collapse all sub-actions"
+                                    onClick={() => setExpandedActionNodes(new Set())}
+                                />
 
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
 
                                 {/* Connection filter */}
-                                <div style={{ position: 'relative' }}>
+                                {supportsToolbarOperation('flowFilters') && <div style={{ position: 'relative' }}>
                                     <IconToggle
                                         icon={<Icon.filter />}
                                         active={flowFiltersOpen}
                                         badge={`${visibleActionFlowKinds.size}/4`}
+                                        fullWidth={false}
                                         onClick={() => setFlowFiltersOpen(open => !open)}
                                         title="Choose which modeled connection categories are visible"
                                     />
                                     {flowFiltersOpen && (
                                         <div
-                                            className="absolute top-full right-0 mt-2 p-3 rounded-lg"
-                                            style={{ width: 264, background: '#FFFFFF', border: '1px solid #D1D5DB', boxShadow: '0 8px 24px rgba(0,0,0,0.14)', zIndex: 30 }}
+                                            className="absolute p-3 rounded-lg"
+                                            style={{
+                                                width: 264,
+                                                ...(actionFlowToolbarPlacement === 'left'
+                                                    ? { top: 0, left: 'calc(100% + 8px)' }
+                                                    : { top: 'calc(100% + 8px)', right: 0 }),
+                                                background: '#FFFFFF', border: '1px solid #D1D5DB', boxShadow: '0 8px 24px rgba(0,0,0,0.14)', zIndex: 30,
+                                            }}
                                         >
                                             <div style={{ color: '#1F2937', fontWeight: 700, fontSize: FONT.xs }}>Show connection categories</div>
                                             <div style={{ color: '#6B7280', fontSize: FONT.xs, lineHeight: 1.4, marginTop: 3, marginBottom: 8 }}>
@@ -2581,7 +2732,7 @@ function DiagramCanvasInner() {
                                             })}
                                         </div>
                                     )}
-                                </div>
+                                </div>}
                                 {/* Drill-down: the ↳ button on a composite action, or double-click */}
                                 <DrillBreadcrumb
                                     path={actionPath}
@@ -2592,9 +2743,9 @@ function DiagramCanvasInner() {
                             </>
                         )}
 
-                        {viewKind === 'interconnection' && (
+                        {viewKind === 'interconnection' && supportsToolbarOperation('expandCollapse') && (
                             <>
-                                <ToolbarSep />
+                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
                                 <IconButton
                                     icon={<Icon.expand />}
                                     onClick={() => setCollapsedInterconnectionNodes(new Set())}
@@ -2605,26 +2756,53 @@ function DiagramCanvasInner() {
                                     onClick={() => setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds))}
                                     title="Collapse all parts" ariaLabel="Collapse all"
                                 />
-                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
-                                <Segmented
-                                    value={interconnectionPortDisplay}
-                                    onChange={setInterconnectionPortDisplay}
-                                    options={[
-                                        { value: 'all', label: 'Nested', title: 'Show ports and their nested ports' },
-                                        { value: 'ports', label: 'Top', title: 'Show top-level ports only (nested connectors lift to the parent port)' },
-                                        { value: 'none', label: 'Off', title: 'Hide ports; connectors run part to part' },
-                                    ]}
-                                />
-                                <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Connections</span>
-                                <Segmented
-                                    value={interconnectionConnectionDisplay}
-                                    onChange={setInterconnectionConnectionDisplay}
-                                    options={[
-                                        { value: 'summary', label: 'Summary', title: 'Show focused-subsystem boundary flows and bundle repeated rendered endpoint pairs' },
-                                        { value: 'all', label: 'All', title: 'Show every model connector' },
-                                        { value: 'none', label: 'Off', title: 'Hide connectors while inspecting block structure' },
-                                    ]}
-                                />
+                                {supportsToolbarOperation('interconnectionPorts') && supportsToolbarOperation('interconnectionConnections') && actionFlowToolbarPlacement === 'left' ? (
+                                    <>
+                                        <IconToggle
+                                            icon={interconnectionPortDisplay === 'all' ? <Icon.library /> : interconnectionPortDisplay === 'ports' ? <Icon.rectangle /> : <Icon.minus />}
+                                            active={interconnectionPortDisplay !== 'none'}
+                                            onClick={() => setInterconnectionPortDisplay(current => current === 'all' ? 'ports' : current === 'ports' ? 'none' : 'all')}
+                                            title={interconnectionPortDisplay === 'all'
+                                                ? 'Ports: nested. Click for top-level ports.'
+                                                : interconnectionPortDisplay === 'ports'
+                                                    ? 'Ports: top-level only. Click to hide ports.'
+                                                    : 'Ports: hidden. Click to show nested ports.'}
+                                        />
+                                        <IconToggle
+                                            icon={interconnectionConnectionDisplay === 'summary' ? <Icon.tidy /> : interconnectionConnectionDisplay === 'all' ? <Icon.lanes /> : <Icon.minus />}
+                                            active={interconnectionConnectionDisplay !== 'none'}
+                                            onClick={() => setInterconnectionConnectionDisplay(current => current === 'summary' ? 'all' : current === 'all' ? 'none' : 'summary')}
+                                            title={interconnectionConnectionDisplay === 'summary'
+                                                ? 'Connections: summary. Click to show all.'
+                                                : interconnectionConnectionDisplay === 'all'
+                                                    ? 'Connections: all. Click to hide them.'
+                                                    : 'Connections: hidden. Click for summary.'}
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
+                                        <Segmented
+                                            value={interconnectionPortDisplay}
+                                            onChange={setInterconnectionPortDisplay}
+                                            options={[
+                                                { value: 'all', label: 'Nested', title: 'Show ports and their nested ports' },
+                                                { value: 'ports', label: 'Top', title: 'Show top-level ports only (nested connectors lift to the parent port)' },
+                                                { value: 'none', label: 'Off', title: 'Hide ports; connectors run part to part' },
+                                            ]}
+                                        />
+                                        <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Connections</span>
+                                        <Segmented
+                                            value={interconnectionConnectionDisplay}
+                                            onChange={setInterconnectionConnectionDisplay}
+                                            options={[
+                                                { value: 'summary', label: 'Summary', title: 'Show focused-subsystem boundary flows and bundle repeated rendered endpoint pairs' },
+                                                { value: 'all', label: 'All', title: 'Show every model connector' },
+                                                { value: 'none', label: 'Off', title: 'Hide connectors while inspecting block structure' },
+                                            ]}
+                                        />
+                                    </>
+                                )}
                                 {/* Drill-down breadcrumb (double-click a part to descend) */}
                                 <DrillBreadcrumb
                                     path={interconnectionPath}
@@ -2635,7 +2813,7 @@ function DiagramCanvasInner() {
                             </>
                         )}
 
-                        {viewKind === 'statetransition' && (
+                        {viewKind === 'statetransition' && supportsToolbarOperation('expandCollapse') && (
                             <>
                                 <ToolbarSep />
                                 <IconButton
@@ -2659,7 +2837,7 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* General template mode switcher (KK-2) */}
-                        {isUseCaseDiagram && (
+                        {isUseCaseDiagram && supportsToolbarOperation('useCaseOptions') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <label className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#475569' }}>
@@ -2721,7 +2899,7 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* General template mode switcher (KK-2) */}
-                        {isGeneralTemplate && !isUseCaseDiagram && (
+                        {isGeneralTemplate && !isUseCaseDiagram && supportsToolbarOperation('generalMode') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
@@ -2736,7 +2914,7 @@ function DiagramCanvasInner() {
                                             title={m === 'graph' ? 'Relationship graph with compartments'
                                                 : m === 'tree' ? 'Decomposition tree with expand/collapse'
                                                 : 'Nested containment blocks'}>
-                                            {m}
+                                            {m === 'graph' ? <Icon.tidy /> : m === 'tree' ? <Icon.library /> : <Icon.rectangle />}
                                         </button>
                                     ))}
                                 </div>
@@ -2759,7 +2937,7 @@ function DiagramCanvasInner() {
                         )}
 
                         {/* Decomposition controls */}
-                        {isDecompDiagram && !isFBSDiagram && (
+                        {isDecompDiagram && !isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
                                 <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
@@ -2770,7 +2948,7 @@ function DiagramCanvasInner() {
                                                 background: layoutStyle === s ? '#1B3A4B' : '#FFFFFF',
                                                 color: layoutStyle === s ? '#FFFFFF' : '#6B7280',
                                             }}>
-                                            {s === 'containment' ? 'Containment' : 'Decomposition'}
+                                            {s === 'containment' ? <Icon.rectangle /> : <Icon.library />}
                                         </button>
                                     ))}
                                 </div>
@@ -2791,37 +2969,15 @@ function DiagramCanvasInner() {
 
                         {selectedDiagramId && (
                             <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                {!isUseCaseDiagram && <button
-                                    aria-pressed={autoLayoutEnabled}
-                                    onClick={() => {
-                                        if (autoLayoutEnabled) {
-                                            markManualLayout();
-                                        } else {
-                                            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
-                                            const layout: DiagramLayout = {
-                                                nodes: {},
-                                                edges: {},
-                                                canvas: { ...previous?.canvas, autoLayout: true },
-                                            };
-                                            mergeDiagramLayouts({ [selectedDiagramId]: layout });
-                                            sendDiagramLayoutUpdate(selectedDiagramId, layout);
-                                            setRelayoutNonce(value => value + 1);
-                                        }
-                                    }}
-                                    className="px-2 py-0.5 text-xs font-semibold rounded"
-                                    style={{
-                                        background: autoLayoutEnabled ? '#ECFDF5' : '#FFF7ED',
-                                        color: autoLayoutEnabled ? '#047857' : '#C2410C',
-                                        border: `1px solid ${autoLayoutEnabled ? '#A7F3D0' : '#FED7AA'}`,
-                                    }}
-                                    title={autoLayoutEnabled
-                                        ? 'Auto layout is on. Drag any item to switch it off and preserve your changes automatically.'
-                                        : 'Auto layout is off. Your changes are saved automatically; click to discard overrides and recalculate.'}
-                                >
-                                    Auto layout: {autoLayoutEnabled ? 'On' : 'Off'}
-                                </button>}
-                                <div id="memo-diagram-editor-controls" />
+                                {viewKind !== 'actionflow' && <span style={{ color: '#E5E5E0' }}>|</span>}
+                                {/* The source editor mounts its compact controls
+                                    here so every diagram action stays in the
+                                    dedicated tools dock. */}
+                                <div
+                                    id="memo-diagram-editor-controls"
+                                    data-compact-diagram-tools="true"
+                                    style={{ display: 'contents' }}
+                                />
                             </>
                         )}
 
@@ -2878,7 +3034,11 @@ function DiagramCanvasInner() {
                             </>
                         )}
                     </div>
-                )}
+                ))}
+                </aside>}
+
+                {/* ── Drawing surface ── */}
+                <div ref={canvasRef} className="flex-1 relative min-h-0" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
 
                 {/* Focus Mode toolbar (#22) */}
                 {focusNodeId && (
@@ -2996,29 +3156,35 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
-                {viewKind === 'actionflow' && (
+                {viewKind === 'actionflow' && actionFlowLegendOpen && (
                     <div
                         aria-label="Action flow legend"
-                        className="absolute right-3 bottom-3 z-10 flex items-center gap-4 px-3 py-2"
+                        className="absolute z-10 flex flex-col gap-2 px-3 py-2.5"
                         style={{
+                            top: actionFlowLegendPlacement === 'above' ? 8 : 12,
+                            right: 12,
+                            minWidth: 154,
                             background: 'rgba(255,255,255,0.96)', border: '1px solid #D1D5DB',
-                            borderRadius: 3, color: '#374151', fontSize: FONT.xs,
+                            borderRadius: 12, color: '#374151', fontSize: FONT.xs,
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)',
                         }}
                     >
-                        <span style={{ fontWeight: 700 }}>Legend</span>
-                        {visibleActionFlowKinds.has('control') && <span className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-4">
+                            <span style={{ fontWeight: 700 }}>Flow legend</span>
+                        </div>
+                        {visibleActionFlowKinds.has('control') && <span className="flex items-center gap-2">
                             <span style={{ width: 24, height: 0, borderTop: '2px solid #4B5563' }} />
                             Control flow
                         </span>}
-                        {visibleActionFlowKinds.has('data') && <span className="flex items-center gap-1.5">
+                        {visibleActionFlowKinds.has('data') && <span className="flex items-center gap-2">
                             <span style={{ width: 24, height: 0, borderTop: '2.5px solid #3498DB' }} />
                             Object flow
                         </span>}
-                        {visibleActionFlowKinds.has('energy') && <span className="flex items-center gap-1.5">
+                        {visibleActionFlowKinds.has('energy') && <span className="flex items-center gap-2">
                             <span style={{ width: 24, height: 0, borderTop: '2.5px solid #D97706' }} />
                             Energy flow
                         </span>}
-                        {visibleActionFlowKinds.has('material') && <span className="flex items-center gap-1.5">
+                        {visibleActionFlowKinds.has('material') && <span className="flex items-center gap-2">
                             <span style={{ width: 24, height: 0, borderTop: '2.5px solid #16A34A' }} />
                             Material flow
                         </span>}
@@ -3148,7 +3314,9 @@ function DiagramCanvasInner() {
                     defaultEdgeOptions={{ interactionWidth: 24 }}
                     snapToGrid={snapEnabled}
                     snapGrid={SNAP_GRID}
-                    fitView
+                    // Action-flow framing anchors the reading direction itself;
+                    // React Flow's initial generic fit would overwrite it.
+                    fitView={viewKind !== 'actionflow'}
                     fitViewOptions={{ ...RF_FIT_VIEW_OPTIONS, minZoom: fitMinZoom }}
                     minZoom={0.1}
                     maxZoom={3}
@@ -3164,11 +3332,30 @@ function DiagramCanvasInner() {
                     multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
                     selectionKeyCode={null}
                     proOptions={RF_PRO_OPTIONS}
-                    style={RF_STYLE}
+                    style={viewKind === 'actionflow' ? {
+                        ...RF_STYLE,
+                        position: 'absolute',
+                        left: 0,
+                        top: actionFlowLegendOpen && actionFlowLegendPlacement === 'above' ? 112 : 0,
+                        right: 0,
+                        bottom: 0,
+                        width: 'auto',
+                        height: 'auto',
+                    } : RF_STYLE}
                 >
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <ConnectorHoverStyles />
-                    <Controls position="bottom-right" showFitView style={{ marginBottom: 82 }}>
+                    <Controls position="bottom-right" showFitView={false} style={{ marginBottom: 82 }}>
+                        <ControlButton
+                            title="Fit diagram to view"
+                            aria-label="Fit diagram to view"
+                            onClick={() => fitDiagramFrame(250)}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
+                                <path d="M3 8l5-5M21 8l-5-5M21 16l-5 5M3 16l5 5" />
+                            </svg>
+                        </ControlButton>
                         <ControlButton
                             title="Toggle fullscreen canvas"
                             aria-label="Toggle fullscreen canvas"
@@ -3190,6 +3377,7 @@ function DiagramCanvasInner() {
                         />
                     )}
                 </ReactFlow>
+            </div>
             </div>
 
             {/* ── Overlays ── */}

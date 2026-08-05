@@ -49,18 +49,22 @@ export function WorkbenchToolbar() {
 
             <div className="flex-1" />
 
-            {metadata?.gitUser && (
+            {(metadata?.projectName || metadata?.gitUser) && (
                 <span
-                    title="Current model Git revision"
+                    title="Current project and Git revision"
                     style={{ color: 'rgba(255,255,255,0.62)', fontSize: '12px', whiteSpace: 'nowrap' }}
                 >
-                    @{metadata.gitUser}
-                    {metadata.gitBranch && <> · {metadata.gitBranch}</>}
-                    {metadata.gitCommitShort && (
-                        <span style={{ marginLeft: 4, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-                            {metadata.gitCommitShort}{metadata.gitDirty ? '*' : ''}
-                        </span>
-                    )}
+                    {metadata?.projectName && <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{metadata.projectName}</span>}
+                    {metadata?.projectName && metadata?.gitUser && <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.32)' }}>|</span>}
+                    {metadata?.gitUser && <>
+                        @{metadata.gitUser}
+                        {metadata.gitBranch && <> · {metadata.gitBranch}</>}
+                        {metadata.gitCommitShort && (
+                            <span style={{ marginLeft: 4, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                                {metadata.gitCommitShort}{metadata.gitDirty ? '*' : ''}
+                            </span>
+                        )}
+                    </>}
                 </span>
             )}
 

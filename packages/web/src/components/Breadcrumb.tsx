@@ -7,11 +7,39 @@ export function Breadcrumb() {
     const activeView = useModelStore(s => s.activeView);
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
+    const activeMode = useModelStore(s => s.activeMode);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
     const selectElement = useModelStore(s => s.selectElement);
     const setActiveView = useModelStore(s => s.setActiveView);
     const navigate = useNavigate();
 
     const crumbs: { label: string; onClick?: () => void }[] = [];
+
+    // The detail trail explains *where* the user is in a model, but not which
+    // top-level workspace they selected. Render that choice as a visual badge
+    // rather than another easily-overlooked breadcrumb segment.
+    const workspace = (() => {
+        switch (activeView.type) {
+            // The diagram's viewpoint is already represented by the left
+            // Viewpoints explorer (or its vertical collapsed rail). Repeating
+            // it here as a green workspace badge competes with that pattern.
+            case 'diagram': return undefined;
+            case 'element-detail': return { label: 'Model Explorer', icon: '☰', onClick: () => { setActiveMode('catalog'); setActiveView({ type: 'welcome' }); navigate('/catalog'); } };
+            case 'dsm': return { label: 'DSM Analysis', icon: '▦', onClick: () => { setActiveView({ type: 'dsm' }); navigate('/dsm'); } };
+            case 'traceability': return { label: 'Traceability Matrix', icon: '☷', onClick: () => { setActiveView({ type: 'traceability' }); navigate('/traceability'); } };
+            case 'ontology':
+            case 'ontology-detail': return { label: 'Ontology Explorer', icon: '◉', onClick: () => { setActiveView({ type: 'ontology' }); navigate('/ontology'); } };
+            case 'scenario-editor': return { label: 'Use Cases', icon: '▶', onClick: () => { setActiveMode('scenario'); setActiveView({ type: 'scenario-editor' }); navigate('/use-cases'); } };
+            case 'dhf-dashboard':
+            case 'dhf-dashboard-legacy':
+            case 'dhf-document': return { label: 'Documents', icon: '⊞', onClick: () => { setActiveMode('dhf'); setActiveView({ type: 'dhf-dashboard' }); navigate('/dhf'); } };
+            case 'welcome':
+                if (activeMode === 'diagram') return { label: 'Viewpoints', icon: '⊟', onClick: () => navigate('/diagrams') };
+                if (activeMode === 'catalog') return { label: 'Model Explorer', icon: '☰', onClick: () => navigate('/catalog') };
+                return undefined;
+            default: return undefined;
+        }
+    })();
 
     // Build breadcrumb trail based on active view
     switch (activeView.type) {
@@ -52,16 +80,9 @@ export function Breadcrumb() {
             break;
         }
         case 'dsm':
-            crumbs.push({ label: 'Tools' });
-            crumbs.push({ label: 'DSM' });
-            break;
         case 'traceability':
-            crumbs.push({ label: 'Tools' });
-            crumbs.push({ label: 'Traceability Matrix' });
-            break;
         case 'ontology':
-            crumbs.push({ label: 'Tools' });
-            crumbs.push({ label: 'Ontology' });
+        case 'ontology-detail':
             break;
         case 'welcome':
             // No breadcrumb on home — MEMO Architect title is already the home button
@@ -79,23 +100,28 @@ export function Breadcrumb() {
         }
     }
 
-    if (crumbs.length === 0) return null;
+    if (!workspace && crumbs.length === 0) return null;
 
     return (
         <div className="flex items-center gap-1 px-4 py-1.5" style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E0' }}>
-            <button
-                className="text-xs px-1 py-0.5 rounded transition-colors"
-                style={{ color: '#9CA3AF' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#374151'; e.currentTarget.style.background = '#F0F0ED'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.background = 'transparent'; }}
-                onClick={() => setActiveView({ type: 'welcome' })}
-                title="Home"
-            >
-                {'\u2302'}
-            </button>
+            {workspace && (
+                <button
+                    type="button"
+                    onClick={workspace.onClick}
+                    className="flex items-center gap-1 rounded-md"
+                    title={`Active workspace: ${workspace.label}`}
+                    style={{
+                        padding: '4px 8px', background: '#E8FBF5', border: '1px solid #A7F3D0',
+                        color: '#0F766E', fontSize: '11px', fontWeight: 700, letterSpacing: '0.01em', cursor: 'pointer',
+                    }}
+                >
+                    <span aria-hidden="true" style={{ fontSize: '13px', lineHeight: 1 }}>{workspace.icon}</span>
+                    {workspace.label}
+                </button>
+            )}
             {crumbs.map((crumb, i) => (
                 <span key={i} className="flex items-center gap-1">
-                    <span className="text-xs" style={{ color: '#D1D5DB' }}>/</span>
+                    {(workspace || i > 0) && <span className="text-xs" style={{ color: '#D1D5DB' }}>/</span>}
                     {crumb.onClick ? (
                         <button
                             className="text-xs px-1 py-0.5 rounded transition-colors"

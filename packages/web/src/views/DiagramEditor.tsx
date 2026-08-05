@@ -29,6 +29,7 @@ import type { DiagramDTO, MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 import { DiagramSurface } from './DiagramSurface';
+import { Icon } from './DiagramToolbarControls';
 
 const SysmlCodeEditor = lazy(() => import('../components/SysmlCodeEditor').then(module => ({ default: module.SysmlCodeEditor })));
 
@@ -548,9 +549,43 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
         </div>
     );
 
-    const editorControls = (
+    const compactDiagramTools = toolbarHost?.dataset.compactDiagramTools === 'true';
+    const nextEditorMode: Record<EditorMode, EditorMode> = { visual: 'split', split: 'text', text: 'visual' };
+    const editorModeLabel: Record<EditorMode, string> = { visual: 'Visual', split: 'Both', text: 'Text' };
+    const editorModeIcon = mode === 'visual' ? <Icon.eye /> : mode === 'split' ? <Icon.split /> : <Icon.code />;
+    const editorControls = toolbarHost ? (
         <>
-            {toolbarHost && <span aria-hidden="true" style={{ color: '#E5E5E0' }}>|</span>}
+            {isTextEditable && (
+                <button type="button" aria-label={`Auto-save ${autoSave ? 'on' : 'off'}`} aria-pressed={autoSave} onClick={() => setAutoSave(value => !value)} title={`Auto-save ${autoSave ? 'on' : 'off'}. Click to turn it ${autoSave ? 'off' : 'on'}.`}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', padding: 0, borderRadius: 5, border: `1px solid ${autoSave ? '#A7F3D0' : COLOR.border}`,
+                        cursor: 'pointer', background: autoSave ? '#ECFDF5' : '#FFFFFF', color: autoSave ? '#047857' : COLOR.secondary }}>
+                    <Icon.clock />
+                </button>
+            )}
+            {isTextEditable && (
+                <button aria-label="Save SysML" onClick={handleSave} disabled={!isDirty || isSaving || isLoadingSource} title="Save SysML (Ctrl/Cmd+S)"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', padding: 0, borderRadius: 5, border: `1px solid ${COLOR.border}`,
+                        cursor: !isDirty || isSaving || isLoadingSource ? 'default' : 'pointer', background: isDirty ? COLOR.accent : '#F0F0ED',
+                        color: isDirty ? '#FFFFFF' : COLOR.faint }}>
+                    <Icon.save />
+                </button>
+            )}
+            {compactDiagramTools ? (
+                <button type="button" aria-label={`Editor mode: ${editorModeLabel[mode]}`} title={`Editor mode: ${editorModeLabel[mode]}. Click to switch to ${editorModeLabel[nextEditorMode[mode]]}.`} onClick={() => setMode(nextEditorMode[mode])}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', borderRadius: 5, border: `1px solid #1B3A4B`, cursor: 'pointer', background: '#1B3A4B', color: '#FFFFFF' }}>
+                    {editorModeIcon}
+                </button>
+            ) : (
+                <select aria-label="Diagram editor view" title="Choose editor view" value={mode} onChange={event => setMode(event.target.value as EditorMode)}
+                    style={{ fontSize: FONT.xs, height: 28, padding: '0 6px', borderRadius: 5, border: `1px solid ${COLOR.border}`, background: '#FFFFFF', color: COLOR.primary }}>
+                    <option value="visual">Visual</option>
+                    <option value="split">Both</option>
+                    <option value="text">Text</option>
+                </select>
+            )}
+        </>
+    ) : (
+        <>
             <RefreshIndicator at={refreshedAt} />
             {isLoadingSource && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Loading source…</span>}
             {isSaving && <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>Saving…</span>}
@@ -589,12 +624,44 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div
-                className="flex items-center justify-center px-3 py-2"
+                className="relative flex items-center justify-center px-3 py-2"
                 style={{ borderBottom: `1px solid ${COLOR.border}`, background: '#FAFAF8', flexShrink: 0 }}
             >
+                {mode !== 'visual' && (
+                    <button
+                        type="button"
+                        onClick={() => setMode('visual')}
+                        title="Return to the visual diagram"
+                        className="absolute left-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold"
+                        style={{ border: `1px solid ${COLOR.border}`, background: '#FFFFFF', color: COLOR.primary }}
+                    >
+                        <Icon.eye />
+                        Return to diagram
+                    </button>
+                )}
                 <span className="truncate" style={{ color: COLOR.primary, fontSize: FONT.md, fontWeight: 700 }}>
                     {diagram.name}
                 </span>
+                {mode === 'visual' && <div className="absolute right-3 flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new Event('memo:toggle-diagram-elements'))}
+                        title="Show or hide Diagram Elements"
+                        aria-label="Show or hide Diagram Elements"
+                        style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLOR.border}`, borderRadius: 5, background: '#FFFFFF', color: COLOR.secondary, cursor: 'pointer' }}
+                    >
+                        <Icon.elements size={18} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new Event('memo:toggle-diagram-toolbar'))}
+                        title="Show or hide Toolbar"
+                        aria-label="Show or hide Toolbar"
+                        style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLOR.border}`, borderRadius: 5, background: '#FFFFFF', color: COLOR.secondary, cursor: 'pointer' }}
+                    >
+                        <Icon.tools size={18} />
+                    </button>
+                </div>}
             </div>
             {/* ── Body ── */}
             <div className="flex flex-1 overflow-hidden">
@@ -612,9 +679,10 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                 )}
             </div>
 
-            {toolbarHost
-                ? createPortal(<div className="flex items-center gap-2">{editorControls}</div>, toolbarHost)
-                : <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderTop: `1px solid ${COLOR.border}`, background: '#FAFAF8', flexShrink: 0 }}>{editorControls}</div>}
+            {toolbarHost && createPortal(
+                <div className={compactDiagramTools ? 'contents' : 'flex flex-wrap items-center gap-2'}>{editorControls}</div>,
+                toolbarHost,
+            )}
         </div>
     );
 }

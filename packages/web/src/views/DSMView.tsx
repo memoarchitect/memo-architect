@@ -7,7 +7,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
-import { computeDSM, reorderDSM, type DSMResult, type DSMCell } from '../analysis/dsm';
+import { analyzeDSM, computeDSM, reorderDSM, type DSMResult, type DSMCell } from '../analysis/dsm';
 import { analyzeConsistency, type ConsistencyIssue } from '../analysis/consistency';
 import { LAYER_COLORS, REL_COLORS } from '../constants';
 
@@ -41,17 +41,42 @@ export function DSMView() {
     const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
     const [rowKind, setRowKind] = useState('__all__');
     const [columnKind, setColumnKind] = useState('__all__');
+    const [hierarchyParentKind, setHierarchyParentKind] = useState('__flat__');
+    const [includedGroups, setIncludedGroups] = useState<Set<string>>(new Set());
+    const [excludedGroups, setExcludedGroups] = useState<Set<string>>(new Set());
 
     const availableKinds = useMemo(() => [...new Set(Object.values(model?.elements ?? {}).map(element => element.kind))].sort(), [model]);
+    const availableGroups = useMemo(() => [...new Set(Object.values(model?.elements ?? {}).map(element => element.attributes?.group).filter((group): group is string => Boolean(group)))].sort(), [model]);
     const rowKinds = rowKind === '__all__' ? availableKinds : [rowKind];
     const columnKinds = columnKind === '__all__' ? availableKinds : [columnKind];
     const isSquareSelection = rowKind === columnKind;
 
     const dsm = useMemo<DSMResult | null>(() => {
         if (!model) return null;
-        const raw = computeDSM(model, { rowKinds, columnKinds });
+        const raw = computeDSM(model, {
+            rowKinds,
+            columnKinds,
+            includeGroups: [...includedGroups],
+            excludeGroups: [...excludedGroups],
+            hierarchyParentKind: hierarchyParentKind === '__flat__' ? undefined : hierarchyParentKind,
+        });
         return showClusters && isSquareSelection ? reorderDSM(raw) : raw;
-    }, [model, showClusters, rowKinds, columnKinds, isSquareSelection]);
+    }, [model, showClusters, rowKinds, columnKinds, isSquareSelection, includedGroups, excludedGroups, hierarchyParentKind]);
+
+    const dsmAnalysis = useMemo(() => dsm ? analyzeDSM(dsm) : null, [dsm]);
+
+    const setGroupMode = useCallback((group: string, mode: 'include' | 'exclude' | 'all') => {
+        setIncludedGroups(current => {
+            const next = new Set(current);
+            if (mode === 'include') next.add(group); else next.delete(group);
+            return next;
+        });
+        setExcludedGroups(current => {
+            const next = new Set(current);
+            if (mode === 'exclude') next.add(group); else next.delete(group);
+            return next;
+        });
+    }, []);
 
     const consistency = useMemo(() => {
         if (!model) return null;
@@ -151,6 +176,33 @@ export function DSMView() {
                         {availableKinds.map(kind => <option key={kind} value={kind}>{kind}</option>)}
                     </select>
                 </label>
+                <label className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }} title="Roll child dependencies up to the nearest matching parent">
+                    Hierarchy
+                    <select value={hierarchyParentKind} onChange={event => setHierarchyParentKind(event.target.value)} style={{ border: '1px solid #E5E5E0', borderRadius: 4, padding: '2px 5px', background: '#FFFFFF' }}>
+                        <option value="__flat__">Flat</option>
+                        {availableKinds.map(kind => <option key={kind} value={kind}>Parent: {kind}</option>)}
+                    </select>
+                </label>
+                {availableGroups.length > 0 && (
+                    <details style={{ position: 'relative', fontSize: '12px', color: '#6B7280' }}>
+                        <summary style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Groups{includedGroups.size || excludedGroups.size ? ` (${includedGroups.size + excludedGroups.size})` : ''}
+                        </summary>
+                        <div style={{ position: 'absolute', right: 0, top: '22px', zIndex: 20, width: '235px', padding: '10px', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: '6px', boxShadow: '0 4px 14px rgba(0,0,0,.12)' }}>
+                            <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '6px' }}>Include limits the matrix; exclude always removes.</div>
+                            {availableGroups.map(group => {
+                                const mode = includedGroups.has(group) ? 'include' : excludedGroups.has(group) ? 'exclude' : 'all';
+                                return <label key={group} className="flex items-center justify-between gap-2" style={{ padding: '3px 0' }}>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={group}>{group}</span>
+                                    <select aria-label={`${group} filter`} value={mode} onChange={event => setGroupMode(group, event.target.value as 'include' | 'exclude' | 'all')} style={{ border: '1px solid #E5E5E0', borderRadius: 3, padding: '1px 3px', background: '#FFF' }}>
+                                        <option value="all">All</option><option value="include">Include</option><option value="exclude">Exclude</option>
+                                    </select>
+                                </label>;
+                            })}
+                            {(includedGroups.size > 0 || excludedGroups.size > 0) && <button onClick={() => { setIncludedGroups(new Set()); setExcludedGroups(new Set()); }} style={{ marginTop: '7px', fontSize: '11px', color: '#2563EB' }}>Clear filters</button>}
+                        </div>
+                    </details>
+                )}
                 <label className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
                     Columns
                     <select value={columnKind} onChange={event => setColumnKind(event.target.value)} style={{ border: '1px solid #E5E5E0', borderRadius: 4, padding: '2px 5px', background: '#FFFFFF' }}>
@@ -185,6 +237,16 @@ export function DSMView() {
 
             {/* Matrix */}
             <div className="flex-1 overflow-auto p-4">
+                {dsmAnalysis && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        {[
+                            ['Feedback', dsmAnalysis.feedbackDependencies, 'dependencies below the diagonal'],
+                            ['Couplings', dsmAnalysis.coupledPairs, 'pairs with dependencies in both directions'],
+                            ['Isolated', dsmAnalysis.isolatedElements, 'elements with no visible dependencies'],
+                            ['Max degree', dsmAnalysis.maxDegree, 'largest direct dependency count'],
+                        ].map(([label, value, title]) => <div key={label as string} title={title as string} style={{ padding: '5px 8px', borderRadius: 5, border: '1px solid #E5E5E0', background: '#FFF', fontSize: '11px', color: '#6B7280' }}><strong style={{ color: '#374151' }}>{value}</strong> {label}</div>)}
+                    </div>
+                )}
                 <div style={{ display: 'inline-block', position: 'relative' }}>
                     {/* Column headers (rotated) */}
                     <div style={{ display: 'flex', marginLeft: LABEL_WIDTH, marginBottom: '4px' }}>
@@ -287,6 +349,7 @@ export function DSMView() {
                                         }}
                                     />
                                     {rowEl.name}
+                                    {rowEl.memberCount && rowEl.memberCount > 1 && <span style={{ fontSize: '9px', color: '#9CA3AF' }}>({rowEl.memberCount})</span>}
                                 </div>
 
                                 {/* Cells */}

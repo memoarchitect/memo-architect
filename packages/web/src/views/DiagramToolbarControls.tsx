@@ -26,8 +26,18 @@ const svg = (size: number, children: React.ReactNode) => (
 export const Icon = {
     arrowRight: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 12h14" /><path d="M13 6l6 6-6 6" /></>),
     arrowDown: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 4v14" /><path d="M6 13l6 6 6-6" /></>),
+    arrowUp: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 20V6" /><path d="m6 11 6-6 6 6" /></>),
+    panelCollapse: ({ size = 16 }: IconProps) => svg(size, <><path d="M18 4v16" /><path d="m13 7-5 5 5 5" /></>),
+    elements: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="6" height="6" rx="1" /><circle cx="17" cy="7" r="3" /><path d="m7 14 4 6H3z" /><path d="m17 14 3 3-3 3-3-3z" /></>),
+    tools: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="1.8" fill="currentColor" /><circle cx="15" cy="12" r="1.8" fill="currentColor" /><circle cx="11" cy="18" r="1.8" fill="currentColor" /></>),
+    overlay: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="7" width="12" height="12" rx="1.5" /><rect x="8" y="3" width="12" height="12" rx="1.5" /></>),
+    eye: ({ size = 16 }: IconProps) => svg(size, <><path d="M2.5 12s3.4-5 9.5-5 9.5 5 9.5 5-3.4 5-9.5 5-9.5-5-9.5-5Z" /><circle cx="12" cy="12" r="2.2" /></>),
+    split: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></>),
+    code: ({ size = 16 }: IconProps) => svg(size, <><path d="m8 7-4 5 4 5M16 7l4 5-4 5M14 4l-4 16" /></>),
     lanes: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="5" width="18" height="3.4" rx="1.3" /><rect x="3" y="10.3" width="18" height="3.4" rx="1.3" /><rect x="3" y="15.6" width="18" height="3.4" rx="1.3" /></>),
+    lanesOff: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="5" width="18" height="3.4" rx="1.3" /><rect x="3" y="15.6" width="18" height="3.4" rx="1.3" /><path d="M4 20 20 4" /></>),
     grid: ({ size = 16 }: IconProps) => svg(size, <><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" /><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17" /></>),
+    gridOff: ({ size = 16 }: IconProps) => svg(size, <><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" /><path d="M4 20 20 4" /></>),
     expand: ({ size = 16 }: IconProps) => svg(size, <><path d="M15 4h5v5" /><path d="M9 20H4v-5" /><path d="M20 4l-7 7" /><path d="M4 20l7-7" /></>),
     collapse: ({ size = 16 }: IconProps) => svg(size, <><path d="M14 10h5" /><path d="M19 10V5" /><path d="M10 14H5" /><path d="M5 14v5" /><path d="M20 4l-6 6" /><path d="M4 20l6-6" /></>),
     filter: ({ size = 16 }: IconProps) => svg(size, <path d="M4 5h16l-6.2 7.4V19l-3.6 1.8v-8.4z" />),
@@ -37,15 +47,20 @@ export const Icon = {
     capture: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M8 6l1.5-2h5L16 6" /><circle cx="12" cy="12.5" r="3.2" /></>),
     info: ({ size = 16 }: IconProps) => svg(size, <><circle cx="12" cy="12" r="9" /><path d="M12 10.5v6" /><path d="M12 7.5h.01" /></>),
     plus: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 5v14" /><path d="M5 12h14" /></>),
+    minus: ({ size = 16 }: IconProps) => svg(size, <path d="M5 12h14" />),
     library: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="M17 5l3 14" /></>),
     detect: ({ size = 16 }: IconProps) => svg(size, <><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" /><rect x="7" y="8" width="10" height="8" rx="1.5" strokeDasharray="2 2" /></>),
     // Two connectors settling into parallel orthogonal lanes.
     tidy: ({ size = 16 }: IconProps) => svg(size, <><path d="M3 7h6l4-4h8" /><path d="M3 17h6l4 4h8" /><circle cx="3" cy="7" r="1.3" /><circle cx="3" cy="17" r="1.3" /></>),
+    arrange: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="5" rx="1" /><rect x="15" y="4" width="5" height="5" rx="1" /><rect x="4" y="15" width="5" height="5" rx="1" /><rect x="15" y="15" width="5" height="5" rx="1" /><path d="m10.5 7 3 0M12 10.5v3" /></>),
     download: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 4v11" /><path d="M7.5 10.5 12 15l4.5-4.5" /><path d="M4 16v3h16v-3" /></>),
+    save: ({ size = 16 }: IconProps) => svg(size, <><path d="M5 3h12l3 3v15H5z" /><path d="M8 3v6h8V3M8 20v-7h8v7" /></>),
+    clock: ({ size = 16 }: IconProps) => svg(size, <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></>),
 };
 
 // ─── Divider between toolbar groups ──────────────────────────────────────────
-export function ToolbarSep() {
+export function ToolbarSep({ hidden = false }: { hidden?: boolean }) {
+    if (hidden) return null;
     return <span aria-hidden="true" style={{ width: 1, height: 18, background: '#E2E1DB', margin: '0 3px', borderRadius: 1 }} />;
 }
 
@@ -138,13 +153,15 @@ export function IconButton({ icon, label, onClick, active = false, title, ariaEx
 }
 
 // ─── Standalone icon toggle (rounded, own border) ────────────────────────────
-export function IconToggle({ icon, label, onClick, active = false, title, badge }: {
+export function IconToggle({ icon, label, onClick, active = false, title, badge, fullWidth = false }: {
     icon: React.ReactNode;
     label?: React.ReactNode;
     onClick: () => void;
     active?: boolean;
     title?: string;
     badge?: React.ReactNode;
+    /** Fill the available toolbar cell (used by the full-width filter action). */
+    fullWidth?: boolean;
 }) {
     return (
         <button
@@ -153,6 +170,8 @@ export function IconToggle({ icon, label, onClick, active = false, title, badge 
             aria-pressed={active}
             className="flex items-center gap-1.5 text-xs font-semibold"
             style={{
+                width: fullWidth ? '100%' : undefined,
+                justifyContent: fullWidth ? 'center' : undefined,
                 padding: (badge != null || label != null) ? '5px 9px' : '5px 7px',
                 borderRadius: 9,
                 border: `1px solid ${active ? ACTIVE : '#E2E1DB'}`,

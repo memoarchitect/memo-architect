@@ -49,6 +49,16 @@ function ChevronIcon({ expanded, size = 14, color = COLOR.muted }: { expanded: b
     );
 }
 
+/** Standard collapse-all glyph for explorer trees; avoids the ambiguous ⇱ text symbol. */
+function CollapseAllIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 3h4v4M13 3H9v4M3 13h4V9M13 13H9V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M7 7 4 4M9 7l3-3M7 9l-3 3M9 9l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 // ─── Tree Icons ──────────────────────────────────────────────────────────────
 
 function FolderIcon({ open, color = COLOR.muted }: { open: boolean; color?: string }) {
@@ -2062,6 +2072,10 @@ export function ExplorerPanel() {
     const model = useModelStore(s => s.model);
     const activeMode = useModelStore(s => s.activeMode);
     const activeView = useModelStore(s => s.activeView);
+    const viewpointDiagram = activeView.type === 'diagram'
+        && model?.diagrams?.find(diagram => diagram.id === activeView.diagramId)?.viewpointId
+        && model.diagrams.find(diagram => diagram.id === activeView.diagramId)?.viewpointId !== '__model';
+    const explorerLabel = viewpointDiagram || activeMode === 'diagram' ? 'Viewpoints' : 'Model Explorer';
     // `preferredWidth` is what the user asked for and what we persist; `sidebarWidth`
     // is what fits on screen today. Keeping them apart means shrinking the window
     // (or a transient zero-width one) narrows the panel without losing the preference.
@@ -2139,15 +2153,15 @@ export function ExplorerPanel() {
         return (
             <button
                 type="button"
-                className="flex flex-col items-center flex-shrink-0"
+                className="flex flex-col items-center py-2 gap-1 flex-shrink-0"
                 onClick={toggleSidebar}
-                title="Expand Model Explorer"
-                aria-label="Expand Model Explorer"
-                style={{ width: 40, background: '#FAFAF8', border: 'none', borderRight: `1px solid ${COLOR.border}`, cursor: 'pointer' }}
+                title={`Expand ${explorerLabel}`}
+                aria-label={`Expand ${explorerLabel}`}
+                style={{ width: 36, background: '#FAFAF8', border: 'none', borderRight: `1px solid ${COLOR.border}`, cursor: 'pointer' }}
             >
-                <span style={{ color: COLOR.muted, fontSize: 20, lineHeight: 1, marginTop: 10 }}>▸</span>
-                <span style={{ color: COLOR.muted, fontSize: FONT.xs, fontWeight: 600, writingMode: 'vertical-rl', marginTop: 10, letterSpacing: '0.06em' }}>
-                    Model Explorer
+                <span style={{ color: COLOR.muted, fontSize: 18, lineHeight: 1 }}>›</span>
+                <span style={{ color: COLOR.muted, fontSize: 10, writingMode: 'vertical-rl' }}>
+                    {explorerLabel}
                 </span>
             </button>
         );
@@ -2162,23 +2176,25 @@ export function ExplorerPanel() {
             }}
         >
 
-            <button
-                type="button"
-                onClick={toggleSidebar}
-                title="Collapse Model Explorer"
-                aria-label="Collapse Model Explorer"
-                style={{
-                    position: 'absolute', top: 5, right: 5, zIndex: 2, width: 28, height: 28,
-                    border: 'none', borderRadius: 5, background: 'transparent', color: COLOR.muted,
-                    cursor: 'pointer', fontSize: 20, lineHeight: 1,
-                }}
-            >
-                ◂
-            </button>
+            <div className="flex items-center justify-between px-3 py-2" style={{ background: COLOR.surfaceAlt, borderBottom: `1px solid ${COLOR.border}`, flexShrink: 0 }}>
+                <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151' }}>{explorerLabel}</span>
+                <button
+                    type="button"
+                    onClick={toggleSidebar}
+                    title={`Collapse ${explorerLabel}`}
+                    aria-label={`Collapse ${explorerLabel}`}
+                    style={{
+                        width: 28, height: 28, border: `1px solid ${COLOR.border}`, borderRadius: 5, background: '#FFFFFF', color: COLOR.muted,
+                        cursor: 'pointer', fontSize: 18, lineHeight: 1,
+                    }}
+                >
+                    ‹
+                </button>
+            </div>
 
-            {/* A diagram always needs the model tree for inspection and
-                navigation, even when it was opened from the Dashboard. */}
-            {activeView.type === 'diagram' ? (
+            {/* Diagrams that conform to a viewpoint keep their viewpoint tree
+                visible; standalone model diagrams retain the model tree. */}
+            {activeView.type === 'diagram' && !viewpointDiagram ? (
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
                         <div className="flex gap-1">
@@ -2187,7 +2203,7 @@ export function ExplorerPanel() {
                                 onKeyDown={e => { if (e.key === 'Enter') window.dispatchEvent(new Event('memo:expand-explorer-search')); }}
                                 className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                                 style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                            <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" className="px-2 rounded-lg" style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}>⇱</button>
+                            <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
                         </div>
                     </div>
                     <ModelExplorerContent searchTerm={searchTerm} />
@@ -2196,7 +2212,7 @@ export function ExplorerPanel() {
                 <DashboardSidebar />
             ) : activeMode === 'dhf' ? (
                 <DhfExplorerContent />
-            ) : activeMode === 'diagram' ? (
+            ) : (activeMode === 'diagram' || viewpointDiagram) ? (
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
                         <input type="text" placeholder="Search viewpoints and views..." value={searchTerm}
@@ -2222,7 +2238,7 @@ export function ExplorerPanel() {
                             onKeyDown={e => { if (e.key === 'Enter') window.dispatchEvent(new Event('memo:expand-explorer-search')); }}
                             className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                             style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
-                        <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" className="px-2 rounded-lg" style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}>⇱</button>
+                        <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
                         </div>
                     </div>
                     <ModelExplorerContent searchTerm={searchTerm} />

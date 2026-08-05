@@ -14,6 +14,7 @@ import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
 import { UNCATEGORIZED_ID, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
+import { MemoBrandMark } from '../components/MemoBrandMark';
 
 export function DiagramHomePage() {
     const model = useModelStore(s => s.model);
@@ -71,13 +72,10 @@ export function DiagramHomePage() {
 
     return (
         <div style={{ flex: 1, overflow: 'auto', background: '#F7F7F5', padding: '32px 40px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, color: COLOR.primary, marginBottom: '4px', marginTop: 0 }}>
-                Viewpoints
-            </h1>
-            <p style={{ color: COLOR.muted, fontSize: FONT.sm, marginTop: 0, marginBottom: '24px' }}>
-                {total} model {total === 1 ? 'view' : 'views'} across {groups.length}{' '}
-                {groups.length === 1 ? 'viewpoint' : 'viewpoints'}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div><h1 style={{ fontSize: '20px', fontWeight: 700, color: COLOR.primary, margin: '0 0 4px' }}>Viewpoints</h1><p style={{ color: COLOR.muted, fontSize: FONT.sm, margin: 0 }}>{total} model {total === 1 ? 'view' : 'views'} across {groups.length}{' '}{groups.length === 1 ? 'viewpoint' : 'viewpoints'}</p></div>
+                <MemoBrandMark size={132} />
+            </div>
 
             {total === 0 && (
                 <p style={{ color: COLOR.muted, fontSize: FONT.sm }}>

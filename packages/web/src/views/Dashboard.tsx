@@ -312,12 +312,20 @@ export function Dashboard() {
 
                 {/* Header */}
                 <div style={{ marginBottom: '28px' }}>
-                    <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B3A4B', margin: '0 0 4px 0' }}>
-                        {stats.projectName}
-                    </h1>
-                    <p style={{ fontSize: '13px', color: '#4B6E80', margin: 0 }}>
-                        Model dashboard · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </p>
+                    <div style={{ position: 'relative', width: 260, height: 154, overflow: 'hidden', margin: '0 auto -10px', opacity: 0.62 }} title="MEMO Architect" aria-label="MEMO Architect">
+                        <img src="/logo.png" alt="" aria-hidden="true" style={{ width: 260, height: 260, objectFit: 'contain', transform: 'translateY(-32px)', mixBlendMode: 'multiply' }} />
+                        <span style={{ position: 'absolute', left: '59%', top: 115, color: '#8B949E', fontSize: 20, fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                            Architect
+                        </span>
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B3A4B', margin: '0 0 4px 0' }}>
+                            {stats.projectName}
+                        </h1>
+                        <p style={{ fontSize: '13px', color: '#4B6E80', margin: 0 }}>
+                            Model dashboard · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Stat cards */}

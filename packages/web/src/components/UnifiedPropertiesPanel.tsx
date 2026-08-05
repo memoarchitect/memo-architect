@@ -715,11 +715,11 @@ export function UnifiedPropertiesPanel() {
                 title="Expand properties"
             >
                 <div className="flex items-center justify-center mt-2" style={{
-                    color: '#6B7280', fontSize: '20px', width: '32px', height: '32px', borderRadius: '6px',
-                }}>{'\u25C2'}</div>
+                    color: '#6B7280', fontSize: '18px', width: '32px', height: '32px', borderRadius: '6px',
+                }}>‹</div>
                 <div style={{
                     writingMode: 'vertical-rl', textOrientation: 'mixed',
-                    color: '#6B7280', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em',
+                    color: '#6B7280', fontSize: '10px', fontWeight: 400,
                 }}>
                     Properties
                 </div>
@@ -732,21 +732,21 @@ export function UnifiedPropertiesPanel() {
 
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
-            <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid #EDEDEA' }}>
-                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Properties</span>
+            <div className="flex items-center justify-between px-3 py-2" style={{ background: '#F0F0ED', borderBottom: '1px solid #E5E5E0', flexShrink: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Properties</span>
                 <button
                     onClick={togglePropertiesPanel}
                     className="flex items-center justify-center"
                     style={{
-                        color: '#6B7280', fontSize: '20px', lineHeight: 1,
-                        width: '32px', height: '32px', borderRadius: '6px',
+                        color: '#6B7280', fontSize: '18px', lineHeight: 1,
+                        width: '28px', height: '28px', borderRadius: '5px', background: '#FFFFFF', border: '1px solid #E5E5E0',
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = '#374151'}
                     onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
                     title="Collapse properties"
                     aria-label="Collapse properties"
                 >
-                    {'\u25B8'}
+                    ›
                 </button>
             </div>
 

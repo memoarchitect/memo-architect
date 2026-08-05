@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
 import { isFeatureEnabled, type FeatureId } from '../config/feature-flags';
 import { WorkspaceManager } from './WorkspaceManager';
+import { DhfSettingsPanel } from '../views/DhfSettingsPanel';
 
 const DOCS_URL = '/help/';
 const JUPYTER_URL = 'http://127.0.0.1:8888/lab/tree/';
@@ -42,6 +43,7 @@ interface ToolItem {
 function AnalysisDropdown() {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+    const setActiveView = useModelStore(s => s.setActiveView);
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
@@ -99,6 +101,18 @@ function AnalysisDropdown() {
                         <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>⌁</span>
                         Jupyter Notebooks
                     </a>
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { setActiveView({ type: 'dsm' }); setOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                        <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>▤</span>
+                        Design Structure Matrix
+                    </button>
                 </div>
             )}
         </div>
@@ -214,6 +228,7 @@ export function ModeSwitcher() {
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [analysisOpen, setAnalysisOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     useEffect(() => {
         const toggle = () => setDrawerOpen(open => !open);
@@ -304,7 +319,7 @@ export function ModeSwitcher() {
                     </button>
                     {analysisOpen && <div style={{ margin: '0 0 4px 36px', borderLeft: '1px solid rgba(45,212,168,0.25)' }}>
                         <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>◫</span>Analysis workspace</button>
-                        {isFeatureEnabled('model-tools') && <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>}
+                        <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>
                         <a href={JUPYTER_URL} target="_blank" rel="noopener noreferrer" onClick={() => setDrawerOpen(false)} className="flex w-full items-center gap-2 px-3 py-2" style={{ color: 'rgba(255,255,255,0.68)', textDecoration: 'none', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</a>
                     </div>}
                 </>}
@@ -312,7 +327,9 @@ export function ModeSwitcher() {
             <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '14px 4px' }} />
             <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Workspaces</span><WorkspaceManager /></div>
             {isFeatureEnabled('model-tools') && <div className="px-2 py-1"><ToolsDropdown activeViewType={activeView.type} /></div>}
+            <button onClick={() => setSettingsOpen(true)} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ color: 'rgba(255,255,255,0.72)', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>⚙</span>Project Settings</button>
             <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
         </aside>
+        {settingsOpen && <DhfSettingsPanel onClose={() => setSettingsOpen(false)} />}
     </>;
 }

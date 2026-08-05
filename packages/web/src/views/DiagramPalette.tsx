@@ -11,6 +11,7 @@ import { getRegistries, useModelStore } from '../store/model-store';
 import { usageConstruct } from '../authoring';
 import { LAYER_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';
+import { Icon } from './DiagramToolbarControls';
 
 /** Drag payload the canvas' onDrop handler expects. */
 export const MEMO_KIND_MIME = 'application/memo-kind';
@@ -94,27 +95,16 @@ export function DiagramPalette({
         return next;
     });
 
-    if (collapsed) {
-        return (
-            <button
-                className="flex flex-col items-center py-2 gap-1 cursor-pointer"
-                style={{ width: 36, border: 0, borderRight: '1px solid #E5E5E0', background: '#FAFAF8', flexShrink: 0 }}
-                onClick={onToggleCollapse}
-                title="Expand diagram elements"
-                aria-label="Expand diagram elements"
-            >
-                <span style={{ color: '#6B7280', fontSize: 18 }}>›</span>
-                <span style={{ fontSize: 10, color: '#6B7280', writingMode: 'vertical-rl' }}>Diagram Elements</span>
-            </button>
-        );
-    }
+    // Reopen is provided by the canvas-edge icon; keep this panel out of the
+    // layout altogether when hidden so the drawing surface gets the width back.
+    if (collapsed) return null;
 
     return (
         <div className="flex flex-col overflow-hidden" style={{ width: 240, borderRight: '1px solid #E5E5E0', background: '#FAFAF8', flexShrink: 0 }}>
-            <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid #E5E5E0', flexShrink: 0 }}>
+            <div className="flex items-center justify-between px-3 py-2" style={{ background: '#F0F0ED', borderBottom: '1px solid #E5E5E0', flexShrink: 0 }}>
                 <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151' }}>Diagram Elements</span>
-                <button onClick={onToggleCollapse} title="Collapse diagram elements" aria-label="Collapse diagram elements"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontSize: 18, lineHeight: 1 }}>‹</button>
+                <button onClick={onToggleCollapse} title="Hide Diagram Elements" aria-label="Hide Diagram Elements"
+                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 20, lineHeight: 1 }}>×</button>
             </div>
 
             <div className="px-2 pt-2 pb-1" style={{ flexShrink: 0 }}>

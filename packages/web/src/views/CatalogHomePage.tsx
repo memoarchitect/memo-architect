@@ -11,6 +11,7 @@ import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
 import { kindToPrefix, prefixToFamily } from '../short-id';
+import { MemoBrandMark } from '../components/MemoBrandMark';
 
 export function CatalogHomePage() {
     const model = useModelStore(s => s.model);
@@ -43,12 +44,10 @@ export function CatalogHomePage() {
 
     return (
         <div style={{ flex: 1, overflow: 'auto', background: '#F7F7F5', padding: '32px 40px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, color: COLOR.primary, marginBottom: '4px', marginTop: 0 }}>
-                Catalog
-            </h1>
-            <p style={{ color: COLOR.muted, fontSize: FONT.sm, marginTop: 0, marginBottom: '24px' }}>
-                {total} elements across {families.length} families
-            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div><h1 style={{ fontSize: '20px', fontWeight: 700, color: COLOR.primary, margin: '0 0 4px' }}>Catalog</h1><p style={{ color: COLOR.muted, fontSize: FONT.sm, margin: 0 }}>{total} elements across {families.length} families</p></div>
+                <MemoBrandMark size={132} />
+            </div>
 
             <div style={{
                 display: 'grid',

@@ -44,9 +44,13 @@ const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
+    const model = useModelStore(s => s.model);
+    const activeMode = useModelStore(s => s.activeMode);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const selectDiagram = useModelStore(s => s.selectDiagram);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
 
     // Sync legacy selectedDiagramId with activeView for DiagramCanvas compatibility
     useEffect(() => {
@@ -54,15 +58,25 @@ function UnifiedCanvas() {
             if (selectedDiagramId !== activeView.diagramId) {
                 selectDiagram(activeView.diagramId);
             }
+
+            // A diagram bound to a viewpoint belongs to the Viewpoints
+            // workspace. Keeping the model explorer after opening one made the
+            // breadcrumb and the left pane contradict each other. Scenario
+            // diagrams intentionally retain their scenario workspace.
+            const diagram = model?.diagrams?.find(item => item.id === activeView.diagramId);
+            if (diagram?.viewpointId && diagram.viewpointId !== '__model' && activeMode !== 'scenario') {
+                if (activeMode !== 'diagram') setActiveMode('diagram');
+                setExplorerTab('views');
+            }
         }
-    }, [activeView, selectedDiagramId, selectDiagram]);
+    }, [activeView, activeMode, model, selectedDiagramId, selectDiagram, setActiveMode, setExplorerTab]);
 
     const renderView = () => {
         switch (activeView.type) {
             case 'diagram':
                 return <DiagramEditor diagramId={activeView.diagramId} />;
             case 'dsm':
-                return isFeatureEnabled('model-tools') ? <DSMView /> : <Dashboard />;
+                return <DSMView />;
             case 'traceability':
                 return isFeatureEnabled('model-tools') ? <TraceabilityMatrix /> : <Dashboard />;
             case 'tabular':

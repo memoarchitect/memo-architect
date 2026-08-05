@@ -5,6 +5,7 @@ import { DIAGRAM_TYPE_META, LAYER_COLORS, resolveActionFlowDiagramType } from '.
 import { COLOR, FONT } from '../styles/tokens';
 import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
 import { ExplorerCountBadge } from '../components/ExplorerCountBadge';
+import { MemoBrandMark } from '../components/MemoBrandMark';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
 const SCENARIO_VIEW_GROUPS = [
@@ -396,7 +397,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                 {!selectedElement && (
                     <div className="flex items-center justify-center h-full" style={{ color: '#9CA3AF' }}>
                         <div className="text-center">
-                            <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>{'\u25B6'}</div>
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}><MemoBrandMark size={180} /></div>
                             <div className="text-sm">Select a scenario to edit steps and link elements</div>
                         </div>
                     </div>
