@@ -13,6 +13,8 @@ import {
     classifyIbdFlow, PORT_DIR_COLORS, IBD_FLOW_COLORS,
     buildPortOwnership, projectPortForDisplay, declaredPortRole,
     ibdLabelWidth, applyPortOrder, portIdFromHandle, INNER_HANDLE_SUFFIX, summarizeConnectors, type PortSide,
+    PORT_LABEL_STACKED_WIDTH, parsePortSide,
+    SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET,
 } from '../interconnection-view';
 import { compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
@@ -354,6 +356,20 @@ describe('port-aware layout', () => {
         expect(portPos.get('a')!.y).toBe(146);
     });
 
+    it('re-deals a horizontal wall along x, since its y says nothing', () => {
+        const portPos = new Map([
+            ['a', { x: 100, y: 300, side: 'bottom' as PortSide }],
+            ['b', { x: 200, y: 300, side: 'bottom' as PortSide }],
+            ['c', { x: 300, y: 300, side: 'bottom' as PortSide }],
+        ]);
+        applyPortOrder(portPos, new Map(), new Map([['a', 30], ['b', 10], ['c', 20]]));
+        expect(portPos.get('b')!.x).toBe(100);
+        expect(portPos.get('c')!.x).toBe(200);
+        expect(portPos.get('a')!.x).toBe(300);
+        // the wall itself never moves
+        for (const p of portPos.values()) expect(p.y).toBe(300);
+    });
+
     it('permutes each side independently and leaves unplaced ports alone', () => {
         const portPos = new Map([
             ['in1', slot(70, 'left')],
@@ -574,6 +590,65 @@ describe('distributePorts (no-overlap invariant)', () => {
         expect(pos.get('in1')!.y + size / 2).toBeCloseTo(72);
     });
 
+    it('deals a horizontal wall across the body and pins it to that edge', () => {
+        // The drawing's bottom wall: four mains-side connectors on the case
+        // floor. Nothing about them is expressible while ports are dealt only
+        // down the left and right walls.
+        const wall = ['powerSwitch', 'powerInlet', 'fuseAccess', 'equipotential'];
+        const pos = distributePorts(wall, {
+            width: 800, height: 500, bodyTop: 48, bodyBottom: 440,
+            bodyLeft: 60, bodyRight: 740,
+            sideOf: () => 'bottom',
+        });
+        const xs = wall.map(id => pos.get(id)!.x).sort((a, b) => a - b);
+        for (const id of wall) {
+            expect(pos.get(id)!.y).toBeCloseTo(500 - size / 2); // straddles the floor
+            expect(pos.get(id)!.side).toBe('bottom');
+        }
+        // dealt across, in order, each clear of its neighbour's caption
+        for (let i = 1; i < xs.length; i++) {
+            expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(PORT_LABEL_STACKED_WIDTH);
+        }
+        expect(xs[0]).toBeGreaterThanOrEqual(60);
+        expect(xs.at(-1)! + size).toBeLessThanOrEqual(740 + size);
+    });
+
+    it('straddles the top edge for a top-wall port', () => {
+        const pos = distributePorts(['antenna'], {
+            width: 300, height: 200, bodyTop: 48, bodyBottom: 180,
+            bodyLeft: 20, bodyRight: 280, sideOf: () => 'top',
+        });
+        expect(pos.get('antenna')!.y).toBeCloseTo(-size / 2);
+        expect(pos.get('antenna')!.x + size / 2).toBeCloseTo(150); // midpoint of [20,280]
+    });
+
+    it('places all four walls in one pass', () => {
+        const sides: Record<string, PortSide> = {
+            w: 'left', e: 'right', n: 'top', s: 'bottom',
+        };
+        const pos = distributePorts(['w', 'e', 'n', 's'], {
+            width: 400, height: 300, bodyTop: 48, bodyBottom: 260,
+            bodyLeft: 40, bodyRight: 360, sideOf: id => sides[id],
+        });
+        expect(pos.get('w')!.x).toBeCloseTo(-size / 2);
+        expect(pos.get('e')!.x).toBeCloseTo(400 - size / 2);
+        expect(pos.get('n')!.y).toBeCloseTo(-size / 2);
+        expect(pos.get('s')!.y).toBeCloseTo(300 - size / 2);
+    });
+
+    it('extends a horizontal wall group along the wall, not into the box', () => {
+        const pos = distributePorts(['panel', 'next'], {
+            width: 600, height: 300, bodyTop: 48, bodyBottom: 260,
+            bodyLeft: 20, bodyRight: 580, sideOf: () => 'bottom',
+            nestedPitch: 20, weightOf: id => (id === 'panel' ? 4 : 1),
+        });
+        const first = pos.get('panel')!.x + size / 2;
+        const second = pos.get('next')!.x + size / 2;
+        // three nested squares to the right of the parent, then a full pitch
+        expect(second).toBeGreaterThanOrEqual(first + 3 * 20 + PORT_LABEL_STACKED_WIDTH);
+        expect(pos.get('panel')!.y).toBeCloseTo(pos.get('next')!.y);
+    });
+
     it('reserves room below a port for its nested ports (group weight)', () => {
         // in1 carries two nested ports (weight 3); in2 must clear the group
         const pos = distributePorts(['in1', 'in2'], {
@@ -585,6 +660,56 @@ describe('distributePorts (no-overlap invariant)', () => {
         const c2 = pos.get('in2')!.y + size / 2;
         const groupBottom = c1 + 2 * 20; // two nested rows below in1
         expect(c2).toBeGreaterThanOrEqual(groupBottom + 26 - 0.001);
+    });
+});
+
+describe('summary bundling keys on the rendered endpoint', () => {
+    // Summary mode exists to collapse genuinely repeated wiring, not to hide
+    // distinct wiring. When ports are drawn, four board outputs each running to
+    // their own wall connector are four visible lines; keying the bundle on the
+    // owning part instead collapsed them to a single "4 connections" stub and
+    // silently deleted three connectors from the drawing.
+    const rel = (id: string, sourceId: string, targetId: string) =>
+        ({ id, type: 'ExchangesWith', sourceId, targetId, attributes: {} } as never);
+    const owner: Record<string, string> = {
+        mcuRs485Out: 'board', mcuAudioOut: 'board', mcuDebugIo: 'board',
+        rs485Wall: 'case', audioWall: 'case', debugWall: 'case',
+    };
+
+    it('keeps connectors between different port pairs of the same two boxes', () => {
+        const bundled = summarizeConnectors(
+            [rel('r1', 'mcuRs485Out', 'rs485Wall'),
+             rel('r2', 'mcuAudioOut', 'audioWall'),
+             rel('r3', 'mcuDebugIo', 'debugWall')],
+            id => id, // ports are drawn, so each port is its own endpoint
+        );
+        expect(bundled).toHaveLength(3);
+        expect(bundled.every(b => !b.attributes?.bundleCount)).toBe(true);
+    });
+
+    it('still bundles when the endpoints really do coincide', () => {
+        const bundled = summarizeConnectors(
+            [rel('r1', 'mcuRs485Out', 'rs485Wall'),
+             rel('r2', 'mcuAudioOut', 'audioWall'),
+             rel('r3', 'mcuDebugIo', 'debugWall')],
+            id => owner[id], // ports hidden — all three land on the same boxes
+        );
+        expect(bundled).toHaveLength(1);
+        expect(bundled[0].attributes?.bundleCount).toBe('3');
+    });
+});
+
+describe('boundary port label gutter', () => {
+    // The node draws a right-side port caption `PORT_LABEL_OFFSET` clear of the
+    // square's far edge, running PORT_LABEL_MAX back into the owner. The
+    // template must reserve at least that much, or every boundary caption on a
+    // frame overprints the part boxes beside it. These two numbers used to live
+    // in separate files behind a "keep in step" comment, and drifted.
+    it('reserves enough room for the caption the node actually draws', () => {
+        const halfSquareInside = INTERCONNECTION_PORT_SIZE / 2;
+        const captionReach =
+            INTERCONNECTION_PORT_SIZE + PORT_LABEL_OFFSET + PORT_LABEL_MAX - halfSquareInside;
+        expect(SIDE_GUTTER).toBeGreaterThanOrEqual(captionReach);
     });
 });
 

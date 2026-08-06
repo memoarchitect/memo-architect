@@ -61,7 +61,10 @@ import {
  * an intentional expand/drill-in interaction, not in the first frame.
  */
 const IBD_FOLD_DEPTH = 1;
-import { PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, type PortDisplay } from './templates/interconnection-view';
+import {
+    PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide,
+    INTERCONNECTION_PORT_SIZE, NESTED_PITCH, type PortDisplay, type PortSide,
+} from './templates/interconnection-view';
 import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
@@ -218,19 +221,32 @@ function reroutePositionedEdges(
         height: Number(node.height ?? node.style?.height ?? 0),
     });
     const requests = edges.flatMap(edge => {
-        const liveOffset = (nodeId: string, portId: unknown, fallback: unknown) => {
+        // Must agree with the interconnection template's own anchoring: a
+        // connector meets a port at the face it arrives on, and a port that
+        // carries nested ports is met on the group's centreline rather than on
+        // the parent square at the top of the stack. Anchoring at the bare
+        // square centre put the arrowhead on top of the glyph and made every
+        // group connector step sideways to reach its lane.
+        const liveOffset = (nodeId: string, portId: unknown, fallback: unknown, side: unknown) => {
             if (typeof portId === 'string') {
-                const port = ((byId.get(nodeId)?.data as { ports?: Array<{ id: string; x: number; y: number; size?: number }> })?.ports ?? [])
-                    .find(candidate => candidate.id === portId);
+                const port = ((byId.get(nodeId)?.data as {
+                    ports?: Array<{ id: string; x: number; y: number; size?: number; nestedCount?: number }>;
+                })?.ports ?? []).find(candidate => candidate.id === portId);
                 if (port) {
-                    const size = port.size ?? 20;
-                    return { x: port.x + size / 2, y: port.y + size / 2 };
+                    const size = port.size ?? INTERCONNECTION_PORT_SIZE;
+                    const cx = port.x + size / 2;
+                    const cy = port.y + size / 2 + (port.nestedCount ?? 0) * NESTED_PITCH / 2;
+                    return side === 'left' ? { x: cx - size / 2, y: cy }
+                        : side === 'right' ? { x: cx + size / 2, y: cy }
+                        : side === 'top' ? { x: cx, y: cy - size / 2 }
+                        : side === 'bottom' ? { x: cx, y: cy + size / 2 }
+                        : { x: cx, y: cy };
                 }
             }
             return fallback as { x: number; y: number } | undefined;
         };
-        const sourceOffset = liveOffset(edge.source, edge.data?.sourcePortId, edge.data?.sourceOffset);
-        const targetOffset = liveOffset(edge.target, edge.data?.targetPortId, edge.data?.targetOffset);
+        const sourceOffset = liveOffset(edge.source, edge.data?.sourcePortId, edge.data?.sourceOffset, edge.data?.sourceSide);
+        const targetOffset = liveOffset(edge.target, edge.data?.targetPortId, edge.data?.targetOffset, edge.data?.targetSide);
         if (!sourceOffset || !targetOffset || !byId.has(edge.source) || !byId.has(edge.target)) return [];
         const s = absOf(edge.source), t = absOf(edge.target);
         return [{
@@ -641,6 +657,19 @@ function DiagramCanvasInner() {
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
     const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
+    // Walls the view declares for its boundary ports. A constraint fed INTO
+    // layout, not an override applied after it: the template sizes the box and
+    // orders the wall around it, so a bottom-wall connector is placed
+    // automatically instead of only being pinnable by hand.
+    const declaredPortWalls = currentLayout?.canvas?.portWalls;
+    const portWalls = useMemo(() => {
+        const entries = Object.entries(declaredPortWalls ?? {})
+            .flatMap(([portId, side]) => {
+                const wall = parsePortSide(side);
+                return wall ? [[portId, wall] as const] : [];
+            });
+        return entries.length > 0 ? new Map<string, PortSide>(entries) : undefined;
+    }, [declaredPortWalls]);
     const persistAnnotationText = useCallback((annotationId: string, text: string) => {
         if (!selectedDiagramId) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -1612,6 +1641,7 @@ function DiagramCanvasInner() {
                     focusId: focusedInterconnectionId ?? undefined,
                     portDisplay: interconnectionPortDisplay,
                     connectionDisplay: interconnectionConnectionDisplay,
+                    portWalls,
                     onPortMove: moveInterconnectionPort,
                     layoutProviderId,
                 },
@@ -1665,7 +1695,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, portWalls, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,

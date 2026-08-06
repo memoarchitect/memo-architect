@@ -21,6 +21,7 @@ import { BaseHandle } from '../components/base-handle';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
+    PORT_LABEL_MAX, PORT_LABEL_OFFSET, NESTED_PITCH, PORT_LABEL_STACKED_WIDTH,
 } from './templates/interconnection-view';
 
 export interface InterconnectionNodeData extends Record<string, unknown> {
@@ -82,8 +83,6 @@ function portGlyph(direction: PortInfo['direction'], side: PortSide): string {
     }
 }
 
-/** Reserved label gutter must stay in step with SIDE_GUTTER in the template. */
-const PORT_LABEL_MAX = 104;
 const PORT_HIT_SIZE = 40;
 
 const handlePinStyle = (size: number): React.CSSProperties => ({
@@ -111,13 +110,52 @@ const connectableHandleStyle = (size: number): React.CSSProperties => ({
     zIndex: 12,
 });
 
+/** Padding between a nested-port group's outline and the squares inside it. */
+const GROUP_PAD = 7;
+
+/**
+ * The enclosing outline behind a parent port and the ports nested in it.
+ *
+ * A boundary feature that carries several ports — a panel cluster, a display
+ * module, a service panel — is one thing on the case, not a run of unrelated
+ * squares. Drawing the group is what makes that readable at a glance; without
+ * it a reader has to infer the grouping from vertical spacing alone.
+ */
+function NestedPortGroup({ port }: { port: PortInfo }) {
+    const size = port.size ?? INTERCONNECTION_PORT_SIZE;
+    // The cluster runs along the wall its parent straddles, so the outline grows
+    // down a left/right wall and across a top/bottom one.
+    const vertical = port.side === 'left' || port.side === 'right';
+    const start = vertical ? port.y : port.x;
+    const end = start + size / 2 + NESTED_PITCH * (port.nestedCount ?? 0) + size / 2;
+    const along = end - start + GROUP_PAD * 2;
+    const across = size + GROUP_PAD * 2;
+    return (
+        <div
+            aria-hidden
+            style={{
+                position: 'absolute',
+                left: port.x - GROUP_PAD,
+                top: port.y - GROUP_PAD,
+                width: vertical ? across : along,
+                height: vertical ? along : across,
+                background: 'rgba(148,163,184,0.30)',
+                border: '1px solid rgba(100,116,139,0.45)',
+                borderRadius: 9,
+                pointerEvents: 'none',
+                zIndex: 0,
+            }}
+        />
+    );
+}
+
 function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) => void }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
     const dimmed = useConnectorHoverActive() && !highlighted;
     const size = port.size ?? INTERCONNECTION_PORT_SIZE;
-    const labelOffset = size + 5;
+    const labelOffset = size + PORT_LABEL_OFFSET;
     const color = portColor(port.direction);
     const beginMove = onMove ? (event: React.PointerEvent) => {
         event.preventDefault();
@@ -155,15 +193,19 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
         display: '-webkit-box',
         WebkitBoxOrient: 'vertical',
         WebkitLineClamp: 2,
-        width: horizontal ? PORT_LABEL_MAX : 72,
+        width: horizontal ? (port.labelWidth ?? PORT_LABEL_MAX) : PORT_LABEL_STACKED_WIDTH,
         background: 'rgba(255,255,255,0.94)',
         padding: '1px 3px',
         borderRadius: 4,
         lineHeight: 1.12,
+        // A horizontal wall's caption is centred on the square and sits clear of
+        // it: above a bottom-wall port (inside the box, as the reference drawing
+        // labels its wall connectors) and above a top-wall port too — which puts
+        // it OUTSIDE the box, and is what keeps a top-wall port from printing
+        // its name over its owner's title bar.
         ...(port.side === 'left' ? { left: labelOffset, bottom: '50%', marginBottom: 2 }
             : port.side === 'right' ? { right: labelOffset, bottom: '50%', marginBottom: 2, textAlign: 'right' as const }
-            : port.side === 'top' ? { top: labelOffset, left: '50%', transform: 'translateX(-50%)' }
-            : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)' }),
+            : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' as const }),
     };
 
     return (
@@ -447,6 +489,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     )}
                 </div>
             )}
+
+            {/* Nested-port groups sit behind the squares they enclose. */}
+            {ports.filter(p => p.nestedCount).map(p => (
+                <NestedPortGroup key={`${p.id}__group`} port={p} />
+            ))}
 
             {/* Boundary ports */}
             {ports.map(p => (

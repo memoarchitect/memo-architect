@@ -96,6 +96,20 @@ export function classifyIbdFlow(flowItem?: string, relType?: string): IbdFlowKin
 
 export type PortSide = 'top' | 'bottom' | 'left' | 'right';
 
+/** Every wall a port can straddle, in a stable iteration order. */
+export const PORT_SIDES = ['left', 'right', 'top', 'bottom'] as const;
+
+/** A wall runs vertically (ports dealt down it) or horizontally (dealt across). */
+export const isVerticalWall = (side: PortSide): boolean =>
+    side === 'left' || side === 'right';
+
+/** The wall named by a view, or undefined when the view names none. */
+export function parsePortSide(value: string | undefined | null): PortSide | undefined {
+    return value && (PORT_SIDES as readonly string[]).includes(value)
+        ? value as PortSide
+        : undefined;
+}
+
 export interface PortInfo {
     id: string;
     name: string;
@@ -108,6 +122,15 @@ export interface PortInfo {
     size?: number;
     /** A SysML nested port (owned by another port), drawn smaller */
     nested?: boolean;
+    /**
+     * On a parent port, how many nested ports render beneath it. The node uses
+     * this to draw one enclosing group behind the cluster, so a boundary
+     * feature that carries several ports reads as one feature rather than as
+     * a run of unrelated squares.
+     */
+    nestedCount?: number;
+    /** Caption box width, sized to this port's own name (see portCaptionWidth). */
+    labelWidth?: number;
 }
 
 /** A view element rendered as a boundary port rather than a part box. */
@@ -134,15 +157,59 @@ const PORT_SIZE = 24;
 export const INTERCONNECTION_PORT_SIZE = PORT_SIZE;
 /** Nested ports use the same glyph size; nesting is conveyed by grouping. */
 export const NESTED_PORT_SIZE = PORT_SIZE;
-const NESTED_PITCH = 30; // centre-to-centre spacing parent port → nested ports
+/** Centre-to-centre spacing parent port → nested ports (shared with the node). */
+export const NESTED_PITCH = 30;
 
 export const INTERCONNECTION_HEADER_HEIGHT = 48; // compact container title + separation
 const HEADER_BAND = INTERCONNECTION_HEADER_HEIGHT;
 const LEAF_HEADER = 44;   // one compact header; long names truncate with a tooltip
 const PAD_BOTTOM = 12;
 const SIDE_MIN = 14;      // inner padding on a side with no boundary ports
-const SIDE_GUTTER = 92;   // room for a port glyph and its short label
+/** Width of a boundary port's caption box (shared with InterconnectionNode). */
+export const PORT_LABEL_MAX = 104;
+/** Gap between the port square and its caption (shared with InterconnectionNode). */
+export const PORT_LABEL_OFFSET = 5;
+// Room for a port glyph and its label, derived from how the node actually
+// draws them rather than guessed: the square straddles the boundary (half of
+// it inside), and the caption hangs `PORT_LABEL_OFFSET` clear of the square's
+// far edge. A gutter narrower than this does not "tighten" the diagram — it
+// makes every boundary caption overprint the part boxes beside it.
+export const SIDE_GUTTER = PORT_LABEL_MAX + PORT_SIZE + PORT_LABEL_OFFSET - PORT_SIZE / 2;
+
+/**
+ * Rendered width of a boundary port's caption: its natural width at the node's
+ * 10.5px caption font, floored so a one-word name still has a readable pill and
+ * capped at the two-line wrap width.
+ */
+export const portCaptionWidth = (name: string): number =>
+    Math.min(Math.max(name.length * 6.1 + 10, 44), PORT_LABEL_MAX);
+
+/**
+ * How far a port's caption reaches ABOVE the port's centreline. The node hangs
+ * the caption there so the connector, which enters at centre height, does not
+ * strike through its own label. A port placed only `header + pitch/2` down
+ * therefore prints its caption over the box's title and stereotype — the
+ * clearance has to count the caption, not just the square.
+ */
+export const PORT_CAPTION_CLEARANCE = 30;
 const PORT_PITCH = 30;    // minimum port centre-to-centre spacing on one side
+/**
+ * A port on a horizontal wall wears its caption centred on the square rather
+ * than beside it, so neighbours are kept apart by the caption's WIDTH — the
+ * vertical pitch would let two 72px captions print over each other.
+ */
+export const PORT_LABEL_STACKED_WIDTH = 72;
+const HORIZONTAL_PORT_PITCH = PORT_LABEL_STACKED_WIDTH + 6;
+/** Rendered height of a caption box (10.5px text, up to two lines, padding). */
+const PORT_CAPTION_HEIGHT = 26;
+/**
+ * Room a bottom wall reserves INSIDE its box: the caption sits above the
+ * square, so content has to stop clear of it. A top-wall caption hangs above
+ * the square and therefore outside the box — see the node renderer — which is
+ * what keeps a top-wall port off its owner's title bar, and why the top wall
+ * costs no inward room at all.
+ */
+export const BOTTOM_GUTTER = PORT_SIZE / 2 + PORT_LABEL_OFFSET + PORT_CAPTION_HEIGHT;
 const ORPHAN_GAP = 14;    // spacing inside the orphan grid
 const ROOT_GAP = 90;      // fallback spacing between disconnected roots
 
@@ -313,45 +380,74 @@ export function focusSubtree(
 }
 
 /**
- * Place boundary ports down a box body with a minimum pitch, strictly below the
- * header band. Guarantees a port square (and thus its label) can never overprint
- * the header or another port on the same side. Returns local top-left + side.
+ * Deal boundary ports along the wall each one declares, with a minimum pitch and
+ * strictly clear of the header band. Guarantees a port square (and thus its
+ * label) can never overprint the header or another port on the same wall.
+ * Returns local top-left + side.
+ *
+ * All four walls are dealt here. A vertical wall runs a port's slots DOWN the
+ * body between `bodyTop`/`bodyBottom`; a horizontal wall runs them ACROSS
+ * between `bodyLeft`/`bodyRight`. Which wall a port is on is the caller's
+ * decision (the view's, ultimately) — this function only places what it is told.
  */
 export function distributePorts(
     ports: string[],
     opts: {
         width: number;
+        /** Box height — a bottom-wall port straddles this edge. */
+        height?: number;
         bodyTop: number;
         bodyBottom: number;
-        sideOf: (id: string) => 'left' | 'right';
+        /** Span the horizontal walls deal across; defaults to the full width. */
+        bodyLeft?: number;
+        bodyRight?: number;
+        sideOf: (id: string) => PortSide;
         size?: number;
         pitch?: number;
+        /** Minimum pitch on a horizontal wall, where captions are the constraint. */
+        horizontalPitch?: number;
         /** Rows a port group occupies: 1 + its rendered nested ports. */
         weightOf?: (id: string) => number;
         nestedPitch?: number;
         /** Preferred centreline for a lone port (for cross-node alignment). */
         singleCenterY?: number;
+        /** Highest centreline a port may take, so its caption clears the header. */
+        minCenterY?: number;
     },
-): Map<string, { x: number; y: number; side: 'left' | 'right' }> {
+): Map<string, { x: number; y: number; side: PortSide }> {
     const size = opts.size ?? PORT_SIZE;
     const pitch = opts.pitch ?? PORT_PITCH;
+    const horizontalPitch = opts.horizontalPitch ?? HORIZONTAL_PORT_PITCH;
     const nestedPitch = opts.nestedPitch ?? NESTED_PITCH;
-    const pos = new Map<string, { x: number; y: number; side: 'left' | 'right' }>();
-    for (const side of ['left', 'right'] as const) {
+    const bottomEdge = opts.height ?? opts.bodyBottom;
+    const pos = new Map<string, { x: number; y: number; side: PortSide }>();
+    for (const side of PORT_SIDES) {
         const group = ports.filter(p => opts.sideOf(p) === side);
+        if (group.length === 0) continue;
         const n = group.length;
-        const span = Math.max(opts.bodyBottom - opts.bodyTop, 0);
-        let prevBottom = -Infinity;
+        const vertical = isVerticalWall(side);
+        const from = vertical ? opts.bodyTop : (opts.bodyLeft ?? 0);
+        const to = vertical ? opts.bodyBottom : (opts.bodyRight ?? opts.width);
+        const step = vertical ? pitch : horizontalPitch;
+        const span = Math.max(to - from, 0);
+        const minCenter = vertical
+            ? (opts.minCenterY ?? from + step / 2)
+            : from + step / 2;
+        let prevEnd = -Infinity;
         group.forEach((pid, i) => {
-            let cy = n === 1 && opts.singleCenterY !== undefined
+            let center = n === 1 && vertical && opts.singleCenterY !== undefined
                 ? opts.singleCenterY
-                : opts.bodyTop + (n === 1 ? span / 2 : (i + 0.5) / n * span);
-            cy = Math.max(cy, opts.bodyTop + pitch / 2, prevBottom + pitch);
-            // the group's nested ports stack below the parent square
-            prevBottom = cy + ((opts.weightOf?.(pid) ?? 1) - 1) * nestedPitch;
+                : from + (n === 1 ? span / 2 : (i + 0.5) / n * span);
+            center = Math.max(center, minCenter, prevEnd + step);
+            // the group's nested ports stack along the same wall, after the parent
+            prevEnd = center + ((opts.weightOf?.(pid) ?? 1) - 1) * nestedPitch;
             pos.set(pid, {
-                x: side === 'left' ? -size / 2 : opts.width - size / 2,
-                y: cy - size / 2,
+                x: vertical
+                    ? (side === 'left' ? -size / 2 : opts.width - size / 2)
+                    : center - size / 2,
+                y: vertical
+                    ? center - size / 2
+                    : (side === 'top' ? -size / 2 : bottomEdge - size / 2),
                 side,
             });
         });
@@ -369,14 +465,26 @@ export function distributePorts(
 export function applyPortOrder(
     portPos: Map<string, { x: number; y: number; side: PortSide }>,
     placedY: ReadonlyMap<string, number>,
+    placedX?: ReadonlyMap<string, number>,
 ): void {
-    for (const side of ['left', 'right'] as const) {
-        const ids = [...portPos].filter(([id, p]) => p.side === side && placedY.has(id)).map(([id]) => id);
+    for (const side of PORT_SIDES) {
+        // A wall is re-dealt along its own axis: down a vertical wall, across a
+        // horizontal one. Ordering a bottom wall by y would compare four
+        // identical numbers and shuffle nothing.
+        const vertical = isVerticalWall(side);
+        const placed = vertical ? placedY : placedX;
+        if (!placed) continue;
+        const ids = [...portPos].filter(([id, p]) => p.side === side && placed.has(id)).map(([id]) => id);
         if (ids.length < 2) continue;
-        const slots = ids.map(id => portPos.get(id)!.y).sort((a, b) => a - b);
+        const slots = ids
+            .map(id => vertical ? portPos.get(id)!.y : portPos.get(id)!.x)
+            .sort((a, b) => a - b);
         [...ids]
-            .sort((a, b) => placedY.get(a)! - placedY.get(b)!)
-            .forEach((id, index) => { portPos.get(id)!.y = slots[index]; });
+            .sort((a, b) => placed.get(a)! - placed.get(b)!)
+            .forEach((id, index) => {
+                const p = portPos.get(id)!;
+                if (vertical) p.y = slots[index]; else p.x = slots[index];
+            });
     }
 }
 
@@ -397,6 +505,14 @@ export interface InterconnectionOptions {
      *  only — nested connectors lift to their parent port), or 'none'
      *  (connectors anchor to part boxes; the frame reflows without ports). */
     portDisplay?: PortDisplay;
+    /**
+     * Walls the view declares, per port id. Which wall a port straddles is a
+     * drawing decision, not an architecture fact, so it is authored on the view
+     * and fed to automatic layout as a constraint — the engine still places and
+     * orders the port, it just does so on the declared wall. Ports the view says
+     * nothing about fall back to their direction (in → left, out → right).
+     */
+    portWalls?: ReadonlyMap<string, PortSide>;
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number) => void;
     layoutProviderId?: string;
@@ -514,6 +630,19 @@ export async function computeInterconnectionLayout(
     );
     /** The part box a connector endpoint anchors to (port → its owner). */
     const liftToPart = (id: string): string => portOwner.get(id) ?? id;
+    /**
+     * The endpoint a connector visibly lands on under the current port display:
+     * the port itself when ports are drawn, otherwise the part box.
+     *
+     * Summary bundling groups by this, not by the owning part. Two connectors
+     * that land on two different ports of the same box are two different lines
+     * on the drawing, and collapsing them to one loses wiring the reader can
+     * see is distinct — a board whose four outputs each run to their own wall
+     * connector would otherwise render as a single "4 connections" stub.
+     */
+    const summaryEndpoint = (id: string): string =>
+        (portEls.has(id) ? projectPortForDisplay(id, portDisplay, parentPort) : undefined)
+        ?? liftToPart(id);
     const connectionDisplay = options?.connectionDisplay ?? 'summary';
     const focusedBoundaryPorts = new Set(
         [...portOwner].filter(([, owner]) => owner === options?.focusId).map(([portId]) => portId),
@@ -523,7 +652,7 @@ export async function computeInterconnectionLayout(
         : rawConnectors;
     const connectors = connectionDisplay === 'none' ? [] : connectionDisplay === 'all'
         ? rawConnectors
-        : summarizeConnectors(summaryConnectors, liftToPart);
+        : summarizeConnectors(summaryConnectors, summaryEndpoint);
     // Render only ports that participate in the visible topology. A connected
     // nested port keeps its ancestor proxy port visible as the group boundary.
     const connectedPortIds = new Set<string>();
@@ -575,12 +704,60 @@ export async function computeInterconnectionLayout(
         roleCache.set(portId, role);
         return role;
     };
-    const portSideOf = (portId: string): 'left' | 'right' => portSideFromRole(portRole(portId));
+    /**
+     * Which wall a port straddles. The view's declaration wins; a nested port
+     * with no declaration of its own rides on its parent's wall (it sits in the
+     * parent's slot); otherwise the direction decides, in → left, out → right.
+     */
+    const declaredWalls = options?.portWalls;
+    const sideCache = new Map<string, PortSide>();
+    const portSideOf = (portId: string): PortSide => {
+        const cached = sideCache.get(portId);
+        if (cached) return cached;
+        const declared = declaredWalls?.get(portId);
+        const parent = parentPort.get(portId);
+        const side = declared
+            ?? (parent && portEls.has(parent) ? portSideOf(parent) : undefined)
+            ?? portSideFromRole(portRole(portId));
+        sideCache.set(portId, side);
+        return side;
+    };
 
-    const sideGutters = (ports: string[]) => ({
-        left: ports.some(p => portSideOf(p) === 'left') ? SIDE_GUTTER : SIDE_MIN,
-        right: ports.some(p => portSideOf(p) === 'right') ? SIDE_GUTTER : SIDE_MIN,
-    });
+    /**
+     * Room this box must reserve on each wall: the widest caption actually on
+     * that wall, not the widest caption possible.
+     *
+     * Reserving the full `SIDE_GUTTER` unconditionally cost every box 121px a
+     * side even when its ports were called `usbIn` — on a board with ports on
+     * both walls that is 242px of white space the diagram never uses, which
+     * pushes the whole drawing wider and shrinks the text at fit-to-view.
+     *
+     * The horizontal walls are not symmetric: a bottom-wall caption is drawn
+     * inside the box above its square, so it costs inward room; a top-wall
+     * caption hangs above its square, outside the box, so it costs none.
+     */
+    const wallGutters = (ports: string[]) => {
+        const verticalWall = (side: 'left' | 'right') => {
+            const captions = ports
+                .filter(p => portSideOf(p) === side)
+                .map(p => portCaptionWidth(portEls.get(p)?.name ?? ''));
+            if (captions.length === 0) return SIDE_MIN;
+            return Math.max(...captions) + PORT_SIZE + PORT_LABEL_OFFSET - PORT_SIZE / 2;
+        };
+        const onWall = (side: PortSide) => ports.some(p => portSideOf(p) === side);
+        return {
+            left: verticalWall('left'),
+            right: verticalWall('right'),
+            top: 0,
+            bottom: onWall('bottom') ? BOTTOM_GUTTER : 0,
+        };
+    };
+    /** Room a wall's ports demand along it, including their nested groups. */
+    const wallExtent = (ports: string[], side: PortSide) => ports
+        .filter(p => portSideOf(p) === side)
+        .reduce((total, p) => total
+            + (isVerticalWall(side) ? PORT_PITCH : HORIZONTAL_PORT_PITCH)
+            + (portWeight(p) - 1) * NESTED_PITCH, 0);
 
     // Header label width for the SysML `name : Type` notation — the name is
     // sized in full (14px bold ≈ 7.6px/char), the type at its 12px render size,
@@ -593,19 +770,24 @@ export async function computeInterconnectionLayout(
 
     // ── Leaf sizing: a box tall/wide enough for its header, ports and labels ──
     const leafLayout = (el: MemoElement, ports: string[]): PartLayout => {
-        const perSide = { left: 0, right: 0 };
-        for (const p of ports) {
-            perSide[portSideOf(p)] += PORT_PITCH + (portWeight(p) - 1) * NESTED_PITCH;
-        }
-        const bodyH = Math.max(perSide.left, perSide.right, 0);
-        const height = Math.max(LEAF_HEADER + bodyH + 8, LEAF_MIN_H);
-        const g = sideGutters(ports);
+        const g = wallGutters(ports);
+        const bodyH = Math.max(wallExtent(ports, 'left'), wallExtent(ports, 'right'), 0);
+        // The first port's caption has to clear the header, so the body starts
+        // a caption's height below it rather than immediately under the title.
+        const firstCenter = LEAF_HEADER + PORT_CAPTION_CLEARANCE;
+        const height = Math.max(firstCenter + bodyH + 8 + g.bottom, LEAF_MIN_H + g.bottom);
         const contentW = labelWidth(el);
-        const width = Math.max(g.left + contentW + g.right, LEAF_MIN_W);
+        // A horizontal wall's ports need room ACROSS the box, between the
+        // vertical walls' caption gutters — a card with four bottom-wall
+        // connectors is wide because of them, not because of its name.
+        const wallW = Math.max(wallExtent(ports, 'top'), wallExtent(ports, 'bottom'));
+        const width = Math.max(g.left + Math.max(contentW, wallW) + g.right, LEAF_MIN_W);
         const portPos = distributePorts(ports, {
-            width, bodyTop: LEAF_HEADER, bodyBottom: height - PAD_BOTTOM / 2,
-            sideOf: portSideOf, weightOf: portWeight,
-            singleCenterY: Math.max(height / 2, LEAF_HEADER + PORT_SIZE / 2),
+            width, height,
+            bodyTop: LEAF_HEADER, bodyBottom: height - PAD_BOTTOM / 2 - g.bottom,
+            bodyLeft: g.left, bodyRight: width - g.right,
+            sideOf: portSideOf, weightOf: portWeight, minCenterY: firstCenter,
+            singleCenterY: Math.max((height - g.bottom) / 2, firstCenter),
         });
         return { width, height, childPos: new Map(), portPos };
     };
@@ -614,6 +796,8 @@ export async function computeInterconnectionLayout(
     const layouts = new Map<string, PartLayout>();
     /** ELK's crossing-minimised y per own-port, captured during a container pass. */
     const portElkY = new Map<string, Map<string, number>>();
+    /** The same for the horizontal walls, where the ordering axis is x. */
+    const portElkX = new Map<string, Map<string, number>>();
 
     const layoutPart = async (partId: string): Promise<PartLayout> => {
         const kids = childrenOf(partId);
@@ -676,13 +860,13 @@ export async function computeInterconnectionLayout(
             portCount: k => portsByOwner.get(k)?.length ?? 0,
         });
 
-        const g = sideGutters(ownPorts);
+        const g = wallGutters(ownPorts);
         const childPos = new Map<string, { x: number; y: number }>();
         let contentW = 0;
         let contentBottom = 0;
 
         if (elkKids.length > 0) {
-            const kidPorts = (id: string): { id: string; side: 'left' | 'right' }[] =>
+            const kidPorts = (id: string): { id: string; side: PortSide }[] =>
                 (portsByOwner.get(id) ?? []).map(portId => ({ id: portId, side: portSideOf(portId) }));
             const resolved = await resolveGraphLayout({
                 id: `container-${partId}`,
@@ -715,8 +899,11 @@ export async function computeInterconnectionLayout(
                 contentBottom = Math.max(contentBottom, y + c.height);
                 // Keep the child's own port slots — its box was already sized
                 // around them — but hand the slots out in the order the layout
-                // engine minimised crossings for.
-                if (c.portY) applyPortOrder(kidLayouts.get(c.id)!.portPos, c.portY);
+                // engine minimised crossings for. Vertical walls are re-dealt
+                // from the engine's y, horizontal walls from its x.
+                if (c.portY || c.portX) {
+                    applyPortOrder(kidLayouts.get(c.id)!.portPos, c.portY ?? new Map(), c.portX);
+                }
             }
             if (resolved.graphPortY) {
                 portElkY.set(partId, new Map(
@@ -733,45 +920,64 @@ export async function computeInterconnectionLayout(
         if (elkKids.length > 0 && elkEdges.length > 0) {
             const contentCentre = (HEADER_BAND + Math.max(contentBottom, HEADER_BAND)) / 2;
             const ownY = new Map<string, number>(portElkY.get(partId) ?? []);
-            const endpointY = (nodeId: string, portId?: string): number | undefined => {
-                if (ownPortSet.has(nodeId)) return ownY.get(nodeId) ?? contentCentre;
+            const ownX = new Map<string, number>(portElkX.get(partId) ?? []);
+            // Both axes are swept: a vertical wall orders by the y of what each
+            // port is wired to, a horizontal wall by the x. One axis alone left
+            // every bottom-wall port with the same barycentre and no order.
+            const endpointPos = (nodeId: string, portId?: string): { x: number; y: number } | undefined => {
+                if (ownPortSet.has(nodeId)) {
+                    return { x: ownX.get(nodeId) ?? contentW / 2, y: ownY.get(nodeId) ?? contentCentre };
+                }
                 const pos = childPos.get(nodeId);
                 const kidLayout = kidLayouts.get(nodeId);
                 if (!pos || !kidLayout) return undefined;
                 const port = portId ? kidLayout.portPos.get(portId) : undefined;
-                return port ? pos.y + port.y + PORT_SIZE / 2 : pos.y + kidLayout.height / 2;
+                return port
+                    ? { x: pos.x + port.x + PORT_SIZE / 2, y: pos.y + port.y + PORT_SIZE / 2 }
+                    : { x: pos.x + kidLayout.width / 2, y: pos.y + kidLayout.height / 2 };
             };
             const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
             // Two sweeps: the first orders against the boxes, the second
             // against the ports the first sweep moved.
             for (let sweep = 0; sweep < 2; sweep++) {
-                const wiredTo = new Map<string, number[]>();
-                const record = (portId: string | undefined, y: number | undefined) => {
-                    if (portId === undefined || y === undefined) return;
-                    if (!wiredTo.has(portId)) wiredTo.set(portId, []);
-                    wiredTo.get(portId)!.push(y);
+                const wiredToY = new Map<string, number[]>();
+                const wiredToX = new Map<string, number[]>();
+                const record = (portId: string | undefined, at: { x: number; y: number } | undefined) => {
+                    if (portId === undefined || at === undefined) return;
+                    for (const [bucket, value] of [[wiredToY, at.y], [wiredToX, at.x]] as const) {
+                        if (!bucket.has(portId)) bucket.set(portId, []);
+                        bucket.get(portId)!.push(value);
+                    }
                 };
                 for (const edge of elkEdges) {
-                    const sourceY = endpointY(edge.source, edge.sourcePort);
-                    const targetY = endpointY(edge.target, edge.targetPort);
-                    record(edge.sourcePort ?? (ownPortSet.has(edge.source) ? edge.source : undefined), targetY);
-                    record(edge.targetPort ?? (ownPortSet.has(edge.target) ? edge.target : undefined), sourceY);
+                    const sourceAt = endpointPos(edge.source, edge.sourcePort);
+                    const targetAt = endpointPos(edge.target, edge.targetPort);
+                    record(edge.sourcePort ?? (ownPortSet.has(edge.source) ? edge.source : undefined), targetAt);
+                    record(edge.targetPort ?? (ownPortSet.has(edge.target) ? edge.target : undefined), sourceAt);
                 }
                 for (const kid of elkKids) {
                     const kidLayout = kidLayouts.get(kid)!;
-                    const placed = new Map<string, number>();
+                    const placedY = new Map<string, number>();
+                    const placedX = new Map<string, number>();
                     for (const portId of kidLayout.portPos.keys()) {
-                        const ys = wiredTo.get(portId);
-                        if (ys?.length) placed.set(portId, mean(ys));
+                        const ys = wiredToY.get(portId);
+                        if (ys?.length) placedY.set(portId, mean(ys));
+                        const xs = wiredToX.get(portId);
+                        if (xs?.length) placedX.set(portId, mean(xs));
                     }
-                    if (placed.size > 1) applyPortOrder(kidLayout.portPos, placed);
+                    if (placedY.size > 1 || placedX.size > 1) {
+                        applyPortOrder(kidLayout.portPos, placedY, placedX);
+                    }
                 }
                 for (const portId of ownPorts) {
-                    const ys = wiredTo.get(portId);
+                    const ys = wiredToY.get(portId);
                     if (ys?.length) ownY.set(portId, mean(ys));
+                    const xs = wiredToX.get(portId);
+                    if (xs?.length) ownX.set(portId, mean(xs));
                 }
             }
             if (ownY.size > 0) portElkY.set(partId, ownY);
+            if (ownX.size > 0) portElkX.set(partId, ownX);
         }
 
         // ── Orphan grid, packed below the connected content ──
@@ -795,22 +1001,31 @@ export async function computeInterconnectionLayout(
         }
 
         const headerW = Math.min(labelWidth(el) + 32, 248);
-        let width = Math.max(g.left + contentW + g.right, headerW, LEAF_MIN_W);
-        let height = Math.max(contentBottom + PAD_BOTTOM, HEADER_BAND + PAD_BOTTOM + 8);
+        // A horizontal wall's ports have to fit ACROSS the frame between the
+        // vertical caption gutters, and a bottom wall's captions need room
+        // inside above the edge, so both walls can widen or deepen the frame.
+        const wallW = Math.max(wallExtent(ownPorts, 'top'), wallExtent(ownPorts, 'bottom'));
+        let width = Math.max(g.left + Math.max(contentW, wallW) + g.right, headerW, LEAF_MIN_W);
+        let height = Math.max(
+            contentBottom + PAD_BOTTOM + g.bottom,
+            HEADER_BAND + PAD_BOTTOM + 8 + g.bottom,
+        );
 
-        // ── Snap own boundary ports onto the frame, keeping ELK's y order and
-        // enforcing a minimum pitch (a port's nested ports extend its group
-        // downward) so labels never overlap ──
+        // ── Snap own boundary ports onto the frame, keeping the engine's order
+        // along each wall and enforcing a minimum pitch (a port's nested ports
+        // extend its group along the wall) so labels never overlap ──
         const portPos = new Map<string, { x: number; y: number; side: PortSide }>();
         const elkY = portElkY.get(partId) ?? new Map<string, number>();
+        const elkX = portElkX.get(partId) ?? new Map<string, number>();
         for (const side of ['left', 'right'] as const) {
             const group = ownPorts.filter(p => portSideOf(p) === side)
                 .sort((a, b) => (elkY.get(a) ?? 0) - (elkY.get(b) ?? 0));
             let prevBottom = -Infinity;
             for (const pid of group) {
-                const loneCenter = Math.max(height / 2, HEADER_BAND + PORT_SIZE / 2);
-                let cy = (elkY.get(pid) ?? (group.length === 1 ? loneCenter : HEADER_BAND + PORT_PITCH / 2));
-                cy = Math.max(cy, HEADER_BAND + PORT_PITCH / 2, prevBottom + PORT_PITCH);
+                const loneCenter = Math.max((height - g.bottom) / 2, HEADER_BAND + PORT_CAPTION_CLEARANCE);
+                const firstCenter = HEADER_BAND + PORT_CAPTION_CLEARANCE;
+                let cy = (elkY.get(pid) ?? (group.length === 1 ? loneCenter : firstCenter));
+                cy = Math.max(cy, firstCenter, prevBottom + PORT_PITCH);
                 const groupBottom = cy + (portWeight(pid) - 1) * NESTED_PITCH;
                 prevBottom = groupBottom;
                 portPos.set(pid, {
@@ -818,13 +1033,39 @@ export async function computeInterconnectionLayout(
                     y: cy - PORT_SIZE / 2,
                     side,
                 });
-                height = Math.max(height, groupBottom + PORT_PITCH / 2 + PAD_BOTTOM);
+                height = Math.max(height, groupBottom + PORT_PITCH / 2 + PAD_BOTTOM + g.bottom);
             }
         }
-        // Right-side ports were snapped to the pre-growth width; re-pin x after
-        // any height growth doesn't change width, so this is stable.
-        for (const [pid, p] of portPos) {
+        // ── The horizontal walls, dealt across the frame in the order the
+        // barycentre sweep settled on. There is no ELK x for a boundary port
+        // (its stand-in node is layer-pinned, not placed), so the sweep's
+        // barycentre is the ordering signal, and the slots themselves are
+        // spread evenly between the vertical gutters. ──
+        for (const side of ['top', 'bottom'] as const) {
+            const group = ownPorts.filter(p => portSideOf(p) === side)
+                .sort((a, b) => (elkX.get(a) ?? 0) - (elkX.get(b) ?? 0));
+            if (group.length === 0) continue;
+            const from = g.left;
+            const to = Math.max(width - g.right, from);
+            const span = to - from;
+            let prevEnd = -Infinity;
+            for (const [index, pid] of group.entries()) {
+                let cx = from + (group.length === 1
+                    ? span / 2
+                    : (index + 0.5) / group.length * span);
+                cx = Math.max(cx, from + HORIZONTAL_PORT_PITCH / 2, prevEnd + HORIZONTAL_PORT_PITCH);
+                prevEnd = cx + (portWeight(pid) - 1) * NESTED_PITCH;
+                portPos.set(pid, { x: cx - PORT_SIZE / 2, y: 0, side });
+                width = Math.max(width, prevEnd + HORIZONTAL_PORT_PITCH / 2 + g.right);
+            }
+        }
+        // Ports were snapped to the pre-growth width and height; re-pin the far
+        // walls now that both are final. Neither pass changes the other's axis,
+        // so one re-pin is enough.
+        for (const [, p] of portPos) {
             if (p.side === 'right') p.x = width - PORT_SIZE / 2;
+            if (p.side === 'top') p.y = -PORT_SIZE / 2;
+            if (p.side === 'bottom') p.y = height - PORT_SIZE / 2;
         }
 
         const l: PartLayout = { width, height, childPos, portPos };
@@ -901,16 +1142,27 @@ export async function computeInterconnectionLayout(
             const p = l.portPos.get(portId);
             if (!p) continue;
             const pel = portEls.get(portId)!;
-            infos.push({ id: portId, name: pel.name, x: p.x, y: p.y, side: p.side, direction: portDirection(pel) ?? portRole(portId) });
-            const parentCenterY = p.y + PORT_SIZE / 2;
-            const insetX = p.x + (PORT_SIZE - NESTED_PORT_SIZE) / 2;
-            (nestedOf.get(portId) ?? []).forEach((childId, i) => {
+            const nestedIds = nestedOf.get(portId) ?? [];
+            infos.push({
+                id: portId, name: pel.name, x: p.x, y: p.y, side: p.side,
+                direction: portDirection(pel) ?? portRole(portId),
+                nestedCount: nestedIds.length || undefined,
+                labelWidth: portCaptionWidth(pel.name),
+            });
+            // A group runs ALONG its wall: down a vertical wall, across a
+            // horizontal one. Stacking a bottom-wall group downward would march
+            // its nested ports off the box.
+            const vertical = isVerticalWall(p.side);
+            const parentCenter = vertical ? p.y + PORT_SIZE / 2 : p.x + PORT_SIZE / 2;
+            const inset = (vertical ? p.x : p.y) + (PORT_SIZE - NESTED_PORT_SIZE) / 2;
+            nestedIds.forEach((childId, i) => {
                 const cel = portEls.get(childId)!;
+                const along = parentCenter + NESTED_PITCH * (i + 1) - NESTED_PORT_SIZE / 2;
                 infos.push({
                     id: childId,
                     name: cel.name,
-                    x: insetX,
-                    y: parentCenterY + NESTED_PITCH * (i + 1) - NESTED_PORT_SIZE / 2,
+                    x: vertical ? inset : along,
+                    y: vertical ? along : inset,
                     side: p.side,
                     direction: portDirection(cel) ?? portRole(childId),
                     size: NESTED_PORT_SIZE,
@@ -1076,20 +1328,38 @@ export async function computeInterconnectionLayout(
         const sourceSide = endpointSide(source, sourcePort, sourceHandle, 'right');
         const targetSide = endpointSide(target, targetPort, targetHandle, 'left');
         const id = rel.id || `ic-e-${i}`;
-        const endpointPoint = (partId: string, portId: string | undefined, sourceEnd: boolean) => {
+        // A connector meets a port at the face the connector arrives on, not at
+        // the square's centre. Anchoring to the centre drew the arrowhead on top
+        // of the port glyph — the head covered the very thing it points at, and
+        // the tail started under its own square.
+        const endpointPoint = (
+            partId: string, portId: string | undefined, sourceEnd: boolean, side: PortSide,
+        ) => {
             const abs = absolutePos.get(partId)!;
             const l = layouts.get(partId)!;
             if (portId) {
                 const info = (portInfoByOwner.get(partId) ?? []).find(p => p.id === portId);
                 if (info) {
                     const size = info.size ?? PORT_SIZE;
-                    return { x: abs.x + info.x + size / 2, y: abs.y + info.y + size / 2 };
+                    // A port that carries nested ports is drawn as a group, and
+                    // the connector belongs to the whole feature — so it meets
+                    // the group's centreline, not the parent square that
+                    // happens to sit at the start of the stack. The group runs
+                    // along its own wall, so the shift follows that axis.
+                    const groupShift = (info.nestedCount ?? 0) * NESTED_PITCH / 2;
+                    const alongY = isVerticalWall(info.side);
+                    const cx = abs.x + info.x + size / 2 + (alongY ? 0 : groupShift);
+                    const cy = abs.y + info.y + size / 2 + (alongY ? groupShift : 0);
+                    return side === 'left' ? { x: cx - size / 2, y: cy }
+                        : side === 'right' ? { x: cx + size / 2, y: cy }
+                        : side === 'top' ? { x: cx, y: cy - size / 2 }
+                        : { x: cx, y: cy + size / 2 };
                 }
             }
             return { x: abs.x + (sourceEnd ? l.width : 0), y: abs.y + l.height / 2 };
         };
-        const sourcePoint = endpointPoint(source, sourcePort, true);
-        const targetPoint = endpointPoint(target, targetPort, false);
+        const sourcePoint = endpointPoint(source, sourcePort, true, sourceSide);
+        const targetPoint = endpointPoint(target, targetPort, false, targetSide);
         const sourceAbs = absolutePos.get(source)!;
         const targetAbs = absolutePos.get(target)!;
         const edge: Edge = {

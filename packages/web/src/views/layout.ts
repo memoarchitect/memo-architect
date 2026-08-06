@@ -58,6 +58,11 @@ export interface ResolverChild extends ResolverNode {
     y: number;
     /** Port id → the local y the engine chose for it, when it placed ports. */
     portY?: ReadonlyMap<string, number>;
+    /**
+     * Port id → the local x the engine chose. This is the ordering signal for a
+     * port on a horizontal wall (NORTH/SOUTH), whose y is fixed by the wall.
+     */
+    portX?: ReadonlyMap<string, number>;
 }
 export interface ResolvedGraphLayout {
     strategy: 'layered-right' | 'layered-down' | 'balanced-board' | 'elk-layered';
@@ -1001,10 +1006,17 @@ export async function resolveGraphLayout(options: {
                 id: port.id,
                 width: 1,
                 height: 1,
-                layoutOptions: {
-                    'elk.layered.layering.layerConstraint':
-                        port.side === 'right' ? 'LAST_SEPARATE' : 'FIRST_SEPARATE',
-                },
+                // Only the vertical walls imply a layer: a west port is upstream
+                // of the contents, an east port downstream. A port on the top or
+                // bottom wall implies no such order, so pinning it to the first
+                // layer would distort the whole board around it — it takes its
+                // natural layer and is ordered along its wall by the caller.
+                ...(port.side === 'left' || port.side === 'right' ? {
+                    layoutOptions: {
+                        'elk.layered.layering.layerConstraint':
+                            port.side === 'right' ? 'LAST_SEPARATE' : 'FIRST_SEPARATE',
+                    },
+                } : {}),
             }));
             const output = await elk.layout({
                 id: `resolver-${options.id}`,
@@ -1065,13 +1077,16 @@ export async function resolveGraphLayout(options: {
                 const minX = Math.min(...rawChildren.map(child => child.x ?? 0));
                 const minY = Math.min(...rawChildren.map(child => child.y ?? 0));
                 const children = rawChildren.map(child => {
-                    const ports = (child as { ports?: { id: string; y?: number }[] }).ports;
+                    const ports = (child as { ports?: { id: string; x?: number; y?: number }[] }).ports;
                     return {
                         ...byId.get(child.id)!,
                         x: (child.x ?? 0) - minX,
                         y: (child.y ?? 0) - minY,
                         ...(ports?.length
-                            ? { portY: new Map(ports.map(port => [port.id, port.y ?? 0])) }
+                            ? {
+                                portY: new Map(ports.map(port => [port.id, port.y ?? 0])),
+                                portX: new Map(ports.map(port => [port.id, port.x ?? 0])),
+                            }
                             : {}),
                     };
                 });
