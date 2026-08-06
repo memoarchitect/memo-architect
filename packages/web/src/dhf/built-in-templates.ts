@@ -15,20 +15,33 @@
 // Vite loads all .md files under the installed ontology package as raw strings.
 // The meta checkout may include the ontology submodule, but package resolution
 // deliberately goes through node_modules so standalone clones build the same way.
+// The templates moved from `src/compliance/dhf-templates/` to
+// `src/artifacts/templates/dhf/` when the artifacts taxonomy landed. This glob
+// kept pointing at the old path, so TEMPLATE_MAP was silently empty and every
+// built-in template in the wizard came up blank — a stale literal here cannot
+// fail loudly, because a glob that matches nothing is not an error. The
+// assertion below is what makes the next such move noisy.
 const _rawTemplates = import.meta.glob(
-    '../../../../node_modules/@memoarchitect/ontology/src/compliance/dhf-templates/**/*.md',
+    '../../../../node_modules/@memoarchitect/ontology/src/artifacts/templates/dhf/**/*.md',
     { query: '?raw', eager: true, import: 'default' }
 ) as Record<string, string>;
 
 // Build map: "iso-14971/rmp" → raw markdown content
 const TEMPLATE_MAP: Record<string, string> = {};
 for (const [path, content] of Object.entries(_rawTemplates)) {
-    // path looks like: .../dhf-templates/iso-14971/rmp.md
-    const match = path.match(/dhf-templates\/(.+)\.md$/);
+    // path looks like: .../templates/dhf/iso-14971/rmp.md
+    const match = path.match(/templates\/dhf\/(.+)\.md$/);
     if (match) {
         TEMPLATE_MAP[match[1]] = content;
     }
 }
+
+/**
+ * Number of templates the glob resolved. Exported so a test can assert the
+ * loader found the ontology at all, rather than discovering a path drift only
+ * when a user opens an empty document.
+ */
+export const builtInTemplateCount = Object.keys(TEMPLATE_MAP).length;
 
 /** Strip YAML frontmatter block from markdown */
 function stripFrontmatter(md: string): string {
