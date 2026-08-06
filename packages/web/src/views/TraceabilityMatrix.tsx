@@ -22,17 +22,20 @@ import { getRegistries, useModelStore } from '../store/model-store';
 import {
     computeHierarchicalDSM,
     collectNodeIds,
-    elementKindsInModel,
     layersInModel,
     relationshipTypesInModel,
     suggestTraceLayers,
     type DsmAggregateCell,
     type DsmAxisEntry,
+    type DsmOrdering,
 } from '../analysis/dsm-hierarchy';
+import { AxisControlGroup } from './DSMView';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
 import { elementFilterOptions } from '../components/element-options';
 import { AxisScopeSelect, type AxisScope } from '../components/AxisScopeSelect';
+import { ToolbarPopover } from '../components/ToolbarPopover';
+import { Icon, IconToggle } from './DiagramToolbarControls';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -65,7 +68,7 @@ const PRESETS: MatrixPreset[] = [
         label: 'IEC 62304: Requirement → Test',
         description: 'Software requirements traced to verification tests',
         rowKinds: ['Requirement', 'SoftwareRequirement', 'SystemRequirement'],
-        columnKinds: ['Test', 'TestCase', 'VerificationActivity'],
+        columnKinds: ['Test', 'TestCase', 'VerificationCase', 'VerificationActivity'],
         linkTypes: ['verifiedBy', 'satisfiedBy', 'validates'],
     },
     {
@@ -118,8 +121,12 @@ export function TraceabilityMatrix() {
     const [rowElements, setRowElements] = useState<string[]>([]);
     const [columnElements, setColumnElements] = useState<string[]>([]);
     const [linkTypes, setLinkTypes] = useState<string[]>([]);
+    const [rowOrdering, setRowOrdering] = useState<DsmOrdering>('natural');
+    const [columnOrdering, setColumnOrdering] = useState<DsmOrdering>('natural');
+    const [activeAxisFilter, setActiveAxisFilter] = useState<'rows' | 'columns' | null>(null);
+    const [toolbarPlacement, setToolbarPlacement] = useState<'top' | 'left'>('top');
     const [editing, setEditing] = useState(false);
-    const [cellSize, setCellSize] = useState(26);
+    const [cellSize, setCellSize] = useState(39);
     const [showColumnNames, setShowColumnNames] = useState(true);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
@@ -132,17 +139,29 @@ export function TraceabilityMatrix() {
 
     const layers = useMemo(() => (model ? layersInModel(model) : []), [model]);
 
-    const linkOptions = useMemo<TypeFilterOption[]>(() => {
-        if (!model) return [];
-        const counts = new Map<string, number>();
-        for (const rel of model.relationships) counts.set(rel.type, (counts.get(rel.type) ?? 0) + 1);
-        return relationshipTypesInModel(model).map(type => ({
-            value: type, hint: String(counts.get(type) ?? 0), color: relationshipColor(type),
-        }));
-    }, [model]);
-
     const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
     const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
+
+    /** Only offer relationships that the ontology permits for a visible axis pair. */
+    const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
+        if (!model || !registries) return [];
+        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, picked: string[]) =>
+            (!scope.layer || element.layer === scope.layer)
+            && (!scope.kind || element.kind === scope.kind)
+            && (picked.length === 0 || picked.includes(element.id));
+        const rowCandidates = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowElements));
+        const columnCandidates = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnElements));
+        const names = new Set<string>();
+        for (const row of rowCandidates) {
+            for (const column of columnCandidates) {
+                if (row.id === column.id) continue;
+                for (const option of legalRelationshipTypes(row, column, registries)) names.add(option.definition.name);
+            }
+        }
+        const counts = new Map<string, number>();
+        for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
+        return [...names].sort().map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
+    }, [model, registries, rowScope, columnScope, rowElements, columnElements]);
 
     // Narrowing the kinds must narrow the picked elements with them, or the
     // axis would keep showing something the kind filter no longer allows.
@@ -155,18 +174,23 @@ export function TraceabilityMatrix() {
         setColumnElements(current => current.every(id => allowed.has(id)) ? current : current.filter(id => allowed.has(id)));
     }, [columnElementOptions]);
 
+    useEffect(() => {
+        const allowed = new Set(legalLinkOptions.map(option => option.value));
+        setLinkTypes(current => current.every(type => allowed.has(type)) ? current : current.filter(type => allowed.has(type)));
+    }, [legalLinkOptions]);
+
     const result = useMemo(() => {
         if (!model) return null;
         return computeHierarchicalDSM(model, {
-            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows },
-            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns },
+            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
+            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
             dependencyTypes: linkTypes,
             // Trace is read as a link between two elements, not as a direction:
             // a requirement verified by a test and a test verifying a
             // requirement are the same coverage fact.
             symmetric: true,
         });
-    }, [model, rowScope, columnScope, rowElements, columnElements, linkTypes, expandedRows, expandedColumns]);
+    }, [model, rowScope, columnScope, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
 
     // Trace is a cross-layer question, so the matrix opens on whichever two
     // layers this model actually links across the most — requirements against
@@ -192,6 +216,20 @@ export function TraceabilityMatrix() {
         setExpandedSeeded(true);
     }, [result, seeded, expandedSeeded]);
 
+    const setAxisExpansion = useCallback((axis: 'rows' | 'columns', next: Set<string>) => {
+        if (axis === 'rows') setExpandedRows(next);
+        else setExpandedColumns(next);
+    }, []);
+    const expandAxis = useCallback((axis: 'rows' | 'columns') => {
+        if (!result) return;
+        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots)));
+    }, [result, setAxisExpansion]);
+    const collapseAxis = useCallback((axis: 'rows' | 'columns') => setAxisExpansion(axis, new Set()), [setAxisExpansion]);
+    const expandAxisToDepth = useCallback((axis: 'rows' | 'columns', depth: number) => {
+        if (!result) return;
+        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots, depth)));
+    }, [result, setAxisExpansion]);
+
     /**
      * A preset names kinds; the axis takes one. The first kind the model
      * actually has wins, and the axis is set to that kind's own layer — so a
@@ -210,8 +248,15 @@ export function TraceabilityMatrix() {
         const types = new Set(model ? relationshipTypesInModel(model) : []);
         const rows = scopeForKinds(preset.rowKinds);
         const columns = scopeForKinds(preset.columnKinds);
-        if (rows) setRowScope(rows);
-        if (columns) setColumnScope(columns);
+        if (preset.id === 'everything') {
+            // Empty kinds are meaningful here: use every element, rather than
+            // leaving the scopes from the previously selected preset behind.
+            setRowScope({});
+            setColumnScope({});
+        } else {
+            if (rows) setRowScope(rows);
+            if (columns) setColumnScope(columns);
+        }
         setLinkTypes(preset.linkTypes.filter(type => types.has(type)));
         // A preset redefines what the axes are about, so any hand-picked
         // elements from the previous configuration no longer apply.
@@ -318,15 +363,55 @@ export function TraceabilityMatrix() {
             : { kind: 'error', message: outcome.error ?? 'The trace could not be removed.' });
     }, [deleteRelationship]);
 
+    const toggleTrace = useCallback(async (row: DsmAxisEntry, column: DsmAxisEntry, cell: DsmAggregateCell | null) => {
+        if (!editing || !connected || !model || !registries
+            || !row.node.isElement || !column.node.isElement
+            || row.node.children.length > 0 || column.node.children.length > 0
+            || row.node.id === column.node.id) return;
+
+        // A direct toggle is safe only when the active relation filter names
+        // one concrete relationship. Otherwise the inspector lets the user
+        // choose instead of inventing a type.
+        if (linkTypes.length !== 1) return;
+        const type = linkTypes[0];
+        const existing = model.relationships.find(rel => rel.type === type
+            && ((rel.sourceId === row.node.id && rel.targetId === column.node.id)
+                || (rel.sourceId === column.node.id && rel.targetId === row.node.id)));
+        if (existing) {
+            if (existing.named === false) {
+                setStatus({ kind: 'error', message: 'This trace has no declared name, so it cannot be removed until it is named in SysML.' });
+                return;
+            }
+            await removeLink(existing.id);
+            return;
+        }
+        const source = model.elements[row.node.id];
+        const target = model.elements[column.node.id];
+        if (!source || !target) return;
+        const option = legalRelationshipTypes(source, target, registries)
+            .find(candidate => candidate.definition.name === type);
+        if (!option) {
+            setStatus({ kind: 'error', message: `${type} is not legal between these element types.` });
+            return;
+        }
+        await addLink(option);
+    }, [editing, connected, model, registries, linkTypes, addLink, removeLink]);
+
     // ── Rendering ────────────────────────────────────────────────────────────
 
     const renderCell = useCallback((cell: DsmAggregateCell | null, row: DsmAxisEntry, column: DsmAxisEntry): MatrixCellStyle => {
-        if (cell?.diagonal) return { text: String(cell.strength), color: COLOR.muted, background: '#E3E8EE' };
+        // Traceability has no meaningful self-link diagonal. Keeping it blank
+        // avoids presenting an internal roll-up count as a trace link.
+        if (cell?.diagonal) return {};
         if (cell) {
-            const color = cell.types.length > 0 ? relationshipColor(cell.types[0]) : '#2DA98C';
-            const intensity = Math.min(0.16 + cell.strength * 0.14, 0.6);
+            // Trace is a coverage fact rather than a relationship taxonomy:
+            // use DSM's green dependency palette consistently for every mark.
+            const color = '#65A30D';
+            const intensity = Math.min(0.14 + cell.strength * 0.13, 0.55);
             return {
-                text: cell.aggregated ? String(cell.strength) : '✓',
+                // A check means exactly one trace. A number is only shown
+                // when this pair (or a collapsed subtree) contains 2+ links.
+                text: cell.strength === 1 ? '✓' : String(cell.strength),
                 color,
                 background: `${color}${Math.round(intensity * 255).toString(16).padStart(2, '0')}`,
                 title: `${row.node.name} ↔ ${column.node.name}\n${cell.types.join(', ')}${editing ? '\nClick to inspect or remove' : ''}`,
@@ -359,95 +444,62 @@ export function TraceabilityMatrix() {
         );
     }
 
+    const leftToolbar = toolbarPlacement === 'left';
+
     return (
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8' }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative' }}>
             {/* ── Toolbar ── */}
-            <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
-                <div className="flex items-center gap-3 px-4 py-2" style={{ flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>Traceability</span>
-                    <span style={{ fontSize: '11px', color: COLOR.faint }}>
-                        {result.totalDependencies} link{result.totalDependencies === 1 ? '' : 's'} shown
-                        {coverage.total > 0 && ` · ${coverage.traced}/${coverage.total} rows traced (${Math.round(coverage.traced / coverage.total * 100)}%)`}
+            <div style={leftToolbar
+                ? { position: 'absolute', inset: '0 auto 0 0', width: '250px', zIndex: 30, overflow: 'auto', borderRight: `1px solid ${COLOR.border}`, background: COLOR.surface }
+                : { borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface, position: 'relative' }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={leftToolbar
+                    ? { flexDirection: 'column', alignItems: 'stretch', position: 'relative', paddingTop: '54px' }
+                    : { flexWrap: 'wrap', position: 'relative', paddingRight: '52px' }}>
+                    <span style={{ position: 'absolute', top: '9px', right: '12px' }}>
+                        <IconToggle
+                            icon={leftToolbar ? <Icon.arrowUp /> : <Icon.panelCollapse />}
+                            onClick={() => setToolbarPlacement(current => current === 'top' ? 'left' : 'top')}
+                            title={leftToolbar ? 'Move toolbar to top' : 'Move toolbar to left'}
+                        />
                     </span>
-                    <div className="flex-1" />
-                    <AxisScopeSelect
-                        label="Rows" layers={layers} value={rowScope} onChange={setRowScope}
-                        describedAs="row scope"
-                        title="What the rows list — one architecture layer, or one element type within it"
+                    <AxisControlGroup
+                        axis="rows" layers={layers} scope={rowScope} onScopeChange={setRowScope}
+                        elements={rowElements} onElementsChange={setRowElements} elementOptions={rowElementOptions}
+                        ordering={rowOrdering} onOrderingChange={setRowOrdering}
+                        onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
+                        leftDock={leftToolbar} filterOpen={activeAxisFilter === 'rows'}
+                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)} parentOf={new Map()}
                     />
-                    <TypeFilterSelect
-                        label="of" allLabel={`All ${rowElementOptions.length} elements`} options={rowElementOptions}
-                        selected={rowElements} onChange={setRowElements} width={130} describedAs="row elements"
-                        placeholder="Filter by name, kind or id…"
-                        title="The individual elements listed down the side"
+                    <AxisControlGroup
+                        axis="columns" layers={layers} scope={columnScope} onScopeChange={setColumnScope}
+                        elements={columnElements} onElementsChange={setColumnElements} elementOptions={columnElementOptions}
+                        ordering={columnOrdering} onOrderingChange={setColumnOrdering}
+                        onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
+                        leftDock={leftToolbar} filterOpen={activeAxisFilter === 'columns'}
+                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)} parentOf={new Map()}
                     />
-                    <AxisScopeSelect
-                        label="Columns" layers={layers} value={columnScope} onChange={setColumnScope}
-                        describedAs="column scope"
-                        title="What the columns list — one architecture layer, or one element type within it"
-                    />
-                    <TypeFilterSelect
-                        label="of" allLabel={`All ${columnElementOptions.length} elements`} options={columnElementOptions}
-                        selected={columnElements} onChange={setColumnElements} width={130} describedAs="column elements"
-                        placeholder="Filter by name, kind or id…"
-                        title="The individual elements listed across the top"
-                    />
-                    <TypeFilterSelect
-                        label="Trace via" allLabel="Any relationship" options={linkOptions}
-                        selected={linkTypes} onChange={setLinkTypes}
-                        title="Relationships counted as trace"
-                    />
-                </div>
-
-                <div className="flex items-center gap-2 px-4 pb-2" style={{ flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '11px', color: COLOR.faint }}>Presets</span>
-                    {PRESETS.map(preset => (
-                        <button
-                            key={preset.id}
-                            onClick={() => applyPreset(preset)}
-                            title={preset.description}
-                            style={{
-                                padding: '3px 8px', borderRadius: '5px', fontSize: '11px',
-                                border: `1px solid ${COLOR.borderLight}`, background: COLOR.surface,
-                                color: COLOR.secondary, cursor: 'pointer',
-                            }}
-                        >
-                            {preset.label}
-                        </button>
-                    ))}
-
-                    <div style={{ width: '1px', height: '16px', background: COLOR.borderLight, margin: '0 4px' }} />
-
-                    <button
-                        onClick={() => { if (result) { setExpandedRows(new Set(collectNodeIds(result.rowRoots))); setExpandedColumns(new Set(collectNodeIds(result.columnRoots))); } }}
-                        style={{ padding: '3px 8px', borderRadius: '5px', fontSize: '11px', border: `1px solid ${COLOR.border}`, background: COLOR.surface, color: COLOR.secondary, cursor: 'pointer' }}
-                    >
-                        Expand all
-                    </button>
-                    <button
-                        onClick={() => { setExpandedRows(new Set()); setExpandedColumns(new Set()); }}
-                        style={{ padding: '3px 8px', borderRadius: '5px', fontSize: '11px', border: `1px solid ${COLOR.border}`, background: COLOR.surface, color: COLOR.secondary, cursor: 'pointer' }}
-                    >
-                        Collapse all
-                    </button>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs, color: COLOR.muted }}>
-                        <input type="checkbox" checked={showColumnNames} onChange={event => setShowColumnNames(event.target.checked)} style={{ accentColor: COLOR.accent }} />
-                        Column names
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted }}>
-                        Zoom
-                        <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
-                    </label>
-
-                    <div className="flex-1" />
-
-                    <label
+                    <div style={{
+                        display: 'grid', gridTemplateColumns: leftToolbar ? '1fr' : 'max-content max-content max-content', gridTemplateRows: 'auto auto',
+                        alignItems: 'center', columnGap: '10px', rowGap: '5px', padding: '6px 8px',
+                        border: `1px solid ${COLOR.border}`, borderRadius: '9px', background: '#FAFBFC',
+                    }}>
+                        <ToolbarPopover label={<><Icon.filter /> Relations</>} ariaLabel="Filter trace relationships" title="Relationships counted as trace" width={leftToolbar ? 210 : 260} fullWidth={leftToolbar}>
+                            <TypeFilterSelect label="Trace relationships" allLabel="Any relationship" options={legalLinkOptions} selected={linkTypes} onChange={setLinkTypes} title="Relationships counted as trace" />
+                        </ToolbarPopover>
+                        <ToolbarPopover label="Presets" ariaLabel="Traceability presets" title="Choose a traceability starting point" width={leftToolbar ? 210 : 270} fullWidth={leftToolbar}>
+                            {PRESETS.map(preset => (
+                                <button key={preset.id} onClick={() => applyPreset(preset)} title={preset.description} style={{
+                                    padding: '6px 7px', border: 'none', borderRadius: '5px', background: 'transparent', cursor: 'pointer', fontSize: FONT.xs, color: COLOR.primary, textAlign: 'left',
+                                }}>{preset.label}</button>
+                            ))}
+                        </ToolbarPopover>
+                        <label
                         title={connected
                             ? 'Click cells to add or remove trace links. Only leaf-to-leaf cells can be edited.'
                             : 'The dev server is unreachable, so nothing can be written to the model.'}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs,
+                            width: leftToolbar ? '100%' : undefined, boxSizing: 'border-box',
                             padding: '3px 9px', borderRadius: '5px',
                             border: `1px solid ${editing ? COLOR.accent : COLOR.border}`,
                             background: editing ? '#E8F8F3' : COLOR.surface,
@@ -460,8 +512,13 @@ export function TraceabilityMatrix() {
                             onChange={event => { setEditing(event.target.checked); setFocus(null); }}
                             style={{ accentColor: COLOR.accent }}
                         />
-                        Edit links
+                        Edit trace
                     </label>
+                        <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted, justifyContent: leftToolbar ? 'center' : undefined }} title="Cell size">
+                            Zoom
+                            <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
+                        </label>
+                    </div>
                 </div>
 
                 {status && (
@@ -477,6 +534,7 @@ export function TraceabilityMatrix() {
             </div>
 
             {/* ── Matrix ── */}
+            <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, marginLeft: leftToolbar ? '250px' : 0, width: leftToolbar ? 'calc(100% - 250px)' : undefined }}>
             <HierarchicalMatrix
                 result={result}
                 onToggleRow={id => setExpandedRows(current => toggled(current, id))}
@@ -485,9 +543,20 @@ export function TraceabilityMatrix() {
                 selectedElementId={selectedElementId}
                 renderCell={renderCell}
                 onCellClick={(row, column, cell) => { setFocus({ row, column, cell }); setLinkQuery(''); }}
+                onCellDoubleClick={(row, column, cell) => { void toggleTrace(row, column, cell); }}
                 cellSize={cellSize}
                 showColumnNames={showColumnNames}
+                cornerHeader={
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
+                        <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>Traceability Matrix</span>
+                        <span style={{ fontSize: '11px', color: COLOR.faint, marginTop: '2px' }}>
+                            {result.totalDependencies} link{result.totalDependencies === 1 ? '' : 's'} shown
+                            {coverage.total > 0 && ` · ${coverage.traced}/${coverage.total} rows traced (${Math.round(coverage.traced / coverage.total * 100)}%)`}
+                        </span>
+                    </div>
+                }
             />
+            </div>
 
             {/* ── Link inspector / editor ── */}
             {focus && (

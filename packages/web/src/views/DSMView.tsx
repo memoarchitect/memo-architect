@@ -20,8 +20,9 @@
 // with different risks.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useModelStore } from '../store/model-store';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { legalRelationshipTypes } from '@memoarchitect/tools/browser';
+import { getRegistries, useModelStore } from '../store/model-store';
 import {
     collectNodeIds,
     computeHierarchicalDSM,
@@ -32,12 +33,15 @@ import {
     type DsmAggregateCell,
     type DsmAxisEntry,
     type DsmOrdering,
+    type LayerSummary,
 } from '../analysis/dsm-hierarchy';
 import { analyzeConsistency } from '../analysis/consistency';
+import { downloadDsmCsv, downloadDsmXlsx } from '../analysis/dsm-export';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
 import { ToolbarPopover } from '../components/ToolbarPopover';
 import { AxisScopeSelect, describeScope, type AxisScope } from '../components/AxisScopeSelect';
+import { Icon, IconButton, IconToggle, ToolbarCluster } from './DiagramToolbarControls';
 import { elementFilterOptions } from '../components/element-options';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
@@ -59,6 +63,7 @@ export function DSMView() {
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const setAnalysisIssues = useModelStore(s => s.setAnalysisIssues);
+    const registries = useMemo(() => getRegistries(model), [model]);
 
     const [rowScope, setRowScope] = useState<AxisScope>({});
     const [columnScope, setColumnScope] = useState<AxisScope>({});
@@ -67,11 +72,16 @@ export function DSMView() {
     const [dependencyTypes, setDependencyTypes] = useState<string[]>([]);
     const [containmentTypes, setContainmentTypes] = useState<string[] | null>(null);
     const [groupByPackage, setGroupByPackage] = useState(false);
-    const [ordering, setOrdering] = useState<DsmOrdering>('natural');
+    const [rowOrdering, setRowOrdering] = useState<DsmOrdering>('natural');
+    const [columnOrdering, setColumnOrdering] = useState<DsmOrdering>('natural');
     const [symmetric, setSymmetric] = useState(false);
+    // Column names remain visible by default, but render straight and inside
+    // their own header cells rather than diagonally across neighbouring cells.
     const [showColumnNames, setShowColumnNames] = useState(true);
-    const [cellSize, setCellSize] = useState(26);
+    const [cellSize, setCellSize] = useState(39);
     const [linkAxes, setLinkAxes] = useState(true);
+    const [toolbarPlacement, setToolbarPlacement] = useState<'top' | 'left'>('top');
+    const [activeAxisFilter, setActiveAxisFilter] = useState<'rows' | 'columns' | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
     const [inspected, setInspected] = useState<{ row: DsmAxisEntry; column: DsmAxisEntry; cell: DsmAggregateCell } | null>(null);
@@ -89,6 +99,21 @@ export function DSMView() {
 
     const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
     const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
+
+    const legalDependencyOptions = useMemo<TypeFilterOption[]>(() => {
+        if (!model || !registries) return [];
+        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, picked: string[]) =>
+            (!scope.layer || element.layer === scope.layer)
+            && (!scope.kind || element.kind === scope.kind)
+            && (picked.length === 0 || picked.includes(element.id));
+        const rows = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowElements));
+        const columns = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnElements));
+        const allowed = new Set<string>();
+        for (const row of rows) for (const column of columns) {
+            if (row.id !== column.id) for (const option of legalRelationshipTypes(row, column, registries)) allowed.add(option.definition.name);
+        }
+        return relationshipOptions.filter(option => allowed.has(option.value));
+    }, [model, registries, rowScope, columnScope, rowElements, columnElements, relationshipOptions]);
 
     // A kind that is no longer on the axis must not keep its elements on it:
     // the picked list is pruned to what the kind filter still allows, so the
@@ -111,6 +136,25 @@ export function DSMView() {
         [containmentTypes, model],
     );
 
+    // The element filter reads the exact containment relations the DSM uses,
+    // so filtering and expanding tell the same structural story.
+    const filterParentOf = useMemo(() => {
+        const parentOf = new Map<string, string>();
+        if (!model) return parentOf;
+        for (const element of Object.values(model.elements)) {
+            const parent = element.parentAction ?? element.owner;
+            if (parent && model.elements[parent]) parentOf.set(element.id, parent);
+        }
+        const containment = new Set(effectiveContainment);
+        for (const relationship of model.relationships) {
+            if (containment.has(relationship.type) && relationship.sourceId !== relationship.targetId
+                && model.elements[relationship.sourceId] && model.elements[relationship.targetId]) {
+                parentOf.set(relationship.targetId, relationship.sourceId);
+            }
+        }
+        return parentOf;
+    }, [model, effectiveContainment]);
+
     /**
      * The same list, with the nesting relations called out. A relation that
      * builds the tree cannot also be a mark inside it — the engine drops it —
@@ -118,10 +162,15 @@ export function DSMView() {
      */
     const dependencyOptions = useMemo<TypeFilterOption[]>(() => {
         const nesting = new Set(effectiveContainment);
-        return relationshipOptions.map(option => nesting.has(option.value)
+        return legalDependencyOptions.map(option => nesting.has(option.value)
             ? { ...option, label: `${option.value} (nesting)`, hint: 'builds the tree' }
             : option);
-    }, [relationshipOptions, effectiveContainment]);
+    }, [legalDependencyOptions, effectiveContainment]);
+
+    useEffect(() => {
+        const allowed = new Set(dependencyOptions.map(option => option.value));
+        setDependencyTypes(current => current.every(type => allowed.has(type)) ? current : current.filter(type => allowed.has(type)));
+    }, [dependencyOptions]);
 
     /** How many tucked-away settings are off their default, so Options says so. */
     const changedOptions = [
@@ -131,15 +180,14 @@ export function DSMView() {
     const result = useMemo(() => {
         if (!model) return null;
         return computeHierarchicalDSM(model, {
-            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows },
-            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns },
+            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
+            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
             dependencyTypes,
             containmentTypes: effectiveContainment,
             groupByPackage,
-            ordering,
             symmetric,
         });
-    }, [model, rowScope, columnScope, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, ordering, symmetric, expandedRows, expandedColumns]);
+    }, [model, rowScope, columnScope, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
 
     // Open on something worth looking at: a DSM's subject is one layer against
     // itself, and the layer chosen is the one whose elements actually depend on
@@ -155,19 +203,6 @@ export function DSMView() {
         setSeeded(true);
     }, [model, effectiveContainment, seeded]);
 
-    // Then expand the first level, so the matrix opens showing structure rather
-    // than one collapsed line per tree.
-    const [expandedSeeded, setExpandedSeeded] = useState(false);
-    useEffect(() => {
-        if (expandedSeeded || !seeded || !result) return;
-        const roots = result.rowRoots.filter(node => node.children.length > 0).map(node => node.id);
-        const columnRoots = result.columnRoots.filter(node => node.children.length > 0).map(node => node.id);
-        if (roots.length === 0 && columnRoots.length === 0) return;
-        setExpandedRows(new Set(roots));
-        setExpandedColumns(new Set(columnRoots));
-        setExpandedSeeded(true);
-    }, [result, seeded, expandedSeeded]);
-
     const toggleRow = useCallback((nodeId: string) => {
         setExpandedRows(current => toggled(current, nodeId));
         if (linkAxes) setExpandedColumns(current => toggled(current, nodeId));
@@ -178,22 +213,60 @@ export function DSMView() {
         if (linkAxes) setExpandedRows(current => toggled(current, nodeId));
     }, [linkAxes]);
 
-    const expandAll = useCallback(() => {
-        if (!result) return;
-        setExpandedRows(new Set(collectNodeIds(result.rowRoots)));
-        setExpandedColumns(new Set(collectNodeIds(result.columnRoots)));
-    }, [result]);
-
-    const collapseAll = useCallback(() => {
-        setExpandedRows(new Set());
-        setExpandedColumns(new Set());
+    const setAxisExpansion = useCallback((axis: 'rows' | 'columns', expanded: Set<string>) => {
+        if (axis === 'rows') setExpandedRows(expanded);
+        else setExpandedColumns(expanded);
     }, []);
 
-    const expandToDepth = useCallback((depth: number) => {
+    const expandAxis = useCallback((axis: 'rows' | 'columns') => {
         if (!result) return;
-        setExpandedRows(new Set(collectNodeIds(result.rowRoots, depth)));
-        setExpandedColumns(new Set(collectNodeIds(result.columnRoots, depth)));
-    }, [result]);
+        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots)));
+    }, [result, setAxisExpansion]);
+
+    const collapseAxis = useCallback((axis: 'rows' | 'columns') => {
+        setAxisExpansion(axis, new Set());
+    }, [setAxisExpansion]);
+
+    const expandAxisToDepth = useCallback((axis: 'rows' | 'columns', depth: number) => {
+        if (!result) return;
+        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots, depth)));
+    }, [result, setAxisExpansion]);
+
+    const hideAxisElement = useCallback((axis: 'rows' | 'columns', elementId: string) => {
+        const options = axis === 'rows' ? rowElementOptions : columnElementOptions;
+        const setElements = axis === 'rows' ? setRowElements : setColumnElements;
+        const visibleEntries = axis === 'rows' ? result?.rows : result?.columns;
+        // A parent remains structurally visible while one of its children is
+        // selected. Hiding it therefore hides its entire displayed subtree.
+        const hidden = new Set(visibleEntries?.find(entry => entry.node.id === elementId)?.node.members ?? [elementId]);
+        setElements(current => {
+            // An empty selection means “all”; materialize that visible set
+            // before removing one item so an eye click and the filter agree.
+            const visible = current.length === 0 ? options.map(option => option.value) : current;
+            return visible.filter(id => !hidden.has(id));
+        });
+    }, [result, rowElementOptions, columnElementOptions]);
+
+    const exportXlsx = useCallback(async () => {
+        if (!model || !result) return;
+        // The workbook needs every line, not only the currently visible ones,
+        // so its native Excel outline controls can expand both hierarchies.
+        const workbookResult = computeHierarchicalDSM(model, {
+            rows: {
+                layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, ordering: rowOrdering,
+                expanded: new Set(collectNodeIds(result.rowRoots)),
+            },
+            columns: {
+                layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, ordering: columnOrdering,
+                expanded: new Set(collectNodeIds(result.columnRoots)),
+            },
+            dependencyTypes,
+            containmentTypes: effectiveContainment,
+            groupByPackage,
+            symmetric,
+        });
+        await downloadDsmXlsx(workbookResult);
+    }, [model, result, rowScope, columnScope, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric]);
 
     // Consistency findings belong in the bottom Problems bar, not in the grid.
     const consistency = useMemo(() => (model ? analyzeConsistency(model) : null), [model]);
@@ -236,90 +309,92 @@ export function DSMView() {
     }
 
     const { stats } = result;
+    const leftToolbar = toolbarPlacement === 'left';
+    const axisGroupStyle: CSSProperties = leftToolbar
+        ? {
+            display: 'grid', gap: '8px', width: '100%',
+        }
+        : { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'nowrap', marginTop: '2px' };
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#F7F7F5' }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#F7F7F5', position: 'relative' }}>
             {/* ── Toolbar ──
                 Two rows, not three: what the matrix *is* (its axes and what
                 counts as a dependency) stays on screen, and the settings you
                 choose once live behind Options. ── */}
-            <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
-                <div className="flex items-center gap-3 px-4 py-2" style={{ flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>
-                        Design Structure Matrix
+            <div style={toolbarPlacement === 'top'
+                ? { borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface, position: 'relative' }
+                : {
+                    position: 'absolute', inset: '0 auto 0 0', width: '250px', zIndex: 30,
+                    overflowY: 'auto', overflowX: 'hidden', borderRight: `1px solid ${COLOR.border}`,
+                    background: COLOR.surface, boxShadow: '2px 0 10px rgba(15, 23, 42, 0.06)',
+                }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={leftToolbar
+                    ? {
+                        flexDirection: 'column', alignItems: 'stretch', gap: '10px', position: 'relative',
+                        minHeight: '100%', padding: '54px 12px 14px', boxSizing: 'border-box',
+                    }
+                    : { flexWrap: 'wrap', rowGap: '2px', position: 'relative', paddingRight: '52px' }}>
+                    <span style={{ position: 'absolute', top: '9px', right: '12px' }}>
+                        <IconToggle
+                            icon={leftToolbar ? <Icon.arrowUp /> : <Icon.panelCollapse />}
+                            onClick={() => setToolbarPlacement(current => current === 'top' ? 'left' : 'top')}
+                            title={leftToolbar ? 'Move toolbar to top' : 'Move toolbar to left'}
+                        />
                     </span>
-                    <span style={{ fontSize: '11px', color: COLOR.faint }}>
-                        {result.rows.length} {'×'} {result.columns.length} {'·'} {result.totalDependencies} dependencies
-                        {stats.internal > 0 && ` · ${stats.internal} internal`}
-                    </span>
-                    <div className="flex-1" />
-                    <AxisScopeSelect
-                        label="Rows" layers={layers} value={rowScope} onChange={setRowScope}
-                        describedAs="row scope"
-                        title="What the rows list — one architecture layer, or one element type within it. An axis holds one semantic type so the marks between rows and columns can be read as a structure."
-                    />
-                    <TypeFilterSelect
-                        label="of" allLabel={`all ${rowElementOptions.length}`} options={rowElementOptions}
-                        selected={rowElements} onChange={setRowElements} width={110} describedAs="row elements"
-                        placeholder="Filter by name, kind or id…"
-                        title="The individual elements listed down the side. Type to narrow; each word narrows further."
-                    />
-                    <AxisScopeSelect
-                        label="Columns" layers={layers} value={columnScope} onChange={setColumnScope}
-                        describedAs="column scope"
-                        title="What the columns list — one architecture layer, or one element type within it."
-                    />
-                    <TypeFilterSelect
-                        label="of" allLabel={`all ${columnElementOptions.length}`} options={columnElementOptions}
-                        selected={columnElements} onChange={setColumnElements} width={110} describedAs="column elements"
-                        placeholder="Filter by name, kind or id…"
-                        title="The individual elements listed across the top. Type to narrow; each word narrows further."
-                    />
-                    <TypeFilterSelect
-                        label="Dependency" allLabel="Any relationship" options={dependencyOptions} width={140}
-                        selected={dependencyTypes} onChange={setDependencyTypes} describedAs="dependency relationships"
-                        title="Relationships that put a mark in a cell — flow, trace, allocation, …"
-                    />
-                </div>
-
-                <div className="flex items-center gap-3 px-4 pb-2" style={{ flexWrap: 'wrap' }}>
-                    <div className="flex items-center gap-1">
-                        <button onClick={expandAll} style={buttonStyle} title="Expand every subsystem on both axes">Expand all</button>
-                        <button onClick={collapseAll} style={buttonStyle} title="Collapse back to the top-level subsystems">Collapse all</button>
-                        {[1, 2, 3].map(depth => (
-                            <button key={depth} onClick={() => expandToDepth(depth)} style={buttonStyle} title={`Expand ${depth} level${depth > 1 ? 's' : ''} deep`}>
-                                L{depth}
-                            </button>
-                        ))}
+                    <div style={axisGroupStyle}>
+                        <AxisControlGroup
+                            axis="rows" layers={layers} scope={rowScope} onScopeChange={setRowScope}
+                            elements={rowElements} onElementsChange={setRowElements} elementOptions={rowElementOptions}
+                            ordering={rowOrdering} onOrderingChange={setRowOrdering}
+                            onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
+                            leftDock={leftToolbar} filterOpen={activeAxisFilter === 'rows'}
+                            onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)}
+                            parentOf={filterParentOf}
+                        />
+                        <AxisControlGroup
+                            axis="columns" layers={layers} scope={columnScope} onScopeChange={setColumnScope}
+                            elements={columnElements} onElementsChange={setColumnElements} elementOptions={columnElementOptions}
+                            ordering={columnOrdering} onOrderingChange={setColumnOrdering}
+                            onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
+                            leftDock={leftToolbar} filterOpen={activeAxisFilter === 'columns'}
+                            onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)}
+                            parentOf={filterParentOf}
+                        />
                     </div>
 
-                    <label style={{ ...checkboxStyle, gap: '5px' }}>
-                        Order
-                        <select
-                            value={ordering}
-                            onChange={event => setOrdering(event.target.value as DsmOrdering)}
-                            title={ORDERINGS.find(entry => entry.value === ordering)?.title}
-                            style={selectStyle}
-                        >
-                            {ORDERINGS.map(entry => (
-                                <option key={entry.value} value={entry.value} title={entry.title}>{entry.label}</option>
-                            ))}
-                        </select>
-                    </label>
-
-                    <label style={{ ...checkboxStyle, gap: '5px' }} title="Cell size">
-                        Zoom
-                        <input
-                            type="range" min={14} max={44} step={2} value={cellSize}
-                            onChange={event => setCellSize(Number(event.target.value))}
-                            style={{ width: '76px', accentColor: COLOR.accent }}
-                        />
-                    </label>
-
+                <div className="flex items-center gap-3" style={leftToolbar
+                    ? {
+                        width: '100%', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                        gridTemplateRows: 'auto auto', alignItems: 'center', columnGap: '10px', rowGap: '8px',
+                        padding: '8px', boxSizing: 'border-box', border: `1px solid ${COLOR.border}`,
+                        borderRadius: '9px', background: '#FAFBFC',
+                    }
+                    : {
+                        flex: '0 0 auto', alignSelf: 'stretch', alignContent: 'space-between',
+                        display: 'grid', gridTemplateColumns: 'max-content max-content max-content', gridTemplateRows: 'auto auto',
+                        alignItems: 'center', columnGap: '10px', rowGap: '5px', boxSizing: 'border-box',
+                        padding: '6px 8px', border: `1px solid ${COLOR.border}`, borderRadius: '9px', background: '#FAFBFC',
+                    }}>
                     <ToolbarPopover
-                        label="Options"
+                        label={leftToolbar ? <><Icon.filter /> Rel.</> : <><Icon.filter /> Relations</>}
+                        ariaLabel="Filter dependency relationships"
+                        title="Relationships that put a mark in a cell"
+                        width={260}
+                        fullWidth={leftToolbar}
+                    >
+                        <TypeFilterSelect
+                            label="Dependency" allLabel="Any relationship" options={dependencyOptions} width={180}
+                            selected={dependencyTypes} onChange={setDependencyTypes} describedAs="dependency relationships"
+                            title="Relationships that put a mark in a cell — flow, trace, allocation, …"
+                        />
+                    </ToolbarPopover>
+                    <ToolbarPopover
+                        label={<Icon.tools />}
+                        ariaLabel="DSM options"
                         badge={changedOptions > 0 ? String(changedOptions) : undefined}
                         title="Settings you set once: how nesting is derived, how the axes are grouped, what the header shows"
+                        fullWidth={leftToolbar}
                     >
                         <TypeFilterSelect
                             label="Nesting" allLabel="Auto (composition)" options={relationshipOptions} width={150}
@@ -345,40 +420,79 @@ export function DSMView() {
                         </label>
                     </ToolbarPopover>
 
-                    <div className="flex-1" />
+                    <ToolbarPopover label={<Icon.download />} ariaLabel="Export DSM" title="Export the DSM" width={220} fullWidth={leftToolbar}>
+                        <button onClick={() => downloadDsmCsv(result)} style={exportOptionStyle}>
+                            CSV <span style={{ color: COLOR.faint }}>current visible matrix</span>
+                        </button>
+                        <button onClick={() => { void exportXlsx(); }} style={exportOptionStyle}>
+                            Excel (.xlsx) <span style={{ color: COLOR.faint }}>with expandable hierarchy</span>
+                        </button>
+                    </ToolbarPopover>
 
-                    {/* One line rather than four chips: these are read together
-                        or not at all. */}
-                    <div style={{ fontSize: '11px', color: COLOR.muted, display: 'flex', gap: '10px', whiteSpace: 'nowrap' }}>
-                        {[
-                            ['feedback', stats.feedback, 'Marks below the diagonal — candidates for rework loops'],
-                            ['coupled', stats.couplings, 'Pairs that depend on each other in both directions'],
-                            ['isolated', stats.isolated, 'Lines with no dependency either way'],
-                            ['max degree', stats.maxDegree, 'Most dependencies touching one line'],
-                        ].map(([label, value, title]) => (
-                            <span key={label as string} title={title as string}>
-                                <strong style={{ color: COLOR.primary }}>{value}</strong> {label}
-                            </span>
-                        ))}
-                    </div>
+                    <label style={{
+                        ...checkboxStyle, gap: '5px', gridColumn: leftToolbar ? '1 / -1' : undefined,
+                        justifyContent: leftToolbar ? 'center' : undefined,
+                    }} title="Cell size">
+                        Zoom
+                        <input
+                            type="range" min={14} max={44} step={2} value={cellSize}
+                            onChange={event => setCellSize(Number(event.target.value))}
+                            style={{ width: '76px', accentColor: COLOR.accent }}
+                        />
+                    </label>
+
+                </div>
                 </div>
             </div>
 
             {/* ── Matrix ── */}
-            <HierarchicalMatrix
-                result={result}
-                onToggleRow={toggleRow}
-                onToggleColumn={toggleColumn}
-                onSelectElement={selectElement}
-                selectedElementId={selectedElementId}
-                renderCell={renderCell}
-                onCellClick={(row, column, cell) => {
-                    if (cell) setInspected({ row, column, cell });
-                    selectElement(row.node.id);
-                }}
-                cellSize={cellSize}
-                showColumnNames={showColumnNames}
-                footer={
+            <div style={{
+                display: 'flex', flex: 1, minHeight: 0, minWidth: 0,
+                marginLeft: leftToolbar ? '250px' : 0,
+                width: leftToolbar ? 'calc(100% - 250px)' : undefined,
+            }}>
+                <HierarchicalMatrix
+                    result={result}
+                    onToggleRow={toggleRow}
+                    onToggleColumn={toggleColumn}
+                    onSelectElement={selectElement}
+                    selectedElementId={selectedElementId}
+                    renderCell={renderCell}
+                    onCellClick={(row, column, cell) => {
+                        if (cell) setInspected({ row, column, cell });
+                        selectElement(row.node.id);
+                    }}
+                    cellSize={cellSize}
+                    showColumnNames={showColumnNames}
+                    onHideRow={id => hideAxisElement('rows', id)}
+                    onHideColumn={id => hideAxisElement('columns', id)}
+                    cornerHeader={
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
+                            <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>
+                                Design Structure Matrix
+                            </span>
+                            <span style={{ fontSize: '11px', color: COLOR.faint, marginTop: '2px' }}>
+                                {result.rows.length} {'×'} {result.columns.length} {'·'} {result.totalDependencies} dependencies
+                                {stats.internal > 0 && ` · ${stats.internal} internal`}
+                            </span>
+                            <div style={{
+                                display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '10px', color: COLOR.muted,
+                                borderTop: `1px solid ${COLOR.border}`, marginTop: '5px', paddingTop: '4px',
+                            }}>
+                                {[
+                                    ['feedback', stats.feedback, 'Marks below the diagonal — candidates for rework loops'],
+                                    ['coupled', stats.couplings, 'Pairs that depend on each other in both directions'],
+                                    ['isolated', stats.isolated, 'Lines with no dependency either way'],
+                                    ['max degree', stats.maxDegree, 'Most dependencies touching one line'],
+                                ].map(([label, value, title]) => (
+                                    <span key={label as string} title={title as string}>
+                                        <strong style={{ color: COLOR.primary }}>{value}</strong> {label}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    }
+                    footer={
                     <div style={{ marginTop: '18px', display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '11px', color: COLOR.muted }}>
                         {[...new Set(result.matrix.flat().flatMap(cell => cell?.types ?? []))].sort().map(type => (
                             <span key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -395,8 +509,9 @@ export function DSMView() {
                             subsystem boundary
                         </span>
                     </div>
-                }
-            />
+                    }
+                />
+            </div>
 
             {/* ── Cell inspector ── */}
             {inspected && (
@@ -443,10 +558,176 @@ function toggled(current: Set<string>, id: string): Set<string> {
     return next;
 }
 
-const buttonStyle = {
-    padding: '3px 8px', borderRadius: '5px', border: `1px solid ${COLOR.border}`,
-    background: COLOR.surface, fontSize: '11px', color: COLOR.secondary, cursor: 'pointer',
-} as const;
+/** One self-contained axis group: scope, element filter, order and tree controls. */
+export function AxisControlGroup({
+    axis, layers, scope, onScopeChange, elements, onElementsChange, elementOptions,
+    ordering, onOrderingChange, onExpandAll, onCollapseAll, onExpandToDepth, leftDock,
+    filterOpen, onFilterOpenChange, parentOf,
+}: {
+    axis: 'rows' | 'columns';
+    layers: LayerSummary[];
+    scope: AxisScope;
+    onScopeChange: (scope: AxisScope) => void;
+    elements: string[];
+    onElementsChange: (elements: string[]) => void;
+    elementOptions: TypeFilterOption[];
+    ordering: DsmOrdering;
+    onOrderingChange: (ordering: DsmOrdering) => void;
+    onExpandAll: (axis: 'rows' | 'columns') => void;
+    onCollapseAll: (axis: 'rows' | 'columns') => void;
+    onExpandToDepth: (axis: 'rows' | 'columns', depth: number) => void;
+    leftDock: boolean;
+    filterOpen: boolean;
+    onFilterOpenChange: (open: boolean) => void;
+    parentOf: ReadonlyMap<string, string>;
+}) {
+    const label = axis === 'rows' ? 'Rows' : 'Columns';
+    if (leftDock) {
+        return (
+            <section style={{
+                display: 'grid', gap: '5px', padding: '6px 8px', borderRadius: '8px',
+                border: `1px solid ${COLOR.borderLight}`, background: COLOR.surfaceAlt,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <span style={{ fontSize: FONT.xs, fontWeight: 700, color: COLOR.secondary }}>{label}</span>
+                    <AxisScopeSelect
+                        label="" layers={layers} value={scope} onChange={onScopeChange} width={138}
+                        describedAs={`${axis} scope`}
+                        title={`What the ${axis} list — one architecture layer, or one element type within it.`}
+                    />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <ToolbarPopover
+                        label={<Icon.filter />} ariaLabel={`Filter ${axis} elements`} title={`Filter elements on the ${axis} axis`} width={255}
+                        open={filterOpen} onOpenChange={onFilterOpenChange}
+                    >
+                        <TypeFilterSelect
+                            label="Elements" allLabel={`all ${elementOptions.length}`} options={elementOptions}
+                            selected={elements} onChange={onElementsChange} width={170} describedAs={`${axis} elements`}
+                            placeholder="Filter by name, kind or id…" parentOf={parentOf}
+                        />
+                    </ToolbarPopover>
+                    <AxisExpansionControls axis={axis} onExpandAll={onExpandAll} onCollapseAll={onCollapseAll} onExpandToDepth={onExpandToDepth} showLabel={false} showDepth={false} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <AxisDepthSelect axis={axis} onExpandToDepth={onExpandToDepth} compact />
+                    <select
+                        value={ordering}
+                        onChange={event => onOrderingChange(event.target.value as DsmOrdering)}
+                        aria-label={`Sort ${axis} siblings`}
+                        title={ORDERINGS.find(entry => entry.value === ordering)?.title}
+                        style={{ ...selectStyle, width: '112px' }}
+                    >
+                        {ORDERINGS.map(entry => <option key={entry.value} value={entry.value} title={entry.title}>{entry.label}</option>)}
+                    </select>
+                </div>
+            </section>
+        );
+    }
+    return (
+        <section style={{
+            display: 'grid', gridTemplateRows: 'auto auto', gap: '4px', boxSizing: 'border-box', padding: '6px 8px',
+            border: `1px solid ${COLOR.border}`, borderRadius: '9px', background: '#FAFBFC',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ fontSize: FONT.xs, fontWeight: 700, color: COLOR.secondary }}>{label}</span>
+                <AxisScopeSelect
+                    label="" layers={layers} value={scope} onChange={onScopeChange} width={150}
+                    describedAs={`${axis} scope`}
+                    title={`What the ${axis} list — one architecture layer, or one element type within it.`}
+                />
+                <ToolbarPopover
+                    label={<Icon.filter />} ariaLabel={`Filter ${axis} elements`} title={`Filter elements on the ${axis} axis`} width={255}
+                    open={filterOpen} onOpenChange={onFilterOpenChange}
+                >
+                    <TypeFilterSelect
+                        label="Elements" allLabel={`all ${elementOptions.length}`} options={elementOptions}
+                        selected={elements} onChange={onElementsChange} width={170} describedAs={`${axis} elements`}
+                        placeholder="Filter by name, kind or id…" parentOf={parentOf}
+                    />
+                </ToolbarPopover>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
+                <AxisExpansionControls axis={axis} onExpandAll={onExpandAll} onCollapseAll={onCollapseAll} onExpandToDepth={onExpandToDepth} showLabel={false} />
+                <label style={{ ...checkboxStyle, gap: '5px' }} title={`Sort ${axis} siblings`}>
+                    Sort
+                    <select
+                        value={ordering}
+                        onChange={event => onOrderingChange(event.target.value as DsmOrdering)}
+                        aria-label={`Sort ${axis} siblings`}
+                        title={ORDERINGS.find(entry => entry.value === ordering)?.title}
+                        style={selectStyle}
+                    >
+                        {ORDERINGS.map(entry => (
+                            <option key={entry.value} value={entry.value} title={entry.title}>{entry.label}</option>
+                        ))}
+                    </select>
+                </label>
+            </div>
+        </section>
+    );
+}
+
+/** Axis controls belong to the axis they change; they never silently reshape the other one. */
+function AxisExpansionControls({
+    axis, onExpandAll, onCollapseAll, onExpandToDepth, showLabel = true, showDepth = true, compact = false,
+}: {
+    axis: 'rows' | 'columns';
+    onExpandAll: (axis: 'rows' | 'columns') => void;
+    onCollapseAll: (axis: 'rows' | 'columns') => void;
+    onExpandToDepth: (axis: 'rows' | 'columns', depth: number) => void;
+    showLabel?: boolean;
+    showDepth?: boolean;
+    compact?: boolean;
+}) {
+    const singular = axis === 'rows' ? 'row' : 'column';
+    const label = axis === 'rows' ? 'Rows' : 'Columns';
+    return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            {showLabel && <span style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600 }}>{label}</span>}
+            <ToolbarCluster>
+                <IconButton
+                    icon={<Icon.expand />}
+                    onClick={() => onExpandAll(axis)}
+                    title={`Expand every ${singular} subsystem`}
+                    ariaLabel={`Expand all ${axis}`}
+                />
+                <IconButton
+                    icon={<Icon.collapse />}
+                    onClick={() => onCollapseAll(axis)}
+                    title={`Collapse ${axis} to their top-level subsystems`}
+                    ariaLabel={`Collapse all ${axis}`}
+                />
+            </ToolbarCluster>
+            {showDepth && <AxisDepthSelect axis={axis} onExpandToDepth={onExpandToDepth} compact={compact} />}
+        </div>
+    );
+}
+
+function AxisDepthSelect({ axis, onExpandToDepth, compact = false }: {
+    axis: 'rows' | 'columns';
+    onExpandToDepth: (axis: 'rows' | 'columns', depth: number) => void;
+    compact?: boolean;
+}) {
+    return (
+        <select
+                defaultValue=""
+                aria-label={`Expand ${axis} to depth`}
+                title={`Expand ${axis} to a specific depth`}
+                onChange={event => {
+                    const depth = Number(event.target.value);
+                    if (depth > 0) onExpandToDepth(axis, depth);
+                    event.currentTarget.value = '';
+                }}
+                style={compact ? { ...selectStyle, width: '82px' } : selectStyle}
+            >
+                <option value="">Depth…</option>
+                <option value="1">Level 1</option>
+                <option value="2">Level 2</option>
+                <option value="3">Level 3</option>
+        </select>
+    );
+}
 
 const checkboxStyle = {
     display: 'flex', alignItems: 'center', gap: '6px',
@@ -456,6 +737,12 @@ const checkboxStyle = {
 const selectStyle = {
     border: `1px solid ${COLOR.border}`, borderRadius: '5px',
     padding: '2px 5px', background: COLOR.surface, fontSize: FONT.xs, color: COLOR.primary,
+} as const;
+
+const exportOptionStyle = {
+    display: 'flex', justifyContent: 'space-between', gap: '12px', width: '100%',
+    padding: '6px 7px', border: 'none', borderRadius: '5px', background: 'transparent',
+    cursor: 'pointer', fontSize: FONT.xs, color: COLOR.primary, textAlign: 'left' as const,
 } as const;
 
 const statStyle = {

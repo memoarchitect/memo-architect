@@ -13,16 +13,29 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { COLOR, FONT, SHADOW } from '../styles/tokens';
 
 export interface ToolbarPopoverProps {
-    label: string;
+    label: ReactNode;
+    /** Required when the visible trigger is icon-only. */
+    ariaLabel?: string;
     children: ReactNode;
     /** Shown next to the label, e.g. how many settings are off their default. */
     badge?: string;
     title?: string;
     width?: number;
+    /** Optional controlled state, used when a related canvas control opens this popover. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Make the trigger fill its toolbar grid cell. */
+    fullWidth?: boolean;
 }
 
-export function ToolbarPopover({ label, children, badge, title, width = 260 }: ToolbarPopoverProps) {
-    const [open, setOpen] = useState(false);
+export function ToolbarPopover({ label, ariaLabel, children, badge, title, width = 260, open: controlledOpen, onOpenChange, fullWidth = false }: ToolbarPopoverProps) {
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const open = controlledOpen ?? uncontrolledOpen;
+    const setOpen = (next: boolean | ((current: boolean) => boolean)) => {
+        const value = typeof next === 'function' ? next(open) : next;
+        if (controlledOpen === undefined) setUncontrolledOpen(value);
+        onOpenChange?.(value);
+    };
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -40,15 +53,17 @@ export function ToolbarPopover({ label, children, badge, title, width = 260 }: T
     }, [open]);
 
     return (
-        <div ref={ref} style={{ position: 'relative' }}>
+        <div ref={ref} style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
             <button
                 type="button"
                 aria-haspopup="dialog"
                 aria-expanded={open}
+                aria-label={ariaLabel}
                 title={title}
                 onClick={() => setOpen(value => !value)}
                 style={{
                     display: 'flex', alignItems: 'center', gap: '5px',
+                    width: fullWidth ? '100%' : undefined, justifyContent: fullWidth ? 'center' : undefined,
                     padding: '3px 8px', borderRadius: '5px',
                     border: `1px solid ${open || badge ? COLOR.accent : COLOR.border}`,
                     background: open ? '#E8F8F3' : COLOR.surface,
@@ -71,7 +86,7 @@ export function ToolbarPopover({ label, children, badge, title, width = 260 }: T
             {open && (
                 <div
                     role="dialog"
-                    aria-label={label}
+                    aria-label={ariaLabel ?? (typeof label === 'string' ? label : 'Options')}
                     style={{
                         position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
                         width, padding: '10px 12px', background: COLOR.surface,

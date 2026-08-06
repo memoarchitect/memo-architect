@@ -99,6 +99,8 @@ export interface DsmAxisSpec {
     elementIds?: readonly string[];
     /** Expanded node ids. A node absent from the set renders collapsed. */
     expanded?: ReadonlySet<string>;
+    /** Sibling order for this axis. Falls back to the legacy shared order. */
+    ordering?: DsmOrdering;
 }
 
 export interface HierarchicalDsmOptions {
@@ -609,8 +611,8 @@ export function computeHierarchicalDSM(
     };
 
     const ordering = options.ordering ?? 'natural';
-    const rowRoots = orderTree(rowAxis.roots, ordering, dependsIndex(rowAxis));
-    const columnRoots = orderTree(columnAxis.roots, ordering, dependsIndex(columnAxis));
+    const rowRoots = orderTree(rowAxis.roots, options.rows?.ordering ?? ordering, dependsIndex(rowAxis));
+    const columnRoots = orderTree(columnAxis.roots, options.columns?.ordering ?? ordering, dependsIndex(columnAxis));
 
     const rows = flattenAxis(rowRoots, options.rows?.expanded ?? new Set());
     const columns = flattenAxis(columnRoots, options.columns?.expanded ?? new Set());

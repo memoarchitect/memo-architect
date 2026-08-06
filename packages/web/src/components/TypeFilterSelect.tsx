@@ -56,6 +56,8 @@ export interface TypeFilterSelectProps {
      * what makes a picker feel broken.
      */
     maxVisible?: number;
+    /** Optional containment map. When supplied, options render as an expandable tree. */
+    parentOf?: ReadonlyMap<string, string>;
 }
 
 /** Every word must match somewhere, so each one typed narrows the list. */
@@ -90,11 +92,12 @@ export function filterOptions(options: TypeFilterOption[], query: string): TypeF
 export function TypeFilterSelect({
     label, options, selected, onChange,
     allLabel = 'All', placeholder = 'Type to filter…', width = 150, title,
-    describedAs, maxVisible = 300,
+    describedAs, maxVisible = 300, parentOf,
 }: TypeFilterSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
+    const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -110,6 +113,40 @@ export function TypeFilterSelect({
     /** What is actually painted, and whether anything was held back. */
     const visible = matches.length > maxVisible ? matches.slice(0, maxVisible) : matches;
     const hidden = matches.length - visible.length;
+
+    const treeRows = useMemo(() => {
+        if (!parentOf) return null;
+        const optionById = new Map(options.map(option => [option.value, option]));
+        const shown = new Set(matches.map(option => option.value));
+        for (const id of [...shown]) {
+            let parent = parentOf.get(id);
+            while (parent && optionById.has(parent) && !shown.has(parent)) {
+                shown.add(parent);
+                parent = parentOf.get(parent);
+            }
+        }
+        const children = new Map<string, string[]>();
+        for (const id of shown) {
+            const parent = parentOf.get(id);
+            if (parent && shown.has(parent)) {
+                const bucket = children.get(parent) ?? [];
+                bucket.push(id); children.set(parent, bucket);
+            }
+        }
+        const order = (a: string, b: string) => (optionById.get(a)?.label ?? a).localeCompare(optionById.get(b)?.label ?? b);
+        children.forEach(bucket => bucket.sort(order));
+        const roots = [...shown].filter(id => !parentOf.get(id) || !shown.has(parentOf.get(id)!)).sort(order);
+        const rows: { option: TypeFilterOption; depth: number; children: string[] }[] = [];
+        const visit = (id: string, depth: number) => {
+            const option = optionById.get(id);
+            if (!option) return;
+            const childIds = children.get(id) ?? [];
+            rows.push({ option, depth, children: childIds });
+            if (childIds.length > 0 && expanded.has(id)) childIds.forEach(child => visit(child, depth + 1));
+        };
+        roots.forEach(root => visit(root, 0));
+        return rows;
+    }, [options, matches, parentOf, expanded]);
 
     useEffect(() => { setActiveIndex(0); }, [query, open]);
 
@@ -134,6 +171,20 @@ export function TypeFilterSelect({
             ? selected.filter(entry => entry !== value)
             : [...selected, value]);
     }, [onChange, selected, selectedSet]);
+
+    const toggleTree = useCallback((value: string) => {
+        if (!parentOf) return toggle(value);
+        const descendants = new Set<string>([value]);
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (const [child, parent] of parentOf) {
+                if (descendants.has(parent) && !descendants.has(child)) { descendants.add(child); changed = true; }
+            }
+        }
+        const allSelected = [...descendants].every(id => selectedSet.has(id));
+        onChange(allSelected ? selected.filter(id => !descendants.has(id)) : [...new Set([...selected, ...descendants])]);
+    }, [parentOf, toggle, selected, selectedSet, onChange]);
 
     const onKeyDown = (event: React.KeyboardEvent) => {
         if (event.key === 'Escape') { setOpen(false); setQuery(''); return; }
@@ -199,11 +250,11 @@ export function TypeFilterSelect({
                                 Nothing matches {'“'}{query}{'”'}
                             </div>
                         )}
-                        {visible.map((option, index) => {
+                        {(treeRows ?? visible.map(option => ({ option, depth: 0, children: [] as string[] }))).map(({ option, depth, children }, index) => {
                             const checked = selectedSet.has(option.value);
                             // A heading whenever the group changes, so a list of
                             // elements reads as its kinds rather than one run.
-                            const heading = option.group && option.group !== visible[index - 1]?.group
+                            const heading = !treeRows && option.group && option.group !== visible[index - 1]?.group
                                 ? option.group
                                 : null;
                             return (
@@ -222,14 +273,33 @@ export function TypeFilterSelect({
                                         role="option"
                                         aria-selected={checked}
                                         onMouseEnter={() => setActiveIndex(index)}
-                                        onClick={() => toggle(option.value)}
+                                        onClick={() => toggleTree(option.value)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: '7px',
-                                            padding: '5px 9px', cursor: 'pointer', fontSize: FONT.xs,
+                                            padding: '5px 9px 5px ' + (9 + depth * 16) + 'px', cursor: 'pointer', fontSize: FONT.xs,
                                             background: index === activeIndex ? COLOR.surfaceAlt : 'transparent',
                                             color: COLOR.primary,
                                         }}
                                     >
+                                        {treeRows && (
+                                            <button
+                                                type="button"
+                                                aria-label={children.length > 0 ? `${expanded.has(option.value) ? 'Collapse' : 'Expand'} ${option.label ?? option.value}` : undefined}
+                                                disabled={children.length === 0}
+                                                onClick={event => {
+                                                    event.stopPropagation();
+                                                    if (children.length === 0) return;
+                                                    setExpanded(current => {
+                                                        const next = new Set(current);
+                                                        if (next.has(option.value)) next.delete(option.value); else next.add(option.value);
+                                                        return next;
+                                                    });
+                                                }}
+                                                style={{ width: '13px', padding: 0, border: 'none', background: 'none', color: COLOR.muted, cursor: children.length > 0 ? 'pointer' : 'default' }}
+                                            >
+                                                {children.length > 0 ? (expanded.has(option.value) ? '▾' : '▸') : ''}
+                                            </button>
+                                        )}
                                         <input type="checkbox" readOnly checked={checked} style={{ accentColor: COLOR.accent }} />
                                         {option.color && (
                                             <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: option.color, flexShrink: 0 }} />

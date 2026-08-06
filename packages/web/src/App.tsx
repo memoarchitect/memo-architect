@@ -307,6 +307,7 @@ export function App() {
     // The AI workspace is self-contained too: it owns its own tool switcher, and
     // the model tree was only ever there because the entry point lived in it.
     const showExplorer = activeView.type !== 'dsm'
+        && activeView.type !== 'traceability'
         && activeView.type !== 'dashboard'
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
