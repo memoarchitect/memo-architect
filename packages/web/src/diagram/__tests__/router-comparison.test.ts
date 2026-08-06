@@ -1,9 +1,14 @@
 // ─── Router comparison: bespoke vs libavoid ──────────────────────────────────
 //
-// Plan item B says: spike libavoid behind the LayoutProvider interface, measure
-// it against the bespoke router on the pump IBD and the 200-node benchmark, and
+// Plan item B: spike libavoid behind the LayoutProvider interface, measure it
+// against the in-house router on the pump IBD and the 200-node benchmark, and
 // decide on evidence. This is that measurement, kept as a test so the numbers
 // can be re-run rather than remembered.
+//
+// It outlived its first purpose. The verdict on libavoid was "do not swap", and
+// the reasons it won were then built into the in-house router instead — so this
+// file is now the regression guard for that work. `in-house` is
+// `routeOrthogonalEdges`; the numbers it replaced are in the plan.
 //
 // The scored properties are the ones a reader of a board actually pays for:
 //   * crossings — two connectors meeting at a right angle. The most expensive
@@ -121,7 +126,7 @@ function score(
 
 // ─── The two routers, one input shape ────────────────────────────────────────
 
-const runBespoke = (
+const runInHouse = (
     requests: OrthogonalRouteRequest[],
     obstacles: RouteObstacle[],
     priority: 'long-first' | 'short-first',
@@ -220,16 +225,22 @@ const table = (label: string, rows: Array<[string, Score]>) => {
 describe('router comparison (plan item B)', () => {
     it('measures both routers on the pump IBD', async () => {
         const { obstacles, requests } = pumpIbd();
-        const bespoke = runBespoke(requests, obstacles, 'short-first');
+        const inHouse = runInHouse(requests, obstacles, 'short-first');
         const libavoid = await runLibavoid(requests, obstacles);
         table(`pump IBD — ${obstacles.length} obstacles, ${requests.length} connectors`, [
-            ['bespoke', bespoke], ['libavoid', libavoid],
+            ['in-house', inHouse], ['libavoid', libavoid],
         ]);
         // Both must actually route every connector, orthogonally.
-        for (const s of [bespoke, libavoid]) {
+        for (const s of [inHouse, libavoid]) {
             expect(s.routed).toBe(requests.length);
             expect(s.nonOrthogonal).toBe(0);
         }
+        // The point of the work: the in-house router must stay at or below the
+        // purpose-built router it was measured against. It was 9 crossings
+        // before the lanes and the rip-up pass; libavoid scores 3.
+        expect(inHouse.crossings).toBeLessThanOrEqual(3);
+        // And it must not buy that by wandering: libavoid's length, plus slack.
+        expect(inHouse.length).toBeLessThan(libavoid.length * 1.15);
     });
 
     /**
@@ -250,12 +261,17 @@ describe('router comparison (plan item B)', () => {
         const rows: Array<[string, Score]> = [];
         for (const n of [10, 20, 40]) {
             const { obstacles, requests } = synthetic(n, n);
-            rows.push([`bespoke n=${n}`, runBespoke(requests, obstacles, 'long-first')]);
+            rows.push([`in-house n=${n}`, runInHouse(requests, obstacles, 'long-first')]);
             rows.push([`libavoid n=${n}`, await runLibavoid(requests, obstacles)]);
             // Same router, no per-connector checkpoints.
             rows.push([`libavoid n=${n} nostub`, await runLibavoid(requests, obstacles, { portStub: 0 })]);
         }
         table('scaling — synthetic board', rows);
         for (const [, s] of rows) expect(s.nonOrthogonal).toBe(0);
+        // A dense random board is the in-house router's weakest case and libavoid
+        // still wins it. What must not regress is the ground already taken: 226
+        // crossings at n=40 before this work, 144 after.
+        const dense = rows.find(([label]) => label === 'in-house n=40')![1];
+        expect(dense.crossings).toBeLessThan(180);
     }, 900_000);
 });
