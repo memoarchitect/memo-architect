@@ -130,8 +130,16 @@ function resolveDirectives(
     content = content.replace(/\{\{glossary\}\}/g, '<span class="directive-placeholder">[Glossary — generated on export]</span>');
     content = content.replace(/\{\{[^}]+\}\}/g, m => `<span class="directive-placeholder">${escapeHtml(m)}</span>`);
 
-    // ```memo-query``` — live query against the model
-    content = content.replace(/```memo-query\r?\n([\s\S]*?)```/g, (_m, block) => {
+    // ```memo-query``` — live query against the model.
+    // A block parked inside an HTML comment is documentation of a query the
+    // engine cannot run yet, not a query to run. The CLI executor skips those
+    // too; preview and export have to agree on what a document contains.
+    const commentRanges: Array<[number, number]> = [];
+    for (const c of content.matchAll(/<!--[\s\S]*?-->/g)) {
+        commentRanges.push([c.index!, c.index! + c[0].length]);
+    }
+    content = content.replace(/```memo-query\r?\n([\s\S]*?)```/g, (_m, block, offset: number) => {
+        if (commentRanges.some(([s, e]) => offset >= s && offset < e)) return _m;
         const lines = block.split('\n').filter(Boolean);
         const get = (prefix: string) => (lines.find((l: string) => l.startsWith(prefix)) ?? '').replace(prefix, '').trim();
         const kindStr = get('kind:') || '?';

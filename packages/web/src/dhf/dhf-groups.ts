@@ -82,8 +82,11 @@ export const DHF_GROUPS: DhfGroup[] = [
     {
         id: 'system', label: 'System', color: '#059669',
         templates: [
-            { id: 'system/srs', title: 'System Requirements Specification', prefix: 'SRS' },
+            { id: 'system/syrs', title: 'System Requirements Specification', prefix: 'SyRS' },
             { id: 'system/sad', title: 'System Architecture Description', prefix: 'SyAD' },
+            { id: 'system/standards-traceability', title: 'Standards Traceability Matrix', prefix: 'STM' },
+            // `system/sds`, `system/icd`, `system/svvp` and `system/svvr` have no
+            // template on disk yet — pre-existing, tracked separately from this pass.
             { id: 'system/sds', title: 'System Design Specification', prefix: 'SDS' },
             { id: 'system/icd', title: 'Interface Control Document', prefix: 'ICD' },
             { id: 'system/svvp', title: 'System V&V Plan', prefix: 'SVVP' },
@@ -93,6 +96,7 @@ export const DHF_GROUPS: DhfGroup[] = [
     {
         id: 'hardware', label: 'Hardware', color: '#b45309',
         templates: [
+            { id: 'iec-60601/hrs', title: 'Hardware Requirements Specification', prefix: 'HRS' },
             { id: 'hardware/hdp', title: 'Hardware Development Plan', prefix: 'HDP' },
             { id: 'hardware/hds', title: 'Hardware Design Specification', prefix: 'HDS' },
             { id: 'hardware/hvp', title: 'Hardware Verification Plan', prefix: 'HVP' },

@@ -110,6 +110,27 @@ describe('renderDhfDocumentHtml', () => {
         expect(html).toContain('<h1>Hello</h1>');
     });
 
+    // A relationship-shaped query cannot render until the executor can select
+    // relationships. Templates park those behind an HTML comment with a visible
+    // TODO; preview must skip them for the same reason the CLI export does, or
+    // preview and export disagree about what a document contains.
+    it('leaves a memo-query parked inside an HTML comment unrendered', () => {
+        const md = [
+            '<!-- _[TODO: requires `select: relationships`]_',
+            '```memo-query',
+            'kind: Hazard',
+            'display: count',
+            'label: Total hazards',
+            '```',
+            '-->',
+            '',
+            '_[TODO: requires `select: relationships`]_',
+        ].join('\n');
+        const html = renderDhfDocumentHtml(md, model, settings(), doc());
+        expect(html).not.toContain('<strong>2</strong>');
+        expect(html).toContain('select: relationships');
+    });
+
     it('resolves {{toc}} on export and shows a placeholder in preview', () => {
         const md = '{{toc}}\n\n## Purpose\n\n## Scope';
         const preview = renderDhfDocumentHtml(md, null, settings(), doc());
