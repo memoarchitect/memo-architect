@@ -75,6 +75,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      libavoid-js:
+        specifier: 0.5.0-beta.5
+        version: 0.5.0-beta.5
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
@@ -1584,6 +1587,9 @@ packages:
   langium@4.3.1:
     resolution: {integrity: sha512-4lmkLHytLXD5pvyL0PKUj1LCNpgzv9s8luH+GbWXHG45QLmO6PlFXrCUghDN5BfcFTlaQyXpXiaSl8A28Xep8w==}
     engines: {node: '>=20.10.0', npm: '>=10.2.3'}
+
+  libavoid-js@0.5.0-beta.5:
+    resolution: {integrity: sha512-jHkn6A10815TgFhZ1paUD/NDnQkg4C66qJc2Juj1NpmO/+QXnJ4UjIdKQarkXLmI/QgXhEO3RWDxMi3i+uHPwA==}
 
   lightningcss-android-arm64@1.31.1:
     resolution: {integrity: sha512-HXJF3x8w9nQ4jbXRiNppBCqeZPIAfUo8zE/kOEGbW5NZvGc/K7nMxbhIr+YlFlHW5mpbg/YFPdbnCh1wAXCKFg==}
@@ -3631,6 +3637,8 @@ snapshots:
       vscode-languageserver-textdocument: 1.0.13
       vscode-languageserver-types: 3.18.0
       vscode-uri: 3.1.0
+
+  libavoid-js@0.5.0-beta.5: {}
 
   lightningcss-android-arm64@1.31.1:
     optional: true

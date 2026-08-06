@@ -1,0 +1,341 @@
+{
+ "obstacles": [
+  {
+   "id": "bubbleDetector1",
+   "x": 121,
+   "y": 48,
+   "width": 422,
+   "height": 112
+  },
+  {
+   "id": "bubbleDetector2",
+   "x": 121,
+   "y": 218,
+   "width": 422,
+   "height": 112
+  },
+  {
+   "id": "pumpMcuBoard",
+   "x": 613,
+   "y": 253,
+   "width": 380.4,
+   "height": 292
+  },
+  {
+   "id": "frontPanelBoard",
+   "x": 133.02,
+   "y": 490,
+   "width": 361.9,
+   "height": 172
+  },
+  {
+   "id": "pumpSbc",
+   "x": 258.8,
+   "y": 715,
+   "width": 284.2,
+   "height": 172
+  }
+ ],
+ "requests": [
+  {
+   "id": "rel-58",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "bubbleDetector1",
+   "source": {
+    "x": 12,
+    "y": 122
+   },
+   "target": {
+    "x": 109,
+    "y": 122
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-59",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "bubbleDetector2",
+   "source": {
+    "x": 12,
+    "y": 292
+   },
+   "target": {
+    "x": 109,
+    "y": 292
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-60",
+   "sourceNodeId": "bubbleDetector1",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 555,
+    "y": 122
+   },
+   "target": {
+    "x": 601,
+    "y": 327
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-61",
+   "sourceNodeId": "bubbleDetector2",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 555,
+    "y": 292
+   },
+   "target": {
+    "x": 601,
+    "y": 357
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-62",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 12,
+    "y": 418
+   },
+   "target": {
+    "x": 601,
+    "y": 418
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-63",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 12,
+    "y": 387
+   },
+   "target": {
+    "x": 601,
+    "y": 387
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-64",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 12,
+    "y": 547.1428571428571
+   },
+   "target": {
+    "x": 601,
+    "y": 452.57142857142856
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-65",
+   "sourceNodeId": "pumpMcuBoard",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 1005.4,
+    "y": 327
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 327
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-66",
+   "sourceNodeId": "pumpMcuBoard",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 1005.4,
+    "y": 369.6
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 369.6
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-67",
+   "sourceNodeId": "pumpMcuBoard",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 1005.4,
+    "y": 418
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 418
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-68",
+   "sourceNodeId": "pumpMcuBoard",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 1005.4,
+    "y": 466.4
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 466.4
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-69",
+   "sourceNodeId": "pumpSbc",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 555,
+    "y": 789
+   },
+   "target": {
+    "x": 601,
+    "y": 521.7142857142858
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-70",
+   "sourceNodeId": "pumpSbc",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 246.8,
+    "y": 801
+   },
+   "target": {
+    "x": 1005.4,
+    "y": 514.8
+   },
+   "sourceSide": "left",
+   "targetSide": "right"
+  },
+  {
+   "id": "rel-71",
+   "sourceNodeId": "pumpSbc",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 555,
+    "y": 820
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 870.3333333333334
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-72",
+   "sourceNodeId": "pumpSbc",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 555,
+    "y": 860.6666666666667
+   },
+   "target": {
+    "x": 1102.4,
+    "y": 900.3333333333334
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-73",
+   "sourceNodeId": "frontPanelBoard",
+   "targetNodeId": "pumpMcuBoard",
+   "source": {
+    "x": 506.91999999999996,
+    "y": 564.5
+   },
+   "target": {
+    "x": 601,
+    "y": 487.1428571428571
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-74",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "frontPanelBoard",
+   "source": {
+    "x": 12,
+    "y": 682.1428571428571
+   },
+   "target": {
+    "x": 121.02000000000001,
+    "y": 564
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-75",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "frontPanelBoard",
+   "source": {
+    "x": 12,
+    "y": 787.1428571428571
+   },
+   "target": {
+    "x": 121.02000000000001,
+    "y": 595
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-76",
+   "sourceNodeId": "pumpEnclosure",
+   "targetNodeId": "frontPanelBoard",
+   "source": {
+    "x": 12,
+    "y": 907.1428571428571
+   },
+   "target": {
+    "x": 121.02000000000001,
+    "y": 635.6666666666667
+   },
+   "sourceSide": "right",
+   "targetSide": "left"
+  },
+  {
+   "id": "rel-77",
+   "sourceNodeId": "frontPanelBoard",
+   "targetNodeId": "pumpEnclosure",
+   "source": {
+    "x": 506.91999999999996,
+    "y": 625.5
+   },
+   "target": {
+    "x": 12,
+    "y": 847.1428571428571
+   },
+   "sourceSide": "right",
+   "targetSide": "right"
+  }
+ ]
+}
