@@ -29,6 +29,19 @@ const model = {
     },
 } as unknown as MemoModelDTO;
 
+// A model with links, for `select: relationships`. Rows are the links; the
+// preview has to resolve both ends the way the CLI executor does, or a
+// conformance table shows the `empty:` message here and real rows on export.
+const relModel = {
+    elements: {
+        R1: { id: 'R1', name: 'OcclusionDetection', kind: 'Requirement', layer: 'implementation' },
+        C1: { id: 'C1', name: 'IEC62304Clause5_2_2', kind: 'StandardClause', layer: 'artifacts' },
+    },
+    relationships: [
+        { id: 'l1', type: 'conformsTo', sourceId: 'R1', sourceEnd: 'a', targetId: 'C1', targetEnd: 'b', file: 'x.sysml' },
+    ],
+} as unknown as MemoModelDTO;
+
 describe('renderMarkdownBody', () => {
     it('renders a pipe table with header into thead/tbody', () => {
         const html = renderMarkdownBody([
@@ -94,6 +107,23 @@ describe('renderDhfDocumentHtml', () => {
         const html = renderDhfDocumentHtml(md, model, settings(), doc());
         expect(html).toContain('<strong>2</strong>');
         expect(html).toContain('Total hazards');
+    });
+
+    it('renders a select: relationships block from the link list', () => {
+        const md = '```memo-query\nselect: relationships\nkind: conformsTo\n```';
+        const html = renderDhfDocumentHtml(md, relModel, settings(), doc());
+        expect(html).toContain('OcclusionDetection');
+        expect(html).toContain('IEC62304Clause5_2_2');
+        expect(html).toContain('conformsTo');
+    });
+
+    // The failure that matters: a relationship query run against the element
+    // index matches nothing and renders `empty:`, which reads as "this project
+    // claims no clauses" rather than "the preview cannot do this".
+    it('does not render the empty message for a relationship query with links', () => {
+        const md = '```memo-query\nselect: relationships\nkind: conformsTo\nempty: "No compliance traces defined."\n```';
+        const html = renderDhfDocumentHtml(md, relModel, settings(), doc());
+        expect(html).not.toContain('No compliance traces defined.');
     });
 
     it('renders the approval block from document authors', () => {

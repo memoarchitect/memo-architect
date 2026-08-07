@@ -153,6 +153,31 @@ function resolveDirectives(
             ? kindStr.replace(/[\[\]]/g, '').split(/[,\n]/).map((s: string) => s.replace('-', '').trim()).filter(Boolean)
             : [kindStr];
 
+        // `select: relationships` — rows are links, and `kind:` names a
+        // relationship type. The preview has to follow the executor here: a
+        // relationship query run against the element index matches nothing and
+        // would render the `empty:` message, which reads as "this project
+        // claims no clauses" rather than "the preview cannot do this yet".
+        if (get('select:') === 'relationships') {
+            const rels = (model.relationships ?? []).filter(r => kindStr === '?' || kinds.includes(r.type));
+            if (rels.length === 0) return `<div class="query-preview empty"><em>${escapeHtml(emptyMsg)}</em></div>`;
+            if (displayStr === 'count') {
+                return `<div class="query-preview count"><strong>${rels.length}</strong><span>${escapeHtml(labelStr)}</span></div>`;
+            }
+            const relCols = ['source', 'type', 'target'];
+            const relHeader = relCols.map(c => `<th>${c}</th>`).join('');
+            const name = (id: string) => model.elements[id]?.name ?? id;
+            const relRows = rels.slice(0, 10).map(r => {
+                const cells = [name(r.sourceId), r.type, name(r.targetId)]
+                    .map(v => `<td>${escapeHtml(String(v))}</td>`).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+            const relMore = rels.length > 10
+                ? `<tr><td colspan="${relCols.length}" style="color:#9CA3AF;font-size:11px">…and ${rels.length - 10} more</td></tr>`
+                : '';
+            return `<div class="query-preview"><table><thead><tr>${relHeader}</tr></thead><tbody>${relRows}${relMore}</tbody></table></div>`;
+        }
+
         const els = Object.values(model.elements).filter(el => kinds.includes(el.kind));
         if (els.length === 0) return `<div class="query-preview empty"><em>${escapeHtml(emptyMsg)}</em></div>`;
 
