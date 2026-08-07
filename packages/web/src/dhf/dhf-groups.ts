@@ -1,9 +1,28 @@
 // ─── DHF Document Categories ──────────────────────────────────────────────────
 //
-// Registry of the built-in document categories and their meMO templates.
-// Shared by the DHF explorer (grouping, colors) and the New Document wizard.
-// Users can also file documents under a custom "Other" category.
+// The built-in document categories and their MEMO templates, DERIVED from the
+// templates the ontology ships. Shared by the DHF explorer (grouping, colors)
+// and the New Document wizard. Users can also file documents under a custom
+// "Other" category.
+//
+// This file used to hold a hand-written array — the third place a clause
+// reference and a document id were written down, and the one that decided
+// which templates existed at all. It disagreed with the disk in both
+// directions: it listed `hardware/hdp`, `system/sds` and five other templates
+// that have never existed as files (the wizard offered them and produced blank
+// documents), and it omitted `iec-60601/*` entirely, so templates that did
+// exist were unreachable. Both failure modes are structural — a hardcoded list
+// cannot notice a file appearing or disappearing.
+//
+// Now: one group per standard directory, one entry per template on disk.
+// Adding a standard is a directory of templates in the ontology and no change
+// here. The trade this makes is that grouping follows the standard a document
+// claims rather than a curated theme, so the three 21 CFR 820 groups
+// ("Requirements", "V&V", "Release & Change") are one group now. That is the
+// same fact the rest of this work rests on: the standard is the axis.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { listBuiltInTemplates } from './built-in-templates';
 
 export interface DhfTemplate { id: string; title: string; prefix: string; }
 
@@ -14,116 +33,53 @@ export interface DhfGroup {
     templates: DhfTemplate[];
 }
 
-export const DHF_GROUPS: DhfGroup[] = [
-    {
-        id: 'risk', label: 'Risk Management', color: '#dc2626',
-        templates: [
-            { id: 'iso-14971/rmp', title: 'Risk Management Plan', prefix: 'RMP' },
-            { id: 'iso-14971/har', title: 'Hazard Analysis Report', prefix: 'HAR' },
-            { id: 'iso-14971/fmea', title: 'FMEA', prefix: 'FMEA' },
-            { id: 'iso-14971/fta', title: 'Fault Tree Analysis', prefix: 'FTA' },
-            { id: 'iso-14971/risk-benefit', title: 'Risk-Benefit Analysis', prefix: 'RBA' },
-            { id: 'iso-14971/rmr', title: 'Risk Management Report', prefix: 'RMR' },
-        ],
-    },
-    {
-        id: 'software', label: 'Software', color: '#2563eb',
-        templates: [
-            { id: 'iec-62304/sdp', title: 'Software Development Plan', prefix: 'SDP' },
-            { id: 'iec-62304/srs', title: 'Software Requirements Spec', prefix: 'SRS' },
-            { id: 'iec-62304/sad', title: 'Software Architecture Description', prefix: 'SAD' },
-            { id: 'iec-62304/detailed-design', title: 'Software Detailed Design', prefix: 'DDS' },
-            { id: 'iec-62304/integration-test', title: 'Integration Test Plan', prefix: 'ITP' },
-            { id: 'iec-62304/system-test', title: 'System Test Plan', prefix: 'STP' },
-            { id: 'iec-62304/soup', title: 'SOUP List', prefix: 'SOUP' },
-            { id: 'iec-62304/sbom', title: 'Software Bill of Materials', prefix: 'SBOM' },
-            { id: 'iec-62304/sw-traceability', title: 'SW Traceability Matrix', prefix: 'STM' },
-            { id: 'iec-62304/change-control', title: 'Change Control Log', prefix: 'CCL' },
-        ],
-    },
-    {
-        id: 'usability', label: 'Usability', color: '#7c3aed',
-        templates: [
-            { id: 'iec-62366/ue-plan', title: 'Usability Engineering Plan', prefix: 'UEP' },
-            { id: 'iec-62366/use-spec', title: 'Intended Use Specification', prefix: 'USE' },
-            { id: 'iec-62366/ui-spec', title: 'User Interface Specification', prefix: 'UIS' },
-            { id: 'iec-62366/task-analysis', title: 'Task Analysis', prefix: 'TA' },
-            { id: 'iec-62366/urra', title: 'Use-Related Risk Analysis', prefix: 'URRA' },
-            { id: 'iec-62366/formative-eval', title: 'Formative Evaluation', prefix: 'FE' },
-            { id: 'iec-62366/summative-eval', title: 'Summative Evaluation', prefix: 'SE' },
-        ],
-    },
-    {
-        id: 'requirements', label: 'Requirements', color: '#0891b2',
-        templates: [
-            { id: '21cfr820/user-needs', title: 'User Needs', prefix: 'UN' },
-            { id: '21cfr820/design-input', title: 'Design Input Specification', prefix: 'DIS' },
-            { id: '21cfr820/design-output', title: 'Design Output Specification', prefix: 'DOS' },
-        ],
-    },
-    {
-        id: 'vv', label: 'Verification & Validation', color: '#0d9488',
-        templates: [
-            { id: '21cfr820/vv-plan', title: 'V&V Plan', prefix: 'VVP' },
-            { id: '21cfr820/vv-report', title: 'V&V Report', prefix: 'VVR' },
-            { id: '21cfr820/design-verification', title: 'Design Verification Report', prefix: 'DVR' },
-            { id: '21cfr820/design-validation', title: 'Design Validation Report', prefix: 'DVAR' },
-            { id: '21cfr820/design-review', title: 'Design Review Record', prefix: 'DRR' },
-        ],
-    },
-    {
-        id: 'release', label: 'Release & Change', color: '#4f46e5',
-        templates: [
-            { id: '21cfr820/transfer-plan', title: 'Design Transfer Plan', prefix: 'DTP' },
-            { id: '21cfr820/change-record', title: 'Design Change Record', prefix: 'DCR' },
-            { id: '21cfr820/dhf-index', title: 'DHF Index', prefix: 'DHF' },
-        ],
-    },
-    {
-        id: 'system', label: 'System', color: '#059669',
-        templates: [
-            { id: 'system/syrs', title: 'System Requirements Specification', prefix: 'SyRS' },
-            { id: 'system/sad', title: 'System Architecture Description', prefix: 'SyAD' },
-            { id: 'system/standards-traceability', title: 'Standards Traceability Matrix', prefix: 'STM' },
-            // `system/sds`, `system/icd`, `system/svvp` and `system/svvr` have no
-            // template on disk yet — pre-existing, tracked separately from this pass.
-            { id: 'system/sds', title: 'System Design Specification', prefix: 'SDS' },
-            { id: 'system/icd', title: 'Interface Control Document', prefix: 'ICD' },
-            { id: 'system/svvp', title: 'System V&V Plan', prefix: 'SVVP' },
-            { id: 'system/svvr', title: 'System V&V Report', prefix: 'SVVR' },
-        ],
-    },
-    {
-        id: 'hardware', label: 'Hardware', color: '#b45309',
-        templates: [
-            { id: 'iec-60601/hrs', title: 'Hardware Requirements Specification', prefix: 'HRS' },
-            { id: 'hardware/hdp', title: 'Hardware Development Plan', prefix: 'HDP' },
-            { id: 'hardware/hds', title: 'Hardware Design Specification', prefix: 'HDS' },
-            { id: 'hardware/hvp', title: 'Hardware Verification Plan', prefix: 'HVP' },
-            { id: 'hardware/hvr', title: 'Hardware Verification Report', prefix: 'HVR' },
-            { id: 'hardware/hbom', title: 'Hardware Bill of Materials', prefix: 'HBOM' },
-            { id: 'hardware/haz', title: 'Hardware Hazard Analysis', prefix: 'HHA' },
-        ],
-    },
-    {
-        id: 'cybersecurity', label: 'Cybersecurity', color: '#d97706',
-        templates: [
-            { id: 'fda-cybersecurity/threat-model', title: 'Threat Model', prefix: 'TM' },
-            { id: 'fda-cybersecurity/security-arch', title: 'Security Architecture', prefix: 'SA' },
-            { id: 'fda-cybersecurity/vuln-assessment', title: 'Vulnerability Assessment', prefix: 'VA' },
-            { id: 'fda-cybersecurity/postmarket-surveillance', title: 'Post-Market Surveillance', prefix: 'PMS' },
-            { id: 'fda-cybersecurity/incident-response', title: 'Incident Response Plan', prefix: 'IRP' },
-        ],
-    },
-];
-
-/** Category id for user-defined categories that don't fit the built-in groups */
+/**
+ * Category id for user-defined categories that don't fit the built-in groups.
+ * Documents created under the previous, theme-based labels ("Risk Management",
+ * "Software", …) land here rather than disappearing: the explorer lists any
+ * document group it does not recognise as a custom category.
+ */
 export const OTHER_GROUP_ID = 'other';
 export const OTHER_GROUP_COLOR = '#6B7280';
 
-/** Color for a group label, falling back to the Other color for custom categories */
-export function groupColorForLabel(label: string): string {
-    return DHF_GROUPS.find(g => g.label === label)?.color ?? OTHER_GROUP_COLOR;
+// A fixed palette indexed by a hash of the directory name, so a group keeps
+// its color when a sibling is added or removed. Colors are decoration; the
+// alternative — a per-standard table — is the registry this file just deleted.
+const PALETTE = [
+    '#dc2626', '#2563eb', '#7c3aed', '#0891b2',
+    '#0d9488', '#4f46e5', '#059669', '#b45309', '#d97706',
+];
+
+function colorFor(id: string): string {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETTE[hash % PALETTE.length];
+}
+
+/**
+ * Human label for a standard directory.
+ *
+ * The label is the designation the directory's documents predominantly claim,
+ * without its edition — "IEC 62304:2006+AMD1:2015" is the right thing to cite
+ * in a document and the wrong length for a sidebar chip. A single outlier does
+ * not rename the group: `iso-14971/` holds six ISO 14971 documents and one
+ * FMEA claiming IEC 60812, and it is still the risk-management group.
+ *
+ * With no majority — `system/` holds three documents claiming 42010, IEC 62304
+ * and IEC 60601-1, one each — the directory name is the only honest label.
+ */
+function labelFor(directory: string, designations: string[]): string {
+    const counts = new Map<string, number>();
+    for (const d of designations) counts.set(d, (counts.get(d) ?? 0) + 1);
+
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const isMajority = ranked.length === 1 || (ranked.length > 1 && ranked[0][1] > ranked[1][1]);
+    if (isMajority) return ranked[0][0].split(':')[0].trim();
+
+    return directory
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 }
 
 /**
@@ -135,4 +91,34 @@ export function prefixFromTitle(title: string): string {
     if (words.length >= 2) return words.slice(0, 4).map(w => w[0].toUpperCase()).join('');
     if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
     return 'DOC';
+}
+
+function buildGroups(): DhfGroup[] {
+    const byDirectory = new Map<string, { designations: string[]; templates: DhfTemplate[] }>();
+
+    for (const t of listBuiltInTemplates()) {
+        if (!byDirectory.has(t.directory)) {
+            byDirectory.set(t.directory, { designations: [], templates: [] });
+        }
+        const group = byDirectory.get(t.directory)!;
+        if (t.standard) group.designations.push(t.standard);
+        const title = t.title ?? t.id.slice(t.id.indexOf('/') + 1);
+        group.templates.push({ id: t.id, title, prefix: prefixFromTitle(title) });
+    }
+
+    return [...byDirectory.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([directory, { designations, templates }]) => ({
+            id: directory,
+            label: labelFor(directory, designations),
+            color: colorFor(directory),
+            templates: templates.sort((a, b) => a.title.localeCompare(b.title)),
+        }));
+}
+
+export const DHF_GROUPS: DhfGroup[] = buildGroups();
+
+/** Color for a group label, falling back to the Other color for custom categories */
+export function groupColorForLabel(label: string): string {
+    return DHF_GROUPS.find(g => g.label === label)?.color ?? OTHER_GROUP_COLOR;
 }

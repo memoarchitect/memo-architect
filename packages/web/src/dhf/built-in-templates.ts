@@ -43,6 +43,66 @@ for (const [path, content] of Object.entries(_rawTemplates)) {
  */
 export const builtInTemplateCount = Object.keys(TEMPLATE_MAP).length;
 
+// ─── Frontmatter ─────────────────────────────────────────────────────────────
+//
+// Only the three keys the wizard groups and labels by. This is deliberately a
+// reader for the shipped subset, not a YAML parser: the templates are content
+// this repo ships, `memo dhf lint` already rejects frontmatter it cannot parse,
+// and pulling a YAML dependency into the web bundle to read three scalar keys
+// would cost more than it explains.
+export interface BuiltInTemplateInfo {
+    /** e.g. "iso-14971/rmp" */
+    id: string;
+    /** Standard directory the template lives in, e.g. "iso-14971" */
+    directory: string;
+    title?: string;
+    /** Full designation, e.g. "IEC 62304:2006+AMD1:2015" */
+    standard?: string;
+    clauses: string[];
+}
+
+function frontmatterBlock(md: string): string {
+    const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    return match ? match[1] : '';
+}
+
+function scalar(block: string, key: string): string | undefined {
+    const m = block.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
+    if (!m) return undefined;
+    return m[1].trim().replace(/^["']|["']$/g, '') || undefined;
+}
+
+function list(block: string, key: string): string[] {
+    const m = block.match(new RegExp(`^${key}:\\s*\\[(.*)\\]$`, 'm'));
+    if (!m) return [];
+    return m[1].split(',').map(v => v.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+}
+
+/**
+ * Every shipped template with the frontmatter the UI groups by.
+ *
+ * Snippets under `shared/` are excluded: an approval block is a fragment, not
+ * a document, and it claims no standard.
+ */
+export function listBuiltInTemplates(): BuiltInTemplateInfo[] {
+    const out: BuiltInTemplateInfo[] = [];
+    for (const [id, raw] of Object.entries(TEMPLATE_MAP)) {
+        const slash = id.indexOf('/');
+        if (slash < 0) continue;
+        const directory = id.slice(0, slash);
+        if (directory === 'shared') continue;
+        const block = frontmatterBlock(raw);
+        out.push({
+            id,
+            directory,
+            title: scalar(block, 'title'),
+            standard: scalar(block, 'standard'),
+            clauses: list(block, 'clauses'),
+        });
+    }
+    return out.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 /** Strip YAML frontmatter block from markdown */
 function stripFrontmatter(md: string): string {
     return md.replace(/^---[\s\S]*?---\n?/, '');
