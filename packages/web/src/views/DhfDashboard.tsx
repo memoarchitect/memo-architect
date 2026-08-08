@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport, Violation } from '@memoarchitect/tools/browser';
+import type { StandardsReport } from '@memoarchitect/tools/browser';
 
 // ─── Inline document registry (lightweight, no core DHF dep for web) ────────
 
@@ -98,6 +99,35 @@ export function DhfDashboard() {
     const completeness = useModelStore(s => s.completeness);
     const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
     const [filterGroup, setFilterGroup] = useState<string | null>(null);
+    const [gapsFilter, setGapsFilter] = useState(false);
+
+    // Standards report is shipped with the model by the dev server.
+    // Each DHF document maps to a template id; we derive a gap count per
+    // template id from the report so the cards can show it without a second
+    // request or a second computation.
+    const standardsReport: StandardsReport | undefined = (model as any)?.standardsReport;
+    const standardGapsByTemplateId = useMemo(() => {
+        const gaps = new Map<string, number>();
+        if (!standardsReport) return gaps;
+        // The report works in template terms indirectly: it contains clause
+        // rows whose `documents` field names the documents that cite them.
+        // We summarise at the standard level: for each required standard, count
+        // the gap clauses and attribute the count to every template that claims
+        // that standard designation.
+        for (const std of standardsReport.standards) {
+            const gapCount = std.totals.gaps;
+            if (gapCount === 0) continue;
+            // Find every DOC_TYPE that mentions this standard.
+            for (const doc of DOC_TYPES) {
+                for (const ref of doc.standards) {
+                    if (ref.startsWith(std.designation.split(':')[0])) {
+                        gaps.set(doc.id, (gaps.get(doc.id) ?? 0) + gapCount);
+                    }
+                }
+            }
+        }
+        return gaps;
+    }, [standardsReport]);
 
     const docStatuses = useMemo(() => {
         if (!model) return new Map<string, DocStatus>();
@@ -109,9 +139,11 @@ export function DhfDashboard() {
     }, [model, validation]);
 
     const filteredDocs = useMemo(() => {
-        if (!filterGroup) return DOC_TYPES;
-        return DOC_TYPES.filter(d => d.group === filterGroup || d.group === 'all');
-    }, [filterGroup]);
+        let docs = DOC_TYPES;
+        if (filterGroup) docs = docs.filter(d => d.group === filterGroup || d.group === 'all');
+        if (gapsFilter) docs = docs.filter(d => (standardGapsByTemplateId.get(d.id) ?? 0) > 0);
+        return docs;
+    }, [filterGroup, gapsFilter, standardGapsByTemplateId]);
 
     const groupedDocs = useMemo(() => {
         const groups = new Map<string, DocType[]>();
@@ -168,12 +200,20 @@ export function DhfDashboard() {
 
             {/* Group filter */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <FilterPill label="All" active={!filterGroup} onClick={() => setFilterGroup(null)} />
+                <FilterPill label="All" active={!filterGroup && !gapsFilter} onClick={() => { setFilterGroup(null); setGapsFilter(false); }} />
                 {Object.entries(GROUP_LABELS).filter(([k]) => k !== 'all').map(([key, label]) => (
                     <FilterPill key={key} label={label} active={filterGroup === key}
-                        onClick={() => setFilterGroup(filterGroup === key ? null : key)}
+                        onClick={() => { setFilterGroup(filterGroup === key ? null : key); setGapsFilter(false); }}
                         color={GROUP_COLORS[key]} />
                 ))}
+                {standardsReport && (
+                    <FilterPill
+                        label={`Has gaps (${standardGapsByTemplateId.size})`}
+                        active={gapsFilter}
+                        onClick={() => { setGapsFilter(!gapsFilter); setFilterGroup(null); }}
+                        color="#dc2626"
+                    />
+                )}
             </div>
 
             {/* Document cards by group */}
@@ -198,8 +238,10 @@ export function DhfDashboard() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                             {docs.map(doc => {
                                 const status = docStatuses.get(doc.id)!;
+                                const standardsGap = standardGapsByTemplateId.get(doc.id) ?? 0;
                                 return (
                                     <DocCard key={doc.id} doc={doc} status={status}
+                                        standardsGap={standardsGap}
                                         onClick={() => setSelectedDoc(doc.id)} />
                                 );
                             })}
@@ -241,7 +283,9 @@ function FilterPill({ label, active, onClick, color }: {
     );
 }
 
-function DocCard({ doc, status, onClick }: { doc: DocType; status: DocStatus; onClick: () => void }) {
+function DocCard({ doc, status, standardsGap = 0, onClick }: {
+    doc: DocType; status: DocStatus; standardsGap?: number; onClick: () => void;
+}) {
     const statusColor = status.status === 'complete' ? '#059669'
         : status.status === 'partial' ? '#d97706' : '#dc2626';
     const statusBg = status.status === 'complete' ? '#ecfdf5'
@@ -251,15 +295,16 @@ function DocCard({ doc, status, onClick }: { doc: DocType; status: DocStatus; on
 
     return (
         <div onClick={onClick} style={{
-            background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
-            padding: '16px', cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s',
+            background: '#fff', border: `1px solid ${standardsGap > 0 ? '#fecaca' : '#e5e7eb'}`,
+            borderRadius: '8px', padding: '16px', cursor: 'pointer',
+            transition: 'border-color 0.15s, box-shadow 0.15s',
         }}
             onMouseEnter={e => {
                 (e.currentTarget as HTMLDivElement).style.borderColor = '#2DD4A8';
                 (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
             }}
             onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e7eb';
+                (e.currentTarget as HTMLDivElement).style.borderColor = standardsGap > 0 ? '#fecaca' : '#e5e7eb';
                 (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
             }}
         >
@@ -267,12 +312,22 @@ function DocCard({ doc, status, onClick }: { doc: DocType; status: DocStatus; on
                 <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', fontFamily: 'monospace' }}>
                     {doc.id.toUpperCase()}
                 </span>
-                <span style={{
-                    fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px',
-                    background: statusBg, color: statusColor,
-                }}>
-                    {statusLabel}
-                </span>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    {standardsGap > 0 && (
+                        <span style={{
+                            fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px',
+                            background: '#fef2f2', color: '#dc2626',
+                        }} title={`${standardsGap} standard clause${standardsGap !== 1 ? 's' : ''} unclaimed`}>
+                            {standardsGap} clauses
+                        </span>
+                    )}
+                    <span style={{
+                        fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px',
+                        background: statusBg, color: statusColor,
+                    }}>
+                        {statusLabel}
+                    </span>
+                </div>
             </div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A4B', marginBottom: '6px' }}>
                 {doc.title}

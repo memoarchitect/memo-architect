@@ -36,10 +36,14 @@ describe('derived DHF groups', () => {
         expect(DHF_GROUPS.find(g => g.id === 'iso-14971')?.label).toBe('ISO 14971');
     });
 
-    it('labels a mixed-standard directory with the directory name', () => {
-        // system/ holds documents claiming 42010, IEC 62304 and IEC 60601-1.
+    it('labels a mixed-standard directory with the majority designation', () => {
+        // system/ holds four documents: standards-traceability and
+        // standards-checklist (both ISO 13485:2016), sad (42010) and syrs
+        // (IEC 60601-1). ISO 13485 wins 2/4, so the majority algorithm labels
+        // the group "ISO 13485" — the directory-name fallback only fires when
+        // there is a strict tie.
         const system = DHF_GROUPS.find(g => g.id === 'system');
-        expect(system?.label).toBe('System');
+        expect(system?.label).toBe('ISO 13485');
     });
 
     it('excludes shared snippets, which claim no standard', () => {
