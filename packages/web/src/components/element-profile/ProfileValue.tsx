@@ -10,8 +10,9 @@
 // does: it sits flat on a tinted surface and explains itself on hover.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { COLOR } from '../../styles/tokens';
+import { useModelStore } from '../../store/model-store';
 import { densityTokens, type Density } from './density';
 import { editabilityLabel, isEditable, type Editability } from './editability';
 
@@ -147,28 +148,99 @@ export function EditableValue({
     const t = densityTokens(density);
     const committed = useRef(false);
 
+    const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+    const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+    const [mentionIndex, setMentionIndex] = useState(0);
+
+    const model = useModelStore(s => s.model);
+    const inspectElement = useModelStore(s => s.inspectElement);
+
     useEffect(() => { setDraft(value); }, [value]);
+
+    const candidates = useMemo(() => {
+        if (mentionSearch === null || !model) return [];
+        return Object.values(model.elements).filter(e => {
+            const sid = (e.shortId ?? '').toLowerCase();
+            const id = e.id.toLowerCase();
+            const name = e.name.toLowerCase();
+            return sid.includes(mentionSearch) || id.includes(mentionSearch) || name.includes(mentionSearch);
+        }).slice(0, 10);
+    }, [mentionSearch, model]);
 
     const commit = useCallback(() => {
         if (committed.current) return;
+        if (mentionSearch !== null) return;
         committed.current = true;
         setEditing(false);
         if (draft !== value) onSave(draft);
-    }, [draft, value, onSave]);
+    }, [draft, value, onSave, mentionSearch]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (mentionSearch !== null) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => (i + 1) % Math.max(1, candidates.length)); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => (i - 1 + candidates.length) % Math.max(1, candidates.length)); return; }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                const selected = candidates[mentionIndex];
+                if (selected) {
+                    const selStart = inputRef.current?.selectionStart ?? 0;
+                    const beforeCursor = draft.slice(0, selStart);
+                    const afterCursor = draft.slice(selStart);
+                    const match = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+                    if (match) {
+                        const replaceStart = selStart - match[1].length - 1;
+                        const insertText = `[${selected.name}](@${selected.shortId ?? selected.id}) `;
+                        const newDraft = draft.slice(0, replaceStart) + insertText + afterCursor;
+                        setDraft(newDraft);
+                        setMentionSearch(null);
+                        
+                        setTimeout(() => {
+                            if (inputRef.current) {
+                                inputRef.current.selectionStart = replaceStart + insertText.length;
+                                inputRef.current.selectionEnd = inputRef.current.selectionStart;
+                                inputRef.current.focus();
+                            }
+                        }, 0);
+                    }
+                } else {
+                    setMentionSearch(null);
+                }
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setMentionSearch(null);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !multiline) { e.preventDefault(); commit(); }
         if (e.key === 'Escape') { committed.current = true; setDraft(value); setEditing(false); }
-    }, [commit, multiline, value]);
+    }, [commit, multiline, value, mentionSearch, candidates, mentionIndex, draft]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const val = e.target.value;
+        setDraft(val);
+        const selStart = e.target.selectionStart ?? 0;
+        const beforeCursor = val.slice(0, selStart);
+        const match = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+        if (match) {
+            setMentionSearch(match[1].toLowerCase());
+            setMentionIndex(0);
+        } else {
+            setMentionSearch(null);
+        }
+    };
 
     const startEditing = () => { committed.current = false; setDraft(value); setEditing(true); };
 
     if (editing) {
         const shared = {
+            ref: inputRef as any,
             value: draft,
             autoFocus: true,
-            onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(e.target.value),
-            onBlur: commit,
+            onChange: handleChange,
+            onBlur: () => { setTimeout(commit, 200); },
             onKeyDown: handleKeyDown,
             placeholder,
             style: {
@@ -185,8 +257,90 @@ export function EditableValue({
                 ...(multiline ? { minHeight: density === 'page' ? '110px' : '54px', resize: 'vertical' as const, lineHeight: 1.6 } : {}),
             },
         };
-        return multiline ? <textarea {...shared} /> : <input type="text" {...shared} />;
+        return (
+            <div style={{ position: 'relative', width: '100%' }}>
+                {multiline ? <textarea {...shared} /> : <input type="text" {...shared} />}
+                
+                {mentionSearch !== null && candidates.length > 0 && (
+                    <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0,
+                        marginTop: 4, background: '#fff', border: '1px solid #E5E7EB',
+                        borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 100, maxHeight: 200, overflowY: 'auto'
+                    }}>
+                        {candidates.map((c, i) => (
+                            <div
+                                key={c.id}
+                                style={{
+                                    padding: '6px 12px', fontSize: 13, cursor: 'pointer',
+                                    background: i === mentionIndex ? '#F3F4F6' : '#fff',
+                                    display: 'flex', justifyContent: 'space-between'
+                                }}
+                                onClick={() => {
+                                    const selStart = inputRef.current?.selectionStart ?? draft.length;
+                                    const beforeCursor = draft.slice(0, selStart);
+                                    const afterCursor = draft.slice(selStart);
+                                    const match = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+                                    if (match) {
+                                        const replaceStart = selStart - match[1].length - 1;
+                                        const newDraft = draft.slice(0, replaceStart) + `[${c.name}](@${c.shortId ?? c.id}) ` + afterCursor;
+                                        setDraft(newDraft);
+                                    }
+                                    setMentionSearch(null);
+                                    inputRef.current?.focus();
+                                }}
+                            >
+                                <span style={{ fontWeight: 500, color: '#111827' }}>{c.name}</span>
+                                <span style={{ color: '#6B7280', fontSize: 11 }}>{c.shortId ?? c.id}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
     }
+
+    const renderFormattedValue = (text: string) => {
+        if (!text) return placeholder ?? 'Click to add…';
+        if (!model) return text;
+        const regex = /(\[[^\]]+\]\(@[a-zA-Z0-9_-]+\)|@[a-zA-Z0-9_-]+)/g;
+        const parts = text.split(regex);
+        
+        return parts.map((part, i) => {
+            let id = '';
+            let label = '';
+            
+            if (part.startsWith('@')) {
+                id = part.slice(1);
+            } else if (part.startsWith('[') && part.includes('](@')) {
+                const match = part.match(/\[([^\]]+)\]\(@([a-zA-Z0-9_-]+)\)/);
+                if (match) {
+                    label = match[1];
+                    id = match[2];
+                }
+            }
+
+            if (id) {
+                const target = Object.values(model.elements).find(e => (e.shortId ?? e.id) === id) || model.elements[id];
+                if (target) {
+                    return (
+                        <span 
+                            key={i} 
+                            onClick={(e) => { e.stopPropagation(); inspectElement(target.id); }}
+                            style={{ 
+                                color: COLOR.accent, cursor: 'pointer', fontWeight: 600, 
+                                background: '#E0F2FE', padding: '1px 4px', borderRadius: '4px' 
+                            }}
+                            title={target.name}
+                        >
+                            {label ? label : `@${target.shortId ?? target.id}`}
+                        </span>
+                    );
+                }
+            }
+            return <span key={i}>{part}</span>;
+        });
+    };
 
     return (
         <div
@@ -217,7 +371,7 @@ export function EditableValue({
             }}
         >
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {value || (placeholder ?? 'Click to add…')}
+                {renderFormattedValue(value)}
             </span>
             <span
                 aria-hidden
