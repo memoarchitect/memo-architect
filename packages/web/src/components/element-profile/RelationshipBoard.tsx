@@ -110,10 +110,11 @@ export function RelationshipBoard({
                 {linkedCount > 6 && (
                     <input value={filter} onChange={event => setFilter(event.target.value)}
                         placeholder="Filter linked elements…" aria-label="Filter linked elements"
+                        className="transition-shadow focus:shadow-md"
                         style={{
-                            marginLeft: 'auto', width: 240, padding: '6px 9px', borderRadius: 7,
-                            border: `1px solid ${COLOR.border}`, background: COLOR.surface,
-                            color: COLOR.primary, fontSize: 12, outline: 'none',
+                            marginLeft: 'auto', width: 240, padding: '8px 12px', borderRadius: 8,
+                            border: `1px solid ${COLOR.border}`, background: '#F9FAFB',
+                            color: COLOR.primary, fontSize: 13, outline: 'none',
                         }} />
                 )}
             </div>
@@ -127,17 +128,17 @@ export function RelationshipBoard({
                     const color = LAYER_COLORS[group.layer] || COLOR.muted;
                     return (
                         <section key={group.layer} style={{
-                            padding: density === 'page' ? '11px 12px' : 8,
-                            background: color + '0D',
-                            border: `1px solid ${color}25`,
-                            borderRadius: density === 'page' ? 11 : 8,
+                            padding: '16px 20px',
+                            background: color + '08',
+                            border: `1px solid ${color}15`,
+                            borderRadius: 12,
                         }}>
-                            <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
-                                <span style={{ width: 9, height: 9, borderRadius: 3, background: color }} />
-                                <strong style={{ color: COLOR.primary, fontSize: 12 }}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                                <strong style={{ color: COLOR.primary, fontSize: 14, letterSpacing: '0.02em' }}>
                                     {LAYER_LABELS[group.layer] ?? group.layer}
                                 </strong>
-                                <span style={{ color: COLOR.faint, fontSize: 11 }}>{group.elements.length}</span>
+                                <span style={{ color: COLOR.faint, fontSize: 12, background: color + '15', padding: '1px 6px', borderRadius: 10 }}>{group.elements.length}</span>
                             </div>
                             <div style={{
                                 display: 'grid',
@@ -165,12 +166,13 @@ function LinkedElementCard({ linked, color, onNavigate }: {
     const [hover, setHover] = useState(false);
     return (
         <button onClick={() => onNavigate(linked.id)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-            className="text-left" title={`Open ${linked.element?.name ?? linked.id}`}
+            className="text-left transition-all duration-200" title={`Open ${linked.element?.name ?? linked.id}`}
             style={{
-                padding: '10px 11px', borderRadius: 10, background: COLOR.surface,
-                border: `1px solid ${hover ? color + '90' : 'rgba(60,60,67,0.12)'}`,
-                cursor: 'pointer', minWidth: 0, width: '100%', maxWidth: 264,
-                boxShadow: hover ? '0 2px 8px rgba(15,23,42,0.08)' : 'none',
+                padding: '12px 14px', borderRadius: 10, background: '#FFFFFF',
+                border: `1px solid ${hover ? color + '80' : '#E5E7EB'}`,
+                cursor: 'pointer', minWidth: 0, width: '100%', maxWidth: 280,
+                boxShadow: hover ? '0 4px 12px rgba(0,0,0,0.05)' : '0 1px 2px rgba(0,0,0,0.02)',
+                transform: hover ? 'translateY(-1px)' : 'none',
             }}>
             <div style={{ minWidth: 0 }}>
                 {linked.links.map(link => (
@@ -184,6 +186,9 @@ function LinkedElementCard({ linked, color, onNavigate }: {
                 <strong className="truncate" style={{ display: 'block', color: COLOR.primary, fontSize: 13 }}>
                     {linked.element?.name ?? linked.id}
                 </strong>
+                <div className="font-mono truncate" style={{ color: '#9CA3AF', fontSize: '10px', marginTop: 2 }} title={linked.id}>
+                    {linked.element?.shortId ?? linked.id}
+                </div>
                 <div style={{ color: COLOR.muted, fontSize: 10, marginTop: 2 }}>
                     {linked.element?.kind ?? 'Unknown element type'}
                 </div>

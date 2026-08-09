@@ -27,6 +27,7 @@ import {
 } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';
+import { TypeFilterSelect } from './TypeFilterSelect';
 
 const BORDER = '#E5E5E0';
 const ACCENT = '#2DD4A8';
@@ -121,6 +122,7 @@ export function matchLegalElements(
         source: MemoElement;
         registries: OntologyRegistriesDTO;
         limit?: number;
+        filterKinds?: string[];
     },
 ): MemoElement[] {
     return matchElements(elements, {
@@ -130,6 +132,7 @@ export function matchLegalElements(
         // of illegal lexical matches can hide legal results below it.
         limit: Object.keys(elements).length,
     })
+        .filter(candidate => !options.filterKinds || options.filterKinds.length === 0 || options.filterKinds.includes(candidate.kind))
         .filter(candidate => legalRelationshipTypes(options.source, candidate, options.registries).length > 0)
         .slice(0, options.limit ?? MAX_MATCHES);
 }
@@ -142,19 +145,22 @@ export function RelationshipQuickAdd({
     const [activeIndex, setActiveIndex] = useState(0);
     const [target, setTarget] = useState<MemoElement | null>(null);
     const [selected, setSelected] = useState<LegalRelationshipOption | null>(null);
+    const [filterKinds, setFilterKinds] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
     // A different element means a different set of legal links.
     useEffect(() => {
-        setQuery(''); setTarget(null); setSelected(null); setOpen(false); setActiveIndex(0);
+        setQuery(''); setTarget(null); setSelected(null); setOpen(false); setActiveIndex(0); setFilterKinds([]);
     }, [element.id]);
 
     // ─── Live element matches, segregated by kind ───────────────────────────
 
+    const allModelKinds = useMemo(() => Array.from(new Set(Object.values(model.elements).map(e => e.kind))).sort(), [model.elements]);
+
     const matches = useMemo(
-        () => matchLegalElements(model.elements, { query, source: element, registries }),
-        [model.elements, element, query, registries]);
+        () => matchLegalElements(model.elements, { query, source: element, registries, filterKinds }),
+        [model.elements, element, query, registries, filterKinds]);
 
     /** Grouped for display, flat for keyboard navigation. */
     const groups = useMemo(() => groupMatchesByKind(matches), [matches]);
@@ -246,32 +252,45 @@ export function RelationshipQuickAdd({
                             style={{ width: 18, height: 18, border: 0, borderRadius: 9, background: '#FFFFFFAA', color: '#0F766E', cursor: 'pointer', lineHeight: 1 }}>×</button>
                     </div>
                 ) : <>
-                <input
-                    ref={inputRef}
-                    value={query}
-                    disabled={!enabled}
-                    onChange={event => {
-                        setQuery(event.target.value);
-                        setTarget(null);
-                        setSelected(null);
-                        setOpen(true);
-                    }}
-                    onFocus={() => { if (query.trim() && !target) setOpen(true); }}
-                    onBlur={() => { window.setTimeout(() => setOpen(false), 120); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder={enabled ? 'Link to… type an element ID or name' : 'Connect to the dev server to author relationships'}
-                    aria-label="Link this element to another"
-                    aria-expanded={open}
-                    aria-controls="memo-quick-add-matches"
-                    aria-activedescendant={open && activeId ? `memo-quick-add-${activeId}` : undefined}
-                    role="combobox"
-                    autoComplete="off"
-                    className="w-full px-2 py-1 rounded focus:outline-none"
-                    style={{
-                        fontSize: FONT.xs, background: '#FFFFFF',
-                        border: `1px solid ${target ? ACCENT : BORDER}`, color: '#374151',
-                    }}
-                />
+                <div className="flex gap-2">
+                    <input
+                        ref={inputRef}
+                        value={query}
+                        disabled={!enabled}
+                        onChange={event => {
+                            setQuery(event.target.value);
+                            setTarget(null);
+                            setSelected(null);
+                            setOpen(true);
+                        }}
+                        onFocus={() => { if (query.trim() && !target) setOpen(true); }}
+                        onBlur={() => { window.setTimeout(() => setOpen(false), 120); }}
+                        onKeyDown={handleKeyDown}
+                        placeholder={enabled ? 'Link to… type an element ID or name' : 'Connect to the dev server to author relationships'}
+                        aria-label="Link this element to another"
+                        aria-expanded={open}
+                        aria-controls="memo-quick-add-matches"
+                        aria-activedescendant={open && activeId ? `memo-quick-add-${activeId}` : undefined}
+                        role="combobox"
+                        autoComplete="off"
+                        className="flex-1 px-2 py-1 rounded focus:outline-none"
+                        style={{
+                            fontSize: FONT.xs, background: '#FFFFFF',
+                            border: `1px solid ${target ? ACCENT : BORDER}`, color: '#374151',
+                            minWidth: 0,
+                        }}
+                    />
+                    <div style={{ flexShrink: 0 }}>
+                        <TypeFilterSelect
+                            label=""
+                            options={allModelKinds.map(kind => ({ value: kind, label: kind }))}
+                            selected={filterKinds}
+                            onChange={setFilterKinds}
+                            allLabel="All Types"
+                            width={110}
+                        />
+                    </div>
+                </div>
 
                 {open && query.trim() && (
                     <div

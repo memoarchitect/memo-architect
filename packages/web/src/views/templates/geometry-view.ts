@@ -37,8 +37,8 @@ export interface ScreenLayoutNode {
     disclosureKind: string;
     /** CSS colour token from the model, when the modeller set one. */
     boundaryColor?: string;
-    /** Modelled fill opacity (0..1) used to reveal the capture below a region. */
-    boundaryOpacity: number;
+    /** Modelled stroke width in pixels used to draw the boundary. */
+    boundaryWidth?: number;
     /** True when bounds came from automatic detection and no one confirmed them. */
     unconfirmed: boolean;
     detectionConfidence?: number;
@@ -176,7 +176,7 @@ export function computeScreenLayout(
             formKind: enumValue(a['formKind']),
             disclosureKind: enumValue(a['disclosureKind']) || 'inline',
             boundaryColor: a['boundaryColor'] || undefined,
-            boundaryOpacity: Math.max(0, Math.min(1, num(a['boundaryOpacity']) ?? 0.12)),
+            boundaryWidth: num(a['boundaryWidth']),
             unconfirmed: detection === 'automatic' && !(a['confirmedBy'] ?? '').trim(),
             detectionConfidence: num(a['detectionConfidence']),
             navigatesToId: (navigates.get(el.id) ?? [])[0],

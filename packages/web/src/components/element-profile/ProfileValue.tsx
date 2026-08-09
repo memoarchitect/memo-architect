@@ -199,13 +199,13 @@ export function EditableValue({
                 display: 'flex', alignItems: 'flex-start', gap: 6,
                 padding: compact ? '5px 8px' : t.valuePadding,
                 borderRadius: compact ? '6px' : t.radius,
-                background: compact ? (hover ? '#F0FDF9' : COLOR.surfaceAlt) : COLOR.surface,
-                border: compact ? `1px solid ${hover ? COLOR.accent : 'transparent'}` : `1px solid ${hover ? COLOR.accent : COLOR.border}`,
-                boxShadow: hover && !compact ? `0 0 0 3px ${COLOR.accent}20` : 'none',
+                background: hover ? '#F3F4F6' : 'transparent',
+                border: `1px solid ${hover ? '#E5E7EB' : 'transparent'}`,
+                boxShadow: 'none',
                 color: value ? COLOR.primary : COLOR.faint,
                 fontSize: t.text,
                 cursor: 'text',
-                transition: 'border-color 150ms ease, box-shadow 150ms ease',
+                transition: 'background-color 150ms ease, border-color 150ms ease',
                 lineHeight: multiline ? 1.6 : 1.4,
                 whiteSpace: multiline ? 'pre-wrap' : 'nowrap',
                 overflow: 'hidden',
@@ -219,8 +219,9 @@ export function EditableValue({
                 aria-hidden
                 style={{
                     flexShrink: 0, fontSize: t.meta,
-                    color: hover ? COLOR.accent : '#C7CBD1',
-                    transition: 'color 150ms ease',
+                    color: COLOR.accent,
+                    opacity: hover ? 1 : 0,
+                    transition: 'opacity 150ms ease',
                 }}
             >
                 ✎

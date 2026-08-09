@@ -323,6 +323,7 @@ export function ScreenLayoutView({
                         return (
                             <div
                                 key={node.element.id}
+                                id={`screen-node-${node.element.id}`}
                                 onClick={e => { e.stopPropagation(); selectElement(node.element.id); }}
                                 onDoubleClick={e => { e.stopPropagation(); follow(node); }}
                                 onMouseEnter={() => setHoveredElementId(node.element.id)}
@@ -345,11 +346,11 @@ export function ScreenLayoutView({
                                     top: `${node.rect.y * 100}%`,
                                     width: `${node.rect.width * 100}%`,
                                     height: `${node.rect.height * 100}%`,
-                                    border: `${isSelected || isHovered ? 2 : 1}px ${node.unconfirmed ? 'dashed' : 'solid'} ${recede ? '#9CA3AF' : stroke}`,
+                                    border: `${node.boundaryWidth ?? (isSelected || isHovered ? 2 : 1)}px ${node.unconfirmed ? 'dashed' : 'solid'} ${recede ? '#9CA3AF' : stroke}`,
                                     borderRadius: 3,
                                     background: recede
                                         ? '#6B728012'
-                                        : `color-mix(in srgb, ${stroke} ${Math.round(Math.min(1, node.boundaryOpacity + (isHovered ? 0.12 : isSelected ? 0.06 : 0)) * 100)}%, transparent)`,
+                                        : (isHovered ? `color-mix(in srgb, ${stroke} 12%, transparent)` : isSelected ? `color-mix(in srgb, ${stroke} 6%, transparent)` : 'transparent'),
                                     boxShadow: isOverlay(node) ? '0 2px 10px rgba(0,0,0,0.18)' : undefined,
                                     opacity: recede ? 0.18 : 1,
                                     pointerEvents: drawMode ? 'none' : 'auto',
@@ -375,6 +376,7 @@ export function ScreenLayoutView({
                                     <button
                                         type="button"
                                         aria-label={`Open ${node.element.name}`}
+                                        onPointerDown={e => e.stopPropagation()}
                                         onClick={e => { e.stopPropagation(); follow(node); }}
                                         style={{
                                             position: 'absolute', top: 3, right: 3, zIndex: 3,

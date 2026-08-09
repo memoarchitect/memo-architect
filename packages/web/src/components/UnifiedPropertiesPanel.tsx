@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     useModelStore, getRelationshipsForElement, getDiagram, getRegistries,
     getElementSourceFiles, sourceChangeAffects,
@@ -7,7 +7,6 @@ import type { MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 import { ElementRelationships } from './element-profile/ElementRelationships';
-import { RenameScopeNote } from './RenameScopeNote';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
 import type { Density } from './element-profile/density';
@@ -26,20 +25,17 @@ function Section({ title, count, defaultOpen = true, actions, children }: {
 }) {
     const [open, setOpen] = useState(defaultOpen);
     return (
-        <div style={{ borderBottom: '1px solid #EDEDEA' }}>
+        <div className="mb-3 mx-3 bg-white border border-gray-200/60 rounded-xl shadow-sm overflow-hidden">
             <div
-                className="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors"
-                style={{ borderRadius: '6px', margin: '2px 4px' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#F0F0ED')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                className="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50"
                 onClick={() => setOpen(o => !o)}
             >
-                <span className="font-medium flex-1 text-xs" style={{ color: '#374151' }}>{title}</span>
+                <span className="font-bold flex-1 text-[10px] uppercase tracking-wider" style={{ color: '#6B7280' }}>{title}</span>
                 {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
-                {typeof count === 'number' && <span className="text-xs" style={{ color: '#9CA3AF' }}>{count}</span>}
-                <span style={{ color: '#D1D5DB' }}>{open ? '▾' : '▸'}</span>
+                {typeof count === 'number' && <span className="px-1.5 py-0.5 rounded-md font-medium text-[10px]" style={{ background: '#F3F4F6', color: '#6B7280' }}>{count}</span>}
+                <span style={{ color: '#D1D5DB', fontSize: 14 }}>{open ? '▾' : '▸'}</span>
             </div>
-            {open && <div className="px-4 pb-3">{children}</div>}
+            {open && <div className="px-3 pb-3 pt-1">{children}</div>}
         </div>
     );
 }
@@ -91,52 +87,6 @@ function TreeRow({ label, kind, kindColor, onClick, arrow, typeBadge, typeColor,
     );
 }
 
-function RegionProperties({ element, onNameSave, onAttributeSave }: {
-    element: MemoElement;
-    onNameSave: (value: string) => void;
-    onAttributeSave: (key: string, value: string) => void;
-}) {
-    const rawColor = element.attributes.boundaryColor || '#14B8A6';
-    const color = /^#[0-9a-f]{6}$/i.test(rawColor) ? rawColor : '#14B8A6';
-    const rawOpacity = Number(element.attributes.boundaryOpacity ?? '0.12');
-    const opacity = Number.isFinite(rawOpacity) ? Math.max(0, Math.min(1, rawOpacity)) : 0.12;
-
-    return (
-        <Section title="Region" defaultOpen>
-            <div className="space-y-2 text-xs">
-                <label style={{ display: 'block', color: '#6B7280' }}>
-                    <span style={{ display: 'block', marginBottom: 3 }}>Name</span>
-                    <EditableValue value={element.name} onSave={onNameSave} density={PANEL_DENSITY} placeholder="Region name" />
-                    <RenameScopeNote identifier={element.id} />
-                </label>
-                <label style={{ display: 'block', color: '#6B7280' }}>
-                    <span style={{ display: 'block', marginBottom: 3 }}>Description</span>
-                    <EditableValue value={element.attributes.description || ''}
-                        onSave={value => onAttributeSave('description', value)} density={PANEL_DENSITY}
-                        multiline placeholder="Describe this region…" />
-                </label>
-                <div>
-                    <span style={{ display: 'block', marginBottom: 3, color: '#6B7280' }}>Boundary color</span>
-                    <div className="flex items-center gap-2">
-                        <input aria-label="Region boundary color" type="color" value={color}
-                            onChange={event => onAttributeSave('boundaryColor', event.target.value)}
-                            style={{ width: 34, height: 28, padding: 2, border: '1px solid #D8D8D2', borderRadius: 6, background: '#FFFFFF' }} />
-                        <EditableValue value={rawColor} onSave={value => onAttributeSave('boundaryColor', value)}
-                            density={PANEL_DENSITY} placeholder="#14B8A6" compact />
-                    </div>
-                </div>
-                <label style={{ display: 'block', color: '#6B7280' }}>
-                    <span className="flex justify-between" style={{ marginBottom: 3 }}>
-                        <span>Fill opacity</span><span>{Math.round(opacity * 100)}%</span>
-                    </span>
-                    <input aria-label="Region fill opacity" type="range" min="0" max="1" step="0.01" value={opacity}
-                        onChange={event => onAttributeSave('boundaryOpacity', event.target.value)} style={{ width: '100%' }} />
-                </label>
-            </div>
-        </Section>
-    );
-}
-
 // ─── Diagram Properties ─────────────────────────────────────────────────────
 
 function DiagramProperties() {
@@ -152,21 +102,21 @@ function DiagramProperties() {
 
     return (
         <>
-            <div className="p-4" style={{ ...sectionStyle, borderLeft: `3px solid ${meta?.color || '#6B7280'}` }}>
-                <div className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>{diagram.name}</div>
-                <div className="flex items-center gap-2 text-xs mt-1.5">
+            <div className="p-5 mb-2" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', borderLeft: `4px solid ${meta?.color || '#6B7280'}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div className="text-sm font-bold truncate" style={{ color: '#111827' }}>{diagram.name}</div>
+                <div className="flex items-center gap-2 text-xs mt-2">
                     {meta && (
-                        <span className="px-2 py-0.5 rounded-md font-medium"
+                        <span className="px-2 py-0.5 rounded-md font-semibold"
                             style={{ background: meta.color + '18', color: meta.color }}>
                             {meta.code}
                         </span>
                     )}
-                    <span style={{ color: '#6B7280' }}>{meta?.fullName || diagram.diagramType}</span>
+                    <span style={{ color: '#6B7280', fontWeight: 500 }}>{meta?.fullName || diagram.diagramType}</span>
                 </div>
-                {diagram.auto && <div className="text-xs mt-1" style={{ color: '#6B7280' }}>Auto-generated</div>}
+                {diagram.auto && <div className="text-xs mt-2 font-medium" style={{ color: '#9CA3AF' }}>Auto-generated</div>}
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pt-2 pb-4 bg-gray-50/50">
                 {diagram.description && (
                     <Section title="Description" defaultOpen>
                         <div className="text-xs leading-relaxed" style={{ color: '#374151' }}>{diagram.description}</div>
@@ -297,6 +247,7 @@ function ElementProperties() {
     const updateElementField = useModelStore(s => s.updateElementField);
     const updateElementAttribute = useModelStore(s => s.updateElementAttribute);
     const applyEdit = useModelStore(s => s.applyEdit);
+    const deleteModelElement = useModelStore(s => s.deleteModelElement);
 
     const [attrEditMode, setAttrEditMode] = useState(false);
 
@@ -330,10 +281,20 @@ function ElementProperties() {
     const layerColor = LAYER_COLORS[element.layer] || '#666';
 
     const violations = validation?.violations.filter(v => v.elementId === selectedElementId) || [];
-    const regionProfileKeys = new Set(['description', 'boundaryColor', 'boundaryOpacity']);
-    const attrs = Object.entries(element.attributes).filter(([k]) =>
-        k !== 'name' && k !== 'id' && !(element.kind === 'UIElement' && regionProfileKeys.has(k))
-        && !(element.kind !== 'UIElement' && k === 'description'));
+    
+    const appearanceKeys = new Set([
+        'boundaryColor', 'boundaryOpacity', 'boundaryWidth', 
+        'fill', 'stroke', 'opacity', 'color', 'backgroundColor',
+        'bounds.x', 'bounds.y', 'bounds.width', 'bounds.height'
+    ]);
+    const attrs = [
+        ['id', element.id],
+        ...( (element as any).uuid ? [['uuid', (element as any).uuid]] : []),
+        ['kind', element.kind],
+        ['layer', element.layer],
+        ...Object.entries(element.attributes).filter(([k]) => k !== 'name' && k !== 'id' && !appearanceKeys.has(k) && k !== 'description' && k !== 'shortDescription')
+    ];
+    const appearanceAttrs = Object.entries(element.attributes).filter(([k]) => appearanceKeys.has(k));
 
     const handleAttrSave = (key: string, newValue: string) => {
         updateElementAttribute(selectedElementId, key, newValue);
@@ -349,46 +310,54 @@ function ElementProperties() {
 
     return (
         <>
-            {/* Header mirrors ModelExplorer layer header (color chip + name + kind badge) */}
-            <div className="p-4" style={{ borderBottom: '1px solid #EDEDEA', borderLeft: `3px solid ${layerColor}` }}>
-                <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-2.5 h-2.5 flex-shrink-0" style={{ background: layerColor, borderRadius: '3px' }} />
-                    <span className="text-sm font-semibold truncate" style={{ color: '#1a1a1a' }}>{element.name}</span>
+            <div className="p-5 mb-2 relative group" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', borderLeft: `4px solid ${layerColor}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-start gap-3 pr-4 min-w-0 flex-1">
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[15px] font-bold leading-tight" style={{ color: '#111827' }}>
+                                <EditableValue value={element.name} onSave={handleNameSave} density={PANEL_DENSITY} placeholder="Element name" />
+                            </div>
+                            <div className="text-sm font-medium mt-3 text-gray-700">
+                                <EditableValue
+                                    value={element.attributes.shortDescription || ''}
+                                    onSave={newValue => handleAttrSave('shortDescription', newValue)}
+                                    density={PANEL_DENSITY}
+                                    multiline
+                                    placeholder="Add a short description..."
+                                />
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                                <EditableValue
+                                    value={element.attributes.description || ''}
+                                    onSave={newValue => handleAttrSave('description', newValue)}
+                                    density={PANEL_DENSITY}
+                                    multiline
+                                    placeholder="Add a detailed description..."
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={() => void navigator.clipboard.writeText(element.id)}
+                            title={`Copy ID: ${element.id}`}
+                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-700"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                        <button
+                            onClick={() => void deleteModelElement(element.id)}
+                            title="Delete element"
+                            className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 rounded-md font-medium" style={{ background: layerColor + '18', color: layerColor }}>
-                        {element.kind}
-                    </span>
-                </div>
-                <div className="text-xs mt-1.5 capitalize" style={{ color: '#6B7280' }}>{element.layer} layer</div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-                {element.kind === 'UIElement' && (
-                    <RegionProperties element={element} onNameSave={handleNameSave} onAttributeSave={handleAttrSave} />
-                )}
-
-                {/* The SysML identifier is what other declarations reference.
-                    Showing it next to the rename caveat is the difference
-                    between "renaming is limited" and knowing what would break. */}
-                <Section title="Identity">
-                    <div className="text-xs" style={{ color: '#374151' }}>
-                        <code style={{ fontFamily: 'ui-monospace, monospace' }}>{element.id}</code>
-                        <RenameScopeNote />
-                    </div>
-                </Section>
-
-                {element.kind !== 'UIElement' && <Section title="Description" defaultOpen>
-                    <div className="text-xs leading-relaxed">
-                        <EditableValue
-                            value={element.attributes.description || ''}
-                            onSave={newValue => handleAttrSave('description', newValue)}
-                            density={PANEL_DENSITY}
-                            multiline
-                            placeholder="Click to add a description…"
-                        />
-                    </div>
-                </Section>}
+            <div className="flex-1 overflow-y-auto pt-2 pb-6 bg-gray-50/50">
 
                 {element.parameters && element.parameters.length > 0 && (
                     <Section title="Parameters" count={element.parameters.length}>
@@ -421,16 +390,46 @@ function ElementProperties() {
                     </Section>
                 )}
 
-                {attrs.length > 0 && (
-                    <Section title="Attributes" count={attrs.length} defaultOpen>
+                {appearanceAttrs.length > 0 && (
+                    <Section title="Appearance" count={appearanceAttrs.length} defaultOpen={false}>
                         <div className="space-y-1.5">
-                            {attrs.map(([key, value]) => {
+                            {appearanceAttrs.map(([key, value]) => {
                                 const editability = attributeEditability(key);
                                 return (
                                     <div key={key} className="flex text-xs items-start gap-1.5">
-                                        <span className="min-w-[80px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
+                                        <span className="min-w-[100px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            {isEditable(editability) ? (
+                                            {key === 'boundaryColor' ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input 
+                                                        aria-label="Boundary color" 
+                                                        type="color" 
+                                                        value={/^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : '#14B8A6'}
+                                                        onChange={event => {
+                                                            const domNode = document.getElementById(`screen-node-${element.id}`);
+                                                            if (domNode) domNode.style.borderColor = event.target.value;
+                                                        }}
+                                                        onBlur={event => handleAttrSave(key, event.target.value)}
+                                                        style={{ width: 28, height: 24, padding: 0, border: '1px solid #D8D8D2', borderRadius: 4, background: '#FFFFFF' }} 
+                                                    />
+                                                    <span className="font-mono text-[10px] text-gray-500">{String(value)}</span>
+                                                </div>
+                                            ) : key === 'boundaryWidth' ? (
+                                                <div className="flex items-center gap-3 pr-2">
+                                                    <input 
+                                                        aria-label="Boundary width" 
+                                                        type="range" min="1" max="10" step="1" 
+                                                        defaultValue={Number(value ?? '2')}
+                                                        onChange={event => {
+                                                            const domNode = document.getElementById(`screen-node-${element.id}`);
+                                                            if (domNode) domNode.style.borderWidth = event.target.value + 'px';
+                                                        }}
+                                                        onMouseUp={event => handleAttrSave(key, (event.target as HTMLInputElement).value)}
+                                                        style={{ width: '100%' }} 
+                                                    />
+                                                    <span className="font-mono text-[10px] text-gray-500 w-6">{value}px</span>
+                                                </div>
+                                            ) : isEditable(editability) ? (
                                                 <EditableValue
                                                     value={String(value ?? '')}
                                                     onSave={newVal => handleAttrSave(key, newVal)}
@@ -442,7 +441,7 @@ function ElementProperties() {
                                                     value={String(value ?? '')}
                                                     editability={editability}
                                                     density={PANEL_DENSITY}
-                                                    mono
+                                                    mono={key !== 'kind' && key !== 'layer'}
                                                 />
                                             )}
                                         </div>
@@ -453,12 +452,40 @@ function ElementProperties() {
                     </Section>
                 )}
 
-                <ElementRelationships
-                    element={element}
-                    outgoing={outgoing}
-                    incoming={incoming}
-                    density={PANEL_DENSITY}
-                />
+                {attrs.length > 0 && (
+                    <Section title="Attributes" count={attrs.length} defaultOpen={false}>
+                        <div className="space-y-1.5">
+                            {attrs.map(([key, value]) => {
+                                const editability = attributeEditability(key);
+                                return (
+                                    <div key={key} className="flex text-xs items-start gap-1.5">
+                                        <span className="min-w-[100px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            {isEditable(editability) ? (
+                                                <EditableValue
+                                                    value={String(value ?? '')}
+                                                    onSave={newVal => handleAttrSave(key, newVal)}
+                                                    density={PANEL_DENSITY}
+                                                    multiline={key === 'description' || key === 'rationale'}
+                                                    placeholder="Click to set…"
+                                                />
+                                            ) : (
+                                                <ReadOnlyValue
+                                                    value={String(value ?? '')}
+                                                    editability={editability}
+                                                    density={PANEL_DENSITY}
+                                                    mono={key !== 'kind' && key !== 'layer'}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Section>
+                )}
+
+
 
                 <AnnotationPanel subject={element} />
 
@@ -516,6 +543,13 @@ function ElementProperties() {
                         </button>
                     </Section>
                 )}
+
+                <ElementRelationships
+                    element={element}
+                    outgoing={outgoing}
+                    incoming={incoming}
+                    density={PANEL_DENSITY}
+                />
             </div>
         </>
     );
@@ -539,7 +573,8 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
     const [summary, setSummary] = useState('');
     const [body, setBody] = useState('');
     const [author, setAuthor] = useState('');
-    const [annotationType, setAnnotationType] = useState<AnnotationType>('comment');
+    const [annotationType, setAnnotationType] = useState<AnnotationType | null>(null);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
     const [qualifier, setQualifier] = useState('');
     const [replyTo, setReplyTo] = useState<string | null>(null);
     const [message, setMessage] = useState('');
@@ -558,8 +593,8 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
 
     const saveAnnotation = async () => {
         if (!body.trim()) return;
+        const selectedType: AnnotationType = replyTo ? 'comment' : (annotationType ?? 'comment');
         setMessage('Saving…');
-        const selectedType: AnnotationType = replyTo ? 'comment' : annotationType;
         const config = ANNOTATION_TYPES[selectedType];
         const title = summary.trim() || `Model ${config.label}`;
         const id = createModelElement({
@@ -599,6 +634,7 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
             setBody('');
             setQualifier('');
             setReplyTo(null);
+            setAnnotationType(null);
             setMessage('Saved.');
         } catch (error) {
             setMessage(error instanceof Error ? error.message : String(error));
@@ -635,19 +671,56 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
 
     return (
         <Section title="Annotations" count={annotations.length} defaultOpen>
-            {annotations.map(annotation => renderAnnotation(annotation))}
-            {replyTo && <div style={{ fontSize: 10, color: '#0F766E', marginBottom: 4 }}>Replying to {model.elements[replyTo]?.name} <button onClick={() => setReplyTo(null)}>cancel</button></div>}
-            {!replyTo && <select value={annotationType} onChange={event => setAnnotationType(event.target.value as AnnotationType)} aria-label="Annotation type" style={{ width: '100%', marginBottom: 4, fontSize: 11 }}>
-                <option value="comment">Comment</option>
-                <option value="rationale">Rationale</option>
-                <option value="note">Note</option>
-            </select>}
-            <input value={author} onChange={event => setAuthor(event.target.value)} placeholder="Author" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
-            <input value={summary} onChange={event => setSummary(event.target.value)} placeholder="Short summary" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
-            {!replyTo && annotationType !== 'comment' && <input value={qualifier} onChange={event => setQualifier(event.target.value)} placeholder={annotationType === 'rationale' ? 'Basis / evidence (optional)' : 'Note kind (optional)'} style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />}
-            <textarea value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Reply' : ANNOTATION_TYPES[annotationType].placeholder} rows={3} style={{ width: '100%', fontSize: 11 }} />
-            <button onClick={saveAnnotation} disabled={!body.trim()} style={{ marginTop: 4, fontSize: 11 }}>Add {replyTo ? 'reply' : ANNOTATION_TYPES[annotationType].label}</button>
-            {message && <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>{message}</div>}
+            <div className="flex items-center gap-2 mb-3">
+                <button onClick={() => setAnnotationType('note')} title="Add Note" className={`p-1.5 rounded flex items-center justify-center transition-colors ${annotationType === 'note' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </button>
+                <button onClick={() => setAnnotationType('comment')} title="Add Comment" className={`p-1.5 rounded flex items-center justify-center transition-colors ${annotationType === 'comment' ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </button>
+                <button onClick={() => setAnnotationType('rationale')} title="Add Rationale" className={`p-1.5 rounded flex items-center justify-center transition-colors ${annotationType === 'rationale' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </button>
+                <div className="flex-1" />
+                <button onClick={() => setViewModalOpen(true)} title="View Annotations" className="p-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center gap-1.5 text-xs font-semibold">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    View ({annotations.length})
+                </button>
+            </div>
+
+            {(annotationType || replyTo) && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-2 mb-2">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-semibold" style={{ color: replyTo ? '#0F766E' : (annotationType === 'rationale' ? '#7C3AED' : annotationType === 'note' ? '#2563EB' : '#2DD4A8') }}>
+                            {replyTo ? `Replying to ${model.elements[replyTo]?.name}` : `New ${ANNOTATION_TYPES[annotationType!].label}`}
+                        </span>
+                        <button onClick={() => { setAnnotationType(null); setReplyTo(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+                    <input value={author} onChange={event => setAuthor(event.target.value)} placeholder="Author" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
+                    <input value={summary} onChange={event => setSummary(event.target.value)} placeholder="Short summary" style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />
+                    {!replyTo && annotationType !== 'comment' && <input value={qualifier} onChange={event => setQualifier(event.target.value)} placeholder={annotationType === 'rationale' ? 'Basis / evidence (optional)' : 'Note kind (optional)'} style={{ width: '100%', marginBottom: 4, fontSize: 11 }} />}
+                    <textarea value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Reply' : ANNOTATION_TYPES[annotationType!].placeholder} rows={3} style={{ width: '100%', fontSize: 11 }} />
+                    <div className="flex gap-2 mt-1">
+                        <button onClick={saveAnnotation} disabled={!body.trim()} style={{ fontSize: 11, padding: '4px 8px', background: '#374151', color: 'white', borderRadius: 4, flex: 1 }}>Save</button>
+                        <button onClick={() => { setAnnotationType(null); setReplyTo(null); }} style={{ fontSize: 11, padding: '4px 8px', background: '#E5E7EB', color: '#374151', borderRadius: 4 }}>Cancel</button>
+                    </div>
+                    {message && <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>{message}</div>}
+                </div>
+            )}
+
+            {viewModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30" onClick={() => setViewModalOpen(false)}>
+                    <div className="bg-white rounded-lg shadow-2xl w-[400px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="p-3 border-b font-bold flex justify-between items-center text-gray-800">
+                            Annotations
+                            <button onClick={() => setViewModalOpen(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+                        </div>
+                        <div className="p-4 overflow-y-auto">
+                            {annotations.length > 0 ? annotations.map(annotation => renderAnnotation(annotation)) : <div className="text-gray-500 text-sm text-center py-8">No annotations yet.</div>}
+                        </div>
+                    </div>
+                </div>
+            )}
         </Section>
     );
 }
@@ -671,15 +744,15 @@ function RelationshipProperties() {
         : '#4B5563';
     return (
         <>
-            <div className="p-4" style={{ borderBottom: '1px solid #EDEDEA', borderLeft: `3px solid ${categoryColor}` }}>
-                <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>Connection</div>
-                <div className="mt-1 text-xs" style={{ color: '#6B7280' }}>{source?.name ?? relationship.sourceId} → {target?.name ?? relationship.targetId}</div>
-                <div className="mt-2 flex gap-2">
-                    <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: categoryColor + '18', color: categoryColor }}>{category} flow</span>
-                    <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: '#F3F4F6', color: '#374151' }}>{relationship.type}</span>
+            <div className="p-5 mb-2" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', borderLeft: `4px solid ${categoryColor}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div className="text-[15px] font-bold" style={{ color: '#111827' }}>Connection</div>
+                <div className="mt-2 text-xs font-medium" style={{ color: '#4B5563' }}>{source?.name ?? relationship.sourceId} → {target?.name ?? relationship.targetId}</div>
+                <div className="mt-3 flex gap-2">
+                    <span className="px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider" style={{ background: categoryColor + '15', color: categoryColor }}>{category} flow</span>
+                    <span className="px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider" style={{ background: '#F3F4F6', color: '#4B5563' }}>{relationship.type}</span>
                 </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pt-2 pb-4 bg-gray-50/50">
                 <Section title="Involved item" defaultOpen>
                     <div className="text-xs" style={{ color: '#374151' }}>{item ?? 'No transported item is modeled for this connection.'}</div>
                 </Section>
@@ -731,18 +804,18 @@ export function UnifiedPropertiesPanel() {
     const showElementProps = !!selectedElementId;
 
     return (
-        <div className="flex flex-col overflow-hidden flex-shrink-0" style={{ width: '300px', background: '#FAFAF8', borderLeft: '1px solid #E5E5E0' }}>
-            <div className="flex items-center justify-between px-3 py-2" style={{ background: '#F0F0ED', borderBottom: '1px solid #E5E5E0', flexShrink: 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Properties</span>
+        <div className="flex flex-col overflow-hidden flex-shrink-0 bg-gray-50/30" style={{ width: '320px', borderLeft: '1px solid #E5E7EB', boxShadow: '-4px 0 16px rgba(0,0,0,0.02)' }}>
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0 z-10 shadow-sm">
+                <span className="text-[11px] uppercase tracking-wider font-bold text-gray-800">Properties</span>
                 <button
                     onClick={togglePropertiesPanel}
-                    className="flex items-center justify-center"
+                    className="flex items-center justify-center transition-colors"
                     style={{
-                        color: '#6B7280', fontSize: '18px', lineHeight: 1,
-                        width: '28px', height: '28px', borderRadius: '5px', background: '#FFFFFF', border: '1px solid #E5E5E0',
+                        color: '#9CA3AF', fontSize: '18px', lineHeight: 1,
+                        width: '28px', height: '28px', borderRadius: '6px', background: '#FFFFFF', border: '1px solid #E5E7EB',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#374151'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#374151'; e.currentTarget.style.borderColor = '#D1D5DB'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.borderColor = '#E5E7EB'; }}
                     title="Collapse properties"
                     aria-label="Collapse properties"
                 >

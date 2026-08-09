@@ -1216,20 +1216,25 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (edit.doc !== undefined) updated.doc = edit.doc;
         if (edit.attributes) updated.attributes = { ...el.attributes, ...edit.attributes };
 
-        // 1. Sync to server
+        // 1. Optimistic local update
+        const optimisticModel = { ...model, elements: { ...model.elements, [elementId]: updated } };
+        set({ model: optimisticModel });
+
+        // 2. Sync to server
         const result = elementId.startsWith('new_')
             ? await sendElementCreate(updated)
             : await sendElementUpdate(updated);
-        // A rejected edit remains in pendingEdits as the exportable/copyable
-        // draft. Only the server's accepted write may clear it or update the
-        // canonical local model.
-        if (!result.success) return;
+        
+        if (!result.success) {
+            // Revert on failure
+            set({ model });
+            return;
+        }
 
-        // 2. Local update
-        const newModel = { ...model, elements: { ...model.elements, [elementId]: updated } };
-        const newEdits = new Map(pendingEdits);
+        // 3. Clear pending edits on success
+        const newEdits = new Map(get().pendingEdits);
         newEdits.delete(elementId);
-        set({ model: newModel, pendingEdits: newEdits });
+        set({ pendingEdits: newEdits });
     },
 }));
 

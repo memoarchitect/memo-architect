@@ -113,6 +113,30 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
             : { kind: 'error', message: outcome.error ?? 'The relationship could not be deleted.' });
     }, [deleteRelationship]);
 
+    const groups = useMemo(() => {
+        const map = new Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>();
+        const add = (rel: MemoRelationship, direction: RelationshipDirection) => {
+            const oppositeId = direction === 'outgoing' ? rel.targetId : rel.sourceId;
+            const opposite = model?.elements[oppositeId];
+            const groupName = opposite?.kind || 'Unknown Type';
+            const current = map.get(groupName) ?? [];
+            current.push({ rel, direction });
+            map.set(groupName, current);
+        };
+        if (model) {
+            outgoing.forEach(r => add(r, 'outgoing'));
+            incoming.forEach(r => add(r, 'incoming'));
+        }
+        return map;
+    }, [outgoing, incoming, model, registries]);
+
+    const allKinds = Array.from(groups.keys()).sort();
+    
+    // Only show these specific kinds inline. All other relationships are still
+    // accessible via the 'View Details' modal.
+    const allowedInlineKinds = new Set(['Requirement', 'Risk', 'Function', 'SystemFunction']);
+    const visibleGroups = new Map([...groups.entries()].filter(([kind]) => allowedInlineKinds.has(kind)));
+
     if (!model) return null;
 
     return (
@@ -125,19 +149,17 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                 actions={
                     total > 0 ? (
                         <button
-                            onClick={() => setExpanded(e => !e)}
+                            onClick={() => setExpanded(true)}
                             style={{
                                 padding: '2px 9px', borderRadius: '6px',
-                                background: expanded ? COLOR.accent : COLOR.surfaceAlt,
-                                color: expanded ? '#FFFFFF' : '#374151',
-                                border: `1px solid ${expanded ? COLOR.accent : COLOR.border}`,
+                                background: COLOR.surfaceAlt,
+                                color: '#374151',
+                                border: `1px solid ${COLOR.border}`,
                                 cursor: 'pointer', fontSize: FONT.xs, fontWeight: 500,
                             }}
-                            title={expanded
-                                ? 'Collapse the expanded relationship view'
-                                : 'Show every relationship, grouped by direction and type'}
+                            title="Show every relationship in a rich grid view"
                         >
-                            {expanded ? '▴ Collapse' : '⤢ Expand'}
+                            ⤢ View Details
                         </button>
                     ) : undefined
                 }
@@ -152,62 +174,70 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                     />
                 </div>
 
-                {expanded ? (
-                    <div style={{ marginBottom: 12 }}>
-                        <RelationshipBoard
-                            element={element}
-                            model={model}
-                            registries={registries}
-                            outgoing={outgoing}
-                            incoming={incoming}
-                            density={density}
-                            onNavigate={selectElement}
-                        />
-                    </div>
-                ) : (
-                    <>
-                        {total === 0 && mine.length === 0 && (
-                            <div style={{ fontSize: densityTokens(density).meta, color: COLOR.faint, padding: '2px 0 6px' }}>
-                                No relationships yet — add the first one below.
+                {expanded && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ padding: '2rem' }} onClick={() => setExpanded(false)}>
+                        <div className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden w-full max-w-5xl max-h-full" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200 bg-gray-50/50">
+                                <h2 className="text-lg font-bold text-gray-900">Element Relationships</h2>
+                                <button onClick={() => setExpanded(false)} className="text-gray-400 hover:text-gray-700 font-bold px-2 py-1 bg-transparent border-none cursor-pointer">✕</button>
                             </div>
-                        )}
-
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: density === 'page' ? 'repeat(auto-fill, 280px)' : '1fr',
-                            justifyContent: 'start',
-                            gap: 8,
-                        }}>
-                            {outgoing.map(rel => (
-                                <RelationshipRow
-                                    key={rel.id} relationship={rel} direction="outgoing" model={model}
-                                    registries={registries} density={density} confirming={confirmDelete === rel.id}
-                                    onNavigate={() => selectElement(rel.targetId)} onRequestDelete={() => setConfirmDelete(rel.id)}
-                                    onCancelDelete={() => setConfirmDelete(null)} onConfirmDelete={() => handleDelete(rel.id)}
-                                    deletable={connected}
+                            <div className="flex-1 overflow-auto p-6 bg-gray-50/30">
+                                <RelationshipBoard
+                                    element={element}
+                                    model={model}
+                                    registries={registries}
+                                    outgoing={outgoing}
+                                    incoming={incoming}
+                                    density={density}
+                                    onNavigate={(id) => { selectElement(id); setExpanded(false); }}
                                 />
-                            ))}
-                            {incoming.map(rel => (
-                                <RelationshipRow
-                                    key={rel.id} relationship={rel} direction="incoming" model={model}
-                                    registries={registries} density={density} confirming={confirmDelete === rel.id}
-                                    onNavigate={() => selectElement(rel.sourceId)} onRequestDelete={() => setConfirmDelete(rel.id)}
-                                    onCancelDelete={() => setConfirmDelete(null)} onConfirmDelete={() => handleDelete(rel.id)}
-                                    deletable={connected}
-                                />
-                            ))}
+                            </div>
                         </div>
-
-                        {mine.map(pending => (
-                            <PendingRelationshipRow
-                                key={pending.pendingId}
-                                pending={pending}
-                                model={model}
-                                onDismiss={() => dismissPendingRelationship(pending.pendingId)}
-                            />
-                        ))}
-                    </>
+                    </div>
                 )}
+
+                {total === 0 && mine.length === 0 && (
+                    <div style={{ fontSize: densityTokens(density).meta, color: COLOR.faint, padding: '2px 0 6px' }}>
+                        No relationships yet — add the first one below.
+                    </div>
+                )}
+
+                {total > 0 && visibleGroups.size > 0 && (
+                    <div className="flex items-center justify-between" style={{ marginBottom: 12, marginTop: 12, borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Existing Links</span>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[...visibleGroups.entries()].map(([groupName, items]) => (
+                        <div key={groupName}>
+                            <div style={{ fontSize: '10px', color: COLOR.muted, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 6 }}>
+                                {groupName}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {items.map(({ rel, direction }) => (
+                                    <RelationshipRow
+                                        key={rel.id} relationship={rel} direction={direction} model={model}
+                                        registries={registries} density={density} confirming={confirmDelete === rel.id}
+                                        onNavigate={() => selectElement(direction === 'outgoing' ? rel.targetId : rel.sourceId)} 
+                                        onRequestDelete={() => setConfirmDelete(rel.id)}
+                                        onCancelDelete={() => setConfirmDelete(null)} onConfirmDelete={() => handleDelete(rel.id)}
+                                        deletable={connected}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {mine.map(pending => (
+                    <PendingRelationshipRow
+                        key={pending.pendingId}
+                        pending={pending}
+                        model={model}
+                        onDismiss={() => dismissPendingRelationship(pending.pendingId)}
+                    />
+                ))}
 
                 {status && (
                     <StatusBanner
@@ -295,9 +325,6 @@ function RelationshipRow({
     const oppositeId = direction === 'outgoing' ? relationship.targetId : relationship.sourceId;
     const opposite = model.elements[oppositeId];
     const color = opposite ? (LAYER_COLORS[opposite.layer] || '#666') : '#666';
-    const layerLabel = opposite
-        ? (LAYER_LABELS[opposite.layer] ?? opposite.layer.replace(/_/g, ' '))
-        : 'Unknown layer';
     const definition = findRelationshipDefinition(relationship.type, registries);
     const [expanded, setExpanded] = useState(false);
     const t = densityTokens(density);
@@ -308,32 +335,25 @@ function RelationshipRow({
 
     return (
         <div style={{
-            border: `1px solid ${color}35`,
-            borderRadius: density === 'page' ? 8 : 6,
-            background: color + '0D',
+            borderLeft: `3px solid ${color}`,
+            borderRadius: 6,
+            background: COLOR.surface,
+            borderTop: `1px solid ${COLOR.borderLight}`,
+            borderRight: `1px solid ${COLOR.borderLight}`,
+            borderBottom: `1px solid ${COLOR.borderLight}`,
             overflow: 'hidden',
             width: '100%',
-            maxWidth: density === 'page' ? 280 : undefined,
         }}>
             <div
-                className="flex items-start gap-2"
-                style={{ padding: density === 'page' ? '9px 10px' : '7px 8px', fontSize: t.text }}
+                className="flex items-center gap-2"
+                style={{ padding: density === 'page' ? '8px 10px' : '6px 8px', fontSize: t.text }}
             >
                 <button onClick={onNavigate} className="text-left" style={{
                     display: 'block', flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 }} title={`Go to ${opposite?.name ?? oppositeId}`}>
-                    <div style={{ color, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {layerLabel}
-                    </div>
-                    <div style={{ color: direction === 'outgoing' ? '#2563EB' : '#059669', fontSize: t.meta, fontWeight: 600, marginTop: 4 }}>
-                        {definition?.label ?? relationship.type} {direction === 'outgoing' ? 'to' : 'from'}
-                    </div>
-                    <strong className="truncate" style={{ display: 'block', color: COLOR.primary, fontSize: t.text, fontWeight: 650, marginTop: 2 }}>
-                        {opposite?.name ?? oppositeId}
+                    <strong className="truncate font-mono" style={{ display: 'block', color: COLOR.primary, fontSize: '11px', fontWeight: 600 }}>
+                        {opposite?.shortId ?? oppositeId}
                     </strong>
-                    {opposite?.kind && (
-                        <div style={{ color: COLOR.muted, fontSize: '10px', marginTop: 2 }}>{opposite.kind}</div>
-                    )}
                 </button>
                 <button
                     onClick={() => setExpanded(e => !e)}
