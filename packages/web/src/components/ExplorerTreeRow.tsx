@@ -6,7 +6,7 @@ export function ExplorerTreeRow({
     id, label, depth, hasChildren, expanded, selected, badge, badgeColor = '#0F766E', count, title, onClick, onDelete,
 }: {
     id: string;
-    label: string;
+    label: React.ReactNode;
     depth: number;
     hasChildren: boolean;
     expanded: boolean;
@@ -77,7 +77,8 @@ export function ExplorerTreeRow({
         }}>
             <button type="button" role="menuitem" onClick={async () => {
                 setMenu(null);
-                if (!window.confirm(`Delete “${label}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
+                const nameStr = typeof label === 'string' ? label : (title ?? 'this element');
+                if (!window.confirm(`Delete “${nameStr}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
                 const result = await onDelete();
                 if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
             }} style={{

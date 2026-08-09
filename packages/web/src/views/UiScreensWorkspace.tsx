@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { MemoElement } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { requestScreenCaptureUpload } from '../store/ws-client';
@@ -9,7 +9,24 @@ import { FONT } from '../styles/tokens';
 import { detectBoundariesFromImage } from './templates/boundary-detection';
 import type { ScreenRegionProposal } from './ScreenLayoutView';
 import { ExplorerTreeRow } from '../components/ExplorerTreeRow';
+import { TypeFilterSelect } from '../components/TypeFilterSelect';
 import { MemoBrandMark } from '../components/MemoBrandMark';
+import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
+
+const UI_SCREENS_WIDTH_STORAGE_KEY = 'memo-uiscreens-width';
+const UI_SCREENS_DEFAULT_WIDTH = 250;
+const UI_SCREENS_MIN_WIDTH = 200;
+const UI_SCREENS_MAX_WIDTH = 600;
+
+function savedSidebarWidth(): number {
+    if (typeof window === 'undefined') return UI_SCREENS_DEFAULT_WIDTH;
+    try {
+        const saved = Number.parseInt(localStorage.getItem(UI_SCREENS_WIDTH_STORAGE_KEY) ?? '', 10);
+        return Number.isFinite(saved) ? Math.min(UI_SCREENS_MAX_WIDTH, Math.max(UI_SCREENS_MIN_WIDTH, saved)) : UI_SCREENS_DEFAULT_WIDTH;
+    } catch {
+        return UI_SCREENS_DEFAULT_WIDTH;
+    }
+}
 
 const boundsAttributes = (bounds: Rect) => ({
     'bounds.x': String(Number(bounds.x.toFixed(5))),
@@ -141,6 +158,56 @@ export function UiScreensWorkspace() {
     const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
     const [proposals, setProposals] = useState<ScreenRegionProposal[]>([]);
     const [collapsedTree, setCollapsedTree] = useState<Set<string>>(new Set());
+    const [sidebarWidth, setSidebarWidth] = useState(savedSidebarWidth);
+
+    const resizeCleanupRef = useRef<(() => void) | null>(null);
+    const setClampedSidebarWidth = useCallback((width: number) => {
+        setSidebarWidth(Math.max(UI_SCREENS_MIN_WIDTH, Math.min(UI_SCREENS_MAX_WIDTH, width)));
+    }, []);
+    const stopResize = useCallback(() => {
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
+    }, []);
+    const startResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        stopResize();
+
+        const startX = event.clientX;
+        const startWidth = sidebarWidth;
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handleMove = (moveEvent: PointerEvent) => {
+            setClampedSidebarWidth(startWidth + moveEvent.clientX - startX);
+        };
+        const cleanup = () => {
+            window.removeEventListener('pointermove', handleMove);
+            window.removeEventListener('pointerup', cleanup);
+            window.removeEventListener('pointercancel', cleanup);
+            document.body.style.cursor = previousCursor;
+            document.body.style.userSelect = previousUserSelect;
+            resizeCleanupRef.current = null;
+        };
+        resizeCleanupRef.current = cleanup;
+        window.addEventListener('pointermove', handleMove);
+        window.addEventListener('pointerup', cleanup);
+        window.addEventListener('pointercancel', cleanup);
+    }, [setClampedSidebarWidth, sidebarWidth, stopResize]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(UI_SCREENS_WIDTH_STORAGE_KEY, String(Math.round(sidebarWidth)));
+        } catch {
+            // Storage may be disabled
+        }
+    }, [sidebarWidth]);
+    useEffect(() => {
+        return () => stopResize();
+    }, [stopResize]);
+
     const proposalElementIds = useRef(new Map<string, string>());
     const uploadInputRef = useRef<HTMLInputElement>(null);
 
@@ -218,7 +285,7 @@ export function UiScreensWorkspace() {
         <div key={element.id} role="none">
             <ExplorerTreeRow
                 id={`element:${element.id}`}
-                label={element.name}
+                label={<ExplorerElementIdentity element={element} />}
                 depth={depth}
                 hasChildren={(composedChildren.get(element.id) ?? []).length > 0}
                 expanded={!collapsedTree.has(`element:${element.id}`)}
@@ -487,8 +554,8 @@ export function UiScreensWorkspace() {
     };
 
     return (
-        <div className="flex flex-1 min-h-0" style={{ background: '#F7F7F5' }}>
-            <aside style={{ width: 250, flexShrink: 0, borderRight: '1px solid #E5E5E0', background: '#FFFFFF', padding: '16px 12px', overflowY: 'auto' }}>
+        <div className="flex flex-1 min-h-0 relative" style={{ background: '#F7F7F5' }}>
+            <aside style={{ width: sidebarWidth, position: 'relative', flexShrink: 0, borderRight: '1px solid #E5E5E0', background: '#FFFFFF', padding: '16px 12px', overflowY: 'auto' }}>
                 <div className="flex items-center" style={{ margin: '0 8px 4px' }}>
                     <h1 style={{ margin: 0, flex: 1, color: '#1B3A4B', fontSize: 18, fontWeight: 700 }}>UI Screens</h1>
                     <IconButton icon={<Icon.plus />} ariaLabel="Add UI element" title="Create a root UIElement screen"
@@ -518,17 +585,59 @@ export function UiScreensWorkspace() {
                     if (!screenElement) return null;
                     const screenKey = `screen:${screenElement.id}`;
                     const regions = composedChildren.get(screenElement.id) ?? [];
-                    return <div key={layout.id} role="none" style={{ marginBottom: 4 }}>
-                        <ExplorerTreeRow id={screenKey} label={screenElement.name} depth={0} hasChildren={regions.length > 0} expanded={!collapsedTree.has(screenKey)}
-                            selected={screenElement.id === selectedElementId} badge="UIE" badgeColor="#0F766E" title="Root UIElement screen"
-                            onClick={() => { if (regions.length) toggleTree(screenKey); selectLayout(layout.id, screenElement, screenElement); }}
-                            onDelete={() => deleteModelElement(screenElement.id)} />
-                        {!collapsedTree.has(screenKey) && <div role="group">
-                            {regions.map(child => renderRegionBranch(child, layout.id, screenElement, 1))}
-                        </div>}
-                    </div>;
+                    return (
+                        <div key={screenKey} role="none" style={{ marginBottom: 4 }}>
+                            <ExplorerTreeRow 
+                                id={screenKey} 
+                                label={<ExplorerElementIdentity element={screenElement} />} 
+                                depth={0} 
+                                hasChildren={regions.length > 0} 
+                                expanded={!collapsedTree.has(screenKey)}
+                                selected={screenElement.id === selectedElementId} 
+                                badge="UIE" 
+                                badgeColor="#0F766E" 
+                                title="Root UIElement screen"
+                                onClick={() => { if (regions.length) toggleTree(screenKey); selectLayout(layout.id, screenElement, screenElement); }}
+                                onDelete={() => deleteModelElement(screenElement.id)} 
+                            />
+                            {!collapsedTree.has(screenKey) && (
+                                <div role="group">
+                                    {regions.map(child => renderRegionBranch(child, layout.id, screenElement, 1))}
+                                </div>
+                            )}
+                        </div>
+                    );
                 })}
                 </div>
+                
+                <div
+                    className="memo-explorer-resizer"
+                    role="separator"
+                    aria-label="Resize UI Screens Explorer"
+                    aria-orientation="vertical"
+                    aria-valuemin={UI_SCREENS_MIN_WIDTH}
+                    aria-valuemax={UI_SCREENS_MAX_WIDTH}
+                    aria-valuenow={Math.round(sidebarWidth)}
+                    tabIndex={0}
+                    title="Drag to resize · Double-click to reset"
+                    onPointerDown={startResize}
+                    onDoubleClick={() => setClampedSidebarWidth(UI_SCREENS_DEFAULT_WIDTH)}
+                    onKeyDown={event => {
+                        if (event.key === 'ArrowLeft') {
+                            event.preventDefault();
+                            setClampedSidebarWidth(sidebarWidth - 20);
+                        } else if (event.key === 'ArrowRight') {
+                            event.preventDefault();
+                            setClampedSidebarWidth(sidebarWidth + 20);
+                        } else if (event.key === 'Home') {
+                            event.preventDefault();
+                            setClampedSidebarWidth(UI_SCREENS_MIN_WIDTH);
+                        } else if (event.key === 'End') {
+                            event.preventDefault();
+                            setClampedSidebarWidth(UI_SCREENS_MAX_WIDTH);
+                        }
+                    }}
+                />
             </aside>
             <main className="flex-1 flex flex-col min-w-0 relative">
                 {selected ? (
