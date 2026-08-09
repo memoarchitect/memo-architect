@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense, useMemo, useRef } from 'react';
+import { useEffect, lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { isPermalinkPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
@@ -578,6 +578,7 @@ function UrlNavigationSync() {
     // store → URL effect does not push the view it is about to replace.
     const urlConsumed = useRef(false);
     const suppressPush = useRef(false);
+    const [pendingElementParam, setPendingElementParam] = useState<string | null>(null);
 
     // ── URL → Store ──────────────────────────────────────────────────────
     // Applies on first load and on Back/Forward. In-app navigation is already
@@ -602,13 +603,25 @@ function UrlNavigationSync() {
         // Restore element selection if we are not in element-detail
         if (view && view.type !== 'element-detail' && view.type !== 'welcome') {
             const params = new URLSearchParams(location.search);
-            const el = params.get('element');
-            if (el !== useModelStore.getState().selectedElementId) {
-                useModelStore.getState().inspectElement(el);
+            const elParam = params.get('element');
+            if (elParam) {
+                setPendingElementParam(elParam);
+            } else if (useModelStore.getState().selectedElementId) {
+                useModelStore.getState().inspectElement(null);
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname, location.search, navigationType]);
+
+    useEffect(() => {
+        if (pendingElementParam && model) {
+            const target = Object.values(model.elements).find(e => (e.shortId ?? e.id) === pendingElementParam)?.id ?? pendingElementParam;
+            if (target !== useModelStore.getState().selectedElementId) {
+                useModelStore.getState().inspectElement(target);
+            }
+            setPendingElementParam(null);
+        }
+    }, [pendingElementParam, model]);
 
     // ── Store → URL ──────────────────────────────────────────────────────
     // Every view the user reaches by clicking also lands in the address bar,
@@ -651,8 +664,10 @@ function UrlNavigationSync() {
         }
 
         if (url && activeView.type !== 'element-detail' && activeView.type !== 'welcome' && selectedElementId) {
+            const el = model?.elements[selectedElementId];
+            const shortId = el?.shortId ?? selectedElementId;
             const sep = url.includes('?') ? '&' : '?';
-            url += `${sep}element=${encodeURIComponent(selectedElementId)}`;
+            url += `${sep}element=${encodeURIComponent(shortId)}`;
         }
 
         if (url && location.pathname + location.search !== url) {
