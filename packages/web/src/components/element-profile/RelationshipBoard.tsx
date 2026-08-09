@@ -4,12 +4,14 @@
 // linked to? Neighbours are grouped by architecture layer and deduplicated;
 // relationship type and direction are supporting badges on each neighbour.
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
     findRelationshipDefinition,
+    legalRelationshipTypes,
     type MemoElement, type MemoModelDTO, type MemoRelationship,
     type OntologyRegistriesDTO, type RelationshipDirection,
 } from '@memoarchitect/tools/browser';
+import { TypeFilterSelect } from '../TypeFilterSelect';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../../constants';
 import { COLOR } from '../../styles/tokens';
 import type { Density } from './density';
@@ -69,6 +71,7 @@ function linkedElementsByLayer(
 
 export function RelationshipBoard({
     element, model, registries, outgoing, incoming, density, onNavigate,
+    onCreate, onDelete,
 }: {
     element: MemoElement;
     model: MemoModelDTO;
@@ -77,6 +80,8 @@ export function RelationshipBoard({
     incoming: MemoRelationship[];
     density: Density;
     onNavigate: (elementId: string) => void;
+    onCreate?: (req: any) => void;
+    onDelete?: (id: string) => void;
 }) {
     const [filter, setFilter] = useState('');
     const groups = useMemo(
@@ -147,7 +152,16 @@ export function RelationshipBoard({
                                 gap: 7,
                             }}>
                                 {group.elements.map(linked => (
-                                    <LinkedElementCard key={linked.id} linked={linked} color={color} onNavigate={onNavigate} />
+                                    <LinkedElementCard 
+                                        key={linked.id} 
+                                        element={element}
+                                        linked={linked} 
+                                        registries={registries}
+                                        color={color} 
+                                        onNavigate={onNavigate} 
+                                        onCreate={onCreate}
+                                        onDelete={onDelete}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -158,12 +172,58 @@ export function RelationshipBoard({
     );
 }
 
-function LinkedElementCard({ linked, color, onNavigate }: {
+function LinkedElementCard({ element, linked, registries, color, onNavigate, onCreate, onDelete }: {
+    element: MemoElement;
     linked: LinkedElement;
+    registries: OntologyRegistriesDTO;
     color: string;
     onNavigate: (elementId: string) => void;
+    onCreate?: (req: any) => void;
+    onDelete?: (id: string) => void;
 }) {
     const [hover, setHover] = useState(false);
+    
+    const options = useMemo(() => {
+        if (!element || !linked.element) return [];
+        return legalRelationshipTypes(element, linked.element, registries).map(opt => ({
+            value: `${opt.definition.name}::${opt.direction}`,
+            label: `${opt.definition.label} ${opt.direction === 'outgoing' ? 'to' : 'from'}`,
+        }));
+    }, [element, linked.element, registries]);
+
+    const selected = linked.links.map(link => `${link.relationship.type}::${link.direction}`);
+    
+    const handleChange = useCallback((next: string[]) => {
+        if (next.length === 0) return; // Must have at least one relationship
+        if (!onCreate || !onDelete) return;
+
+        const nextSet = new Set(next);
+        const currentSet = new Set(selected);
+        
+        // Remove unchecked
+        for (const link of linked.links) {
+            if (!nextSet.has(`${link.relationship.type}::${link.direction}`)) {
+                onDelete(link.relationship.id);
+            }
+        }
+        
+        // Add checked
+        const legalOpts = legalRelationshipTypes(element, linked.element!, registries);
+        for (const val of next) {
+            if (!currentSet.has(val)) {
+                const opt = legalOpts.find(o => `${o.definition.name}::${o.direction}` === val);
+                if (opt) {
+                    onCreate({
+                        type: opt.definition.name,
+                        sourceId: opt.sourceId,
+                        targetId: opt.targetId,
+                        direction: opt.direction,
+                    });
+                }
+            }
+        }
+    }, [selected, linked.links, element, linked.element, registries, onCreate, onDelete]);
+
     return (
         <button onClick={() => onNavigate(linked.id)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
             className="text-left transition-all duration-200" title={`Open ${linked.element?.name ?? linked.id}`}
@@ -175,14 +235,31 @@ function LinkedElementCard({ linked, color, onNavigate }: {
                 transform: hover ? 'translateY(-1px)' : 'none',
             }}>
             <div style={{ minWidth: 0 }}>
-                {linked.links.map(link => (
-                    <div key={link.relationship.id} style={{
-                        color: link.direction === 'outgoing' ? '#2563EB' : '#059669',
-                        fontSize: 10, fontWeight: 600, marginBottom: 2,
-                    }}>
-                        {link.label} {link.direction === 'outgoing' ? 'to' : 'from'}
+                <div className="flex items-start justify-between mb-1" style={{ gap: 4 }}>
+                    <div>
+                        {linked.links.map(link => (
+                            <div key={link.relationship.id} style={{
+                                color: link.direction === 'outgoing' ? '#2563EB' : '#059669',
+                                fontSize: 10, fontWeight: 600, marginBottom: 2,
+                            }}>
+                                {link.label} {link.direction === 'outgoing' ? 'to' : 'from'}
+                            </div>
+                        ))}
                     </div>
-                ))}
+                    {options.length > 1 && onCreate && (
+                        <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0, marginTop: -4, marginRight: -4 }}>
+                            <TypeFilterSelect
+                                label=""
+                                options={options}
+                                selected={selected}
+                                onChange={handleChange}
+                                iconOnly={true}
+                                align="right"
+                                title="Change relationship type"
+                            />
+                        </div>
+                    )}
+                </div>
                 <strong className="truncate" style={{ display: 'block', color: COLOR.primary, fontSize: 13 }}>
                     {linked.element?.name ?? linked.id}
                 </strong>

@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     findRelationshipDefinition,
+    legalRelationshipTypes,
     type MemoElement, type MemoModelDTO, type MemoRelationship,
     type OntologyRegistriesDTO, type RelationshipDirection,
 } from '@memoarchitect/tools/browser';
@@ -24,6 +25,7 @@ import type { PendingRelationship } from '../../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS } from '../../constants';
 import { COLOR, FONT } from '../../styles/tokens';
 import { RelationshipQuickAdd } from '../RelationshipQuickAdd';
+import { TypeFilterSelect } from '../TypeFilterSelect';
 import { ProfileSection } from './ProfileValue';
 import { RelationshipBoard } from './RelationshipBoard';
 import { densityTokens, type Density } from './density';
@@ -56,13 +58,14 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
 
     const [expanded, setExpanded] = useState(false);
     const [status, setStatus] = useState<RelationshipStatus | null>(null);
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [visibleKinds, setVisibleKinds] = useState<string[]>(['Requirement', 'Risk', 'Function', 'SystemFunction']);
 
     const registries = useMemo(() => getRegistries(model), [model]);
 
     // Reset transient state whenever the inspected element changes.
     useEffect(() => {
-        setStatus(null); setConfirmDelete(null); setExpanded(false);
+        setStatus(null); setExpanded(false);
+        setVisibleKinds(['Requirement', 'Risk', 'Function', 'SystemFunction']);
     }, [element.id]);
 
     const mine = pendingRelationships.filter(p =>
@@ -95,47 +98,52 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
             && diagram.elementIds.length > 0
             && !diagram.elementIds.includes(oppositeId);
 
-        setStatus({
-            kind: 'success',
-            message: `Relationship created in ${outcome.sourceFile ?? 'the model'}.`,
-            profileMessage: profileBlocked?.message,
-            offerAddToView: outsideView && !profileBlocked && !!selectedDiagramId
-                ? { elementId: oppositeId, diagramId: selectedDiagramId }
-                : undefined,
-        });
+        if (outsideView && !profileBlocked && !!selectedDiagramId) {
+            setStatus({
+                kind: 'success',
+                message: `Relationship created in ${outcome.sourceFile ?? 'the model'}.`,
+                offerAddToView: { elementId: oppositeId, diagramId: selectedDiagramId },
+            });
+        } else if (profileBlocked) {
+            setStatus({
+                kind: 'success',
+                message: `Relationship created in ${outcome.sourceFile ?? 'the model'}.`,
+                profileMessage: profileBlocked.message,
+            });
+        } else {
+            setStatus(null);
+        }
     }, [createRelationship, element.id, selectedDiagramId, model]);
 
     const handleDelete = useCallback(async (relationshipId: string) => {
-        setConfirmDelete(null);
         const outcome = await deleteRelationship(relationshipId);
-        setStatus(outcome.success
-            ? { kind: 'success', message: `Relationship removed from ${outcome.sourceFile ?? 'the model'}.` }
-            : { kind: 'error', message: outcome.error ?? 'The relationship could not be deleted.' });
+        if (!outcome.success) {
+            setStatus({ kind: 'error', message: outcome.error ?? 'The relationship could not be deleted.' });
+        }
     }, [deleteRelationship]);
 
     const groups = useMemo(() => {
-        const map = new Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>();
+        const map = new Map<string, Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>>();
         const add = (rel: MemoRelationship, direction: RelationshipDirection) => {
             const oppositeId = direction === 'outgoing' ? rel.targetId : rel.sourceId;
             const opposite = model?.elements[oppositeId];
             const groupName = opposite?.kind || 'Unknown Type';
-            const current = map.get(groupName) ?? [];
-            current.push({ rel, direction });
-            map.set(groupName, current);
+            const currentGroup = map.get(groupName) ?? new Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>();
+            const currentElementLinks = currentGroup.get(oppositeId) ?? [];
+            currentElementLinks.push({ rel, direction });
+            currentGroup.set(oppositeId, currentElementLinks);
+            map.set(groupName, currentGroup);
         };
         if (model) {
             outgoing.forEach(r => add(r, 'outgoing'));
             incoming.forEach(r => add(r, 'incoming'));
         }
         return map;
-    }, [outgoing, incoming, model, registries]);
+    }, [outgoing, incoming, model]);
 
     const allKinds = Array.from(groups.keys()).sort();
     
-    // Only show these specific kinds inline. All other relationships are still
-    // accessible via the 'View Details' modal.
-    const allowedInlineKinds = new Set(['Requirement', 'Risk', 'Function', 'SystemFunction']);
-    const visibleGroups = new Map([...groups.entries()].filter(([kind]) => allowedInlineKinds.has(kind)));
+    const visibleGroups = new Map([...groups.entries()].filter(([kind]) => visibleKinds.includes(kind)));
 
     if (!model) return null;
 
@@ -147,21 +155,38 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                 density={density}
                 collapsible={density === 'panel'}
                 actions={
-                    total > 0 ? (
-                        <button
-                            onClick={() => setExpanded(true)}
-                            style={{
-                                padding: '2px 9px', borderRadius: '6px',
-                                background: COLOR.surfaceAlt,
-                                color: '#374151',
-                                border: `1px solid ${COLOR.border}`,
-                                cursor: 'pointer', fontSize: FONT.xs, fontWeight: 500,
-                            }}
-                            title="Show every relationship in a rich grid view"
-                        >
-                            ⤢ View Details
-                        </button>
-                    ) : undefined
+                    <div className="flex items-center gap-1">
+                        {total > 0 && (
+                            <button
+                                onClick={() => setExpanded(true)}
+                                style={{
+                                    width: 24, height: 24, borderRadius: '4px',
+                                    background: 'transparent',
+                                    color: '#6B7280',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                                title="View Details (Rich Grid)"
+                                aria-label="View Details"
+                                onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                            </button>
+                        )}
+                        {total > 0 && (
+                            <TypeFilterSelect
+                                label=""
+                                options={allKinds.map(kind => ({ value: kind, label: kind }))}
+                                selected={visibleKinds}
+                                onChange={setVisibleKinds}
+                                allLabel="None"
+                                iconOnly={true}
+                                align="right"
+                            />
+                        )}
+                    </div>
                 }
             >
                 <div style={{ marginBottom: density === 'page' ? 14 : 8, maxWidth: density === 'page' ? 720 : undefined }}>
@@ -183,13 +208,11 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                             </div>
                             <div className="flex-1 overflow-auto p-6 bg-gray-50/30">
                                 <RelationshipBoard
-                                    element={element}
-                                    model={model}
-                                    registries={registries}
-                                    outgoing={outgoing}
-                                    incoming={incoming}
-                                    density={density}
-                                    onNavigate={(id) => { selectElement(id); setExpanded(false); }}
+                                    element={element} model={model} registries={registries}
+                                    outgoing={outgoing} incoming={incoming} density={density}
+                                    onNavigate={id => { setExpanded(false); selectElement(id); }}
+                                    onCreate={createRelationship}
+                                    onDelete={handleDelete}
                                 />
                             </div>
                         </div>
@@ -209,20 +232,25 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {[...visibleGroups.entries()].map(([groupName, items]) => (
+                    {[...visibleGroups.entries()].map(([groupName, itemsMap]) => (
                         <div key={groupName}>
                             <div style={{ fontSize: '10px', color: COLOR.muted, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 6 }}>
                                 {groupName}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {items.map(({ rel, direction }) => (
-                                    <RelationshipRow
-                                        key={rel.id} relationship={rel} direction={direction} model={model}
-                                        registries={registries} density={density} confirming={confirmDelete === rel.id}
-                                        onNavigate={() => selectElement(direction === 'outgoing' ? rel.targetId : rel.sourceId)} 
-                                        onRequestDelete={() => setConfirmDelete(rel.id)}
-                                        onCancelDelete={() => setConfirmDelete(null)} onConfirmDelete={() => handleDelete(rel.id)}
+                                {[...itemsMap.entries()].map(([oppositeId, links]) => (
+                                    <LinkedElementRow
+                                        key={oppositeId}
+                                        sourceElement={element}
+                                        oppositeId={oppositeId}
+                                        links={links}
+                                        model={model}
+                                        registries={registries}
+                                        density={density}
                                         deletable={connected}
+                                        onNavigate={() => selectElement(oppositeId)}
+                                        onCreate={createRelationship}
+                                        onDelete={handleDelete}
                                     />
                                 ))}
                             </div>
@@ -305,56 +333,118 @@ function StatusBanner({ status, onAddToView, onDismiss, model }: {
     );
 }
 
-/** One existing relationship: endpoint, type, direction, roles and source file. */
-function RelationshipRow({
-    relationship, direction, model, registries, deletable, density,
-    confirming, onNavigate, onRequestDelete, onCancelDelete, onConfirmDelete,
+/** One existing linked element, which may have multiple relationships. */
+function LinkedElementRow({
+    sourceElement, oppositeId, links, model, registries, deletable, density,
+    onNavigate, onCreate, onDelete,
 }: {
-    relationship: MemoRelationship;
-    direction: RelationshipDirection;
+    sourceElement: MemoElement;
+    oppositeId: string;
+    links: { rel: MemoRelationship; direction: RelationshipDirection }[];
     model: MemoModelDTO;
     registries: OntologyRegistriesDTO;
     deletable: boolean;
     density: Density;
-    confirming: boolean;
     onNavigate: () => void;
-    onRequestDelete: () => void;
-    onCancelDelete: () => void;
-    onConfirmDelete: () => void;
+    onCreate?: (req: any) => void;
+    onDelete: (id: string) => void;
 }) {
-    const oppositeId = direction === 'outgoing' ? relationship.targetId : relationship.sourceId;
     const opposite = model.elements[oppositeId];
     const color = opposite ? (LAYER_COLORS[opposite.layer] || '#666') : '#666';
-    const definition = findRelationshipDefinition(relationship.type, registries);
     const [expanded, setExpanded] = useState(false);
+    const [hovered, setHovered] = useState(false);
+    const [confirming, setConfirming] = useState<'header' | string | null>(null);
     const t = densityTokens(density);
 
-    // Only a named connection usage can be addressed for deletion; anonymous
-    // ones have no stable identity in the source.
-    const removable = deletable && relationship.named === true;
+    // Filter to named connections for mass deletion
+    const removableLinks = links.filter(l => deletable && l.rel.named === true);
+
+    const options = useMemo(() => {
+        if (!sourceElement || !opposite) return [];
+        return legalRelationshipTypes(sourceElement, opposite, registries).map(opt => ({
+            value: `${opt.definition.name}::${opt.direction}`,
+            label: `${opt.definition.label} ${opt.direction === 'outgoing' ? 'to' : 'from'}`,
+        }));
+    }, [sourceElement, opposite, registries]);
+
+    const selected = links.map(link => `${link.rel.type}::${link.direction}`);
+    
+    const handleChange = useCallback((next: string[]) => {
+        if (next.length === 0) return; // Must have at least one relationship
+        if (!onCreate || !onDelete) return;
+
+        const nextSet = new Set(next);
+        const currentSet = new Set(selected);
+        
+        // Remove unchecked
+        for (const link of links) {
+            if (!nextSet.has(`${link.rel.type}::${link.direction}`)) {
+                onDelete(link.rel.id);
+            }
+        }
+        
+        // Add checked
+        const legalOpts = legalRelationshipTypes(sourceElement, opposite!, registries);
+        for (const val of next) {
+            if (!currentSet.has(val)) {
+                const opt = legalOpts.find(o => `${o.definition.name}::${o.direction}` === val);
+                if (opt) {
+                    onCreate({
+                        type: opt.definition.name,
+                        sourceId: opt.sourceId,
+                        targetId: opt.targetId,
+                        direction: opt.direction,
+                    });
+                }
+            }
+        }
+    }, [selected, links, sourceElement, opposite, registries, onCreate, onDelete]);
 
     return (
-        <div style={{
-            borderLeft: `3px solid ${color}`,
-            borderRadius: 6,
-            background: COLOR.surface,
-            borderTop: `1px solid ${COLOR.borderLight}`,
-            borderRight: `1px solid ${COLOR.borderLight}`,
-            borderBottom: `1px solid ${COLOR.borderLight}`,
-            overflow: 'hidden',
-            width: '100%',
-        }}>
+        <div 
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                borderLeft: `3px solid ${color}`,
+                borderRadius: 6,
+                background: COLOR.surface,
+                borderTop: `1px solid ${COLOR.borderLight}`,
+                borderRight: `1px solid ${COLOR.borderLight}`,
+                borderBottom: `1px solid ${COLOR.borderLight}`,
+                width: '100%',
+            }}
+        >
             <div
                 className="flex items-center gap-2"
                 style={{ padding: density === 'page' ? '8px 10px' : '6px 8px', fontSize: t.text }}
             >
-                <button onClick={onNavigate} className="text-left" style={{
-                    display: 'block', flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                <button onClick={onNavigate} className="text-left flex items-center gap-1.5" style={{
+                    display: 'flex', flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 }} title={`Go to ${opposite?.name ?? oppositeId}`}>
-                    <strong className="truncate font-mono" style={{ display: 'block', color: COLOR.primary, fontSize: '11px', fontWeight: 600 }}>
+                    <strong className="truncate font-mono" style={{ color: COLOR.primary, fontSize: '11px', fontWeight: 600 }}>
                         {opposite?.shortId ?? oppositeId}
                     </strong>
+                    {links.length > 1 && (
+                        <span style={{ fontSize: '10px', color: '#9CA3AF', background: '#F3F4F6', padding: '1px 4px', borderRadius: 4, fontWeight: 600 }}>
+                            {links.length}
+                        </span>
+                    )}
                 </button>
+                
+                {options.length > 1 && onCreate && (
+                    <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                        <TypeFilterSelect 
+                            label=""
+                            options={options}
+                            selected={selected}
+                            onChange={handleChange}
+                            allLabel="Relationships"
+                            iconOnly={true}
+                            align="right"
+                        />
+                    </div>
+                )}
+
                 <button
                     onClick={() => setExpanded(e => !e)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLOR.faint, padding: 2 }}
@@ -362,64 +452,101 @@ function RelationshipRow({
                 >
                     {expanded ? '▾' : '▸'}
                 </button>
-                {removable && !confirming && (
-                    <button
-                        onClick={() => { setExpanded(true); onRequestDelete(); }}
-                        aria-label={`Remove ${definition?.label ?? relationship.type} relationship to ${opposite?.name ?? oppositeId}`}
-                        title="Remove relationship"
-                        style={{ width: 20, height: 20, padding: 0, border: 0, borderRadius: 10, background: '#FFFFFFAA', color: '#9CA3AF', cursor: 'pointer', lineHeight: 1 }}
-                    >×</button>
+                
+                {removableLinks.length > 0 && (hovered || expanded || confirming === 'header') && (
+                    <div className="relative flex items-center">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirming('header');
+                            }}
+                            aria-label={`Remove relationships to ${opposite?.name ?? oppositeId}`}
+                            title="Remove relationships"
+                            style={{ width: 20, height: 20, padding: 0, border: 0, borderRadius: 10, background: '#FFFFFFAA', color: '#9CA3AF', cursor: 'pointer', lineHeight: 1 }}
+                        >×</button>
+
+                        {confirming === 'header' && (
+                            <div 
+                                className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-20 bg-white rounded-lg shadow-xl border border-gray-200 p-2.5 w-48"
+                                onClick={e => e.stopPropagation()}
+                                style={{ boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                            >
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                                    Remove {removableLinks.length > 1 ? `all ${removableLinks.length} relationships` : 'relationship'}?
+                                </div>
+                                <div className="flex gap-1.5 justify-end">
+                                    <button 
+                                        onClick={() => setConfirming(null)}
+                                        className="px-2 py-1 rounded"
+                                        style={{ fontSize: '10px', background: '#F3F4F6', color: '#4B5563', border: 'none', cursor: 'pointer' }}
+                                    >Cancel</button>
+                                    <button 
+                                        onClick={() => {
+                                            setConfirming(null);
+                                            removableLinks.forEach(l => onDelete(l.rel.id));
+                                        }}
+                                        className="px-2 py-1 rounded"
+                                        style={{ fontSize: '10px', background: '#EF4444', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
+                                    >Remove</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
             {expanded && (
-                <div className="px-3 pb-2 space-y-1" style={{ fontSize: '10px', color: '#6B7280', borderTop: `1px solid ${COLOR.borderLight}`, paddingTop: 7 }}>
-                    <DetailLine label="Kind" value={opposite?.kind ?? '—'} valueColor={color} />
-                    <DetailLine
-                        label="Roles"
-                        value={`${relationship.sourceEnd || definition?.sourceEnd.name || 'source'} → ${
-                            relationship.targetEnd || definition?.targetEnd.name || 'target'}`}
-                    />
-                    <DetailLine label="ID" value={relationship.id} mono />
-                    <DetailLine label="Source" value={relationship.file || '—'} mono />
-                    {!relationship.named && (
-                        <div style={{ color: '#D97706' }}>
-                            Anonymous connection — name it in SysML to allow deletion from here.
-                        </div>
-                    )}
-                    {removable && !confirming && (
-                        <button
-                            onClick={onRequestDelete}
-                            className="px-1.5 py-0.5 rounded"
-                            style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', cursor: 'pointer', fontSize: '10px' }}
-                        >
-                            Remove relationship
-                        </button>
-                    )}
-                    {confirming && (
-                        <div className="p-1.5 rounded" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                            <div style={{ color: '#DC2626' }}>
-                                Remove {definition?.label ?? relationship.type} to {opposite?.name ?? oppositeId}?
-                                Both elements are kept.
+                <div className="px-3 pb-2 space-y-2" style={{ borderTop: `1px solid ${COLOR.borderLight}`, paddingTop: 7 }}>
+                    {links.map(({ rel: relationship, direction }, i) => {
+                        const definition = findRelationshipDefinition(relationship.type, registries);
+                        const removable = deletable && relationship.named === true;
+                        return (
+                            <div key={relationship.id} style={{ fontSize: '10px', color: '#6B7280', marginTop: i > 0 ? 8 : 0, paddingTop: i > 0 ? 8 : 0, borderTop: i > 0 ? `1px dashed ${COLOR.borderLight}` : 'none' }}>
+                                <DetailLine label="Kind" value={definition?.label ?? relationship.type} valueColor={color} />
+                                <DetailLine
+                                    label="Roles"
+                                    value={`${relationship.sourceEnd || definition?.sourceEnd.name || 'source'} → ${
+                                        relationship.targetEnd || definition?.targetEnd.name || 'target'}`}
+                                />
+                                <DetailLine label="ID" value={relationship.id} mono />
+                                <DetailLine label="Source" value={relationship.file || '—'} mono />
+                                {!relationship.named && (
+                                    <div style={{ color: '#D97706', marginTop: 4 }}>
+                                        Anonymous connection — name it in SysML to allow deletion from here.
+                                    </div>
+                                )}
+                                {removable && (
+                                    <div className="relative inline-block mt-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setConfirming(relationship.id);
+                                            }}
+                                            className="px-1.5 py-0.5 rounded"
+                                            style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', cursor: 'pointer', fontSize: '10px' }}
+                                        >
+                                            Remove this relationship
+                                        </button>
+                                        
+                                        {confirming === relationship.id && (
+                                            <div 
+                                                className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-20 bg-white rounded-lg shadow-xl border border-gray-200 p-2.5 w-48"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                                                    Remove relationship?
+                                                </div>
+                                                <div className="flex gap-1.5 justify-end">
+                                                    <button onClick={() => setConfirming(null)} className="px-2 py-1 rounded" style={{ fontSize: '10px', background: '#F3F4F6', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                                                    <button onClick={() => { setConfirming(null); onDelete(relationship.id); }} className="px-2 py-1 rounded" style={{ fontSize: '10px', background: '#EF4444', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}>Remove</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex gap-1 mt-1">
-                                <button
-                                    onClick={onConfirmDelete}
-                                    className="px-1.5 py-0.5 rounded"
-                                    style={{ background: '#DC2626', color: '#FFFFFF', border: 'none', cursor: 'pointer', fontSize: '10px' }}
-                                >
-                                    Remove
-                                </button>
-                                <button
-                                    onClick={onCancelDelete}
-                                    className="px-1.5 py-0.5 rounded"
-                                    style={{ background: '#FFFFFF', color: '#374151', border: '1px solid #E5E5E0', cursor: 'pointer', fontSize: '10px' }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })}
                 </div>
             )}
         </div>

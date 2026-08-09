@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense, useMemo, useRef } from 'react';
-import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
+import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { isPermalinkPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
 import { isFeatureEnabled } from './config/feature-flags';
@@ -536,7 +536,6 @@ function DiagramPermalinkRoute() {
     const model = useModelStore(s => s.model);
     const selectDiagram = useModelStore(s => s.selectDiagram);
     const setActiveView = useModelStore(s => s.setActiveView);
-
     useEffect(() => {
         if (!model) return;
         const diagram = model.diagrams?.find(
@@ -567,6 +566,7 @@ function UrlNavigationSync() {
     const model = useModelStore(s => s.model);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setActiveMode = useModelStore(s => s.setActiveMode);
+    const selectedElementId = useModelStore(s => s.selectedElementId);
     const navigate = useNavigate();
     const location = useLocation();
     const navigationType = useNavigationType();
@@ -597,6 +597,15 @@ function UrlNavigationSync() {
         if (view && JSON.stringify(view) !== JSON.stringify(activeView)) {
             suppressPush.current = true;
             setActiveView(view);
+        }
+
+        // Restore element selection if we are not in element-detail
+        if (view && view.type !== 'element-detail' && view.type !== 'welcome') {
+            const params = new URLSearchParams(location.search);
+            const el = params.get('element');
+            if (el !== useModelStore.getState().selectedElementId) {
+                useModelStore.getState().inspectElement(el);
+            }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname, location.search, navigationType]);
@@ -634,16 +643,25 @@ function UrlNavigationSync() {
         } else if (activeView.type === 'diagram' && model) {
             const diagram = model.diagrams?.find(d => d.id === activeView.diagramId);
             // Diagram permalinks need the type slug, which only the model knows.
-            if (diagram) url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.shortId ?? diagram.id)}`;
+            if (diagram) {
+                url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.shortId ?? diagram.id)}`;
+            }
         } else {
             url = viewToPath(activeView);
         }
 
+        if (url && activeView.type !== 'element-detail' && activeView.type !== 'welcome' && selectedElementId) {
+            const sep = url.includes('?') ? '&' : '?';
+            url += `${sep}element=${encodeURIComponent(selectedElementId)}`;
+        }
+
         if (url && location.pathname + location.search !== url) {
-            navigate(url, { replace: false });
+            const pathOnly = url.split('?')[0];
+            const isJustSearchChange = pathOnly === location.pathname;
+            navigate(url, { replace: isJustSearchChange });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeView, model]);
+    }, [activeView, model, selectedElementId]);
 
     return null;
 }

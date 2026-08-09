@@ -58,6 +58,10 @@ export interface TypeFilterSelectProps {
     maxVisible?: number;
     /** Optional containment map. When supplied, options render as an expandable tree. */
     parentOf?: ReadonlyMap<string, string>;
+    /** Render as a compact icon button instead of a text dropdown. */
+    iconOnly?: boolean;
+    /** How to align the popover relative to the button. Defaults to 'left'. */
+    align?: 'left' | 'right';
 }
 
 /** Every word must match somewhere, so each one typed narrows the list. */
@@ -92,7 +96,7 @@ export function filterOptions(options: TypeFilterOption[], query: string): TypeF
 export function TypeFilterSelect({
     label, options, selected, onChange,
     allLabel = 'All', placeholder = 'Type to filter…', width = 150, title,
-    describedAs, maxVisible = 300, parentOf,
+    describedAs, maxVisible = 300, parentOf, iconOnly, align = 'left',
 }: TypeFilterSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -208,7 +212,11 @@ export function TypeFilterSelect({
                 aria-expanded={open}
                 title={title ?? (selected.length > 0 ? selected.join(', ') : allLabel)}
                 onClick={() => setOpen(value => !value)}
-                style={{
+                style={iconOnly ? {
+                    width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '4px', background: 'transparent', border: 'none',
+                    color: selected.length > 0 ? COLOR.accent : COLOR.muted, cursor: 'pointer', padding: 0
+                } : {
                     width, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '6px', padding: '3px 7px', borderRadius: '5px',
                     border: `1px solid ${selected.length > 0 ? COLOR.accent : COLOR.border}`,
@@ -217,15 +225,23 @@ export function TypeFilterSelect({
                     cursor: 'pointer', textAlign: 'left',
                 }}
             >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
-                <span style={{ fontSize: '9px', color: COLOR.faint }}>{'▼'}</span>
+                {iconOnly ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                ) : (
+                    <>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+                        <span style={{ fontSize: '9px', color: COLOR.faint }}>{'▼'}</span>
+                    </>
+                )}
             </button>
 
             {open && (
                 <div
                     role="listbox"
                     style={{
-                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 60,
+                        position: 'absolute', top: 'calc(100% + 4px)', 
+                        ...(align === 'right' ? { right: 0 } : { left: 0 }),
+                        zIndex: 60,
                         width: Math.max(width + 70, 220), background: COLOR.surface,
                         border: `1px solid ${COLOR.border}`, borderRadius: '7px',
                         boxShadow: SHADOW.lg, overflow: 'hidden',

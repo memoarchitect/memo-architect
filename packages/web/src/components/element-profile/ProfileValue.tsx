@@ -58,19 +58,23 @@ export function ProfileSection({
                 <h3 style={{
                     flex: 1,
                     margin: 0,
-                    fontSize: t.heading,
-                    fontWeight: page ? 700 : 500,
-                    color: page ? COLOR.primary : '#374151',
-                    letterSpacing: 0,
-                    textTransform: 'none',
+                    fontSize: page ? t.heading : '10px',
+                    fontWeight: page ? 700 : 'bold',
+                    color: page ? COLOR.primary : '#6B7280',
+                    letterSpacing: page ? 0 : '0.05em',
+                    textTransform: page ? 'none' : 'uppercase',
                 }}>
                     {title}
                 </h3>
                 {typeof count === 'number' && (
-                    <span style={{ fontSize: t.meta, color: COLOR.faint }}>{count}</span>
+                    page ? (
+                        <span style={{ fontSize: t.meta, color: COLOR.faint }}>{count}</span>
+                    ) : (
+                        <span className="px-1.5 py-0.5 rounded-md font-medium text-[10px]" style={{ background: '#F3F4F6', color: '#6B7280' }}>{count}</span>
+                    )
                 )}
                 {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
-                {collapsible && <span style={{ color: '#D1D5DB', fontSize: t.meta }}>{expanded ? '▾' : '▸'}</span>}
+                {collapsible && <span style={{ color: '#D1D5DB', fontSize: page ? t.meta : 14 }}>{expanded ? '▾' : '▸'}</span>}
             </header>
             {expanded && <div style={{ padding: page ? 0 : '0 14px 8px' }}>{children}</div>}
         </section>
