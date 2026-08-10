@@ -56,7 +56,7 @@ export function analyzeConsistency(model: MemoModelDTO): ConsistencyResult {
     }
 
     for (const rel of model.relationships) {
-        if (rel.type !== 'allocateTo') continue;
+        if (rel.type !== 'allocatedTo') continue;
 
         const func = model.elements[rel.sourceId];
         const struct = model.elements[rel.targetId];

@@ -46,8 +46,8 @@ const model: MemoModelDTO = {
         rel('c7', 'composes', 'fnTop', 'fnB'),
         rel('f1', 'flow', 'compA1', 'compB1'),
         rel('f2', 'flow', 'compA2', 'compA1'),
-        rel('a1', 'allocateTo', 'fnA', 'compA1'),
-        rel('a2', 'allocateTo', 'fnB', 'compB1'),
+        rel('a1', 'allocatedTo', 'fnA', 'compA1'),
+        rel('a2', 'allocatedTo', 'fnB', 'compB1'),
     ],
 };
 
@@ -142,7 +142,7 @@ describe('asymmetric axes', () => {
         const dsm = computeHierarchicalDSM(model, {
             rows: { kinds: ['Function'], expanded: new Set(['fnTop']) },
             columns: { kinds: ['System', 'Subsystem', 'Component'], expanded: new Set(['sys', 'subA', 'subB']) },
-            dependencyTypes: ['allocateTo'],
+            dependencyTypes: ['allocatedTo'],
         });
         expect(dsm.rows.map(entry => entry.node.id)).toEqual(['fnTop', 'fnA', 'fnB']);
         const colOf = (id: string) => dsm.columns.findIndex(entry => entry.node.id === id);
@@ -260,7 +260,7 @@ describe('suggested defaults', () => {
     it('falls back to a single layer when nothing crosses', () => {
         const isolated: MemoModelDTO = {
             ...model,
-            relationships: model.relationships.filter(rel => rel.type !== 'allocateTo'),
+            relationships: model.relationships.filter(rel => rel.type !== 'allocatedTo'),
         };
         expect(suggestTraceLayers(isolated)).toEqual({ rows: 'logical', columns: 'logical' });
     });
