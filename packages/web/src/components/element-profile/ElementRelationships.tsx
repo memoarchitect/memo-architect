@@ -58,14 +58,14 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
 
     const [expanded, setExpanded] = useState(false);
     const [status, setStatus] = useState<RelationshipStatus | null>(null);
-    const [visibleKinds, setVisibleKinds] = useState<string[]>(['Requirement', 'Risk', 'Function', 'SystemFunction']);
+    const [visibleKinds, setVisibleKinds] = useState<string[]>(['Requirement', 'Risk', 'Function', 'SystemFunction', 'ComponentFunction']);
 
     const registries = useMemo(() => getRegistries(model), [model]);
 
     // Reset transient state whenever the inspected element changes.
     useEffect(() => {
         setStatus(null); setExpanded(false);
-        setVisibleKinds(['Requirement', 'Risk', 'Function', 'SystemFunction']);
+        setVisibleKinds(['Requirement', 'Risk', 'Function', 'SystemFunction', 'ComponentFunction']);
     }, [element.id]);
 
     const mine = pendingRelationships.filter(p =>
