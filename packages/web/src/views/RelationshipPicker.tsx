@@ -88,6 +88,7 @@ export function RelationshipPicker({
         const needle = search.trim().toLowerCase();
         if (!needle) return options;
         return options.filter(option =>
+            option.definition.nativeKeyword?.toLowerCase().includes(needle) ||
             option.definition.label.toLowerCase().includes(needle) ||
             option.definition.name.toLowerCase().includes(needle));
     }, [options, search]);
@@ -145,6 +146,7 @@ export function RelationshipPicker({
             <div className="flex-1 overflow-y-auto py-1">
                 {filtered.map(option => {
                     const { definition, direction, sourceId, targetId } = option;
+                    const label = definition.nativeKeyword ?? definition.label;
                     // An 'incoming' option reverses the drawn edge: the node the
                     // user dragged to ends up on the source end.
                     const reversed = direction === 'incoming';
@@ -166,7 +168,7 @@ export function RelationshipPicker({
                             }} />
                             <div style={{ minWidth: 0 }}>
                                 <div style={{ fontSize: FONT.xs, fontWeight: 500, color: '#1a1a1a' }}>
-                                    {definition.label}
+                                    {label}
                                     {reversed && (
                                         <span style={{ color: '#9CA3AF', fontWeight: 400 }}> (reversed)</span>
                                     )}
