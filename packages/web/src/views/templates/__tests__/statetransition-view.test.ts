@@ -58,13 +58,13 @@ describe('classifyStateTransitionElements', () => {
 });
 
 describe('resolveTransitions', () => {
-    it('resolves endpoints by state display name and drops unresolvable ones', () => {
+    it('resolves native state IDs, with display names as the legacy fallback', () => {
         const states = [
             el('modeOFF', { name: 'OFF' }),
             el('modeIdle', { name: 'ON.IDLE' }),
         ];
         const transitions = [
-            el('tr1', { kind: 'Transition', attributes: { sourceState: 'OFF', targetState: 'ON.IDLE', trigger: 'start' } }),
+            el('tr1', { kind: 'Transition', attributes: { sourceState: 'modeOFF', targetState: 'modeIdle', trigger: 'start' } }),
             el('tr2', { kind: 'Transition', attributes: { sourceState: 'OFF', targetState: 'MISSING' } }),
         ];
         const resolved = resolveTransitions(transitions, states);

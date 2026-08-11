@@ -5,9 +5,9 @@
 // edges with trigger [guard] / effect labels, and non-state behavior
 // elements (properties, timing constraints) as side notes.
 //
-// Transition elements are modelled as parts carrying `sourceState` /
-// `targetState` attributes that reference state *names* — they render as
-// edges, not nodes.
+// Native transition usages carry `sourceState` / `targetState` as resolved
+// state IDs. Older part-based models carry display names; resolveTransitions
+// accepts both while fixtures migrate. They render as edges, not nodes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
@@ -83,9 +83,9 @@ export function transitionLabel(el: MemoElement): string {
 }
 
 /**
- * Resolve transition elements onto the visible states: `sourceState` /
- * `targetState` match a state's display name or id. Transitions whose
- * endpoints are not in the view are dropped.
+ * Resolve transition elements onto the visible states. Native transitions use
+ * IDs; the display-name fallback keeps legacy part-based models renderable.
+ * Transitions whose endpoints are not in the view are dropped.
  */
 export function resolveTransitions(
     transitions: MemoElement[],
