@@ -10,7 +10,7 @@ import re
 
 
 _TOKEN = re.compile(
-    r'(//[^\n]*|"(?:\\.|[^"\\])*"|\b(?:package|private|public|import|part|item|requirement|connection|connect|to|attribute|def|abstract|specializes)\b|\b(?:Actor|StakeholderNeed|SystemRequirement|OperationalActivity|OperationalScenario|LogicalFunction|SoftwareItem|HardwareAssembly|Hazard|RiskControlMeasure|VerificationCase)\b|\b(?:DerivesFrom|SequencesStep|SatisfiedBy|AllocatedTo|MitigatesHazard|VerifiedBy|ProducesEvidence)\b|::>|:>>|\b\d+(?:\.\d+)?\b)'
+    r'(//[^\n]*|"(?:\\.|[^"\\])*"|\b(?:package|private|public|import|part|item|requirement|connection|connect|to|attribute|def|abstract|specializes)\b|\b(?:Actor|StakeholderNeed|SystemRequirement|OperationalActivity|OperationalScenario|LogicalFunction|SoftwareElement|HardwareAssembly|Hazard|RiskControlMeasure|VerificationCase)\b|\b(?:DerivesFrom|SequencesStep|SatisfiedBy|AllocatedTo|MitigatesHazard|VerifiedBy|ProducesEvidence)\b|::>|:>>|\b\d+(?:\.\d+)?\b)'
 )
 
 
@@ -19,7 +19,7 @@ def _class_for(token):
         return 'sysml-comment'
     if token.startswith('"'):
         return 'sysml-string'
-    if token in {'Actor', 'StakeholderNeed', 'SystemRequirement', 'OperationalActivity', 'OperationalScenario', 'LogicalFunction', 'SoftwareItem', 'HardwareAssembly', 'Hazard', 'RiskControlMeasure', 'VerificationCase'}:
+    if token in {'Actor', 'StakeholderNeed', 'SystemRequirement', 'OperationalActivity', 'OperationalScenario', 'LogicalFunction', 'SoftwareElement', 'HardwareAssembly', 'Hazard', 'RiskControlMeasure', 'VerificationCase'}:
         return 'sysml-type'
     if token in {'DerivesFrom', 'SequencesStep', 'SatisfiedBy', 'AllocatedTo', 'MitigatesHazard', 'VerifiedBy', 'ProducesEvidence'}:
         return 'sysml-relation'

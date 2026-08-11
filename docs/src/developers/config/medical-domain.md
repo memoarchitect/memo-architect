@@ -36,7 +36,7 @@ concerns.
 | Operations | `OperationalActivity`, `OperationalCapability`, `OperationalScenario` | What work and clinical outcome must be supported? |
 | Requirements | `Need` (needKind: stakeholder…), `Requirement` (requirementKind: system, software, hardware) | What measurable obligations apply? |
 | Functions and behavior | `LogicalFunction`, `StateMachine`, `ModeState`, `ActivityAction` | What transformations, states, and interactions are required? |
-| Architecture | `LogicalComponent`, `SoftwareItem`, `FirmwareItem`, `HardwareAssembly`, `ProcessingNode`, `Interface` | Which design elements own and realize the required behavior? |
+| Architecture | `LogicalComponent`, `SoftwareElement`, `FirmwareItem`, `HardwareAssembly`, `ProcessingNode`, `Interface` | Which design elements own and realize the required behavior? |
 | Safety risk | `IntendedUse`, `ReasonablyForeseeableMisuse`, `SafetyRelatedCharacteristic`, `HazardCause`, `Hazard`, `SequenceOfEvents`, `HazardousSituation`, `Harm`, `Risk`, `RiskControlMeasure`, `ResidualRisk`, `Benefit` | How can harm occur, be controlled, and be evaluated? |
 | Cybersecurity | `CybersecurityAsset`, `Threat`, `Vulnerability`, `ThreatScenario`, `CyberMitigation`, `SecurityRequirement` | How can the connected device be compromised and protected? |
 | Assurance | `VerificationCase`, `ValidationCase`, `TestArtifact`, `Evidence` | What activity and evidence support each claim? |

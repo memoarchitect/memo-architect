@@ -58,7 +58,7 @@ const BUILT_IN_SNIPPETS: Snippet[] = [
     { id: 'q-soup', label: 'SOUP List', description: 'All SOUP components', category: 'query',
         code: '```memo-query\nkind: SOUPComponent\ndisplay: table\ncolumns: name, layer, doc\n```' },
     { id: 'q-sw-items', label: 'Software Items', description: 'All software items', category: 'query',
-        code: '```memo-query\nkind: SoftwareItem\ndisplay: table\ncolumns: name, layer, doc\n```' },
+        code: '```memo-query\nkind: SoftwareElement\ndisplay: table\ncolumns: name, layer, doc\n```' },
     { id: 'q-test-cases', label: 'Test Cases', description: 'All test cases', category: 'query',
         code: '```memo-query\nkind: TestCase\ndisplay: table\ncolumns: name, layer, doc\n```' },
     { id: 'q-hazard-count', label: 'Hazard Count (metric)', description: 'Metric badge with hazard count', category: 'query',
