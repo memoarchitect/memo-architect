@@ -1,7 +1,7 @@
 {
   "name": "@memoarchitect/architect",
   "version": "0.7.2",
-  "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
+  "description": "MEMO Architect \u2014 interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
     "memo-architect": "lib/bin/memo-architect.js"
@@ -12,15 +12,17 @@
   },
   "files": [
     "dist/",
+    "dist-standalone/",
     "lib/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm run generate:notation && pnpm run check:cache && pnpm run build:client && pnpm run check:bundle && pnpm run build:cli",
+    "build": "pnpm run generate:notation && pnpm run check:cache && pnpm run build:client && pnpm run check:bundle && pnpm run build:client:standalone && pnpm run build:cli",
     "generate:notation": "node scripts/generate-notation-registry.mjs",
     "prepack": "pnpm run clean && pnpm run build",
     "build:client": "vite build --config packages/web/vite.config.ts",
+    "build:client:standalone": "vite build --config packages/web/vite.standalone.config.ts",
     "build:cli": "tsc -p tsconfig.architect.json",
     "check:cache": "bash scripts/check-no-ontology-cache.sh",
     "check:bundle": "bash scripts/check-no-bare-imports.sh",
@@ -29,7 +31,7 @@
     "test": "pnpm run test:web && pnpm run test:cli",
     "test:coverage": "cd packages/web && vitest run --coverage",
     "type-check": "tsc -p packages/web/tsconfig.json --noEmit && tsc -p tsconfig.architect.json --noEmit",
-    "clean": "rm -rf dist lib",
+    "clean": "rm -rf dist dist-standalone lib",
     "docs:serve": "pdm run docs-serve",
     "docs:build": "pdm run docs-build",
     "version:sync": "node scripts/sync-version.mjs",

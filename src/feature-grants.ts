@@ -41,5 +41,7 @@ export const EXPERIMENTAL_FLAG_DESCRIPTION =
 export function injectFeatureGrants(html: string, grants: FeatureGrants): string {
     if (html.includes('__MEMO_FLAGS__')) return html;
     const tag = `<script>window.__MEMO_FLAGS__=${JSON.stringify(grants)};</script>`;
-    return html.includes('</head>') ? html.replace('</head>', `${tag}\n</head>`) : tag + html;
+    // Replacer function: grant names are data, and `$&` in a replacement string
+    // is a substitution pattern rather than two characters.
+    return html.includes('</head>') ? html.replace('</head>', () => `${tag}\n</head>`) : tag + html;
 }

@@ -1,5 +1,6 @@
 import ELKConstructor, { type ELK } from 'elkjs/lib/elk.bundled.js';
 import type { LayoutExecutionContext, LayoutGraph, LayoutProvider } from '../layout-provider';
+import { elkWorkerFactory } from './elk-worker-factory';
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 
@@ -38,13 +39,10 @@ export class ElkLayoutProvider implements LayoutProvider {
 
     private getInstance(): ELK {
         if (!this.instance) {
-            this.instance = typeof Worker === 'undefined'
-                ? new ELKConstructor()
-                : new ELKConstructor({
-                    workerFactory: (_url: string) => new Worker(
-                        new URL('elkjs/lib/elk-worker.min.js', import.meta.url),
-                    ),
-                } as never);
+            const workerFactory = elkWorkerFactory();
+            this.instance = workerFactory
+                ? new ELKConstructor({ workerFactory } as never)
+                : new ELKConstructor();
         }
         return this.instance;
     }

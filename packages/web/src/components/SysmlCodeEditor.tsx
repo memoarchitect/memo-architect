@@ -1,15 +1,52 @@
 import { useEffect, useRef } from 'react';
 import Editor, { loader, type BeforeMount, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker&inline';
 import type { editor, languages, Position } from 'monaco-editor';
 
 // Keep the editor fully local/offline. @monaco-editor/react otherwise loads
 // Monaco from a CDN, which is unsuitable for local engineering projects.
+//
+// The worker is inlined (`?worker&inline`) rather than emitted beside the
+// bundle so the single-file build has no second file to fetch. It stays inside
+// this lazily loaded chunk either way, so a session that never opens the editor
+// never pays for it. Starting it is allowed to fail: a `file://` page has a null
+// origin and Chrome blocks workers there, and Monaco degrades to main-thread
+// editing rather than refusing to mount.
 loader.config({ monaco });
+
+/**
+ * Stand-in for a worker that could not be started.
+ *
+ * Monaco's `getWorker` is typed to return a worker and is called during editor
+ * setup, so throwing there takes the editor down with it. A silent worker
+ * leaves Monaco waiting for language-service replies that never arrive, which
+ * costs syntax intelligence and keeps plain text editing.
+ */
+function inertWorker(): Worker {
+    return {
+        postMessage: () => {},
+        terminate: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+        onmessage: null,
+        onmessageerror: null,
+        onerror: null,
+    } as unknown as Worker;
+}
+
 (globalThis as typeof globalThis & {
     MonacoEnvironment?: { getWorker(): Worker };
-}).MonacoEnvironment = { getWorker: () => new EditorWorker() };
+}).MonacoEnvironment = {
+    getWorker: () => {
+        try {
+            return new EditorWorker();
+        } catch {
+            return inertWorker();
+        }
+    },
+};
 
 export interface SysmlCompletionSymbol {
     id: string;

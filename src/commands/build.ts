@@ -15,24 +15,6 @@ function architectPackageRoot(): string {
     return resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 }
 
-function inlineEntryAssets(html: string, outputDir: string): string {
-    html = html.replace(
-        /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"[^>]*\/?>/g,
-        (match, href: string) => {
-            const path = resolve(outputDir, href.replace(/^\//, ''));
-            return existsSync(path) ? `<style>${readFileSync(path, 'utf-8')}</style>` : match;
-        },
-    );
-    html = html.replace(
-        /<script[^>]+src="([^"]+)"[^>]*><\/script>/g,
-        (match, src: string) => {
-            const path = resolve(outputDir, src.replace(/^\//, ''));
-            return existsSync(path) ? `<script type="module">${readFileSync(path, 'utf-8')}</script>` : match;
-        },
-    );
-    return html;
-}
-
 export async function architectBuildCommand(options: {
     output?: string;
     standalone?: boolean;
@@ -40,9 +22,13 @@ export async function architectBuildCommand(options: {
     featureGrants?: FeatureGrants;
 }): Promise<void> {
     const snapshot = await buildProjectSnapshot();
-    const sourceDist = resolve(architectPackageRoot(), 'dist');
+    // Two distributions, because one file and many files are different builds,
+    // not the same build post-processed: see packages/web/vite.standalone.config.ts.
+    const sourceDist = resolve(architectPackageRoot(), options.standalone ? 'dist-standalone' : 'dist');
     if (!existsSync(resolve(sourceDist, 'index.html'))) {
-        throw new Error('Architect distribution is missing. Reinstall @memoarchitect/architect or run its build.');
+        throw new Error(options.standalone
+            ? 'Standalone Architect distribution is missing. Reinstall @memoarchitect/architect or run `pnpm run build:client:standalone`.'
+            : 'Architect distribution is missing. Reinstall @memoarchitect/architect or run its build.');
     }
 
     const outputDir = resolve(snapshot.projectRoot, options.output || 'dist');
@@ -51,18 +37,22 @@ export async function architectBuildCommand(options: {
     }
     rmSync(outputDir, { recursive: true, force: true });
     mkdirSync(outputDir, { recursive: true });
-    cpSync(sourceDist, outputDir, { recursive: true });
+    // The standalone distribution is the single HTML file and nothing beside
+    // it; copying the directory would be copying that one file.
+    if (!options.standalone) cpSync(sourceDist, outputDir, { recursive: true });
 
     const indexPath = resolve(outputDir, 'index.html');
-    let html = readFileSync(indexPath, 'utf-8');
+    let html = readFileSync(resolve(sourceDist, 'index.html'), 'utf-8');
     const payload = serializeForInlineScript({
         model: snapshot.model,
         validation: snapshot.validation,
         completeness: snapshot.completeness,
     });
-    html = html.replace('</head>', `<script>window.__MEMO_DATA__=${payload};</script>\n</head>`);
+    // Replacer function, not a replacement string: model text containing `$&`
+    // or ``$` `` would otherwise be read as a substitution pattern and splice
+    // the document into the payload.
+    html = html.replace('</head>', () => `<script>window.__MEMO_DATA__=${payload};</script>\n</head>`);
     if (options.featureGrants) html = injectFeatureGrants(html, options.featureGrants);
-    if (options.standalone) html = inlineEntryAssets(html, outputDir);
     writeFileSync(indexPath, html);
 
     process.stdout.write(`Architect viewer built at ${indexPath}\n`);
