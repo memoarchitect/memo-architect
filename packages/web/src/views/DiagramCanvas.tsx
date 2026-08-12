@@ -1434,7 +1434,7 @@ function DiagramCanvasInner() {
         });
     }, []);
 
-    const moveInterconnectionPort = useCallback((ownerId: string, portId: string, y: number) => {
+    const moveInterconnectionPort = useCallback((ownerId: string, portId: string, y: number, side?: PortSide) => {
         suppressInspectUntilRef.current = Date.now() + 250;
         markManualLayout();
         setLayoutEditVersion(version => version + 1);
@@ -1448,6 +1448,13 @@ function DiagramCanvasInner() {
             return { ...edge, data };
         });
         edgesRef.current = invalidatedEdges;
+        if (side && selectedDiagramId) {
+            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+            mergeDiagramLayouts({ [selectedDiagramId]: {
+                ...previous,
+                canvas: { ...previous.canvas, autoLayout: false, portWalls: { ...previous.canvas?.portWalls, [portId]: side } },
+            } });
+        }
         const next = nodesRef.current.map(node => node.id !== ownerId ? node : {
             ...node,
             data: {
@@ -1457,7 +1464,7 @@ function DiagramCanvasInner() {
             },
         });
         scheduleGeometryUpdate(next);
-    }, [scheduleGeometryUpdate, markManualLayout]);
+    }, [scheduleGeometryUpdate, markManualLayout, selectedDiagramId, mergeDiagramLayouts]);
 
     const moveEdgeRoute = useCallback((edgeId: string, points: Array<{ x: number; y: number }>) => {
         suppressInspectUntilRef.current = Date.now() + 250;

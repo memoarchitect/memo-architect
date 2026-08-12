@@ -516,7 +516,7 @@ export interface InterconnectionOptions {
     /** A declared enum's literal colours, keyed by the element attribute value. */
     legend?: { attribute: string; colors: ReadonlyMap<string, string> };
     /** Interactive per-diagram port repositioning. */
-    onPortMove?: (ownerId: string, portId: string, y: number) => void;
+    onPortMove?: (ownerId: string, portId: string, y: number, side?: PortSide) => void;
     /** Bind a visible port glyph to the model element it represents. */
     onPortSelect?: (portId: string) => void;
     layoutProviderId?: string;
@@ -1240,7 +1240,7 @@ export async function computeInterconnectionLayout(
                 implicitIn: showPorts && implicitInParts.has(partId),
                 implicitOut: showPorts && implicitOutParts.has(partId),
                 onPortMove: options?.onPortMove
-                    ? (portId: string, y: number) => options.onPortMove!(partId, portId, y)
+                    ? (portId: string, y: number, side?: PortSide) => options.onPortMove!(partId, portId, y, side)
                     : undefined,
                 onPortSelect: options?.onPortSelect
                     ? (portId: string) => options.onPortSelect!(portId)

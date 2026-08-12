@@ -42,7 +42,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     /** Visible proxy ports for relationships that target the part directly. */
     implicitIn?: boolean;
     implicitOut?: boolean;
-    onPortMove?: (portId: string, y: number) => void;
+    onPortMove?: (portId: string, y: number, side?: PortSide) => void;
     onPortSelect?: (portId: string) => void;
     /** Content-derived lower bound emitted by the IBD template. */
     minWidth?: number;
@@ -157,7 +157,7 @@ function NestedPortGroup({ port }: { port: PortInfo }) {
     );
 }
 
-function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y: number) => void; onSelect?: (portId: string) => void }) {
+function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onSelect?: (portId: string) => void }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
@@ -170,8 +170,19 @@ function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y:
         event.stopPropagation();
         const startClientY = event.clientY;
         const startY = port.y;
-        const move = (next: PointerEvent) => onMove(startY + (next.clientY - startClientY) / getZoom());
+        let last: PointerEvent | undefined;
+        const move = (next: PointerEvent) => { last = next; onMove(startY + (next.clientY - startClientY) / getZoom()); };
         const stop = () => {
+            if (last) {
+                const dx = last.clientX - event.clientX;
+                const dy = last.clientY - event.clientY;
+                if (Math.hypot(dx, dy) > 18) {
+                    const side: PortSide = Math.abs(dx) > Math.abs(dy)
+                        ? (dx < 0 ? 'left' : 'right')
+                        : (dy < 0 ? 'top' : 'bottom');
+                    onMove(startY + dy / getZoom(), side);
+                }
+            }
             window.removeEventListener('pointermove', move);
             window.removeEventListener('pointerup', stop);
         };
@@ -515,11 +526,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 <BoundaryPort
                     key={p.id}
                     port={p}
-                    onMove={onPortMove ? y => {
+                    onMove={onPortMove ? (y, side) => {
                         const size = p.size ?? INTERCONNECTION_PORT_SIZE;
                         const min = (isFrame || isContainer ? 70 : 62) - size / 2;
                         const max = Math.max(min, (height ?? min + size + 18) - size - 18);
-                        onPortMove(p.id, Math.min(Math.max(y, min), max));
+                        onPortMove(p.id, Math.min(Math.max(y, min), max), side);
                     } : undefined}
                     onSelect={onPortSelect}
                 />
