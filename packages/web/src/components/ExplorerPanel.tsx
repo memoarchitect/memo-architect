@@ -6,7 +6,7 @@ import {
     getRelationshipsForElement,
     type ExplorerTab,
     type DhfDoc,
-    FOLDER_ATTR,
+    type PackageMutationResult,
 } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
@@ -94,9 +94,31 @@ interface CtxMenuState {
     x: number;
     y: number;
     elementId?: string;
-    folderId?: string;
+    /** Qualified name of the package the menu was opened on. */
+    packageName?: string;
     kind?: string;
     type: 'element' | 'folder' | 'kind' | 'group';
+}
+
+/**
+ * Say what a containment change did, and what it did not.
+ *
+ * These writes edit one declaration; they do not update the qualified names
+ * that refer to it, because that needs cross-file name resolution MEMO does not
+ * have yet. Swallowing that warning would present a model with dangling
+ * references as a clean rename.
+ */
+async function reportPackageResult(pending: Promise<PackageMutationResult>): Promise<void> {
+    try {
+        const result = await pending;
+        if (!result.success) {
+            window.alert(result.error ?? 'The containment change was refused.');
+            return;
+        }
+        for (const warning of result.warnings ?? []) window.alert(warning.message);
+    } catch (e) {
+        window.alert(e instanceof Error ? e.message : String(e));
+    }
 }
 
 function ChangeTypeModal({ elementId, currentKind, onClose }: { elementId: string; currentKind: string; onClose: () => void }) {
@@ -166,9 +188,10 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const model = useModelStore(s => s.model);
     const selectElement = useModelStore(s => s.selectElement);
     const addElement = useModelStore(s => s.addElement);
-    const updateElementFolder = useModelStore(s => s.updateElementFolder);
-    const moveFolder = useModelStore(s => s.moveFolder);
-    const deleteFolder = useModelStore(s => s.deleteFolder);
+    const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
+    const createPackage = useModelStore(s => s.createPackage);
+    const renamePackage = useModelStore(s => s.renamePackage);
+    const deletePackage = useModelStore(s => s.deletePackage);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
     const [showChangeType, setShowChangeType] = useState<{ elementId: string; currentKind: string } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
@@ -197,10 +220,11 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
             {
-                label: 'Move to folder...',
+                label: 'Move to package…',
                 action: () => {
-                    const path = window.prompt('Enter new folder path (e.g., Manufacturers/Hardware):', el.attributes[FOLDER_ATTR] || '');
-                    if (path !== null) updateElementFolder(el.id, path);
+                    const target = window.prompt(
+                        'Move to which package? (qualified name, e.g. Plant::Hydraulics)', el.package || '');
+                    if (target !== null) void reportPackageResult(moveElementToPackage(el.id, target.trim()));
                 }
             },
             { label: 'Copy ID', action: () => navigator.clipboard?.writeText(el.id) },
@@ -219,40 +243,40 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 action: () => setShowChangeType({ elementId: el.id, currentKind: el.kind }),
             }] : []),
         ];
-    } else if (menu.type === 'folder' && menu.folderId && menu.kind) {
-        title = `Folder: ${menu.folderId.split('/').pop()}`;
+    } else if (menu.type === 'folder' && menu.packageName && menu.kind) {
+        const packageName = menu.packageName;
+        title = `Package: ${packageName.split('::').pop()}`;
         actions = [
             {
                 label: 'Add Element here',
                 action: () => {
                     const name = window.prompt('Enter element name:');
-                    if (name) addElement(menu.kind!, name, menu.folderId!);
+                    if (name) addElement(menu.kind!, name, packageName);
                 }
             },
             {
-                label: 'Add Sub-group',
+                label: 'New Package…',
                 action: () => {
-                    const name = window.prompt('Enter group name:');
-                    if (name) {
-                        const newPath = menu.folderId ? `${menu.folderId}/${name}` : name;
-                        // Just a dummy addElement to "create" the folder
-                        addElement(menu.kind!, `(new ${name} element)`, newPath);
-                    }
+                    const name = window.prompt('Enter package name:');
+                    if (name) void reportPackageResult(createPackage(name.trim(), packageName));
                 }
             },
             {
-                label: 'Move Folder...',
+                label: 'Rename Package…',
                 action: () => {
-                    const newPath = window.prompt('Enter new folder path:', menu.folderId);
-                    if (newPath && newPath !== menu.folderId) moveFolder(menu.kind!, menu.folderId!, newPath);
+                    const name = window.prompt('Enter new package name:', packageName.split('::').pop() ?? '');
+                    if (name) void reportPackageResult(renamePackage(packageName, name.trim()));
                 }
             },
             {
-                label: 'Delete Folder (Move items up)',
+                label: 'Delete Package (keep contents)',
                 danger: true,
                 action: () => {
-                    if (window.confirm(`Move all elements in "${menu.folderId}" to its parent group?`)) {
-                        deleteFolder(menu.kind!, menu.folderId!);
+                    if (window.confirm(
+                        `Remove the package "${packageName}"?\n\n`
+                        + 'Everything it declares moves into the enclosing package. Qualified names that '
+                        + 'refer to it will need updating by hand.')) {
+                        void reportPackageResult(deletePackage(packageName));
                     }
                 }
             }
@@ -268,10 +292,10 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }
             },
             {
-                label: 'New Group',
+                label: 'New Package…',
                 action: () => {
-                    const name = window.prompt('Enter group name:');
-                    if (name) addElement(menu.kind!, `(new ${name} element)`, name);
+                    const name = window.prompt('Enter package name:');
+                    if (name) void reportPackageResult(createPackage(name.trim()));
                 }
             }
         ];
@@ -353,45 +377,49 @@ function TabBar({ active, onChange }: { active: ExplorerTab; onChange: (tab: Exp
 // ─── Model Tree Persistence ─────────────────────────────────────────────────
 
 interface TreeNode {
-    id: string; // f:<path> or e:<id>
+    /** `f:<qualified name>` for a package, the element id for an element. */
+    id: string;
     name: string;
     type: 'folder' | 'element';
     children: TreeNode[];
     element?: MemoElement;
 }
 
-function buildTree(elements: MemoElement[]): TreeNode[] {
+/**
+ * The containment tree, built from package membership.
+ *
+ * A container here is a SysML package — the model's own containment axis — so
+ * the tree shows what the source says rather than a grouping the client
+ * invented. `packages` is passed separately from the elements because a package
+ * that declares nothing is still a package, and deriving the branches from
+ * membership alone would hide every empty one.
+ */
+export function buildTree(elements: MemoElement[], packages: { qualifiedName: string }[] = []): TreeNode[] {
     const root: TreeNode[] = [];
-    const folders = new Map<string, TreeNode>();
 
-    // Sort elements by name first
-    const sorted = [...elements].sort((a, b) => a.name.localeCompare(b.name));
-
-    for (const el of sorted) {
-        const path = el.attributes[FOLDER_ATTR] || '';
-        const parts = path.split('/').filter(Boolean);
-
-        let currentLevel = root;
-        let currentPath = '';
-
-        for (const part of parts) {
-            currentPath = currentPath ? `${currentPath}/${part}` : part;
-            const folderKey = `f:${currentPath}`;
-
-            let folder = currentLevel.find(n => n.id === folderKey);
-            if (!folder) {
-                folder = {
-                    id: folderKey,
-                    name: part,
-                    type: 'folder',
-                    children: [],
-                };
-                currentLevel.push(folder);
+    /** Walk to a package's node, creating the branch it sits on. */
+    const branchFor = (qualifiedName: string): TreeNode[] => {
+        let level = root;
+        let path = '';
+        for (const segment of qualifiedName.split('::').filter(Boolean)) {
+            path = path ? `${path}::${segment}` : segment;
+            const key = `f:${path}`;
+            let node = level.find(child => child.id === key);
+            if (!node) {
+                node = { id: key, name: segment, type: 'folder', children: [] };
+                level.push(node);
             }
-            currentLevel = folder.children;
+            level = node.children;
         }
+        return level;
+    };
 
-        currentLevel.push({
+    // Declared packages first, so an empty one is a visible container rather
+    // than a branch that only exists while something happens to sit in it.
+    for (const pkg of packages) branchFor(pkg.qualifiedName);
+
+    for (const el of [...elements].sort((a, b) => a.name.localeCompare(b.name))) {
+        branchFor(el.package ?? '').push({
             id: el.id,
             name: el.name,
             type: 'element',
@@ -744,8 +772,35 @@ export function computeExplorerGroupTree(
     searchTerm: string,
     registryKinds: KindDefinitionDTO[],
     availableOntologies: OntologyPackageInfo[],
+    declaredPackages: { qualifiedName: string }[] = [],
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
+
+    // Which packages belong in a kind's subtree.
+    //
+    // The explorer groups by kind first, so one package can appear under
+    // several kinds — once for each kind it declares. A package that declares
+    // nothing at all is the exception: it has no kind to sort it by, and
+    // hiding it until something is put in it is exactly the disappearing
+    // container this replaced, so it shows wherever a container can be made.
+    const populated = new Set<string>();
+    for (const el of elements) {
+        for (let path = el.package; path; path = path.includes('::') ? path.slice(0, path.lastIndexOf('::')) : '') {
+            populated.add(path);
+        }
+    }
+    const emptyPackages = declaredPackages.filter(pkg => !populated.has(pkg.qualifiedName));
+    /** The packages a kind's own elements sit in, plus every empty one. */
+    const packagesFor = (kindElements: MemoElement[]): { qualifiedName: string }[] => {
+        const used = new Set<string>();
+        for (const el of kindElements) {
+            for (let path = el.package; path; path = path.includes('::') ? path.slice(0, path.lastIndexOf('::')) : '') {
+                used.add(path);
+            }
+        }
+        return [...[...used].map(qualifiedName => ({ qualifiedName })), ...emptyPackages]
+            .sort((a, b) => a.qualifiedName.localeCompare(b.qualifiedName));
+    };
 
     // Derive groups and kind→layer map from the currently selected ontology packages.
     // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
@@ -758,9 +813,13 @@ export function computeExplorerGroupTree(
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
-    /** Bucket kind → elements into sub-groups, building each kind's tree. */
+    /** Bucket kind → elements into sub-groups, building each type folder's tree. */
     const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string, layerId?: string): ExplorerSubGroup[] => {
-        const buckets = new Map<string, Map<string, TreeNode[]>>();
+        // Several kinds can share one type folder — a specialization sits under
+        // the kind it derives from — so the elements are pooled per folder and
+        // the tree built once. Building per kind and concatenating gave the
+        // folder one package branch per kind, all with the same name.
+        const pooled = new Map<string, Map<string, MemoElement[]>>();
         for (const [kind, els] of kindMap.entries()) {
             // An ontology kind without a namespace group sits directly in its
             // declared ontology layer.
@@ -768,11 +827,16 @@ export function computeExplorerGroupTree(
                 ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
                 : (kindToSubGroup[kind] ?? '');
             const typeFolder = kindToParent[kind] ?? kind;
-            if (!buckets.has(sub)) buckets.set(sub, new Map());
-            const kinds = buckets.get(sub)!;
-            const existing = kinds.get(typeFolder) ?? [];
-            kinds.set(typeFolder, [...existing, ...buildTree(els)]);
+            if (!pooled.has(sub)) pooled.set(sub, new Map());
+            const folders = pooled.get(sub)!;
+            folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), ...els]);
         }
+        const buckets = new Map<string, Map<string, TreeNode[]>>(
+            [...pooled.entries()].map(([sub, folders]) => [
+                sub,
+                new Map([...folders.entries()].map(([folder, els]) => [folder, buildTree(els, packagesFor(els))])),
+            ]),
+        );
         return [...buckets.entries()]
             .sort(([a], [b]) => layerId === 'artifacts'
                 ? ARTIFACT_CATEGORIES.indexOf(a as any) - ARTIFACT_CATEGORIES.indexOf(b as any)
@@ -831,7 +895,7 @@ export function computeExplorerGroupTree(
                 id: 'diagram-elements',
                 label: 'Diagram Elements',
                 color: standardColor,
-                kinds: new Map([...standardDiagramMap.entries()].map(([kind, entries]) => [kind, buildTree(entries)])),
+                kinds: new Map([...standardDiagramMap.entries()].map(([kind, entries]) => [kind, buildTree(entries, packagesFor(entries))])),
             }],
         });
     }
@@ -872,8 +936,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const toggleElementSelection = useModelStore(s => s.toggleElementSelection);
     const selectAllElements = useModelStore(s => s.selectAllElements);
     const clearElementSelection = useModelStore(s => s.clearElementSelection);
-    const updateElementFolder = useModelStore(s => s.updateElementFolder);
-    const moveFolder = useModelStore(s => s.moveFolder);
+    const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
+    const movePackage = useModelStore(s => s.movePackage);
     const validation = useModelStore(s => s.validation);
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
@@ -907,7 +971,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             y: e.clientY,
             type,
             elementId: type === 'element' ? id : undefined,
-            folderId: type === 'folder' ? id.replace('f:', '') : undefined,
+            packageName: type === 'folder' ? id.replace('f:', '') : undefined,
             kind: kind || (type === 'kind' ? id.replace('k:', '').split(':').pop() : undefined),
         });
     }, []);
@@ -919,6 +983,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             searchTerm,
             model.registries?.kinds ?? [],
             availableOntologies,
+            model.packages ?? [],
         ) : [],
         [model, searchTerm, availableOntologies],
     );
@@ -955,7 +1020,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             kind: kind,
             name: node.name,
             elementId: node.element?.id,
-            folderPath: node.type === 'folder' ? node.id.replace('f:', '') : undefined
+            packageName: node.type === 'folder' ? node.id.replace('f:', '') : undefined
         }));
         e.dataTransfer.effectAllowed = 'move';
     }, []);
@@ -967,28 +1032,25 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         }
     }, [dragging]);
 
-    const handleDrop = useCallback((e: React.DragEvent, targetFolderPath: string, targetKind: string) => {
+    const handleDrop = useCallback((e: React.DragEvent, targetPackage: string, targetKind: string) => {
         e.preventDefault();
         setDragging(null);
         try {
             const data = JSON.parse(e.dataTransfer.getData('application/memo-node'));
             if (data.kind !== targetKind) return;
 
+            // A drop is a containment change, so it is the same server write the
+            // context menu makes — the tree updates when the model does.
             if (data.type === 'element') {
-                updateElementFolder(data.elementId, targetFolderPath);
+                void reportPackageResult(moveElementToPackage(data.elementId, targetPackage));
             } else if (data.type === 'folder') {
-                // Prevent dropping into self or its own descendant
-                if (targetFolderPath === data.folderPath || targetFolderPath.startsWith(data.folderPath + '/')) {
-                    return;
-                }
-                const subPath = data.folderPath.includes('/') ? data.folderPath.slice(data.folderPath.lastIndexOf('/') + 1) : data.folderPath;
-                const newPath = targetFolderPath ? targetFolderPath + '/' + subPath : subPath;
-                moveFolder(data.kind, data.folderPath, newPath);
+                if (targetPackage === data.packageName || targetPackage.startsWith(`${data.packageName}::`)) return;
+                void reportPackageResult(movePackage(data.packageName, targetPackage));
             }
         } catch (err) {
             console.error('Drop error:', err);
         }
-    }, [updateElementFolder, moveFolder]);
+    }, [moveElementToPackage, movePackage]);
 
     // Violation counts per element
     const violationCounts = useMemo(() => {

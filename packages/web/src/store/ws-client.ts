@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -115,6 +115,7 @@ const relationshipCreateRequests = new Map<string, PendingRequest<RelationshipCr
 const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDeletePayload>>();
 const elementDeleteRequests = new Map<string, PendingRequest<ElementDeleteResultMessage['payload']>>();
 const elementMutationRequests = new Map<string, PendingRequest<ElementMutationResultMessage['payload']>>();
+const packageMutationRequests = new Map<string, PendingRequest<PackageMutationResultMessage['payload']>>();
 const methodologySourceRequests = new Map<string, PendingRequest<MethodologySourceResultMessage['payload']>>();
 const rulePolicyWriteRequests = new Map<string, PendingRequest<any>>();
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
@@ -138,7 +139,7 @@ function settleRelationshipRequest<T extends { requestId: string }>(
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, elementDeleteRequests, screenCaptureUploadRequests]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -349,6 +350,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'element:mutation:result':
             settleRelationshipRequest(msg.payload, elementMutationRequests);
+            break;
+        case 'package:mutation:result':
+            settleRelationshipRequest(msg.payload, packageMutationRequests);
             break;
         case 'methodology:source:result':
             settleRelationshipRequest(msg.payload, methodologySourceRequests);
@@ -625,6 +629,32 @@ function sendElementMutation(
                 ...(type === 'element:update' ? { irIdentity: irIdentityOf(element.id) } : {}),
             },
         }));
+    });
+}
+
+/**
+ * Ask the server to change containment, and wait for its answer.
+ *
+ * Containment is package membership, and a package is a declaration in project
+ * source — so all four operations are server writes, and none of them has a
+ * local shortcut. A resolved promise means the source changed; the model the
+ * rebuild publishes is what the tree then shows.
+ */
+export function sendPackageMutation(
+    type: 'package:create' | 'package:rename' | 'package:delete' | 'package:move' | 'element:move-package',
+    request: Record<string, unknown>,
+): Promise<PackageMutationResultMessage['payload']> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            packageMutationRequests.delete(requestId);
+            reject(new Error('The server did not answer the containment change.'));
+        }, 15000);
+        packageMutationRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type, payload: { ...request, requestId } }));
     });
 }
 

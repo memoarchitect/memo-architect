@@ -14,6 +14,7 @@ import type {
     RestartRequiredMessage,
     SourceCoherenceMessage,
     EditConflictMessage,
+    PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport, LlmSettingsStatus } from '@memoarchitect/tools/browser';
 import type {
@@ -26,7 +27,7 @@ import type {
 import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
-    requestRelationshipCreate, requestRelationshipDelete, requestElementDelete,
+    requestRelationshipCreate, requestRelationshipDelete, requestElementDelete, sendPackageMutation,
 } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
 import type { ViewpointDTO } from '@memoarchitect/tools/browser';
@@ -69,7 +70,14 @@ function migrateLegacyViewpoints(): ViewpointDTO[] {
     return [];
 }
 
-export const FOLDER_ATTR = '_folder';
+/**
+ * What a containment change answers with.
+ *
+ * Containment lives in project source as SysML package membership, so the
+ * server is the only party that can report what happened; the client never
+ * moves an element locally and hopes the write agrees.
+ */
+export type PackageMutationResult = PackageMutationResultMessage['payload'];
 
 // ─── Relationship authoring types ───────────────────────────────────────────
 
@@ -375,12 +383,19 @@ export interface ModelState {
     setEditingElement: (id: string | null) => void;
     updateElementField: (elementId: string, field: 'name' | 'doc', value: string) => void;
     updateElementAttribute: (elementId: string, key: string, value: string) => void;
-    updateElementFolder: (elementId: string, folderPath: string) => void;
-    moveFolder: (kind: string, oldPath: string, newPath: string) => void;
-    addElement: (kind: string, name: string, folderPath: string) => void;
+    /** Move an element's declaration into a package; no package = the file's top level. */
+    moveElementToPackage: (elementId: string, targetPackage: string) => Promise<PackageMutationResult>;
+    /** Declare a new package, nested in `parent` when one is given. */
+    createPackage: (name: string, parent?: string) => Promise<PackageMutationResult>;
+    /** Rename a package declaration in place. */
+    renamePackage: (qualifiedName: string, name: string) => Promise<PackageMutationResult>;
+    /** Re-parent a package, moving everything it declares with it. */
+    movePackage: (qualifiedName: string, targetParent: string) => Promise<PackageMutationResult>;
+    /** Remove a package declaration, lifting its members into the enclosing scope. */
+    deletePackage: (qualifiedName: string) => Promise<PackageMutationResult>;
+    addElement: (kind: string, name: string, targetPackage: string) => void;
     createModelElement: (element: Omit<MemoElement, 'id'> & { id?: string }) => string;
     persistElementAttributes: (elementId: string, attributes: Record<string, string>) => void;
-    deleteFolder: (kind: string, folderPath: string) => void;
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
 
@@ -982,68 +997,40 @@ export const useModelStore = create<ModelState>((set, get) => ({
         edits.set(elementId, { ...current, attributes: attrs });
         return { pendingEdits: edits };
     }),
-    updateElementFolder: (elementId, folderPath) => {
-        const el = get().model?.elements[elementId];
-        if (!el) return;
-        
-        // Immediate update and sync (DnD usually doesn't have "Save/Cancel")
-        const updated = {
-            ...el,
-            attributes: { ...el.attributes, [FOLDER_ATTR]: folderPath }
-        };
-        
-        set((s) => ({
-            model: s.model ? {
-                ...s.model,
-                elements: { ...s.model.elements, [elementId]: updated }
-            } : null
-        }));
-        
-        sendElementUpdate(updated);
-    },
-    moveFolder: (kind, oldPath, newPath) => {
-        const s = get();
-        if (!s.model) return;
-        const newElements = { ...s.model.elements };
-        const changedIds: string[] = [];
-
-        for (const [id, el] of Object.entries(newElements)) {
-            if (el.kind === kind) {
-                const currentFolder = el.attributes[FOLDER_ATTR] || '';
-                if (currentFolder === oldPath || currentFolder.startsWith(oldPath + '/')) {
-                    const subPath = currentFolder.slice(oldPath.length);
-                    const updatedFolder = (newPath + subPath).replace('//', '/');
-                    const updated = {
-                        ...el,
-                        attributes: { ...el.attributes, [FOLDER_ATTR]: updatedFolder }
-                    };
-                    newElements[id] = updated;
-                    changedIds.push(id);
-                }
-            }
-        }
-
-        if (changedIds.length === 0) return;
-
-        set((state) => ({
-            model: state.model ? { ...state.model, elements: newElements } : null
-        }));
-
-        // Sync to server
-        for (const id of changedIds) {
-            sendElementUpdate(newElements[id]);
-        }
-    },
-    addElement: (kind, name, folderPath) => {
+    // ── Containment ───────────────────────────────────────────────────────
+    //
+    // A container in the explorer is a SysML package, so every one of these is
+    // a source edit the server makes and the next rebuild publishes. None of
+    // them touches local state: a package the client invented would disagree
+    // with the model the moment the write failed, and containment is exactly
+    // the thing that must not be guessed at.
+    moveElementToPackage: (elementId, targetPackage) =>
+        sendPackageMutation('element:move-package', { elementId, targetPackage }),
+    createPackage: (name, parent) =>
+        sendPackageMutation('package:create', { name, ...(parent ? { parent } : {}) }),
+    renamePackage: (qualifiedName, name) =>
+        sendPackageMutation('package:rename', { qualifiedName, name }),
+    movePackage: (qualifiedName, targetParent) =>
+        sendPackageMutation('package:move', { qualifiedName, targetParent }),
+    deletePackage: (qualifiedName) =>
+        sendPackageMutation('package:delete', { qualifiedName }),
+    addElement: (kind, name, targetPackage) => {
         const s = get();
         if (!s.model) return;
         const id = `${kind.toLowerCase().replace(/\s+/g, '_')}_${Math.random().toString(36).substr(2, 5)}`;
         const ref = Object.values(s.model.elements).find(e => e.kind === kind);
+        // Place the declaration in the package the user pointed at, using a
+        // file that already declares it. Falling back to a sibling of the same
+        // kind keeps a first-of-its-kind element out of a file nobody imports.
+        const inPackage = targetPackage
+            ? Object.values(s.model.elements).find(e => e.package === targetPackage)
+            : undefined;
         const newElement: MemoElement = {
             id, name, kind, construct: ref?.construct || 'part',
             layer: ref?.layer || 'Other', doc: '',
-            attributes: { [FOLDER_ATTR]: folderPath },
-            file: ref?.file || 'model/generated.sysml',
+            attributes: {},
+            ...(targetPackage ? { package: targetPackage } : {}),
+            file: inPackage?.file || ref?.file || 'model/generated.sysml',
         };
 
         set((state) => ({
@@ -1076,38 +1063,6 @@ export const useModelStore = create<ModelState>((set, get) => ({
                 : null,
         }));
         sendElementUpdate(updated);
-    },
-    deleteFolder: (kind, folderPath) => {
-        const s = get();
-        if (!s.model) return;
-        const newElements = { ...s.model.elements };
-        const parentPath = folderPath.includes('/') ? folderPath.split('/').slice(0, -1).join('/') : '';
-        const changedIds: string[] = [];
-
-        for (const [id, el] of Object.entries(newElements)) {
-            if (el.kind === kind) {
-                const currentFolder = el.attributes[FOLDER_ATTR] || '';
-                if (currentFolder === folderPath || currentFolder.startsWith(folderPath + '/')) {
-                    const updatedFolder = currentFolder.replace(folderPath, parentPath).replace('//', '/');
-                    const updated = {
-                        ...el,
-                        attributes: { ...el.attributes, [FOLDER_ATTR]: updatedFolder }
-                    };
-                    newElements[id] = updated;
-                    changedIds.push(id);
-                }
-            }
-        }
-
-        if (changedIds.length === 0) return;
-
-        set((state) => ({
-            model: state.model ? { ...state.model, elements: newElements } : null
-        }));
-
-        for (const id of changedIds) {
-            sendElementUpdate(newElements[id]);
-        }
     },
     addUserViewpoint: (vp) => set((s) => ({ userViewpoints: [...s.userViewpoints, vp] })),
     updateUserViewpoint: (vp) => set((s) => ({

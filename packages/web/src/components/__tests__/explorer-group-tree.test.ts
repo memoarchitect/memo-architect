@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { artifactCategory, computeExplorerGroupTree } from '../ExplorerPanel';
+import { artifactCategory, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
 import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
@@ -52,6 +52,72 @@ function registryFromOntology(ontology: OntologyPackageInfo): KindDefinitionDTO[
 function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): string[] {
     return group.subGroups.flatMap(sg => [...sg.kinds.keys()]).sort();
 }
+
+// ─── Containment ────────────────────────────────────────────────────────────
+//
+// A container in the explorer is a SysML package, and the tree is built from
+// package membership. These hold down what that has to mean for the user: the
+// branches are the model's own namespaces, an empty package is still a visible
+// container, and one type folder shows a namespace once however many kinds
+// contribute elements to it.
+
+/** An element declared by a package. */
+function inPackage(id: string, kind: string, layer: string, pkg?: string): MemoElement {
+    return { ...el(id, kind, layer), ...(pkg ? { package: pkg } : {}) };
+}
+
+describe('buildTree', () => {
+    it('nests elements under their package, splitting the qualified name', () => {
+        const tree = buildTree([inPackage('h1', 'Hazard', 'risk', 'Plant::Hydraulics')]);
+
+        expect(tree.map(node => node.id)).toEqual(['f:Plant']);
+        const hydraulics = tree[0].children[0];
+        expect(hydraulics).toMatchObject({ id: 'f:Plant::Hydraulics', name: 'Hydraulics', type: 'folder' });
+        expect(hydraulics.children.map(child => child.id)).toEqual(['h1']);
+    });
+
+    it('shows a declared package that holds nothing', () => {
+        const tree = buildTree([], [{ qualifiedName: 'Plant::Hydraulics' }]);
+
+        expect(tree[0].children.map(node => node.name)).toEqual(['Hydraulics']);
+        expect(tree[0].children[0].children).toEqual([]);
+    });
+
+    it('leaves an element with no package at the root', () => {
+        const tree = buildTree([inPackage('h1', 'Hazard', 'risk')]);
+
+        expect(tree.map(node => node.id)).toEqual(['h1']);
+    });
+});
+
+describe('computeExplorerGroupTree containment', () => {
+    it('shows a namespace once per type folder, not once per contributing kind', () => {
+        // Both kinds sit in the same sub-group and the same package; a tree
+        // built per kind and concatenated showed "Plant" twice.
+        const elements = [
+            inPackage('h1', 'Hazard', 'risk', 'Plant'),
+            inPackage('rc1', 'RiskControlMeasure', 'risk', 'Plant'),
+        ];
+        const groups = computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        const risk = groups[0].subGroups.find(sg => sg.id === 'safety-risk')!;
+
+        for (const nodes of risk.kinds.values()) {
+            expect(nodes.filter(node => node.id === 'f:Plant')).toHaveLength(1);
+        }
+    });
+
+    it('carries an empty package into the tree so it can be filled', () => {
+        const groups = computeExplorerGroupTree(
+            [inPackage('h1', 'Hazard', 'risk', 'Plant')], '',
+            registryFromOntology(ONTOLOGY), [ONTOLOGY],
+            [{ qualifiedName: 'Plant' }, { qualifiedName: 'Spares' }],
+        );
+        const risk = groups[0].subGroups.find(sg => sg.id === 'safety-risk')!;
+        const hazards = risk.kinds.get('Hazard')!;
+
+        expect(hazards.map(node => node.id).sort()).toEqual(['f:Plant', 'f:Spares']);
+    });
+});
 
 describe('computeExplorerGroupTree', () => {
     it('uses the required Artifacts child categories', () => {
