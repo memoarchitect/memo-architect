@@ -38,7 +38,7 @@ concerns.
 | Functions and behavior | `LogicalFunction`, `StateMachine`, `ModeState`, `ActivityAction` | What transformations, states, and interactions are required? |
 | Architecture | `LogicalComponent`, `SoftwareElement`, `FirmwareItem`, `HardwareAssembly`, `ProcessingNode`, `Interface` | Which design elements own and realize the required behavior? |
 | Safety risk | `IntendedUse`, `ReasonablyForeseeableMisuse`, `SafetyRelatedCharacteristic`, `HazardCause`, `Hazard`, `SequenceOfEvents`, `HazardousSituation`, `Harm`, `Risk`, `RiskControlMeasure`, `ResidualRisk`, `Benefit` | How can harm occur, be controlled, and be evaluated? |
-| Cybersecurity | `CybersecurityAsset`, `Threat`, `Vulnerability`, `ThreatScenario`, `CyberMitigation`, `SecurityRequirement` | How can the connected device be compromised and protected? |
+| Cybersecurity | `CybersecurityAsset`, `Threat`, `Vulnerability`, `MemoScenario[scenarioKind=threat]`, `CyberMitigation`, `SecurityRequirement` | How can the connected device be compromised and protected? |
 | Assurance | `VerificationCase`, `ValidationCase`, `TestArtifact`, `Evidence` | What activity and evidence support each claim? |
 
 ## Standards-oriented use
