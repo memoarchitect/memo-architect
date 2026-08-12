@@ -1,9 +1,33 @@
 # ADR-1-16: View and Presentation Syntax Fallbacks
 
-**Status:** Accepted
+**Status:** Accepted — **both fallbacks superseded 2026-08-12; the parser now
+supports the standard forms**
 **Session-3 note (native semantic contract):** Reviewed 2026-08-01. Constructs used by the native contract — `ref :>> targetRule : <ConstraintDef>`, `abstract constraint def`, nested `RulePolicy` parts — were verified in SysIDE before adoption.
 **Date:** 2026-05-03
 **Reference:** [platform.md](../../architecture/platform.md)
+
+---
+
+## Both fallbacks are obsolete (2026-08-12, R7-S1 audit)
+
+This ADR's §17 action was *review/supersede obsolete parser fallbacks; accept
+only standard constructs verified in supported tools*. The 2026-08-01 review
+recorded the constructs it had verified but did not retract the two fallbacks
+below, and the tree has contradicted both ever since:
+
+1. **Import visibility modifiers are supported.** The grammar accepts them —
+   `memo-tools/packages/tools/src/grammar/memo-sysml.langium`, the `Import` rule
+   carries `visibility=('private' | 'public')?` — and the ontology uses
+   `private import` throughout. The "production files MUST use bare imports"
+   rule below is withdrawn; ADR-1-12's private-by-default target is now simply
+   the rule.
+2. **`presentationKind` is not written as repeated scalars.** Every view in
+   `memo/src/viewpoints/**` writes the redefining collection form
+   `attribute :>> presentationKind = (PresentationKind::blockDiagram);`. The
+   repeated-scalar encoding below is withdrawn.
+
+Everything after this section is the historical 2026-05-03 decision, retained
+for the reasoning. Nothing in it constrains new files.
 
 ---
 

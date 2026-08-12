@@ -625,7 +625,8 @@ And the `User Keyword Example` then uses `#situation`, `#cause`, etc.
 | P3, L1, L3 | §5.1 (`memo::core::*` is a library) |
 | L2, M3, M4 | §5.1 (`memo::core::stereotypes`) — newly proposed sibling package |
 | N3, N4 | §2 R4 (id format) |
-| D1, D5 | §1 principle 4 (def/usage split) |
+| D1 | §7 (source-ownership: the resolved root a file sits under decides ownership) |
+| D5 | §1 principle 4 (def/usage split) |
 | Q1, S2, Q3 | §2 R5 (units) |
 | I1, I2, I3, I4 | §2 R6 (ports + ExchangeItem); fresh-arch P7 (Ports/IBD phase) |
 | R1–R7 | DHF compiler (B11) needs satisfy/verify chains for ISO 14971 + IEC 62304 |
@@ -645,7 +646,7 @@ P2   private import default
 P3   library packages declare `library package`
 P5   filesystem path ↔ namespace
 N3   id literal in <'…'> with format <KIND>-<DOMAIN>-<NNN>
-D1   no `… def` of an ontology kind in projects/
+D1   project definition whose name collides with a resolved one
 D2   :> for specialise, redefines for override, :>> for bind
 D3   explicit multiplicity when ≠ 1
 D5   ref part for non-owned references

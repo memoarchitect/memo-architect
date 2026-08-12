@@ -1,6 +1,7 @@
 # ADR-1-13: SysML Standard Library Import Wrapper
 
 **Status:** Accepted
+**Session-3 note (native semantic contract):** Retained 2026-08-01, unchanged — recorded 2026-08-12 by the R7-S1 audit, which found this the only ADR in the design's §17 table carrying no verdict of its own. The wrapper exists at `memo/src/core/stdlib/{scalars,collections,functions,time}`.
 **Date:** 2026-05-02
 **Reference:** [ADR-1-12](ADR-1-12-namespace-canonicalization.md), [platform.md](../../architecture/platform.md)
 
