@@ -210,9 +210,8 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
         cursor: onMove ? 'ns-resize' : 'default',
         touchAction: 'none',
         overflow: 'hidden',
-        display: '-webkit-box',
-        WebkitBoxOrient: 'vertical',
-        WebkitLineClamp: 2,
+        display: 'flex',
+        flexDirection: 'column',
         width: horizontal ? (port.labelWidth ?? PORT_LABEL_MAX) : PORT_LABEL_STACKED_WIDTH,
         background: 'rgba(255,255,255,0.94)',
         padding: '1px 3px',
@@ -226,6 +225,27 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
         ...(port.side === 'left' ? { left: labelOffset, bottom: '50%', marginBottom: 2 }
             : port.side === 'right' ? { right: labelOffset, bottom: '50%', marginBottom: 2, textAlign: 'right' as const }
             : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' as const }),
+    };
+    // The caption's total height is a layout constant (PORT_CAPTION_HEIGHT
+    // drives BOTTOM_GUTTER, PORT_CAPTION_CLEARANCE and the vertical port
+    // pitch), so a connector line has to be paid for out of the name's second
+    // line rather than added on top of it. Two lines in, two lines out: no
+    // diagram grows, and nothing overprints. The full name stays reachable in
+    // the tooltip.
+    const nameStyle: React.CSSProperties = {
+        overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitBoxOrient: 'vertical',
+        WebkitLineClamp: port.connectorType ? 1 : 2,
+    };
+    const connectorStyle: React.CSSProperties = {
+        fontSize: port.nested ? '8.5px' : '9px',
+        fontWeight: 500,
+        color: highlighted ? '#475569' : '#94A3B8',
+        letterSpacing: '0.01em',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     };
 
     return (
@@ -253,7 +273,7 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                     event.stopPropagation();
                     onSelect?.(port.id);
                 }}
-                title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
+                title={`${port.name}${port.direction ? ` (${port.direction})` : ''}${port.connectorType ? `\n${port.connectorType}` : ''}`}
                 style={{
                     position: 'absolute',
                     left: '50%',
@@ -285,7 +305,12 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                 transition: 'box-shadow 120ms ease, opacity 120ms ease',
             }}>
                 {portGlyph(port.direction, port.side)}
-                {showText && <span onPointerDown={beginMove} style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>}
+                {showText && (
+                    <span onPointerDown={beginMove} style={labelStyle}>
+                        <span style={nameStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
+                        {port.connectorType && <span style={connectorStyle}>{port.connectorType}</span>}
+                    </span>
+                )}
                 {/* The outer face is connectable so a connector can be drawn
                     port-to-port; the inner face stays an anchor for routing a
                     pass-through connector to its owner's internals. */}

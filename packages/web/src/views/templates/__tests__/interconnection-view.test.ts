@@ -14,7 +14,7 @@ import {
     buildPortOwnership, projectPortForDisplay, declaredPortRole,
     ibdLabelWidth, applyPortOrder, portIdFromHandle, INNER_HANDLE_SUFFIX, summarizeConnectors, type PortSide,
     PORT_LABEL_STACKED_WIDTH, parsePortSide,
-    SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET,
+    SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET, portCaptionWidth, ibdEdgeLabel,
 } from '../interconnection-view';
 import { compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
@@ -471,6 +471,13 @@ describe('classifyIbdFlow', () => {
         expect(classifyIbdFlow(undefined, 'ExchangesWith')).toBe('data');
         expect(classifyIbdFlow('status signal')).toBe('data');
     });
+    // `of <itemType>` is optional in SysML v2, so a native flow may carry no
+    // item at all. Colouring has to land somewhere sensible rather than throw
+    // or fall out of the palette.
+    it('treats a native flow with no item as data', () => {
+        expect(classifyIbdFlow(undefined, 'flow')).toBe('data');
+        expect(IBD_FLOW_COLORS[classifyIbdFlow(undefined, 'flow')]).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    });
     it('recognizes control connectors by type', () => {
         expect(classifyIbdFlow(undefined, 'succession')).toBe('control');
     });
@@ -481,6 +488,29 @@ describe('classifyIbdFlow', () => {
         for (const d of ['in', 'out', 'inout'] as const) {
             expect(PORT_DIR_COLORS[d]).toMatch(/^#[0-9A-Fa-f]{6}$/);
         }
+    });
+});
+
+describe('ibdEdgeLabel', () => {
+    it('prefers the transported item', () => {
+        expect(ibdEdgeLabel('UsbTraffic', 'flow')).toBe('UsbTraffic');
+        expect(ibdEdgeLabel('Electrical power', 'ExchangesWith')).toBe('Electrical power');
+    });
+    // An itemless flow has nothing to add to the arrow. Printing "flow" on
+    // every port-to-port connector is the noise the ExchangesWith suppression
+    // existed to prevent, and untyped flows are now the common case.
+    it('says nothing for a connector family carrying no item', () => {
+        expect(ibdEdgeLabel(undefined, 'flow')).toBeUndefined();
+        expect(ibdEdgeLabel(undefined, 'ExchangesWith')).toBeUndefined();
+        expect(ibdEdgeLabel('', 'flow')).toBeUndefined();
+    });
+    it('keeps a relationship type that is a verb worth reading', () => {
+        expect(ibdEdgeLabel(undefined, 'Composes')).toBe('Composes');
+        expect(ibdEdgeLabel(undefined, 'Mitigates')).toBe('Mitigates');
+    });
+    it('never returns an empty string for a caller to render', () => {
+        expect(ibdEdgeLabel(undefined, '')).toBeUndefined();
+        expect(ibdEdgeLabel()).toBeUndefined();
     });
 });
 
@@ -710,6 +740,31 @@ describe('boundary port label gutter', () => {
         const captionReach =
             INTERCONNECTION_PORT_SIZE + PORT_LABEL_OFFSET + PORT_LABEL_MAX - halfSquareInside;
         expect(SIDE_GUTTER).toBeGreaterThanOrEqual(captionReach);
+    });
+});
+
+describe('portCaptionWidth with a connector type', () => {
+    // A physical port's caption carries the connector FAMILY on a second line.
+    // The box has to be sized to whichever line is longer — otherwise a short
+    // name like "Serial" gives a 47px pill and "RS-485 serial (isolated)"
+    // ellipsises away to nothing, which defeats printing it at all.
+    it('widens to the connector type when it is the longer line', () => {
+        expect(portCaptionWidth('Serial', 'RS-485 serial (isolated)'))
+            .toBeGreaterThan(portCaptionWidth('Serial'));
+    });
+
+    it('leaves a caption whose name already dominates unchanged', () => {
+        expect(portCaptionWidth('Equipotential Cable', 'USB'))
+            .toBe(portCaptionWidth('Equipotential Cable'));
+    });
+
+    it('never exceeds the wrap width the side gutter is derived from', () => {
+        expect(portCaptionWidth('Microcontroller Programming Port', 'Debug / programming header'))
+            .toBeLessThanOrEqual(PORT_LABEL_MAX);
+    });
+
+    it('keeps the existing floor for a port with no connector type', () => {
+        expect(portCaptionWidth('In')).toBe(44);
     });
 });
 

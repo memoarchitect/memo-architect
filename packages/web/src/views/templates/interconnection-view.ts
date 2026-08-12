@@ -84,6 +84,28 @@ export const IBD_FLOW_COLORS: Record<IbdFlowKind, string> = {
  * (information) by default — the practical-engineering vocabulary shared with
  * the Action Flow view.
  */
+/**
+ * Connector families that say nothing a reader cannot already see, so an
+ * instance of one carrying no item goes unlabelled rather than printing its own
+ * type on the edge.
+ */
+const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'exchangeswith']);
+
+/**
+ * What a connector writes on itself: the item it transports, if it names one.
+ *
+ * A native `flow` may name no item — `of <itemType>` is optional in SysML v2 —
+ * and then the arrow already says everything the edge has to say. Falling back
+ * to the relationship type would stamp "flow" on every such connector, which is
+ * precisely the noise this suppression existed to prevent for `ExchangesWith`.
+ * Any OTHER relationship type is a verb worth reading ("Composes", "Mitigates"),
+ * so it stays.
+ */
+export function ibdEdgeLabel(flowItem?: string, relType = ''): string | undefined {
+    return flowItem || (UNLABELLED_WHEN_ITEMLESS.has(relType.toLowerCase()) ? undefined : relType)
+        || undefined;
+}
+
 export function classifyIbdFlow(flowItem?: string, relType?: string): IbdFlowKind {
     const item = flowItem ?? '';
     if (/energy|power|voltage|current|thermal|heat/i.test(item)) return 'energy';
@@ -131,11 +153,29 @@ export interface PortInfo {
     nestedCount?: number;
     /** Caption box width, sized to this port's own name (see portCaptionWidth). */
     labelWidth?: number;
+    /**
+     * Connector FAMILY this port presents — "USB", "RS-485 serial", "Mains
+     * inlet". Drawn as the caption's second line so a physical IBD says what
+     * plugs in, not just what the feature is called. Deliberately not a part
+     * number: the model records the family, and inventing C13-vs-C14 detail the
+     * source never stated would be a fabrication.
+     */
+    connectorType?: string;
 }
 
 /** A view element rendered as a boundary port rather than a part box. */
 export function isPortElement(el: MemoElement): boolean {
     return el.construct === 'port' || el.kind.endsWith('Port');
+}
+
+/**
+ * The connector family declared on a port, if any. `connectorType` is a plain
+ * String attribute on the realization-layer port, so it is taken verbatim —
+ * there is no enum to unqualify.
+ */
+function portConnectorType(el: MemoElement): string | undefined {
+    const declared = el.attributes['connectorType']?.trim();
+    return declared ? declared : undefined;
 }
 
 function portDirection(el: MemoElement): PortInfo['direction'] {
@@ -180,9 +220,19 @@ export const SIDE_GUTTER = PORT_LABEL_MAX + PORT_SIZE + PORT_LABEL_OFFSET - PORT
  * Rendered width of a boundary port's caption: its natural width at the node's
  * 10.5px caption font, floored so a one-word name still has a readable pill and
  * capped at the two-line wrap width.
+ *
+ * A connector type is drawn beneath the name at 9px, so it can be the wider of
+ * the two lines — "RS-485 serial (isolated)" under a port called "Serial". The
+ * caption box has to be sized to whichever line is longer, or the connector
+ * family silently ellipsises away and the whole point of printing it is lost.
  */
-export const portCaptionWidth = (name: string): number =>
-    Math.min(Math.max(name.length * 6.1 + 10, 44), PORT_LABEL_MAX);
+export const portCaptionWidth = (name: string, connectorType?: string): number => {
+    const natural = Math.max(
+        name.length * 6.1 + 10,
+        connectorType ? connectorType.length * 5.2 + 10 : 0,
+    );
+    return Math.min(Math.max(natural, 44), PORT_LABEL_MAX);
+};
 
 /**
  * How far a port's caption reaches ABOVE the port's centreline. The node hangs
@@ -746,7 +796,10 @@ export async function computeInterconnectionLayout(
         const verticalWall = (side: 'left' | 'right') => {
             const captions = ports
                 .filter(p => portSideOf(p) === side)
-                .map(p => portCaptionWidth(portEls.get(p)?.name ?? ''));
+                .map(p => {
+                    const el = portEls.get(p);
+                    return portCaptionWidth(el?.name ?? '', el && portConnectorType(el));
+                });
             if (captions.length === 0) return SIDE_MIN;
             return Math.max(...captions) + PORT_SIZE + PORT_LABEL_OFFSET - PORT_SIZE / 2;
         };
@@ -1153,7 +1206,8 @@ export async function computeInterconnectionLayout(
                 id: portId, name: pel.name, x: p.x, y: p.y, side: p.side,
                 direction: portDirection(pel) ?? portRole(portId),
                 nestedCount: nestedIds.length || undefined,
-                labelWidth: portCaptionWidth(pel.name),
+                labelWidth: portCaptionWidth(pel.name, portConnectorType(pel)),
+                connectorType: portConnectorType(pel),
             });
             // A group runs ALONG its wall: down a vertical wall, across a
             // horizontal one. Stacking a bottom-wall group downward would march
@@ -1173,6 +1227,8 @@ export async function computeInterconnectionLayout(
                     direction: portDirection(cel) ?? portRole(childId),
                     size: NESTED_PORT_SIZE,
                     nested: true,
+                    labelWidth: portCaptionWidth(cel.name, portConnectorType(cel)),
+                    connectorType: portConnectorType(cel),
                 });
             });
         }
@@ -1321,11 +1377,10 @@ export async function computeInterconnectionLayout(
         // Colour by transported item; the legend explains the categories.
         const flowKind = classifyIbdFlow(rel.flowItem, rel.type);
         const flowColor = IBD_FLOW_COLORS[flowKind];
-        // Prefer the transported item as the label; the ubiquitous unlabelled
-        // exchange edges stay clean.
         const bundleCount = Number(rel.attributes?.bundleCount ?? 0);
-        const label = bundleCount > 1 ? `${bundleCount} connections` : rel.flowItem
-            || (rel.type.toLowerCase() === 'exchangeswith' ? undefined : rel.type);
+        const label = bundleCount > 1
+            ? `${bundleCount} connections`
+            : ibdEdgeLabel(rel.flowItem, rel.type);
         // Port endpoints anchor to the port's inner/outer face; a part endpoint
         // anchors to its right (source) / left (target) side so the connector
         // stays a clean horizontal run instead of looping over the box.
