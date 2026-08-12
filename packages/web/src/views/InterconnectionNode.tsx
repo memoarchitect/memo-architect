@@ -43,6 +43,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     implicitIn?: boolean;
     implicitOut?: boolean;
     onPortMove?: (portId: string, y: number) => void;
+    onPortSelect?: (portId: string) => void;
     /** Content-derived lower bound emitted by the IBD template. */
     minWidth?: number;
     minHeight?: number;
@@ -156,7 +157,7 @@ function NestedPortGroup({ port }: { port: PortInfo }) {
     );
 }
 
-function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) => void }) {
+function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y: number) => void; onSelect?: (portId: string) => void }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
@@ -236,6 +237,10 @@ function BoundaryPort({ port, onMove }: { port: PortInfo; onMove?: (y: number) =
                 onPointerEnter={() => setConnectorHover({ endpointIds: [port.id] })}
                 onPointerLeave={() => setConnectorHover(null)}
                 onPointerDown={beginMove}
+                onClick={event => {
+                    event.stopPropagation();
+                    onSelect?.(port.id);
+                }}
                 title={`${port.name}${port.direction ? ` (${port.direction})` : ''}`}
                 style={{
                     position: 'absolute',
@@ -398,7 +403,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        onPortMove, onPortSelect, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -516,6 +521,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         const max = Math.max(min, (height ?? min + size + 18) - size - 18);
                         onPortMove(p.id, Math.min(Math.max(y, min), max));
                     } : undefined}
+                    onSelect={onPortSelect}
                 />
             ))}
             {implicitIn && <ImplicitPort side="left" direction="in" />}

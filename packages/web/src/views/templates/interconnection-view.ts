@@ -517,6 +517,8 @@ export interface InterconnectionOptions {
     legend?: { attribute: string; colors: ReadonlyMap<string, string> };
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number) => void;
+    /** Bind a visible port glyph to the model element it represents. */
+    onPortSelect?: (portId: string) => void;
     layoutProviderId?: string;
     /** Deliberate density control: bundle repeated rendered endpoint pairs,
      * show every connector, or suppress wiring while inspecting structure. */
@@ -1239,6 +1241,9 @@ export async function computeInterconnectionLayout(
                 implicitOut: showPorts && implicitOutParts.has(partId),
                 onPortMove: options?.onPortMove
                     ? (portId: string, y: number) => options.onPortMove!(partId, portId, y)
+                    : undefined,
+                onPortSelect: options?.onPortSelect
+                    ? (portId: string) => options.onPortSelect!(portId)
                     : undefined,
                 // Preserve this model-derived footprint while the user resizes
                 // a node.  A container cannot be shrunk across one of its

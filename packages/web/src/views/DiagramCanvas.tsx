@@ -1665,6 +1665,10 @@ function DiagramCanvasInner() {
                     portWalls,
                     legend: ibdLegend,
                     onPortMove: moveInterconnectionPort,
+                    onPortSelect: portId => {
+                        inspectRelationship(null);
+                        inspectElement(portId);
+                    },
                     layoutProviderId,
                 },
                 actionflow: {
@@ -1721,7 +1725,7 @@ function DiagramCanvasInner() {
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
-        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, inspectRelationship, getViewport]);
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, inspectElement, inspectRelationship, getViewport]);
 
     // Re-fit after layout
     useEffect(() => {
