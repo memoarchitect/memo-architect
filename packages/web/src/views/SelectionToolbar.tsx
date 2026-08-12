@@ -1,7 +1,7 @@
 // ─── Selection toolbar ───────────────────────────────────────────────────────
 //
 // The floating bar that appears over a multi-selection: align, match size,
-// distribute, and set fill colour and opacity — the board-tool gestures a
+// distribute, and set block styling — the board-tool gestures a
 // reviewer reaches for when tidying a diagram before a design review.
 //
 // It only ever changes presentation. Every edit here lands in the diagram's
@@ -29,6 +29,7 @@ interface Props {
     onDistribute: (axis: DistributeAxis) => void;
     onFill: (color: string) => void;
     onOpacity: (opacity: number) => void;
+    onTextStyle: (patch: { textColor?: string; fontSize?: number; fontWeight?: number; textAlign?: 'left' | 'center' | 'right'; verticalAlign?: 'top' | 'middle' | 'bottom'; borderColor?: string }) => void;
     opacity: number;
 }
 
@@ -58,7 +59,7 @@ function Btn({ title, label, onClick }: { title: string; label: string; onClick:
 }
 
 export function SelectionToolbar({
-    count, onAlign, onMatchSize, onDistribute, onFill, onOpacity, opacity,
+    count, onAlign, onMatchSize, onDistribute, onFill, onOpacity, onTextStyle, opacity,
 }: Props) {
     return (
         <div
@@ -127,6 +128,23 @@ export function SelectionToolbar({
                         {swatch.value ? '' : '⌫'}
                     </button>
                 ))}
+            </div>
+            <span style={sepStyle} />
+
+            <div style={groupStyle} aria-label="Text styling">
+                <Btn title="Align text left" label="≡" onClick={() => onTextStyle({ textAlign: 'left' })} />
+                <Btn title="Align text centre" label="≣" onClick={() => onTextStyle({ textAlign: 'center' })} />
+                <Btn title="Align text right" label="☷" onClick={() => onTextStyle({ textAlign: 'right' })} />
+                <Btn title="Align text at top" label="⤒" onClick={() => onTextStyle({ verticalAlign: 'top' })} />
+                <Btn title="Align text vertically centred" label="↕" onClick={() => onTextStyle({ verticalAlign: 'middle' })} />
+                <Btn title="Align text at bottom" label="⤓" onClick={() => onTextStyle({ verticalAlign: 'bottom' })} />
+                <select aria-label="Text size" title="Text size" defaultValue="" onChange={event => event.target.value && onTextStyle({ fontSize: Number(event.target.value) })} style={{ height: 26, border: '1px solid #CBD5E1', borderRadius: 4, color: '#475569', fontSize: 11 }}>
+                    <option value="">Auto size</option>
+                    {[10, 12, 14, 16, 18, 20].map(size => <option key={size} value={size}>{size}px</option>)}
+                </select>
+                <Btn title="Bold text" label="B" onClick={() => onTextStyle({ fontWeight: 700 })} />
+                <label title="Text colour" style={{ display: 'flex', alignItems: 'center' }}><input aria-label="Text colour" type="color" onChange={event => onTextStyle({ textColor: event.target.value })} style={{ width: 24, height: 24, padding: 1 }} /></label>
+                <label title="Border colour" style={{ display: 'flex', alignItems: 'center' }}><input aria-label="Border colour" type="color" onChange={event => onTextStyle({ borderColor: event.target.value })} style={{ width: 24, height: 24, padding: 1 }} /></label>
             </div>
             <span style={sepStyle} />
 

@@ -50,6 +50,13 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     bgColor?: string;
     /** Per-diagram fill opacity 0..1 from the layout companion. */
     fillOpacity?: number;
+    /** Per-diagram notation overrides; omitted values retain the automatic look. */
+    borderColor?: string;
+    textColor?: string;
+    fontSize?: number;
+    fontWeight?: number;
+    textAlign?: 'left' | 'center' | 'right';
+    verticalAlign?: 'top' | 'middle' | 'bottom';
 }
 
 const SIDE_TO_POSITION: Record<PortSide, Position> = {
@@ -311,21 +318,23 @@ function ImplicitPort({ side, direction }: { side: 'left' | 'right'; direction: 
 }
 
 /** Compact, non-wrapping SysML part-property identity. */
-function TypedLabel({ name, kind, nameColor, typeColor, frame = false }: {
+function TypedLabel({ name, kind, nameColor, typeColor, frame = false, style }: {
     name: string; kind: string; nameColor: string; typeColor: string; frame?: boolean;
+    style?: Pick<InterconnectionNodeData, 'textColor' | 'fontSize' | 'fontWeight' | 'textAlign'>;
 }) {
+    const textAlign = style?.textAlign ?? 'left';
     return (
-        <span title={`${name} : ${kind}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1 }}>
+        <span title={`${name} : ${kind}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
             <span style={{
                 display: frame ? 'block' : '-webkit-box', width: '100%', minWidth: 0,
-                fontSize: frame ? FONT.md : FONT.sm, lineHeight: 1.2, fontWeight: 700,
-                color: nameColor, whiteSpace: frame ? 'nowrap' : 'normal', overflow: 'hidden',
+                fontSize: style?.fontSize ?? (frame ? FONT.md : FONT.sm), lineHeight: 1.2, fontWeight: style?.fontWeight ?? 700,
+                color: style?.textColor ?? nameColor, whiteSpace: frame ? 'nowrap' : 'normal', overflow: 'hidden',
                 textOverflow: 'ellipsis', WebkitBoxOrient: 'vertical', WebkitLineClamp: frame ? undefined : 2,
                 overflowWrap: 'anywhere',
             }}>
                 {name}
             </span>
-            <span style={{ display: 'block', maxWidth: '100%', fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', textTransform: 'uppercase', color: typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ display: 'block', maxWidth: '100%', fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', textTransform: 'uppercase', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {frame ? `: ${kind}` : `«${kind}»`}
             </span>
         </span>
@@ -390,7 +399,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
         onPortMove, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
-        bgColor, fillOpacity,
+        bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
 
@@ -417,9 +426,9 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 background: bgColor || '#FFFFFF',
                 opacity: fillOpacity ?? 1,
                 border: isFrame
-                    ? '1.5px solid #94A3B8'
-                    : `1px solid ${hovered ? color + '9A' : '#CBD5E1'}`,
-                ...(!isFrame ? { borderTop: `3px solid ${color}` } : {}),
+                    ? `1.5px solid ${borderColor ?? '#94A3B8'}`
+                    : `1px solid ${borderColor ?? (hovered ? color + '9A' : '#CBD5E1')}`,
+                ...(!isFrame ? { borderTop: `3px solid ${borderColor ?? color}` } : {}),
                 borderRadius: isFrame ? 10 : 8,
                 boxShadow,
                 transition: 'box-shadow 150ms ease, border-color 150ms ease',
@@ -448,14 +457,14 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                    dated clipped-corner tab or text-driven frame width. */
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: 38,
-                    display: 'flex', alignItems: 'center', gap: 8,
+                    display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 8,
                     padding: '0 10px',
                     background: '#F8FAFC',
                     borderBottom: '1px solid #E2E8F0',
                     borderRadius: '9px 9px 0 0',
                 }}>
                     <span style={{ padding: '2px 6px', borderRadius: 4, background: color, color: '#FFFFFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em' }}>IBD</span>
-                    <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame />
+                    <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame style={{ textColor, fontSize, fontWeight, textAlign }} />
                     {/* The frame is already the diagram's root, so it offers no
                         drill-in — descending into it would change nothing. */}
                     {hasChildren && onToggleCollapse && (
@@ -465,7 +474,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
             ) : (
                 /* Part property header: `partName : Type` */
                 <div style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
+                    display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 6,
                     minHeight: 58,
                     padding: '7px 10px 6px',
                     background: '#FFFFFF',
@@ -478,6 +487,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         name={label} kind={kind}
                         nameColor="#0F172A"
                         typeColor={isContainer ? color : '#64748B'}
+                        style={{ textColor, fontSize, fontWeight, textAlign }}
                     />
                     {/* Both controls sit on a part that owns parts, folded or
                         not: a collapsed part is still worth descending into. */}

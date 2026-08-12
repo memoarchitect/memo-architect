@@ -670,6 +670,21 @@ function DiagramCanvasInner() {
             });
         return entries.length > 0 ? new Map<string, PortSide>(entries) : undefined;
     }, [declaredPortWalls]);
+    // A view names the enum and the attribute that carries its literal. Colours
+    // are authored beside that declaration in the viewlayout, never selected by
+    // a renderer palette. Without a declaration, the old automatic layer colour
+    // path remains byte-for-byte intact.
+    const ibdLegend = useMemo(() => {
+        const legend = currentLayout?.canvas?.legend;
+        if (!legend?.enum || !legend.attribute) return undefined;
+        const definition = model?.enumerations?.find(candidate => candidate.name === legend.enum);
+        if (!definition) return undefined;
+        const colors = new Map(definition.literals.flatMap(literal => {
+            const color = legend.colors?.[literal];
+            return color ? [[literal, color] as const] : [];
+        }));
+        return { attribute: legend.attribute, colors, name: definition.name };
+    }, [currentLayout?.canvas?.legend, model?.enumerations]);
     const persistAnnotationText = useCallback((annotationId: string, text: string) => {
         if (!selectedDiagramId) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -1347,6 +1362,12 @@ function DiagramCanvasInner() {
                     ...n.data,
                     bgColor: pos.color || undefined,
                     ...(pos.opacity !== undefined ? { fillOpacity: pos.opacity } : {}),
+                    ...(pos.borderColor !== undefined ? { borderColor: pos.borderColor || undefined } : {}),
+                    ...(pos.textColor !== undefined ? { textColor: pos.textColor || undefined } : {}),
+                    ...(pos.fontSize !== undefined ? { fontSize: pos.fontSize || undefined } : {}),
+                    ...(pos.fontWeight !== undefined ? { fontWeight: pos.fontWeight || undefined } : {}),
+                    ...(pos.textAlign !== undefined ? { textAlign: pos.textAlign } : {}),
+                    ...(pos.verticalAlign !== undefined ? { verticalAlign: pos.verticalAlign } : {}),
                     ...(pos.ports ? {
                         ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string }> }).ports ?? [])
                             .map(port => ({ ...port, ...(pos.ports?.[port.id] ?? {}) })),
@@ -1642,6 +1663,7 @@ function DiagramCanvasInner() {
                     portDisplay: interconnectionPortDisplay,
                     connectionDisplay: interconnectionConnectionDisplay,
                     portWalls,
+                    legend: ibdLegend,
                     onPortMove: moveInterconnectionPort,
                     layoutProviderId,
                 },
@@ -1695,7 +1717,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, portWalls, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -2326,8 +2348,12 @@ function DiagramCanvasInner() {
         applyArrange(distributeBoxes(selectionBoxes(), axis));
     }, [applyArrange, selectionBoxes]);
 
-    /** Fill and opacity ride in the layout companion beside position. */
-    const styleSelection = useCallback((patch: { color?: string; opacity?: number }) => {
+    /** Block styling rides in the layout companion beside position. */
+    const styleSelection = useCallback((patch: {
+        color?: string; opacity?: number; borderColor?: string; textColor?: string;
+        fontSize?: number; fontWeight?: number; textAlign?: 'left' | 'center' | 'right';
+        verticalAlign?: 'top' | 'middle' | 'bottom';
+    }) => {
         if (!selectedDiagramId || selectedNodes.length === 0) return;
         markManualLayout();
         const layouts = useModelStore.getState().diagramLayouts[selectedDiagramId];
@@ -2338,6 +2364,12 @@ function DiagramCanvasInner() {
                 // An empty colour clears the override rather than storing "".
                 ...(patch.color !== undefined ? { color: patch.color || undefined } : {}),
                 ...(patch.opacity !== undefined ? { opacity: patch.opacity } : {}),
+                ...(patch.borderColor !== undefined ? { borderColor: patch.borderColor || undefined } : {}),
+                ...(patch.textColor !== undefined ? { textColor: patch.textColor || undefined } : {}),
+                ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize || undefined } : {}),
+                ...(patch.fontWeight !== undefined ? { fontWeight: patch.fontWeight || undefined } : {}),
+                ...(patch.textAlign !== undefined ? { textAlign: patch.textAlign } : {}),
+                ...(patch.verticalAlign !== undefined ? { verticalAlign: patch.verticalAlign } : {}),
             });
         }
         const ids = new Set(selectedNodes.map(node => node.id));
@@ -2348,6 +2380,12 @@ function DiagramCanvasInner() {
                     ...node.data,
                     ...(patch.color !== undefined ? { bgColor: patch.color || undefined } : {}),
                     ...(patch.opacity !== undefined ? { fillOpacity: patch.opacity } : {}),
+                    ...(patch.borderColor !== undefined ? { borderColor: patch.borderColor || undefined } : {}),
+                    ...(patch.textColor !== undefined ? { textColor: patch.textColor || undefined } : {}),
+                    ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize || undefined } : {}),
+                    ...(patch.fontWeight !== undefined ? { fontWeight: patch.fontWeight || undefined } : {}),
+                    ...(patch.textAlign !== undefined ? { textAlign: patch.textAlign } : {}),
+                    ...(patch.verticalAlign !== undefined ? { verticalAlign: patch.verticalAlign } : {}),
                 },
             }
             : node));
@@ -3260,6 +3298,19 @@ function DiagramCanvasInner() {
                                 </span>
                             ))}
                         </div>
+                        {ibdLegend && (
+                            <div className="flex flex-col gap-1">
+                                <span style={{ fontWeight: 700 }}>{ibdLegend.name}</span>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                    {[...ibdLegend.colors.entries()].map(([literal, color]) => (
+                                        <span key={literal} className="flex items-center gap-1">
+                                            <span style={{ width: 11, height: 11, borderRadius: 2, background: color, border: '1px solid rgba(15,23,42,0.25)' }} />
+                                            {literal}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -3294,7 +3345,7 @@ function DiagramCanvasInner() {
 
                 {/* Arrange bar: only a real multi-selection has anything to align
                     against, so a single selected block keeps the canvas clear. */}
-                {selectedNodes.length >= 2 && (
+                {selectedNodes.length >= 1 && (
                     <SelectionToolbar
                         count={selectedNodes.length}
                         opacity={selectionOpacity}
@@ -3303,6 +3354,7 @@ function DiagramCanvasInner() {
                         onDistribute={distributeSelection}
                         onFill={color => styleSelection({ color })}
                         onOpacity={opacity => styleSelection({ opacity })}
+                        onTextStyle={styleSelection}
                     />
                 )}
 
