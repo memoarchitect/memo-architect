@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
-import { isPermalinkPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
+import { isPermalinkPath, isRouteOwnedPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
 import { isFeatureEnabled } from './config/feature-flags';
 import { connectWebSocket, loadEmbeddedData } from './store/ws-client';
 import { WorkbenchToolbar } from './components/WorkbenchToolbar';
@@ -644,6 +644,11 @@ function UrlNavigationSync() {
                 (activeView.type === 'diagram' || activeView.type === 'element-detail');
             if (!adopted) return;
         }
+
+        // The catalog and diagram index pages own their address outright: they
+        // have no view to adopt, so there is never a moment when pushing over
+        // them is right.
+        if (isRouteOwnedPath(location.pathname)) return;
 
         let url: string | null = null;
 

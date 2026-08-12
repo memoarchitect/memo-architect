@@ -157,6 +157,28 @@ export function isPermalinkPath(pathname: string): boolean {
 }
 
 /**
+ * Whether a path is rendered by its own route component and has no `ActiveView`
+ * at all — the catalog and diagram index pages.
+ *
+ * This is NOT the permalink case. A permalink has a view it will eventually
+ * adopt once the model resolves its identifier, so the sync waits for it. These
+ * pages have nothing to adopt, ever: `pathToView` returns null for them, which
+ * leaves `activeView` on whatever it booted with, and the store → URL effect
+ * then pushes THAT view's path over the address the user actually asked for.
+ * `/catalog` bounced straight to `/` for exactly this reason, which made every
+ * catalog link unshareable and made "Browse Model" look like a dead button.
+ *
+ * The rule is the same one the two-way sync is built on — whoever owns the
+ * destination wins — applied to the case where the owner is the router.
+ */
+export function isRouteOwnedPath(pathname: string): boolean {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments[0] === 'catalog' && segments.length <= 2) return true;   // /catalog, /catalog/:family
+    if (segments[0] === 'diagrams' && segments.length === 1) return true; // /diagrams
+    return false;
+}
+
+/**
  * Every static path, for route registration and for tests to enumerate.
  * '/' is excluded: it is the index route, registered separately.
  */

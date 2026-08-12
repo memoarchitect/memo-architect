@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
     addressableViewTypes,
+    isPermalinkPath,
+    isRouteOwnedPath,
     pathToView,
     slug,
     staticViewPaths,
@@ -135,5 +137,41 @@ describe('slug', () => {
         expect(slug('Sample · Requirements')).toBe('sample-·-requirements');
         expect(slug('BDD')).toBe('bdd');
         expect(slug('Use Case View')).toBe('use-case-view');
+    });
+});
+
+// ─── Router-owned paths ─────────────────────────────────────────────────────
+
+describe('isRouteOwnedPath', () => {
+    // The catalog and diagram index pages are rendered by their own route
+    // components and have no ActiveView. `pathToView` returns null for them, so
+    // the store keeps whatever view it booted with — and the store → URL effect
+    // used to push THAT view's path over the address the user asked for.
+    // `/catalog` bounced to `/`, which made every catalog link unshareable and
+    // made the dashboard's "Browse Model" button look dead.
+    it('claims the index pages that have no view of their own', () => {
+        expect(pathToView('/catalog')).toBeNull();
+        expect(pathToView('/catalog/PHY')).toBeNull();
+        expect(pathToView('/diagrams')).toBeNull();
+
+        expect(isRouteOwnedPath('/catalog')).toBe(true);
+        expect(isRouteOwnedPath('/catalog/PHY')).toBe(true);
+        expect(isRouteOwnedPath('/diagrams')).toBe(true);
+    });
+
+    // A permalink DOES get a view once its identifier resolves, so the sync
+    // waits for it rather than declining outright. The two guards must not
+    // overlap, or a resolved permalink would never write its address back.
+    it('does not claim permalinks, which resolve to a view instead', () => {
+        expect(isRouteOwnedPath('/catalog/PHY/PORT-ENC-01')).toBe(false);
+        expect(isRouteOwnedPath('/diagrams/ibd/INT-1')).toBe(false);
+        expect(isPermalinkPath('/catalog/PHY/PORT-ENC-01')).toBe(true);
+        expect(isPermalinkPath('/diagrams/ibd/INT-1')).toBe(true);
+    });
+
+    it('leaves ordinary view paths to the store', () => {
+        for (const path of ['/', '/dsm', '/statistics', '/traceability']) {
+            expect(isRouteOwnedPath(path)).toBe(false);
+        }
     });
 });

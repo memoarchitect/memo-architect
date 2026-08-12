@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
@@ -279,6 +280,7 @@ export function Dashboard() {
     const completeness = useModelStore(s => s.completeness);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const navigate = useNavigate();
     const toggleGapBar = useModelStore(s => s.toggleGapBar);
 
     const violationCount = validation?.violations?.length ?? 0;
@@ -428,8 +430,15 @@ export function Dashboard() {
                             Quick Actions
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); }} />
-                            <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => setExplorerTab('views')} />
+                            {/* The explorer is a side panel, and `showExplorer`
+                                in App.tsx hides it on the dashboard — so
+                                setting its tab without also leaving the
+                                dashboard changes a tab on a panel that is not
+                                mounted, which is why these two did nothing at
+                                all. The layer-coverage cards above always got
+                                this right; these did not. */}
+                            <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); navigate('/catalog'); }} />
+                            <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }} />
                             <QuickActionButton icon="↔️" label="Traceability Matrix" onClick={() => setActiveView({ type: 'traceability' })} />
                             <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
                             <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
