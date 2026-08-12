@@ -505,6 +505,8 @@ export interface InterconnectionOptions {
      *  only — nested connectors lift to their parent port), or 'none'
      *  (connectors anchor to part boxes; the frame reflows without ports). */
     portDisplay?: PortDisplay;
+    showPortText?: boolean;
+    showConnectionText?: boolean;
     /**
      * Walls the view declares, per port id. Which wall a port straddles is a
      * drawing decision, not an architecture fact, so it is authored on the view
@@ -1237,6 +1239,7 @@ export async function computeInterconnectionLayout(
                     ? () => options.onDrillIn!(partId)
                     : undefined,
                 ports: portInfoByOwner.get(partId) ?? [],
+                showPortText: options?.showPortText !== false,
                 implicitIn: showPorts && implicitInParts.has(partId),
                 implicitOut: showPorts && implicitOutParts.has(partId),
                 onPortMove: options?.onPortMove
@@ -1449,6 +1452,7 @@ export async function computeInterconnectionLayout(
             ...edge.data,
             points: routes.get(edge.id) ?? [],
             labelPoint: labelPoints.get(edge.id),
+            showLabel: options?.showConnectionText !== false,
         },
     }));
 

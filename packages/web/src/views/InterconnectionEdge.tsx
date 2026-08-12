@@ -137,7 +137,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     onClick={event => onSelect?.(event)}
                 />
             )}
-            {props.label ? (
+            {props.label && props.data?.showLabel !== false ? (
                 <EdgeLabelRenderer>
                     <div style={{
                         position: 'absolute',

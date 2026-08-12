@@ -39,6 +39,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     onDrillIn?: () => void;
     /** Ports straddling this part's boundary */
     ports: PortInfo[];
+    showPortText?: boolean;
     /** Visible proxy ports for relationships that target the part directly. */
     implicitIn?: boolean;
     implicitOut?: boolean;
@@ -157,7 +158,7 @@ function NestedPortGroup({ port }: { port: PortInfo }) {
     );
 }
 
-function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onSelect?: (portId: string) => void }) {
+function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onSelect?: (portId: string) => void; showText?: boolean }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
@@ -284,7 +285,7 @@ function BoundaryPort({ port, onMove, onSelect }: { port: PortInfo; onMove?: (y:
                 transition: 'box-shadow 120ms ease, opacity 120ms ease',
             }}>
                 {portGlyph(port.direction, port.side)}
-                <span onPointerDown={beginMove} style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
+                {showText && <span onPointerDown={beginMove} style={labelStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>}
                 {/* The outer face is connectable so a connector can be drawn
                     port-to-port; the inner face stays an anchor for routing a
                     pass-through connector to its owner's internals. */}
@@ -414,7 +415,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortSelect, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        onPortMove, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -533,6 +534,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         onPortMove(p.id, Math.min(Math.max(y, min), max), side);
                     } : undefined}
                     onSelect={onPortSelect}
+                    showText={showPortText}
                 />
             ))}
             {implicitIn && <ImplicitPort side="left" direction="in" />}

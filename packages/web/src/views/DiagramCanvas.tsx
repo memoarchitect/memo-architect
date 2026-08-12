@@ -657,6 +657,8 @@ function DiagramCanvasInner() {
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
     const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
+    const showIbdPortText = currentLayout?.canvas?.showPortText !== false;
+    const showIbdConnectionText = currentLayout?.canvas?.showConnectionText !== false;
     // Walls the view declares for its boundary ports. A constraint fed INTO
     // layout, not an override applied after it: the template sizes the box and
     // orders the wall around it, so a bottom-wall connector is placed
@@ -980,6 +982,13 @@ function DiagramCanvasInner() {
     const [interconnectionConnectionDisplay, setInterconnectionConnectionDisplay] = useState<'summary' | 'all' | 'none'>('summary');
     const [interconnectionLegendOpen, setInterconnectionLegendOpen] = useState(false);
     const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
+    const saveIbdDisplay = useCallback((patch: { portDisplay?: PortDisplay; connectionDisplay?: 'summary' | 'all' | 'none' }) => {
+        if (!selectedDiagramId) return;
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, ...patch } };
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+    }, [selectedDiagramId, mergeDiagramLayouts]);
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
     const [actionFlowNesting, setActionFlowNesting] = useState<ActionFlowNesting>('flat');
     // State machine nesting: composites folded in place, or one drilled into.
@@ -1059,15 +1068,15 @@ function DiagramCanvasInner() {
         // default-collapsed effect below, which owns them outright — clearing
         // them here too would race it and leave the diagram fully expanded.
         setFocusedInterconnectionId(null);
-        setInterconnectionPortDisplay('all');
-        setInterconnectionConnectionDisplay('summary');
+        setInterconnectionPortDisplay(currentLayout?.canvas?.portDisplay ?? 'all');
+        setInterconnectionConnectionDisplay(currentLayout?.canvas?.connectionDisplay ?? 'summary');
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
         setActionFlowNesting('flat');
         setFocusedStateId(null);
         positionCacheRef.current.clear();
-    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint]);
+    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, currentLayout?.canvas?.portDisplay, currentLayout?.canvas?.connectionDisplay]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -1669,6 +1678,8 @@ function DiagramCanvasInner() {
                     focusId: focusedInterconnectionId ?? undefined,
                     portDisplay: interconnectionPortDisplay,
                     connectionDisplay: interconnectionConnectionDisplay,
+                    showPortText: showIbdPortText,
+                    showConnectionText: showIbdConnectionText,
                     portWalls,
                     legend: ibdLegend,
                     onPortMove: moveInterconnectionPort,
@@ -1728,7 +1739,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -2840,7 +2851,7 @@ function DiagramCanvasInner() {
                                         <IconToggle
                                             icon={interconnectionPortDisplay === 'all' ? <Icon.library /> : interconnectionPortDisplay === 'ports' ? <Icon.rectangle /> : <Icon.minus />}
                                             active={interconnectionPortDisplay !== 'none'}
-                                            onClick={() => setInterconnectionPortDisplay(current => current === 'all' ? 'ports' : current === 'ports' ? 'none' : 'all')}
+                                            onClick={() => setInterconnectionPortDisplay(current => { const next = current === 'all' ? 'ports' : current === 'ports' ? 'none' : 'all'; saveIbdDisplay({ portDisplay: next }); return next; })}
                                             title={interconnectionPortDisplay === 'all'
                                                 ? 'Ports: nested. Click for top-level ports.'
                                                 : interconnectionPortDisplay === 'ports'
@@ -2850,7 +2861,7 @@ function DiagramCanvasInner() {
                                         <IconToggle
                                             icon={interconnectionConnectionDisplay === 'summary' ? <Icon.tidy /> : interconnectionConnectionDisplay === 'all' ? <Icon.lanes /> : <Icon.minus />}
                                             active={interconnectionConnectionDisplay !== 'none'}
-                                            onClick={() => setInterconnectionConnectionDisplay(current => current === 'summary' ? 'all' : current === 'all' ? 'none' : 'summary')}
+                                            onClick={() => setInterconnectionConnectionDisplay(current => { const next = current === 'summary' ? 'all' : current === 'all' ? 'none' : 'summary'; saveIbdDisplay({ connectionDisplay: next }); return next; })}
                                             title={interconnectionConnectionDisplay === 'summary'
                                                 ? 'Connections: summary. Click to show all.'
                                                 : interconnectionConnectionDisplay === 'all'
@@ -2863,7 +2874,7 @@ function DiagramCanvasInner() {
                                         <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Ports</span>
                                         <Segmented
                                             value={interconnectionPortDisplay}
-                                            onChange={setInterconnectionPortDisplay}
+                                            onChange={value => { setInterconnectionPortDisplay(value); saveIbdDisplay({ portDisplay: value }); }}
                                             options={[
                                                 { value: 'all', label: 'Nested', title: 'Show ports and their nested ports' },
                                                 { value: 'ports', label: 'Top', title: 'Show top-level ports only (nested connectors lift to the parent port)' },
@@ -2873,7 +2884,7 @@ function DiagramCanvasInner() {
                                         <span style={{ color: '#9CA3AF', fontSize: FONT.xs, fontWeight: 600 }}>Connections</span>
                                         <Segmented
                                             value={interconnectionConnectionDisplay}
-                                            onChange={setInterconnectionConnectionDisplay}
+                                            onChange={value => { setInterconnectionConnectionDisplay(value); saveIbdDisplay({ connectionDisplay: value }); }}
                                             options={[
                                                 { value: 'summary', label: 'Summary', title: 'Show focused-subsystem boundary flows and bundle repeated rendered endpoint pairs' },
                                                 { value: 'all', label: 'All', title: 'Show every model connector' },
@@ -3063,21 +3074,9 @@ function DiagramCanvasInner() {
                         {selectedDiagramId && viewKind === 'interconnection' && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
-                                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
-                                    {(['note', 'text', 'constraint'] as const).map(kind => (
-                                        <button
-                                            key={kind}
-                                            onClick={() => addAnnotation(kind)}
-                                            className="px-2 py-0.5 text-xs font-medium capitalize"
-                                            style={{ background: '#FFFFFF', color: '#475569', border: 0 }}
-                                            title={`Add an editable ${kind} annotation to this IBD`}
-                                        >
-                                            + {kind}
-                                        </button>
-                                    ))}
-                                </div>
-                                <button
-                                    aria-pressed={flowAnimationEnabled}
+                                <IconButton icon={<Icon.plus />} onClick={() => addAnnotation('note')}
+                                    title="Add an editable note" ariaLabel="Add note" />
+                                <IconToggle icon={<Icon.arrowRight />} active={flowAnimationEnabled}
                                     onClick={() => {
                                         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
                                         const layout: DiagramLayout = {
@@ -3090,26 +3089,15 @@ function DiagramCanvasInner() {
                                             ...edge,
                                             data: { ...edge.data, flowAnimation: !flowAnimationEnabled },
                                         })));
-                                    }}
-                                    className="px-2 py-0.5 text-xs font-semibold rounded"
-                                    style={{
-                                        background: flowAnimationEnabled ? '#EFF6FF' : '#F8FAFC',
-                                        color: flowAnimationEnabled ? '#1D4ED8' : '#64748B',
-                                        border: `1px solid ${flowAnimationEnabled ? '#93C5FD' : '#CBD5E1'}`,
-                                    }}
-                                    title="Toggle animated source-to-target flow on IBD connectors"
-                                >
-                                    Flow: {flowAnimationEnabled ? 'On' : 'Off'}
-                                </button>
-                                <button
-                                    aria-pressed={interconnectionLegendOpen}
-                                    onClick={() => setInterconnectionLegendOpen(open => !open)}
-                                    className="px-2 py-0.5 text-xs font-medium rounded"
-                                    style={{ background: '#F8FAFC', color: '#475569', border: '1px solid #CBD5E1' }}
-                                    title="Show or hide the IBD notation legend"
-                                >
-                                    Legend
-                                </button>
+                                    }} title="Toggle animated source-to-target flow" />
+                                <IconToggle icon={<Icon.library />} active={interconnectionLegendOpen}
+                                    onClick={() => setInterconnectionLegendOpen(open => !open)} title="Show or hide the IBD notation legend" />
+                                <IconToggle icon={<Icon.elements />} active={showIbdPortText}
+                                    onClick={() => { const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} }; const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, showPortText: !showIbdPortText } }; mergeDiagramLayouts({ [selectedDiagramId]: layout }); sendDiagramLayoutUpdate(selectedDiagramId, layout); }}
+                                    title="Show or hide port captions" />
+                                <IconToggle icon={<Icon.code />} active={showIbdConnectionText}
+                                    onClick={() => { const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} }; const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, showConnectionText: !showIbdConnectionText } }; mergeDiagramLayouts({ [selectedDiagramId]: layout }); sendDiagramLayoutUpdate(selectedDiagramId, layout); }}
+                                    title="Show or hide connector labels" />
                             </>
                         )}
                     </div>
