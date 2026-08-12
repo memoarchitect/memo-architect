@@ -145,9 +145,9 @@ it, so keep local changes elsewhere or re-apply them after re-running init.
 **The server does not appear in Cursor.** Restart Cursor after `memo mcp init` —
 it reads `.cursor/mcp.json` at startup.
 
-**"No MEMO project found."** The `--project` path must contain a `memo.package.yaml` or
-`memo.config.yaml`. Run `memo mcp init` from the project root so the generated path is
-correct.
+**"No MEMO project found."** The `--project` path must contain the native entrypoint
+`model/catalog/project.sysml`. Run `memo mcp init` from the project root so the
+generated path is correct.
 
 **Answers look stale.** The server reloads when your `.sysml` files change, checked per
 request. If an answer looks wrong, confirm the agent is not quoting an earlier reply

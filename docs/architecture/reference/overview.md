@@ -11,7 +11,7 @@ repository publishes one npm package:
 ```mermaid
 graph LR
     Author[Model Author] -->|edits| ProjectSysML[Project .sysml files]
-    Author -->|pins| Config[memo.config.yaml methodology]
+    Author -->|binds| Binding[ProjectMethodBinding in project.sysml]
     Author -->|runs| CLI[memo CLI]
 
     CLI -->|loads once at startup| Ontology[Canonical @memoarchitect/ontology]

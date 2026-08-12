@@ -12,6 +12,29 @@
 
 ---
 
+> **Update (2026-08-12, R7-S2):** **constraint 1's declaration form is corrected.**
+> A package *declaration* names one flat segment; qualified names remain valid in
+> references and imports, which is where they belong. The lean rearchitecture
+> left the tree spelling the path in that single segment with underscores:
+>
+> ```sysml
+> package memo_architecture_implementation_software_runtime { … }   // declaration
+> private import memo_core_enumerations::*;                          // reference
+> ```
+>
+> All 242 package declarations under `memo/src` are in this form; none is
+> qualified. Constraint 4's directory-mirrors-name rule is unchanged and now
+> reads through the underscores — the file above sits at
+> `architecture/implementation/software_runtime/`.
+>
+> The design that superseded this ADR's semantics recorded the same defect from
+> the other side (§4 contradiction 2: qualified names in declarations conflict
+> with the portability gate) but proposed *nested* declarations. The tree went
+> flat instead, so this note records what shipped rather than what was planned.
+> The `memo::`-rooted paths in the tables below are historical.
+
+---
+
 ## Context
 
 The existing repository contains conflicting namespace conventions:

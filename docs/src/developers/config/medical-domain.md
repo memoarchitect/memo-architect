@@ -13,11 +13,19 @@ modeling rules, viewpoints, archetypes, and project templates.
 | `@memoarchitect/methodology-default` | General modeling workflow and review gates |
 | `@memoarchitect/methodology-gpca` | Methodology content used by the GPCA reference project |
 
-Projects normally select the medical profile:
+Projects normally select the medical profile natively, in
+`model/catalog/project.sysml` — by importing it and binding it as the
+methodology:
 
-```yaml
-extends: "@memoarchitect/medical-modeling-profile"
+```sysml
+private import memo_methodology_profiles::*;
+
+part projectMethodBinding : ProjectMethodBinding {
+    ref :>> selectedMethodology = mdDefaultDefinition;
+}
 ```
+
+There is no `extends:` key; see the [configuration reference](reference.md).
 
 Model files import the public library surface:
 

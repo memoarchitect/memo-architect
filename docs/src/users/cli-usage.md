@@ -1,8 +1,9 @@
 # Architect command line
 
 `memo-architect` opens a MEMO project as an interactive workbench or builds a
-static viewer. Run it from the project directory containing `memo.config.yaml`
-or `memo.package.yaml`.
+static viewer. Run it from the project root — the directory containing
+`model/catalog/project.sysml`, the project's native entrypoint. A project stays a
+project when every YAML file beside it is deleted.
 
 ## Discover what is available
 
