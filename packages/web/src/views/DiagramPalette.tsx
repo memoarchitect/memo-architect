@@ -66,7 +66,7 @@ export function DiagramPalette({
         const query = search.trim().toLowerCase();
         const byKind = new Map<string, MemoElement[]>();
         // Allocation targets are visible as lane backgrounds and therefore
-        // are diagram elements even when the view's IncludedIn list contains
+        // are diagram elements even when the view's exposed set contains
         // only the actions/functions that reference them.
         const visibleIds = new Set(elementIds);
         for (const id of elementIds) {

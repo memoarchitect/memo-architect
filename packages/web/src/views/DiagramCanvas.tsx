@@ -3328,7 +3328,7 @@ function DiagramCanvasInner() {
                                 <div style={{ fontSize: FONT.xs, color: '#6B7280', lineHeight: 1.6 }}>
                                     The view is auto-populated from its selectionQuery in the model.
                                     Add includeElementKinds / includeLayers to its SysML definition,
-                                    or link elements to it with IncludedIn relationships.
+                                    or add an `expose` member for the elements you want visible.
                                 </div>
                             </div>
                         ) : (
