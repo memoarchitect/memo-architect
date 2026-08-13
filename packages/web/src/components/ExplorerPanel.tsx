@@ -1555,14 +1555,15 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
 
-    const authoredUncategorized = filterDiagrams(
-        uncategorizedDiagrams.filter(diagram => !diagram.id.startsWith('diag-layer-')),
-    );
+    // The Viewpoints landing page shows every generated per-layer summary.
+    // Keep the explorer consistent: an auto view still needs a visible route
+    // to open it, even when no authored viewpoint claims it.
+    const uncategorizedViews = filterDiagrams(uncategorizedDiagrams);
 
     /** Fallback clubbing for uncategorized views, which have no authored group. */
     const uncategorizedByLayer = useMemo(() => {
         const groups = new Map<string, DiagramDTO[]>();
-        for (const diagram of authoredUncategorized) {
+        for (const diagram of uncategorizedViews) {
             const layers = (diagram.elementIds ?? [])
                 .map(id => model?.elements[id]?.layer)
                 .filter((layer): layer is string => Boolean(layer));
@@ -1578,7 +1579,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             const bIndex = LAYER_ORDER.indexOf(b as typeof LAYER_ORDER[number]);
             return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
         });
-    }, [authoredUncategorized, model?.elements]);
+    }, [uncategorizedViews, model?.elements]);
 
     const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
         diagrams.map(diag => (
@@ -1654,11 +1655,10 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 );
             })}
 
-            {/* Everything no viewpoint claims, last. Gated on the authored
-                count, not the raw one: auto per-layer diagrams are filtered out
-                of the list below, so counting them would advertise views that
-                are not there. */}
-            {authoredUncategorized.length > 0 && <div className="mb-0.5">
+            {/* Everything no viewpoint claims, including generated per-layer
+                summaries, appears last so every card on the landing page is
+                reachable from this tree as well. */}
+            {uncategorizedViews.length > 0 && <div className="mb-0.5">
                 <div
                     className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                     style={{ borderRadius: '4px', margin: '0 4px' }}
@@ -1670,17 +1670,17 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     <FolderIcon open={expandedVps.has(UNCATEGORIZED_ID)} color={COLOR.muted} />
                     <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>Uncategorized</span>
                     <span
-                        title="These views conform to no viewpoint. Bind one with viewpointDefinition to file them."
+                        title="These views conform to no authored viewpoint; generated layer summaries are shown here too. Bind an authored view with viewpointDefinition to file it."
                         style={{ color: COLOR.faint, fontSize: FONT.badge }}
                     >
                         no viewpoint
                     </span>
-                    <ExplorerCountBadge count={authoredUncategorized.length} color={COLOR.muted} title={`${authoredUncategorized.length} views`} />
+                    <ExplorerCountBadge count={uncategorizedViews.length} color={COLOR.muted} title={`${uncategorizedViews.length} views`} />
                 </div>
                 {expandedVps.has(UNCATEGORIZED_ID) && (
                     <div style={{ marginLeft: '16px' }}>
-                        {authoredUncategorized.some(d => (d as DiagramDTO & { group?: string }).group)
-                            ? renderGroupedDiagramList(authoredUncategorized, UNCATEGORIZED_ID)
+                        {uncategorizedViews.some(d => (d as DiagramDTO & { group?: string }).group)
+                            ? renderGroupedDiagramList(uncategorizedViews, UNCATEGORIZED_ID)
                             : uncategorizedByLayer.map(([layer, diagrams]) => (
                                 <div key={layer} style={{ margin: '5px 4px 2px' }}>
                                     <div className="px-2 py-1 font-semibold" style={{
