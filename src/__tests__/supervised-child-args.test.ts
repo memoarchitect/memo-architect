@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { supervisedChildArgs } from '../commands/dev.js';
+import { runningArchitectsForProject, supervisedChildArgs } from '../commands/dev.js';
 
 // ─── Supervised child argv ──────────────────────────────────────────────────
 //
@@ -43,5 +43,27 @@ describe('supervisedChildArgs', () => {
             [ENTRY, 'dev', '--port', '4100'],
         );
         expect(supervisedChildArgs(ENTRY, {}, true)).toContain('3000');
+    });
+});
+
+describe('runningArchitectsForProject', () => {
+    it('reports only Architect servers whose cwd is the requested project', async () => {
+        const run = async (file: string, args: string[]) => {
+            if (file === 'ps') {
+                return {
+                    stdout: [
+                        '100 node /workspace/pump/node_modules/.bin/memo-architect dev --port 3111',
+                        '200 node /workspace/other/node_modules/.bin/memo-architect dev --port 3112',
+                    ].join('\n'),
+                    stderr: '',
+                };
+            }
+            expect(file).toBe('lsof');
+            return { stdout: args[2] === '100' ? 'pcwd\nn/workspace/pump\n' : 'pcwd\nn/workspace/other\n', stderr: '' };
+        };
+
+        await expect(runningArchitectsForProject('/workspace/pump', run)).resolves.toEqual([
+            { pid: 100, command: 'node /workspace/pump/node_modules/.bin/memo-architect dev --port 3111' },
+        ]);
     });
 });

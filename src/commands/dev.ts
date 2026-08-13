@@ -1,10 +1,57 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { promisify } from 'node:util';
 import { startProjectServer } from '@memoarchitect/tools';
 import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
+
+const execFileAsync = promisify(execFile);
+
+type ProjectProcessRunner = (
+    file: string,
+    args: string[],
+) => Promise<{ stdout: string; stderr: string }>;
+
+const runProjectProcess: ProjectProcessRunner = (file, args) => execFileAsync(file, args);
+
+export interface RunningArchitect {
+    pid: number;
+    command: string;
+}
+
+/**
+ * Best-effort duplicate detection. A dev server has a supervisor and a runtime
+ * child, so callers treat this as an advisory rather than a process count.
+ */
+export async function runningArchitectsForProject(
+    projectDir: string,
+    run: ProjectProcessRunner = runProjectProcess,
+): Promise<RunningArchitect[]> {
+    try {
+        const { stdout } = await run('ps', ['-axo', 'pid=,command=']);
+        const candidates = stdout.split('\n').flatMap(line => {
+            const match = line.trim().match(/^(\d+)\s+(.+)$/);
+            return match && /(?:^|\/)memo-architect(?:\.js)?\s+dev\b/.test(match[2])
+                && Number(match[1]) !== process.pid
+                ? [{ pid: Number(match[1]), command: match[2] }]
+                : [];
+        });
+        const matching = await Promise.all(candidates.map(async candidate => {
+            try {
+                const { stdout } = await run('lsof', ['-a', '-p', String(candidate.pid), '-d', 'cwd', '-Fn']);
+                const cwd = stdout.split('\n').find(line => line.startsWith('n'))?.slice(1);
+                return cwd === projectDir ? candidate : undefined;
+            } catch {
+                return undefined;
+            }
+        }));
+        return matching.filter((candidate): candidate is RunningArchitect => candidate !== undefined);
+    } catch {
+        return [];
+    }
+}
 
 function architectPackageRoot(): string {
     return resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -49,6 +96,14 @@ export function supervisedChildArgs(
 export async function architectDevCommand(options: ArchitectDevOptions): Promise<void> {
     if (process.env.MEMO_ARCHITECT_RUNTIME_CHILD !== '1') {
         const port = options.port ?? 3000;
+        const existing = await runningArchitectsForProject(process.cwd());
+        if (existing.length > 0) {
+            const pids = existing.map(({ pid }) => pid).join(', ');
+            process.stderr.write(
+                `⚠ MEMO Architect is already running for this project (PID${existing.length === 1 ? '' : 's'} ${pids}). `
+                + `Starting another server on http://127.0.0.1:${port}.\n`,
+            );
+        }
         let stopping = false;
         let firstStart = true;
         let restartStartedAt: number | undefined;
