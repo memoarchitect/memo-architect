@@ -494,15 +494,19 @@ describe('classifyIbdFlow', () => {
 describe('ibdEdgeLabel', () => {
     it('prefers the transported item', () => {
         expect(ibdEdgeLabel('UsbTraffic', 'flow')).toBe('UsbTraffic');
-        expect(ibdEdgeLabel('Electrical power', 'ExchangesWith')).toBe('Electrical power');
+        expect(ibdEdgeLabel('Electrical power', 'bind')).toBe('Electrical power');
     });
     // An itemless flow has nothing to add to the arrow. Printing "flow" on
-    // every port-to-port connector is the noise the ExchangesWith suppression
-    // existed to prevent, and untyped flows are now the common case.
+    // every port-to-port connector is the noise the deleted ExchangesWith
+    // suppression existed to prevent, and untyped flows are the common case.
     it('says nothing for a connector family carrying no item', () => {
         expect(ibdEdgeLabel(undefined, 'flow')).toBeUndefined();
-        expect(ibdEdgeLabel(undefined, 'ExchangesWith')).toBeUndefined();
         expect(ibdEdgeLabel('', 'flow')).toBeUndefined();
+        // A delegation is identity, so it never carries an item at all.
+        expect(ibdEdgeLabel(undefined, 'bind')).toBeUndefined();
+        // Matching goes through toModelType, so the source spelling of a
+        // definition name works too — one rule, not three.
+        expect(ibdEdgeLabel(undefined, 'Flow')).toBeUndefined();
     });
     it('keeps a relationship type that is a verb worth reading', () => {
         expect(ibdEdgeLabel(undefined, 'Composes')).toBe('Composes');

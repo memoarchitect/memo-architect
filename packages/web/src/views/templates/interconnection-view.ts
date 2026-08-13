@@ -33,6 +33,7 @@ import {
     type LayoutResult, type OrthogonalRouteRequest,
 } from '../layout';
 import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree';
+import { toModelType } from '@memoarchitect/tools/browser';
 
 /**
  * Inner-handle id suffix. A boundary port renders two coincident handle pairs:
@@ -89,7 +90,7 @@ export const IBD_FLOW_COLORS: Record<IbdFlowKind, string> = {
  * instance of one carrying no item goes unlabelled rather than printing its own
  * type on the edge.
  */
-const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'exchangeswith']);
+const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'bind']);
 
 /**
  * What a connector writes on itself: the item it transports, if it names one.
@@ -97,12 +98,14 @@ const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'exchangeswith']);
  * A native `flow` may name no item — `of <itemType>` is optional in SysML v2 —
  * and then the arrow already says everything the edge has to say. Falling back
  * to the relationship type would stamp "flow" on every such connector, which is
- * precisely the noise this suppression existed to prevent for `ExchangesWith`.
- * Any OTHER relationship type is a verb worth reading ("Composes", "Mitigates"),
- * so it stays.
+ * precisely the noise this suppression existed to prevent for the ExchangesWith
+ * this replaced. A `bind` never carries an item at all: delegation is identity, so there is
+ * nothing in transit to name and "bind" on every boundary connector is pure
+ * noise. Any OTHER relationship type is a verb worth reading ("Composes",
+ * "Mitigates"), so it stays.
  */
 export function ibdEdgeLabel(flowItem?: string, relType = ''): string | undefined {
-    return flowItem || (UNLABELLED_WHEN_ITEMLESS.has(relType.toLowerCase()) ? undefined : relType)
+    return flowItem || (UNLABELLED_WHEN_ITEMLESS.has(toModelType(relType)) ? undefined : relType)
         || undefined;
 }
 

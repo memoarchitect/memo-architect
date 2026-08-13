@@ -22,6 +22,7 @@ import {
     type LayoutResult,
 } from '../layout';
 import { buildCompositionTree, type CompositionTree } from './composition-tree';
+import { toModelTypeSet } from '@memoarchitect/tools/browser';
 
 export type GeneralViewMode = 'graph' | 'tree' | 'containment';
 
@@ -52,7 +53,7 @@ export function buildGeneralViewTree(
     hierarchyRelationshipTypes?: readonly string[],
 ): CompositionTree {
     const relationshipTypes = hierarchyRelationshipTypes?.length
-        ? new Set(hierarchyRelationshipTypes.map(type => type.charAt(0).toLowerCase() + type.slice(1)))
+        ? toModelTypeSet(hierarchyRelationshipTypes)
         : undefined;
     return buildCompositionTree(visibleViewElements(model, viewpointFilter), model.relationships, relationshipTypes);
 }
