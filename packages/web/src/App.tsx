@@ -591,6 +591,21 @@ function UrlNavigationSync() {
         if (!isInitial && navigationType !== 'POP') return;
 
         const view = pathToView(location.pathname, location.search);
+        // The Viewpoints index is route-owned, so it has no `ActiveView` to
+        // restore. It must still restore the accompanying workbench state:
+        // otherwise a browser refresh can leave /diagrams with the persisted
+        // explorer collapsed and no visible way to browse its views.
+        if (location.pathname === '/diagrams') {
+            setActiveMode('diagram');
+            useModelStore.getState().setExplorerTab('views');
+            if (useModelStore.getState().sidebarCollapsed) {
+                useModelStore.getState().toggleSidebar();
+            }
+            if (activeView.type !== 'welcome') {
+                suppressPush.current = true;
+                setActiveView({ type: 'welcome' });
+            }
+        }
         // A direct /use-cases load must restore both halves of the workbench:
         // the center view and its custom explorer, even when the persisted
         // active view already happens to be scenario-editor.

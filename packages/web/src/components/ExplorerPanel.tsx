@@ -1447,7 +1447,8 @@ export const UNCATEGORIZED_ID = '__uncategorized';
  */
 export function sortViewpointsByOntologyLayer(viewpoints: ViewpointDTO[]): ViewpointDTO[] {
     const laneRank = (viewpoint: ViewpointDTO) =>
-        viewpoint.explorerLane === 'architecture' ? 0
+        viewpoint.id === '__generated' ? 3
+            : viewpoint.explorerLane === 'architecture' ? 0
             : viewpoint.explorerLane === 'assurance' ? 1
                 : 2;
     return viewpoints.slice().sort((a, b) => {
@@ -1621,7 +1622,11 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const allDiagrams = getDiagramsForViewpoint(model, vp.id);
-                const authoredDiags = filterDiagrams(allDiagrams.filter(d => !d.id.startsWith('diag-layer-')));
+                const displayedDiags = filterDiagrams(
+                    vp.id === '__generated'
+                        ? allDiagrams
+                        : allDiagrams.filter(d => !d.id.startsWith('diag-layer-')),
+                );
 
                 return (
                     <div key={vp.id} className="mb-0.5">
@@ -1639,7 +1644,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
-                                {renderGroupedDiagramList(authoredDiags, vp.id)}
+                                {renderGroupedDiagramList(displayedDiags, vp.id)}
                                 <button
                                     className="flex items-center gap-1 px-2 py-1 w-full text-left"
                                     style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
