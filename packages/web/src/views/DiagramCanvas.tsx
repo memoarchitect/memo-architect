@@ -2565,7 +2565,6 @@ function DiagramCanvasInner() {
                             background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                         }}
                     >
-                        <span className="memo-diagram-tools__group-label">View</span>
                         {/* Snap toggle */}
                         {supportsToolbarOperation('grid') && <IconToggle
                             icon={gridVisible ? <Icon.grid /> : <Icon.gridOff />}
@@ -2632,7 +2631,7 @@ function DiagramCanvasInner() {
                             )}
                         </div>}
 
-                        <span className="memo-diagram-tools__group-label">Layout</span>
+                        <div className="memo-diagram-tools__layout-divider" aria-hidden="true" />
                         {/* Connectors stay direct while blocks move; this is the
                             explicit pass that routes them around obstacles. */}
                         {supportsToolbarOperation('route') && <IconToggle
@@ -2843,7 +2842,6 @@ function DiagramCanvasInner() {
 
                         {viewKind === 'interconnection' && supportsToolbarOperation('expandCollapse') && (
                             <>
-                                <span className="memo-diagram-tools__group-label">View</span>
                                 <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
                                 <IconButton
                                     icon={<Icon.expand />}
@@ -3068,7 +3066,6 @@ function DiagramCanvasInner() {
 
                         {selectedDiagramId && (
                             <>
-                                <span className="memo-diagram-tools__group-label">Edit</span>
                                 {viewKind !== 'actionflow' && actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 {/* The source editor mounts its compact controls
                                     here so every diagram action stays in the
@@ -3086,7 +3083,6 @@ function DiagramCanvasInner() {
                                 {actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 <IconButton icon={<Icon.plus />} onClick={() => addAnnotation('note')}
                                     title="Add an editable note" ariaLabel="Add note" />
-                                <span className="memo-diagram-tools__group-label">View</span>
                                 <IconToggle icon={<Icon.arrowRight />} active={flowAnimationEnabled}
                                     onClick={() => {
                                         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };

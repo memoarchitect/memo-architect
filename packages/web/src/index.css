@@ -209,23 +209,19 @@ body {
 
 /* Separators help scan a horizontal toolbar, but a two-column dock gives each
    child a complete grid cell. Do not let a separator turn into an empty row. */
-.memo-diagram-tools--left > span:not(.memo-diagram-tools__group-label) {
+.memo-diagram-tools--left > span {
     display: none;
 }
 
-/* A compact label makes the dock's safety boundary explicit without creating
-   empty grid cells.  Repeated labels are intentional: controls are emitted by
-   the view-kind capability blocks that own them. */
-.memo-diagram-tools--left > .memo-diagram-tools__group-label {
-    display: block;
+/* Only the two actions that can replace hand-arranged geometry are separated
+   from ordinary view controls. The divider is a thin full-width grid row, not
+   an empty icon cell. */
+.memo-diagram-tools--left > .memo-diagram-tools__layout-divider {
     grid-column: 1 / -1;
-    margin: 3px 1px -1px;
-    color: #8A96A3;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    line-height: 1;
-    text-transform: uppercase;
+    width: 100%;
+    height: 1px;
+    margin: 2px 0;
+    background: #E2E1DB;
 }
 
 .memo-diagram-tools--left > button > span:not([aria-hidden]),
