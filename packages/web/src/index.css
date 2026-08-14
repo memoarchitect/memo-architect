@@ -147,12 +147,16 @@ body {
     cursor: default;
 }
 
+.memo-diagram-canvas .react-flow__node.draggable:hover {
+    cursor: move !important;
+}
+
 .memo-diagram-canvas .react-flow__pane.dragging {
     cursor: grabbing;
 }
 
 .memo-diagram-canvas .react-flow__node.dragging {
-    cursor: grabbing;
+    cursor: grabbing !important;
 }
 
 /* Handle visibility on hover */
