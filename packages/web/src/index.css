@@ -134,6 +134,18 @@ body {
     stroke-width: 3px;
 }
 
+/* React Flow adds `.draggable` whenever any mouse button can pan the pane.
+   MEMO reserves left-drag for box selection and pans with middle/right drag,
+   so the library's persistent grab cursor is misleading over empty canvas.
+   Keep the hand only while a pan is actually in progress. */
+.memo-diagram-canvas .react-flow__pane.draggable {
+    cursor: default;
+}
+
+.memo-diagram-canvas .react-flow__pane.dragging {
+    cursor: grabbing;
+}
+
 /* Handle visibility on hover */
 .react-flow__node:hover .react-flow__handle {
     opacity: 1 !important;

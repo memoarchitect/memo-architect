@@ -3385,6 +3385,7 @@ function DiagramCanvasInner() {
                 )}
 
                 <ReactFlow
+                    className="memo-diagram-canvas"
                     nodes={nodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
