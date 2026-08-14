@@ -148,7 +148,7 @@ body {
 }
 
 .memo-diagram-canvas .react-flow__node.draggable:hover {
-    cursor: move !important;
+    cursor: pointer !important;
 }
 
 .memo-diagram-canvas .react-flow__pane.dragging {

@@ -1,6 +1,6 @@
 [project]
 name = "memo-docs"
-version = "0.8.20"
+version = "0.8.21"
 description = "MEMO MBSE documentation"
 requires-python = ">=3.10"
 dependencies = [
