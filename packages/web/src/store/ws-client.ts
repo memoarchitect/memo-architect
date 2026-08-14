@@ -13,6 +13,7 @@ import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, Edi
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
+    RelationshipUpdateRequest, RelationshipUpdateResultMessage,
     ElementDeleteResultMessage,
 } from '@memoarchitect/tools/browser';
 import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
@@ -110,9 +111,11 @@ interface PendingRequest<T> {
 
 type RelationshipCreatePayload = RelationshipCreateResultMessage['payload'];
 type RelationshipDeletePayload = RelationshipDeleteResultMessage['payload'];
+type RelationshipUpdatePayload = RelationshipUpdateResultMessage['payload'];
 
 const relationshipCreateRequests = new Map<string, PendingRequest<RelationshipCreatePayload>>();
 const relationshipDeleteRequests = new Map<string, PendingRequest<RelationshipDeletePayload>>();
+const relationshipUpdateRequests = new Map<string, PendingRequest<RelationshipUpdatePayload>>();
 const elementDeleteRequests = new Map<string, PendingRequest<ElementDeleteResultMessage['payload']>>();
 const elementMutationRequests = new Map<string, PendingRequest<ElementMutationResultMessage['payload']>>();
 const packageMutationRequests = new Map<string, PendingRequest<PackageMutationResultMessage['payload']>>();
@@ -139,7 +142,7 @@ function settleRelationshipRequest<T extends { requestId: string }>(
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -164,7 +167,7 @@ function rejectRelationshipRequests(message: string): void {
 }
 
 function sendRelationshipRequest<T extends { requestId: string }>(
-    type: 'relationship:create' | 'relationship:delete' | 'element:delete',
+    type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -344,6 +347,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'relationship:delete:result':
             settleRelationshipRequest(msg.payload, relationshipDeleteRequests);
+            break;
+        case 'relationship:update:result':
+            settleRelationshipRequest(msg.payload, relationshipUpdateRequests);
             break;
         case 'element:delete:result':
             settleRelationshipRequest(msg.payload, elementDeleteRequests);
@@ -687,6 +693,22 @@ export function requestRelationshipDelete(
         ...request,
         precondition: sourceFile ? sourcePrecondition(sourceFile, [relationship?.sourceId, relationship?.targetId].filter(Boolean) as string[]) : undefined,
     }, relationshipDeleteRequests);
+}
+
+/** Atomically move one or both endpoints of a relationship usage. */
+export function requestRelationshipUpdate(
+    request: Omit<RelationshipUpdateRequest, 'requestId'>,
+): Promise<RelationshipUpdateResultMessage['payload']> {
+    const relationship = useModelStore.getState().model?.relationships.find(rel => rel.id === request.relationshipId);
+    const sourceFile = relationship?.file;
+    return sendRelationshipRequest('relationship:update', {
+        ...request,
+        sourceIdentity: irIdentityOf(request.sourceId),
+        targetIdentity: irIdentityOf(request.targetId),
+        precondition: sourceFile
+            ? sourcePrecondition(sourceFile, [request.sourceId, request.targetId])
+            : undefined,
+    }, relationshipUpdateRequests);
 }
 
 /** Delete a project-owned element and every relationship connected to it. */

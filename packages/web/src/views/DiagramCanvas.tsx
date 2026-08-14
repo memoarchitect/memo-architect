@@ -35,7 +35,7 @@ type RFAny = any;
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
-import { sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
+import { requestRelationshipUpdate, sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { sysmlIdentifier } from '../authoring';
 import { SelectionToolbar } from './SelectionToolbar';
@@ -805,8 +805,8 @@ function DiagramCanvasInner() {
                     ...(node.width ? { width: node.width } : {}),
                     ...(node.height ? { height: node.height } : {}),
                     ports: Object.fromEntries(
-                        (((node.data as { ports?: Array<{ id: string; x: number; y: number; side?: 'top' | 'bottom' | 'left' | 'right' }> }).ports) ?? [])
-                            .map(port => [port.id, { x: port.x, y: port.y, side: port.side }]),
+                        (((node.data as { ports?: Array<{ id: string; x: number; y: number; side?: 'top' | 'bottom' | 'left' | 'right'; size?: number }> }).ports) ?? [])
+                            .map(port => [port.id, { x: port.x, y: port.y, side: port.side, ...(port.size ? { size: port.size } : {}) }]),
                     ),
                 }])),
                 edges: Object.fromEntries(edges.map(edge => [edge.id, {
@@ -1378,7 +1378,7 @@ function DiagramCanvasInner() {
                     ...(pos.textAlign !== undefined ? { textAlign: pos.textAlign } : {}),
                     ...(pos.verticalAlign !== undefined ? { verticalAlign: pos.verticalAlign } : {}),
                     ...(pos.ports ? {
-                        ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string }> }).ports ?? [])
+                        ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string; size?: number }> }).ports ?? [])
                             .map(port => ({ ...port, ...(pos.ports?.[port.id] ?? {}) })),
                     } : {}),
                 },
@@ -1474,6 +1474,41 @@ function DiagramCanvasInner() {
         });
         scheduleGeometryUpdate(next);
     }, [scheduleGeometryUpdate, markManualLayout, selectedDiagramId, mergeDiagramLayouts]);
+
+    const resizeInterconnectionPort = useCallback((ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => {
+        suppressInspectUntilRef.current = Date.now() + 250;
+        markManualLayout();
+        setLayoutEditVersion(version => version + 1);
+        const next = nodesRef.current.map(node => {
+            if (node.id !== ownerId) return node;
+            const ports = ((node.data as { ports?: Array<{ id: string; x: number; y: number; size?: number }> }).ports ?? []);
+            const target = ports.find(port => port.id === portId);
+            if (!target) return node;
+            const oldSize = target.size ?? INTERCONNECTION_PORT_SIZE;
+            const delta = size - oldSize;
+            const proposed = {
+                ...target,
+                x: target.x + (axis.includes('w') ? -delta : axis.includes('e') ? 0 : -delta / 2),
+                y: target.y + (axis.includes('n') ? -delta : axis.includes('s') ? 0 : -delta / 2),
+                size,
+            };
+            const gap = 2;
+            const overlaps = ports.some(other => {
+                if (other.id === portId) return false;
+                const otherSize = other.size ?? INTERCONNECTION_PORT_SIZE;
+                return proposed.x < other.x + otherSize + gap
+                    && proposed.x + size + gap > other.x
+                    && proposed.y < other.y + otherSize + gap
+                    && proposed.y + size + gap > other.y;
+            });
+            if (overlaps) return node;
+            return {
+                ...node,
+                data: { ...node.data, ports: ports.map(port => port.id === portId ? proposed : port) },
+            };
+        });
+        scheduleGeometryUpdate(next);
+    }, [scheduleGeometryUpdate, markManualLayout]);
 
     const moveEdgeRoute = useCallback((edgeId: string, points: Array<{ x: number; y: number }>) => {
         suppressInspectUntilRef.current = Date.now() + 250;
@@ -1618,6 +1653,7 @@ function DiagramCanvasInner() {
             const positioned = [...positionedModel, ...annotationNodes(savedLayout)];
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
+                const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
                 const attachmentMatches = !savedEdge?.source || (
                     savedEdge.source === edge.source
                     && savedEdge.target === edge.target
@@ -1627,6 +1663,11 @@ function DiagramCanvasInner() {
                 const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
                 return {
                     ...edge,
+                    // React Flow's endpoint handles are safe only for one exact
+                    // source declaration. Bundles have no single source range;
+                    // named and anonymous relationships compiled with a range
+                    // can both be updated atomically.
+                    reconnectable: Boolean(semanticRelationship?.sourceRange),
                     data: {
                         ...edge.data,
                         ...(savedPoints?.length ? { points: savedPoints, manualRoute: true } : {}),
@@ -1716,6 +1757,7 @@ function DiagramCanvasInner() {
                     portWalls,
                     legend: ibdLegend,
                     onPortMove: moveInterconnectionPort,
+                    onPortResize: resizeInterconnectionPort,
                     onPortSelect: portId => {
                         inspectRelationship(null);
                         inspectElement(portId);
@@ -1776,7 +1818,7 @@ function DiagramCanvasInner() {
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
-        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, resizeInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
 
     // Re-fit after layout
     useEffect(() => {
@@ -2064,6 +2106,44 @@ function DiagramCanvasInner() {
     }, [connectionEndpoint]);
 
     /**
+     * Reconnect one end of an existing SysML relationship.
+     *
+     * React Flow owns the endpoint gesture and hit testing. Persistence remains
+     * model-first through one atomic source edit. The compiled declaration
+     * range lets the server address anonymous SysML flows without inventing a
+     * name or passing through a transient delete/create state.
+     */
+    const onReconnect = useCallback(async (oldEdge: FlowEdge, connection: Connection) => {
+        suppressInspectUntilRef.current = Date.now() + 500;
+        const relationship = model?.relationships.find(candidate => candidate.id === oldEdge.id);
+        if (!relationship?.sourceRange || !connection.source || !connection.target) return;
+
+        const sourceEl = connectionEndpoint(connection.source, connection.sourceHandle);
+        const targetEl = connectionEndpoint(connection.target, connection.targetHandle);
+        if (!sourceEl || !targetEl || sourceEl.id === targetEl.id) return;
+        if (sourceEl.id === relationship.sourceId && targetEl.id === relationship.targetId) return;
+
+        const replacement = await requestRelationshipUpdate({
+            relationshipId: relationship.id,
+            sourceId: sourceEl.id,
+            targetId: targetEl.id,
+            diagramId: selectedDiagramId ?? undefined,
+        });
+        if (replacement.success) return;
+        console.warn(`[MEMO] Connector endpoint update rejected: ${replacement.error}`);
+    }, [model, connectionEndpoint, selectedDiagramId]);
+
+    const onReconnectStart = useCallback(() => {
+        suppressInspectUntilRef.current = Date.now() + 500;
+        setNodeCtx(null);
+        setEdgeCtx(null);
+    }, []);
+
+    const onReconnectEnd = useCallback(() => {
+        suppressInspectUntilRef.current = Date.now() + 250;
+    }, []);
+
+    /**
      * Persist the chosen relationship, then draw it.
      *
      * The edge is only added after the server confirms the write — an optimistic
@@ -2186,6 +2266,11 @@ function DiagramCanvasInner() {
         if (changes.some(change => change.type === 'position' && change.dragging && !isAnnotationChange(change))) markManualLayout();
         const resizing = changes.some(change => change.type === 'dimensions' && change.resizing);
         const resizeCommitted = changes.some(change => change.type === 'dimensions' && change.setAttributes);
+        if (resizing || resizeCommitted) {
+            // A resize handle releases over its node. Do not reinterpret that
+            // release as a click that opens the Properties inspector.
+            suppressInspectUntilRef.current = Date.now() + 250;
+        }
         if (resizing) {
             if (changes.some(change => change.type === 'dimensions' && change.resizing && !isAnnotationChange(change))) {
                 markManualLayout();
@@ -3452,6 +3537,10 @@ function DiagramCanvasInner() {
                     onConnect={onConnect}
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd as any}
+                    onReconnect={onReconnect}
+                    onReconnectStart={onReconnectStart}
+                    onReconnectEnd={onReconnectEnd}
+                    reconnectRadius={10}
                     connectionMode={ConnectionMode.Loose}
                     defaultEdgeOptions={{ interactionWidth: 24 }}
                     snapToGrid={snapEnabled}

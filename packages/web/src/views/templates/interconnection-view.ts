@@ -572,6 +572,7 @@ export interface InterconnectionOptions {
     legend?: { attribute: string; colors: ReadonlyMap<string, string> };
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number, side?: PortSide) => void;
+    onPortResize?: (ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
     /** Bind a visible port glyph to the model element it represents. */
     onPortSelect?: (portId: string) => void;
     layoutProviderId?: string;
@@ -1303,6 +1304,9 @@ export async function computeInterconnectionLayout(
                 implicitOut: showPorts && implicitOutParts.has(partId),
                 onPortMove: options?.onPortMove
                     ? (portId: string, y: number, side?: PortSide) => options.onPortMove!(partId, portId, y, side)
+                    : undefined,
+                onPortResize: options?.onPortResize
+                    ? (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => options.onPortResize!(partId, portId, size, axis)
                     : undefined,
                 onPortSelect: options?.onPortSelect
                     ? (portId: string) => options.onPortSelect!(portId)

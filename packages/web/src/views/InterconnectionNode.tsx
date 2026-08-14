@@ -12,12 +12,13 @@
 // anchor to the correct face.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo, useState } from 'react';
-import { NodeResizer, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
+import { memo, useRef, useState } from 'react';
+import { NodeResizer, Position, useReactFlow, useStore, useStoreApi, type NodeProps, type ResizeParamsWithDirection } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
 import { BaseHandle } from '../components/base-handle';
+import { useModelStore } from '../store/model-store';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
@@ -44,6 +45,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     implicitIn?: boolean;
     implicitOut?: boolean;
     onPortMove?: (portId: string, y: number, side?: PortSide) => void;
+    onPortResize?: (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
     onPortSelect?: (portId: string) => void;
     /** Content-derived lower bound emitted by the IBD template. */
     minWidth?: number;
@@ -115,7 +117,7 @@ const handlePinStyle = (size: number): React.CSSProperties => ({
 const connectableHandleStyle = (size: number): React.CSSProperties => ({
     ...handlePinStyle(size),
     pointerEvents: 'auto',
-    cursor: 'crosshair',
+    cursor: 'pointer',
     zIndex: 12,
 });
 
@@ -158,10 +160,12 @@ function NestedPortGroup({ port }: { port: PortInfo }) {
     );
 }
 
-function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onSelect?: (portId: string) => void; showText?: boolean }) {
+function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string) => void; showText?: boolean }) {
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
+    const selected = useModelStore(state => state.selectedElementId === port.id);
+    const suppressSelectRef = useRef(false);
     const dimmed = useConnectorHoverActive() && !highlighted;
     const size = port.size ?? INTERCONNECTION_PORT_SIZE;
     const labelOffset = size + PORT_LABEL_OFFSET;
@@ -172,7 +176,13 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
         const startClientY = event.clientY;
         const startY = port.y;
         let last: PointerEvent | undefined;
-        const move = (next: PointerEvent) => { last = next; onMove(startY + (next.clientY - startClientY) / getZoom()); };
+        const move = (next: PointerEvent) => {
+            last = next;
+            const distance = Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY);
+            if (distance <= 2) return;
+            suppressSelectRef.current = true;
+            onMove(startY + (next.clientY - startClientY) / getZoom());
+        };
         const stop = () => {
             if (last) {
                 const dx = last.clientX - event.clientX;
@@ -186,10 +196,62 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
             }
             window.removeEventListener('pointermove', move);
             window.removeEventListener('pointerup', stop);
+            // The browser dispatches click after pointerup. Keep the guard for
+            // that click, then restore ordinary click-to-inspect behaviour.
+            window.setTimeout(() => { suppressSelectRef.current = false; }, 0);
         };
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', stop, { once: true });
     } : undefined;
+    const selectPort = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (suppressSelectRef.current) return;
+        onSelect?.(port.id);
+    };
+    const trackConnectionGesture = (event: React.PointerEvent) => {
+        const startX = event.clientX;
+        const startY = event.clientY;
+        suppressSelectRef.current = false;
+        const move = (next: PointerEvent) => {
+            if (Math.hypot(next.clientX - startX, next.clientY - startY) > 2) {
+                suppressSelectRef.current = true;
+            }
+        };
+        const stop = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', stop);
+            window.setTimeout(() => { suppressSelectRef.current = false; }, 0);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop, { once: true });
+    };
+    const beginResize = (axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') =>
+        (event: React.PointerEvent) => {
+            if (!onResize) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const startX = event.clientX;
+            const startY = event.clientY;
+            const startSize = size;
+            suppressSelectRef.current = true;
+            const move = (next: PointerEvent) => {
+                const dx = (next.clientX - startX) / getZoom();
+                const dy = (next.clientY - startY) / getZoom();
+                const horizontal = axis.includes('e') ? dx : axis.includes('w') ? -dx : undefined;
+                const vertical = axis.includes('s') ? dy : axis.includes('n') ? -dy : undefined;
+                const delta = horizontal !== undefined && vertical !== undefined
+                    ? (horizontal + vertical) / 2
+                    : horizontal ?? vertical ?? 0;
+                onResize(Math.min(48, Math.max(10, startSize + delta)), axis);
+            };
+            const stop = () => {
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', stop);
+                window.setTimeout(() => { suppressSelectRef.current = false; }, 0);
+            };
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', stop, { once: true });
+        };
     // Label sits inside the owner, just ABOVE the port's centreline — the
     // connector enters the port horizontally at centre-y, so a vertically
     // centred label would be struck through by its own edge. A translucent
@@ -198,8 +260,8 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
     const labelStyle: React.CSSProperties = {
         position: 'absolute',
         fontSize: port.nested ? '9.5px' : '10.5px',
-        fontWeight: highlighted ? 750 : port.nested ? 600 : 650,
-        color: highlighted ? '#0F172A' : port.nested ? '#6B7280' : '#374151',
+        fontWeight: highlighted || selected ? 750 : port.nested ? 600 : 650,
+        color: highlighted || selected ? '#0F172A' : port.nested ? '#6B7280' : '#374151',
         opacity: dimmed ? 0.45 : 1,
         transition: 'color 120ms ease, opacity 120ms ease',
         whiteSpace: 'normal',
@@ -207,7 +269,7 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
         // clean React Flow connection handle, removing the prior hidden-ring
         // ambiguity that made ports appear immovable.
         pointerEvents: onMove ? 'auto' : 'none',
-        cursor: onMove ? 'ns-resize' : 'default',
+        cursor: onSelect ? 'pointer' : 'default',
         touchAction: 'none',
         overflow: 'hidden',
         display: 'flex',
@@ -269,10 +331,7 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                 onPointerEnter={() => setConnectorHover({ endpointIds: [port.id] })}
                 onPointerLeave={() => setConnectorHover(null)}
                 onPointerDown={beginMove}
-                onClick={event => {
-                    event.stopPropagation();
-                    onSelect?.(port.id);
-                }}
+                onClick={selectPort}
                 title={`${port.name}${port.direction ? ` (${port.direction})` : ''}${port.connectorType ? `\n${port.connectorType}` : ''}`}
                 style={{
                     position: 'absolute',
@@ -285,7 +344,7 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                     // is otherwise ordinary diagram content.  React Flow's
                     // default grab hand incorrectly suggested that merely
                     // hovering the port would pan the whole board.
-                    cursor: 'default',
+                    cursor: onSelect ? 'pointer' : 'default',
                     touchAction: 'none',
                 }}
             />
@@ -294,7 +353,9 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                 background: '#FFFFFF', border: `2px solid ${color}`, borderRadius: 5,
                 // A hovered port wears a halo in its own direction colour, so
                 // the lit connectors read as belonging to this square.
-                boxShadow: highlighted
+                boxShadow: selected
+                    ? `0 0 0 3px #2563EB, 0 2px 8px rgba(15,23,42,0.24)`
+                    : highlighted
                     ? `0 0 0 4px ${color}33, 0 2px 8px rgba(15,23,42,0.24)`
                     : '0 1px 3px rgba(15,23,42,0.18)',
                 opacity: dimmed ? 0.5 : 1,
@@ -306,7 +367,7 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
             }}>
                 {portGlyph(port.direction, port.side)}
                 {showText && (
-                    <span onPointerDown={beginMove} style={labelStyle}>
+                    <span onPointerDown={beginMove} onClick={selectPort} style={labelStyle}>
                         <span style={nameStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
                         {port.connectorType && <span style={connectorStyle}>{port.connectorType}</span>}
                     </span>
@@ -324,12 +385,33 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                     const style = h.connectable ? connectableHandleStyle(size) : handlePinStyle(size);
                     return [
                         <BaseHandle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
-                            style={style} isConnectable={h.connectable} />,
+                            style={style} isConnectable={h.connectable}
+                            onPointerDownCapture={h.connectable ? trackConnectionGesture : undefined}
+                            onClick={h.connectable ? selectPort : undefined} />,
                         <BaseHandle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
-                            style={style} isConnectable={h.connectable} />,
+                            style={style} isConnectable={h.connectable}
+                            onPointerDownCapture={h.connectable ? trackConnectionGesture : undefined}
+                            onClick={h.connectable ? selectPort : undefined} />,
                     ];
                 })}
             </div>
+            {onResize && ([
+                ['n', { top: -5, left: 5, right: 5, height: 10, cursor: 'ns-resize' }],
+                ['e', { top: 5, right: -5, bottom: 5, width: 10, cursor: 'ew-resize' }],
+                ['s', { bottom: -5, left: 5, right: 5, height: 10, cursor: 'ns-resize' }],
+                ['w', { top: 5, left: -5, bottom: 5, width: 10, cursor: 'ew-resize' }],
+                ['nw', { top: -5, left: -5, width: 10, height: 10, cursor: 'nwse-resize' }],
+                ['ne', { top: -5, right: -5, width: 10, height: 10, cursor: 'nesw-resize' }],
+                ['se', { bottom: -5, right: -5, width: 10, height: 10, cursor: 'nwse-resize' }],
+                ['sw', { bottom: -5, left: -5, width: 10, height: 10, cursor: 'nesw-resize' }],
+            ] as const).map(([axis, position]) => (
+                <div
+                    key={axis}
+                    className={`ibd-port-resize-handle ibd-port-resize-handle--${axis}`}
+                    onPointerDown={beginResize(axis)}
+                    style={{ position: 'absolute', zIndex: 20, touchAction: 'none', ...position }}
+                />
+            ))}
         </div>
     );
 }
@@ -437,10 +519,11 @@ function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
 }
 
 function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
+    const store = useStoreApi();
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        onPortMove, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -451,6 +534,22 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
         : isFrame ? 'none'
         : hovered ? '0 8px 20px rgba(15,23,42,0.12)'
         : isContainer ? '0 1px 2px rgba(15,23,42,0.05)' : '0 2px 8px rgba(15,23,42,0.08)';
+    const canResizeWithoutOverlap = (_event: unknown, next: ResizeParamsWithDirection): boolean => {
+        const current = store.getState().nodeLookup.get(id);
+        if (!current) return true;
+        const gap = 4;
+        return [...store.getState().nodeLookup.values()].every(other => {
+            if (other.id === id || other.parentId !== current.parentId || other.hidden) return true;
+            const width = other.measured.width ?? other.width ?? 0;
+            const otherHeight = other.measured.height ?? other.height ?? 0;
+            if (width <= 0 || otherHeight <= 0) return true;
+            const position = other.internals.positionAbsolute;
+            return next.x + next.width + gap <= position.x
+                || position.x + width + gap <= next.x
+                || next.y + next.height + gap <= position.y
+                || position.y + otherHeight + gap <= next.y;
+        });
+    };
 
     return (
         <div
@@ -483,7 +582,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 its title bar, ports, or children. */}
             <NodeResizer
                 nodeId={id}
-                isVisible={selected}
+                isVisible={selected || hovered}
                 // A user can make a part as large as needed, but never
                 // smaller than its title, port gutters, and (for a
                 // container) its laid-out children.  This is the same
@@ -493,6 +592,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 color="#2563EB"
                 lineStyle={{ borderWidth: 1 }}
                 handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
+                shouldResize={canResizeWithoutOverlap}
             />
             {isFrame ? (
                 /* Modern IBD frame bar: clear context identity without the
@@ -558,6 +658,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         const max = Math.max(min, (height ?? min + size + 18) - size - 18);
                         onPortMove(p.id, Math.min(Math.max(y, min), max), side);
                     } : undefined}
+                    onResize={onPortResize ? (size, axis) => onPortResize(p.id, size, axis) : undefined}
                     onSelect={onPortSelect}
                     showText={showPortText}
                 />
