@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, type PointerEvent as ReactPointerEvent } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
 
 interface Point { x: number; y: number }
+interface RouteSegment { index: number; a: Point; b: Point; straight: boolean }
 
 function trimStart(points: Point[], distance: number): Point[] {
     const next = points.map(point => ({ ...point }));
@@ -74,7 +75,7 @@ function labelAnchor(points: Point[]): Point {
 }
 
 function InterconnectionEdgeInner(props: EdgeProps) {
-    const { getZoom } = useReactFlow();
+    const { getZoom, screenToFlowPosition } = useReactFlow();
     // Connectors that are not taking part are dimmed by ConnectorHoverStyles;
     // this edge only adds the ornament that marks the one that is.
     const highlighted = useConnectorHighlighted(props.id, [
@@ -97,12 +98,62 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     const hitTrim = Math.min(28 / Math.max(getZoom(), 0.1), routeLength(points) * 0.3);
     const hitPoints = trimEndpoints(points, hitTrim);
     const onRouteChange = props.data?.onRouteChange as ((points: Point[]) => void) | undefined;
+    const onRouteChangeComplete = props.data?.onRouteChangeComplete as ((before: Point[], after: Point[]) => void) | undefined;
     const onSelect = props.data?.onSelect as ((event: React.MouseEvent<SVGPathElement>) => void) | undefined;
     const flowAnimation = Boolean(props.data?.flowAnimation);
-    const draggableSegments = points.length === 2
+    const draggableSegments: RouteSegment[] = points.length === 2
         ? [{ index: 1, a: points[0], b: points[1], straight: true }]
         : points.slice(1).map((point, index) => ({ index: index + 1, a: points[index], b: point, straight: false }))
             .filter(segment => segment.index >= 2 && segment.index <= points.length - 2);
+    const beginRouteDrag = (event: ReactPointerEvent<SVGPathElement | HTMLDivElement>, segment: RouteSegment) => {
+        if (!onRouteChange) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const before = points.map(point => ({ ...point }));
+        const startX = event.clientX, startY = event.clientY;
+        let latest = before;
+        const move = (e: PointerEvent) => {
+            const dx = (e.clientX - startX) / getZoom();
+            const dy = (e.clientY - startY) / getZoom();
+            if (segment.straight) {
+                if (Math.abs(dy) >= Math.abs(dx)) {
+                    const laneY = segment.a.y + dy;
+                    latest = [segment.a, { x: segment.a.x, y: laneY }, { x: segment.b.x, y: laneY }, segment.b];
+                } else {
+                    const laneX = (segment.a.x + segment.b.x) / 2 + dx;
+                    latest = [segment.a, { x: laneX, y: segment.a.y }, { x: laneX, y: segment.b.y }, segment.b];
+                }
+            } else {
+                latest = points.map(point => ({ ...point }));
+                if (segment.a.y === segment.b.y) {
+                    latest[segment.index - 1].y = segment.a.y + dy;
+                    latest[segment.index].y = segment.b.y + dy;
+                } else {
+                    latest[segment.index - 1].x = segment.a.x + dx;
+                    latest[segment.index].x = segment.b.x + dx;
+                }
+            }
+            onRouteChange(latest);
+        };
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            onRouteChangeComplete?.(before, latest);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up, { once: true });
+    };
+    const nearestDraggableSegment = (point: Point): RouteSegment | undefined => {
+        const squaredDistance = (segment: RouteSegment) => {
+            const dx = segment.b.x - segment.a.x, dy = segment.b.y - segment.a.y;
+            const lengthSquared = dx * dx + dy * dy;
+            const ratio = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1,
+                ((point.x - segment.a.x) * dx + (point.y - segment.a.y) * dy) / lengthSquared));
+            const x = segment.a.x + ratio * dx, y = segment.a.y + ratio * dy;
+            return (point.x - x) ** 2 + (point.y - y) ** 2;
+        };
+        return draggableSegments.reduce<RouteSegment | undefined>((closest, segment) =>
+            !closest || squaredDistance(segment) < squaredDistance(closest) ? segment : closest, undefined);
+    };
     return (
         <>
             {highlighted && (
@@ -135,6 +186,11 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     pointerEvents="stroke"
                     cursor="pointer"
                     onClick={event => onSelect?.(event)}
+                    onPointerDown={event => {
+                        if (!props.selected || !onRouteChange || draggableSegments.length === 0) return;
+                        const segment = nearestDraggableSegment(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+                        if (segment) beginRouteDrag(event, segment);
+                    }}
                 />
             )}
             {props.label && props.data?.showLabel !== false ? (
@@ -161,40 +217,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                         <div
                             className="nodrag nopan"
                             title="Drag connector segment"
-                            onPointerDown={event => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                const startX = event.clientX, startY = event.clientY;
-                                const move = (e: PointerEvent) => {
-                                    const dx = (e.clientX - startX) / getZoom();
-                                    const dy = (e.clientY - startY) / getZoom();
-                                    if (segment.straight) {
-                                        if (Math.abs(dy) >= Math.abs(dx)) {
-                                            const laneY = segment.a.y + dy;
-                                            onRouteChange([segment.a, { x: segment.a.x, y: laneY }, { x: segment.b.x, y: laneY }, segment.b]);
-                                        } else {
-                                            const laneX = (segment.a.x + segment.b.x) / 2 + dx;
-                                            onRouteChange([segment.a, { x: laneX, y: segment.a.y }, { x: laneX, y: segment.b.y }, segment.b]);
-                                        }
-                                        return;
-                                    }
-                                    const next = points.map(point => ({ ...point }));
-                                    if (segment.a.y === segment.b.y) {
-                                        next[segment.index - 1].y = segment.a.y + dy;
-                                        next[segment.index].y = segment.b.y + dy;
-                                    } else {
-                                        next[segment.index - 1].x = segment.a.x + dx;
-                                        next[segment.index].x = segment.b.x + dx;
-                                    }
-                                    onRouteChange(next);
-                                };
-                                const up = () => {
-                                    window.removeEventListener('pointermove', move);
-                                    window.removeEventListener('pointerup', up);
-                                };
-                                window.addEventListener('pointermove', move);
-                                window.addEventListener('pointerup', up, { once: true });
-                            }}
+                            onPointerDown={event => beginRouteDrag(event, segment)}
                             style={{
                                 position: 'absolute', transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
                                 width: 12, height: 12, borderRadius: 3, background: '#FFFFFF',

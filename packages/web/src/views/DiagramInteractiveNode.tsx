@@ -90,7 +90,7 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                     : hovered
                     ? '0 4px 16px rgba(0,0,0,0.14)'
                     : '0 1px 4px rgba(0,0,0,0.08)',
-                cursor: editing ? 'text' : 'grab',
+                cursor: editing ? 'text' : 'default',
                 position: 'relative',
                 transition: 'box-shadow 0.15s',
                 opacity: d.isNew ? 0.7 : 1,

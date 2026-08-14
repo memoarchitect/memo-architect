@@ -281,11 +281,11 @@ function BoundaryPort({ port, onMove, onSelect, showText = true }: { port: PortI
                     width: PORT_HIT_SIZE,
                     height: PORT_HIT_SIZE,
                     transform: `translate(-50%, -50%) scale(${1 / Math.max(zoom, 0.1)})`,
-                    // Use the board's grab convention instead of a competing
-                    // resize cursor. The port is constrained vertically by the
-                    // drag handler, but the pointer remains visually stable
-                    // when crossing its boundary and the parent node.
-                    cursor: onMove ? 'grab' : 'default',
+                    // A port can be dragged along its permitted wall, but it
+                    // is otherwise ordinary diagram content.  React Flow's
+                    // default grab hand incorrectly suggested that merely
+                    // hovering the port would pan the whole board.
+                    cursor: 'default',
                     touchAction: 'none',
                 }}
             />

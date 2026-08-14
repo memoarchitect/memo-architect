@@ -1488,6 +1488,34 @@ function DiagramCanvasInner() {
         });
     }, [markManualLayout, setEdges]);
 
+    const commitEdgeRouteMove = useCallback((
+        edgeId: string,
+        before: Array<{ x: number; y: number }>,
+        after: Array<{ x: number; y: number }>,
+        wasManual: boolean,
+    ) => {
+        if (JSON.stringify(before) === JSON.stringify(after)) return;
+        const restore = (points: Array<{ x: number; y: number }>, manual: boolean) => {
+            markManualLayout();
+            setLayoutEditVersion(version => version + 1);
+            setEdges(previous => {
+                const next = previous.map(edge => {
+                    if (edge.id !== edgeId) return edge;
+                    if (manual) return { ...edge, data: { ...edge.data, points, manualRoute: true } };
+                    const { points: _points, manualRoute: _manualRoute, ...data } = edge.data ?? {};
+                    return { ...edge, data };
+                });
+                edgesRef.current = next;
+                return next;
+            });
+            scheduleGeometryUpdate(nodesRef.current);
+        };
+        pushUndo({
+            do: () => restore(after, true),
+            undo: () => restore(before, wasManual),
+        });
+    }, [markManualLayout, pushUndo, scheduleGeometryUpdate, setEdges]);
+
     /**
      * Replan every connector with the obstacle-avoiding planner. Live edits use
      * the cheap direct router, which keeps connectors attached and orthogonal
@@ -1604,6 +1632,8 @@ function DiagramCanvasInner() {
                         ...(savedPoints?.length ? { points: savedPoints, manualRoute: true } : {}),
                         flowAnimation: flowAnimationEnabled,
                         onRouteChange: (points: Array<{ x: number; y: number }>) => moveEdgeRoute(edge.id, points),
+                        onRouteChangeComplete: (before: Array<{ x: number; y: number }>, after: Array<{ x: number; y: number }>) =>
+                            commitEdgeRouteMove(edge.id, before, after, Boolean(edge.data?.manualRoute)),
                         onSelect: (event: React.MouseEvent<SVGPathElement>) => {
                             event.stopPropagation();
                             if (Date.now() < suppressInspectUntilRef.current) return;
@@ -1746,7 +1776,7 @@ function DiagramCanvasInner() {
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
-        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, inspectElement, inspectRelationship, getViewport]);
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
 
     // Re-fit after layout
     useEffect(() => {
@@ -1835,6 +1865,29 @@ function DiagramCanvasInner() {
 
     // ─── Keyboard shortcuts ────────────────────────────────────────────────────
 
+    const dismissSelectionTools = useCallback(() => {
+        selectElement(null);
+        inspectRelationship(null);
+        setNodeCtx(null);
+        setEdgeCtx(null);
+        setNodes(prev => prev.map(node => ({
+            ...node,
+            selected: false,
+            style: { ...node.style, opacity: 1, boxShadow: undefined },
+        })));
+        setEdges(prev => prev.map(edge => ({ ...edge, selected: false })));
+    }, [selectElement, inspectRelationship, setNodes, setEdges]);
+
+    const undoLastDiagramEdit = useCallback(() => {
+        const cmd = undoStack.current.pop();
+        if (cmd) { cmd.undo(); redoStack.current.push(cmd); }
+    }, []);
+
+    const redoLastDiagramEdit = useCallback(() => {
+        const cmd = redoStack.current.pop();
+        if (cmd) { cmd.do(); undoStack.current.push(cmd); }
+    }, []);
+
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
@@ -1842,13 +1895,14 @@ function DiagramCanvasInner() {
 
             if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
-                const cmd = undoStack.current.pop();
-                if (cmd) { cmd.undo(); redoStack.current.push(cmd); }
+                undoLastDiagramEdit();
             }
             if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
                 e.preventDefault();
-                const cmd = redoStack.current.pop();
-                if (cmd) { cmd.do(); undoStack.current.push(cmd); }
+                redoLastDiagramEdit();
+            }
+            if (e.key === 'Escape') {
+                dismissSelectionTools();
             }
             if (e.key === 'g' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
                 e.preventDefault();
@@ -1861,7 +1915,7 @@ function DiagramCanvasInner() {
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [fitDiagramFrame]);
+    }, [fitDiagramFrame, dismissSelectionTools, undoLastDiagramEdit, redoLastDiagramEdit]);
 
     // ─── Drag/drop from palette ───────────────────────────────────────────────
 
@@ -2247,17 +2301,7 @@ function DiagramCanvasInner() {
         }
     }, [viewKind, model?.elements, inspectElement, drillIntoAction, drillIntoState, drillIntoInterconnection]);
 
-    const onPaneClick = useCallback(() => {
-        selectElement(null);
-        inspectRelationship(null);
-        setNodeCtx(null);
-        setEdgeCtx(null);
-        setNodes(prev => prev.map(n => ({
-            ...n,
-            style: { ...n.style, opacity: 1, boxShadow: undefined },
-        })));
-        setEdges(prev => prev.map(edge => edge.selected ? { ...edge, selected: false } : edge));
-    }, [selectElement, inspectRelationship, setNodes, setEdges]);
+    const onPaneClick = dismissSelectionTools;
 
     const onEdgeClick = useCallback((event: RFAny, edge: FlowEdge) => {
         event?.stopPropagation?.();
@@ -3362,6 +3406,7 @@ function DiagramCanvasInner() {
                 {selectedNodes.length >= 1 && (
                     <SelectionToolbar
                         count={selectedNodes.length}
+                        onClose={dismissSelectionTools}
                         opacity={selectionOpacity}
                         onAlign={alignSelection}
                         onMatchSize={matchSelectionSize}
@@ -3443,6 +3488,16 @@ function DiagramCanvasInner() {
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <ConnectorHoverStyles />
                     <Controls position="bottom-right" showFitView={false} style={{ marginBottom: 82 }}>
+                        <ControlButton
+                            title="Undo last diagram edit (⌘Z)"
+                            aria-label="Undo last diagram edit"
+                            onClick={undoLastDiagramEdit}
+                        >↶</ControlButton>
+                        <ControlButton
+                            title="Redo last diagram edit (⌘⇧Z)"
+                            aria-label="Redo last diagram edit"
+                            onClick={redoLastDiagramEdit}
+                        >↷</ControlButton>
                         <ControlButton
                             title="Fit diagram to view"
                             aria-label="Fit diagram to view"

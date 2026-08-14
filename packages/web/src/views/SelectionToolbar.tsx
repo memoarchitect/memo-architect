@@ -24,6 +24,7 @@ const FILL_SWATCHES = [
 
 interface Props {
     count: number;
+    onClose: () => void;
     onAlign: (edge: AlignEdge) => void;
     onMatchSize: (match: SizeMatch) => void;
     onDistribute: (axis: DistributeAxis) => void;
@@ -59,7 +60,7 @@ function Btn({ title, label, onClick }: { title: string; label: string; onClick:
 }
 
 export function SelectionToolbar({
-    count, onAlign, onMatchSize, onDistribute, onFill, onOpacity, onTextStyle, opacity,
+    count, onClose, onAlign, onMatchSize, onDistribute, onFill, onOpacity, onTextStyle, opacity,
 }: Props) {
     return (
         <div
@@ -75,6 +76,17 @@ export function SelectionToolbar({
             <span style={{ fontSize: FONT.xs, color: '#6B7280', fontWeight: 700, paddingRight: 2 }}>
                 {count} selected
             </span>
+            <button
+                type="button"
+                title="Close selection tools (Esc)"
+                aria-label="Close selection tools"
+                onClick={onClose}
+                style={{
+                    width: 24, height: 24, padding: 0, borderRadius: 5,
+                    border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#475569',
+                    cursor: 'pointer', fontSize: 17, lineHeight: 1,
+                }}
+            >×</button>
             <span style={sepStyle} />
 
             <div style={groupStyle}>
