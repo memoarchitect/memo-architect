@@ -1449,8 +1449,7 @@ export const UNCATEGORIZED_ID = '__uncategorized';
  */
 export function sortViewpointsByOntologyLayer(viewpoints: ViewpointDTO[]): ViewpointDTO[] {
     const laneRank = (viewpoint: ViewpointDTO) =>
-        viewpoint.id === '__generated' ? 3
-            : viewpoint.explorerLane === 'architecture' ? 0
+        viewpoint.explorerLane === 'architecture' ? 0
             : viewpoint.explorerLane === 'assurance' ? 1
                 : 2;
     return viewpoints.slice().sort((a, b) => {
@@ -1559,9 +1558,8 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
 
-    // The Viewpoints landing page shows every generated per-layer summary.
-    // Keep the explorer consistent: an auto view still needs a visible route
-    // to open it, even when no authored viewpoint claims it.
+    // Keep the explorer consistent with the Viewpoints landing page: every
+    // unbound view still needs a visible route to open it.
     const uncategorizedViews = filterDiagrams(uncategorizedDiagrams);
 
     /** Fallback clubbing for uncategorized views, which have no authored group. */
@@ -1626,11 +1624,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const allDiagrams = getDiagramsForViewpoint(model, vp.id);
-                const displayedDiags = filterDiagrams(
-                    vp.id === '__generated'
-                        ? allDiagrams
-                        : allDiagrams.filter(d => !d.id.startsWith('diag-layer-')),
-                );
+                const displayedDiags = filterDiagrams(allDiagrams);
 
                 return (
                     <div key={vp.id} className="mb-0.5">
@@ -1664,9 +1658,8 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 );
             })}
 
-            {/* Everything no viewpoint claims, including generated per-layer
-                summaries, appears last so every card on the landing page is
-                reachable from this tree as well. */}
+            {/* Everything no viewpoint claims appears last, so every card on
+                the landing page is reachable from this tree as well. */}
             {uncategorizedViews.length > 0 && <div className="mb-0.5">
                 <div
                     className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
@@ -1679,7 +1672,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     <FolderIcon open={expandedVps.has(UNCATEGORIZED_ID)} color={COLOR.muted} />
                     <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>Uncategorized</span>
                     <span
-                        title="These views conform to no authored viewpoint; generated layer summaries are shown here too. Bind an authored view with viewpointDefinition to file it."
+                        title="These views conform to no authored viewpoint. Bind an authored view with viewpointDefinition to file it."
                         style={{ color: COLOR.faint, fontSize: FONT.badge }}
                     >
                         no viewpoint
