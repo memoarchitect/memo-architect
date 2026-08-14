@@ -2631,38 +2631,41 @@ function DiagramCanvasInner() {
                             )}
                         </div>}
 
-                        <div className="memo-diagram-tools__layout-divider" aria-hidden="true" />
                         {/* Connectors stay direct while blocks move; this is the
                             explicit pass that routes them around obstacles. */}
-                        {supportsToolbarOperation('route') && <IconToggle
-                            icon={<Icon.tidy />}
-                            active={false}
-                            onClick={tidyConnectors}
-                            title="Layout: re-route connectors. Warns before replacing hand-drawn bends."
-                        />}
-                        {selectedDiagramId && supportsToolbarOperation('autoLayout') && <IconToggle
-                            icon={<Icon.arrange />}
-                            active={autoLayoutEnabled}
-                            onClick={() => {
-                                if (autoLayoutEnabled) {
-                                    markManualLayout();
-                                } else {
-                                    if (!window.confirm(
-                                        'Recalculate the layout? This replaces saved manual positions and hand-routed connectors for this diagram.',
-                                    )) return;
-                                    const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
-                                    const layout: DiagramLayout = {
-                                        nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },
-                                    };
-                                    mergeDiagramLayouts({ [selectedDiagramId]: layout });
-                                    sendDiagramLayoutUpdate(selectedDiagramId, layout);
-                                    setRelayoutNonce(value => value + 1);
-                                }
-                            }}
-                            title={autoLayoutEnabled
-                                ? 'Auto layout is on. Drag an item to preserve a manual layout.'
-                                : 'Layout: recalculate. Replaces saved manual positions after confirmation.'}
-                        />}
+                        {supportsToolbarOperation('route') && <div className={viewKind === 'interconnection' ? 'memo-diagram-tools__layout-reset' : undefined} style={{ display: 'contents' }}>
+                            <IconToggle
+                                icon={<Icon.tidy />}
+                                active={false}
+                                onClick={tidyConnectors}
+                                title="Layout: re-route connectors. Warns before replacing hand-drawn bends."
+                            />
+                        </div>}
+                        {selectedDiagramId && supportsToolbarOperation('autoLayout') && <div className={viewKind === 'interconnection' ? 'memo-diagram-tools__layout-reset' : undefined} style={{ display: 'contents' }}>
+                            <IconToggle
+                                icon={<Icon.arrange />}
+                                active={autoLayoutEnabled}
+                                onClick={() => {
+                                    if (autoLayoutEnabled) {
+                                        markManualLayout();
+                                    } else {
+                                        if (!window.confirm(
+                                            'Recalculate the layout? This replaces saved manual positions and hand-routed connectors for this diagram.',
+                                        )) return;
+                                        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
+                                        const layout: DiagramLayout = {
+                                            nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },
+                                        };
+                                        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+                                        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+                                        setRelayoutNonce(value => value + 1);
+                                    }
+                                }}
+                                title={autoLayoutEnabled
+                                    ? 'Auto layout is on. Drag an item to preserve a manual layout.'
+                                    : 'Layout: recalculate. Replaces saved manual positions after confirmation.'}
+                            />
+                        </div>}
 
                         {/* FBS controls */}
                         {isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
@@ -2843,16 +2846,19 @@ function DiagramCanvasInner() {
                         {viewKind === 'interconnection' && supportsToolbarOperation('expandCollapse') && (
                             <>
                                 <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
-                                <IconButton
-                                    icon={<Icon.expand />}
-                                    onClick={() => setCollapsedInterconnectionNodes(new Set())}
-                                    title="Expand all parts" ariaLabel="Expand all"
-                                />
-                                <IconButton
-                                    icon={<Icon.collapse />}
-                                    onClick={() => setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds))}
-                                    title="Collapse all parts" ariaLabel="Collapse all"
-                                />
+                                <div className="memo-diagram-tools__layout-reset" style={{ display: 'contents' }}>
+                                    <IconButton
+                                        icon={<Icon.expand />}
+                                        onClick={() => setCollapsedInterconnectionNodes(new Set())}
+                                        title="Expand all parts" ariaLabel="Expand all"
+                                    />
+                                    <IconButton
+                                        icon={<Icon.collapse />}
+                                        onClick={() => setCollapsedInterconnectionNodes(new Set(interconnectionContainerIds))}
+                                        title="Collapse all parts" ariaLabel="Collapse all"
+                                    />
+                                </div>
+                                <div className="memo-diagram-tools__layout-divider memo-diagram-tools__layout-reset-divider" aria-hidden="true" />
                                 {supportsToolbarOperation('interconnectionPorts') && supportsToolbarOperation('interconnectionConnections') && actionFlowToolbarPlacement === 'left' ? (
                                     <>
                                         <IconToggle

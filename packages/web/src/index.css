@@ -196,7 +196,9 @@ body {
    expand a single cell or make the icon grid look uneven. */
 .memo-diagram-tools--left > button,
 .memo-diagram-tools--left > [style*="position: relative"] > button,
-.memo-diagram-tools--left > [style*="grid-column"] > button {
+.memo-diagram-tools--left > [style*="grid-column"] > button,
+.memo-diagram-tools--left #memo-diagram-editor-controls button,
+.memo-diagram-tools--left .memo-diagram-tools__layout-reset > button {
     width: 38px !important;
     min-width: 38px;
     height: 38px;
@@ -224,10 +226,22 @@ body {
     background: #E2E1DB;
 }
 
+.memo-diagram-tools--left > .memo-diagram-tools__layout-reset-divider {
+    order: -1;
+}
+
+.memo-diagram-tools--left .memo-diagram-tools__layout-reset > button {
+    order: -2;
+}
+
 .memo-diagram-tools--left > button > span:not([aria-hidden]),
 .memo-diagram-tools--left > button > span[aria-hidden] + span,
 .memo-diagram-tools--left > [style*="position: relative"] > button > span:not([aria-hidden]),
-.memo-diagram-tools--left > [style*="position: relative"] > button > span[aria-hidden] + span {
+.memo-diagram-tools--left > [style*="position: relative"] > button > span[aria-hidden] + span,
+.memo-diagram-tools--left #memo-diagram-editor-controls button > span:not([aria-hidden]),
+.memo-diagram-tools--left #memo-diagram-editor-controls button > span[aria-hidden] + span,
+.memo-diagram-tools--left .memo-diagram-tools__layout-reset > button > span:not([aria-hidden]),
+.memo-diagram-tools--left .memo-diagram-tools__layout-reset > button > span[aria-hidden] + span {
     display: none;
 }
 
