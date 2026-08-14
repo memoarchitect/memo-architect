@@ -234,6 +234,17 @@ body {
     order: -2;
 }
 
+/* Export and source-editor controls are document actions, not diagram-display
+   tools. Keep them together in a single footer group. */
+.memo-diagram-tools--left > .memo-diagram-tools__document-actions-divider {
+    order: 1;
+}
+
+.memo-diagram-tools--left > .memo-diagram-tools__document-action,
+.memo-diagram-tools--left #memo-diagram-editor-controls button {
+    order: 2;
+}
+
 .memo-diagram-tools--left > button > span:not([aria-hidden]),
 .memo-diagram-tools--left > button > span[aria-hidden] + span,
 .memo-diagram-tools--left > [style*="position: relative"] > button > span:not([aria-hidden]),

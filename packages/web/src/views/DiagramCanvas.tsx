@@ -2582,7 +2582,7 @@ function DiagramCanvasInner() {
                         {/* Image export. The whole diagram is written at full
                             extent, so the current pan and zoom do not decide
                             what lands in the file. */}
-                        {supportsToolbarOperation('export') && <div style={{ position: 'relative' }}>
+                        {supportsToolbarOperation('export') && <div className="memo-diagram-tools__document-action" style={{ position: 'relative' }}>
                             <IconToggle
                                 icon={<Icon.download />}
                                 active={exportMenuOpen}
@@ -2630,6 +2630,8 @@ function DiagramCanvasInner() {
                                 </div>
                             )}
                         </div>}
+
+                        <div className="memo-diagram-tools__layout-divider memo-diagram-tools__document-actions-divider" aria-hidden="true" />
 
                         {/* Connectors stay direct while blocks move; this is the
                             explicit pass that routes them around obstacles. */}
