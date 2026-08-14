@@ -203,6 +203,14 @@ body {
     min-height: 38px;
     padding: 0 !important;
     justify-content: center;
+    border: 1px solid #E2E1DB !important;
+    border-radius: 9px !important;
+}
+
+/* Separators help scan a horizontal toolbar, but a two-column dock gives each
+   child a complete grid cell. Do not let a separator turn into an empty row. */
+.memo-diagram-tools--left > span {
+    display: none;
 }
 
 .memo-diagram-tools--left > button > span:not([aria-hidden]),

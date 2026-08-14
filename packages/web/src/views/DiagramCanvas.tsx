@@ -3059,7 +3059,7 @@ function DiagramCanvasInner() {
 
                         {selectedDiagramId && (
                             <>
-                                {viewKind !== 'actionflow' && <span style={{ color: '#E5E5E0' }}>|</span>}
+                                {viewKind !== 'actionflow' && actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 {/* The source editor mounts its compact controls
                                     here so every diagram action stays in the
                                     dedicated tools dock. */}
@@ -3073,7 +3073,7 @@ function DiagramCanvasInner() {
 
                         {selectedDiagramId && viewKind === 'interconnection' && (
                             <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
+                                {actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 <IconButton icon={<Icon.plus />} onClick={() => addAnnotation('note')}
                                     title="Add an editable note" ariaLabel="Add note" />
                                 <IconToggle icon={<Icon.arrowRight />} active={flowAnimationEnabled}
