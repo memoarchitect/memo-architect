@@ -1516,6 +1516,9 @@ function DiagramCanvasInner() {
     }, [selectedDiagram?.name]);
 
     const tidyConnectors = useCallback(() => {
+        if (edgesRef.current.some(edge => edge.data?.manualRoute) && !window.confirm(
+            'Re-route connectors? This replaces the hand-drawn bends on this diagram. Node positions will be kept.',
+        )) return;
         markManualLayout();
         setLayoutEditVersion(version => version + 1);
         const cleared = edgesRef.current.map(edge => {
@@ -2558,10 +2561,11 @@ function DiagramCanvasInner() {
                     <div
                         className="memo-diagram-tools memo-diagram-tools--left m-3 grid content-start items-stretch justify-items-stretch rounded-lg text-xs"
                         style={{
-                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: '38px', gridAutoFlow: 'row dense',
+                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: 'min-content', gridAutoFlow: 'row dense',
                             background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                         }}
                     >
+                        <span className="memo-diagram-tools__group-label">View</span>
                         {/* Snap toggle */}
                         {supportsToolbarOperation('grid') && <IconToggle
                             icon={gridVisible ? <Icon.grid /> : <Icon.gridOff />}
@@ -2574,35 +2578,6 @@ function DiagramCanvasInner() {
                                 });
                             }}
                             title="Show or hide the canvas grid and snapping (⌘⇧G)"
-                        />}
-
-                        {/* Connectors stay direct while blocks move; this is the
-                            explicit pass that routes them around obstacles. */}
-                        {supportsToolbarOperation('route') && <IconToggle
-                            icon={<Icon.tidy />}
-                            active={false}
-                            onClick={tidyConnectors}
-                            title="Re-route connectors around blocks and into separate lanes. Replaces any bends you drew by hand."
-                        />}
-                        {selectedDiagramId && supportsToolbarOperation('autoLayout') && <IconToggle
-                            icon={<Icon.arrange />}
-                            active={autoLayoutEnabled}
-                            onClick={() => {
-                                if (autoLayoutEnabled) {
-                                    markManualLayout();
-                                } else {
-                                    const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
-                                    const layout: DiagramLayout = {
-                                        nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },
-                                    };
-                                    mergeDiagramLayouts({ [selectedDiagramId]: layout });
-                                    sendDiagramLayoutUpdate(selectedDiagramId, layout);
-                                    setRelayoutNonce(value => value + 1);
-                                }
-                            }}
-                            title={autoLayoutEnabled
-                                ? 'Auto layout is on. Drag an item to preserve a manual layout.'
-                                : 'Auto layout is off. Click to recalculate the diagram.'}
                         />}
 
                         {/* Image export. The whole diagram is written at full
@@ -2656,6 +2631,39 @@ function DiagramCanvasInner() {
                                 </div>
                             )}
                         </div>}
+
+                        <span className="memo-diagram-tools__group-label">Layout</span>
+                        {/* Connectors stay direct while blocks move; this is the
+                            explicit pass that routes them around obstacles. */}
+                        {supportsToolbarOperation('route') && <IconToggle
+                            icon={<Icon.tidy />}
+                            active={false}
+                            onClick={tidyConnectors}
+                            title="Layout: re-route connectors. Warns before replacing hand-drawn bends."
+                        />}
+                        {selectedDiagramId && supportsToolbarOperation('autoLayout') && <IconToggle
+                            icon={<Icon.arrange />}
+                            active={autoLayoutEnabled}
+                            onClick={() => {
+                                if (autoLayoutEnabled) {
+                                    markManualLayout();
+                                } else {
+                                    if (!window.confirm(
+                                        'Recalculate the layout? This replaces saved manual positions and hand-routed connectors for this diagram.',
+                                    )) return;
+                                    const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
+                                    const layout: DiagramLayout = {
+                                        nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },
+                                    };
+                                    mergeDiagramLayouts({ [selectedDiagramId]: layout });
+                                    sendDiagramLayoutUpdate(selectedDiagramId, layout);
+                                    setRelayoutNonce(value => value + 1);
+                                }
+                            }}
+                            title={autoLayoutEnabled
+                                ? 'Auto layout is on. Drag an item to preserve a manual layout.'
+                                : 'Layout: recalculate. Replaces saved manual positions after confirmation.'}
+                        />}
 
                         {/* FBS controls */}
                         {isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
@@ -2835,6 +2843,7 @@ function DiagramCanvasInner() {
 
                         {viewKind === 'interconnection' && supportsToolbarOperation('expandCollapse') && (
                             <>
+                                <span className="memo-diagram-tools__group-label">View</span>
                                 <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
                                 <IconButton
                                     icon={<Icon.expand />}
@@ -3059,6 +3068,7 @@ function DiagramCanvasInner() {
 
                         {selectedDiagramId && (
                             <>
+                                <span className="memo-diagram-tools__group-label">Edit</span>
                                 {viewKind !== 'actionflow' && actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 {/* The source editor mounts its compact controls
                                     here so every diagram action stays in the
@@ -3076,6 +3086,7 @@ function DiagramCanvasInner() {
                                 {actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
                                 <IconButton icon={<Icon.plus />} onClick={() => addAnnotation('note')}
                                     title="Add an editable note" ariaLabel="Add note" />
+                                <span className="memo-diagram-tools__group-label">View</span>
                                 <IconToggle icon={<Icon.arrowRight />} active={flowAnimationEnabled}
                                     onClick={() => {
                                         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
