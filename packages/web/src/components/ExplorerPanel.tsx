@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     useModelStore,
     getElementsByLayer,
@@ -21,6 +22,7 @@ import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
 import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
 import { isFeatureEnabled } from '../config/feature-flags';
+import { diagramUrl } from '../router';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1516,6 +1518,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const setActiveView = useModelStore(s => s.setActiveView);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
+    const navigate = useNavigate();
 
     // Viewpoint folders start collapsed, including Uncategorized: a project can
     // contain many views and the Explorer should first present the hierarchy.
@@ -1591,6 +1594,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 onSelect={() => {
                     setActiveView({ type: 'diagram', diagramId: diag.id });
                     selectViewpoint(vpId === '__model' ? null : vpId);
+                    navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
                 onDelete={!diag.auto ? () => deleteDiagram(diag.id) : undefined}
             />
