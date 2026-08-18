@@ -43,8 +43,8 @@
     "test:cli": "vitest run --config vitest.cli.config.ts"
   },
   "dependencies": {
-    "@memoarchitect/ontology": "0.8.1",
-    "@memoarchitect/tools": "0.8.6",
+    "@memoarchitect/ontology": "0.8.22",
+    "@memoarchitect/tools": "0.8.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",
