@@ -953,24 +953,8 @@ export function computeExplorerGroupTree(
             const subBuckets = new Map<string, TreeNode[]>();
             for (const [folder, folderRoots] of folders.entries()) {
                 const tree: TreeNode[] = [];
-                const branchFor = (qualifiedName: string): TreeNode[] => {
-                    let level = tree;
-                    let path = '';
-                    for (const segment of qualifiedName.split('::').filter(Boolean)) {
-                        path = path ? `${path}::${segment}` : segment;
-                        const id = `f:${path}`;
-                        let fNode = level.find(node => node.id === id);
-                        if (!fNode) {
-                            fNode = { id, name: segment, type: 'folder', children: [] };
-                            level.push(fNode);
-                        }
-                        level = fNode.children;
-                    }
-                    return level;
-                };
-
                 for (const root of folderRoots) {
-                    branchFor(root.element?.package ?? '').push(root);
+                    tree.push(root);
                 }
                 sortNodes(tree);
                 subBuckets.set(folder, tree);

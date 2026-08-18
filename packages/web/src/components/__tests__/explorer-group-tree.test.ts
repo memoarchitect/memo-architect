@@ -124,34 +124,7 @@ describe('buildOwnerThenPackageTree', () => {
     });
 });
 
-describe('computeExplorerGroupTree containment', () => {
-    it('shows a namespace once per type folder, not once per contributing kind', () => {
-        // Both kinds sit in the same sub-group and the same package; a tree
-        // built per kind and concatenated showed "Plant" twice.
-        const elements = [
-            inPackage('h1', 'Hazard', 'risk', 'Plant'),
-            inPackage('rc1', 'RiskControlMeasure', 'risk', 'Plant'),
-        ];
-        const groups = computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        const risk = groups[0].subGroups.find(sg => sg.id === 'safety-risk')!;
 
-        for (const nodes of risk.kinds.values()) {
-            expect(nodes.filter(node => node.id === 'f:Plant')).toHaveLength(1);
-        }
-    });
-
-    it('does not clone empty packages into a type tree', () => {
-        const groups = computeExplorerGroupTree(
-            [inPackage('h1', 'Hazard', 'risk', 'Plant')], '',
-            registryFromOntology(ONTOLOGY), [ONTOLOGY],
-            [{ qualifiedName: 'Plant' }, { qualifiedName: 'Spares' }],
-        );
-        const risk = groups[0].subGroups.find(sg => sg.id === 'safety-risk')!;
-        const hazards = risk.kinds.get('Hazard')!;
-
-        expect(hazards.map(node => node.id)).toEqual(['f:Plant']);
-    });
-});
 
 describe('computeExplorerGroupTree', () => {
     it('uses the required Artifacts child categories', () => {
