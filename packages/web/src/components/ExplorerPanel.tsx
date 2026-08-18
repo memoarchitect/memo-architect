@@ -929,13 +929,24 @@ export function computeExplorerGroupTree(
             
             let resolveKind = kind;
             while (true) {
-                const isBase = availableOntologies.some(pkg => 
+                const def = registryKinds.find(definition => definition.name === resolveKind);
+                if (!def) break;
+                
+                const ns = def.namespace?.[0] ?? def.layer;
+                const isFoundational = ns && availableOntologies.some(pkg => 
+                    pkg.layers.some(l => l.id === ns)
+                );
+                
+                // If this kind belongs to a foundational ontology layer, stop here
+                if (isFoundational) break;
+                
+                // Also explicitly check if it was declared directly in availableOntologies
+                const isExplicitlyBase = availableOntologies.some(pkg => 
                     pkg.layers.some(l => l.kinds.some(k => k.name === resolveKind))
                 );
-                if (isBase) break;
+                if (isExplicitlyBase) break;
                 
-                const def = registryKinds.find(definition => definition.name === resolveKind);
-                if (def && def.superType) {
+                if (def.superType) {
                     resolveKind = def.superType;
                 } else {
                     break;
