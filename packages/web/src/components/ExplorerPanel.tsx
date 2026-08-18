@@ -445,6 +445,66 @@ export function buildTree(elements: MemoElement[], packages: { qualifiedName: st
     return root;
 }
 
+/**
+ * Explorer content is semantic containment first, package containment second.
+ *
+ * Within one exact element type, a child declared inside another element belongs
+ * below that owner even if both declarations happen to carry package names.
+ * Roots without an owner are grouped by their SysML package path. This keeps a
+ * functional decomposition readable as `SystemFunction → parent → child`, yet
+ * still gives unowned functions a stable package home.
+ */
+export function buildOwnerThenPackageTree(elements: MemoElement[]): TreeNode[] {
+    const nodes = new Map<string, TreeNode>();
+    for (const element of elements) {
+        nodes.set(element.id, {
+            id: element.id,
+            name: element.name,
+            type: 'element',
+            element,
+            children: [],
+        });
+    }
+
+    const roots: TreeNode[] = [];
+    for (const node of nodes.values()) {
+        const owner = node.element?.owner ? nodes.get(node.element.owner) : undefined;
+        if (owner) owner.children.push(node);
+        else roots.push(node);
+    }
+
+    const tree: TreeNode[] = [];
+    const branchFor = (qualifiedName: string): TreeNode[] => {
+        let level = tree;
+        let path = '';
+        for (const segment of qualifiedName.split('::').filter(Boolean)) {
+            path = path ? `${path}::${segment}` : segment;
+            const id = `f:${path}`;
+            let folder = level.find(node => node.id === id);
+            if (!folder) {
+                folder = { id, name: segment, type: 'folder', children: [] };
+                level.push(folder);
+            }
+            level = folder.children;
+        }
+        return level;
+    };
+
+    for (const root of roots) {
+        branchFor(root.element?.package ?? '').push(root);
+    }
+
+    const sort = (nodesToSort: TreeNode[]) => {
+        nodesToSort.sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+        nodesToSort.forEach(node => sort(node.children));
+    };
+    sort(tree);
+    return tree;
+}
+
 /** Semantic ownership navigation for nested part and port usages. */
 export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
     if (!elements.some(element => Boolean(element.owner))) return [];
@@ -857,7 +917,7 @@ export function computeExplorerGroupTree(
         const buckets = new Map<string, Map<string, TreeNode[]>>(
             [...pooled.entries()].map(([sub, folders]) => [
                 sub,
-                new Map([...folders.entries()].map(([folder, els]) => [folder, buildTree(els, packagesFor(els))])),
+                new Map([...folders.entries()].map(([folder, els]) => [folder, buildOwnerThenPackageTree(els)])),
             ]),
         );
         return [...buckets.entries()]

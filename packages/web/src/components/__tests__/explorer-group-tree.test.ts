@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { artifactCategory, buildOwnershipTree, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
+import { artifactCategory, buildOwnerThenPackageTree, buildOwnershipTree, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
 import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
@@ -98,6 +98,29 @@ describe('buildOwnershipTree', () => {
         expect(tree).toHaveLength(1);
         expect(tree[0].id).toBe('pump');
         expect(tree[0].children.map(child => child.id)).toEqual(['inlet']);
+    });
+});
+
+describe('buildOwnerThenPackageTree', () => {
+    it('nests a same-type child beneath its owner before considering packages', () => {
+        const parent = { ...inPackage('doseControl', 'SystemFunction', 'functional', 'Functional'), name: 'Dose Control' };
+        const child = { ...inPackage('enforceLimits', 'SystemFunction', 'functional', 'Functional'), name: 'Enforce Limits', owner: 'doseControl' };
+
+        const tree = buildOwnerThenPackageTree([parent, child]);
+
+        expect(tree.map(node => node.id)).toEqual(['f:Functional']);
+        expect(tree[0].children.map(node => node.id)).toEqual(['doseControl']);
+        expect(tree[0].children[0].children.map(node => node.id)).toEqual(['enforceLimits']);
+    });
+
+    it('uses packages only for roots without an owner', () => {
+        const loose = { ...inPackage('acquire', 'SystemFunction', 'functional', 'Functional::Sensing'), name: 'Acquire Sensor Data' };
+
+        const tree = buildOwnerThenPackageTree([loose]);
+
+        expect(tree[0].id).toBe('f:Functional');
+        expect(tree[0].children[0].id).toBe('f:Functional::Sensing');
+        expect(tree[0].children[0].children.map(node => node.id)).toEqual(['acquire']);
     });
 });
 
