@@ -1,6 +1,6 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.8.26",
+  "version": "0.8.27",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
@@ -43,8 +43,8 @@
     "test:cli": "vitest run --config vitest.cli.config.ts"
   },
   "dependencies": {
-    "@memoarchitect/ontology": "0.8.22",
-    "@memoarchitect/tools": "0.8.7",
+    "@memoarchitect/ontology": "0.8.24",
+    "@memoarchitect/tools": "0.8.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",

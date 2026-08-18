@@ -7,19 +7,27 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
-import { LAYER_COLORS } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
 import { kindToPrefix, prefixToFamily } from '../short-id';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 
+type FamilyInfo = { count: number; kinds: Set<string>; layer: string };
+
+function layerLabel(layer: string): string {
+    if (LAYER_LABELS[layer]) return LAYER_LABELS[layer];
+    if (!layer) return 'Other';
+    return layer.split(/[_-]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
 export function CatalogHomePage() {
     const model = useModelStore(s => s.model);
     const navigate = useNavigate();
 
-    const families = useMemo(() => {
+    const familiesByLayer = useMemo(() => {
         if (!model) return [];
-        const map: Record<string, { count: number; kinds: Set<string>; layer: string }> = {};
+        const map: Record<string, FamilyInfo> = {};
         for (const el of Object.values(model.elements)) {
             const prefix = kindToPrefix(el.kind);
             const family = prefixToFamily(prefix);
@@ -29,8 +37,26 @@ export function CatalogHomePage() {
             map[family].count++;
             map[family].kinds.add(el.kind);
         }
-        return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
+
+        const byLayer = new Map<string, [string, FamilyInfo][]>();
+        for (const entry of Object.entries(map)) {
+            const layer = entry[1].layer;
+            if (!byLayer.has(layer)) byLayer.set(layer, []);
+            byLayer.get(layer)!.push(entry);
+        }
+        for (const families of byLayer.values()) {
+            families.sort((a, b) => b[1].count - a[1].count);
+        }
+
+        const layerOrder = new Map<string, number>(LAYER_ORDER.map((layer, index) => [layer, index]));
+        return [...byLayer.entries()].sort(([a], [b]) => {
+            const orderA = layerOrder.get(a) ?? LAYER_ORDER.length;
+            const orderB = layerOrder.get(b) ?? LAYER_ORDER.length;
+            return orderA !== orderB ? orderA - orderB : a.localeCompare(b);
+        });
     }, [model]);
+
+    const families = useMemo(() => familiesByLayer.flatMap(([, entries]) => entries), [familiesByLayer]);
 
     if (!model) {
         return (
@@ -49,25 +75,35 @@ export function CatalogHomePage() {
                 <MemoBrandMark size={132} />
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '12px',
-            }}>
-                {families.map(([family, info]) => {
-                    const layerColor = LAYER_COLORS[info.layer] ?? '#9CA3AF';
-                    return (
-                        <FamilyCard
-                            key={family}
-                            family={family}
-                            count={info.count}
-                            kinds={info.kinds}
-                            color={layerColor}
-                            onClick={() => navigate(familyUrl(family))}
-                        />
-                    );
-                })}
-            </div>
+            {familiesByLayer.map(([layer, entries]) => {
+                const layerColor = LAYER_COLORS[layer] ?? '#9CA3AF';
+                return (
+                    <div key={layer || '__none'} style={{ marginBottom: '28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: layerColor, flexShrink: 0 }} />
+                            <h2 style={{ fontSize: '13px', fontWeight: 700, color: COLOR.secondary, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
+                                {layerLabel(layer)}
+                            </h2>
+                        </div>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                            gap: '12px',
+                        }}>
+                            {entries.map(([family, info]) => (
+                                <FamilyCard
+                                    key={family}
+                                    family={family}
+                                    count={info.count}
+                                    kinds={info.kinds}
+                                    color={layerColor}
+                                    onClick={() => navigate(familyUrl(family))}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 }

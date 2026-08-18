@@ -22,7 +22,7 @@ import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
 import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
 import { isFeatureEnabled } from '../config/feature-flags';
-import { diagramUrl } from '../router';
+import { diagramUrl, elementUrl } from '../router';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -915,62 +915,70 @@ export function computeExplorerGroupTree(
         sortNodes(node.children);
     }
 
+    // A project names one function with its own one-off def (`action def
+    // AcquireSensorData :> FunctionalAction`) — MEMO's convention for a
+    // single named behaviour. A shared def used by many usages (`part
+    // basalTherapyConfig : ModeConfiguration`) is already a fine type
+    // folder as-is. Climbing every kind to its superType regardless would
+    // merge the second case into an unhelpfully generic ancestor, so only a
+    // kind with exactly one instance in this bucket is a rollup candidate;
+    // climbing stops at the nearest `abstract` ancestor (SysML's own signal
+    // for "this is a category") or the root. The climb is discarded unless
+    // it actually reunites that lone instance with a sibling — otherwise a
+    // singleton keeps its own declared name.
+    //
+    // The climb also never crosses into a different top-level ontology
+    // layer. `MemoPart`/`MemoAction`/`MemoState` live in the `core` layer as
+    // the universal root every part/action/state ultimately specializes, so
+    // reaching one of them proves only "this is a part" — not that two kinds
+    // are siblings. A same-layer abstract ancestor like `FunctionalAction`
+    // (declared alongside its concrete specializations) is a real category;
+    // a cross-layer one is the whole type system, not a family.
+    const climbToAbstractOrRoot = (kind: string): string => {
+        const startLayer = registryKinds.find(definition => definition.name === kind)?.namespace?.[0];
+        let resolveKind = kind;
+        while (true) {
+            const def = registryKinds.find(definition => definition.name === resolveKind);
+            if (!def || def.isAbstract || !def.superType) return resolveKind;
+            const parentLayer = registryKinds.find(definition => definition.name === def.superType)?.namespace?.[0];
+            if (parentLayer !== startLayer) return resolveKind;
+            resolveKind = def.superType;
+        }
+    };
+
     const toSubGroups = (rootsList: TreeNode[], groupColor: string, layerId?: string): ExplorerSubGroup[] => {
-        const pooled = new Map<string, Map<string, TreeNode[]>>();
+        const bySub = new Map<string, Map<string, TreeNode[]>>();
         for (const root of rootsList) {
             const kind = root.element!.kind;
             const sub = layerId === 'artifacts'
                 ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
                 : (kindToSubGroup[kind] ?? '');
-            
-            const isBaseOntologyKind = availableOntologies.some(pkg => 
-                pkg.layers.some(l => l.kinds.some(k => k.name === kind))
-            );
-            
-            let resolveKind = kind;
-            while (true) {
-                const def = registryKinds.find(definition => definition.name === resolveKind);
-                if (!def) break;
-                
-                const ns = def.namespace?.[0] ?? def.layer;
-                // Only stop at layers that are part of the core/foundational ontologies
-                const CORE_ONTOLOGY_LAYERS = new Set([
-                    'architecture', 'core', 'compliance', 'analysis', 
-                    'geometry', 'systems', 'domain', 'assurance', 
-                    'methodology', 'rules', 'viewpoints', 'artifacts'
-                ]);
-                const isFoundational = ns && CORE_ONTOLOGY_LAYERS.has(ns);
-                
-                // If this kind belongs to a foundational ontology layer, stop here
-                if (isFoundational) break;
-                
-                // Also explicitly check if it was declared directly in availableOntologies
-                const isExplicitlyBase = availableOntologies.some(pkg => 
-                    pkg.layers.some(l => l.kinds.some(k => k.name === resolveKind))
-                );
-                if (isExplicitlyBase) break;
-                
-                if (def.superType) {
-                    resolveKind = def.superType;
-                } else {
-                    break;
-                }
-            }
-            
-            const typeFolder = resolveKind;
-            if (!pooled.has(sub)) pooled.set(sub, new Map());
-            const folders = pooled.get(sub)!;
-            folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), root]);
+            if (!bySub.has(sub)) bySub.set(sub, new Map());
+            const byKind = bySub.get(sub)!;
+            byKind.set(kind, [...(byKind.get(kind) ?? []), root]);
         }
-        
+
         const buckets = new Map<string, Map<string, TreeNode[]>>();
-        for (const [sub, folders] of pooled.entries()) {
+        for (const [sub, byKind] of bySub.entries()) {
+            const candidateFor = new Map<string, string>();
+            for (const [kind, kindRoots] of byKind.entries()) {
+                if (kindRoots.length === 1) candidateFor.set(kind, climbToAbstractOrRoot(kind));
+            }
+            const candidateUsers = new Map<string, number>();
+            for (const candidate of candidateFor.values()) {
+                candidateUsers.set(candidate, (candidateUsers.get(candidate) ?? 0) + 1);
+            }
+
+            const folders = new Map<string, TreeNode[]>();
+            for (const [kind, kindRoots] of byKind.entries()) {
+                const candidate = candidateFor.get(kind);
+                const typeFolder = candidate && (candidateUsers.get(candidate) ?? 0) > 1 ? candidate : kind;
+                folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), ...kindRoots]);
+            }
+
             const subBuckets = new Map<string, TreeNode[]>();
             for (const [folder, folderRoots] of folders.entries()) {
-                const tree: TreeNode[] = [];
-                for (const root of folderRoots) {
-                    tree.push(root);
-                }
+                const tree = [...folderRoots];
                 sortNodes(tree);
                 subBuckets.set(folder, tree);
             }
@@ -1051,6 +1059,7 @@ export function computeExplorerGroupTree(
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
+    const navigate = useNavigate();
     const model = useModelStore(s => s.model);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
@@ -1071,7 +1080,9 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const selectElementAndNavigate = useCallback((id: string) => {
         selectElement(id);
         setActiveView({ type: 'element-detail', elementId: id });
-    }, [selectElement, setActiveView]);
+        const el = model?.elements?.[id];
+        if (el) navigate(elementUrl(el.shortId ?? el.id));
+    }, [selectElement, setActiveView, model, navigate]);
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const initializedTypeBranches = useRef(false);
