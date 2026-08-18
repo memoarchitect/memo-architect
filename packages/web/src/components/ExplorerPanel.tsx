@@ -933,9 +933,13 @@ export function computeExplorerGroupTree(
                 if (!def) break;
                 
                 const ns = def.namespace?.[0] ?? def.layer;
-                const isFoundational = ns && availableOntologies.some(pkg => 
-                    pkg.layers.some(l => l.id === ns)
-                );
+                // Only stop at layers that are part of the core/foundational ontologies
+                const CORE_ONTOLOGY_LAYERS = new Set([
+                    'architecture', 'core', 'compliance', 'analysis', 
+                    'geometry', 'systems', 'domain', 'assurance', 
+                    'methodology', 'rules', 'viewpoints', 'artifacts'
+                ]);
+                const isFoundational = ns && CORE_ONTOLOGY_LAYERS.has(ns);
                 
                 // If this kind belongs to a foundational ontology layer, stop here
                 if (isFoundational) break;
