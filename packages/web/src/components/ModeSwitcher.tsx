@@ -270,9 +270,13 @@ export function ModeSwitcher() {
         if (activeView.type === 'analysis') return 'analysis';
         if (activeView.type === 'ui-screens' || activeMode === 'ui-screens') return 'ui-screens';
         if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
+        // The dashboard retains the last explorer mode in `activeMode`. It is
+        // still the dashboard, though: otherwise Model Explorer is treated as
+        // already active and its click only toggles the sidebar instead of
+        // navigating to /catalog.
+        if (activeView.type === 'dashboard') return 'dashboard';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
-        if (activeView.type === 'dashboard') return 'dashboard';
         return activeMode;
     })();
 
