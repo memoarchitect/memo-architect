@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { partitionViewsByViewpoint, sortViewpointsByOntologyLayer } from '../ExplorerPanel';
+import { buildViewPackageTree, partitionViewsByViewpoint, sortViewpointsByOntologyLayer } from '../ExplorerPanel';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 // ─── Views organised by viewpoint ───────────────────────────────────────────
@@ -23,6 +23,16 @@ function model(diagrams: any[], viewpoints: { id: string; label: string }[]): Me
 }
 
 describe('partitionViewsByViewpoint', () => {
+    it('uses the owning SysML package path rather than the source file path', () => {
+        const tree = buildViewPackageTree([
+            view('logical', 'vp', { package: 'architecture::logical' }),
+            view('physical', 'vp', { package: 'architecture::physical' }),
+        ]);
+        expect(tree[0].name).toBe('architecture');
+        expect(tree[0].children.map(node => node.name)).toEqual(['logical', 'physical']);
+        expect(tree[0].children[0].diagrams.map(diagram => diagram.id)).toEqual(['logical']);
+    });
+
     it('follows the ontology-authored V-model lanes, then alphabetizes unplaced viewpoints', () => {
         const ordered = sortViewpointsByOntologyLayer([
             { id: 'other-z', label: 'Zeta', visibleKinds: [], visibleRelationships: [], visibleLayers: [] },

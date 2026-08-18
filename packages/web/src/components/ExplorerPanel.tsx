@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     useModelStore,
@@ -445,6 +445,29 @@ export function buildTree(elements: MemoElement[], packages: { qualifiedName: st
     return root;
 }
 
+/** Semantic ownership navigation for nested part and port usages. */
+export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
+    if (!elements.some(element => Boolean(element.owner))) return [];
+    const nodes = new Map<string, TreeNode>();
+    for (const element of elements) {
+        if (element.construct !== 'part' && element.construct !== 'port') continue;
+        nodes.set(element.id, { id: element.id, name: element.name, type: 'element', element, children: [] });
+    }
+    const roots: TreeNode[] = [];
+    for (const node of nodes.values()) {
+        const owner = node.element?.owner;
+        const parent = owner ? nodes.get(owner) : undefined;
+        if (parent) parent.children.push(node);
+        else roots.push(node);
+    }
+    const sort = (items: TreeNode[]) => {
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        items.forEach(item => sort(item.children));
+    };
+    sort(roots);
+    return roots;
+}
+
 function RecursiveTree({
     nodes,
     level,
@@ -535,8 +558,8 @@ function RecursiveTree({
                     const layerClr = LAYER_COLORS[el.layer] || baseColor;
 
                     return (
+                        <Fragment key={el.id}>
                         <div
-                            key={el.id}
                             className="group flex items-center gap-1.5 px-2 py-1 cursor-pointer"
                             style={{
                                 borderRadius: '4px',
@@ -597,6 +620,25 @@ function RecursiveTree({
                                 </span>
                             )}
                         </div>
+                        {node.children.length > 0 && (
+                            <RecursiveTree
+                                nodes={node.children}
+                                level={level + 1}
+                                expanded={expanded}
+                                toggleExpand={toggleExpand}
+                                selectedElementId={selectedElementId}
+                                selectElement={selectElement}
+                                selectedElementIds={selectedElementIds}
+                                toggleElementSelection={toggleElementSelection}
+                                violationCounts={violationCounts}
+                                baseColor={baseColor}
+                                onContextMenu={onContextMenu}
+                                onDragStart={onDragStart}
+                                onDrop={onDrop}
+                                isUndefined={isUndefined}
+                            />
+                        )}
+                        </Fragment>
                     );
                 }
             })}
@@ -774,25 +816,16 @@ export function computeExplorerGroupTree(
     searchTerm: string,
     registryKinds: KindDefinitionDTO[],
     availableOntologies: OntologyPackageInfo[],
-    declaredPackages: { qualifiedName: string }[] = [],
+    _declaredPackages: { qualifiedName: string }[] = [],
+    kindFilter?: ReadonlySet<string>,
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
-    // Which packages belong in a kind's subtree.
-    //
-    // The explorer groups by kind first, so one package can appear under
-    // several kinds — once for each kind it declares. A package that declares
-    // nothing at all is the exception: it has no kind to sort it by, and
-    // hiding it until something is put in it is exactly the disappearing
-    // container this replaced, so it shows wherever a container can be made.
-    const populated = new Set<string>();
-    for (const el of elements) {
-        for (let path = el.package; path; path = path.includes('::') ? path.slice(0, path.lastIndexOf('::')) : '') {
-            populated.add(path);
-        }
-    }
-    const emptyPackages = declaredPackages.filter(pkg => !populated.has(pkg.qualifiedName));
-    /** The packages a kind's own elements sit in, plus every empty one. */
+    // Which SysML packages belong in a kind's subtree. A type tree is a view
+    // of declarations, not a generic package browser: it must include only
+    // the containment path to matching declarations. In particular, an empty
+    // package or a namespace made visible through an import must not be cloned
+    // beneath every kind; the containment browser is the place to navigate it.
     const packagesFor = (kindElements: MemoElement[]): { qualifiedName: string }[] => {
         const used = new Set<string>();
         for (const el of kindElements) {
@@ -800,7 +833,7 @@ export function computeExplorerGroupTree(
                 used.add(path);
             }
         }
-        return [...[...used].map(qualifiedName => ({ qualifiedName })), ...emptyPackages]
+        return [...used].map(qualifiedName => ({ qualifiedName }))
             .sort((a, b) => a.qualifiedName.localeCompare(b.qualifiedName));
     };
 
@@ -856,6 +889,8 @@ export function computeExplorerGroupTree(
     for (const lg of layerGroups) {
         const kindMap = new Map<string, MemoElement[]>();
         for (const el of elements) {
+            if (kindFilter && !kindFilter.has(el.kind)) continue;
+            if (el.construct === 'port') continue;
             const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
             const sourcePackage = kindToSubGroup[el.kind];
             if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
@@ -876,6 +911,8 @@ export function computeExplorerGroupTree(
     const standardDiagramMap = new Map<string, MemoElement[]>();
     const uncategorizedMap = new Map<string, MemoElement[]>();
     for (const el of elements) {
+        if (kindFilter && !kindFilter.has(el.kind)) continue;
+        if (el.construct === 'port') continue;
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
         if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
@@ -905,6 +942,8 @@ export function computeExplorerGroupTree(
     // Elements that are neither ontology kinds nor recognized standard SysML
     // diagram notation → "Not in Ontology".
     for (const el of elements) {
+        if (kindFilter && !kindFilter.has(el.kind)) continue;
+        if (el.construct === 'port') continue;
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
         if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
@@ -921,6 +960,27 @@ export function computeExplorerGroupTree(
         groups.push({
             group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: undefColor, kinds: [] },
             subGroups: toSubGroups(uncategorizedMap, undefColor),
+        });
+    }
+
+    // Ports are structural even when their declaration happens to live in a
+    // functional source directory. Definitions remain discoverable by their
+    // semantic port family; usages belong to the owning part in containment.
+    const ports = elements.filter(el => el.construct === 'port' && (!kindFilter || kindFilter.has(el.kind)));
+    const portDefinitions = ports.filter(port => !port.owner);
+    const ownedStructure = buildOwnershipTree(elements.filter(el => !kindFilter || kindFilter.has(el.kind)));
+    if (portDefinitions.length > 0 || ownedStructure.length > 0) {
+        const structureColor = '#0F766E';
+        const kinds = new Map<string, TreeNode[]>();
+        for (const port of portDefinitions) {
+            const entries = kinds.get(port.kind) ?? [];
+            entries.push(...buildTree([port]));
+            kinds.set(port.kind, entries);
+        }
+        if (ownedStructure.length > 0) kinds.set('Owned Structure', ownedStructure);
+        groups.push({
+            group: { id: 'structure', label: 'Structure', color: structureColor, kinds: [] },
+            subGroups: [{ id: '', label: '', color: structureColor, kinds }],
         });
     }
 
@@ -955,6 +1015,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
     const [dragging, setDragging] = useState<{ id: string; kind: string } | null>(null);
+    const [kindFilter, setKindFilter] = useState<Set<string>>(new Set());
 
     const toggleExpand = useCallback((key: string, e?: React.MouseEvent) => {
         e?.stopPropagation();
@@ -986,8 +1047,9 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             model.registries?.kinds ?? [],
             availableOntologies,
             model.packages ?? [],
+            kindFilter.size ? kindFilter : undefined,
         ) : [],
-        [model, searchTerm, availableOntologies],
+        [model, searchTerm, availableOntologies, kindFilter],
     );
 
     useEffect(() => {
@@ -1086,6 +1148,22 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
+            <details className="px-3 py-1.5 flex-shrink-0" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }}>
+                <summary style={{ cursor: 'pointer', color: COLOR.secondary }}>Filter element types{kindFilter.size ? ` (${kindFilter.size})` : ''}</summary>
+                <div className="mt-1 max-h-32 overflow-y-auto">
+                    <button onClick={() => setKindFilter(new Set())} style={{ color: COLOR.accent, fontSize: FONT.xs }}>Show all</button>
+                    {registryKinds.filter(kind => !kind.isAbstract).sort((a, b) => a.name.localeCompare(b.name)).map(kind => (
+                        <label key={kind.name} className="flex items-center gap-1 py-0.5">
+                            <input type="checkbox" checked={!kindFilter.size || kindFilter.has(kind.name)} onChange={() => setKindFilter(current => {
+                                const next = current.size ? new Set(current) : new Set(registryKinds.filter(def => !def.isAbstract).map(def => def.name));
+                                if (next.has(kind.name)) next.delete(kind.name); else next.add(kind.name);
+                                return next;
+                            })} />
+                            {kind.label || kind.name}
+                        </label>
+                    ))}
+                </div>
+            </details>
             {/* ── Multi-select toolbar ── */}
             {selectionCount > 0 && (
                 <div
@@ -1511,12 +1589,57 @@ export function partitionViewsByViewpoint(model: MemoModelDTO | null): {
     };
 }
 
+interface ViewPackageNode {
+    id: string;
+    name: string;
+    children: ViewPackageNode[];
+    diagrams: DiagramDTO[];
+}
+type PackagedDiagram = DiagramDTO & { package?: string };
+
+/** Build Viewpoints navigation from SysML package ownership, never file paths. */
+export function buildViewPackageTree(diagrams: PackagedDiagram[]): ViewPackageNode[] {
+    const root: ViewPackageNode[] = [];
+    for (const diagram of diagrams) {
+        let level = root;
+        let path = '';
+        let owner: ViewPackageNode | undefined;
+        for (const segment of (diagram.package ?? '').split('::').filter(Boolean)) {
+            path = path ? `${path}::${segment}` : segment;
+            let node = level.find(candidate => candidate.id === path);
+            if (!node) {
+                node = { id: path, name: segment, children: [], diagrams: [] };
+                level.push(node);
+            }
+            owner = node;
+            level = node.children;
+        }
+        if (level === root) {
+            // A view without a package remains reachable but is never assigned
+            // a path based on the source file.
+            let node = root.find(candidate => candidate.id === '__unpackaged');
+            if (!node) {
+                node = { id: '__unpackaged', name: 'No owning package', children: [], diagrams: [] };
+                root.push(node);
+            }
+            node.diagrams.push(diagram);
+        } else owner!.diagrams.push(diagram);
+    }
+    const sort = (nodes: ViewPackageNode[]) => {
+        nodes.sort((a, b) => a.name.localeCompare(b.name));
+        nodes.forEach(node => { node.diagrams.sort((a, b) => a.name.localeCompare(b.name)); sort(node.children); });
+    };
+    sort(root);
+    return root;
+}
+
 function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
+    const createPackage = useModelStore(s => s.createPackage);
     const navigate = useNavigate();
 
     // Viewpoint folders start collapsed, including Uncategorized: a project can
@@ -1600,6 +1723,17 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     );
 
     const renderGroupedDiagramList = (diagrams: DiagramDTO[], vpId: string) => {
+        const packageTree = buildViewPackageTree(diagrams);
+        const renderPackage = (node: ViewPackageNode, depth = 0): React.ReactNode => (
+            <div key={node.id} style={{ marginLeft: depth ? '12px' : 0 }}>
+                <div className="px-2 py-1 font-semibold" style={{ color: COLOR.muted, fontSize: FONT.xs }}>
+                    {node.name}
+                </div>
+                <div style={{ marginLeft: '8px' }}>{renderDiagramList(node.diagrams, vpId)}</div>
+                {node.children.map(child => renderPackage(child, depth + 1))}
+            </div>
+        );
+        if (diagrams.some(diagram => (diagram as PackagedDiagram).package)) return packageTree.map(node => renderPackage(node));
         const groupOf = (diagram: DiagramDTO) => (diagram as DiagramDTO & { group?: string }).group;
         if (!diagrams.some(diagram => groupOf(diagram))) return renderDiagramList(diagrams, vpId);
         const groups = new Map<string, DiagramDTO[]>();
@@ -1651,6 +1785,18 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                                     onClick={() => setNewDiagramVp(vp.id)}
                                 >
                                     <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New View
+                                </button>
+                                <button
+                                    className="flex items-center gap-1 px-2 py-1 w-full text-left"
+                                    style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    onClick={() => {
+                                        const name = window.prompt('New SysML package name');
+                                        if (name?.trim()) void reportPackageResult(createPackage(name.trim()));
+                                    }}
+                                >
+                                    <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Package
                                 </button>
                             </div>
                         )}

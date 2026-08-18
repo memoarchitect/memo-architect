@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { artifactCategory, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
+import { artifactCategory, buildOwnershipTree, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
 import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
@@ -90,6 +90,17 @@ describe('buildTree', () => {
     });
 });
 
+describe('buildOwnershipTree', () => {
+    it('nests owned port usages beneath their owning part', () => {
+        const part = { ...el('pump', 'Pump', 'logical'), construct: 'part' };
+        const port = { ...el('inlet', 'LogicalPort', 'functional'), construct: 'port', owner: 'pump' };
+        const tree = buildOwnershipTree([part, port]);
+        expect(tree).toHaveLength(1);
+        expect(tree[0].id).toBe('pump');
+        expect(tree[0].children.map(child => child.id)).toEqual(['inlet']);
+    });
+});
+
 describe('computeExplorerGroupTree containment', () => {
     it('shows a namespace once per type folder, not once per contributing kind', () => {
         // Both kinds sit in the same sub-group and the same package; a tree
@@ -106,7 +117,7 @@ describe('computeExplorerGroupTree containment', () => {
         }
     });
 
-    it('carries an empty package into the tree so it can be filled', () => {
+    it('does not clone empty packages into a type tree', () => {
         const groups = computeExplorerGroupTree(
             [inPackage('h1', 'Hazard', 'risk', 'Plant')], '',
             registryFromOntology(ONTOLOGY), [ONTOLOGY],
@@ -115,7 +126,7 @@ describe('computeExplorerGroupTree containment', () => {
         const risk = groups[0].subGroups.find(sg => sg.id === 'safety-risk')!;
         const hazards = risk.kinds.get('Hazard')!;
 
-        expect(hazards.map(node => node.id).sort()).toEqual(['f:Plant', 'f:Spares']);
+        expect(hazards.map(node => node.id)).toEqual(['f:Plant']);
     });
 });
 
