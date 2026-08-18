@@ -237,9 +237,10 @@ describe('computeExplorerGroupTree', () => {
             el('assembly', 'HardwareAssembly', 'implementation'),
         ], '', registryFromOntology(memoOntology), [memoOntology]);
         expect(groups.map(group => group.group.id)).toEqual(['architecture']);
-        // The concrete elements nest below their ontology bases; critically,
-        // they stay in the MEMO architecture group rather than Undefined.
-        expect(allKinds(groups[0])).toEqual(['Actor', 'PhysicalAssembly']);
+        // Every declared type is a first-class branch; it stays in the MEMO
+        // architecture group rather than Undefined, then contains its SysML
+        // package hierarchy.
+        expect(allKinds(groups[0])).toEqual(['HardwareAssembly', 'User']);
     });
 
     it('uses an ontology-declared native kind in its declared layer', () => {

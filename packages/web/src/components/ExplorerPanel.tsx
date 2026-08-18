@@ -744,22 +744,6 @@ function buildKindToSubGroupMap(
     return map;
 }
 
-/** Immediate ontology parent used as the Explorer's type folder. */
-function buildKindToParentMap(
-    registryKinds: KindDefinitionDTO[],
-): Record<string, string | undefined> {
-    const map: Record<string, string | undefined> = {};
-    const abstractKinds = new Set<string>();
-    for (const kind of registryKinds) {
-        if (kind.isAbstract) abstractKinds.add(kind.name);
-        map[kind.name] = kind.superType;
-    }
-    for (const [kind, parent] of Object.entries(map)) {
-        if (parent && abstractKinds.has(parent)) map[kind] = undefined;
-    }
-    return map;
-}
-
 function subGroupLabel(id: string): string {
     return id
         .split(/[_-]/)
@@ -842,7 +826,6 @@ export function computeExplorerGroupTree(
     const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(registryKinds);
     const kindToSubGroup = buildKindToSubGroupMap(registryKinds);
-    const kindToParent = buildKindToParentMap(registryKinds);
     const registryKindNames = new Set(registryKinds.map(kind => kind.name));
     const layerGroups = buildLayerGroupsFromRegistry(registryKinds, availableOntologies)
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
@@ -861,7 +844,12 @@ export function computeExplorerGroupTree(
             const sub = layerId === 'artifacts'
                 ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
                 : (kindToSubGroup[kind] ?? '');
-            const typeFolder = kindToParent[kind] ?? kind;
+            // The first branch below an ontology group is always the exact
+            // element type.  Type inheritance is useful metadata, but it must
+            // not merge (for example) `User` into `Actor`: users navigate an
+            // Explorer by the type they declared, then by the SysML package
+            // hierarchy that owns those declarations.
+            const typeFolder = kind;
             if (!pooled.has(sub)) pooled.set(sub, new Map());
             const folders = pooled.get(sub)!;
             folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), ...els]);
