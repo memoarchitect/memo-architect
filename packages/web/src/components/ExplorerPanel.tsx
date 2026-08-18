@@ -865,61 +865,119 @@ export function computeExplorerGroupTree(
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
-    // Which SysML packages belong in a kind's subtree. A type tree is a view
-    // of declarations, not a generic package browser: it must include only
-    // the containment path to matching declarations. In particular, an empty
-    // package or a namespace made visible through an import must not be cloned
-    // beneath every kind; the containment browser is the place to navigate it.
-    const packagesFor = (kindElements: MemoElement[]): { qualifiedName: string }[] => {
-        const used = new Set<string>();
-        for (const el of kindElements) {
-            for (let path = el.package; path; path = path.includes('::') ? path.slice(0, path.lastIndexOf('::')) : '') {
-                used.add(path);
-            }
-        }
-        return [...used].map(qualifiedName => ({ qualifiedName }))
-            .sort((a, b) => a.qualifiedName.localeCompare(b.qualifiedName));
-    };
-
-    // Derive groups and kind→layer map from the currently selected ontology packages.
-    // Drop view-bearing layers — views live in Diagrams, not Model Explorer (Phase D3).
     const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(registryKinds);
     const kindToSubGroup = buildKindToSubGroupMap(registryKinds);
-    const registryKindNames = new Set(registryKinds.map(kind => kind.name));
     const layerGroups = buildLayerGroupsFromRegistry(registryKinds, availableOntologies)
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
-    /** Bucket kind → elements into sub-groups, building each type folder's tree. */
-    const toSubGroups = (kindMap: Map<string, MemoElement[]>, groupColor: string, layerId?: string): ExplorerSubGroup[] => {
-        // Several kinds can share one type folder — a specialization sits under
-        // the kind it derives from — so the elements are pooled per folder and
-        // the tree built once. Building per kind and concatenating gave the
-        // folder one package branch per kind, all with the same name.
-        const pooled = new Map<string, Map<string, MemoElement[]>>();
-        for (const [kind, els] of kindMap.entries()) {
-            // An ontology kind without a namespace group sits directly in its
-            // declared ontology layer.
+    const validElements = new Map<string, MemoElement>();
+    for (const el of elements) {
+        if (kindFilter && !kindFilter.has(el.kind)) continue;
+        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
+        const sourcePackage = kindToSubGroup[el.kind];
+        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
+        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
+        validElements.set(el.id, el);
+    }
+
+    const nodes = new Map<string, TreeNode>();
+    for (const el of validElements.values()) {
+        nodes.set(el.id, {
+            id: el.id,
+            name: el.name,
+            type: 'element',
+            element: el,
+            children: [],
+        });
+    }
+
+    const roots: TreeNode[] = [];
+    for (const node of nodes.values()) {
+        const ownerId = node.element?.owner;
+        const owner = ownerId ? nodes.get(ownerId) : undefined;
+        if (owner) {
+            owner.children.push(node);
+        } else {
+            roots.push(node);
+        }
+    }
+
+    const sortNodes = (nodesToSort: TreeNode[]) => {
+        nodesToSort.sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+        nodesToSort.forEach(node => sortNodes(node.children));
+    };
+    for (const node of nodes.values()) {
+        sortNodes(node.children);
+    }
+
+    const toSubGroups = (rootsList: TreeNode[], groupColor: string, layerId?: string): ExplorerSubGroup[] => {
+        const pooled = new Map<string, Map<string, TreeNode[]>>();
+        for (const root of rootsList) {
+            const kind = root.element!.kind;
             const sub = layerId === 'artifacts'
                 ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
                 : (kindToSubGroup[kind] ?? '');
-            // The first branch below an ontology group is always the exact
-            // element type.  Type inheritance is useful metadata, but it must
-            // not merge (for example) `User` into `Actor`: users navigate an
-            // Explorer by the type they declared, then by the SysML package
-            // hierarchy that owns those declarations.
-            const typeFolder = kind;
+            
+            const isBaseOntologyKind = availableOntologies.some(pkg => 
+                pkg.layers.some(l => l.kinds.some(k => k.name === kind))
+            );
+            
+            let resolveKind = kind;
+            while (true) {
+                const isBase = availableOntologies.some(pkg => 
+                    pkg.layers.some(l => l.kinds.some(k => k.name === resolveKind))
+                );
+                if (isBase) break;
+                
+                const def = registryKinds.find(definition => definition.name === resolveKind);
+                if (def && def.superType) {
+                    resolveKind = def.superType;
+                } else {
+                    break;
+                }
+            }
+            
+            const typeFolder = resolveKind;
             if (!pooled.has(sub)) pooled.set(sub, new Map());
             const folders = pooled.get(sub)!;
-            folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), ...els]);
+            folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), root]);
         }
-        const buckets = new Map<string, Map<string, TreeNode[]>>(
-            [...pooled.entries()].map(([sub, folders]) => [
-                sub,
-                new Map([...folders.entries()].map(([folder, els]) => [folder, buildOwnerThenPackageTree(els)])),
-            ]),
-        );
+        
+        const buckets = new Map<string, Map<string, TreeNode[]>>();
+        for (const [sub, folders] of pooled.entries()) {
+            const subBuckets = new Map<string, TreeNode[]>();
+            for (const [folder, folderRoots] of folders.entries()) {
+                const tree: TreeNode[] = [];
+                const branchFor = (qualifiedName: string): TreeNode[] => {
+                    let level = tree;
+                    let path = '';
+                    for (const segment of qualifiedName.split('::').filter(Boolean)) {
+                        path = path ? `${path}::${segment}` : segment;
+                        const id = `f:${path}`;
+                        let fNode = level.find(node => node.id === id);
+                        if (!fNode) {
+                            fNode = { id, name: segment, type: 'folder', children: [] };
+                            level.push(fNode);
+                        }
+                        level = fNode.children;
+                    }
+                    return level;
+                };
+
+                for (const root of folderRoots) {
+                    branchFor(root.element?.package ?? '').push(root);
+                }
+                sortNodes(tree);
+                subBuckets.set(folder, tree);
+            }
+            buckets.set(sub, subBuckets);
+        }
+
         return [...buckets.entries()]
             .sort(([a], [b]) => layerId === 'artifacts'
                 ? ARTIFACT_CATEGORIES.indexOf(a as any) - ARTIFACT_CATEGORIES.indexOf(b as any)
@@ -935,41 +993,38 @@ export function computeExplorerGroupTree(
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
     for (const lg of layerGroups) {
-        const kindMap = new Map<string, MemoElement[]>();
-        for (const el of elements) {
-            if (kindFilter && !kindFilter.has(el.kind)) continue;
-            if (el.construct === 'port') continue;
-            const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
-            const sourcePackage = kindToSubGroup[el.kind];
-            if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
+        const layerRoots: TreeNode[] = [];
+        for (const root of roots) {
+            const el = root.element!;
             const layerId = kindToLayerId[el.kind];
-            if (!layerId) continue;
-            if (layerId !== lg.id) continue;
-            if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-            if (!kindMap.has(el.kind)) kindMap.set(el.kind, []);
-            kindMap.get(el.kind)!.push(el);
+            if (!layerId || layerId !== lg.id) continue;
+            layerRoots.push(root);
         }
-        if (kindMap.size > 0) {
-            groups.push({ group: lg, subGroups: toSubGroups(kindMap, lg.color, lg.id) });
+        if (layerRoots.length > 0) {
+            groups.push({ group: lg, subGroups: toSubGroups(layerRoots, lg.color, lg.id) });
         }
     }
 
-    // Native SysML activity notation is supported by the renderer but does not
-    // become a MEMO ontology kind just by being present in a project.
-    const standardDiagramMap = new Map<string, MemoElement[]>();
-    const uncategorizedMap = new Map<string, MemoElement[]>();
-    for (const el of elements) {
-        if (kindFilter && !kindFilter.has(el.kind)) continue;
-        if (el.construct === 'port') continue;
-        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
-        const sourcePackage = kindToSubGroup[el.kind];
-        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        if (!isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) continue;
-        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-        if (!standardDiagramMap.has(el.kind)) standardDiagramMap.set(el.kind, []);
-        standardDiagramMap.get(el.kind)!.push(el);
+    const standardDiagramRoots: TreeNode[] = [];
+    const uncategorizedRoots: TreeNode[] = [];
+
+    const registryKindNames = new Set(registryKinds.map(kind => kind.name));
+
+    for (const root of roots) {
+        const el = root.element!;
+        const layerId = kindToLayerId[el.kind];
+        
+        if (layerId && knownLayerIds.has(layerId)) continue;
+        if (layerId && NON_ELEMENT_LAYERS.has(layerId)) continue;
+        
+        if (isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) {
+            standardDiagramRoots.push(root);
+        } else {
+            uncategorizedRoots.push(root);
+        }
     }
-    if (standardDiagramMap.size > 0) {
+
+    if (standardDiagramRoots.length > 0) {
         const standardColor = '#64748B';
         groups.push({
             group: {
@@ -978,62 +1033,21 @@ export function computeExplorerGroupTree(
                 color: standardColor,
                 kinds: [],
             },
-            subGroups: [{
-                id: 'diagram-elements',
-                label: 'Diagram Elements',
-                color: standardColor,
-                kinds: new Map([...standardDiagramMap.entries()].map(([kind, entries]) => [kind, buildTree(entries, packagesFor(entries))])),
-            }],
+            subGroups: toSubGroups(standardDiagramRoots, standardColor).map(sg => ({ ...sg, id: 'diagram-elements', label: 'Diagram Elements' })),
         });
     }
 
-    // Elements that are neither ontology kinds nor recognized standard SysML
-    // diagram notation → "Not in Ontology".
-    for (const el of elements) {
-        if (kindFilter && !kindFilter.has(el.kind)) continue;
-        if (el.construct === 'port') continue;
-        const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
-        const sourcePackage = kindToSubGroup[el.kind];
-        if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        const layerId = kindToLayerId[el.kind];
-        if (layerId && knownLayerIds.has(layerId)) continue;
-        if (layerId && NON_ELEMENT_LAYERS.has(layerId)) continue;
-        if (isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) continue;
-        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-        if (!uncategorizedMap.has(el.kind)) uncategorizedMap.set(el.kind, []);
-        uncategorizedMap.get(el.kind)!.push(el);
-    }
-    if (uncategorizedMap.size > 0) {
+    if (uncategorizedRoots.length > 0) {
         const undefColor = '#F59E0B';
         groups.push({
             group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: undefColor, kinds: [] },
-            subGroups: toSubGroups(uncategorizedMap, undefColor),
-        });
-    }
-
-    // Ports are structural even when their declaration happens to live in a
-    // functional source directory. Definitions remain discoverable by their
-    // semantic port family; usages belong to the owning part in containment.
-    const ports = elements.filter(el => el.construct === 'port' && (!kindFilter || kindFilter.has(el.kind)));
-    const portDefinitions = ports.filter(port => !port.owner);
-    const ownedStructure = buildOwnershipTree(elements.filter(el => !kindFilter || kindFilter.has(el.kind)));
-    if (portDefinitions.length > 0 || ownedStructure.length > 0) {
-        const structureColor = '#0F766E';
-        const kinds = new Map<string, TreeNode[]>();
-        for (const port of portDefinitions) {
-            const entries = kinds.get(port.kind) ?? [];
-            entries.push(...buildTree([port]));
-            kinds.set(port.kind, entries);
-        }
-        if (ownedStructure.length > 0) kinds.set('Owned Structure', ownedStructure);
-        groups.push({
-            group: { id: 'structure', label: 'Structure', color: structureColor, kinds: [] },
-            subGroups: [{ id: '', label: '', color: structureColor, kinds }],
+            subGroups: toSubGroups(uncategorizedRoots, undefColor).map(sg => ({ ...sg, id: 'undefined-elements', label: 'Elements' })),
         });
     }
 
     return groups;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 
