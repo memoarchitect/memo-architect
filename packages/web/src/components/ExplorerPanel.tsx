@@ -1001,6 +1001,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, [selectElement, setActiveView]);
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const initializedTypeBranches = useRef(false);
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
     const [dragging, setDragging] = useState<{ id: string; kind: string } | null>(null);
     const [kindFilter, setKindFilter] = useState<Set<string>>(new Set());
@@ -1039,6 +1040,24 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         ) : [],
         [model, searchTerm, availableOntologies, kindFilter],
     );
+
+    // Keep the broad layer/group branches user-controlled, but open every
+    // exact type branch once. This makes the next level — the owning SysML
+    // package hierarchy — visible as soon as a user opens Functional (or any
+    // other group), instead of requiring a second click on every type.
+    useEffect(() => {
+        if (initializedTypeBranches.current || groupTree.length === 0) return;
+        const typeBranches = new Set<string>();
+        for (const { group, subGroups } of groupTree) {
+            for (const sub of subGroups) {
+                for (const kind of sub.kinds.keys()) {
+                    typeBranches.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
+                }
+            }
+        }
+        initializedTypeBranches.current = true;
+        setExpanded(typeBranches);
+    }, [groupTree]);
 
     useEffect(() => {
         const expandSearchResults = () => {
