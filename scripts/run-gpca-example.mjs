@@ -17,7 +17,10 @@ cpSync(installedExample, exampleRoot, { recursive: true });
 writeFileSync(resolve(exampleRoot, 'memo.package.yaml'), [
     'name: GPCA Sample',
     'version: 1.0.0',
-    'sysmlDir: model',
+    'entrypoint: model/catalog/project.sysml',
+    'include: [model]',
+    'toolchain:',
+    '  validator: syside',
 ].join('\n') + '\n');
 const architectCli = resolve(repoRoot, 'lib/bin/memo-architect.js');
 

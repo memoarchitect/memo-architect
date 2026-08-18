@@ -29,10 +29,17 @@ function toolchainOptionsFrom(options: Record<string, unknown>): Record<string, 
     );
 }
 
-/** Re-emit the toolchain flags so the supervised child runs the same toolchain. */
-function toolchainArgv(options: Record<string, unknown>): string[] {
-    return Object.entries(toolchainOptionsFrom(options))
-        .flatMap(([name, value]) => [`--${name}`, String(value)]);
+/**
+ * Architect is a SysML workbench, so its validity verdict comes from the
+ * compiler of record unless the caller deliberately selects another validator.
+ * The internal provider still lowers the model into Architect's IR; it is not
+ * allowed to redefine what valid SysML means.
+ */
+function architectDevToolchainOptions(options: Record<string, unknown>): Record<string, unknown> {
+    const selected = toolchainOptionsFrom(options);
+    return selected['toolchain.validator'] === undefined
+        ? { ...selected, 'toolchain.validator': 'syside' }
+        : selected;
 }
 
 program
@@ -84,21 +91,23 @@ applyToolchainCliOptions(
         .description('Start Architect with live model reload')
         .option('-p, --port <port>', 'Server port', '3000')
         .option('--no-open', 'Do not open a browser')
-        .option('--keep-alive', 'Keep running after the last browser disconnects')
-        .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION),
-    defaultRegistry,
+.option('--keep-alive', 'Keep running after the last browser disconnects')
+.option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION),
+defaultRegistry,
 ).action(async function (this: Command, options: Record<string, unknown>) {
     const port = resolveOption(this, 'port', options.port as string);
     const open = resolveOption(this, 'open', options.open as boolean);
     const experimental = resolveOption(this, 'experimental', options.experimental as boolean | undefined);
     const keepAlive = resolveOption(this, 'keepAlive', options.keepAlive as boolean | undefined);
+    const toolchainOptions = architectDevToolchainOptions(options);
     await architectDevCommand({
         port: Number.parseInt(String(port), 10),
         open,
         featureGrants: resolveFeatureGrants({ experimental }),
         keepAlive: keepAlive === true,
-        toolchainOptions: toolchainOptionsFrom(options),
-        toolchainArgv: toolchainArgv(options),
+        toolchainOptions,
+        toolchainArgv: Object.entries(toolchainOptions)
+            .flatMap(([name, value]) => [`--${name}`, String(value)]),
     });
 });
 
