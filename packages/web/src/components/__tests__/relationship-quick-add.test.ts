@@ -125,15 +125,14 @@ describe('relationship choices for a picked pair', () => {
     const registries: OntologyRegistriesDTO = {
         kinds: [
             { name: 'MemoPart', label: 'Memo Part', layer: 'core', construct: 'part def', isAbstract: true },
-            { name: 'ArchitectureElement', label: 'Architecture Element', layer: 'core', construct: 'part def', superType: 'MemoPart', isAbstract: true },
-            { name: 'VerifiableElement', label: 'Verifiable Element', layer: 'core', construct: 'part def', superType: 'MemoPart', isAbstract: true },
-            { name: 'SoftwareComponent', label: 'Software Component', layer: 'software', construct: 'part def', superType: 'ArchitectureElement' },
+            { name: 'VerifiableElement', label: 'Verifiable Element', layer: 'core', construct: 'requirement def', isAbstract: true },
+            { name: 'SoftwareComponent', label: 'Software Component', layer: 'software', construct: 'part def', superType: 'MemoPart' },
             { name: 'SoftwareRequirement', label: 'Software Requirement', layer: 'requirements', construct: 'requirement def', superType: 'VerifiableElement' },
         ],
         relationships: [
             {
                 name: 'satisfiedBy', sysmlName: 'SatisfiedBy', label: 'Satisfied By', layer: 'requirements',
-                sourceEnd: { name: 'satisfyingElement', type: 'ArchitectureElement' },
+                sourceEnd: { name: 'satisfyingElement', type: 'MemoPart' },
                 targetEnd: { name: 'requiredElement', type: 'VerifiableElement' },
             },
             {
@@ -148,16 +147,16 @@ describe('relationship choices for a picked pair', () => {
         const options = legalRelationshipTypes(
             elements.pumpController, elements.sr104, registries);
 
-        // Outgoing satisfiedBy and tracesTo, plus incoming tracesTo.
+        // Only satisfiedBy fits: tracesTo stays within the MemoPart family.
         expect(options.map(o => `${o.definition.name}:${o.direction}`).sort())
-            .toEqual(['satisfiedBy:outgoing', 'tracesTo:incoming', 'tracesTo:outgoing']);
+            .toEqual(['satisfiedBy:outgoing']);
     });
 
     it('puts the picked element on the correct end for an incoming choice', () => {
-        const incoming = legalRelationshipTypes(elements.pumpController, elements.sr104, registries)
+        const incoming = legalRelationshipTypes(elements.pumpController, elements.pumpMonitor, registries)
             .find(option => option.direction === 'incoming')!;
 
-        expect(incoming.sourceId).toBe('sr104');
+        expect(incoming.sourceId).toBe('pumpMonitor');
         expect(incoming.targetId).toBe('pumpController');
     });
 

@@ -34,15 +34,14 @@ const { useModelStore, getRegistries, getRelationshipDefinition } = await import
 const registries: OntologyRegistriesDTO = {
     kinds: [
         { name: 'MemoPart', label: 'Memo Part', layer: 'core', construct: 'part def', isAbstract: true },
-        { name: 'ArchitectureElement', label: 'Architecture Element', layer: 'core', construct: 'part def', superType: 'MemoPart', isAbstract: true },
-        { name: 'VerifiableElement', label: 'Verifiable Element', layer: 'core', construct: 'part def', superType: 'MemoPart', isAbstract: true },
-        { name: 'SoftwareComponent', label: 'Software Component', layer: 'software', construct: 'part def', superType: 'ArchitectureElement' },
+        { name: 'VerifiableElement', label: 'Verifiable Element', layer: 'core', construct: 'requirement def', isAbstract: true },
+        { name: 'SoftwareComponent', label: 'Software Component', layer: 'software', construct: 'part def', superType: 'MemoPart' },
         { name: 'SoftwareRequirement', label: 'Software Requirement', layer: 'requirements', construct: 'requirement def', superType: 'VerifiableElement' },
     ],
     relationships: [
         {
             name: 'satisfiedBy', sysmlName: 'SatisfiedBy', label: 'Satisfied By', layer: 'requirements',
-            sourceEnd: { name: 'satisfyingElement', type: 'ArchitectureElement' },
+            sourceEnd: { name: 'satisfyingElement', type: 'MemoPart' },
             targetEnd: { name: 'requiredElement', type: 'VerifiableElement' },
         },
         {
@@ -332,7 +331,7 @@ describe('shared legality resolver', () => {
 
         // Every type the picker offers is a type the panel would also offer.
         for (const name of pickerOptions) expect(panelOptions).toContain(name);
-        expect(pickerOptions.sort()).toEqual(['satisfiedBy', 'tracesTo']);
+        expect(pickerOptions.sort()).toEqual(['satisfiedBy']);
     });
 
     it('offers nothing in either surface for an illegal pairing', () => {
