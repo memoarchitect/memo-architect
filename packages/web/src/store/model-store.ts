@@ -161,6 +161,27 @@ export type ActiveView =
     | { type: 'ui-screens' }
     | { type: 'welcome' };
 
+/** A presentation patch the canvas can apply to its current selection. */
+export interface SelectionStylePatch {
+    color?: string;
+    opacity?: number;
+    borderColor?: string;
+    textColor?: string;
+    fontSize?: number;
+    fontWeight?: number;
+    textAlign?: 'left' | 'center' | 'right';
+    verticalAlign?: 'top' | 'middle' | 'bottom';
+}
+
+/** What the properties panel needs to style the canvas selection. */
+export interface SelectionStyleHandle {
+    /** How many blocks the change would land on. */
+    count: number;
+    /** Current fill opacity, so the slider opens where the selection is. */
+    opacity: number;
+    apply: (patch: SelectionStylePatch) => void;
+}
+
 /** A DHF document created by the user in the DHF Workbench */
 export interface DhfDoc {
     id: string;         // e.g. "RMP-001"
@@ -302,6 +323,20 @@ export interface ModelState {
     diagramLayouts: Record<string, DiagramLayout>;
     mergeDiagramLayouts: (layouts: Record<string, DiagramLayout>) => void;
     setNodeLayout: (diagramId: string, nodeId: string, pos: { x: number; y: number; width?: number; height?: number; color?: string; opacity?: number }) => void;
+
+    /**
+     * The style controls for whatever the open canvas has selected.
+     *
+     * The canvas owns the action — it knows which React Flow nodes are
+     * selected and how a style patch reaches both the sidecar layout and the
+     * live node — and the properties panel owns the surface. Colour belongs in
+     * a panel the user can leave open and expand, not on a bar that floats over
+     * the diagram it is meant to be recolouring.
+     *
+     * Null when no diagram is open or nothing is selected.
+     */
+    selectionStyle: SelectionStyleHandle | null;
+    setSelectionStyle: (handle: SelectionStyleHandle | null) => void;
 
     // ─── Diagram parse errors (per diagramId) ─────────────────────────
     diagramParseErrors: Record<string, string[]>;
@@ -524,6 +559,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     userViewpoints: migrateLegacyViewpoints(),
 
     // Sidecar layouts
+    selectionStyle: null,
+    setSelectionStyle: (handle) => set({ selectionStyle: handle }),
     diagramLayouts: {},
     mergeDiagramLayouts: (layouts) => set((s) => ({
         diagramLayouts: { ...s.diagramLayouts, ...layouts },

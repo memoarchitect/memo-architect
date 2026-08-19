@@ -2586,6 +2586,18 @@ function DiagramCanvasInner() {
         return values.every(value => value === values[0]) ? values[0] : 1;
     }, [selectedNodes]);
 
+    // The properties panel renders the style controls; the canvas keeps the
+    // action, because only it knows which nodes are selected and how a patch
+    // reaches both the sidecar layout and the live node. Published here rather
+    // than passed down, since the panel is a sibling in App, not a child.
+    const setSelectionStyle = useModelStore(s => s.setSelectionStyle);
+    useEffect(() => {
+        setSelectionStyle(selectedNodes.length > 0
+            ? { count: selectedNodes.length, opacity: selectionOpacity, apply: styleSelection }
+            : null);
+    }, [selectedNodes.length, selectionOpacity, styleSelection, setSelectionStyle]);
+    useEffect(() => () => setSelectionStyle(null), [setSelectionStyle]);
+
     const handleRemoveFromDiagram = useCallback((nodeId: string) => {
         if (!selectedDiagramId || !selectedDiagram) return;
         const newIds = (selectedDiagram.elementIds ?? []).filter(id => id !== nodeId);
@@ -3524,13 +3536,9 @@ function DiagramCanvasInner() {
                     <SelectionToolbar
                         count={selectedNodes.length}
                         onClose={dismissSelectionTools}
-                        opacity={selectionOpacity}
                         onAlign={alignSelection}
                         onMatchSize={matchSelectionSize}
                         onDistribute={distributeSelection}
-                        onFill={color => styleSelection({ color })}
-                        onOpacity={opacity => styleSelection({ opacity })}
-                        onTextStyle={styleSelection}
                     />
                 )}
 

@@ -7,6 +7,7 @@ import type { MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 import { ElementRelationships } from './element-profile/ElementRelationships';
+import { SelectionStyleSection } from './SelectionStyleSection';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
 import type { Density } from './element-profile/density';
@@ -836,6 +837,11 @@ export function UnifiedPropertiesPanel() {
                     </span>
                 </div>
             )}
+
+            {/* Presentation, below whatever the panel is describing: colour is
+                a property of the block on this canvas, not of the model
+                element, and it applies to the whole canvas selection. */}
+            <SelectionStyleSection />
         </div>
     );
 }
