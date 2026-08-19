@@ -166,6 +166,11 @@ export interface DhfDoc {
     id: string;         // e.g. "RMP-001"
     title: string;
     group: string;      // e.g. "Risk Management"
+    /**
+     * Element id of the system this document is the design history file for.
+     * Absent means project-wide; the explorer files those under "Global".
+     */
+    systemId?: string;
     templateId: string; // e.g. "iso-14971/rmp"
     content: string;
     createdAt: number;

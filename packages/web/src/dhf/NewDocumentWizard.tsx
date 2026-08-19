@@ -19,6 +19,8 @@ import {
     prefixFromTitle,
 } from './dhf-groups';
 import type { DhfGroup, DhfTemplate } from './dhf-groups';
+import { kindParents } from '../analysis/kind-hierarchy';
+import { isSystemKind } from '../lib/system-grouping';
 
 /** One document the wizard resolved for creation */
 export interface NewDocSpec {
@@ -27,6 +29,8 @@ export interface NewDocSpec {
     /** Built-in template id, `repo:<path>`, or `blank` */
     templateId: string;
     groupLabel: string;
+    /** System the document belongs to; absent means project-wide. */
+    systemId?: string;
     /** Resolved markdown body; null → caller loads the built-in template */
     content: string | null;
 }
@@ -82,6 +86,18 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
     const [titleOverrides, setTitleOverrides] = useState<Record<string, string>>({});
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
+    // A DHF is per-device, and a system-of-systems project has several devices
+    // in it. Project-wide is the default because most documents are, and it is
+    // the honest answer when the author has not decided.
+    const [systemId, setSystemId] = useState<string>('');
+    const model = useModelStore(s => s.model);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const systems = useMemo(() => {
+        const parents = kindParents(availableOntologies);
+        return Object.values(model?.elements ?? {})
+            .filter(element => isSystemKind(element.kind, parents))
+            .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+    }, [model, availableOntologies]);
 
     const isOther = group === null && step > 0;
     const groupLabel = isOther ? (customLabel.trim() || 'Other') : group?.label ?? '';
@@ -152,13 +168,13 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                     );
                     specs.push({
                         title: draftTitle(d), prefix: draftPrefix(d),
-                        templateId: `repo:${saved.path}`, groupLabel, content: templateBody,
+                        templateId: `repo:${saved.path}`, groupLabel, systemId: systemId || undefined, content: templateBody,
                     });
                     continue;
                 } else if (d.templateId === 'blank') {
                     content = `# ${draftTitle(d)}\n\n_[TODO: Add content]_\n`;
                 }
-                specs.push({ title: draftTitle(d), prefix: draftPrefix(d), templateId: d.templateId, groupLabel, content });
+                specs.push({ title: draftTitle(d), prefix: draftPrefix(d), templateId: d.templateId, groupLabel, systemId: systemId || undefined, content });
             }
             onCreate(specs);
         } catch (e: any) {
@@ -295,6 +311,24 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                             {drafts.length} document{drafts.length === 1 ? '' : 's'} will be created in
                             <strong style={{ color: '#1B3A4B' }}> {groupLabel}</strong> and saved to <code style={{ background: '#F3F4F6', padding: '0 4px', borderRadius: '3px', fontSize: '11px' }}>dhf/documents/</code>:
                         </div>
+                        {/* A DHF belongs to a device. Offered whenever the model
+                            has systems in it; a single-system project can leave
+                            it project-wide and see no grouping at all. */}
+                        {systems.length > 0 && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
+                                <span style={{ whiteSpace: 'nowrap' }}>System</span>
+                                <select
+                                    value={systemId}
+                                    onChange={e => setSystemId(e.target.value)}
+                                    style={{ flex: 1, padding: '5px 8px', border: '1px solid #E5E7EB', borderRadius: '5px', fontSize: '12px', color: '#1B3A4B', background: '#fff' }}
+                                >
+                                    <option value="">Global — project-wide</option>
+                                    {systems.map(system => (
+                                        <option key={system.id} value={system.id}>{system.name || system.id}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
                         {drafts.map((d, i) => (
                             <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: '6px' }}>
                                 <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: groupColor, whiteSpace: 'nowrap' }}>{previewIds[i]}</span>

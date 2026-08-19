@@ -105,3 +105,24 @@ describe('usages nest under the definition they instantiate', () => {
         expect(branches.find(b => b.id === 'functions')!.nodes[0].children).toEqual([]);
     });
 });
+
+describe('system grouping', () => {
+    const systemOf = (element: { owner?: string }) => element.owner === 'pump'
+        ? { systemId: 'pump', label: 'InfusionPump' }
+        : { label: 'Global' };
+
+    it('files use cases under their system, with the untraced ones under Global', () => {
+        const families = DEFAULT_FAMILIES.map(family => family.id === 'usecases'
+            ? { ...family, systemOf }
+            : family);
+        const branches = buildBreakdown([
+            { id: 'pump', name: 'InfusionPump', kind: 'System', construct: 'part', layer: 'logical' },
+            { id: 'uc1', name: 'DeliverTherapy', kind: 'UseCase', construct: 'use case', layer: 'operational', owner: 'pump' },
+            { id: 'uc2', name: 'ServiceDevice', kind: 'UseCase', construct: 'use case', layer: 'operational' },
+        ] as never, families);
+        const useCases = branches.find(branch => branch.id === 'usecases')!;
+        expect(useCases.nodes.map(node => node.name)).toEqual(['InfusionPump', 'Global']);
+        expect(useCases.nodes[0].children.map(node => node.name)).toEqual(['DeliverTherapy']);
+        expect(useCases.nodes[1].children.map(node => node.name)).toEqual(['ServiceDevice']);
+    });
+});

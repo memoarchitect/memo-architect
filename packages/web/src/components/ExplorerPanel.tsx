@@ -1,5 +1,7 @@
 import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
-import { buildBreakdown, type BreakdownNode } from '../lib/breakdown-tree';
+import { buildBreakdown, DEFAULT_FAMILIES, type BreakdownNode } from '../lib/breakdown-tree';
+import { kindParents } from '../analysis/kind-hierarchy';
+import { GLOBAL_SYSTEM, groupBySystem, resolveSystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
 import {
     useModelStore,
@@ -1069,11 +1071,21 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect }: {
     onSelect: (id: string) => void;
 }) {
     const model = useModelStore(s => s.model);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-    const branches = useMemo(
-        () => buildBreakdown(Object.values(model?.elements ?? {}), undefined, searchTerm),
-        [model, searchTerm],
-    );
+    const branches = useMemo(() => {
+        const elements = Object.values(model?.elements ?? {});
+        // Use cases are filed under the system they serve — a system-of-systems
+        // project has several, and one flat list does not say which device a use
+        // case is about. Everything untraced lands under Global.
+        const parents = kindParents(availableOntologies);
+        const byId = new Map(elements.map(element => [element.id, element]));
+        const relationships = model?.relationships ?? [];
+        const families = DEFAULT_FAMILIES.map(family => family.id === 'usecases'
+            ? { ...family, systemOf: (element: MemoElement) => resolveSystem(element, byId, relationships, parents) }
+            : family);
+        return buildBreakdown(elements, families, searchTerm);
+    }, [model, availableOntologies, searchTerm]);
 
     const toggle = (id: string) =>
         setCollapsed(prev => {
@@ -2159,6 +2171,41 @@ function DhfExplorerContent() {
         return [...new Set(dhfDocuments.map(d => d.group))].filter(l => l && !builtIn.has(l)).sort();
     }, [dhfDocuments]);
 
+    // A DHF is the design history file OF a device. The document names its
+    // system when it is created; one that names none is project-wide and lands
+    // under Global, which is also the whole listing for a single-system project.
+    const model = useModelStore(s => s.model);
+    const documentsBySystem = useMemo(() => {
+        const elements = model?.elements ?? {};
+        return groupBySystem(dhfDocuments, doc => {
+            const system = doc.systemId ? elements[doc.systemId] : undefined;
+            return system
+                ? { systemId: system.id, label: system.name || system.id }
+                // A system id that no longer resolves is not silently dropped:
+                // the id itself is the label, so a deleted system is visible.
+                : doc.systemId
+                    ? { systemId: doc.systemId, label: doc.systemId }
+                    : { label: GLOBAL_SYSTEM };
+        });
+    }, [dhfDocuments, model]);
+
+    /** The categories one system's documents fall into: built-in first, then custom. */
+    const categoriesFor = (docs: DhfDoc[]) => [
+        ...DHF_GROUPS
+            .filter(group => docs.some(doc => doc.group === group.label))
+            .map(group => ({
+                key: group.id, groupId: group.id, label: group.label, color: group.color,
+                docs: docs.filter(doc => doc.group === group.label),
+            })),
+        ...customGroupLabels
+            .filter(label => docs.some(doc => doc.group === label))
+            .map(label => ({
+                key: `custom:${label}`, groupId: undefined as string | undefined,
+                label, color: groupColorForLabel(label),
+                docs: docs.filter(doc => doc.group === label),
+            })),
+    ];
+
     function toggleGroup(id: string) {
         setExpandedGroups(prev => {
             const next = new Set(prev);
@@ -2240,38 +2287,43 @@ function DhfExplorerContent() {
                     </button>
                 </div>
 
-                {/* Only categories that contain documents — creation goes through the wizard */}
-                {DHF_GROUPS.filter(g => dhfDocuments.some(d => d.group === g.label)).map(group => {
-                    const expanded = expandedGroups.has(group.id);
-                    const groupDocs = dhfDocuments.filter(d => d.group === group.label);
-                    return (
-                        <div key={group.id}>
-                            {/* Group header */}
-                            <button
-                                onClick={() => toggleGroup(group.id)}
-                                onContextMenu={e => openContextMenu(e, group.id)}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-left"
-                                style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary, borderRadius: '4px' }}
-                                onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                title="Right-click to add documents"
-                            >
-                                <span style={{
-                                    display: 'inline-block', width: '7px', height: '7px',
-                                    borderRadius: '50%', background: group.color, flexShrink: 0,
-                                }} />
-                                <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{group.label}</span>
-                                {groupDocs.length > 0 && (
-                                    <span style={{ fontSize: '10px', color: group.color, fontWeight: 700 }}>
-                                        {groupDocs.length}
-                                    </span>
-                                )}
-                                <ChevronIcon expanded={expanded} size={11} />
-                            </button>
-
-                            {/* Doc items */}
-                            {expanded && (
-                                    groupDocs.map(doc => {
+                {/* A design history file is per-device, so documents are filed
+                    under the system they cover and the project-wide ones under
+                    Global. One system (or none named) means one group, and the
+                    panel reads exactly as it did before. */}
+                {documentsBySystem.map(system => (
+                    <div key={system.systemId ?? system.label}>
+                        {documentsBySystem.length > 1 && (
+                            <div style={{
+                                padding: '9px 10px 2px', fontSize: '10px', fontWeight: 700,
+                                letterSpacing: '.07em', textTransform: 'uppercase', color: COLOR.muted,
+                            }}>
+                                {system.label}
+                            </div>
+                        )}
+                        {categoriesFor(system.items).map(category => {
+                            const key = `${system.systemId ?? 'global'}:${category.key}`;
+                            const expanded = expandedGroups.has(category.key);
+                            return (
+                                <div key={key}>
+                                    <button
+                                        onClick={() => toggleGroup(category.key)}
+                                        onContextMenu={category.groupId ? e => openContextMenu(e, category.groupId!) : undefined}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-left"
+                                        style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary, borderRadius: '4px' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        title={category.groupId ? 'Right-click to add documents' : undefined}
+                                    >
+                                        <span style={{
+                                            display: 'inline-block', width: '7px', height: '7px',
+                                            borderRadius: '50%', background: category.color, flexShrink: 0,
+                                        }} />
+                                        <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{category.label}</span>
+                                        <span style={{ fontSize: '10px', color: category.color, fontWeight: 700 }}>{category.docs.length}</span>
+                                        <ChevronIcon expanded={expanded} size={11} />
+                                    </button>
+                                    {expanded && category.docs.map(doc => {
                                         const isActive = activeDocId === doc.id;
                                         return (
                                             <div
@@ -2279,28 +2331,27 @@ function DhfExplorerContent() {
                                                 style={{
                                                     display: 'flex', alignItems: 'center',
                                                     paddingLeft: '28px', paddingRight: '4px',
-                                                    background: isActive ? `${group.color}18` : 'transparent',
-                                                    borderLeft: isActive ? `2px solid ${group.color}` : '2px solid transparent',
+                                                    background: isActive ? `${category.color}18` : 'transparent',
+                                                    borderLeft: isActive ? `2px solid ${category.color}` : '2px solid transparent',
                                                     cursor: 'pointer',
                                                 }}
                                                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = COLOR.surfaceAlt; }}
-                                                onMouseLeave={e => { e.currentTarget.style.background = isActive ? `${group.color}18` : 'transparent'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = isActive ? `${category.color}18` : 'transparent'; }}
                                             >
                                                 <button
                                                     onClick={() => setActiveView({ type: 'dhf-document', docId: doc.id })}
                                                     style={{
                                                         flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
                                                         background: 'none', border: 'none', padding: '5px 0',
-                                                        fontSize: FONT.explorer.element, color: isActive ? group.color : COLOR.primary,
+                                                        fontSize: FONT.explorer.element, color: isActive ? category.color : COLOR.primary,
                                                         fontWeight: isActive ? 600 : 400, cursor: 'pointer', textAlign: 'left',
                                                     }}
                                                 >
-                                                    <ItemIcon color={group.color} />
+                                                    <ItemIcon color={category.color} />
                                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {doc.id}
                                                     </span>
                                                 </button>
-                                                {/* Delete button */}
                                                 <button
                                                     onClick={e => { e.stopPropagation(); removeDhfDocument(doc.id); }}
                                                     title="Remove document"
@@ -2316,83 +2367,12 @@ function DhfExplorerContent() {
                                                 </button>
                                             </div>
                                         );
-                                    })
-                            )}
-                        </div>
-                    );
-                })}
-
-                {/* Custom "Other" categories */}
-                {customGroupLabels.map(label => {
-                    const key = `custom:${label}`;
-                    const expanded = expandedGroups.has(key);
-                    const color = groupColorForLabel(label);
-                    const groupDocs = dhfDocuments.filter(d => d.group === label);
-                    return (
-                        <div key={key}>
-                            <button
-                                onClick={() => toggleGroup(key)}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-left"
-                                style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary, borderRadius: '4px' }}
-                                onMouseEnter={e => e.currentTarget.style.background = COLOR.surfaceAlt}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <span style={{
-                                    display: 'inline-block', width: '7px', height: '7px',
-                                    borderRadius: '50%', background: color, flexShrink: 0,
-                                }} />
-                                <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{label}</span>
-                                <span style={{ fontSize: '10px', color, fontWeight: 700 }}>{groupDocs.length}</span>
-                                <ChevronIcon expanded={expanded} size={11} />
-                            </button>
-                            {expanded && groupDocs.map(doc => {
-                                const isActive = activeDocId === doc.id;
-                                return (
-                                    <div
-                                        key={doc.id}
-                                        style={{
-                                            display: 'flex', alignItems: 'center',
-                                            paddingLeft: '28px', paddingRight: '4px',
-                                            background: isActive ? `${color}18` : 'transparent',
-                                            borderLeft: isActive ? `2px solid ${color}` : '2px solid transparent',
-                                            cursor: 'pointer',
-                                        }}
-                                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = COLOR.surfaceAlt; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = isActive ? `${color}18` : 'transparent'; }}
-                                    >
-                                        <button
-                                            onClick={() => setActiveView({ type: 'dhf-document', docId: doc.id })}
-                                            style={{
-                                                flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
-                                                background: 'none', border: 'none', padding: '5px 0',
-                                                fontSize: FONT.explorer.element, color: isActive ? color : COLOR.primary,
-                                                fontWeight: isActive ? 600 : 400, cursor: 'pointer', textAlign: 'left',
-                                            }}
-                                        >
-                                            <ItemIcon color={color} />
-                                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {doc.id}
-                                            </span>
-                                        </button>
-                                        <button
-                                            onClick={e => { e.stopPropagation(); removeDhfDocument(doc.id); }}
-                                            title="Remove document"
-                                            style={{
-                                                background: 'none', border: 'none', cursor: 'pointer',
-                                                color: '#9CA3AF', padding: '2px 4px', borderRadius: '3px', fontSize: '12px',
-                                                opacity: 0, transition: 'opacity 0.1s',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef4444'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = '#9CA3AF'; }}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    );
-                })}
+                                    })}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
 
                 {/* Hint */}
                 {dhfDocuments.length === 0 && (
