@@ -1861,7 +1861,44 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
     const createPackage = useModelStore(s => s.createPackage);
+    const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const navigate = useNavigate();
+
+    /**
+     * Move one view's declaration into a package.
+     *
+     * The views tree already groups by owning package — it just had no way to
+     * change one, so a package created here grouped nothing. This addresses the
+     * view's own element rather than its authored id, which is why the DTO now
+     * carries `elementId`.
+     */
+    const moveViewToPackage = (diagram: DiagramDTO) => {
+        if (!diagram.elementId) return;
+        const target = window.prompt(
+            `Move “${diagram.name}” into which package? (qualified name, e.g. Views::Safety)`,
+            diagram.package ?? '');
+        if (target === null) return;
+        void reportPackageResult(moveElementToPackage(diagram.elementId, target.trim()));
+    };
+
+    /**
+     * The package a new grouping package should be created under: the one this
+     * viewpoint's views already live in. Creating it at the project root — what
+     * this button used to do — produced a package no view could be filed into
+     * without retyping a qualified name.
+     */
+    const packageForViewpoint = (viewpointId: string): string | undefined => {
+        const packages = getDiagramsForViewpoint(model, viewpointId)
+            .map(diagram => diagram.package)
+            .filter((name): name is string => Boolean(name));
+        if (packages.length === 0) return undefined;
+        const counts = new Map<string, number>();
+        for (const name of packages) counts.set(name, (counts.get(name) ?? 0) + 1);
+        // The commonest owner, and on a tie the shorter path: the more general
+        // package is the safer place to hang a new grouping one.
+        return [...counts.entries()].sort((a, b) =>
+            b[1] - a[1] || a[0].length - b[0].length || a[0].localeCompare(b[0]))[0][0];
+    };
 
     // Viewpoint folders start collapsed, including Uncategorized: a project can
     // contain many views and the Explorer should first present the hierarchy.
@@ -1939,6 +1976,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
                 onDelete={!diag.auto ? () => deleteDiagram(diag.id) : undefined}
+                onMoveToPackage={diag.elementId ? () => moveViewToPackage(diag) : undefined}
             />
         ))
     );
@@ -2013,8 +2051,11 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                                     onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     onClick={() => {
-                                        const name = window.prompt('New SysML package name');
-                                        if (name?.trim()) void reportPackageResult(createPackage(name.trim()));
+                                        const parent = packageForViewpoint(vp.id);
+                                        const name = window.prompt(parent
+                                            ? `New package under ${parent}`
+                                            : 'New SysML package name');
+                                        if (name?.trim()) void reportPackageResult(createPackage(name.trim(), parent));
                                     }}
                                 >
                                     <span style={{ fontSize: '14px', lineHeight: 1 }}>+</span> New Package
@@ -2082,11 +2123,13 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     );
 }
 
-function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
+function DiagramRow({ diag, isSelected, onSelect, onDelete, onMoveToPackage }: {
     diag: DiagramDTO;
     isSelected: boolean;
     onSelect: () => void;
     onDelete?: () => void;
+    /** Absent for a view with no addressable declaration (renderer samples). */
+    onMoveToPackage?: () => void;
 }) {
     const [hovered, setHovered] = useState(false);
     const meta = DIAGRAM_TYPE_META[diag.diagramType];
@@ -2126,6 +2169,19 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete }: {
                     }}>
                     {elCount}
                 </span>
+            )}
+            {onMoveToPackage && hovered && (
+                <button
+                    onClick={e => { e.stopPropagation(); onMoveToPackage(); }}
+                    title="Move this view into a package"
+                    aria-label={`Move ${diag.name} into a package`}
+                    style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: COLOR.muted, fontSize: '12px', padding: '0 2px', lineHeight: 1,
+                    }}
+                >
+                    ⌸
+                </button>
             )}
             {onDelete && hovered && (
                 <button
