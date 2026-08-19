@@ -100,8 +100,24 @@ export function DSMView() {
     const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
     const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
 
+    /** True once the user has actually narrowed an axis. */
+    const axesChosen = Boolean(
+        rowScope.layer || rowScope.kind || rowElements.length
+        || columnScope.layer || columnScope.kind || columnElements.length);
+
     const legalDependencyOptions = useMemo<TypeFilterOption[]>(() => {
         if (!model || !registries) return [];
+        // This is a CROSS PRODUCT: every row against every column, asking the
+        // ontology which relationships are legal between them. With no axis
+        // chosen both sides are the whole model, so opening the DSM on a large
+        // project paid |elements|^2 `legalRelationshipTypes` calls before the
+        // user had expressed any intent at all -- 724 elements on gpca-pump is
+        // over half a million pairs, on mount.
+        //
+        // Until an axis is narrowed there is nothing to narrow the relationship
+        // list BY, so the unfiltered list is also the correct answer. The work
+        // starts when the user's choice makes it meaningful.
+        if (!axesChosen) return relationshipOptions;
         const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, picked: string[]) =>
             (!scope.layer || element.layer === scope.layer)
             && (!scope.kind || element.kind === scope.kind)
@@ -113,7 +129,7 @@ export function DSMView() {
             if (row.id !== column.id) for (const option of legalRelationshipTypes(row, column, registries)) allowed.add(option.definition.name);
         }
         return relationshipOptions.filter(option => allowed.has(option.value));
-    }, [model, registries, rowScope, columnScope, rowElements, columnElements, relationshipOptions]);
+    }, [model, registries, rowScope, columnScope, rowElements, columnElements, relationshipOptions, axesChosen]);
 
     // A kind that is no longer on the axis must not keep its elements on it:
     // the picked list is pruned to what the kind filter still allows, so the
