@@ -71,7 +71,7 @@ import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseE
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
 import {
-    hasContextChildCoordinates, rebaseLegacyContextChildPosition, withContextChildCoordinates,
+    hasContextChildCoordinates, rebaseForFrameChange, rebaseLegacyContextChildPosition, withContextChildCoordinates,
 } from '../diagram/layout-coordinate-migration';
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
@@ -802,6 +802,13 @@ function DiagramCanvasInner() {
                     ...(previous.nodes[node.id] ?? {}),
                     x: node.position.x,
                     y: node.position.y,
+                    // The frame these coordinates are in. React Flow positions a
+                    // nested node relative to its parent and a top-level node in
+                    // board coordinates, so the pair above is meaningless without
+                    // it: re-parenting a node silently reinterprets the numbers in
+                    // a different frame and the node jumps. Recording the frame is
+                    // what lets the loader rebase instead of guess.
+                    parent: node.parentId ?? null,
                     ...(node.width ? { width: node.width } : {}),
                     ...(node.height ? { height: node.height } : {}),
                     ports: Object.fromEntries(
@@ -1341,7 +1348,6 @@ function DiagramCanvasInner() {
     }, [model]);
 
     // ─── Build nodes from sidecar or ELK ──────────────────────────────────────
-
     const buildNodesFromSidecar = useCallback((
         rawNodes: FlowNode[], layout: DiagramLayout
     ): FlowNode[] => {
@@ -1358,7 +1364,7 @@ function DiagramCanvasInner() {
             const position = legacyContextCoordinates && n.type === 'contextSystem'
                 && parent?.type === 'contextBoundary'
                 ? rebaseLegacyContextChildPosition(pos, parent.position)
-                : { x: pos.x, y: pos.y };
+                : rebaseForFrameChange(pos, n.parentId ?? null, id => rawById.get(id)?.position);
             return {
                 ...n,
                 position,
