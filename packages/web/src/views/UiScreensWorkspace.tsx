@@ -12,6 +12,7 @@ import { ExplorerTreeRow } from '../components/ExplorerTreeRow';
 import { TypeFilterSelect } from '../components/TypeFilterSelect';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
+import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 
 const UI_SCREENS_WIDTH_STORAGE_KEY = 'memo-uiscreens-width';
 const UI_SCREENS_DEFAULT_WIDTH = 250;
@@ -26,6 +27,31 @@ function savedSidebarWidth(): number {
     } catch {
         return UI_SCREENS_DEFAULT_WIDTH;
     }
+}
+
+/**
+ * Split a screen's children into the grouping packages that label them and the
+ * children no package groups.
+ *
+ * A `package` inside a usage body groups without decomposing, so its members
+ * arrive here as children of the SCREEN — the package only stamps its name on
+ * them. Groups keep the order they are first seen in, which is declaration
+ * order, because a screen reads top to bottom.
+ */
+export function groupUiChildren(children: MemoElement[]): {
+    groups: { name: string; members: MemoElement[] }[];
+    ungrouped: MemoElement[];
+} {
+    const groups: { name: string; members: MemoElement[] }[] = [];
+    const ungrouped: MemoElement[] = [];
+    for (const child of children) {
+        const group = child.attributes?.['elementPackage'];
+        if (!group) { ungrouped.push(child); continue; }
+        const existing = groups.find(candidate => candidate.name === group);
+        if (existing) existing.members.push(child);
+        else groups.push({ name: group, members: [child] });
+    }
+    return { groups, ungrouped };
 }
 
 const boundsAttributes = (bounds: Rect) => ({
@@ -96,9 +122,18 @@ export function usageIdentifier(stableId: string, prefix: string, elements: Memo
     return `${base}_${counter}`;
 }
 
-function screenForLayout(layout: { id: string; name: string }, screens: MemoElement[]): MemoElement | undefined {
+export function screenForLayout(layout: { id: string; name: string }, screens: MemoElement[]): MemoElement | undefined {
     const byId = screens.find(screen => screen.id === layout.id);
     if (byId) return byId;
+    // A layout view is identified by the AUTHORED id it shares with the screen
+    // it draws (`@MemoIdentity providedId = "UIE-001"` on both), and a
+    // DiagramDTO's id is that authored id. The element's `id` is its usage
+    // name, so comparing the two above can only match a project that names the
+    // usage after the id — which is why the shipped example listed no screens
+    // at all until this line existed.
+    const byAuthoredId = screens.find(screen =>
+        (screen.attributes?.['providedId'] ?? screen.attributes?.['id'] ?? screen.shortId) === layout.id);
+    if (byAuthoredId) return byAuthoredId;
     const normalizedLayout = layout.name.toLowerCase().replace(/region layout|screen layout|[^a-z0-9]/g, '');
     return screens.find(screen => {
         const normalizedScreen = screen.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -148,6 +183,8 @@ export function UiScreensWorkspace() {
     const inspectElement = useModelStore(s => s.inspectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
+    const createPackage = useModelStore(s => s.createPackage);
+    const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const [selectedId, setSelectedId] = useState<string>();
     const [captureId, setCaptureId] = useState<string>();
     const [drawMode, setDrawMode] = useState(false);
@@ -281,6 +318,98 @@ export function UiScreensWorkspace() {
         return next;
     });
 
+    /**
+     * Report a package edit the way every other surface does: silence on
+     * success, the writer's own words on failure.
+     */
+    const report = async (pending: Promise<{ success: boolean; error?: string }>) => {
+        const result = await pending;
+        if (!result.success) window.alert(result.error ?? 'The package could not be written.');
+    };
+
+    /**
+     * Group this element with a package declared beside it.
+     *
+     * The package goes inside the element's OWNER, not inside the element:
+     * "these six buttons are the header" is a claim about the screen's members,
+     * so the container has to be a member of the screen too.
+     */
+    const groupInNewPackage = async (element: MemoElement) => {
+        const parent = groupParentPath(model, element);
+        const name = window.prompt(parent
+            ? `Name the group inside ${parent.split('::').pop()}`
+            : 'Name the group');
+        if (!name?.trim()) return;
+        const created = await createPackage(name.trim(), parent);
+        if (!created.success) { window.alert(created.error ?? 'The package could not be created.'); return; }
+        const qualifiedName = `${parent}::${name.trim()}`;
+        await waitForPackage(qualifiedName);
+        await report(moveElementToPackage(element.id, qualifiedName));
+    };
+
+    /** Move this element into a grouping package that already exists beside it. */
+    const moveIntoGroup = async (element: MemoElement) => {
+        const parent = groupParentPath(model, element);
+        const existing = siblingGroups(model, element);
+        const name = window.prompt(existing.length
+            ? `Move into which group? (${existing.join(', ')})`
+            : 'Move into which group?', element.attributes?.['elementPackage'] ?? existing[0] ?? '');
+        if (!name?.trim()) return;
+        await report(moveElementToPackage(element.id, `${parent}::${name.trim()}`));
+    };
+
+    /** The grouping actions a UI element's context menu offers. */
+    const groupActions = (element: MemoElement) => [
+        { label: 'Group in new package…', onSelect: () => { void groupInNewPackage(element); } },
+        ...(siblingGroups(model, element).length > 0
+            ? [{ label: 'Move into group…', onSelect: () => { void moveIntoGroup(element); } }]
+            : []),
+    ];
+
+    /**
+     * The children of one UI element, with grouping packages made visible.
+     *
+     * A screen is authored as one part tree, and a `package` inside it groups
+     * without decomposing — `part scrHome : UIElement { package grpHeader {
+     * part btnBack : UIElement; } }`. The members stay contained by the screen,
+     * which is why they arrive here as its composed children; the package only
+     * labels the grouping, so it is a display node and nothing else. Without
+     * this the header's buttons sat beside the footer's in one flat list and
+     * the grouping the author wrote was invisible.
+     */
+    const renderChildren = (children: MemoElement[], layoutId: string, screenElement: MemoElement, depth: number): React.ReactNode => {
+        const { groups, ungrouped } = groupUiChildren(children);
+        const rendered = ungrouped.map(child => renderRegionBranch(child, layoutId, screenElement, depth));
+        return <>
+            {groups.map(group => {
+                const groupKey = `group:${screenElement.id}:${group.name}`;
+                return (
+                    <div key={groupKey} role="none">
+                        <ExplorerTreeRow
+                            id={groupKey}
+                            label={group.name}
+                            depth={depth}
+                            hasChildren
+                            expanded={!collapsedTree.has(groupKey)}
+                            selected={false}
+                            badge="PKG"
+                            badgeColor="#6B7280"
+                            count={group.members.length}
+                            title={`Grouping package — ${group.members.length} UI elements. The package groups; the screen still owns them.`}
+                            onClick={() => toggleTree(groupKey)}
+                        />
+                        {!collapsedTree.has(groupKey) && (
+                            <div role="group">
+                                {group.members.map(member => renderRegionBranch(member, layoutId, screenElement, depth + 1))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+            {rendered}
+        </>;
+    };
+
     const renderRegionBranch = (element: MemoElement, layoutId: string, screenElement: MemoElement, depth: number): React.ReactNode => (
         <div key={element.id} role="none">
             <ExplorerTreeRow
@@ -299,9 +428,10 @@ export function UiScreensWorkspace() {
                     selectLayout(layoutId, screenElement, element);
                 }}
                 onDelete={() => deleteModelElement(element.id)}
+                actions={groupActions(element)}
             />
-            {!collapsedTree.has(`element:${element.id}`) && (composedChildren.get(element.id) ?? [])
-                .map(child => renderRegionBranch(child, layoutId, screenElement, depth + 1))}
+            {!collapsedTree.has(`element:${element.id}`)
+                && renderChildren(composedChildren.get(element.id) ?? [], layoutId, screenElement, depth + 1)}
         </div>
     );
 
@@ -602,7 +732,7 @@ export function UiScreensWorkspace() {
                             />
                             {!collapsedTree.has(screenKey) && (
                                 <div role="group">
-                                    {regions.map(child => renderRegionBranch(child, layout.id, screenElement, 1))}
+                                    {renderChildren(regions, layout.id, screenElement, 1)}
                                 </div>
                             )}
                         </div>

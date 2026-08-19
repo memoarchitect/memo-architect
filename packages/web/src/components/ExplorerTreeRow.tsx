@@ -4,6 +4,7 @@ import { FONT } from '../styles/tokens';
 /** Shared explorer row used by hierarchical workspaces and Browser views. */
 export function ExplorerTreeRow({
     id, label, depth, hasChildren, expanded, selected, badge, badgeColor = '#0F766E', count, title, onClick, onDelete,
+    actions = [],
 }: {
     id: string;
     label: React.ReactNode;
@@ -17,6 +18,8 @@ export function ExplorerTreeRow({
     title?: string;
     onClick: () => void;
     onDelete?: () => Promise<{ success: boolean; error?: string }>;
+    /** Row-specific context-menu entries, shown above Delete. */
+    actions?: { label: string; onSelect: () => void }[];
 }) {
     const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -43,7 +46,7 @@ export function ExplorerTreeRow({
             aria-expanded={hasChildren ? expanded : undefined}
             data-tree-id={id}
             onClick={onClick}
-            onContextMenu={onDelete ? event => {
+            onContextMenu={onDelete || actions.length ? event => {
                 event.preventDefault();
                 event.stopPropagation();
                 setMenu({ x: event.clientX, y: event.clientY });
@@ -71,11 +74,19 @@ export function ExplorerTreeRow({
             <span className="truncate" style={{ flex: 1, fontSize: FONT.xs, fontWeight: hasChildren ? 650 : 500 }}>{label}</span>
             {count !== undefined && <span style={{ color: '#9CA3AF', fontSize: 9 }}>{count}</span>}
         </button>
-        {menu && onDelete && <div ref={menuRef} role="menu" className="fixed z-50 rounded-lg overflow-hidden py-1" style={{
+        {menu && (onDelete || actions.length > 0) && <div ref={menuRef} role="menu" className="fixed z-50 rounded-lg overflow-hidden py-1" style={{
             left: menu.x, top: menu.y, minWidth: 180, background: '#FFFFFF', border: '1px solid #E5E7EB',
             boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
         }}>
-            <button type="button" role="menuitem" onClick={async () => {
+            {actions.map(action => (
+                <button key={action.label} type="button" role="menuitem"
+                    onClick={() => { setMenu(null); action.onSelect(); }}
+                    style={{
+                        width: '100%', border: 0, padding: '8px 12px', textAlign: 'left', cursor: 'pointer',
+                        background: '#FFFFFF', color: '#374151', fontSize: 12, fontWeight: 600,
+                    }}>{action.label}</button>
+            ))}
+            {onDelete && <button type="button" role="menuitem" onClick={async () => {
                 setMenu(null);
                 const nameStr = typeof label === 'string' ? label : (title ?? 'this element');
                 if (!window.confirm(`Delete “${nameStr}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
@@ -84,7 +95,7 @@ export function ExplorerTreeRow({
             }} style={{
                 width: '100%', border: 0, padding: '8px 12px', textAlign: 'left', cursor: 'pointer',
                 background: '#FFFFFF', color: '#DC2626', fontSize: 12, fontWeight: 600,
-            }}>Delete element…</button>
+            }}>Delete element…</button>}
         </div>}
         </div>
     );

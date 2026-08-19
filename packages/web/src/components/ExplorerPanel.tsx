@@ -1,5 +1,6 @@
 import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { buildBreakdown, DEFAULT_FAMILIES, type BreakdownNode } from '../lib/breakdown-tree';
+import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 import { kindParents } from '../analysis/kind-hierarchy';
 import { GLOBAL_SYSTEM, groupBySystem, resolveSystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
@@ -232,6 +233,39 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                     if (target !== null) void reportPackageResult(moveElementToPackage(el.id, target.trim()));
                 }
             },
+            // A grouping package is the leaf-level container: it is declared
+            // beside the element, inside the element's owner, and labels a
+            // grouping without claiming the element decomposes into it.
+            {
+                label: 'Group in new package…',
+                action: () => {
+                    const parent = groupParentPath(model, el);
+                    const name = window.prompt(parent
+                        ? `Name the group inside ${parent.split('::').pop()}`
+                        : 'Name the group');
+                    if (!name?.trim()) return;
+                    const qualifiedName = `${parent}::${name.trim()}`;
+                    void createPackage(name.trim(), parent).then(async created => {
+                        if (!created.success) {
+                            window.alert(created.error ?? 'The package could not be created.');
+                            return;
+                        }
+                        await waitForPackage(qualifiedName);
+                        return reportPackageResult(moveElementToPackage(el.id, qualifiedName));
+                    });
+                }
+            },
+            ...(siblingGroups(model, el).length > 0 ? [{
+                label: 'Move into group…',
+                action: () => {
+                    const parent = groupParentPath(model, el);
+                    const groups = siblingGroups(model, el);
+                    const name = window.prompt(`Move into which group? (${groups.join(', ')})`,
+                        el.attributes?.['elementPackage'] ?? groups[0] ?? '');
+                    if (!name?.trim()) return;
+                    void reportPackageResult(moveElementToPackage(el.id, `${parent}::${name.trim()}`));
+                }
+            }] : []),
             { label: 'Copy ID', action: () => navigator.clipboard?.writeText(el.id) },
             {
                 label: 'Delete element…',
@@ -721,7 +755,11 @@ interface LayerGroup {
 }
 
 function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
-    return kind.endsWith('View')
+    // A viewpoint is presentation apparatus, not model content: it frames views
+    // and is read in the Viewpoints tree. It became an element so that nesting
+    // could be modelled, and it must not arrive in the Model Explorer as an
+    // undefined kind on the strength of that.
+    return kind.endsWith('View') || kind.endsWith('Viewpoint')
         || sourceLayer === 'viewpoints'
         || sourceLayer === 'views'
         || sourcePackage === 'viewpoints'
@@ -1065,10 +1103,12 @@ export function computeExplorerGroupTree(
  * The composition reading of the model. See `lib/breakdown-tree.ts` for why
  * this exists alongside the catalog.
  */
-function BreakdownTree({ searchTerm, selectedElementId, onSelect }: {
+function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu }: {
     searchTerm: string;
     selectedElementId: string | null;
     onSelect: (id: string) => void;
+    /** The breakdown is where grouping packages read, so it offers to make one. */
+    onContextMenu: (event: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
 }) {
     const model = useModelStore(s => s.model);
     const availableOntologies = useModelStore(s => s.availableOntologies);
@@ -1110,6 +1150,9 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect }: {
                         if (hasChildren) toggle(node.id);
                         if (node.element) onSelect(node.element.id);
                     }}
+                    onContextMenu={node.element
+                        ? event => onContextMenu(event, 'element', node.element!.id)
+                        : undefined}
                 >
                     {hasChildren
                         ? <ChevronIcon expanded={isOpen} size={12} />
@@ -1411,6 +1454,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     searchTerm={searchTerm}
                     selectedElementId={selectedElementId}
                     onSelect={selectElementAndNavigate}
+                    onContextMenu={onContextMenu}
                 />
             ) : (
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
@@ -1630,9 +1674,12 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                         </div>
                     );
                 })}
-                {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
             </div>
             )}
+            {/* Outside the view switch: the breakdown offers the same menu, and
+                a menu that renders only in the catalog is a menu the other tab
+                opens into nothing. */}
+            {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
         </div>
     );
 }
@@ -1810,6 +1857,39 @@ export function partitionViewsByViewpoint(model: MemoModelDTO | null): {
     };
 }
 
+/**
+ * Arrange viewpoints into the tree they declare.
+ *
+ * Viewpoints nest, for system-of-systems modelling: the viewpoint that frames
+ * the whole system of systems declares one viewpoint per constituent system. A
+ * viewpoint whose parent is not in this model is a root — the tree must never
+ * drop a viewpoint because the parent it names is absent — and a viewpoint that
+ * names itself, or takes part in a cycle, is a root for the same reason.
+ */
+export function buildViewpointTree(viewpoints: ViewpointDTO[]): {
+    rootViewpoints: ViewpointDTO[];
+    viewpointChildren: Map<string, ViewpointDTO[]>;
+} {
+    const byId = new Map(viewpoints.map(vp => [vp.id, vp]));
+    const parentOf = (vp: ViewpointDTO): string | undefined => {
+        const seen = new Set<string>([vp.id]);
+        for (let cursor = vp.parentId; cursor; cursor = byId.get(cursor)?.parentId) {
+            if (seen.has(cursor)) return undefined;
+            seen.add(cursor);
+        }
+        return vp.parentId && byId.has(vp.parentId) ? vp.parentId : undefined;
+    };
+
+    const viewpointChildren = new Map<string, ViewpointDTO[]>();
+    const rootViewpoints: ViewpointDTO[] = [];
+    for (const vp of viewpoints) {
+        const parent = parentOf(vp);
+        if (parent) viewpointChildren.set(parent, [...(viewpointChildren.get(parent) ?? []), vp]);
+        else rootViewpoints.push(vp);
+    }
+    return { rootViewpoints, viewpointChildren };
+}
+
 interface ViewPackageNode {
     id: string;
     name: string;
@@ -1923,8 +2003,13 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         [model],
     );
     // Display labels only — vp.label stays the authored title everywhere else.
-    const viewpointLabels = useMemo(
-        () => stripSharedLabelPrefix(viewpoints.map(vp => vp.label)),
+    const viewpointLabels = useMemo(() => {
+        const stripped = stripSharedLabelPrefix(viewpoints.map(vp => vp.label));
+        return new Map(viewpoints.map((vp, index) => [vp.id, stripped[index]]));
+    }, [viewpoints]);
+
+    const { rootViewpoints, viewpointChildren } = useMemo(
+        () => buildViewpointTree(viewpoints),
         [viewpoints],
     );
 
@@ -2010,17 +2095,27 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         ));
     };
 
-    return (
-        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-            {/* Named viewpoints — the primary organisation */}
-            {viewpoints.map((vp, vpIndex) => {
+    /**
+     * One viewpoint branch, and beneath it the viewpoints it frames.
+     *
+     * A nesting viewpoint may bind no view of its own — the system-of-systems
+     * viewpoint frames the constituents and leaves the drawing to them — so an
+     * empty branch with children is still expandable, and the count badge
+     * carries the family's total rather than a bare zero.
+     */
+    const renderViewpoint = (vp: ViewpointDTO, depth: number): React.ReactNode => {
+                const children = viewpointChildren.get(vp.id) ?? [];
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
                 const allDiagrams = getDiagramsForViewpoint(model, vp.id);
                 const displayedDiags = filterDiagrams(allDiagrams);
+                const familyCount = (function total(node: ViewpointDTO): number {
+                    return getDiagramsForViewpoint(model, node.id).length
+                        + (viewpointChildren.get(node.id) ?? []).reduce((sum, child) => sum + total(child), 0);
+                })(vp);
 
                 return (
-                    <div key={vp.id} className="mb-0.5">
+                    <div key={vp.id} className="mb-0.5" style={{ marginLeft: depth ? '14px' : 0 }}>
                         <div
                             className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                             style={{ borderRadius: '4px', margin: '0 4px' }}
@@ -2030,11 +2125,18 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         >
                             <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
                             <FolderIcon open={isExpanded} color={vpColor} />
-                            <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels[vpIndex]}</span>
-                            <ExplorerCountBadge count={allDiagrams.length} color={vpColor} title={`${allDiagrams.length} views`} />
+                            <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels.get(vp.id) ?? vp.label}</span>
+                            <ExplorerCountBadge
+                                count={familyCount}
+                                color={vpColor}
+                                title={children.length
+                                    ? `${allDiagrams.length} views here, ${familyCount} including the viewpoints it frames`
+                                    : `${allDiagrams.length} views`}
+                            />
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
+                                {children.map(child => renderViewpoint(child, depth + 1))}
                                 {renderGroupedDiagramList(displayedDiags, vp.id)}
                                 <button
                                     className="flex items-center gap-1 px-2 py-1 w-full text-left"
@@ -2064,7 +2166,12 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         )}
                     </div>
                 );
-            })}
+    };
+
+    return (
+        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+            {/* Named viewpoints — the primary organisation */}
+            {rootViewpoints.map(vp => renderViewpoint(vp, 0))}
 
             {/* Everything no viewpoint claims appears last, so every card on
                 the landing page is reachable from this tree as well. */}
