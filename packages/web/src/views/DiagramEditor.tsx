@@ -29,6 +29,7 @@ import type { DiagramDTO, MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 import { DiagramSurface } from './DiagramSurface';
+import { DiagnosticsBadge } from '../components/DiagnosticsBadge';
 import { Icon } from './DiagramToolbarControls';
 
 const SysmlCodeEditor = lazy(() => import('../components/SysmlCodeEditor').then(module => ({ default: module.SysmlCodeEditor })));
@@ -500,23 +501,6 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                     />
                 </Suspense>
             </div>
-            {saveDiagnostics.length > 0 && (
-                <div
-                    className="px-3 py-1.5 text-xs"
-                    style={{ background: '#1C1407', color: '#FCD34D', borderTop: '1px solid #3B2A0A', fontFamily: 'monospace' }}
-                    title="Saved, but the file does not parse — the model keeps its last good state for this file"
-                >
-                    {saveDiagnostics.join(' · ')}
-                </div>
-            )}
-            {parseErrors.length > 0 && (
-                <div
-                    className="px-3 py-1.5 text-xs"
-                    style={{ background: '#1C0A0A', color: '#F87171', borderTop: '1px solid #3B0A0A', fontFamily: 'monospace' }}
-                >
-                    {parseErrors.join(' · ')}
-                </div>
-            )}
             {saveError && (
                 <div
                     className="px-3 py-1.5 text-xs"
@@ -592,9 +576,21 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
             {!isSaving && saveError && <span title={saveError} style={{ color: '#EF4444', fontSize: FONT.xs }}>Save failed</span>}
             {!isSaving && !saveError && isDirty && <span style={{ color: '#B45309', fontSize: FONT.xs }}>Unsaved</span>}
             {!isSaving && !isDirty && savedAt && <span style={{ color: '#15803D', fontSize: FONT.xs }}>Saved</span>}
-            {!isSaving && parseErrors.length > 0 && (
-                <span style={{ color: '#EF4444', fontSize: FONT.xs }}>{parseErrors.length} error{parseErrors.length > 1 ? 's' : ''}</span>
+            {/* The detail used to be a permanent monospace strip under the
+                canvas — most in the way exactly when the user needed to see the
+                diagram to fix it. It is a badge now, and the file:line list is
+                one click away. */}
+            {!isSaving && (
+                <DiagnosticsBadge
+                    messages={parseErrors}
+                    title="This diagram's source does not parse"
+                />
             )}
+            <DiagnosticsBadge
+                messages={saveDiagnostics}
+                severity="warning"
+                title="Saved, but the file does not parse — the model keeps its last good state for this file"
+            />
             {isTextEditable && (
                 <>
                     <label className="flex items-center gap-1" style={{ color: COLOR.secondary, fontSize: FONT.xs }} title="Save changes 800ms after typing">
