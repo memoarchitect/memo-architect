@@ -7,8 +7,28 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
+import { kindsUnder, type KindParents } from '../analysis/kind-hierarchy';
 import type { AxisScope } from './AxisScopeSelect';
 import type { TypeFilterOption } from './TypeFilterSelect';
+
+/**
+ * The element kinds a scope stands for: the chosen kind and everything that
+ * specializes it. An axis set to `Requirement` shows the `SecurityRequirement`s
+ * too, because the picker nested them under it and said so.
+ *
+ * With no ontology loaded the scope is just the one kind — the same behaviour
+ * this had before the picker learned the hierarchy.
+ */
+export function scopeKinds(
+    scope: AxisScope,
+    model: MemoModelDTO | null,
+    parents?: KindParents,
+): string[] {
+    if (!scope.kind) return [];
+    if (!parents || !model) return [scope.kind];
+    const universe = new Set(Object.values(model.elements).map(element => element.kind));
+    return kindsUnder(scope.kind, parents, universe);
+}
 
 /**
  * One option per element, grouped under its kind.
@@ -20,11 +40,13 @@ import type { TypeFilterOption } from './TypeFilterSelect';
 export function elementFilterOptions(
     model: MemoModelDTO | null,
     scope: AxisScope,
+    parents?: KindParents,
 ): TypeFilterOption[] {
     if (!model) return [];
+    const kinds = new Set(scopeKinds(scope, model, parents));
     return Object.values(model.elements)
         .filter(element => (!scope.layer || element.layer === scope.layer)
-            && (!scope.kind || element.kind === scope.kind))
+            && (kinds.size === 0 || kinds.has(element.kind)))
         .sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name))
         .map(element => ({
             value: element.id,

@@ -42,7 +42,8 @@ import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilte
 import { ToolbarPopover } from '../components/ToolbarPopover';
 import { AxisScopeSelect, describeScope, type AxisScope } from '../components/AxisScopeSelect';
 import { Icon, IconButton, IconToggle, ToolbarCluster } from './DiagramToolbarControls';
-import { elementFilterOptions } from '../components/element-options';
+import { elementFilterOptions, scopeKinds } from '../components/element-options';
+import { kindParents, type KindParents } from '../analysis/kind-hierarchy';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -64,6 +65,10 @@ export function DSMView() {
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const setAnalysisIssues = useModelStore(s => s.setAnalysisIssues);
     const registries = useMemo(() => getRegistries(model), [model]);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    // The picker nests kinds by the ontology's specialization chain, so the
+    // axis has to honour the same reading: `Requirement` means its subkinds too.
+    const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
 
     const [rowScope, setRowScope] = useState<AxisScope>({});
     const [columnScope, setColumnScope] = useState<AxisScope>({});
@@ -97,8 +102,10 @@ export function DSMView() {
         }));
     }, [model]);
 
-    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
-    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
+    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope, parents), [model, rowScope, parents]);
+    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope, parents), [model, columnScope, parents]);
+    const rowKinds = useMemo(() => scopeKinds(rowScope, model, parents), [rowScope, model, parents]);
+    const columnKinds = useMemo(() => scopeKinds(columnScope, model, parents), [columnScope, model, parents]);
 
     /** True once the user has actually narrowed an axis. */
     const axesChosen = Boolean(
@@ -118,18 +125,18 @@ export function DSMView() {
         // list BY, so the unfiltered list is also the correct answer. The work
         // starts when the user's choice makes it meaningful.
         if (!axesChosen) return relationshipOptions;
-        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, picked: string[]) =>
+        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, kinds: string[], picked: string[]) =>
             (!scope.layer || element.layer === scope.layer)
-            && (!scope.kind || element.kind === scope.kind)
+            && (kinds.length === 0 || kinds.includes(element.kind))
             && (picked.length === 0 || picked.includes(element.id));
-        const rows = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowElements));
-        const columns = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnElements));
+        const rows = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowKinds, rowElements));
+        const columns = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnKinds, columnElements));
         const allowed = new Set<string>();
         for (const row of rows) for (const column of columns) {
             if (row.id !== column.id) for (const option of legalRelationshipTypes(row, column, registries)) allowed.add(option.definition.name);
         }
         return relationshipOptions.filter(option => allowed.has(option.value));
-    }, [model, registries, rowScope, columnScope, rowElements, columnElements, relationshipOptions, axesChosen]);
+    }, [model, registries, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, relationshipOptions, axesChosen]);
 
     // A kind that is no longer on the axis must not keep its elements on it:
     // the picked list is pruned to what the kind filter still allows, so the
@@ -196,14 +203,14 @@ export function DSMView() {
     const result = useMemo(() => {
         if (!model) return null;
         return computeHierarchicalDSM(model, {
-            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
-            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
+            rows: { layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
+            columns: { layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
             dependencyTypes,
             containmentTypes: effectiveContainment,
             groupByPackage,
             symmetric,
         });
-    }, [model, rowScope, columnScope, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
+    }, [model, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
 
     // Open on something worth looking at: a DSM's subject is one layer against
     // itself, and the layer chosen is the one whose elements actually depend on
@@ -269,11 +276,11 @@ export function DSMView() {
         // so its native Excel outline controls can expand both hierarchies.
         const workbookResult = computeHierarchicalDSM(model, {
             rows: {
-                layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, ordering: rowOrdering,
+                layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, ordering: rowOrdering,
                 expanded: new Set(collectNodeIds(result.rowRoots)),
             },
             columns: {
-                layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, ordering: columnOrdering,
+                layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, ordering: columnOrdering,
                 expanded: new Set(collectNodeIds(result.columnRoots)),
             },
             dependencyTypes,
@@ -366,7 +373,7 @@ export function DSMView() {
                             onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
                             leftDock={leftToolbar} filterOpen={activeAxisFilter === 'rows'}
                             onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)}
-                            parentOf={filterParentOf}
+                            parentOf={filterParentOf} kindParents={parents}
                         />
                         <AxisControlGroup
                             axis="columns" layers={layers} scope={columnScope} onScopeChange={setColumnScope}
@@ -375,7 +382,7 @@ export function DSMView() {
                             onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
                             leftDock={leftToolbar} filterOpen={activeAxisFilter === 'columns'}
                             onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)}
-                            parentOf={filterParentOf}
+                            parentOf={filterParentOf} kindParents={parents}
                         />
                     </div>
 
@@ -578,10 +585,12 @@ function toggled(current: Set<string>, id: string): Set<string> {
 export function AxisControlGroup({
     axis, layers, scope, onScopeChange, elements, onElementsChange, elementOptions,
     ordering, onOrderingChange, onExpandAll, onCollapseAll, onExpandToDepth, leftDock,
-    filterOpen, onFilterOpenChange, parentOf,
+    filterOpen, onFilterOpenChange, parentOf, kindParents,
 }: {
     axis: 'rows' | 'columns';
     layers: LayerSummary[];
+    /** kind → supertype, so the scope picker can nest the layer's kinds. */
+    kindParents?: KindParents;
     scope: AxisScope;
     onScopeChange: (scope: AxisScope) => void;
     elements: string[];
@@ -607,7 +616,7 @@ export function AxisControlGroup({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                     <span style={{ fontSize: FONT.xs, fontWeight: 700, color: COLOR.secondary }}>{label}</span>
                     <AxisScopeSelect
-                        label="" layers={layers} value={scope} onChange={onScopeChange} width={138}
+                        label="" layers={layers} value={scope} onChange={onScopeChange} width={138} kindParents={kindParents}
                         describedAs={`${axis} scope`}
                         title={`What the ${axis} list — one architecture layer, or one element type within it.`}
                     />
@@ -648,7 +657,7 @@ export function AxisControlGroup({
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ fontSize: FONT.xs, fontWeight: 700, color: COLOR.secondary }}>{label}</span>
                 <AxisScopeSelect
-                    label="" layers={layers} value={scope} onChange={onScopeChange} width={150}
+                    label="" layers={layers} value={scope} onChange={onScopeChange} width={150} kindParents={kindParents}
                     describedAs={`${axis} scope`}
                     title={`What the ${axis} list — one architecture layer, or one element type within it.`}
                 />

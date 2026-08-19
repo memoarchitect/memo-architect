@@ -11,11 +11,14 @@
 // hand-assembled mixture.
 //
 // Layers come from the ontology, not from a list kept here, so a project with
-// its own layers gets its own axes.
+// its own layers gets its own axes — and the kinds inside a layer are nested by
+// the ontology's own specialization chain rather than listed as a flat alphabet,
+// so picking `Requirement` visibly means the `SecurityRequirement`s too.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LayerSummary } from '../analysis/dsm-hierarchy';
+import { flattenKindTree, kindTree, type KindParents } from '../analysis/kind-hierarchy';
 import { LAYER_COLORS } from '../constants';
 import { COLOR, FONT, SHADOW } from '../styles/tokens';
 
@@ -33,6 +36,8 @@ export interface AxisScopeSelectProps {
     width?: number;
     title?: string;
     describedAs?: string;
+    /** kind → supertype, from the loaded ontology. Absent means a flat list. */
+    kindParents?: KindParents;
 }
 
 /** Title-case a layer id for display: `verification_validation` → `Verification validation`. */
@@ -54,7 +59,7 @@ export function describeScope(value: AxisScope, layers: LayerSummary[]): string 
 }
 
 export function AxisScopeSelect({
-    label, layers, value, onChange, width = 165, title, describedAs,
+    label, layers, value, onChange, width = 165, title, describedAs, kindParents,
 }: AxisScopeSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -87,6 +92,15 @@ export function AxisScopeSelect({
             })
             .filter((entry): entry is LayerSummary => entry !== null);
     }, [layers, query]);
+
+    /**
+     * A layer's kinds as picker rows. Without an ontology to read the
+     * specialization chain from, this degrades to the flat list it replaced —
+     * the picker still works before `ontology:packages` has arrived.
+     */
+    const kindRows = (entry: LayerSummary, parents?: KindParents) => parents
+        ? flattenKindTree(kindTree(entry.kinds, parents))
+        : entry.kinds.map(kind => ({ node: { ...kind, totalCount: kind.elementCount, children: [] }, depth: 0 }));
 
     const choose = (next: AxisScope) => {
         onChange(next);
@@ -178,16 +192,16 @@ export function AxisScopeSelect({
                                     <span style={{ color: COLOR.faint, fontSize: '11px' }}>{entry.elementCount}</span>
                                 </div>
                                 {/* A layer with one kind is that kind; listing it twice says nothing. */}
-                                {entry.kinds.length > 1 && entry.kinds.map(kind => (
+                                {entry.kinds.length > 1 && kindRows(entry, kindParents).map(({ node, depth }) => (
                                     <div
-                                        key={kind.kind}
+                                        key={node.kind}
                                         role="option"
-                                        aria-selected={value.kind === kind.kind}
-                                        onClick={() => choose({ layer: entry.layer, kind: kind.kind })}
-                                        style={rowStyle(value.kind === kind.kind, true)}
+                                        aria-selected={value.kind === node.kind}
+                                        onClick={() => choose({ layer: entry.layer, kind: node.kind })}
+                                        style={{ ...rowStyle(value.kind === node.kind, true), paddingLeft: 26 + depth * 13 }}
                                     >
-                                        <span style={{ flex: 1, color: COLOR.secondary }}>{kind.kind}</span>
-                                        <span style={{ color: COLOR.faint, fontSize: '11px' }}>{kind.elementCount}</span>
+                                        <span style={{ flex: 1, color: COLOR.secondary }}>{node.kind}</span>
+                                        <span style={{ color: COLOR.faint, fontSize: '11px' }}>{node.totalCount}</span>
                                     </div>
                                 ))}
                             </div>

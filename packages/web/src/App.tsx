@@ -78,7 +78,7 @@ function UnifiedCanvas() {
             case 'dsm':
                 return <DSMView />;
             case 'traceability':
-                return isFeatureEnabled('model-tools') ? <TraceabilityMatrix /> : <Dashboard />;
+                return isFeatureEnabled('analysis') ? <TraceabilityMatrix /> : <Dashboard />;
             case 'tabular':
                 return <TabularView />;
             case 'ontology':

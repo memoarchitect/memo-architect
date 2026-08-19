@@ -32,7 +32,8 @@ import {
 import { AxisControlGroup } from './DSMView';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
-import { elementFilterOptions } from '../components/element-options';
+import { elementFilterOptions, scopeKinds } from '../components/element-options';
+import { kindParents } from '../analysis/kind-hierarchy';
 import { AxisScopeSelect, type AxisScope } from '../components/AxisScopeSelect';
 import { ToolbarPopover } from '../components/ToolbarPopover';
 import { Icon, IconToggle } from './DiagramToolbarControls';
@@ -138,19 +139,23 @@ export function TraceabilityMatrix() {
     const registries = useMemo(() => getRegistries(model), [model]);
 
     const layers = useMemo(() => (model ? layersInModel(model) : []), [model]);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
 
-    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope), [model, rowScope]);
-    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope), [model, columnScope]);
+    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope, parents), [model, rowScope, parents]);
+    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope, parents), [model, columnScope, parents]);
+    const rowKinds = useMemo(() => scopeKinds(rowScope, model, parents), [rowScope, model, parents]);
+    const columnKinds = useMemo(() => scopeKinds(columnScope, model, parents), [columnScope, model, parents]);
 
     /** Only offer relationships that the ontology permits for a visible axis pair. */
     const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
         if (!model || !registries) return [];
-        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, picked: string[]) =>
+        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, kinds: string[], picked: string[]) =>
             (!scope.layer || element.layer === scope.layer)
-            && (!scope.kind || element.kind === scope.kind)
+            && (kinds.length === 0 || kinds.includes(element.kind))
             && (picked.length === 0 || picked.includes(element.id));
-        const rowCandidates = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowElements));
-        const columnCandidates = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnElements));
+        const rowCandidates = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowKinds, rowElements));
+        const columnCandidates = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnKinds, columnElements));
         const names = new Set<string>();
         for (const row of rowCandidates) {
             for (const column of columnCandidates) {
@@ -161,7 +166,7 @@ export function TraceabilityMatrix() {
         const counts = new Map<string, number>();
         for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
         return [...names].sort().map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
-    }, [model, registries, rowScope, columnScope, rowElements, columnElements]);
+    }, [model, registries, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements]);
 
     // Narrowing the kinds must narrow the picked elements with them, or the
     // axis would keep showing something the kind filter no longer allows.
@@ -182,15 +187,15 @@ export function TraceabilityMatrix() {
     const result = useMemo(() => {
         if (!model) return null;
         return computeHierarchicalDSM(model, {
-            rows: { layer: rowScope.layer, kinds: rowScope.kind ? [rowScope.kind] : [], elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
-            columns: { layer: columnScope.layer, kinds: columnScope.kind ? [columnScope.kind] : [], elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
+            rows: { layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
+            columns: { layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
             dependencyTypes: linkTypes,
             // Trace is read as a link between two elements, not as a direction:
             // a requirement verified by a test and a test verifying a
             // requirement are the same coverage fact.
             symmetric: true,
         });
-    }, [model, rowScope, columnScope, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
+    }, [model, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
 
     // Trace is a cross-layer question, so the matrix opens on whichever two
     // layers this model actually links across the most — requirements against
@@ -468,7 +473,7 @@ export function TraceabilityMatrix() {
                         ordering={rowOrdering} onOrderingChange={setRowOrdering}
                         onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
                         leftDock={leftToolbar} filterOpen={activeAxisFilter === 'rows'}
-                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)} parentOf={new Map()}
+                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)} parentOf={new Map()} kindParents={parents}
                     />
                     <AxisControlGroup
                         axis="columns" layers={layers} scope={columnScope} onScopeChange={setColumnScope}
@@ -476,7 +481,7 @@ export function TraceabilityMatrix() {
                         ordering={columnOrdering} onOrderingChange={setColumnOrdering}
                         onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
                         leftDock={leftToolbar} filterOpen={activeAxisFilter === 'columns'}
-                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)} parentOf={new Map()}
+                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)} parentOf={new Map()} kindParents={parents}
                     />
                     <div style={{
                         display: 'grid', gridTemplateColumns: leftToolbar ? '1fr' : 'max-content max-content max-content', gridTemplateRows: 'auto auto',

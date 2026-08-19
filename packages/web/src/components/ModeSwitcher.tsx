@@ -6,7 +6,6 @@ import { WorkspaceManager } from './WorkspaceManager';
 import { DhfSettingsPanel } from '../views/DhfSettingsPanel';
 
 const DOCS_URL = '/help/';
-const JUPYTER_URL = 'http://127.0.0.1:8888/lab/tree/';
 
 // ─── Primary navigation modes ────────────────────────────────────────────────
 
@@ -87,20 +86,22 @@ function AnalysisDropdown() {
                         overflow: 'hidden',
                     }}
                 >
-                    <a
-                        href={JUPYTER_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    {/* The Analysis workspace *is* the notebook surface: it
+                        writes the notebook into the local JupyterLab and then
+                        offers the open link. Linking straight at 127.0.0.1:8888
+                        from here skipped that and landed on an empty lab. */}
+                    <button
+                        type="button"
                         role="menuitem"
-                        onClick={() => setOpen(false)}
+                        onClick={() => { setActiveView({ type: 'analysis' }); setOpen(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}
+                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                     >
                         <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>⌁</span>
                         Jupyter Notebooks
-                    </a>
+                    </button>
                     <button
                         type="button"
                         role="menuitem"
@@ -115,10 +116,8 @@ function AnalysisDropdown() {
                     </button>
                     {/* Traceability is the DSM's sibling — same grid, for
                         establishing trace rather than reading structure — so it
-                        belongs next to it. It stays behind the model-tools gate
-                        that its view checks, rather than offering a menu entry
-                        that would land on the dashboard. */}
-                    {isFeatureEnabled('model-tools') && (
+                        belongs next to it, on the same `analysis` gate. */}
+                    {isFeatureEnabled('analysis') && (
                         <button
                             type="button"
                             role="menuitem"
@@ -343,8 +342,8 @@ export function ModeSwitcher() {
                     {analysisOpen && <div style={{ margin: '0 0 4px 36px', borderLeft: '1px solid rgba(45,212,168,0.25)' }}>
                         <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>◫</span>Analysis workspace</button>
                         <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>
-                        {isFeatureEnabled('model-tools') && <button onClick={() => { setActiveView({ type: 'traceability' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>{'☷'}</span>Traceability Matrix</button>}
-                        <a href={JUPYTER_URL} target="_blank" rel="noopener noreferrer" onClick={() => setDrawerOpen(false)} className="flex w-full items-center gap-2 px-3 py-2" style={{ color: 'rgba(255,255,255,0.68)', textDecoration: 'none', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</a>
+                        <button onClick={() => { setActiveView({ type: 'traceability' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>{'☷'}</span>Traceability Matrix</button>
+                        <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</button>
                     </div>}
                 </>}
             </div>
