@@ -3582,7 +3582,13 @@ function DiagramCanvasInner() {
                 >
                     {gridVisible && <Background color="#C5C7C2" gap={20} size={1.5} />}
                     <ConnectorHoverStyles />
-                    <Controls position="bottom-right" showFitView={false} style={{ marginBottom: 82 }}>
+                    {/* The minimap moved to the opposite corner, so the zoom
+                        stack no longer needs to be lifted clear of it. The old
+                        `marginBottom: 82` was a guess at the minimap's height —
+                        it is ~160px with its margin, so on any diagram large
+                        enough to show one the two overlapped and the maximise
+                        button underneath could not be clicked. */}
+                    <Controls position="bottom-right" showFitView={false}>
                         <ControlButton
                             title="Undo last diagram edit (⌘Z)"
                             aria-label="Undo last diagram edit"
@@ -3618,6 +3624,7 @@ function DiagramCanvasInner() {
                     </Controls>
                     {nodes.length > 20 && (
                         <MiniMap
+                            position="bottom-left"
                             style={MINIMAP_STYLE}
                             nodeColor={miniMapNodeColor}
                             maskColor="rgba(247, 247, 245, 0.7)"
