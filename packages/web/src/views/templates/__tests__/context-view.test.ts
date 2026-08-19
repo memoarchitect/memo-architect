@@ -12,8 +12,8 @@ describe('system context view template', () => {
         const pharmacy = element('pharmacy', 'OperationalEntity', 'Pharmacy Information System');
         const environment = element('home', 'UseContext', 'Home Care Environment');
         const layout = computeContextViewLayout(model({ system, clinician, pharmacy, environment }, [
-            { id: 'interact', type: 'interactsWith', sourceId: 'clinician', targetId: 'pump' },
-            { id: 'exchange', type: 'exchangesWith', sourceId: 'pump', targetId: 'pharmacy' },
+            { id: 'interact', type: 'connect', sourceId: 'clinician', targetId: 'pump' },
+            { id: 'exchange', type: 'flow', sourceId: 'pump', targetId: 'pharmacy' },
             { id: 'context', type: 'appliesInContext', sourceId: 'home', targetId: 'pump' },
         ]), 'Infusion Pump Context');
 
@@ -33,7 +33,7 @@ describe('system context view template', () => {
         const patient = element('patient', 'User', 'Patient');
         const internal = element('motor', 'LogicalComponent', 'Motor Controller');
         const layout = computeContextViewLayout(model({ system, patient, internal }, [
-            { id: 'care', type: 'interactsWith', sourceId: 'patient', targetId: 'pump' },
+            { id: 'care', type: 'connect', sourceId: 'patient', targetId: 'pump' },
         ]));
         expect(layout.nodes.map(node => node.id)).not.toContain('motor');
         expect(layout.nodes.map(node => node.id)).toEqual(expect.arrayContaining(['pump', 'patient']));
@@ -66,7 +66,7 @@ describe('system context view template', () => {
         const network = element('network', 'OperationalEntity', 'Hospital Network');
         const layout = computeContextViewLayout(model({ pump, clinician, network }, [
             { id: 'shown', type: 'interactsInContext', sourceId: 'clinician', targetId: 'pump' },
-            { id: 'hidden', type: 'interactsWith', sourceId: 'network', targetId: 'pump' },
+            { id: 'hidden', type: 'connect', sourceId: 'network', targetId: 'pump' },
         ]), 'Pump Context', {
             viewpointFilter: element => element.id !== 'network',
             relationshipTypes: ['InteractsInContext'],

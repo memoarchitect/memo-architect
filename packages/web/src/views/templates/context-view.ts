@@ -21,7 +21,11 @@ import {
 } from '../layout';
 import { isPortElement } from './interconnection-view';
 
-const CONTEXT_RELATIONSHIPS = new Set(['interactsincontext', 'interactswith', 'exchangeswith', 'appliesincontext', 'connectsphysically']);
+// Native keywords, because the MEMO relations that used to be here are gone:
+// `InteractsWith` and `ConnectsPhysically` are both native `connect` now, and
+// `ExchangesWith` was replaced by `flow`. A kind that no longer exists matches
+// nothing and the context diagram just comes up empty.
+const CONTEXT_RELATIONSHIPS = new Set(['interactsincontext', 'appliesincontext', 'connect', 'flow']);
 const HUMAN_ACTOR_KINDS = new Set(['Actor', 'User']);
 
 const relationshipType = (type: string) => type.toLowerCase();
