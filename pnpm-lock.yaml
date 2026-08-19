@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@memoarchitect/ontology':
-        specifier: 0.8.24
-        version: 0.8.24
+        specifier: ^0.10.0
+        version: 0.10.9
       '@memoarchitect/tools':
-        specifier: 0.8.8
-        version: 0.8.8
+        specifier: ^0.10.0
+        version: 0.10.8
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -774,12 +774,12 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
-  '@memoarchitect/ontology@0.8.24':
-    resolution: {integrity: sha512-6Fu8cQr+ZZBkuwTwGLcuYziPG/wqb9A5+Cp0H24mjrZSBk1fFKfpgnEvp9/TsznGEbj7SvbnRiUcvS7v5Ir/Ww==}
+  '@memoarchitect/ontology@0.10.9':
+    resolution: {integrity: sha512-aG0HsZdZlyirlCD3EFjBwHhJDPgXkhHqg4B5ofrZr3p/EoNq76ESMhmQ4GSVg4iWlfORzKsTVEKAxwhNHObr3g==}
     engines: {node: '>=26.0.0'}
 
-  '@memoarchitect/tools@0.8.8':
-    resolution: {integrity: sha512-H2FW7xpgCIdQoFV8FDWUu3KlNMrU2N1R8zE4PObnnviayQ42nxbDYIHV2aSDO5wIXufpY/nJ6R9zXGhV10ZEqg==}
+  '@memoarchitect/tools@0.10.8':
+    resolution: {integrity: sha512-FYowEP11jRWmtL9+f5Ej7s1hd/dJ6wx1Swgao/BiKXHEy0PtSRIkbdPGuF/FcGfdG7vy+BRion7XTkSqgQ/4Ow==}
     engines: {node: '>=26.0.0'}
     hasBin: true
 
@@ -2784,11 +2784,11 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
-  '@memoarchitect/ontology@0.8.24': {}
+  '@memoarchitect/ontology@0.10.9': {}
 
-  '@memoarchitect/tools@0.8.8':
+  '@memoarchitect/tools@0.10.8':
     dependencies:
-      '@memoarchitect/ontology': 0.8.24
+      '@memoarchitect/ontology': 0.10.9
       chalk: 5.6.2
       chokidar: 4.0.3
       commander: 12.1.0
