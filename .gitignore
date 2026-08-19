@@ -18,6 +18,11 @@ lib/
 out/
 *.tsbuildinfo
 
+# `lib/` above is a build output directory, and it silently swallowed the web
+# app's own `src/lib` — three modules the explorer imports were ignored rather
+# than committed, so a fresh clone could not build. Source is not build output.
+!packages/web/src/lib/
+
 # Generated (Langium)
 packages/core/src/language/generated/
 
