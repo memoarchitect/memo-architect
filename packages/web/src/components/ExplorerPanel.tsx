@@ -1,4 +1,5 @@
 import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { buildBreakdown, type BreakdownNode } from '../lib/breakdown-tree';
 import { useNavigate } from 'react-router-dom';
 import {
     useModelStore,
@@ -1058,6 +1059,95 @@ export function computeExplorerGroupTree(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * The composition reading of the model. See `lib/breakdown-tree.ts` for why
+ * this exists alongside the catalog.
+ */
+function BreakdownTree({ searchTerm, selectedElementId, onSelect }: {
+    searchTerm: string;
+    selectedElementId: string | null;
+    onSelect: (id: string) => void;
+}) {
+    const model = useModelStore(s => s.model);
+    const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+    const branches = useMemo(
+        () => buildBreakdown(Object.values(model?.elements ?? {}), undefined, searchTerm),
+        [model, searchTerm],
+    );
+
+    const toggle = (id: string) =>
+        setCollapsed(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+
+    const renderNode = (node: BreakdownNode, depth: number) => {
+        const hasChildren = node.children.length > 0;
+        const isOpen = !collapsed.has(node.id);
+        return (
+            <div key={node.id}>
+                <div
+                    className="flex items-center gap-1.5 py-1 cursor-pointer select-none"
+                    style={{
+                        paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', borderRadius: '4px',
+                        margin: '0 4px',
+                        background: node.element && node.element.id === selectedElementId ? '#EEF2FF' : 'transparent',
+                    }}
+                    onClick={() => {
+                        if (hasChildren) toggle(node.id);
+                        if (node.element) onSelect(node.element.id);
+                    }}
+                >
+                    {hasChildren
+                        ? <ChevronIcon expanded={isOpen} size={12} />
+                        : <span style={{ width: '12px', display: 'inline-block' }} />}
+                    {node.isGroup ? <FolderIcon open={isOpen} /> : <ItemIcon />}
+                    <span className="truncate flex-1" style={{ color: COLOR.primary }}>{node.name}</span>
+                    {!node.isGroup && (
+                        <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{node.kind}</span>
+                    )}
+                </div>
+                {isOpen && node.children.map(child => renderNode(child, depth + 1))}
+            </div>
+        );
+    };
+
+    if (branches.length === 0) {
+        return (
+            <div className="flex-1 flex items-center justify-center px-4 text-center"
+                 style={{ color: COLOR.faint, fontSize: '12px' }}>
+                {searchTerm ? 'Nothing matches that search.' : 'No composition to show yet.'}
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+            {branches.map(branch => {
+                const isOpen = !collapsed.has(`b:${branch.id}`);
+                return (
+                    <div key={branch.id} className="mb-0.5">
+                        <div
+                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                            style={{ margin: '0 4px', borderRadius: '4px' }}
+                            onClick={() => toggle(`b:${branch.id}`)}
+                        >
+                            <ChevronIcon expanded={isOpen} size={13} />
+                            <FolderIcon open={isOpen} />
+                            <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.kind }}>
+                                {branch.label}
+                            </span>
+                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{branch.nodes.length}</span>
+                        </div>
+                        {isOpen && branch.nodes.map(node => renderNode(node, 1))}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const navigate = useNavigate();
     const model = useModelStore(s => s.model);
@@ -1084,6 +1174,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         if (el) navigate(elementUrl(el.shortId ?? el.id));
     }, [selectElement, setActiveView, model, navigate]);
 
+    // The model tab has two readings. The CATALOG groups by layer and kind,
+    // which is how you find an element you can name. The BREAKDOWN nests by
+    // composition, which is how you read a system — a port belongs on its
+    // component, not in a folder of every port in the model.
+    const [modelView, setModelView] = useState<'catalog' | 'breakdown'>('catalog');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const initializedTypeBranches = useRef(false);
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
@@ -1284,6 +1379,28 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     >Select All</button>
                 </div>
             )}
+            <div className="flex px-2 pt-1.5 pb-1 gap-1 flex-shrink-0">
+                {(['catalog', 'breakdown'] as const).map(v => (
+                    <button
+                        key={v}
+                        onClick={() => setModelView(v)}
+                        className="px-2 py-0.5 rounded capitalize"
+                        style={{
+                            fontSize: '11px', fontWeight: 500,
+                            ...(modelView === v
+                                ? { background: COLOR.accent, color: '#fff' }
+                                : { background: 'transparent', color: COLOR.faint }),
+                        }}
+                    >{v}</button>
+                ))}
+            </div>
+            {modelView === 'breakdown' ? (
+                <BreakdownTree
+                    searchTerm={searchTerm}
+                    selectedElementId={selectedElementId}
+                    onSelect={selectElementAndNavigate}
+                />
+            ) : (
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
                 {groupTree.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
@@ -1503,6 +1620,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 })}
                 {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
             </div>
+            )}
         </div>
     );
 }
