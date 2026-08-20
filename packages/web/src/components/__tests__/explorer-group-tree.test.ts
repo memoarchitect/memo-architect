@@ -92,8 +92,8 @@ describe('buildTree', () => {
 
 describe('buildOwnershipTree', () => {
     it('nests owned port usages beneath their owning part', () => {
-        const part = { ...el('pump', 'Pump', 'logical'), construct: 'part' };
-        const port = { ...el('inlet', 'LogicalPort', 'functional'), construct: 'port', owner: 'pump' };
+        const part = { ...el('pump', 'Pump', 'logical'), construct: 'part' as const };
+        const port = { ...el('inlet', 'LogicalPort', 'functional'), construct: 'port' as const, owner: 'pump' };
         const tree = buildOwnershipTree([part, port]);
         expect(tree).toHaveLength(1);
         expect(tree[0].id).toBe('pump');

@@ -11,7 +11,7 @@ import {
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
 const element = (id: string, kind: string, layer: string, pkg?: string) => ({
-    id, name: id, kind, layer, construct: 'part', file: 'model.sysml',
+    id, name: id, kind, layer, construct: 'part' as const, file: 'model.sysml',
     attributes: {}, package: pkg,
 });
 

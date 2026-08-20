@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeUseCaseViewLayout, isUseCase, isUseCaseActor, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions } from '../use-case-view';
 
-const el = (id: string, kind: string, name = id) => ({ id, kind, name, construct: kind === 'UseCase' ? 'use case' : 'part', layer: 'operational', file: 'test.sysml', attributes: {} });
+const el = (id: string, kind: string, name = id) => ({ id, kind, name, construct: kind === 'UseCase' ? ('use case' as const) : ('part' as const), layer: 'operational', file: 'test.sysml', attributes: {} });
 const model = (elements: Record<string, any>, relationships: any[] = []) => ({ elements, relationships, errors: [] }) as any;
 
 describe('use-case view template', () => {

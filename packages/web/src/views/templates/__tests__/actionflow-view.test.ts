@@ -300,7 +300,7 @@ describe('control nodes (fork/join)', () => {
 
 describe('SysML v2 activity-node audit', () => {
     it('recognizes standard activity nodes and common importer aliases', () => {
-        expect(activityNodeType(el('route', { kind: 'DecisionNodeUsage', construct: 'decision' }))).toBe('decision');
+        expect(activityNodeType(el('route', { kind: 'DecisionNodeUsage' }))).toBe('decision');
         expect(activityNodeType(el('afterRoute', { kind: 'MergeNode' }))).toBe('merge');
         expect(activityNodeType(el('receive', { kind: 'AcceptActionUsage' }))).toBe('accept');
         expect(activityNodeType(el('send', { kind: 'SendActionUsage' }))).toBe('send');
@@ -312,8 +312,8 @@ describe('SysML v2 activity-node audit', () => {
         const m = model([
             el('activity'),
             el('receive', { parentAction: 'activity', kind: 'AcceptActionUsage' }),
-            el('route', { parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision' }),
-            el('merge', { parentAction: 'activity', kind: 'MergeNodeUsage', construct: 'merge' }),
+            el('route', { parentAction: 'activity', kind: 'DecisionNodeUsage' }),
+            el('merge', { parentAction: 'activity', kind: 'MergeNodeUsage' }),
             el('stop', { parentAction: 'activity', kind: 'ActivityFinalNodeUsage' }),
         ]);
         expect(collectActionFlowActions(m).map(node => node.id)).toEqual(['receive', 'route', 'merge', 'stop']);
@@ -526,14 +526,14 @@ describe('computeActionFlowViewLayout: feedback loops', () => {
         const activity = el('activity');
         const login = el('customerLogsIn', { parentAction: 'activity' });
         const valid = el('validUserDecision', {
-            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+            parentAction: 'activity', kind: 'DecisionNodeUsage',
         });
         const browse = el('browseCatalog', {
-            parentAction: 'activity', kind: 'MergeNodeUsage', construct: 'merge',
+            parentAction: 'activity', kind: 'MergeNodeUsage',
         });
         const view = el('viewBookStore', { parentAction: 'activity' });
         const shopping = el('shoppingDecision', {
-            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+            parentAction: 'activity', kind: 'DecisionNodeUsage',
         });
         const commit = el('commitOrder', { parentAction: 'activity' });
         const relationships = [
@@ -569,8 +569,10 @@ describe('computeActionFlowViewLayout: feedback loops', () => {
     it('keeps a terminal branch inside its single resolved swimlane', async () => {
         const activity = el('activity');
         const login = el('login', { parentAction: 'activity' });
+        // A decision node IS an action usage in the metamodel; `kind` carries
+        // the metaclass that says which one it is.
         const choice = el('choice', {
-            parentAction: 'activity', kind: 'DecisionNodeUsage', construct: 'decision',
+            parentAction: 'activity', kind: 'DecisionNodeUsage',
         });
         const proceed = el('proceed', { parentAction: 'activity' });
         const rejected = el('rejected', {
