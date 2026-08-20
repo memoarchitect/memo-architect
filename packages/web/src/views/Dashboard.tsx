@@ -73,7 +73,7 @@ function computeDashboardStats(model: MemoModelDTO, violations: number, complete
         ].reduce((sum, l) => sum + (layerCounts[l] || 0), 0),
         verificationCount: (layerCounts['verification'] || 0) + (layerCounts['assurance'] || 0),
         hazardCount: kindLower['hazard'] || 0,
-        // All ontology requirement defs: Requirement (requirementKind:
+        // All ontology requirement defs: Requirement (requirementType:
         // system/software/hardware/…), SecurityRequirement
         requirementCount: Object.entries(kindLower)
             .filter(([k]) => k.endsWith('requirement'))
