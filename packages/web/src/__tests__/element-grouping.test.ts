@@ -76,6 +76,26 @@ const action = (id: string, kind: string, extra: Partial<MemoElement> = {}): Mem
     file: 'model/fn.sysml', package: 'Fn', attributes: {}, ...extra,
 });
 
+describe('a definition that carries its supertype as its kind', () => {
+    // `part def Pump :> LogicalComponent` is an element with kind
+    // LogicalComponent, so the kind name no longer says "definition" — the
+    // builder's flag does.
+    const pumpDef = element('Pump', { kind: 'LogicalComponent', isDefinition: true });
+    const pumpUsage = element('p1', { kind: 'Pump' });
+
+    it('is still found as the definition its usages name', () => {
+        const tree = buildDefinitionTree([pumpDef, pumpUsage]);
+        expect(tree).toEqual([{ layer: 'implementation', definitions: [{ definition: pumpDef, usages: [pumpUsage] }] }]);
+    });
+
+    it('survives a definition that specializes another definition', () => {
+        const base = element('Vessel', { kind: 'LogicalComponent', isDefinition: true });
+        const derived = element('Tank', { kind: 'Vessel', isDefinition: true });
+        const tree = buildDefinitionTree([base, derived]);
+        expect(tree[0].definitions.find(entry => entry.definition.id === 'Vessel')?.usages).toEqual([derived]);
+    });
+});
+
 describe('the definitions a model declares', () => {
     const definition = action('AcquireSensorData', 'ActionDefinition');
     const usage = action('acquireSensors', 'AcquireSensorData');

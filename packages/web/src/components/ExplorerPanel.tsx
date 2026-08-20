@@ -1326,7 +1326,12 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu 
                         ? <ChevronIcon expanded={isOpen} size={12} />
                         : <span style={{ width: '12px', display: 'inline-block' }} />}
                     {node.isGroup ? <FolderIcon open={isOpen} /> : <ItemIcon />}
-                    <span className="truncate flex-1" style={{ color: COLOR.primary }}>{node.name}</span>
+                    <span className="truncate flex-1" style={{ color: COLOR.primary }}>
+                        {node.name}
+                        {node.element?.isDefinition && (
+                            <span style={{ color: COLOR.muted, fontWeight: 600, marginLeft: '5px', fontSize: '0.85em' }}>def</span>
+                        )}
+                    </span>
                     {!node.isGroup && (
                         <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{node.kind}</span>
                     )}

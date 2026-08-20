@@ -12,7 +12,7 @@ export function ExplorerElementIdentity({
     fontSize = FONT.explorer.item,
     fontWeight,
 }: {
-    element: Pick<MemoElement, 'id' | 'name' | 'shortId'>;
+    element: Pick<MemoElement, 'id' | 'name' | 'shortId'> & { isDefinition?: boolean };
     selected?: boolean;
     fontSize?: string | number;
     fontWeight?: number;
@@ -35,6 +35,13 @@ export function ExplorerElementIdentity({
                 [{identity}]
             </span>
             {element.name}
+            {/* A definition carries the kind it specializes, so nothing else in
+                the row distinguishes `part def Pump` from a pump. */}
+            {element.isDefinition && (
+                <span style={{ color: COLOR.muted, fontWeight: 600, marginLeft: '5px', fontSize: '0.85em' }}>
+                    def
+                </span>
+            )}
         </span>
     );
 }
