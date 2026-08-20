@@ -1,5 +1,6 @@
 import type { MemoElement } from '@memoarchitect/tools/browser';
 import { groupBySystem, type SystemResolution } from './system-grouping';
+import { definitionOf, indexLocalDefinitions } from './definition-nesting';
 
 /**
  * The explorer's second view: a COMPOSITION breakdown, not a catalog.
@@ -102,25 +103,13 @@ export function buildBreakdown(
 ): BreakdownBranch[] {
     const byId = new Map(elements.map(e => [e.id, e]));
 
-    // A model-local DEFINITION and its usages were listed as siblings:
-    // `AcquireSensorData` (an ActionDefinition) next to `acquireSensors`, which
-    // is a usage OF it. A usage belongs under its def — that is what makes the
-    // list readable, and it is what the definition is for.
-    //
-    // The link is the usage's `kind`: it names the def. Only definitions that
-    // are themselves elements of this model can parent anything; a usage of an
-    // ONTOLOGY kind has no local def to sit under and stays where it is.
-    const definitionByName = new Map<string, MemoElement>();
-    for (const e of elements) {
-        if (/Definition$|Def$/.test(e.kind)) definitionByName.set(e.name || e.id, e);
-    }
+    // A usage belongs under the definition it is a usage of — see
+    // `lib/definition-nesting.ts`, which the catalog tree reads the same way.
+    const definitions = indexLocalDefinitions(elements);
 
     const parentOf = (e: MemoElement): string | undefined => {
         if (e.owner && byId.has(e.owner)) return e.owner;
-        const def = definitionByName.get(e.kind);
-        // Never let a definition parent itself, and never build a 2-cycle.
-        if (def && def.id !== e.id && def.kind !== e.kind) return def.id;
-        return undefined;
+        return definitionOf(e, definitions)?.id;
     };
 
     const childrenOf = new Map<string, MemoElement[]>();

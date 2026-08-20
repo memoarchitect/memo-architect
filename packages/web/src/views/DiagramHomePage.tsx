@@ -13,7 +13,7 @@ import { useModelStore } from '../store/model-store';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
-import { UNCATEGORIZED_ID, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
+import { UNCATEGORIZED_ID, buildViewpointTree, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 
 export function DiagramHomePage() {
@@ -43,20 +43,45 @@ export function DiagramHomePage() {
                 });
             }
         }
-        // Order and label exactly as the Explorer tree does, so the two agree.
-        const named = sortViewpointsByOntologyLayer(
-            [...byViewpoint.values()]
-                .filter(g => g.id !== UNCATEGORIZED_ID)
-                .map(g => ({ ...g, ...viewpointMetadata.get(g.id) })) as any,
-        ) as unknown as (typeof byViewpoint extends Map<string, infer V> ? V : never)[];
-        const labels = stripSharedLabelPrefix(named.map(g => g.label));
-        const ordered = named.map((g, i) => ({
-            ...g, label: labels[i],
-            items: [...g.items].sort((a, b) => a.name.localeCompare(b.name)),
-        }));
+        // Order, label and NEST exactly as the Explorer tree does, so the two
+        // agree. A viewpoint frames viewpoints in a system-of-systems model,
+        // and a page that lists the constituents beside the whole says the
+        // model is flat when it is not.
+        const declared = sortViewpointsByOntologyLayer([...viewpointMetadata.values()]);
+        const { rootViewpoints, viewpointChildren } = buildViewpointTree(declared);
+        const flattened: { viewpoint: (typeof declared)[number]; depth: number }[] = [];
+        const walk = (viewpoint: (typeof declared)[number], depth: number, seen: Set<string>) => {
+            if (seen.has(viewpoint.id)) return;
+            seen.add(viewpoint.id);
+            flattened.push({ viewpoint, depth });
+            for (const child of viewpointChildren.get(viewpoint.id) ?? []) walk(child, depth + 1, seen);
+        };
+        const seen = new Set<string>();
+        for (const root of rootViewpoints) walk(root, 0, seen);
+
+        const labels = stripSharedLabelPrefix(flattened.map(entry => entry.viewpoint.label));
+        // A viewpoint that binds no view of its own is kept when it frames one
+        // that does: it is the heading its constituents sit under.
+        const framesViews = (id: string): boolean =>
+            (byViewpoint.get(id)?.items.length ?? 0) > 0
+            || (viewpointChildren.get(id) ?? []).some(child => framesViews(child.id));
+        const ordered = flattened
+            .map((entry, index) => ({
+                ...(byViewpoint.get(entry.viewpoint.id) ?? { id: entry.viewpoint.id, label: entry.viewpoint.label, items: [] }),
+                ...entry.viewpoint,
+                label: labels[index],
+                depth: entry.depth,
+                childCount: (viewpointChildren.get(entry.viewpoint.id) ?? []).length,
+                items: [...(byViewpoint.get(entry.viewpoint.id)?.items ?? [])]
+                    .sort((a, b) => a.name.localeCompare(b.name)),
+            }))
+            .filter(group => framesViews(group.id));
         const leftover = byViewpoint.get(UNCATEGORIZED_ID);
         return leftover
-            ? [...ordered, { ...leftover, items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)) }]
+            ? [...ordered, {
+                ...leftover, depth: 0, childCount: 0,
+                items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)),
+            }]
             : ordered;
     }, [model]);
 
@@ -84,7 +109,18 @@ export function DiagramHomePage() {
             )}
 
             {groups.map(group => (
-                <section key={group.id} style={{ marginBottom: '28px' }}>
+                <section
+                    key={group.id}
+                    style={{
+                        marginBottom: '28px',
+                        // A framed viewpoint is indented under the one that
+                        // frames it, with a rule down the left so the nesting
+                        // survives a section long enough to scroll.
+                        marginLeft: group.depth ? `${group.depth * 20}px` : 0,
+                        paddingLeft: group.depth ? '14px' : 0,
+                        borderLeft: group.depth ? `2px solid ${COLOR.border}` : 'none',
+                    }}
+                >
                     <h2 style={{
                         fontSize: '11px', fontWeight: 700, color: COLOR.muted,
                         textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -97,20 +133,33 @@ export function DiagramHomePage() {
                             {group.id === UNCATEGORIZED_ID ? 'no viewpoint' : group.id}
                         </code>
                         <span style={{ marginLeft: 8, fontWeight: 400 }}>{group.items.length}</span>
+                        {group.childCount > 0 && (
+                            <span style={{ marginLeft: 8, fontWeight: 400, textTransform: 'none', color: COLOR.faint }}>
+                                frames {group.childCount} {group.childCount === 1 ? 'viewpoint' : 'viewpoints'}
+                            </span>
+                        )}
                     </h2>
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                        gap: '12px',
-                    }}>
-                        {group.items.map(diagram => (
-                            <DiagramCard
-                                key={diagram.id}
-                                diagram={diagram}
-                                onClick={() => navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id))}
-                            />
-                        ))}
-                    </div>
+                    {group.items.length === 0 ? (
+                        // A framing viewpoint draws nothing itself; say so
+                        // rather than leaving a heading over blank space.
+                        <p style={{ color: COLOR.faint, fontSize: FONT.sm, margin: '0 0 4px' }}>
+                            No views of its own — the viewpoints it frames are below.
+                        </p>
+                    ) : (
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                            gap: '12px',
+                        }}>
+                            {group.items.map(diagram => (
+                                <DiagramCard
+                                    key={diagram.id}
+                                    diagram={diagram}
+                                    onClick={() => navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id))}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </section>
             ))}
         </div>
