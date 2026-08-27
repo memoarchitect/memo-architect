@@ -51,16 +51,9 @@ import {
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import {
-    validateSingleTree, buildCompositionTree, containersBelowDepth, COMPOSITION_REL_TYPES,
+    validateSingleTree, COMPOSITION_REL_TYPES,
 } from './templates/composition-tree';
 
-/**
- * The nesting level from which an IBD opens folded. The frame (0) always shows
- * its immediate parts (1), while those parts start folded. An IBD needs to
- * open as a readable system overview; its detailed internal wiring belongs in
- * an intentional expand/drill-in interaction, not in the first frame.
- */
-const IBD_FOLD_DEPTH = 1;
 import {
     PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide,
     INTERCONNECTION_PORT_SIZE, NESTED_PITCH, type PortDisplay, type PortSide,
@@ -199,6 +192,14 @@ interface UndoCommand {
  */
 type RouteQuality = 'direct' | 'tidy';
 
+/** A frame is drawn from the inside, so its ports present their opposite face. */
+const OPPOSITE_SIDE: Record<PortSide, PortSide> = {
+    left: 'right',
+    right: 'left',
+    top: 'bottom',
+    bottom: 'top',
+};
+
 /** Re-route explicit orthogonal edges after saved/user node positions overlay. */
 function reroutePositionedEdges(
     nodes: FlowNode[],
@@ -245,8 +246,33 @@ function reroutePositionedEdges(
             }
             return fallback as { x: number; y: number } | undefined;
         };
-        const sourceOffset = liveOffset(edge.source, edge.data?.sourcePortId, edge.data?.sourceOffset, edge.data?.sourceSide);
-        const targetOffset = liveOffset(edge.target, edge.data?.targetPortId, edge.data?.targetOffset, edge.data?.targetSide);
+        // The side recorded on the edge is the side the connector was authored
+        // against; the side the port actually sits on is on the port itself and
+        // is what the route has to meet. They disagree whenever a port has been
+        // moved since the connector was drawn. Prefer the port's own side, and
+        // fall back to the edge's when the port carries none.
+        //
+        // A frame is drawn from the inside: its ports face into the diagram, so
+        // a port on the frame's `left` presents a `right` face to everything it
+        // connects to. Invert the side for frames or every frame connector
+        // leaves from the wrong face and doubles back across the drawing.
+        const effectiveSide = (
+            nodeId: string,
+            portId: unknown,
+            fallback: unknown,
+        ): PortSide | undefined => {
+            const node = byId.get(nodeId);
+            if (!node || typeof portId !== 'string') return fallback as PortSide | undefined;
+            const port = ((node.data as { ports?: Array<{ id: string; side?: PortSide }> })?.ports ?? [])
+                .find(candidate => candidate.id === portId);
+            if (!port?.side) return fallback as PortSide | undefined;
+            if ((node.data as { isFrame?: boolean })?.isFrame) return OPPOSITE_SIDE[port.side];
+            return port.side;
+        };
+        const sourceSide = effectiveSide(edge.source, edge.data?.sourcePortId, edge.data?.sourceSide);
+        const targetSide = effectiveSide(edge.target, edge.data?.targetPortId, edge.data?.targetSide);
+        const sourceOffset = liveOffset(edge.source, edge.data?.sourcePortId, edge.data?.sourceOffset, sourceSide);
+        const targetOffset = liveOffset(edge.target, edge.data?.targetPortId, edge.data?.targetOffset, targetSide);
         if (!sourceOffset || !targetOffset || !byId.has(edge.source) || !byId.has(edge.target)) return [];
         const s = absOf(edge.source), t = absOf(edge.target);
         return [{
@@ -255,13 +281,20 @@ function reroutePositionedEdges(
             target: { x: t.x + targetOffset.x, y: t.y + targetOffset.y },
             sourceNodeId: edge.source,
             targetNodeId: edge.target,
-            sourceSide: edge.data?.sourceSide as 'left' | 'right' | 'top' | 'bottom' | undefined,
-            targetSide: edge.data?.targetSide as 'left' | 'right' | 'top' | 'bottom' | undefined,
+            sourceSide,
+            targetSide,
         }];
     });
     if (requests.length === 0) return edges;
     const obstacles = nodes
-        .filter(node => !(node.data as { isFrame?: boolean }).isFrame)
+        // Frames, containers and any node with children are drawn AROUND the
+        // things they hold, so treating them as obstacles walls off the region
+        // their own children live in and every route that has to reach a child
+        // is pushed out around the parent.
+        .filter(node => {
+            const data = node.data as { isFrame?: boolean; isContainer?: boolean; hasChildren?: boolean };
+            return !data.isFrame && !data.isContainer && !data.hasChildren;
+        })
         .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }));
     const requestById = new Map(requests.map(request => [request.id, request]));
     const manualRouted = new Set(edges.filter(edge => edge.data?.manualRoute).map(edge => edge.id));
@@ -1163,16 +1196,6 @@ function DiagramCanvasInner() {
      * its children must count as level 1 regardless of how deep they sit
      * globally. Depth 1 is the first detail level inside that visible frame.
      */
-    const interconnectionDeepContainerIds = useMemo(() => {
-        if (!model || viewKind !== 'interconnection') return [] as string[];
-        const all = Object.values(model.elements);
-        const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-        return containersBelowDepth(
-            buildCompositionTree(visible, model.relationships),
-            IBD_FOLD_DEPTH,
-        );
-    }, [model, viewKind, viewpointFilter]);
-
     /**
      * A diagram that nests deeply opens folded. A deep hierarchy drawn at full
      * depth is unreadable — GPCA's mode machine is four levels — so the reader
@@ -1181,8 +1204,9 @@ function DiagramCanvasInner() {
      * The action-flow and tree views already start collapsed, because they
      * track which nodes are *expanded*. The state-machine and IBD views track
      * the inverse, so an empty set means fully open and they have to be seeded.
-     * A state machine folds every composite; an IBD folds only what sits below
-     * its first level (see interconnectionDeepContainerIds).
+     * A state machine folds every composite. An IBD does NOT fold: its parts
+     * are the content the reader came for, and folding by depth hid the ports
+     * a connector lands on, so the connectors read as arriving nowhere.
      * Seeded once per diagram: after that the set belongs to the user, and
      * "expand all" must not be undone on the next render.
      */
@@ -1195,12 +1219,12 @@ function DiagramCanvasInner() {
             if (compositeStateIds.length === 0) return;
             setCollapsedStateNodes(new Set(compositeStateIds));
         } else if (viewKind === 'interconnection') {
-            // An IBD with nothing deep to fold opens fully expanded, which is
-            // the correct default — so this seeds an empty set and is done.
-            setCollapsedInterconnectionNodes(new Set(interconnectionDeepContainerIds));
+            // Open fully expanded, and record that this diagram has been
+            // seeded so a later render cannot re-fold what the user opened.
+            setCollapsedInterconnectionNodes(new Set());
         }
         seededCollapseRef.current = key;
-    }, [model, selectedDiagramId, viewKind, compositeStateIds, interconnectionDeepContainerIds]);
+    }, [model, selectedDiagramId, viewKind, compositeStateIds]);
 
     // BDD integrity: a block definition diagram must be one connected hierarchy,
     // not a forest of disconnected/floating elements (validateSingleTree).

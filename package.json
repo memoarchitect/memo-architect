@@ -1,6 +1,6 @@
 {
   "name": "@memoarchitect/architect",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {

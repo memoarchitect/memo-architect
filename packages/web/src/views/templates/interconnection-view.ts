@@ -1385,9 +1385,16 @@ export async function computeInterconnectionLayout(
         const flowKind = classifyIbdFlow(rel.flowItem, rel.type);
         const flowColor = IBD_FLOW_COLORS[flowKind];
         const bundleCount = Number(rel.attributes?.bundleCount ?? 0);
+        // `ibdEdgeLabel` falls back to the flow's TYPE REFERENCE, printed
+        // verbatim and never resolved — for a ROS topic flow that is
+        // `rosTopicCommandChannels`, the SysML declaration, which is the name
+        // for code rather than for a reader. The readable name is on the flow
+        // itself (`/command/channels`), and a declaration can never carry it
+        // because it cannot contain "/". Prefer the authored name; every flow
+        // without one keeps the previous label.
         const label = bundleCount > 1
             ? `${bundleCount} connections`
-            : ibdEdgeLabel(rel.flowItem, rel.type);
+            : (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type);
         // Port endpoints anchor to the port's inner/outer face; a part endpoint
         // anchors to its right (source) / left (target) side so the connector
         // stays a clean horizontal run instead of looping over the box.

@@ -11,27 +11,49 @@ export function ExplorerElementIdentity({
     selected = false,
     fontSize = FONT.explorer.item,
     fontWeight,
+    tint,
 }: {
-    element: Pick<MemoElement, 'id' | 'name' | 'shortId'> & { isDefinition?: boolean };
+    element: Pick<MemoElement, 'id' | 'name' | 'shortId'> & {
+        isDefinition?: boolean;
+        /** Authored providedId, preferred over shortId where the model carries one. */
+        __displayId?: string;
+    };
     selected?: boolean;
     fontSize?: string | number;
     fontWeight?: number;
+    /** Overrides the label colour, so a usage row can be tinted as one. */
+    tint?: string;
 }) {
     // The builder assigns this deterministic, human-facing form to every
     // element (for example STT-1). Never expose the internal SysML/UUID
     // identifier as an explorer label.
-    const identity = element.shortId ?? 'ID-PENDING';
+    // An authored providedId is the id the reader knows the element by and the
+    // one every other document cites; shortId is the builder's fallback for
+    // elements that carry none.
+    const identity = element.__displayId ?? element.shortId ?? 'ID-PENDING';
     return (
         <span
             className="truncate flex-1"
             style={{
-                color: selected ? COLOR.accentDark : COLOR.primary,
+                color: tint ?? (selected ? COLOR.accentDark : COLOR.primary),
                 fontSize,
                 fontWeight: fontWeight ?? (selected ? 500 : 400),
             }}
             title={`${identity} ${element.name}`}
         >
-            <span style={{ color: COLOR.muted, fontWeight: 500, marginRight: '4px' }}>
+            {/* Fixed-width monospace so ids line up into a readable column
+                instead of ragging the names across the tree. */}
+            <span
+                style={{
+                    color: COLOR.muted,
+                    fontWeight: 500,
+                    marginRight: '4px',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                    display: 'inline-block',
+                    minWidth: '17ch',
+                    flexShrink: 0,
+                }}
+            >
                 [{identity}]
             </span>
             {element.name}

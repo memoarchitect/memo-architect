@@ -194,7 +194,14 @@ export function UiScreensWorkspace() {
     const [screenName, setScreenName] = useState('NewUIScreen');
     const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
     const [proposals, setProposals] = useState<ScreenRegionProposal[]>([]);
-    const [collapsedTree, setCollapsedTree] = useState<Set<string>>(new Set());
+    /**
+     * Tracks which tree nodes are EXPANDED, so an empty set opens the tree
+     * fully collapsed. A UI screen model is wide and shallow — every screen
+     * carries its whole element tree — and opening it fully expanded buried
+     * the screen list itself under hundreds of rows, so the reader could not
+     * see what screens exist without scrolling past the first one's contents.
+     */
+    const [expandedTree, setExpandedTree] = useState<Set<string>>(new Set());
     const [sidebarWidth, setSidebarWidth] = useState(savedSidebarWidth);
 
     const resizeCleanupRef = useRef<(() => void) | null>(null);
@@ -312,7 +319,7 @@ export function UiScreensWorkspace() {
         if (element) inspectElement(element.id);
     };
 
-    const toggleTree = (id: string) => setCollapsedTree(current => {
+    const toggleTree = (id: string) => setExpandedTree(current => {
         const next = new Set(current);
         if (next.has(id)) next.delete(id); else next.add(id);
         return next;
@@ -390,7 +397,7 @@ export function UiScreensWorkspace() {
                             label={group.name}
                             depth={depth}
                             hasChildren
-                            expanded={!collapsedTree.has(groupKey)}
+                            expanded={expandedTree.has(groupKey)}
                             selected={false}
                             badge="PKG"
                             badgeColor="#6B7280"
@@ -398,7 +405,7 @@ export function UiScreensWorkspace() {
                             title={`Grouping package — ${group.members.length} UI elements. The package groups; the screen still owns them.`}
                             onClick={() => toggleTree(groupKey)}
                         />
-                        {!collapsedTree.has(groupKey) && (
+                        {expandedTree.has(groupKey) && (
                             <div role="group">
                                 {group.members.map(member => renderRegionBranch(member, layoutId, screenElement, depth + 1))}
                             </div>
@@ -417,7 +424,7 @@ export function UiScreensWorkspace() {
                 label={<ExplorerElementIdentity element={element} />}
                 depth={depth}
                 hasChildren={(composedChildren.get(element.id) ?? []).length > 0}
-                expanded={!collapsedTree.has(`element:${element.id}`)}
+                expanded={expandedTree.has(`element:${element.id}`)}
                 selected={element.id === selectedElementId}
                 badge="UIE"
                 badgeColor="#0F766E"
@@ -430,7 +437,7 @@ export function UiScreensWorkspace() {
                 onDelete={() => deleteModelElement(element.id)}
                 actions={groupActions(element)}
             />
-            {!collapsedTree.has(`element:${element.id}`)
+            {expandedTree.has(`element:${element.id}`)
                 && renderChildren(composedChildren.get(element.id) ?? [], layoutId, screenElement, depth + 1)}
         </div>
     );
@@ -722,7 +729,7 @@ export function UiScreensWorkspace() {
                                 label={<ExplorerElementIdentity element={screenElement} />} 
                                 depth={0} 
                                 hasChildren={regions.length > 0} 
-                                expanded={!collapsedTree.has(screenKey)}
+                                expanded={expandedTree.has(screenKey)}
                                 selected={screenElement.id === selectedElementId} 
                                 badge="UIE" 
                                 badgeColor="#0F766E" 
@@ -730,7 +737,7 @@ export function UiScreensWorkspace() {
                                 onClick={() => { if (regions.length) toggleTree(screenKey); selectLayout(layout.id, screenElement, screenElement); }}
                                 onDelete={() => deleteModelElement(screenElement.id)} 
                             />
-                            {!collapsedTree.has(screenKey) && (
+                            {expandedTree.has(screenKey) && (
                                 <div role="group">
                                     {renderChildren(regions, layout.id, screenElement, 1)}
                                 </div>

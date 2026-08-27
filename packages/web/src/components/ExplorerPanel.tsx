@@ -14,7 +14,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_SUBGROUP_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
@@ -422,8 +422,27 @@ interface TreeNode {
     name: string;
     type: 'folder' | 'element';
     children: TreeNode[];
-    element?: MemoElement;
+    element?: ExplorerElement;
+    /** The synthetic "Usages (n)" folder holding one definition's usages. */
+    isUsagesFolder?: boolean;
+    /** This node was folded under the definition it is a usage of. */
+    isUsage?: boolean;
 }
+
+/**
+ * A model element decorated for display.
+ *
+ * The explorer shows an element under the id and name a READER knows it by,
+ * which is not always what the builder produced: an authored `providedId`
+ * outranks the generated `shortId`, and a usage with no name of its own is
+ * best labelled with the one on its definition.
+ */
+export type ExplorerElement = MemoElement & {
+    /** Authored providedId where the model carries one, else shortId/id. */
+    __displayId?: string;
+    /** True for a definition, resolved once so rows need not re-derive it. */
+    __isDef?: boolean;
+};
 
 /**
  * The containment tree, built from package membership.
@@ -566,6 +585,9 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
     return roots;
 }
 
+/** A folded usage is tinted so it reads as an instance, not a peer definition. */
+const USAGE_TINT = '#7C3AED';
+
 function RecursiveTree({
     nodes,
     level,
@@ -605,7 +627,7 @@ function RecursiveTree({
                     return (
                         <div
                             key={node.id}
-                            style={{ marginLeft: level > 0 ? '16px' : '0' }}
+                            style={{ marginLeft: node.isUsagesFolder ? `${16 + level * 16}px` : level > 0 ? '16px' : '0' }}
                             draggable
                             onDragStart={e => onDragStart(e, node)}
                             onDragOver={e => e.preventDefault()}
@@ -620,10 +642,14 @@ function RecursiveTree({
                                 onContextMenu={e => onContextMenu(e, 'folder', node.id)}
                             >
                                 <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
-                                <FolderIcon open={isExpanded} color={baseColor} />
+                                <FolderIcon open={isExpanded} color={node.isUsagesFolder ? USAGE_TINT : baseColor} />
                                 <span
                                     className="font-medium flex-1 truncate"
-                                    style={{ color: COLOR.secondary, fontSize: FONT.explorer.kind }}
+                                    style={{
+                                        color: node.isUsagesFolder ? USAGE_TINT : COLOR.secondary,
+                                        fontSize: FONT.explorer.kind,
+                                        fontStyle: node.isUsagesFolder ? 'italic' : 'normal',
+                                    }}
                                 >
                                     {node.name}
                                 </span>
@@ -639,7 +665,7 @@ function RecursiveTree({
                                     selectedElementIds={selectedElementIds}
                                     toggleElementSelection={toggleElementSelection}
                                     violationCounts={violationCounts}
-                                    baseColor={baseColor}
+                                    baseColor={node.isUsagesFolder ? USAGE_TINT : baseColor}
                                     onContextMenu={onContextMenu}
                                     onDragStart={onDragStart}
                                     onDrop={onDrop}
@@ -653,7 +679,12 @@ function RecursiveTree({
                     const isSelected = selectedElementId === el.id;
                     const isChecked = selectedElementIds.has(el.id);
                     const vCount = violationCounts.get(el.id) || 0;
-                    const layerClr = LAYER_COLORS[el.layer] || baseColor;
+                    const layerClr = node.isUsage ? USAGE_TINT : (LAYER_COLORS[el.layer] || baseColor);
+                    // An element row now carries children of its own — the parts
+                    // it composes, and its Usages folder — so it needs the same
+                    // disclosure control a package folder has.
+                    const hasChildren = node.children.length > 0;
+                    const isOpen = expanded.has(el.id);
 
                     return (
                         <Fragment key={el.id}>
@@ -662,7 +693,7 @@ function RecursiveTree({
                             style={{
                                 borderRadius: '4px',
                                 margin: '0 4px',
-                                marginLeft: (level > 0 ? 16 : 0) + 20 + 'px',
+                                marginLeft: 16 + level * 16 + (node.isUsage ? 16 : 0) + (hasChildren ? 0 : 16) + 'px',
                                 background: isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent',
                                 fontWeight: isSelected || isChecked ? 500 : 400,
                             }}
@@ -675,11 +706,23 @@ function RecursiveTree({
                                     e.preventDefault();
                                     toggleElementSelection(el.id);
                                 } else {
+                                    // Selecting a parent also opens it: the row
+                                    // is both the element and the way into it.
                                     selectElement(el.id);
+                                    if (hasChildren) toggleExpand(el.id);
                                 }
                             }}
                             onContextMenu={e => onContextMenu(e, 'element', el.id)}
                         >
+                            {hasChildren ? (
+                                <span
+                                    onClick={e => { e.stopPropagation(); toggleExpand(el.id); }}
+                                    className="cursor-pointer flex items-center justify-center"
+                                    style={{ width: '14px', height: '14px', flexShrink: 0 }}
+                                >
+                                    <ChevronIcon expanded={isOpen} size={12} color={COLOR.muted} />
+                                </span>
+                            ) : null}
                             {/* Checkbox — visible when checked or on hover via CSS group */}
                             <input
                                 type="checkbox"
@@ -697,7 +740,18 @@ function RecursiveTree({
                                 onMouseLeave={e => { (e.currentTarget as HTMLInputElement).style.opacity = isChecked ? '1' : '0'; }}
                             />
                             <ItemIcon color={isUndefined ? '#F59E0B' : layerClr} />
-                            <ExplorerElementIdentity element={el} selected={isSelected} />
+                            <ExplorerElementIdentity element={el} selected={isSelected} tint={node.isUsage ? USAGE_TINT : undefined} />
+                            {hasChildren && (
+                                <span
+                                    className="px-1.5 py-0.5 rounded-full ml-auto text-xs"
+                                    style={{
+                                        background: '#F3F4F6', color: '#6B7280', fontSize: '11px',
+                                        fontWeight: 500, minWidth: '16px', textAlign: 'center',
+                                    }}
+                                >
+                                    {node.children.length}
+                                </span>
+                            )}
                             {isUndefined && (
                                 <span title={`Kind "${el.kind}" is not defined in the ontology`}
                                     style={{ color: '#F59E0B', fontSize: '12px', flexShrink: 0 }}>⚠</span>
@@ -718,7 +772,7 @@ function RecursiveTree({
                                 </span>
                             )}
                         </div>
-                        {node.children.length > 0 && (
+                        {hasChildren && isOpen && (
                             <RecursiveTree
                                 nodes={node.children}
                                 level={level + 1}
@@ -861,10 +915,11 @@ function kindFolderLabel(kind: string, count: number): string {
         AssumeProperty: 'Assumption',
         GuaranteeProperty: 'Guarantee',
     };
-    if (labels[kind]) return count === 1 ? labels[kind] : labels[kind] + 's';
-    const singular = kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-    if (count === 1 || /(?:ss|Data|Status)$/i.test(singular)) return singular;
-    return singular.endsWith('s') ? singular : singular + 's';
+    // Always singular. A type folder names the TYPE its rows are instances of
+    // ("Hazard"), and the count badge beside it already says how many there
+    // are — pluralising made the folder read as the collection instead, and
+    // the English rules needed to do it were wrong as often as they were right.
+    return labels[kind] ?? kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
 /** One namespace sub-group inside a layer group (e.g. Risk inside Architecture). */
@@ -904,6 +959,8 @@ export function computeExplorerGroupTree(
     availableOntologies: OntologyPackageInfo[],
     _declaredPackages: { qualifiedName: string }[] = [],
     kindFilter?: ReadonlySet<string>,
+    relationships: { type?: string; sourceId?: string; targetId?: string }[] = [],
+    viewpoints: ViewpointDTO[] = [],
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
@@ -914,86 +971,245 @@ export function computeExplorerGroupTree(
         .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
     const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
-    const validElements = new Map<string, MemoElement>();
+    // ─── Presentation elements belong to the Viewpoints explorer ────────────
+    //
+    // A view and everything declared alongside it in the same file describes
+    // how the model is PRESENTED, not what the model contains. Leaking those
+    // into the model tree put render directives beside the parts they render.
+    const viewSourceFiles = new Set(
+        elements.filter(el => el.construct === 'view').map(el => el.file).filter(Boolean),
+    );
+    const viewpointIds = new Set(viewpoints.map(viewpoint => viewpoint.id));
+    const isPresentation = (el: MemoElement): boolean =>
+        el.construct === 'view'
+        || (!!el.file && viewSourceFiles.has(el.file))
+        || viewpointIds.has(el.id);
+
+    // ─── Definitions this project declares, indexed by every name they answer to
+    const projectDefs = new Map<string, MemoElement>();
+    for (const el of elements) {
+        if (!el.isDefinition) continue;
+        for (const key of [el.name, el.id, el.shortId]) if (key) projectDefs.set(key, el);
+    }
+
+    /**
+     * The ontology kind an element really belongs to.
+     *
+     * `kind` may name a PROJECT definition (`part p : CatheterExtensionPort`)
+     * rather than an ontology kind, which leaves the element sorted under a
+     * type folder named after one project element. Walk up — through ontology
+     * superTypes and through project definitions to what they specialize —
+     * until a concrete ontology kind is reached. Abstract kinds are categories,
+     * not destinations, so the walk passes through them.
+     */
+    const resolveOntologyKind = (kind: string, el?: MemoElement): string => {
+        let current: string | undefined = kind;
+        const seen = new Set<string>();
+        while (current && !seen.has(current)) {
+            seen.add(current);
+            const ontologyKind = registryKinds.find(definition => definition.name === current);
+            if (ontologyKind && !ontologyKind.isAbstract && !projectDefs.has(current)) return ontologyKind.name;
+            if (ontologyKind?.superType) { current = ontologyKind.superType; continue; }
+            const projectDef = projectDefs.get(current);
+            const superKind = projectDef?.kind;
+            if (superKind && superKind !== current) { current = superKind; continue; }
+            break;
+        }
+        // A functional element that resolved no further than the universal
+        // action root is still a function; say which sort, rather than
+        // stranding the whole functional layer under "Action".
+        if (!current || current === 'MemoFunction' || current === 'Function' || current === 'Action') {
+            if (el?.layer === 'functional' || el?.construct === 'action') {
+                return el.kind === 'ComponentFunction' ? 'ComponentFunction' : 'SystemFunction';
+            }
+        }
+        return current || kind;
+    };
+
+    /** The type name a usage is typed by, however the builder recorded it. */
+    const typeNameOf = (el: MemoElement): string =>
+        el.attributes?.actionType || el.attributes?.usageType || el.kind || '';
+
+    // A definition earns a row only when something uses it. An unused one is a
+    // finding for the Definitions tab, not a member of the model tree, and
+    // listing every one of them doubled the catalog.
+    const usedDefinitions = new Set<string>();
+    for (const el of elements) {
+        const typeName = typeNameOf(el);
+        if (!typeName) continue;
+        usedDefinitions.add(typeName);
+        if (typeName.includes('::')) usedDefinitions.add(typeName.split('::').pop()!);
+    }
+
+    const validElements = new Map<string, ExplorerElement>();
     for (const el of elements) {
         if (kindFilter && !kindFilter.has(el.kind)) continue;
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
         if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        if (lower && !el.name.toLowerCase().includes(lower) && !el.kind.toLowerCase().includes(lower)) continue;
-        validElements.set(el.id, el);
-    }
+        if (isPresentation(el)) continue;
+        const isDef = !!el.isDefinition;
+        if (isDef && !(usedDefinitions.has(el.name) || usedDefinitions.has(el.id))) continue;
+        const resolvedKind = resolveOntologyKind(el.kind, el);
+        if (lower && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
-    const nodes = new Map<string, TreeNode>();
-    for (const el of validElements.values()) {
-        nodes.set(el.id, {
-            id: el.id,
-            name: el.name,
-            type: 'element',
-            element: el,
-            children: [],
+        // A usage with no id or name of its own inherits both from the
+        // definition it is typed by, so the row reads as the thing rather than
+        // as an anonymous instance of it.
+        const typeName = typeNameOf(el);
+        const typeDef = projectDefs.get(typeName)
+            ?? (typeName.includes('::') ? projectDefs.get(typeName.split('::').pop()!) : undefined);
+        const displayId = el.attributes?.providedId || typeDef?.attributes?.providedId || el.shortId || el.id;
+        const displayName = (el.name && el.name !== el.id)
+            ? el.name
+            : (el.attributes?.name || typeDef?.attributes?.name || el.name);
+
+        validElements.set(el.id, {
+            ...el,
+            name: displayName,
+            kind: resolvedKind,
+            __isDef: isDef,
+            __displayId: displayId,
         });
     }
 
-    // A usage nests under the model-local definition it is a usage of, the same
-    // rule the breakdown reads — `AcquireSensorData` (an ActionDefinition) with
-    // `acquireSensors` beneath it, rather than the two in separate type folders
-    // as though they were unrelated. Ownership still wins where there is any.
-    const definitions = indexLocalDefinitions(validElements.values());
+    const nodes = new Map<string, TreeNode>();
+    /** Every name a node answers to, so a relationship end resolves whichever it names. */
+    const lookup = new Map<string, TreeNode>();
+    for (const el of validElements.values()) {
+        const node: TreeNode = { id: el.id, name: el.name, type: 'element', element: el, children: [] };
+        nodes.set(el.id, node);
+        for (const key of [el.id, el.shortId, el.name, el.attributes?.providedId]) {
+            if (key) lookup.set(key, node);
+        }
+    }
+
+    // ─── Composition comes from `composes`, where the model states it ───────
+    //
+    // `owner` is SysML syntactic nesting, which a model authored as flat
+    // packages with explicit composition relationships does not use — leaving
+    // every element a root and the tree flat. Read `composes` first and fall
+    // back to ownership.
+    const parentOf = new Map<string, string>();
+    for (const rel of relationships) {
+        if (!rel?.sourceId || !rel?.targetId) continue;
+        const type = (rel.type ?? '').toLowerCase();
+        if (type !== 'composes' && type !== 'compose') continue;
+        const source = lookup.get(rel.sourceId);
+        const target = lookup.get(rel.targetId);
+        parentOf.set(target?.id ?? rel.targetId, source?.id ?? rel.sourceId);
+    }
+
+    // ─── Fold each usage into the definition it is a usage of ───────────────
+    //
+    // A definition and its usages are one thing seen twice. Showing them as
+    // unrelated siblings in separate type folders is what made the catalog
+    // read as duplicated. The definition keeps the row; its usages move into a
+    // "Usages" folder beneath it.
+    const definitionNodes = new Map<string, TreeNode>();
+    for (const node of nodes.values()) {
+        if (!node.element?.__isDef) continue;
+        for (const key of [node.element.name, node.element.id]) if (key) definitionNodes.set(key, node);
+    }
+    const canonical = (node: TreeNode | undefined): TreeNode | undefined => {
+        if (!node || node.element?.__isDef) return node;
+        const typeName = node.element ? typeNameOf(node.element) : '';
+        const definition = definitionNodes.get(typeName)
+            ?? (typeName.includes('::') ? definitionNodes.get(typeName.split('::').pop()!) : undefined);
+        return definition && definition !== node ? definition : node;
+    };
+
+    const foldedInto = new Map<string, TreeNode>();
+    const usagesOf = new Map<string, TreeNode[]>();
+    for (const node of nodes.values()) {
+        const target = canonical(node);
+        if (!target || target === node) continue;
+        foldedInto.set(node.id, target);
+        node.isUsage = true;
+        usagesOf.set(target.id, [...(usagesOf.get(target.id) ?? []), node]);
+    }
+    // Re-point composition onto the rows that survived the fold.
+    for (const [childId, parentId] of [...parentOf]) {
+        const child = canonical(lookup.get(childId) ?? nodes.get(childId));
+        const parent = canonical(lookup.get(parentId) ?? nodes.get(parentId));
+        if (!child || !parent) continue;
+        parentOf.delete(childId);
+        if (child !== parent) parentOf.set(child.id, parent.id);
+    }
+
+    /** A model may state a cycle; nesting one would hang the render. */
+    const isAncestor = (node: TreeNode, candidate: TreeNode): boolean => {
+        let current: TreeNode | undefined = candidate;
+        const seen = new Set<string>();
+        while (current) {
+            if (current.id === node.id) return true;
+            if (seen.has(current.id)) return false;
+            seen.add(current.id);
+            const parentId = parentOf.get(current.id);
+            current = parentId ? (lookup.get(parentId) ?? nodes.get(parentId)) : undefined;
+        }
+        return false;
+    };
 
     const roots: TreeNode[] = [];
     for (const node of nodes.values()) {
-        const ownerId = node.element?.owner;
-        const parent = (ownerId ? nodes.get(ownerId) : undefined)
-            ?? (node.element ? nodes.get(definitionOf(node.element, definitions)?.id ?? '') : undefined);
-        if (parent && parent !== node) {
-            parent.children.push(node);
-        } else {
-            roots.push(node);
+        if (foldedInto.has(node.id)) continue;
+        const el = node.element!;
+        let parent: TreeNode | undefined;
+
+        const composedUnder = parentOf.get(node.id) ?? parentOf.get(el.shortId ?? '')
+            ?? parentOf.get(el.id) ?? parentOf.get(el.attributes?.providedId ?? '');
+        if (composedUnder) parent = lookup.get(composedUnder) ?? nodes.get(composedUnder);
+
+        if (!parent && el.owner) parent = lookup.get(el.owner) ?? nodes.get(el.owner);
+
+        if (!parent && el.parentAction) {
+            const candidate = lookup.get(el.parentAction) ?? nodes.get(el.parentAction);
+            if (candidate && candidate !== node && !isAncestor(node, candidate)) parent = candidate;
         }
+
+        // Last resort: the qualified name itself states the containment.
+        if (!parent) {
+            let qualified = el.id;
+            while (qualified.includes('::')) {
+                qualified = qualified.substring(0, qualified.lastIndexOf('::'));
+                const candidate = lookup.get(qualified) ?? nodes.get(qualified);
+                if (candidate && candidate !== node && !isAncestor(node, candidate)) { parent = candidate; break; }
+            }
+        }
+
+        parent = canonical(parent);
+        if (!parent || parent === node || isAncestor(node, parent)) roots.push(node);
+        else parent.children.push(node);
     }
 
     const sortNodes = (nodesToSort: TreeNode[]) => {
         nodesToSort.sort((a, b) => {
+            // The Usages folder is part of the row above it, so it leads.
+            if (!!a.isUsagesFolder !== !!b.isUsagesFolder) return a.isUsagesFolder ? -1 : 1;
             if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-            return a.name.localeCompare(b.name);
+            // Authored ids carry the reading order (SPEC-2 before SPEC-10),
+            // which only a numeric collation preserves.
+            const idOf = (node: TreeNode) =>
+                String(node.element?.__displayId ?? node.element?.attributes?.providedId ?? node.name);
+            return idOf(a).localeCompare(idOf(b), undefined, { numeric: true });
         });
         nodesToSort.forEach(node => sortNodes(node.children));
     };
+    for (const [nodeId, usages] of usagesOf) {
+        const definition = nodes.get(nodeId);
+        if (!definition || usages.length === 0) continue;
+        definition.children.push({
+            id: `u:${nodeId}`,
+            name: `Usages (${usages.length})`,
+            type: 'folder',
+            isUsagesFolder: true,
+            children: usages,
+        });
+    }
     for (const node of nodes.values()) {
         sortNodes(node.children);
     }
-
-    // A project names one function with its own one-off def (`action def
-    // AcquireSensorData :> FunctionalAction`) — MEMO's convention for a
-    // single named behaviour. A shared def used by many usages (`part
-    // basalTherapyConfig : ModeConfiguration`) is already a fine type
-    // folder as-is. Climbing every kind to its superType regardless would
-    // merge the second case into an unhelpfully generic ancestor, so only a
-    // kind with exactly one instance in this bucket is a rollup candidate;
-    // climbing stops at the nearest `abstract` ancestor (SysML's own signal
-    // for "this is a category") or the root. The climb is discarded unless
-    // it actually reunites that lone instance with a sibling — otherwise a
-    // singleton keeps its own declared name.
-    //
-    // The climb also never crosses into a different top-level ontology
-    // layer. `MemoPart`/`MemoAction`/`MemoState` live in the `core` layer as
-    // the universal root every part/action/state ultimately specializes, so
-    // reaching one of them proves only "this is a part" — not that two kinds
-    // are siblings. A same-layer abstract ancestor like `FunctionalAction`
-    // (declared alongside its concrete specializations) is a real category;
-    // a cross-layer one is the whole type system, not a family.
-    const climbToAbstractOrRoot = (kind: string): string => {
-        const startLayer = registryKinds.find(definition => definition.name === kind)?.namespace?.[0];
-        let resolveKind = kind;
-        while (true) {
-            const def = registryKinds.find(definition => definition.name === resolveKind);
-            if (!def || def.isAbstract || !def.superType) return resolveKind;
-            const parentLayer = registryKinds.find(definition => definition.name === def.superType)?.namespace?.[0];
-            if (parentLayer !== startLayer) return resolveKind;
-            resolveKind = def.superType;
-        }
-    };
 
     const toSubGroups = (rootsList: TreeNode[], groupColor: string, layerId?: string): ExplorerSubGroup[] => {
         const bySub = new Map<string, Map<string, TreeNode[]>>();
@@ -1007,37 +1223,31 @@ export function computeExplorerGroupTree(
             byKind.set(kind, [...(byKind.get(kind) ?? []), root]);
         }
 
+        // Kinds are no longer rolled up to a shared ancestor. `resolveOntologyKind`
+        // now settles every element on a concrete ontology kind before it gets
+        // here, so a folder already names a real type; climbing further merged
+        // distinct types under whichever abstract ancestor they happened to share.
         const buckets = new Map<string, Map<string, TreeNode[]>>();
         for (const [sub, byKind] of bySub.entries()) {
-            const candidateFor = new Map<string, string>();
-            for (const [kind, kindRoots] of byKind.entries()) {
-                if (kindRoots.length === 1) candidateFor.set(kind, climbToAbstractOrRoot(kind));
-            }
-            const candidateUsers = new Map<string, number>();
-            for (const candidate of candidateFor.values()) {
-                candidateUsers.set(candidate, (candidateUsers.get(candidate) ?? 0) + 1);
-            }
-
-            const folders = new Map<string, TreeNode[]>();
-            for (const [kind, kindRoots] of byKind.entries()) {
-                const candidate = candidateFor.get(kind);
-                const typeFolder = candidate && (candidateUsers.get(candidate) ?? 0) > 1 ? candidate : kind;
-                folders.set(typeFolder, [...(folders.get(typeFolder) ?? []), ...kindRoots]);
-            }
-
             const subBuckets = new Map<string, TreeNode[]>();
-            for (const [folder, folderRoots] of folders.entries()) {
-                const tree = [...folderRoots];
+            for (const [kind, kindRoots] of byKind.entries()) {
+                const tree = [...kindRoots];
                 sortNodes(tree);
-                subBuckets.set(folder, tree);
+                subBuckets.set(kind, tree);
             }
             buckets.set(sub, subBuckets);
         }
 
+        const subGroupRank = (id: string) => {
+            const index = EXPLORER_SUBGROUP_ORDER.indexOf(
+                id.replace(/_/g, '-') as typeof EXPLORER_SUBGROUP_ORDER[number],
+            );
+            return index < 0 ? EXPLORER_SUBGROUP_ORDER.length : index;
+        };
         return [...buckets.entries()]
             .sort(([a], [b]) => layerId === 'artifacts'
                 ? ARTIFACT_CATEGORIES.indexOf(a as any) - ARTIFACT_CATEGORIES.indexOf(b as any)
-                : a.localeCompare(b))
+                : subGroupRank(a) - subGroupRank(b) || a.localeCompare(b))
             .map(([id, kinds]) => ({
                 id,
                 label: id ? subGroupLabel(id) : '',
@@ -1171,13 +1381,18 @@ function DefinitionsTree({ searchTerm, selectedElementId, onSelect, onContextMen
     onContextMenu: (event: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
 }) {
     const model = useModelStore(s => s.model);
-    const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+    /**
+     * Which branches are OPEN. An empty set therefore opens the tree fully
+     * collapsed, which is the readable default: these trees are wide, and
+     * opening everything buried the top-level list the reader navigates by.
+     */
+    const [expanded, setExpandedBranches] = useState<Set<string>>(new Set());
     const layers = useMemo(
         () => buildDefinitionTree(Object.values(model?.elements ?? {}), searchTerm),
         [model, searchTerm],
     );
 
-    const toggle = (id: string) => setCollapsed(prev => {
+    const toggle = (id: string) => setExpandedBranches(prev => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
@@ -1197,7 +1412,7 @@ function DefinitionsTree({ searchTerm, selectedElementId, onSelect, onContextMen
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
             {layers.map(({ layer, definitions }) => {
-                const layerOpen = !collapsed.has(`l:${layer}`);
+                const layerOpen = expanded.has(`l:${layer}`);
                 const color = LAYER_COLORS[layer] ?? COLOR.muted;
                 return (
                     <div key={layer} className="mb-0.5">
@@ -1216,7 +1431,7 @@ function DefinitionsTree({ searchTerm, selectedElementId, onSelect, onContextMen
                                 title={`${definitions.length} definitions`} />
                         </div>
                         {layerOpen && definitions.map(({ definition, usages }) => {
-                            const open = !collapsed.has(definition.id);
+                            const open = expanded.has(definition.id);
                             return (
                                 <div key={definition.id}>
                                     <div
@@ -1280,7 +1495,12 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu 
 }) {
     const model = useModelStore(s => s.model);
     const availableOntologies = useModelStore(s => s.availableOntologies);
-    const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+    /**
+     * Which branches are OPEN. An empty set therefore opens the tree fully
+     * collapsed, which is the readable default: these trees are wide, and
+     * opening everything buried the top-level list the reader navigates by.
+     */
+    const [expanded, setExpandedBranches] = useState<Set<string>>(new Set());
     const branches = useMemo(() => {
         const elements = Object.values(model?.elements ?? {});
         // Use cases are filed under the system they serve — a system-of-systems
@@ -1296,7 +1516,7 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu 
     }, [model, availableOntologies, searchTerm]);
 
     const toggle = (id: string) =>
-        setCollapsed(prev => {
+        setExpandedBranches(prev => {
             const next = new Set(prev);
             next.has(id) ? next.delete(id) : next.add(id);
             return next;
@@ -1304,7 +1524,7 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu 
 
     const renderNode = (node: BreakdownNode, depth: number) => {
         const hasChildren = node.children.length > 0;
-        const isOpen = !collapsed.has(node.id);
+        const isOpen = expanded.has(node.id);
         return (
             <div key={node.id}>
                 <div
@@ -1353,7 +1573,7 @@ function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu 
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
             {branches.map(branch => {
-                const isOpen = !collapsed.has(`b:${branch.id}`);
+                const isOpen = expanded.has(`b:${branch.id}`);
                 return (
                     <div key={branch.id} className="mb-0.5">
                         <div
@@ -1444,26 +1664,24 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             availableOntologies,
             model.packages ?? [],
             kindFilter.size ? kindFilter : undefined,
+            model.relationships ?? [],
+            model.viewpoints ?? [],
         ) : [],
         [model, searchTerm, availableOntologies, kindFilter],
     );
 
-    // Keep the broad layer/group branches user-controlled, but open every
-    // exact type branch once. This makes the next level — the owning SysML
-    // package hierarchy — visible as soon as a user opens Functional (or any
-    // other group), instead of requiring a second click on every type.
+    // The explorer opens fully collapsed.
+    //
+    // Every type branch used to be opened once, on the theory that it saved a
+    // click. With usages folded under their definitions and composition now
+    // nesting the tree, opening every type branch renders most of the model at
+    // once — the layer groups themselves scroll off the top, so the reader
+    // cannot see what layers exist. Seed an empty set and let them open what
+    // they came for; the ref still guards against re-seeding over their choice.
     useEffect(() => {
         if (initializedTypeBranches.current || groupTree.length === 0) return;
-        const typeBranches = new Set<string>();
-        for (const { group, subGroups } of groupTree) {
-            for (const sub of subGroups) {
-                for (const kind of sub.kinds.keys()) {
-                    typeBranches.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
-                }
-            }
-        }
         initializedTypeBranches.current = true;
-        setExpanded(typeBranches);
+        setExpanded(new Set());
     }, [groupTree]);
 
     useEffect(() => {

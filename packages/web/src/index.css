@@ -126,12 +126,21 @@ body {
     .memo-ibd-flow { animation: none; }
 }
 
+/* React Flow sets stroke-width inline on each edge path, so these rules need
+   !important to win. The invisible interaction path is untouched: it is
+   already 20px wide, so line thickness was never what made an edge hard to
+   click. A 1px connector is simply too faint to follow across a dense IBD. */
 .react-flow__edge path {
     transition: stroke-width 150ms ease;
 }
 
-.react-flow__edge:hover path {
-    stroke-width: 3px;
+.react-flow__edge .react-flow__edge-path {
+    stroke-width: 3px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+    stroke-width: 4.5px !important;
 }
 
 /* React Flow adds `.draggable` whenever any mouse button can pan the pane.

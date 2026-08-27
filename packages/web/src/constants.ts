@@ -64,6 +64,21 @@ export const LAYER_ORDER = [
     'physical', 'software', 'interfaces', 'verification', 'ui',
 ] as const;
 
+/**
+ * Sub-group order inside an explorer layer group.
+ *
+ * These are ONTOLOGY namespaces (the sub-group ids `buildKindToSubGroupMap`
+ * produces), not the `layer` values in LAYER_ORDER above — a different
+ * vocabulary again. Alphabetical order put Cybersecurity above Functional and
+ * Verification above Logical, which is neither the order the methodology is
+ * read in nor the order the layers are drawn in. Anything unlisted sorts after
+ * these, alphabetically.
+ */
+export const EXPLORER_SUBGROUP_ORDER = [
+    'operational', 'functional', 'behavior', 'logical', 'implementation', 'realization',
+    'requirements', 'safety-risk', 'verification-validation', 'cybersecurity', 'human-factors',
+] as const;
+
 export const REL_COLORS: Record<string, string> = {
     mitigates: '#E74C3C',
     causes: '#C0392B',
