@@ -630,9 +630,13 @@ function planOne(
     // A box that encloses an endpoint cannot be avoided — the connector starts
     // inside it. Treating an ancestor container as an obstacle leaves the search
     // with no route out at all, and the fallback then cuts through everything.
+    // The margin is generous enough to cover a port that STRADDLES the box's wall
+    // (its anchor sits a half-port outside), so a board never blocks a connector
+    // that leaves from its own boundary port.
+    const enclosureMargin = clearance + PORT_STUB;
     const encloses = (o: RouteObstacle, p: RoutePoint) =>
-        p.x > o.x - clearance && p.x < o.x + o.width + clearance
-        && p.y > o.y - clearance && p.y < o.y + o.height + clearance;
+        p.x > o.x - enclosureMargin && p.x < o.x + o.width + enclosureMargin
+        && p.y > o.y - enclosureMargin && p.y < o.y + o.height + enclosureMargin;
     // Only boxes near this connector can shape it, so the lattice grows with the
     // obstruction this connector actually negotiates rather than with the size of
     // the diagram.

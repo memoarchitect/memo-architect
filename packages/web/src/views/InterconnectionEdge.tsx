@@ -2,6 +2,7 @@ import { memo, type PointerEvent as ReactPointerEvent } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
+import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
 
 interface Point { x: number; y: number }
 interface RouteSegment { index: number; a: Point; b: Point; straight: boolean }
@@ -75,7 +76,8 @@ function labelAnchor(points: Point[]): Point {
 }
 
 function InterconnectionEdgeInner(props: EdgeProps) {
-    const { getZoom, screenToFlowPosition } = useReactFlow();
+    const renderer = useInterconnectionRenderer();
+    const { getZoom, screenToFlowPosition, getEdges } = useReactFlow();
     // Connectors that are not taking part are dimmed by ConnectorHoverStyles;
     // this edge only adds the ornament that marks the one that is.
     const highlighted = useConnectorHighlighted(props.id, [
@@ -87,14 +89,30 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     const labelDimmed = useConnectorHoverActive() && !highlighted;
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
-    const stroke = String(props.style?.stroke ?? '#2563EB');
+    // The active profile draws the connector path — the default rounds the
+    // orthogonal route; the IBD profile adds crossing bridges over other wires.
+    const displayPath = renderer.edgePath(points, {
+        edgeId: props.id,
+        allEdges: getEdges().map(edge => ({ id: edge.id, points: edge.data?.points as Point[] | undefined })),
+    });
+    const stroke = renderer.edgeStroke(props.style?.stroke as string | undefined);
     const baseWidth = Number(props.style?.strokeWidth ?? 2);
     const edgeStyle = highlighted
-        ? { ...props.style, strokeWidth: baseWidth + 1.4 }
-        : props.style;
+        ? { ...props.style, stroke, strokeWidth: baseWidth + 1.4 }
+        : { ...props.style, stroke };
     // A template that placed all its labels together supplies the point; a
     // lone edge falls back to its own longest segment.
     const anchor = (props.data?.labelPoint as Point | undefined) ?? labelAnchor(points);
+    // A label sitting on a vertical run reads along the line, not across it.
+    const labelRotation = (() => {
+        for (let i = 0; i < points.length - 1; i++) {
+            const p = points[i], q = points[i + 1];
+            if (anchor.x >= Math.min(p.x, q.x) - 8 && anchor.x <= Math.max(p.x, q.x) + 8 &&
+                anchor.y >= Math.min(p.y, q.y) - 8 && anchor.y <= Math.max(p.y, q.y) + 8)
+                return Math.abs(q.y - p.y) > Math.abs(q.x - p.x) ? ' rotate(-90deg)' : '';
+        }
+        return '';
+    })();
     const hitTrim = Math.min(28 / Math.max(getZoom(), 0.1), routeLength(points) * 0.3);
     const hitPoints = trimEndpoints(points, hitTrim);
     const onRouteChange = props.data?.onRouteChange as ((points: Point[]) => void) | undefined;
@@ -158,7 +176,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         <>
             {highlighted && (
                 <path
-                    d={roundedPath(points)}
+                    d={displayPath}
                     fill="none"
                     stroke={stroke}
                     strokeOpacity={0.22}
@@ -167,12 +185,12 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     pointerEvents="none"
                 />
             )}
-            <BaseEdge id={props.id} path={roundedPath(points)} style={edgeStyle} markerEnd={props.markerEnd} />
+            <BaseEdge id={props.id} path={displayPath} style={edgeStyle} markerEnd={props.markerEnd} />
             {flowAnimation && (
                 <path
-                    d={roundedPath(points)}
+                    d={displayPath}
                     fill="none"
-                    stroke={String(props.style?.stroke ?? '#2563EB')}
+                    stroke={stroke}
                     strokeWidth={Math.max(2, Number(props.style?.strokeWidth ?? 2))}
                     className="memo-ibd-flow"
                 />
@@ -197,7 +215,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                 <EdgeLabelRenderer>
                     <div style={{
                         position: 'absolute',
-                        transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)`,
+                        transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)${labelRotation}`,
                         fontSize: FONT.badge, fontWeight: highlighted ? 700 : 600,
                         color: highlighted ? '#0F172A' : '#475569',
                         background: 'rgba(255,255,255,0.96)',

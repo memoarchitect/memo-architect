@@ -22,8 +22,10 @@ import { useModelStore } from '../store/model-store';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
-    PORT_LABEL_MAX, PORT_LABEL_OFFSET, NESTED_PITCH, PORT_LABEL_STACKED_WIDTH,
+    PORT_LABEL_MAX, PORT_LABEL_OFFSET, PORT_LABEL_STACKED_WIDTH,
+    NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
 } from './templates/interconnection-view';
+import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
 
 export interface InterconnectionNodeData extends Record<string, unknown> {
     label: string;
@@ -45,6 +47,8 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     implicitIn?: boolean;
     implicitOut?: boolean;
     onPortMove?: (portId: string, y: number, side?: PortSide) => void;
+    /** Persist the port once its drag ends. */
+    onPortCommit?: (portId: string) => void;
     onPortResize?: (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
     onPortSelect?: (portId: string) => void;
     /** Content-derived lower bound emitted by the IBD template. */
@@ -121,88 +125,95 @@ const connectableHandleStyle = (size: number): React.CSSProperties => ({
     zIndex: 12,
 });
 
-/** Padding between a nested-port group's outline and the squares inside it. */
-const GROUP_PAD = 7;
 
 /**
- * The enclosing outline behind a parent port and the ports nested in it.
- *
- * A boundary feature that carries several ports — a panel cluster, a display
- * module, a service panel — is one thing on the case, not a run of unrelated
- * squares. Drawing the group is what makes that readable at a glance; without
- * it a reader has to infer the grouping from vertical spacing alone.
+ * Drag a port along the wall it straddles. With `multiWall` the port follows the
+ * cursor to whichever of the four walls is nearest and slides along that one, so
+ * a port stays tied to its owner's edge and can be walked around the perimeter.
+ * Shared by a plain boundary port and by a connector's body, which drags the
+ * whole nested group (its child ports are derived from it, so they come along).
  */
-function NestedPortGroup({ port }: { port: PortInfo }) {
-    const size = port.size ?? INTERCONNECTION_PORT_SIZE;
-    // The cluster runs along the wall its parent straddles, so the outline grows
-    // down a left/right wall and across a top/bottom one.
-    const vertical = port.side === 'left' || port.side === 'right';
-    const start = vertical ? port.y : port.x;
-    const end = start + size / 2 + NESTED_PITCH * (port.nestedCount ?? 0) + size / 2;
-    const along = end - start + GROUP_PAD * 2;
-    const across = size + GROUP_PAD * 2;
-    return (
-        <div
-            aria-hidden
-            style={{
-                position: 'absolute',
-                left: port.x - GROUP_PAD,
-                top: port.y - GROUP_PAD,
-                width: vertical ? across : along,
-                height: vertical ? along : across,
-                background: 'rgba(148,163,184,0.30)',
-                border: '1px solid rgba(100,116,139,0.45)',
-                borderRadius: 9,
-                pointerEvents: 'none',
-                zIndex: 0,
-            }}
-        />
-    );
+function beginWallDrag(
+    event: React.PointerEvent,
+    options: {
+        alongStart: number;
+        size: number;
+        multiWall: boolean;
+        getZoom: () => number;
+        onMove: (along: number, side?: PortSide) => void;
+        onDragging?: (dragging: boolean) => void;
+        onCommit?: () => void;
+    },
+): void {
+    const { alongStart, size, multiWall, getZoom, onMove, onDragging, onCommit } = options;
+    event.preventDefault();
+    event.stopPropagation();
+    const nodeEl = (event.currentTarget as HTMLElement).closest('.react-flow__node') as HTMLElement | null;
+    const rect = multiWall && nodeEl ? nodeEl.getBoundingClientRect() : null;
+    const startClientY = event.clientY;
+    let last: PointerEvent | undefined;
+    const move = (next: PointerEvent) => {
+        last = next;
+        if (Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) <= 2) return;
+        onDragging?.(true);
+        if (rect) {
+            const zoom = getZoom() || 1;
+            const nw = rect.width / zoom, nh = rect.height / zoom;
+            const mx = (next.clientX - rect.left) / zoom, my = (next.clientY - rect.top) / zoom;
+            const dL = Math.abs(mx), dR = Math.abs(mx - nw), dT = Math.abs(my), dB = Math.abs(my - nh);
+            let side: PortSide = 'left', minD = dL;
+            if (dR < minD) { minD = dR; side = 'right'; }
+            if (dT < minD) { minD = dT; side = 'top'; }
+            if (dB < minD) { minD = dB; side = 'bottom'; }
+            const along = side === 'left' || side === 'right'
+                ? Math.min(Math.max(8, my - size / 2), Math.max(8, nh - size - 8))
+                : Math.min(Math.max(8, mx - size / 2), Math.max(8, nw - size - 8));
+            onMove(along, side);
+            return;
+        }
+        onMove(alongStart + (next.clientY - startClientY) / getZoom());
+    };
+    const stop = () => {
+        if (!rect && last) {
+            const dx = last.clientX - event.clientX, dy = last.clientY - event.clientY;
+            if (Math.hypot(dx, dy) > 18) {
+                const side: PortSide = Math.abs(dx) > Math.abs(dy)
+                    ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'top' : 'bottom');
+                onMove(alongStart + dy / getZoom(), side);
+            }
+        }
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', stop);
+        if (last) onCommit?.();
+        // The browser dispatches click after pointerup. Keep the guard for that
+        // click, then restore ordinary click-to-inspect behaviour.
+        window.setTimeout(() => { onDragging?.(false); }, 0);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
 }
 
-function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string) => void; showText?: boolean }) {
+function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onBeginDrag?: (event: React.PointerEvent, setDragging: (d: boolean) => void) => void; onCommit?: () => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string) => void; showText?: boolean }) {
+    const renderer = useInterconnectionRenderer();
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
     const selected = useModelStore(state => state.selectedElementId === port.id);
     const suppressSelectRef = useRef(false);
     const dimmed = useConnectorHoverActive() && !highlighted;
-    const size = port.size ?? INTERCONNECTION_PORT_SIZE;
+    const size = renderer.portSize(port);
     const labelOffset = size + PORT_LABEL_OFFSET;
-    const color = portColor(port.direction);
-    const beginMove = onMove ? (event: React.PointerEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const startClientY = event.clientY;
-        const startY = port.y;
-        let last: PointerEvent | undefined;
-        const move = (next: PointerEvent) => {
-            last = next;
-            const distance = Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY);
-            if (distance <= 2) return;
-            suppressSelectRef.current = true;
-            onMove(startY + (next.clientY - startClientY) / getZoom());
-        };
-        const stop = () => {
-            if (last) {
-                const dx = last.clientX - event.clientX;
-                const dy = last.clientY - event.clientY;
-                if (Math.hypot(dx, dy) > 18) {
-                    const side: PortSide = Math.abs(dx) > Math.abs(dy)
-                        ? (dx < 0 ? 'left' : 'right')
-                        : (dy < 0 ? 'top' : 'bottom');
-                    onMove(startY + dy / getZoom(), side);
-                }
-            }
-            window.removeEventListener('pointermove', move);
-            window.removeEventListener('pointerup', stop);
-            // The browser dispatches click after pointerup. Keep the guard for
-            // that click, then restore ordinary click-to-inspect behaviour.
-            window.setTimeout(() => { suppressSelectRef.current = false; }, 0);
-        };
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', stop, { once: true });
-    } : undefined;
+    const color = renderer.portColor(port.direction, port);
+    const setDragging = (dragging: boolean) => { suppressSelectRef.current = dragging; };
+    // A port slides along the boundary of whatever CONTAINS it. For a plain port
+    // that is the part's wall (handled here); a nested pin is contained by its
+    // parent port, and its owner supplies that behaviour through onBeginDrag.
+    const beginMove = onBeginDrag
+        ? (event: React.PointerEvent) => onBeginDrag(event, setDragging)
+        : onMove ? (event: React.PointerEvent) => beginWallDrag(event, {
+            alongStart: port.y, size, multiWall: renderer.multiWallPortDrag, getZoom, onMove,
+            onDragging: setDragging, onCommit,
+        }) : undefined;
     const selectPort = (event: React.MouseEvent) => {
         event.stopPropagation();
         if (suppressSelectRef.current) return;
@@ -284,9 +295,7 @@ function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { p
         // labels its wall connectors) and above a top-wall port too — which puts
         // it OUTSIDE the box, and is what keeps a top-wall port from printing
         // its name over its owner's title bar.
-        ...(port.side === 'left' ? { left: labelOffset, bottom: '50%', marginBottom: 2 }
-            : port.side === 'right' ? { right: labelOffset, bottom: '50%', marginBottom: 2, textAlign: 'right' as const }
-            : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' as const }),
+        ...renderer.portLabelPlacement(port, { labelOffset }),
     };
     // The caption's total height is a layout constant (PORT_CAPTION_HEIGHT
     // drives BOTTOM_GUTTER, PORT_CAPTION_CLEARANCE and the vertical port
@@ -319,7 +328,7 @@ function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { p
                 top: port.y,
                 width: size,
                 height: size,
-                zIndex: port.nested ? 11 : 10,
+                zIndex: port.nested ? 12 : 10,
             }}
         >
             {/* Invisible hit target only. Ports are interaction controls as
@@ -350,7 +359,7 @@ function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { p
             />
             <div style={{
                 position: 'absolute', inset: 0, boxSizing: 'border-box',
-                background: '#FFFFFF', border: `2px solid ${color}`, borderRadius: 5,
+                background: '#FFFFFF', border: `2px solid ${color}`, borderRadius: renderer.portBoxBorderRadius(port),
                 // A hovered port wears a halo in its own direction colour, so
                 // the lit connectors read as belonging to this square.
                 boxShadow: selected
@@ -365,7 +374,7 @@ function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { p
                 pointerEvents: 'none',
                 transition: 'box-shadow 120ms ease, opacity 120ms ease',
             }}>
-                {portGlyph(port.direction, port.side)}
+                {renderer.portGlyph(port.direction, port.side, port)}
                 {showText && (
                     <span onPointerDown={beginMove} onClick={selectPort} style={labelStyle}>
                         <span style={nameStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
@@ -379,19 +388,22 @@ function BoundaryPort({ port, onMove, onResize, onSelect, showText = true }: { p
                     { suffix: '', pos: SIDE_TO_POSITION[port.side], connectable: true },
                     { suffix: INNER_HANDLE_SUFFIX, pos: SIDE_TO_POSITION[OPPOSITE_SIDE[port.side]], connectable: false },
                 ] as const).flatMap(h => {
+                    // A profile may forbid connector-draw gestures (edges come
+                    // from the model): its outer face becomes a plain anchor.
+                    const canConnect = h.connectable && renderer.portConnectable(port);
                     // The anchor class carries a `pointer-events: none` rule, so
                     // the connectable face must not wear it.
-                    const cls = h.connectable ? 'ibd-port-connect' : 'ibd-port-anchor';
-                    const style = h.connectable ? connectableHandleStyle(size) : handlePinStyle(size);
+                    const cls = canConnect ? 'ibd-port-connect' : 'ibd-port-anchor';
+                    const style = canConnect ? connectableHandleStyle(size) : handlePinStyle(size);
                     return [
                         <BaseHandle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
-                            style={style} isConnectable={h.connectable}
-                            onPointerDownCapture={h.connectable ? trackConnectionGesture : undefined}
-                            onClick={h.connectable ? selectPort : undefined} />,
+                            style={style} isConnectable={canConnect}
+                            onPointerDownCapture={canConnect ? trackConnectionGesture : undefined}
+                            onClick={canConnect ? selectPort : undefined} />,
                         <BaseHandle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
-                            style={style} isConnectable={h.connectable}
-                            onPointerDownCapture={h.connectable ? trackConnectionGesture : undefined}
-                            onClick={h.connectable ? selectPort : undefined} />,
+                            style={style} isConnectable={canConnect}
+                            onPointerDownCapture={canConnect ? trackConnectionGesture : undefined}
+                            onClick={canConnect ? selectPort : undefined} />,
                     ];
                 })}
             </div>
@@ -520,10 +532,12 @@ function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
 
 function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const store = useStoreApi();
+    const renderer = useInterconnectionRenderer();
+    const { getZoom } = useReactFlow();
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -534,6 +548,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
         : isFrame ? 'none'
         : hovered ? '0 8px 20px rgba(15,23,42,0.12)'
         : isContainer ? '0 1px 2px rgba(15,23,42,0.05)' : '0 2px 8px rgba(15,23,42,0.08)';
+    // Profile-supplied container fill/border/top-accent.
+    const containerStyle = renderer.nodeContainerStyle({
+        isFrame: !!isFrame, isContainer, hasChildren: !!hasChildren, hovered,
+        color, bgColor, borderColor,
+    });
     const canResizeWithoutOverlap = (_event: unknown, next: ResizeParamsWithDirection): boolean => {
         const current = store.getState().nodeLookup.get(id);
         if (!current) return true;
@@ -564,12 +583,10 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 // A per-diagram fill override wins over all three: dimming or
                 // tinting a group of parts is how a reviewer marks up a board,
                 // and it must not be overridden by the notation defaults.
-                background: bgColor || '#FFFFFF',
+                background: containerStyle.background,
                 opacity: fillOpacity ?? 1,
-                border: isFrame
-                    ? `1.5px solid ${borderColor ?? '#94A3B8'}`
-                    : `1px solid ${borderColor ?? (hovered ? color + '9A' : '#CBD5E1')}`,
-                ...(!isFrame ? { borderTop: `3px solid ${borderColor ?? color}` } : {}),
+                border: containerStyle.border,
+                ...(containerStyle.borderTop ? { borderTop: containerStyle.borderTop } : {}),
                 borderRadius: isFrame ? 10 : 8,
                 boxShadow,
                 transition: 'box-shadow 150ms ease, border-color 150ms ease',
@@ -590,8 +607,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 minWidth={minWidth ?? 180}
                 minHeight={minHeight ?? 100}
                 color="#2563EB"
-                lineStyle={{ borderWidth: 1 }}
-                handleStyle={{ width: 10, height: 10, borderRadius: 2 }}
+                // Above the ports: a wall carrying a run of ports would otherwise
+                // blanket its own border with 40px port hit targets, and the resize
+                // handles underneath could never be grabbed.
+                lineStyle={{ borderWidth: 1, zIndex: 20 }}
+                handleStyle={{ width: 10, height: 10, borderRadius: 2, zIndex: 21 }}
                 shouldResize={canResizeWithoutOverlap}
             />
             {isFrame ? (
@@ -605,7 +625,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     borderBottom: '1px solid #E2E8F0',
                     borderRadius: '9px 9px 0 0',
                 }}>
-                    <span style={{ padding: '2px 6px', borderRadius: 4, background: color, color: '#FFFFFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em' }}>IBD</span>
+                    <span style={{ padding: '2px 6px', borderRadius: 4, background: renderer.frameBadgeBackground(color), color: '#FFFFFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em' }}>IBD</span>
                     <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame style={{ textColor, fontSize, fontWeight, textAlign }} />
                     {/* The frame is already the diagram's root, so it offers no
                         drill-in — descending into it would change nothing. */}
@@ -642,29 +662,89 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 </div>
             )}
 
-            {/* Nested-port groups sit behind the squares they enclose. */}
+            {/* Nested-port housings sit behind the squares they enclose. */}
             {ports.filter(p => p.nestedCount).map(p => (
-                <NestedPortGroup key={`${p.id}__group`} port={p} />
+                // The connector's body is the grab handle for the whole group: its
+                // child ports are derived from it, so they travel with it.
+                <div
+                    key={`${p.id}__group`}
+                    style={{ display: 'contents' }}
+                    onPointerDown={onPortMove ? event => beginWallDrag(event, {
+                        alongStart: p.side === 'left' || p.side === 'right' ? p.y : p.x,
+                        size: p.size ?? INTERCONNECTION_PORT_SIZE,
+                        multiWall: renderer.multiWallPortDrag,
+                        getZoom,
+                        onMove: (along, side) => onPortMove(p.id, Math.max(8, along), side),
+                        onCommit: onPortCommit ? () => onPortCommit(p.id) : undefined,
+                    }) : undefined}
+                >
+                    {renderer.nestedPortHousing(p, { showText: showPortText })}
+                </div>
             ))}
 
-            {/* Boundary ports */}
-            {ports.map(p => (
+            {/* Boundary ports. A nested-parent port is drawn as its housing + the
+                pins straddling the wall, not as a bare square of its own. */}
+            {ports.filter(p => !p.nestedCount).map(p => (
                 <BoundaryPort
                     key={p.id}
                     port={p}
+                    onBeginDrag={onPortMove && p.nested && p.parentId ? (event, setDragging) => {
+                        // Same rule as a wall port, one level down: slide along the
+                        // PARENT PORT's edge, and swap face by crossing its centre.
+                        const parent = ports.find(candidate => candidate.id === p.parentId);
+                        const nodeEl = (event.currentTarget as HTMLElement).closest('.react-flow__node') as HTMLElement | null;
+                        if (!parent || !nodeEl) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const rect = nodeEl.getBoundingClientRect();
+                        const vertical = parent.side === 'left' || parent.side === 'right';
+                        const pinSize = p.size ?? INTERCONNECTION_PORT_SIZE;
+                        const bodyAlong = vertical ? parent.y : parent.x;
+                        const bodyCross = vertical ? parent.x : parent.y;
+                        const bodyLength = (Math.max(parent.nestedCount ?? 1, 1) - 1) * NESTED_PITCH
+                            + INTERCONNECTION_PORT_SIZE + NESTED_PIN_INSET * 2;
+                        const move = (next: PointerEvent) => {
+                            if (Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) <= 2) return;
+                            setDragging(true);
+                            const zoom = getZoom() || 1;
+                            const mx = (next.clientX - rect.left) / zoom, my = (next.clientY - rect.top) / zoom;
+                            const cursorAlong = vertical ? my : mx;
+                            const cursorCross = vertical ? mx : my;
+                            const along = Math.min(
+                                Math.max(cursorAlong - pinSize / 2, bodyAlong),
+                                bodyAlong + bodyLength - pinSize,
+                            );
+                            const outward = parent.side === 'left' || parent.side === 'top';
+                            const beyondCentre = cursorCross < bodyCross + NESTED_HOUSING_DEPTH / 2;
+                            const onOuter = outward ? beyondCentre : !beyondCentre;
+                            onPortMove(p.id, along, onOuter ? parent.side : OPPOSITE_SIDE[parent.side]);
+                        };
+                        const stop = () => {
+                            window.removeEventListener('pointermove', move);
+                            window.removeEventListener('pointerup', stop);
+                            onPortCommit?.(p.id);
+                            window.setTimeout(() => setDragging(false), 0);
+                        };
+                        window.addEventListener('pointermove', move);
+                        window.addEventListener('pointerup', stop, { once: true });
+                    } : undefined}
                     onMove={onPortMove ? (y, side) => {
+                        // The multi-wall drag already clamps the along-wall value to
+                        // the wall's usable span; the legacy vertical nudge does not.
+                        if (renderer.multiWallPortDrag) { onPortMove(p.id, Math.max(8, y), side); return; }
                         const size = p.size ?? INTERCONNECTION_PORT_SIZE;
                         const min = (isFrame || isContainer ? 70 : 62) - size / 2;
                         const max = Math.max(min, (height ?? min + size + 18) - size - 18);
                         onPortMove(p.id, Math.min(Math.max(y, min), max), side);
                     } : undefined}
+                    onCommit={onPortCommit ? () => onPortCommit(p.id) : undefined}
                     onResize={onPortResize ? (size, axis) => onPortResize(p.id, size, axis) : undefined}
                     onSelect={onPortSelect}
                     showText={showPortText}
                 />
             ))}
-            {implicitIn && <ImplicitPort side="left" direction="in" />}
-            {implicitOut && <ImplicitPort side="right" direction="out" />}
+            {renderer.renderImplicitPorts() && implicitIn && <ImplicitPort side="left" direction="in" />}
+            {renderer.renderImplicitPorts() && implicitOut && <ImplicitPort side="right" direction="out" />}
         </div>
     );
 }

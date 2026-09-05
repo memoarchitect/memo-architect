@@ -107,7 +107,8 @@ describe('declared port walls drive automatic layout', () => {
         for (const child of nested) {
             // a nested port inherits its parent's wall without declaring one
             expect(child.side).toBe('bottom');
-            // the group grows ACROSS the floor, so every square stays on it
+            // pins straddle the SAME wall as the parent (on the floor: same y),
+            // clustered ALONG it (increasing x)
             expect(child.y).toBeCloseTo(parent.y);
             expect(child.x).toBeGreaterThan(parent.x);
         }

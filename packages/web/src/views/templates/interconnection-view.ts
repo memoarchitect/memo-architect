@@ -62,10 +62,12 @@ export function portIdFromHandle(handleId: string | null | undefined): string | 
 
 // ─── Colour coding (shared with the node renderer + legend) ────────────────────
 
-/** Port direction → colour: in = green, out = amber, inout = blue. */
+/** Port direction → colour: in = orange, out = green, inout = blue.
+ *  Project IBD convention: a publisher (out) reads green, a subscriber (in)
+ *  reads orange — applied everywhere ports are drawn, not just the IBD canvas. */
 export const PORT_DIR_COLORS = {
-    in: '#16A34A',
-    out: '#D97706',
+    in: '#D97706',
+    out: '#16A34A',
     inout: '#2563EB',
 } as const;
 
@@ -147,6 +149,20 @@ export interface PortInfo {
     size?: number;
     /** A SysML nested port (owned by another port), drawn smaller */
     nested?: boolean;
+    /** For a nested pin, the id of the parent connector port it belongs to. */
+    parentId?: string;
+    /**
+     * For a nested pin, how far ALONG its parent port's edge it sits, measured
+     * from the parent body's start. Set when a pin is dragged; without it the pin
+     * falls back to its declaration order in the run.
+     */
+    alongOffset?: number;
+    /**
+     * For a nested pin, which face of the parent port it straddles: the outer face
+     * (pointing away from the owning part) or the inner one. Defaults to the face
+     * its direction implies — inputs outer, outputs inner.
+     */
+    faceOuter?: boolean;
     /**
      * On a parent port, how many nested ports render beneath it. The node uses
      * this to draw one enclosing group behind the cluster, so a boundary
@@ -195,13 +211,24 @@ function portDirection(el: MemoElement): PortInfo['direction'] {
 // Large enough to remain legible and acquire reliably at normal canvas zoom.
 // The semantic anchor remains the square centre, so this is renderer-wide and
 // not tied to any particular diagram.
-const PORT_SIZE = 24;
+const PORT_SIZE = 32;
 /** Port square edge length — shared with InterconnectionNode rendering. */
 export const INTERCONNECTION_PORT_SIZE = PORT_SIZE;
 /** Nested ports use the same glyph size; nesting is conveyed by grouping. */
 export const NESTED_PORT_SIZE = PORT_SIZE;
-/** Centre-to-centre spacing parent port → nested ports (shared with the node). */
-export const NESTED_PITCH = 30;
+/** Along-wall centre-to-centre spacing of nested pins (shared with the housing). */
+export const NESTED_PITCH = 44;
+/** Cross-wall offset of a nested pin from the parent wall (outer vs inner edge). */
+export const NESTED_WALL_OFFSET = 32;
+/** Along-wall inset of the first nested pin from the housing start. */
+export const NESTED_PIN_INSET = 20;
+/**
+ * Depth (across the wall) of a connector port's own body — the box a nested port
+ * lives on. A port that nests other ports is itself a typed block drawn as a box
+ * straddling its owner's wall, and per SysML its child ports are bound to THAT
+ * box's edge, not to the owner's. This is that box's thickness.
+ */
+export const NESTED_HOUSING_DEPTH = PORT_SIZE + 16;
 
 export const INTERCONNECTION_HEADER_HEIGHT = 48; // compact container title + separation
 const HEADER_BAND = INTERCONNECTION_HEADER_HEIGHT;
@@ -245,7 +272,7 @@ export const portCaptionWidth = (name: string, connectorType?: string): number =
  * clearance has to count the caption, not just the square.
  */
 export const PORT_CAPTION_CLEARANCE = 30;
-const PORT_PITCH = 30;    // minimum port centre-to-centre spacing on one side
+const PORT_PITCH = 40;    // minimum port centre-to-centre spacing on one side
 /**
  * A port on a horizontal wall wears its caption centred on the square rather
  * than beside it, so neighbours are kept apart by the caption's WIDTH — the
@@ -364,9 +391,34 @@ export function buildPortOwnership(
 ): PortOwnership {
     const directPart = new Map<string, string>();
     const parentPort = new Map<string, string>();
+    // A connector's pins often belong to its port *definition*, not to the port
+    // usage on the part (the idiomatic SysML v2 form:
+    //   port def FooConnector { port pin1 : FooPin; … }
+    //   part x { in port fooPort : FooConnector; }
+    // ). Such a pin's `owner` is the definition, which is owned by no part, so the
+    // ownership chain dead-ends and the pins are dropped. Map each connector-typed
+    // usage on a part by its definition name so a pin whose owner is that
+    // definition re-homes onto the usage that carries it. First usage wins (pins
+    // carry one id per definition; per-usage instances are a model-lowering job).
+    const unqualify = (id: string | undefined): string =>
+        typeof id === 'string' ? (id.split('::').pop() ?? '') : '';
+    const connectorDefUsage = new Map<string, string>();
+    for (const [portId, el] of ports) {
+        if (!el.owner || !isPart(el.owner)) continue;
+        const definition = unqualify(el.portSpec?.type);
+        if (definition.includes('Connector') && !connectorDefUsage.has(definition)) {
+            connectorDefUsage.set(definition, portId);
+        }
+    }
     for (const [portId, el] of ports) {
         if (!el.owner) continue;
-        if (isPart(el.owner)) directPart.set(portId, el.owner);
+        if (isPart(el.owner)) { directPart.set(portId, el.owner); continue; }
+        // A pin's owner is often the connector *definition* — which is itself a
+        // port element on the diagram. Re-homing onto the usage that carries the
+        // definition must win over nesting under the definition (which anchors to
+        // no part and is dropped), so check it before the inline-port case.
+        const usage = connectorDefUsage.get(unqualify(el.owner));
+        if (usage) parentPort.set(portId, usage);
         else if (ports.has(el.owner)) parentPort.set(portId, el.owner);
     }
     for (const rel of relationships) {
@@ -560,6 +612,14 @@ export interface InterconnectionOptions {
     portDisplay?: PortDisplay;
     showPortText?: boolean;
     showConnectionText?: boolean;
+    /** Per-edge label override (edge id → visible). Where an edge has an entry it
+     *  wins over the global `showConnectionText`, so a dense IBD can name the few
+     *  flows that carry the story while the rest stay unlabelled. */
+    labelVisibility?: Record<string, boolean>;
+    /** When the renderer draws every port at one size (ignoring authored
+     *  `port.size`), this is that size — connector anchoring uses it so the line
+     *  meets the RENDERED square, not the authored one. */
+    forcedPortSize?: number;
     /**
      * Walls the view declares, per port id. Which wall a port straddles is a
      * drawing decision, not an architecture fact, so it is authored on the view
@@ -573,6 +633,8 @@ export interface InterconnectionOptions {
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number, side?: PortSide) => void;
     onPortResize?: (ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
+    /** Persist a port's position once its drag ends. */
+    onPortCommit?: (ownerId: string, portId: string) => void;
     /** Bind a visible port glyph to the model element it represents. */
     onPortSelect?: (portId: string) => void;
     layoutProviderId?: string;
@@ -1206,31 +1268,36 @@ export async function computeInterconnectionLayout(
             if (!p) continue;
             const pel = portEls.get(portId)!;
             const nestedIds = nestedOf.get(portId) ?? [];
+            // A connector's pins cluster as ONE larger port on the parent wall:
+            // inputs range along the outer edge, outputs along the inner edge, so
+            // the group reads as a single multi-conductor feature rather than a run
+            // of squares marching off the box. On the right/bottom walls every pin
+            // sits on the outer edge (a two-sided split there would point outputs
+            // back into the box).
+            const hasNested = nestedIds.length > 0;
             infos.push({
                 id: portId, name: pel.name, x: p.x, y: p.y, side: p.side,
                 direction: portDirection(pel) ?? portRole(portId),
-                nestedCount: nestedIds.length || undefined,
+                nestedCount: hasNested ? nestedIds.length : undefined,
                 labelWidth: portCaptionWidth(pel.name, portConnectorType(pel)),
                 connectorType: portConnectorType(pel),
             });
-            // A group runs ALONG its wall: down a vertical wall, across a
-            // horizontal one. Stacking a bottom-wall group downward would march
-            // its nested ports off the box.
+            if (!hasNested) continue;
+            // Every nested pin STRADDLES the same wall as its parent (its cross-wall
+            // coordinate equals the parent's), stacked ALONG the wall so the run of
+            // small ports sits ON the edge and reads as one larger boundary feature.
             const vertical = isVerticalWall(p.side);
-            const parentCenter = vertical ? p.y + PORT_SIZE / 2 : p.x + PORT_SIZE / 2;
-            const inset = (vertical ? p.x : p.y) + (PORT_SIZE - NESTED_PORT_SIZE) / 2;
+            const base = vertical ? p.y : p.x;   // along-wall origin
+            const cross = vertical ? p.x : p.y;  // parent's straddle position on the wall
             nestedIds.forEach((childId, i) => {
                 const cel = portEls.get(childId)!;
-                const along = parentCenter + NESTED_PITCH * (i + 1) - NESTED_PORT_SIZE / 2;
+                const along = base + NESTED_PIN_INSET + i * NESTED_PITCH;
                 infos.push({
-                    id: childId,
-                    name: cel.name,
-                    x: vertical ? inset : along,
-                    y: vertical ? along : inset,
-                    side: p.side,
-                    direction: portDirection(cel) ?? portRole(childId),
-                    size: NESTED_PORT_SIZE,
-                    nested: true,
+                    id: childId, name: cel.name,
+                    x: vertical ? cross : along,
+                    y: vertical ? along : cross,
+                    side: p.side, direction: portDirection(cel) ?? portRole(childId),
+                    size: NESTED_PORT_SIZE, nested: true, parentId: portId,
                     labelWidth: portCaptionWidth(cel.name, portConnectorType(cel)),
                     connectorType: portConnectorType(cel),
                 });
@@ -1304,6 +1371,9 @@ export async function computeInterconnectionLayout(
                 implicitOut: showPorts && implicitOutParts.has(partId),
                 onPortMove: options?.onPortMove
                     ? (portId: string, y: number, side?: PortSide) => options.onPortMove!(partId, portId, y, side)
+                    : undefined,
+                onPortCommit: options?.onPortCommit
+                    ? (portId: string) => options.onPortCommit!(partId, portId)
                     : undefined,
                 onPortResize: options?.onPortResize
                     ? (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => options.onPortResize!(partId, portId, size, axis)
@@ -1422,16 +1492,12 @@ export async function computeInterconnectionLayout(
             if (portId) {
                 const info = (portInfoByOwner.get(partId) ?? []).find(p => p.id === portId);
                 if (info) {
-                    const size = info.size ?? PORT_SIZE;
-                    // A port that carries nested ports is drawn as a group, and
-                    // the connector belongs to the whole feature — so it meets
-                    // the group's centreline, not the parent square that
-                    // happens to sit at the start of the stack. The group runs
-                    // along its own wall, so the shift follows that axis.
-                    const groupShift = (info.nestedCount ?? 0) * NESTED_PITCH / 2;
-                    const alongY = isVerticalWall(info.side);
-                    const cx = abs.x + info.x + size / 2 + (alongY ? 0 : groupShift);
-                    const cy = abs.y + info.y + size / 2 + (alongY ? groupShift : 0);
+                    const size = options?.forcedPortSize ?? info.size ?? PORT_SIZE;
+                    // The connector meets the MIDDLE of the port's OUTER edge (the
+                    // edge its wall faces). A nested-parent port clusters its pins on
+                    // that same wall, so its own centre is the anchor.
+                    const cx = abs.x + info.x + size / 2;
+                    const cy = abs.y + info.y + size / 2;
                     return side === 'left' ? { x: cx - size / 2, y: cy }
                         : side === 'right' ? { x: cx + size / 2, y: cy }
                         : side === 'top' ? { x: cx, y: cy - size / 2 }
@@ -1521,7 +1587,9 @@ export async function computeInterconnectionLayout(
             ...edge.data,
             points: routes.get(edge.id) ?? [],
             labelPoint: labelPoints.get(edge.id),
-            showLabel: options?.showConnectionText !== false,
+            showLabel: typeof options?.labelVisibility?.[edge.id] === 'boolean'
+                ? options.labelVisibility[edge.id]
+                : options?.showConnectionText !== false,
         },
     }));
 

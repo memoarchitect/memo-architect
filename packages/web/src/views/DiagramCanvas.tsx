@@ -56,7 +56,8 @@ import {
 
 import {
     PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide,
-    INTERCONNECTION_PORT_SIZE, NESTED_PITCH, type PortDisplay, type PortSide,
+    INTERCONNECTION_PORT_SIZE, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
+    type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
 import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
@@ -69,6 +70,10 @@ import {
 import { DecompositionNode } from './DecompositionNode';
 import { InterconnectionNode } from './InterconnectionNode';
 import { InterconnectionEdge } from './InterconnectionEdge';
+import {
+    InterconnectionRendererContext, resolveInterconnectionRenderer,
+    baseInterconnectionRenderer,
+} from '../diagram/renderers/interconnection-renderer';
 import { ActionFlowNode, ActionFlowLaneNode, ActionFlowLaneLabelNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
@@ -205,6 +210,7 @@ function reroutePositionedEdges(
     nodes: FlowNode[],
     edges: FlowEdge[],
     quality: RouteQuality = 'direct',
+    forcedPortSize?: number,
 ): FlowEdge[] {
     const byId = new Map(nodes.map(n => [n.id, n]));
     const absolute = new Map<string, { x: number; y: number }>();
@@ -234,9 +240,13 @@ function reroutePositionedEdges(
                     ports?: Array<{ id: string; x: number; y: number; size?: number; nestedCount?: number }>;
                 })?.ports ?? []).find(candidate => candidate.id === portId);
                 if (port) {
-                    const size = port.size ?? INTERCONNECTION_PORT_SIZE;
+                    const size = forcedPortSize ?? port.size ?? INTERCONNECTION_PORT_SIZE;
+                    // Connectors always meet the MIDDLE of a port's OUTER edge — the
+                    // edge its (effective) wall faces. A nested-parent port clusters
+                    // its pins on that same wall now, so its own centre is the anchor
+                    // (no group-centreline shift).
                     const cx = port.x + size / 2;
-                    const cy = port.y + size / 2 + (port.nestedCount ?? 0) * NESTED_PITCH / 2;
+                    const cy = port.y + size / 2;
                     return side === 'left' ? { x: cx - size / 2, y: cy }
                         : side === 'right' ? { x: cx + size / 2, y: cy }
                         : side === 'top' ? { x: cx, y: cy - size / 2 }
@@ -286,16 +296,19 @@ function reroutePositionedEdges(
         }];
     });
     if (requests.length === 0) return edges;
+    // A connector must not cut through a part it does not terminate in — the rule
+    // a formal IBD is read by. Containers and boards are obstacles too: the router
+    // (planOne) already drops any obstacle that ENCLOSES one of the connector's
+    // endpoints, so a route to a child still leaves its own parent freely while
+    // being kept out of every unrelated board. The diagram FRAME is the drawing
+    // surface itself and encloses everything, so it is never an obstacle.
     const obstacles = nodes
-        // Frames, containers and any node with children are drawn AROUND the
-        // things they hold, so treating them as obstacles walls off the region
-        // their own children live in and every route that has to reach a child
-        // is pushed out around the parent.
         .filter(node => {
-            const data = node.data as { isFrame?: boolean; isContainer?: boolean; hasChildren?: boolean };
-            return !data.isFrame && !data.isContainer && !data.hasChildren;
+            const data = node.data as { isFrame?: boolean };
+            return !data.isFrame && node.type !== 'annotationNode';
         })
-        .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }));
+        .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }))
+        .filter(o => o.width > 0 && o.height > 0);
     const requestById = new Map(requests.map(request => [request.id, request]));
     const manualRouted = new Set(edges.filter(edge => edge.data?.manualRoute).map(edge => edge.id));
     const automaticRequests = requests.filter(request => !manualRouted.has(request.id));
@@ -340,6 +353,258 @@ function reroutePositionedEdges(
     return routed.map(edge => labelled.has(edge.id)
         ? { ...edge, data: { ...edge.data, labelPoint: labelled.get(edge.id) } }
         : edge);
+}
+
+/** Clear space kept between two neighbouring ports on the same wall. */
+const WALL_PORT_GAP = 12;
+
+/** How far apart two facing ports may be and still be pulled into line. */
+const PORT_ALIGN_REACH = 96;
+
+/**
+ * A boundary port's CROSS-wall coordinate is derived, never stored: the square
+ * straddles the wall, so its centre is the wall. Only the ALONG-wall coordinate
+ * is authored (and draggable). Authored cross-wall values go stale the moment the
+ * port size changes — a position written for a 24px port leaves a 32px port
+ * sitting 4px inside its own boundary — so they are recomputed here.
+ */
+function snapPortsToWall(nodes: FlowNode[], forced?: number): FlowNode[] {
+    return nodes.map(node => {
+        const ports = (node.data as { ports?: PortInfo[] })?.ports;
+        if (!ports?.length) return node;
+        // Local coordinates: the owning part's edges ARE 0 and w/h in this space,
+        // so those constants are the parent edge the square has to straddle.
+        const w = Number(node.width ?? node.measured?.width ?? (node.style as { width?: number })?.width ?? 0);
+        const h = Number(node.height ?? node.measured?.height ?? (node.style as { height?: number })?.height ?? 0);
+        if (!w || !h) return node;
+        const snapped = ports.map(port => {
+            if (port.nested) return port;      // derived from its parent PORT instead
+            const half = renderedPortSize(port, forced) / 2;
+            switch (port.side) {
+                case 'left': return port.x === -half ? port : { ...port, x: -half };
+                case 'right': return port.x === w - half ? port : { ...port, x: w - half };
+                case 'top': return port.y === -half ? port : { ...port, y: -half };
+                default: return port.y === h - half ? port : { ...port, y: h - half };
+            }
+        });
+        return snapped.every((p, i) => p === ports[i])
+            ? node : { ...node, data: { ...node.data, ports: snapped } };
+    });
+}
+
+/**
+ * The size a port is actually DRAWN at. A renderer that gives every port one
+ * uniform square (the dedicated IBD canvas) overrides the authored `size`, and
+ * geometry computed from the authored value would then disagree with the picture
+ * — a port authored at 24 but drawn at 32 sits 4px inside its own wall.
+ */
+function renderedPortSize(port: PortInfo, forced?: number): number {
+    // A connector port's body is the box its child ports sit on, so ACROSS the
+    // wall it is that box's depth — not a plain port square.
+    if (port.nestedCount) return NESTED_HOUSING_DEPTH;
+    return forced ?? port.size ?? INTERCONNECTION_PORT_SIZE;
+}
+
+/** Along-wall length of a connector port's body: the column of pins it carries. */
+function nestedHousingLength(count: number, pinSize: number): number {
+    return (Math.max(count, 1) - 1) * NESTED_PITCH + pinSize + NESTED_PIN_INSET * 2;
+}
+
+/** The extent a port occupies ALONG its wall: one square, or — for a connector —
+ *  the whole column of pins it carries. */
+function portWallSpan(port: PortInfo, forced?: number): number {
+    return port.nestedCount
+        ? nestedHousingLength(port.nestedCount, forced ?? INTERCONNECTION_PORT_SIZE)
+        : renderedPortSize(port, forced);
+}
+
+/**
+ * Second pass over each wall: walk its ports in order and give every one a slot
+ * big enough for what it draws (a connector reserves its whole pin column), so a
+ * port can never sit on top of its neighbour. Authored positions are the input —
+ * a port only moves when it would otherwise collide — and the part grows if the
+ * run of ports needs more wall than it currently has.
+ */
+function resolveWallPortOverlaps(nodes: FlowNode[], forced?: number): FlowNode[] {
+    return nodes.map(node => {
+        const ports = (node.data as { ports?: PortInfo[] })?.ports;
+        if (!ports?.length) return node;
+        const along = new Map<string, number>();
+        let neededH = 0, neededW = 0;
+        for (const side of ['left', 'right', 'top', 'bottom'] as const) {
+            const vertical = side === 'left' || side === 'right';
+            const wall = ports.filter(p => p.side === side && !p.nested)
+                .sort((a, b) => (vertical ? a.y - b.y : a.x - b.x));
+            let cursor = -Infinity;
+            for (const port of wall) {
+                const start = Math.max(vertical ? port.y : port.x, cursor);
+                along.set(port.id, start);
+                cursor = start + portWallSpan(port, forced) + WALL_PORT_GAP;
+            }
+            if (wall.length) {
+                if (vertical) neededH = Math.max(neededH, cursor - WALL_PORT_GAP);
+                else neededW = Math.max(neededW, cursor - WALL_PORT_GAP);
+            }
+        }
+        const moved = ports.map(port => {
+            const start = along.get(port.id);
+            if (start === undefined) return port;
+            const vertical = port.side === 'left' || port.side === 'right';
+            if (vertical) return start === port.y ? port : { ...port, y: start };
+            return start === port.x ? port : { ...port, x: start };
+        });
+        if (moved.every((p, i) => p === ports[i])) return node;
+        // Grow the part so a pushed-apart run still fits inside its own boundary.
+        const height = Number(node.height ?? (node.style as { height?: number })?.height ?? 0);
+        const width = Number(node.width ?? (node.style as { width?: number })?.width ?? 0);
+        const grownH = Math.max(height, neededH + renderedPortSize({} as PortInfo, forced));
+        const grownW = Math.max(width, neededW + renderedPortSize({} as PortInfo, forced));
+        const grew = grownH !== height || grownW !== width;
+        return {
+            ...node,
+            ...(grew ? { height: grownH, width: grownW, style: { ...node.style, height: grownH, width: grownW } } : {}),
+            data: { ...node.data, ports: moved },
+        };
+    });
+}
+
+/**
+ * Pull two connected ports into line so their connector is drawn as one straight
+ * run rather than a small S-bend. A port is only nudged when it is safe to do so:
+ * it carries a single connector (so no other route is disturbed), its partner is
+ * on the facing axis, the offset is small, and the new position still clears its
+ * neighbours on the wall. Everything else is left exactly where it was authored.
+ */
+function alignFacingPorts(nodes: FlowNode[], edges: FlowEdge[], forced?: number): FlowNode[] {
+    const byId = new Map(nodes.map(node => [node.id, node]));
+    const absolute = new Map<string, { x: number; y: number }>();
+    const absOf = (id: string): { x: number; y: number } => {
+        const known = absolute.get(id);
+        if (known) return known;
+        const node = byId.get(id);
+        if (!node) return { x: 0, y: 0 };
+        const parent = node.parentId ? absOf(node.parentId) : { x: 0, y: 0 };
+        const value = { x: parent.x + node.position.x, y: parent.y + node.position.y };
+        absolute.set(id, value);
+        return value;
+    };
+    // A port serving several connectors is a shared anchor: moving it to please
+    // one of them drags the others off their routes.
+    const incident = new Map<string, number>();
+    for (const edge of edges) {
+        for (const key of [edge.data?.sourcePortId, edge.data?.targetPortId]) {
+            if (typeof key === 'string') incident.set(key, (incident.get(key) ?? 0) + 1);
+        }
+    }
+    const working = new Map<string, PortInfo[]>();
+    for (const node of nodes) {
+        const ports = (node.data as { ports?: PortInfo[] })?.ports;
+        if (ports?.length) working.set(node.id, ports.map(port => ({ ...port })));
+    }
+    let changed = false;
+    for (const edge of edges) {
+        const sourceId = edge.data?.sourcePortId, targetId = edge.data?.targetPortId;
+        if (typeof sourceId !== 'string' || typeof targetId !== 'string') continue;
+        const sourcePorts = working.get(edge.source), targetPorts = working.get(edge.target);
+        if (!sourcePorts || !targetPorts) continue;
+        const source = sourcePorts.find(p => p.id === sourceId);
+        const target = targetPorts.find(p => p.id === targetId);
+        if (!source || !target || source.nested || target.nested) continue;
+        if (source.nestedCount || target.nestedCount) continue;
+        const vertical = source.side === 'left' || source.side === 'right';
+        if (vertical !== (target.side === 'left' || target.side === 'right')) continue;
+        const sourceAbs = absOf(edge.source), targetAbs = absOf(edge.target);
+        const sourceHalf = renderedPortSize(source, forced) / 2;
+        const targetHalf = renderedPortSize(target, forced) / 2;
+        const sourceCentre = vertical ? sourceAbs.y + source.y + sourceHalf : sourceAbs.x + source.x + sourceHalf;
+        const targetCentre = vertical ? targetAbs.y + target.y + targetHalf : targetAbs.x + target.x + targetHalf;
+        const delta = sourceCentre - targetCentre;
+        if (delta === 0 || Math.abs(delta) > PORT_ALIGN_REACH) continue;
+        // Move whichever end is free to move; a frame port anchors the pair.
+        const sourceFixed = Boolean((byId.get(edge.source)?.data as { isFrame?: boolean })?.isFrame)
+            || (incident.get(sourceId) ?? 0) > 1;
+        const targetFixed = Boolean((byId.get(edge.target)?.data as { isFrame?: boolean })?.isFrame)
+            || (incident.get(targetId) ?? 0) > 1;
+        if (targetFixed === sourceFixed) continue;          // both pinned, or both free — leave it
+        const mover = targetFixed ? source : target;
+        const ports = targetFixed ? sourcePorts : targetPorts;
+        const shift = targetFixed ? -delta : delta;
+        const start = (vertical ? mover.y : mover.x) + shift;
+        // Keep clear of the neighbours already on this wall.
+        const span = portWallSpan(mover, forced);
+        const collides = ports.some(other => {
+            if (other.id === mover.id || other.nested || other.side !== mover.side) return false;
+            const otherStart = vertical ? other.y : other.x;
+            return start < otherStart + portWallSpan(other, forced) + WALL_PORT_GAP
+                && start + span + WALL_PORT_GAP > otherStart;
+        });
+        if (collides || start < 0) continue;
+        if (vertical) mover.y = start; else mover.x = start;
+        changed = true;
+    }
+    if (!changed) return nodes;
+    return nodes.map(node => working.has(node.id)
+        ? { ...node, data: { ...node.data, ports: working.get(node.id)! } }
+        : node);
+}
+
+/**
+ * A connector's nested pins are placed RELATIVE to their parent port: each pin
+ * straddles the parent's wall at the parent's cross-coordinate and stacks along
+ * it. Deriving pin coordinates from the (possibly moved/saved) parent — in the
+ * node data, so render, routing and side-resolution all agree — keeps the pin
+ * cluster glued to its parent wherever the parent ends up.
+ */
+function repositionNestedPins(nodes: FlowNode[]): FlowNode[] {
+    return nodes.map(node => {
+        const ports = (node.data as { ports?: PortInfo[] })?.ports;
+        if (!ports?.some(p => p.nested)) return node;
+        const parentById = new Map(ports.filter(p => p.nestedCount).map(p => [p.id, p]));
+        if (!parentById.size) return node;
+        const isOutward = (port: PortInfo) => String(port.direction ?? '').toLowerCase() === 'out';
+        // Each FACE of the parent port carries its own run: inputs range along the
+        // outer face, outputs along the inner one, so direction reads at a glance
+        // instead of having to be picked out of one mixed column.
+        const faceIndex = new Map<string, number>();
+        const faceCount = new Map<string, { inputs: number; outputs: number }>();
+        for (const port of ports) {
+            if (!port.nested || !port.parentId || !parentById.has(port.parentId)) continue;
+            const tally = faceCount.get(port.parentId) ?? { inputs: 0, outputs: 0 };
+            if (isOutward(port)) faceIndex.set(port.id, tally.outputs++);
+            else faceIndex.set(port.id, tally.inputs++);
+            faceCount.set(port.parentId, tally);
+        }
+        const repositioned = ports.map(port => {
+            if (port.nestedCount) {
+                // The body only has to be as long as its longest face.
+                const tally = faceCount.get(port.id);
+                const longest = Math.max(tally?.inputs ?? 0, tally?.outputs ?? 0, 1);
+                return longest === port.nestedCount ? port : { ...port, nestedCount: longest };
+            }
+            const parent = port.nested && port.parentId ? parentById.get(port.parentId) : undefined;
+            if (!parent) return port;
+            const vertical = parent.side === 'left' || parent.side === 'right';
+            const pinSize = port.size ?? INTERCONNECTION_PORT_SIZE;
+            // SysML: a child port is bound to the edge of its PARENT PORT. The
+            // parent's body straddles the owner's wall; an input sits on the face
+            // pointing away from the owner, an output on the face pointing in.
+            const bodyStart = vertical ? parent.x : parent.y;
+            const outward = parent.side === 'left' || parent.side === 'top';
+            const outerFace = outward ? bodyStart : bodyStart + NESTED_HOUSING_DEPTH;
+            const innerFace = outward ? bodyStart + NESTED_HOUSING_DEPTH : bodyStart;
+            // Which face, and where along it: a dragged pin keeps what the user
+            // chose; otherwise direction picks the face and declaration order the
+            // position in the run.
+            const outerByDefault = !isOutward(port);
+            const onOuter = port.faceOuter ?? outerByDefault;
+            const face = onOuter ? outerFace : innerFace;
+            const cross = face - pinSize / 2;
+            const along = (vertical ? parent.y : parent.x)
+                + (port.alongOffset ?? NESTED_PIN_INSET + (faceIndex.get(port.id) ?? 0) * NESTED_PITCH);
+            return { ...port, side: parent.side, x: vertical ? cross : along, y: vertical ? along : cross };
+        });
+        return { ...node, data: { ...node.data, ports: repositioned } };
+    });
 }
 
 // ─── Quick create popup ───────────────────────────────────────────────────────
@@ -548,6 +813,10 @@ function DiagramCanvasInner() {
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const nodesRef = useRef<FlowNode[]>([]);
     const edgesRef = useRef<FlowEdge[]>([]);
+    // The active interconnection profile (base vs dedicated IBD), resolved per
+    // view below. Held in a ref so the geometry rAF callbacks can read its route
+    // quality without being torn down and rebuilt on every view switch.
+    const activeRendererRef = useRef(baseInterconnectionRenderer);
     /** Canvas root, captured by the image export. */
     const canvasRef = useRef<HTMLDivElement>(null);
     const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -578,14 +847,21 @@ function DiagramCanvasInner() {
         if (geometryFrameRef.current !== null) return;
         geometryFrameRef.current = requestAnimationFrame(() => {
             geometryFrameRef.current = null;
-            const stableNodes = nodesRef.current;
+            const forced = activeRendererRef.current.forcedPortSize;
+            const stableNodes = repositionNestedPins(
+                snapPortsToWall(
+                    alignFacingPorts(
+                        resolveWallPortOverlaps(nodesRef.current, forced),
+                        edgesRef.current, forced),
+                    forced));
+            nodesRef.current = stableNodes;
             const shouldReroute = geometryNeedsRerouteRef.current;
             geometryNeedsRerouteRef.current = false;
             if (!shouldReroute) {
                 setNodes(stableNodes);
                 return;
             }
-            const routedEdges = reroutePositionedEdges(stableNodes, edgesRef.current);
+            const routedEdges = reroutePositionedEdges(stableNodes, edgesRef.current, activeRendererRef.current.routeQuality, activeRendererRef.current.forcedPortSize);
             edgesRef.current = routedEdges;
             setNodes(stableNodes);
             setEdges(routedEdges);
@@ -604,7 +880,9 @@ function DiagramCanvasInner() {
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
     const [relayoutNonce, setRelayoutNonce] = useState(0);
     const [paletteCollapsed, setPaletteCollapsed] = useState(true);
-    const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+    // The floating toolbar drawer starts closed: on load it covers whatever the
+    // diagram placed under it, which on a wide layout is real content.
+    const [toolbarCollapsed, setToolbarCollapsed] = useState(true);
     const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
     const actionFlowToolbarPlacement: 'left' = 'left';
 
@@ -693,6 +971,13 @@ function DiagramCanvasInner() {
     const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
     const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
+    // Per-view renderer profile: a view opts into the dedicated IBD canvas via
+    // its layout companion (`canvas.renderer`); everything else keeps the base
+    // profile, so no other diagram is affected by the IBD rules.
+    const activeRenderer = resolveInterconnectionRenderer(
+        (currentLayout?.canvas as { renderer?: string } | undefined)?.renderer,
+    );
+    activeRendererRef.current = activeRenderer;
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
     const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
@@ -711,6 +996,18 @@ function DiagramCanvasInner() {
             });
         return entries.length > 0 ? new Map<string, PortSide>(entries) : undefined;
     }, [declaredPortWalls]);
+    // Per-edge label overrides authored on the .viewlayout edges
+    // (`DiagramEdgeLayout.labelVisible`). With `showConnectionText` on, these let
+    // a dense IBD name only the few flows that carry the story.
+    const declaredEdges = currentLayout?.edges;
+    const edgeLabelVisibility = useMemo(() => {
+        const entries = Object.entries(declaredEdges ?? {})
+            .flatMap(([edgeId, layout]) => {
+                const visible = (layout as { labelVisible?: boolean } | undefined)?.labelVisible;
+                return typeof visible === 'boolean' ? [[edgeId, visible] as const] : [];
+            });
+        return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+    }, [declaredEdges]);
     // A view names the enum and the attribute that carries its literal. Colours
     // are authored beside that declaration in the viewlayout, never selected by
     // a renderer palette. Without a declaration, the old automatic layer colour
@@ -851,8 +1148,17 @@ function DiagramCanvasInner() {
                     ...(node.width ? { width: node.width } : {}),
                     ...(node.height ? { height: node.height } : {}),
                     ports: Object.fromEntries(
-                        (((node.data as { ports?: Array<{ id: string; x: number; y: number; side?: 'top' | 'bottom' | 'left' | 'right'; size?: number }> }).ports) ?? [])
-                            .map(port => [port.id, { x: port.x, y: port.y, side: port.side, ...(port.size ? { size: port.size } : {}) }]),
+                        (((node.data as { ports?: PortInfo[] }).ports) ?? [])
+                            .map(port => [port.id, {
+                                ...((previous.nodes[node.id] as { ports?: Record<string, object> } | undefined)?.ports?.[port.id] ?? {}),
+                                x: port.x, y: port.y, side: port.side,
+                                ...(port.size ? { size: port.size } : {}),
+                                // A nested pin's x/y are derived from its parent, so
+                                // what has to survive is where the user put it along
+                                // that parent's edge — and on which face.
+                                ...(port.alongOffset !== undefined ? { alongOffset: port.alongOffset } : {}),
+                                ...(port.faceOuter !== undefined ? { faceOuter: port.faceOuter } : {}),
+                            }]),
                     ),
                 }])),
                 edges: Object.fromEntries(edges.map(edge => [edge.id, {
@@ -1434,8 +1740,26 @@ function DiagramCanvasInner() {
                     ...(pos.textAlign !== undefined ? { textAlign: pos.textAlign } : {}),
                     ...(pos.verticalAlign !== undefined ? { verticalAlign: pos.verticalAlign } : {}),
                     ...(pos.ports ? {
-                        ports: ((n.data as { ports?: Array<{ id: string; x: number; y: number; side: string; size?: number }> }).ports ?? [])
-                            .map(port => ({ ...port, ...(pos.ports?.[port.id] ?? {}) })),
+                        // Authored port positions are honoured (a hand-placed board is
+                        // the point of a manual layout). A nested PIN is derived from
+                        // its parent instead, and any overlap an authored position
+                        // creates is resolved by the wall pass below — fidelity first,
+                        // then a correction, rather than discarding the authoring.
+                        ports: ((n.data as { ports?: PortInfo[] }).ports ?? []).map(port => {
+                            const saved = pos.ports?.[port.id] as Partial<PortInfo> | undefined;
+                            if (!saved) return port;
+                            // A nested pin's x/y are derived from its parent, so it
+                            // only takes back the two things a drag can author: where
+                            // along the parent's edge it sits, and which face.
+                            if (port.nested) {
+                                return {
+                                    ...port,
+                                    ...(saved.alongOffset !== undefined ? { alongOffset: saved.alongOffset } : {}),
+                                    ...(saved.faceOuter !== undefined ? { faceOuter: saved.faceOuter } : {}),
+                                };
+                            }
+                            return { ...port, ...saved };
+                        }),
                     } : {}),
                 },
             };
@@ -1513,23 +1837,91 @@ function DiagramCanvasInner() {
             return { ...edge, data };
         });
         edgesRef.current = invalidatedEdges;
-        if (side && selectedDiagramId) {
+        // A declared port wall is a layout CONSTRAINT: writing it re-runs the
+        // template layout (and re-fits the view). For the multi-wall drag that
+        // would fire every frame — a jarring zoom and a snap-back to the
+        // template's slot on release. There the port keeps the exact spot it was
+        // dragged to (held on the node below) instead; only the base vertical
+        // nudge records a wall change.
+        if (side && selectedDiagramId && !activeRendererRef.current.multiWallPortDrag) {
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
             mergeDiagramLayouts({ [selectedDiagramId]: {
                 ...previous,
                 canvas: { ...previous.canvas, autoLayout: false, portWalls: { ...previous.canvas?.portWalls, [portId]: side } },
             } });
         }
-        const next = nodesRef.current.map(node => node.id !== ownerId ? node : {
-            ...node,
-            data: {
-                ...node.data,
-                ports: ((node.data as { ports?: Array<{ id: string; y: number }> }).ports ?? [])
-                    .map(port => port.id === portId ? { ...port, y } : port),
-            },
+        const next = nodesRef.current.map(node => {
+            if (node.id !== ownerId) return node;
+            const nw = Number(node.width ?? (node.style as { width?: number })?.width ?? 100);
+            const nh = Number(node.height ?? (node.style as { height?: number })?.height ?? 100);
+            return {
+                ...node,
+                data: {
+                    ...node.data,
+                    ports: ((node.data as { ports?: PortInfo[] }).ports ?? [])
+                        .map(port => {
+                            if (port.id !== portId) return port;
+                            // Recursive case: a nested pin travels along its PARENT
+                            // PORT's edge, not the part's wall. `y` is the along
+                            // coordinate in node space and `side` names the face —
+                            // the parent's own side means the outer face.
+                            if (port.nested && port.parentId) {
+                                const parent = ((node.data as { ports?: PortInfo[] }).ports ?? [])
+                                    .find(candidate => candidate.id === port.parentId);
+                                if (!parent) return port;
+                                const vertical = parent.side === 'left' || parent.side === 'right';
+                                const parentAlong = vertical ? parent.y : parent.x;
+                                return {
+                                    ...port,
+                                    alongOffset: Math.max(0, y - parentAlong),
+                                    ...(side ? { faceOuter: side === parent.side } : {}),
+                                };
+                            }
+                            // `y` carries the along-wall coordinate. With a wall
+                            // change (`side`), snap the cross-wall coordinate to that
+                            // wall so the port stays straddling its parent's edge.
+                            if (!side) return { ...port, y };
+                            const half = (port.size ?? INTERCONNECTION_PORT_SIZE) / 2;
+                            if (side === 'top') return { ...port, x: y, y: -half, side };
+                            if (side === 'bottom') return { ...port, x: y, y: nh - half, side };
+                            if (side === 'right') return { ...port, y, x: nw - half, side };
+                            return { ...port, y, x: -half, side };
+                        }),
+                },
+            };
         });
         scheduleGeometryUpdate(next);
     }, [scheduleGeometryUpdate, markManualLayout, selectedDiagramId, mergeDiagramLayouts]);
+
+    /**
+     * Write a dragged port back to the diagram's layout companion. Dragging keeps
+     * the canvas responsive by updating node data live; the position only becomes
+     * part of the document here, once, on release — so a rebuild no longer throws
+     * the drag away, and the websocket sees one update instead of one per frame.
+     */
+    const commitInterconnectionPort = useCallback((ownerId: string, portId: string) => {
+        if (!selectedDiagramId) return;
+        const owner = nodesRef.current.find(node => node.id === ownerId);
+        const port = ((owner?.data as { ports?: PortInfo[] })?.ports ?? []).find(p => p.id === portId);
+        if (!port) return;
+        const patch = port.nested
+            ? { alongOffset: port.alongOffset, faceOuter: port.faceOuter }
+            : { x: port.x, y: port.y, side: port.side };
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const nodeLayout = (previous.nodes?.[ownerId] ?? {}) as { ports?: Record<string, unknown> };
+        const layout = {
+            ...previous,
+            nodes: {
+                ...previous.nodes,
+                [ownerId]: {
+                    ...nodeLayout,
+                    ports: { ...nodeLayout.ports, [portId]: { ...(nodeLayout.ports?.[portId] as object ?? {}), ...patch } },
+                },
+            },
+        } as typeof previous;
+        mergeDiagramLayouts({ [selectedDiagramId]: layout });
+        sendDiagramLayoutUpdate(selectedDiagramId, layout);
+    }, [selectedDiagramId, mergeDiagramLayouts, sendDiagramLayoutUpdate]);
 
     const resizeInterconnectionPort = useCallback((ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => {
         suppressInspectUntilRef.current = Date.now() + 250;
@@ -1645,7 +2037,7 @@ function DiagramCanvasInner() {
             const { points: _points, manualRoute: _manualRoute, ...data } = edge.data;
             return { ...edge, data };
         });
-        const tidied = reroutePositionedEdges(nodesRef.current, cleared, 'tidy');
+        const tidied = reroutePositionedEdges(nodesRef.current, cleared, 'tidy', activeRendererRef.current.forcedPortSize);
         edgesRef.current = tidied;
         setEdges(tidied);
     }, [markManualLayout, setEdges]);
@@ -1706,7 +2098,13 @@ function DiagramCanvasInner() {
             const positionedModel = savedLayout && Object.keys(savedLayout.nodes).length > 0
                 ? buildNodesFromSidecar(rendererNodes, savedLayout)
                 : rendererNodes;
-            const positioned = [...positionedModel, ...annotationNodes(savedLayout)];
+            // Ports: snap to the wall → resolve collisions along it → straighten the
+            // pairs that can be straightened → derive each connector's nested pins.
+            const forcedSize = activeRendererRef.current.forcedPortSize;
+            // Collision + growth first (they only move ports ALONG a wall and may
+            // resize the part), then snap across the wall against the FINAL size.
+            const placed = resolveWallPortOverlaps(
+                [...positionedModel, ...annotationNodes(savedLayout)], forcedSize);
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
@@ -1745,8 +2143,10 @@ function DiagramCanvasInner() {
                     },
                 };
             });
+            const positioned = repositionNestedPins(
+                snapPortsToWall(alignFacingPorts(placed, preparedEdges as FlowEdge[], forcedSize), forcedSize));
             setNodes(interactive ? applyInteractiveData(positioned) : positioned);
-            setEdges(reroutePositionedEdges(positioned, preparedEdges));
+            setEdges(reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality, activeRendererRef.current.forcedPortSize));
             setIsLayouting(false);
             setLayoutVersion(v => v + 1);
         };
@@ -1810,9 +2210,12 @@ function DiagramCanvasInner() {
                     connectionDisplay: interconnectionConnectionDisplay,
                     showPortText: showIbdPortText,
                     showConnectionText: showIbdConnectionText,
+                    labelVisibility: edgeLabelVisibility,
+                    forcedPortSize: activeRenderer.forcedPortSize,
                     portWalls,
                     legend: ibdLegend,
                     onPortMove: moveInterconnectionPort,
+                    onPortCommit: commitInterconnectionPort,
                     onPortResize: resizeInterconnectionPort,
                     onPortSelect: portId => {
                         inspectRelationship(null);
@@ -1870,11 +2273,11 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
-        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, resizeInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, commitInterconnectionPort, resizeInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
 
     // Re-fit after layout
     useEffect(() => {
@@ -2276,6 +2679,31 @@ function DiagramCanvasInner() {
         const { x, y } = node.position;
 
         if (node.type === 'annotationNode') return;
+
+        // A part may not be dropped overlapping a sibling — only a parent may
+        // contain a child. An overlapping drop reverts to where the drag began.
+        if (activeRendererRef.current.preventPartOverlap && start) {
+            const sizeOf = (n: FlowNode) => ({
+                w: Number(n.width ?? n.measured?.width ?? (n.style as { width?: number })?.width ?? 0),
+                h: Number(n.height ?? n.measured?.height ?? (n.style as { height?: number })?.height ?? 0),
+            });
+            const self = sizeOf(node);
+            const gap = 4;
+            const overlaps = nodesRef.current.some(other => {
+                if (other.id === node.id || other.parentId !== node.parentId || other.hidden || other.type === 'annotationNode') return false;
+                const os = sizeOf(other);
+                if (self.w <= 0 || self.h <= 0 || os.w <= 0 || os.h <= 0) return false;
+                return x < other.position.x + os.w + gap && x + self.w + gap > other.position.x
+                    && y < other.position.y + os.h + gap && y + self.h + gap > other.position.y;
+            });
+            if (overlaps) {
+                const reverted = { x: start.x, y: start.y };
+                nodesRef.current = nodesRef.current.map(n => n.id === node.id ? { ...n, position: reverted } : n);
+                setNodes(prev => prev.map(n => n.id === node.id ? { ...n, position: reverted } : n));
+                scheduleGeometryUpdate(nodesRef.current);
+                return;
+            }
+        }
         markManualLayout();
 
         // Hand-drawn bends describe a route between two places. Once the block
@@ -2710,6 +3138,7 @@ function DiagramCanvasInner() {
     }
 
     return (
+        <InterconnectionRendererContext.Provider value={activeRenderer}>
         <div className="flex flex-1 overflow-hidden">
             {/* ── Palette ── */}
             <DiagramPalette
@@ -3598,9 +4027,10 @@ function DiagramCanvasInner() {
                     onNodeMouseLeave={clearConnectorHover}
                     onEdgeMouseEnter={onEdgeMouseEnter}
                     onEdgeMouseLeave={clearConnectorHover}
-                    onConnect={onConnect}
-                    onConnectStart={onConnectStart}
-                    onConnectEnd={onConnectEnd as any}
+                    nodesConnectable={!activeRenderer.disableConnectorCreation}
+                    onConnect={activeRenderer.disableConnectorCreation ? undefined : onConnect}
+                    onConnectStart={activeRenderer.disableConnectorCreation ? undefined : onConnectStart}
+                    onConnectEnd={activeRenderer.disableConnectorCreation ? undefined : (onConnectEnd as any)}
                     onReconnect={onReconnect}
                     onReconnectStart={onReconnectStart}
                     onReconnectEnd={onReconnectEnd}
@@ -3824,6 +4254,7 @@ function DiagramCanvasInner() {
                 />
             )}
         </div>
+        </InterconnectionRendererContext.Provider>
     );
 }
 

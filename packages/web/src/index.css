@@ -30,6 +30,19 @@ body {
 }
 
 /* ReactFlow overrides for light theme */
+
+/* Tinted board instead of white: React Flow's default board colour is
+   `transparent`, which shows the app's white surface through. A white board is
+   the one background a nested-shaded block cannot be told apart from without a
+   border, so give unstyled views a faint tint. A per-diagram
+   `--xy-background-color` (set by the app) still wins where present. */
+/* `body` prefix outranks React Flow's own `.react-flow { …: transparent }`,
+   which loads after this stylesheet. */
+:root,
+body .react-flow {
+    --xy-background-color-default: #fafaf8;
+}
+
 .react-flow__controls {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
     border: 1px solid #E5E5E0 !important;
@@ -52,6 +65,18 @@ body {
     border-radius: 12px !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
     overflow: hidden;
+    /* The minimap pins over the bottom-left of the board, where a wide layout
+       puts real content. Shrink it and keep it translucent until hovered so it
+       stays available without occluding the drawing. */
+    width: 132px !important;
+    height: 98px !important;
+    margin: 8px !important;
+    opacity: 0.3;
+    transition: opacity 0.12s ease;
+}
+
+.react-flow__minimap:hover {
+    opacity: 1;
 }
 
 /* Scrollbar styling */
