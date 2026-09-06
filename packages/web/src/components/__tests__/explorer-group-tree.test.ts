@@ -278,3 +278,52 @@ describe('computeExplorerGroupTree', () => {
         expect(risk.kinds.has('AbstractRisk')).toBe(false);
     });
 });
+
+describe('grouping by elementPackage', () => {
+    const grouped = (id: string, packageName?: string): MemoElement => {
+        const base = el(id, 'Requirement', 'requirements');
+        return packageName
+            ? { ...base, attributes: { elementPackage: packageName } } as MemoElement
+            : base;
+    };
+
+    const kindNodes = (elements: MemoElement[]) =>
+        computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY])
+            .flatMap(group => group.subGroups)
+            .flatMap(subGroup => [...subGroup.kinds.values()])
+            .flat();
+
+    // SysML lets a package group members inside a usage body, and the builder
+    // records which one an element landed in. The Catalog used to flatten them
+    // all under their kind, so the grouping the author wrote was invisible.
+    it('folds elements into a folder per grouping package', () => {
+        const nodes = kindNodes([
+            grouped('loose'),
+            grouped('header1', 'grpHeader'),
+            grouped('footer1', 'grpFooter'),
+            grouped('header2', 'grpHeader'),
+        ]);
+
+        const header = nodes.find(node => node.name === 'grpHeader');
+        const footer = nodes.find(node => node.name === 'grpFooter');
+        expect(header?.type).toBe('folder');
+        expect(header?.children.map(child => child.element?.id)).toEqual(['header1', 'header2']);
+        expect(footer?.children.map(child => child.element?.id)).toEqual(['footer1']);
+    });
+
+    // A kind is usually mostly ungrouped; sinking those below the folders would
+    // reorder the common case to serve the rare one.
+    it('leaves an ungrouped element a sibling of the folders, not inside one', () => {
+        const nodes = kindNodes([grouped('loose'), grouped('header1', 'grpHeader')]);
+
+        expect(nodes.some(node => node.element?.id === 'loose')).toBe(true);
+        const header = nodes.find(node => node.name === 'grpHeader');
+        expect(header?.children.some(child => child.element?.id === 'loose')).toBe(false);
+    });
+
+    it('leaves a kind untouched when nothing declares a grouping package', () => {
+        const nodes = kindNodes([grouped('a'), grouped('b')]);
+
+        expect(nodes.every(node => node.type === 'element')).toBe(true);
+    });
+});
