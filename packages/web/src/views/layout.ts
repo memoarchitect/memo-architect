@@ -13,8 +13,10 @@ import {
     type OrthogonalRouteRequest, type RouteObstacle, type RoutePoint,
 } from './orthogonal-router';
 import { runLayoutProvider } from '../diagram/layout-providers';
-import { LAYER_COLORS, REL_COLORS, CONTAINMENT_DEPTH_COLORS } from '../constants';
-import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
+import {
+    LAYER_COLORS, REL_COLORS, CONTAINMENT_DEPTH_COLORS, CONTAINMENT_LEAF_COLOR,
+} from '../constants';
+import { SHADOW, RADIUS, EDGE, FONT, COLOR } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import { pickCompartmentEntries, portCompartmentEntries } from './templates/composition-tree';
 
@@ -1148,7 +1150,7 @@ export async function computeTreeLayout(
         label: 'composedOf',
         type: 'default',
         style: {
-            stroke: REL_COLORS['composedOf'] || '#8E44AD',
+            stroke: COLOR.secondary,
             strokeWidth: EDGE.defaultWidth,
         },
         labelStyle: {
@@ -1161,7 +1163,7 @@ export async function computeTreeLayout(
         labelBgStyle: EDGE.labelBgStyle,
         markerEnd: {
             type: 'arrowclosed' as any,
-            color: REL_COLORS['composedOf'] || '#8E44AD',
+            color: COLOR.secondary,
             width: EDGE.arrowSize,
             height: EDGE.arrowSize,
         },
@@ -1334,7 +1336,12 @@ export async function computeDecompositionLayout(
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    const compColor = REL_COLORS['composedOf'] || '#8E44AD';
+    // Every edge in a decomposition is composition, so a hue distinguishes it
+    // from nothing — it only made the tree purple. `REL_COLORS` keeps its
+    // violet for legends and matrices, where composition sits beside other
+    // relationship types and does need its own colour; here the line takes the
+    // theme's own ink.
+    const compColor = COLOR.secondary;
 
     const place = (id: string, parentId: string | null, centerX: number, centerY: number) => {
         const el = tree.elements.get(id)!;
@@ -1500,10 +1507,12 @@ export function computeContainmentLayout(
             containerHeight = curY + maxRowHeight + CONTAINMENT_MARGIN;
         }
 
-        // Clamped, not cycled: wrapping back to white would put an outermost
-        // colour inside the deepest box and undo the ordering.
-        const depthBgColor = CONTAINMENT_DEPTH_COLORS[
-            Math.min(depth, CONTAINMENT_DEPTH_COLORS.length - 1)];
+        // Containers are tinted by how deep they sit, outermost darkest; a block
+        // that holds nothing is white whatever its depth. Clamped, not cycled,
+        // so a level can never take the colour of one outside it.
+        const depthBgColor = hasChildren
+            ? CONTAINMENT_DEPTH_COLORS[Math.min(depth, CONTAINMENT_DEPTH_COLORS.length - 1)]
+            : CONTAINMENT_LEAF_COLOR;
 
         const nodeData: DecompositionNodeData = {
             element: el, layerColor: color, isExpanded, hasChildren,

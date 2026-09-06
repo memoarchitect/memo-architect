@@ -5,11 +5,11 @@ import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser
 import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
-    definitionIndex, definitionLevelElements, definitionLevelComposition,
+    definitionIndex, definitionLevelElements, definitionLevelComposition, resolveDefinition,
     declaredSubject, subtreeOf, dominantRoot,
 
 } from '../composition-tree';
-import { generalViewFilter, hierarchyTypesFor } from '../general-view';
+import { generalViewFilter, hierarchyTypesFor, resolveGeneralMode } from '../general-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
     return {
@@ -389,3 +389,42 @@ describe('dominantRoot', () => {
         expect(dominantRoot(buildCompositionTree(els, rels))).toBe('big');
     });
 });
+
+describe('resolveGeneralMode', () => {
+    it('honours a declared tree hint when there is a hierarchy', () => {
+        expect(resolveGeneralMode({ layoutHint: 'tree' }, true)).toBe('tree');
+        expect(resolveGeneralMode({ layoutHint: 'containment' }, true)).toBe('containment');
+    });
+
+    it('falls back to graph when the selection composes nothing', () => {
+        // The Affera L1 function allocation: seven functions, no composition.
+        expect(resolveGeneralMode({ layoutHint: 'tree' }, false)).toBe('graph');
+        expect(resolveGeneralMode({ layoutHint: 'containment' }, false)).toBe('graph');
+    });
+
+    it('defaults to graph, and assumes a hierarchy when not told', () => {
+        expect(resolveGeneralMode(undefined)).toBe('graph');
+        expect(resolveGeneralMode({ layoutHint: 'tree' })).toBe('tree');
+    });
+});
+
+describe('resolveDefinition across constructs', () => {
+    const defs = (els: MemoElement[]) => definitionIndex(Object.fromEntries(els.map(e => [e.id, e])));
+
+    it('reads the typing attribute each construct uses', () => {
+        const d = el('TreatArrhythmiaUsingAffera', { isDefinition: true, construct: 'action' });
+        const u = el('sysTreat', {
+            construct: 'action', kind: 'SystemFunction',
+            attributes: { actionType: 'TreatArrhythmiaUsingAffera' },
+        });
+        expect(resolveDefinition(u, defs([d, u]))?.id).toBe('TreatArrhythmiaUsingAffera');
+    });
+
+    it('resolves a part usage the same way', () => {
+        // Same SysML mechanism, so the same result: `part p : Board`.
+        const d = el('Board', { isDefinition: true });
+        const u = el('board1', { attributes: { usageType: 'pkg::Board' } });
+        expect(resolveDefinition(u, defs([d, u]))?.id).toBe('Board');
+    });
+});
+

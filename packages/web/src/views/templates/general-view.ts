@@ -35,10 +35,21 @@ export const GENERAL_VIEW_MODES: readonly GeneralViewMode[] = ['graph', 'tree', 
 /**
  * Initial mode for a view: honors a declared `layoutHint` presentation
  * hint ("tree" | "containment" | "graph"), defaults to graph.
+ *
+ * A hint asking for a tree is only honoured when there is a hierarchy to draw.
+ * The Affera L1 function allocation declares `layoutHint: "tree"` and holds
+ * seven functions that compose nothing, so tree mode drew seven orphan boxes
+ * with no line between them — a list pretending to be a decomposition. It opens
+ * as a graph instead, and the mode toggle is still there for anyone who wants
+ * the other view.
  */
-export function resolveGeneralMode(properties?: Record<string, string>): GeneralViewMode {
+export function resolveGeneralMode(
+    properties?: Record<string, string>,
+    hasHierarchy = true,
+): GeneralViewMode {
     const hint = properties?.layoutHint;
-    return hint === 'tree' || hint === 'containment' || hint === 'graph' ? hint : 'graph';
+    const declared = hint === 'tree' || hint === 'containment' || hint === 'graph' ? hint : 'graph';
+    return declared !== 'graph' && !hasHierarchy ? 'graph' : declared;
 }
 
 /**
@@ -120,6 +131,14 @@ export function buildGeneralViewTree(
     // A BDD is a BDD OF something: one root, and everything on it part of that
     // root. Whatever the subject does not reach was pulled in by a broad
     // selection query and is not on this diagram.
+    // Nothing to root: the view's elements compose nothing. A function
+    // allocation is a list of L1 functions, not a decomposition of one — the
+    // Affera L1 view holds seven actions and no composition at all — and
+    // picking a "root" there would prune six of them away to leave an
+    // arbitrary single box. `hasHierarchy` is the whole test: rooting is a
+    // statement about a tree, and there is no tree here.
+    if (full.childrenMap.size === 0) return full;
+
     const subject = declaredSubject(viewElement?.attributes, model.elements);
     const subjectNode = subject
         ? (subject.isDefinition ? subject : definitions.get(
