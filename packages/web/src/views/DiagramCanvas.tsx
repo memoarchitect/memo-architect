@@ -90,6 +90,12 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
+
+/** The view's own element, which carries the `expose` naming its subject. */
+const viewElementOf = (
+    model: MemoModelDTO | null | undefined,
+    diagram: { elementId?: string } | null | undefined,
+) => (model && diagram?.elementId ? model.elements[diagram.elementId] : undefined);
 import { exportDiagram, type DiagramExportFormat } from '../diagram/export-diagram';
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
 import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
@@ -1443,7 +1449,7 @@ function DiagramCanvasInner() {
             && resolveGeneralMode(selectedDiagram?.properties) !== 'graph'
             && expandedHint.length === 0;
         setExpandedNodes(opensDecomposed
-            ? defaultExpandedNodes(buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes))
+            ? defaultExpandedNodes(buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram)))
             : new Set(expandedHint));
         // collapsedInterconnectionNodes / collapsedStateNodes are seeded by the
         // default-collapsed effect below, which owns them outright — clearing
@@ -1573,7 +1579,7 @@ function DiagramCanvasInner() {
         // UseCase Includes). Those may intentionally have multiple roots, so
         // the strict single-composition-tree rule does not apply.
         if (!usesComposition) return null;
-        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes));
+        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram)));
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
@@ -1583,7 +1589,7 @@ function DiagramCanvasInner() {
     const buildActiveTree = useCallback(() => {
         if (!model) return undefined;
         if (isFBSDiagram) return buildFunctionalTree(model);
-        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes);
+        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram));
         return buildDecompositionTree(model);
     }, [model, isFBSDiagram, isGeneralTemplate, viewpointFilter, selectedDiagram?.relationshipTypes]);
 
@@ -2277,6 +2283,7 @@ function DiagramCanvasInner() {
                 sequence: { viewpointFilter },
                 general: {
                     mode: generalMode, viewpointFilter, expandedNodes, nodeDirections,
+                    viewElement: viewElementOf(model, selectedDiagram),
                     callbacks: treeCallbacks,
                     positionCache: positionCacheRef.current,
                     hierarchyRelationshipTypes: selectedDiagram?.relationshipTypes,
