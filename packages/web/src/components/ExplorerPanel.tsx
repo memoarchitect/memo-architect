@@ -29,6 +29,7 @@ import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
 import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { diagramUrl, elementUrl } from '../router';
+import { buildOwnershipTest } from '../views/templates/composition-tree';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1125,6 +1126,13 @@ export function computeExplorerGroupTree(
     // packages with explicit composition relationships does not use — leaving
     // every element a root and the tree flat. Read `composes` first and fall
     // back to ownership.
+    // Nest only where one kind OWNS the other. `composes` carries both meanings:
+    // a function decomposes into functions, and a function is also composed to
+    // the ActionUsage that performs it and to the hardware it is allocated to.
+    // An operative action is DONE BY a system, not part of one — so nesting
+    // every `composes` put a traceability action inside the function tree and a
+    // Hazard inside the Risk that concerns it.
+    const owns = buildOwnershipTest(registryKinds);
     const parentOf = new Map<string, string>();
     for (const rel of relationships) {
         if (!rel?.sourceId || !rel?.targetId) continue;
@@ -1132,6 +1140,7 @@ export function computeExplorerGroupTree(
         if (type !== 'composes' && type !== 'compose') continue;
         const source = lookup.get(rel.sourceId);
         const target = lookup.get(rel.targetId);
+        if (source?.element && target?.element && !owns(source.element, target.element)) continue;
         parentOf.set(target?.id ?? rel.targetId, source?.id ?? rel.sourceId);
     }
 

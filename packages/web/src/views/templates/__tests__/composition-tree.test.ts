@@ -6,6 +6,7 @@ import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
     definitionIndex, definitionLevelElements, definitionLevelComposition, resolveDefinition,
+    buildOwnershipTest,
     declaredSubject, subtreeOf, dominantRoot,
 
 } from '../composition-tree';
@@ -430,3 +431,62 @@ describe('resolveDefinition across constructs', () => {
     });
 });
 
+
+// ─── `composes` states ownership and mere relation alike ────────────────────
+
+describe('buildOwnershipTest', () => {
+    // The shape of the real ontology: families meet below universal roots.
+    const kinds = [
+        { name: 'MemoAction' }, { name: 'MemoPart' }, { name: 'MemoItem' },
+        { name: 'MemoFunction', superType: 'MemoAction' },
+        { name: 'SystemFunction', superType: 'MemoFunction' },
+        { name: 'ComponentFunction', superType: 'MemoFunction' },
+        { name: 'ActionUsage' },
+        { name: 'SoftwareElement', superType: 'MemoPart' },
+        { name: 'SoftwareSystem', superType: 'SoftwareElement' },
+        { name: 'SoftwareComponent', superType: 'SoftwareElement' },
+        { name: 'RiskDriver', superType: 'MemoPart' },
+        { name: 'Risk', superType: 'RiskDriver' },
+        { name: 'RiskItem', superType: 'MemoItem' },
+        { name: 'Hazard', superType: 'RiskItem' },
+    ];
+    const owns = buildOwnershipTest(kinds);
+    const of = (kind: string) => ({ ...el('x'), kind } as MemoElement);
+    const pair = (a: string, b: string) => owns(of(a), of(b));
+
+    it('owns within a family: a function decomposes into functions', () => {
+        expect(pair('SystemFunction', 'ComponentFunction')).toBe(true);
+        expect(pair('SoftwareSystem', 'SoftwareComponent')).toBe(true);
+        expect(pair('ComponentFunction', 'ComponentFunction')).toBe(true);
+    });
+
+    it('does not own across families: an action is DONE BY, not part of', () => {
+        expect(pair('ComponentFunction', 'ActionUsage')).toBe(false);
+        expect(pair('ActionUsage', 'ComponentFunction')).toBe(false);
+    });
+
+    it('does not own what it merely concerns', () => {
+        // Risk and Hazard root in different trees entirely.
+        expect(pair('Risk', 'Hazard')).toBe(false);
+    });
+
+    it('does not let a universal root make everything a family', () => {
+        // Both reach MemoPart, and neither owns the other.
+        expect(pair('Risk', 'SoftwareSystem')).toBe(false);
+    });
+
+    it('nests only owned children in a tree', () => {
+        const fn = el('fn', { kind: 'ComponentFunction' });
+        const sub = el('sub', { kind: 'ComponentFunction' });
+        const act = el('act', { kind: 'ActionUsage' });
+        const rels = [rel('composes', 'fn', 'sub'), rel('composes', 'fn', 'act')];
+        const tree = buildCompositionTree([fn, sub, act], rels, COMPOSITION_REL_TYPES, owns);
+        expect(tree.childrenMap.get('fn')).toEqual(['sub']);
+        expect(tree.roots).toContain('act');
+    });
+
+    it('nests everything when the registry is unavailable', () => {
+        const permissive = buildOwnershipTest(undefined);
+        expect(permissive(of('Risk'), of('Hazard'))).toBe(true);
+    });
+});

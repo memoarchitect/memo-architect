@@ -22,7 +22,7 @@ import {
     type LayoutResult,
 } from '../layout';
 import {
-    buildCompositionTree, isPortUsage, definitionIndex, definitionLevelElements,
+    buildCompositionTree, isPortUsage, definitionIndex, definitionLevelElements, buildOwnershipTest,
     definitionLevelComposition, declaredSubject, subtreeOf, dominantRoot,
     COMPOSITION_REL_TYPES, type CompositionTree,
 } from './composition-tree';
@@ -127,6 +127,10 @@ export function buildGeneralViewTree(
         elements,
         definitionLevelComposition(model.relationships, model.elements, definitions, types),
         types,
+        // `composes` states ownership and mere relation alike; only the first
+        // nests. Without this a function contained the ActionUsage that
+        // performs it.
+        buildOwnershipTest(model.registries?.kinds),
     );
 
     // A BDD is a BDD OF something: one root, and everything on it part of that
