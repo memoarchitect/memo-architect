@@ -131,46 +131,6 @@ export function buildGeneralViewTree(
     return rootId ? subtreeOf(full, rootId) : full;
 }
 
-/**
- * How many nodes a decomposition may reveal before it stops opening levels.
- *
- * Enough that a real architecture shows its shape on open; small enough that a
- * six-thousand-element model does not try to draw itself at once.
- */
-const DEFAULT_EXPANSION_BUDGET = 80;
-
-/**
- * Which nodes a decomposition expands when it first opens.
- *
- * Tree and containment both started fully collapsed, so a 305-element view
- * opened as a single box reading "3 parts (collapsed)" — a decomposition view
- * showing no decomposition, which every user then had to Expand All to read.
- *
- * Levels are opened breadth-first and the whole level is taken or none of it:
- * stopping halfway through would show some siblings expanded and others not,
- * which reads as structure that is not there. Expansion stops when the next
- * level would exceed the budget, so a broad model opens shallow and a narrow
- * one opens deep — both to something that fits.
- */
-export function defaultExpandedNodes(
-    tree: CompositionTree,
-    budget: number = DEFAULT_EXPANSION_BUDGET,
-): Set<string> {
-    const expanded = new Set<string>();
-    let revealed = tree.roots.length;
-    let level = tree.roots;
-    while (level.length > 0) {
-        const withChildren = level.filter(id => (tree.childrenMap.get(id) ?? []).length > 0);
-        if (withChildren.length === 0) break;
-        const next = withChildren.flatMap(id => tree.childrenMap.get(id) ?? []);
-        if (revealed + next.length > budget) break;
-        for (const id of withChildren) expanded.add(id);
-        revealed += next.length;
-        level = next;
-    }
-    return expanded;
-}
-
 export interface GeneralViewOptions {
     mode: GeneralViewMode;
     viewpointFilter?: (el: MemoElement) => boolean;
