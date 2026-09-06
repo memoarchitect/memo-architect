@@ -1200,8 +1200,20 @@ const TREE_MAX_SUBTREE_WIDTH = 2600;
  */
 const TREE_MAX_ROW_WIDTH = 5200;
 
-function treeNodeWidth(el: MemoElement): number {
-    return Math.max(el.name.length * 8 + 80, 220);
+/**
+ * Every node in a decomposition is the same size.
+ *
+ * Width used to follow the name (`name.length * 8 + 80`), so a block called
+ * "Remote Control Power Supply and Power Cord" drew nearly twice as wide as its
+ * siblings and the tree read as though the long-named boxes mattered more.
+ * Size is not a channel this diagram uses for anything, and a uniform grid is
+ * what makes a decomposition scannable — the reference implementation fixes it
+ * at 240 for the same reason. Long names ellipsize in the node.
+ */
+const TREE_NODE_WIDTH = 240;
+
+function treeNodeWidth(_el: MemoElement): number {
+    return TREE_NODE_WIDTH;
 }
 
 export async function computeDecompositionLayout(
