@@ -47,7 +47,7 @@ import { FONT, COLOR } from '../styles/tokens';
 import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
-    resolveGeneralMode, buildGeneralViewTree,
+    resolveGeneralMode, buildGeneralViewTree, defaultExpandedNodes,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import {
@@ -1435,7 +1435,16 @@ function DiagramCanvasInner() {
         const expandedHint = selectedDiagram?.properties?.styleHint?.startsWith('expanded:')
             ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
             : [];
-        setExpandedNodes(new Set(expandedHint));
+        // A decomposition opens showing its decomposition. Fully collapsed, a
+        // 305-element view opened as one box reading "3 parts (collapsed)" and
+        // every reader's first action was Expand All. A view that names its own
+        // expansion still wins.
+        const opensDecomposed = model
+            && resolveGeneralMode(selectedDiagram?.properties) !== 'graph'
+            && expandedHint.length === 0;
+        setExpandedNodes(opensDecomposed
+            ? defaultExpandedNodes(buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes))
+            : new Set(expandedHint));
         // collapsedInterconnectionNodes / collapsedStateNodes are seeded by the
         // default-collapsed effect below, which owns them outright — clearing
         // them here too would race it and leave the diagram fully expanded.
@@ -3653,11 +3662,19 @@ function DiagramCanvasInner() {
                         {isGeneralTemplate && !isUseCaseDiagram && supportsToolbarOperation('generalMode') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
-                                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
+                                {/* The dock is a two-column grid of 38px cells, so a
+                                    three-button group landed inside ONE cell and the
+                                    modes became three unreadable slivers. Grouped
+                                    controls take a full row and say what they are. */}
+                                <div style={{ gridColumn: '1 / -1', fontSize: 10, fontWeight: 600, color: '#6B7280', paddingLeft: 2 }}>
+                                    View as
+                                </div>
+                                <div className="flex rounded overflow-hidden"
+                                    style={{ gridColumn: '1 / -1', border: '1px solid #E5E5E0' }}>
                                     {allowedGeneralModes.map(m => (
                                         <button key={m}
                                             onClick={() => { setGeneralMode(m); positionCacheRef.current.clear(); }}
-                                            className="px-2 py-0.5 text-xs font-medium capitalize"
+                                            className="flex-1 flex items-center justify-center py-1 text-xs font-medium capitalize"
                                             style={{
                                                 background: generalMode === m ? '#1B3A4B' : '#FFFFFF',
                                                 color: generalMode === m ? '#FFFFFF' : '#6B7280',
@@ -3691,10 +3708,14 @@ function DiagramCanvasInner() {
                         {isDecompDiagram && !isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
-                                <div className="flex rounded overflow-hidden" style={{ border: '1px solid #E5E5E0' }}>
+                                <div style={{ gridColumn: '1 / -1', fontSize: 10, fontWeight: 600, color: '#6B7280', paddingLeft: 2 }}>
+                                    View as
+                                </div>
+                                <div className="flex rounded overflow-hidden"
+                                    style={{ gridColumn: '1 / -1', border: '1px solid #E5E5E0' }}>
                                     {(['containment', 'decomposition'] as const).map(s => (
                                         <button key={s} onClick={() => { setLayoutStyle(s); positionCacheRef.current.clear(); }}
-                                            className="px-2 py-0.5 text-xs font-medium"
+                                            className="flex-1 flex items-center justify-center py-1 text-xs font-medium"
                                             style={{
                                                 background: layoutStyle === s ? '#1B3A4B' : '#FFFFFF',
                                                 color: layoutStyle === s ? '#FFFFFF' : '#6B7280',
