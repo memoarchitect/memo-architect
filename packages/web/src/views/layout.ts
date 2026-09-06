@@ -16,7 +16,7 @@ import { runLayoutProvider } from '../diagram/layout-providers';
 import { LAYER_COLORS, REL_COLORS, CONTAINMENT_DEPTH_COLORS } from '../constants';
 import { SHADOW, RADIUS, EDGE, FONT } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
-import { pickCompartmentEntries } from './templates/composition-tree';
+import { pickCompartmentEntries, portCompartmentEntries } from './templates/composition-tree';
 
 export const elk = {
     /** Compatibility facade while call sites migrate from the ELK-shaped graph contract. */
@@ -752,8 +752,12 @@ export async function computeLayout(
 
     // Estimate node width from the longer of name and kind label so long kind
     // tags (e.g. HARDWAREASSEMBLY) don't overflow the box
+    // Attributes first, then ports — the order a SysML block is written in.
     const compartmentsByEl = options?.compartments
-        ? new Map(visibleElements.map(el => [el.id, pickCompartmentEntries(el)]))
+        ? new Map(visibleElements.map(el => [el.id, [
+            ...pickCompartmentEntries(el),
+            ...portCompartmentEntries(el, model),
+        ]]))
         : undefined;
     const nodeWidth = (el: MemoElement) =>
         Math.max(el.name.length * 7.5 + 48, el.kind.length * 6.8 + 48, 130);
