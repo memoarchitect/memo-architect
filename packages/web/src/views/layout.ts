@@ -1179,6 +1179,13 @@ const TREE_H_GAP = 100;          // horizontal gap between sibling subtrees (V m
 const TREE_V_GAP = 110;          // vertical rank gap parent → children (V mode)
 const TREE_HMODE_OFFSET = 300;   // children column offset right of parent (H mode)
 const TREE_HMODE_V_GAP = 44;     // vertical gap between stacked children (H mode)
+/**
+ * Children beyond this many stack in a column instead of spreading sideways.
+ *
+ * Six keeps the familiar side-by-side tree for the shapes people draw by hand,
+ * and switches before the width of a level starts to dominate the diagram.
+ */
+const TREE_FANOUT_LIMIT = 6;
 
 function treeNodeWidth(el: MemoElement): number {
     return Math.max(el.name.length * 8 + 80, 220);
@@ -1204,9 +1211,32 @@ export async function computeDecompositionLayout(
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
 
     const cache = options.positionCache ?? new Map<string, { x: number; y: number }>();
-    const direction = (id: string) => options.nodeDirections.get(id) || 'vertical';
     const childrenOf = (id: string) =>
         (tree.childrenMap.get(id) || []).filter(cid => tree.elements.has(cid));
+
+    /**
+     * Which way a node fans its children out, when the user has not said.
+     *
+     * Vertical means children sit side by side under the parent, which reads as
+     * a tree and is right for a handful of them. It is quadratic in the wrong
+     * direction though: every extra sibling adds its whole subtree's width, so
+     * a level with twenty children pushes the diagram tens of thousands of
+     * pixels wide and fitting it leaves every box unreadably small. A 225-node
+     * decomposition came out ~39,000px across.
+     *
+     * Past a threshold the children stack in a column beside the parent
+     * instead — the shape a file tree or mind map uses for the same reason.
+     * Width then grows with DEPTH, which is bounded by the model's nesting,
+     * rather than with BREADTH, which is not.
+     *
+     * An explicit `nodeDirections` entry always wins: this is the starting
+     * point, not a constraint.
+     */
+    const direction = (id: string): 'vertical' | 'horizontal' => {
+        const chosen = options.nodeDirections.get(id);
+        if (chosen) return chosen;
+        return childrenOf(id).length > TREE_FANOUT_LIMIT ? 'horizontal' : 'vertical';
+    };
 
     // Subtree extent given current expansion + per-node direction
     const dims = (id: string): { width: number; height: number } => {

@@ -888,8 +888,21 @@ function DiagramCanvasInner() {
     const [relayoutNonce, setRelayoutNonce] = useState(0);
     const [paletteCollapsed, setPaletteCollapsed] = useState(true);
     // The floating toolbar drawer starts closed: on load it covers whatever the
-    // diagram placed under it, which on a wide layout is real content.
-    const [toolbarCollapsed, setToolbarCollapsed] = useState(true);
+    // diagram placed under it, which on a wide layout is real content. But the
+    // choice is REMEMBERED, like the minimap's. It used to reset on every
+    // navigation, and since the drawer holds the general-view mode switch —
+    // graph / tree / containment — opening a second diagram silently took those
+    // modes away again. A control that has to be rediscovered per diagram reads
+    // as a control that was removed.
+    const [toolbarCollapsed, setToolbarCollapsed] = useState(
+        () => localStorage.getItem('memo.diagram.toolbar.open') !== 'true');
+    useEffect(() => {
+        try {
+            localStorage.setItem('memo.diagram.toolbar.open', String(!toolbarCollapsed));
+        } catch {
+            // storage disabled — the choice still holds for this session
+        }
+    }, [toolbarCollapsed]);
     const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
     const actionFlowToolbarPlacement: 'left' = 'left';
 
