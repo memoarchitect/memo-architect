@@ -22,7 +22,8 @@ import {
     type LayoutResult,
 } from '../layout';
 import {
-    buildCompositionTree, isPortUsage, COMPOSITION_REL_TYPES, type CompositionTree,
+    buildCompositionTree, isPortUsage, withDefinitionComposition, redundantDefinitionIds,
+    COMPOSITION_REL_TYPES, type CompositionTree,
 } from './composition-tree';
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
 
@@ -101,10 +102,17 @@ export function buildGeneralViewTree(
     viewpointFilter?: (el: MemoElement) => boolean,
     hierarchyRelationshipTypes?: readonly string[],
 ): CompositionTree {
+    const selected = visibleViewElements(model, viewpointFilter);
+    // A definition already represented by one of its usages would otherwise
+    // stand beside it holding the same children — see redundantDefinitionIds.
+    const redundant = redundantDefinitionIds(selected);
+    const elements = redundant.size ? selected.filter(el => !redundant.has(el.id)) : selected;
+    const types = hierarchyTypesFor(hierarchyRelationshipTypes);
+    const byId = new Map(elements.map(el => [el.id, el]));
     return buildCompositionTree(
-        visibleViewElements(model, viewpointFilter),
-        model.relationships,
-        hierarchyTypesFor(hierarchyRelationshipTypes),
+        elements,
+        withDefinitionComposition(model.relationships, byId, model.elements, types),
+        types,
     );
 }
 

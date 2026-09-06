@@ -18,6 +18,102 @@ export const COMPOSITION_REL_TYPES: ReadonlySet<string> = new Set([
     'composedOf', 'composes', 'decomposedBy', 'aggregation',
 ]);
 
+/**
+ * Composition edges a usage inherits from the definition that types it.
+ *
+ * SysML declares composition on the DEFINITION — `part def DataAcquisitionBoard
+ * { part fpga : ...; }` — while a decomposition shows USAGES. Walking
+ * usage-to-usage therefore stops one level in: `dataAcquisitionBoard` has no
+ * composition edge of its own, and the six parts it is made of hang off
+ * `DataAcquisitionBoard` instead. The tree came apart exactly there, and every
+ * definition then floated as its own parentless root — 87 of the IMS physical
+ * view's 146.
+ *
+ * So a usage inherits its definition's children, which is the hop the
+ * memo-sysmlv4 reference makes when it resolves `partUsage.partDef` and
+ * recurses into that definition's own parts.
+ *
+ * Its own edges win: a usage that overrides part of its definition keeps what
+ * it declared, and the definition only fills in what the usage left unsaid.
+ *
+ * Inherited edges are returned FIRST so they beat the definition's own edge to
+ * the child, because `buildCompositionTree` gives each element a single parent
+ * and the first edge takes it. In a decomposition of usages the usage is the
+ * real parent; leaving the definition to claim it is what left the usage a
+ * childless leaf and the definition a parentless root.
+ *
+ * One consequence is worth stating: two usages of the same definition compete
+ * for the same child elements and only the first gets them. A tree cannot put
+ * one node under two parents, and these ids are shared model elements, not
+ * per-usage copies.
+ */
+export function withDefinitionComposition(
+    relationships: readonly MemoRelationship[],
+    elements: Map<string, MemoElement>,
+    allElements: Readonly<Record<string, MemoElement>>,
+    hierarchyRelationshipTypes: ReadonlySet<string> = COMPOSITION_REL_TYPES,
+): MemoRelationship[] {
+    // Definitions indexed by the names a usage can refer to them by.
+    const definitions = new Map<string, MemoElement>();
+    for (const el of Object.values(allElements)) {
+        if (!el.isDefinition) continue;
+        definitions.set(el.id, el);
+        if (!definitions.has(el.name)) definitions.set(el.name, el);
+    }
+
+    const childrenOfDefinition = new Map<string, MemoRelationship[]>();
+    const declaresOwn = new Set<string>();
+    for (const rel of relationships) {
+        if (!hierarchyRelationshipTypes.has(rel.type)) continue;
+        declaresOwn.add(rel.sourceId);
+        const list = childrenOfDefinition.get(rel.sourceId);
+        if (list) list.push(rel); else childrenOfDefinition.set(rel.sourceId, [rel]);
+    }
+
+    const inherited: MemoRelationship[] = [];
+    for (const usage of elements.values()) {
+        if (usage.isDefinition || declaresOwn.has(usage.id)) continue;
+        const typeName = (usage.attributes.usageType ?? '').split('::').pop()?.trim();
+        if (!typeName) continue;
+        const definition = definitions.get(typeName);
+        if (!definition || definition.id === usage.id) continue;
+        for (const rel of childrenOfDefinition.get(definition.id) ?? []) {
+            inherited.push({ ...rel, id: `${rel.id}-via-${usage.id}`, sourceId: usage.id });
+        }
+    }
+    return inherited.length ? [...inherited, ...relationships] : [...relationships];
+}
+
+/**
+ * Definitions whose content is already on the diagram through a usage.
+ *
+ * Once a usage inherits its definition's composition
+ * (`withDefinitionComposition`), keeping the definition too draws the same
+ * structure twice: `dataAcquisitionBoard` decomposes into the six parts, and
+ * `DataAcquisitionBoard` sits alongside it as a parentless root holding the
+ * same six. 87 of the IMS physical view's 146 roots were definitions of
+ * usages already present.
+ *
+ * A definition is dropped ONLY when some usage in the same set is typed by it.
+ * A view that shows definitions on purpose — a taxonomy, or a package of types
+ * with no instances — keeps every one of them, because nothing there is a
+ * duplicate of anything.
+ */
+export function redundantDefinitionIds(elements: Iterable<MemoElement>): Set<string> {
+    const all = [...elements];
+    const typed = new Set<string>();
+    for (const el of all) {
+        if (el.isDefinition) continue;
+        const name = (el.attributes.usageType ?? '').split('::').pop()?.trim();
+        if (name) typed.add(name);
+    }
+    const redundant = new Set<string>();
+    for (const el of all) {
+        if (el.isDefinition && (typed.has(el.id) || typed.has(el.name))) redundant.add(el.id);
+    }
+    return redundant;
+}
+
 export interface CompositionTree {
     /** Elements with no parent inside the set, in insertion order */
     roots: string[];
