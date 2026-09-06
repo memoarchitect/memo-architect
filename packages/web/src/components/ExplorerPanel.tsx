@@ -953,6 +953,40 @@ export function artifactCategory(kind: string, superType?: string): typeof ARTIF
  * selected ontology land in "Undefined — Not in Ontology".
  * Exported for tests.
  */
+/**
+ * Fold a kind's elements into folders by the grouping package they sit in.
+ *
+ * SysML lets a package group members inside a usage body — `part scrHome {
+ * package grpHeader { … } }` — and the builder records which one an element
+ * landed in as `elementPackage`. Without this the Catalog flattens all of them
+ * under their kind, so a screen's header, body and footer groups arrive as one
+ * undifferentiated list and the grouping the author wrote is invisible.
+ *
+ * Elements with no grouping package keep their position rather than being
+ * pushed below the folders: a kind is usually mostly ungrouped, and sinking
+ * those under a couple of folders would reorder the common case to serve the
+ * rare one. Folders appear where their first member would have been.
+ */
+function groupByElementPackage(nodes: TreeNode[]): TreeNode[] {
+    const folders = new Map<string, TreeNode>();
+    const ordered: TreeNode[] = [];
+    for (const node of nodes) {
+        const packageName = node.element?.attributes?.['elementPackage'];
+        if (!packageName) {
+            ordered.push(node);
+            continue;
+        }
+        let folder = folders.get(packageName);
+        if (!folder) {
+            folder = { id: `pkg:${packageName}`, name: packageName, type: 'folder', children: [] };
+            folders.set(packageName, folder);
+            ordered.push(folder);
+        }
+        folder.children.push(node);
+    }
+    return ordered;
+}
+
 export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
@@ -1234,7 +1268,7 @@ export function computeExplorerGroupTree(
             for (const [kind, kindRoots] of byKind.entries()) {
                 const tree = [...kindRoots];
                 sortNodes(tree);
-                subBuckets.set(kind, tree);
+                subBuckets.set(kind, groupByElementPackage(tree));
             }
             buckets.set(sub, subBuckets);
         }
@@ -2467,15 +2501,42 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const renderGroupedDiagramList = (diagrams: DiagramDTO[], vpId: string) => {
         const packageTree = buildViewPackageTree(diagrams);
-        const renderPackage = (node: ViewPackageNode, depth = 0): React.ReactNode => (
-            <div key={node.id} style={{ marginLeft: depth ? '12px' : 0 }}>
-                <div className="px-2 py-1 font-semibold" style={{ color: COLOR.muted, fontSize: FONT.xs }}>
-                    {node.name}
+        // A package is a folder, not a caption. It was rendered as a bare label
+        // with its views always expanded, so a viewpoint holding several
+        // packages became one long unbreakable list — the tree could show the
+        // grouping but not use it. Same chevron, folder icon and count badge as
+        // the model tree, so one thing looks like one thing across the explorer.
+        const countIn = (node: ViewPackageNode): number =>
+            node.diagrams.length + node.children.reduce((total, child) => total + countIn(child), 0);
+        const renderPackage = (node: ViewPackageNode, depth = 0): React.ReactNode => {
+            const key = `vp-pkg:${vpId}:${node.id}`;
+            const isExpanded = expandedVps.has(key);
+            return (
+                <div key={node.id} style={{ marginLeft: depth ? '12px' : 0 }}>
+                    <button
+                        type="button"
+                        onClick={() => toggleExpand(key)}
+                        aria-expanded={isExpanded}
+                        className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
+                        style={{
+                            background: 'none', border: 0, cursor: 'pointer',
+                            color: COLOR.muted, fontSize: FONT.explorer.group, textAlign: 'left',
+                        }}
+                    >
+                        <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
+                        <FolderIcon open={isExpanded} color={COLOR.muted} />
+                        <span className="flex-1 truncate">{node.name}</span>
+                        <ExplorerCountBadge count={countIn(node)} color={COLOR.muted} />
+                    </button>
+                    {isExpanded && (
+                        <>
+                            <div style={{ marginLeft: '8px' }}>{renderDiagramList(node.diagrams, vpId)}</div>
+                            {node.children.map(child => renderPackage(child, depth + 1))}
+                        </>
+                    )}
                 </div>
-                <div style={{ marginLeft: '8px' }}>{renderDiagramList(node.diagrams, vpId)}</div>
-                {node.children.map(child => renderPackage(child, depth + 1))}
-            </div>
-        );
+            );
+        };
         if (diagrams.some(diagram => (diagram as PackagedDiagram).package)) return packageTree.map(node => renderPackage(node));
         const groupOf = (diagram: DiagramDTO) => (diagram as DiagramDTO & { group?: string }).group;
         if (!diagrams.some(diagram => groupOf(diagram))) return renderDiagramList(diagrams, vpId);
