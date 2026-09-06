@@ -37,6 +37,21 @@ const spanOf = (nodes: { position: { x: number }; style?: { width?: unknown } }[
     return Math.max(...rights) - Math.min(...xs);
 };
 
+const spanYOf = (nodes: { position: { y: number } }[]) => {
+    const ys = nodes.map(node => node.position.y);
+    return Math.max(...ys) - Math.min(...ys);
+};
+
+const layoutHeight = async (childCount: number) => {
+    const result = await computeDecompositionLayout(emptyModel, {
+        expandedNodes: new Set(['root']),
+        nodeDirections: new Map(),
+        callbacks: { onToggleExpand: () => {}, onToggleDirection: () => {} },
+        tree: tree(childCount) as never,
+    });
+    return spanYOf(result.nodes as never);
+};
+
 const layoutWidth = async (childCount: number, forced?: 'vertical' | 'horizontal') => {
     const result = await computeDecompositionLayout(emptyModel, {
         expandedNodes: new Set(['root']),
@@ -78,28 +93,32 @@ const balancedWidth = async (branch: number, depth: number) => {
 };
 
 describe('decomposition tree fan-out', () => {
-    it('keeps a narrow level side by side', async () => {
-        const four = await layoutWidth(4);
-        const one = await layoutWidth(1);
-        // Four children spread sideways, so the level is clearly wider than one.
-        expect(four).toBeGreaterThan(one);
-    });
-
-    it('lays every node out the same way, whatever its breadth', async () => {
-        // Direction used to flip to a column on its own once a subtree passed a
-        // width budget. On a real diagram that read as arbitrary — one block
-        // laid its children across, the next laid them down, and nothing on
-        // screen said why. Forty children are simply wider than eight.
+    it('wraps a broad level instead of running it off the canvas', async () => {
+        // The IMS physical architecture has a block with 21 parts. In one row
+        // that is 7040px, which fits on screen only at 0.12 zoom. Five times
+        // the children must not be five times the width.
         const eight = await layoutWidth(8);
         const forty = await layoutWidth(40);
-        expect(forty).toBeGreaterThan(eight * 2);
+        expect(forty).toBeLessThan(eight * 2);
+        expect(forty).toBeLessThan(2200);
+    });
+
+    it('spends the wrapped level on height instead', async () => {
+        const four = await layoutHeight(4);
+        const forty = await layoutHeight(40);
+        expect(forty).toBeGreaterThan(four);
+    });
+
+    it('keeps a level that fits on one row', async () => {
+        // Four children still sit side by side; wrapping is a bound, not a grid.
+        expect(await layoutWidth(4)).toBeGreaterThan(await layoutWidth(1));
     });
 
     it('takes the direction the user set, at that node only', async () => {
-        // The V/H control is how direction is chosen now, so a forced column
-        // has to be dramatically narrower than the default row.
-        expect(await layoutWidth(40, 'horizontal')).toBeLessThan(await layoutWidth(40) / 4);
+        // A column to the right is narrower than a wrapped block of rows.
+        expect(await layoutWidth(40, 'horizontal')).toBeLessThan(await layoutWidth(40));
     });
+
 });
 
 describe('many roots', () => {
