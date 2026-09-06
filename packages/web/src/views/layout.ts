@@ -1301,7 +1301,7 @@ export async function computeDecompositionLayout(
     // theme's own ink.
     const compColor = COLOR.secondary;
 
-    const place = (id: string, parentId: string | null, centerX: number, centerY: number) => {
+    const place = (id: string, parentId: string | null, centerX: number, centerY: number, depth = 0) => {
         const el = tree.elements.get(id)!;
         const w = treeNodeWidth(el);
         const kids = childrenOf(id);
@@ -1318,7 +1318,7 @@ export async function computeDecompositionLayout(
             // A legend, when the view names one, is what the colour means here;
             // the layer is the default only because it is what colour meant
             // before anything said otherwise.
-            element: el, layerColor: options.legend?.colorFor(el) ?? LAYER_COLORS[el.layer] ?? '#666',
+            element: el, layerColor: options.legend?.colorFor(el, { depth }) ?? LAYER_COLORS[el.layer] ?? '#666',
             isExpanded, hasChildren: kids.length > 0, childCount: kids.length,
             direction: direction(id),
             onToggleExpand: () => options.callbacks.onToggleExpand(id),
@@ -1364,7 +1364,7 @@ export async function computeDecompositionLayout(
             let childX = pos.x + w / 2 - totalW / 2;
             const childCenterY = pos.y + TREE_NODE_HEIGHT + TREE_V_GAP + TREE_NODE_HEIGHT / 2;
             kids.forEach((cid, i) => {
-                place(cid, id, childX + kd[i].width / 2, childCenterY);
+                place(cid, id, childX + kd[i].width / 2, childCenterY, depth + 1);
                 childX += kd[i].width + TREE_H_GAP;
             });
         } else {
@@ -1373,7 +1373,7 @@ export async function computeDecompositionLayout(
             let childY = pos.y + TREE_NODE_HEIGHT + 20;
             kids.forEach((cid, i) => {
                 const cel = tree.elements.get(cid)!;
-                place(cid, id, childX + treeNodeWidth(cel) / 2, childY + TREE_NODE_HEIGHT / 2);
+                place(cid, id, childX + treeNodeWidth(cel) / 2, childY + TREE_NODE_HEIGHT / 2, depth + 1);
                 childY += kd[i].height + TREE_HMODE_V_GAP;
             });
         }
@@ -1435,7 +1435,7 @@ export function computeContainmentLayout(
         const el = tree.elements.get(nodeId);
         if (!el) return { width: 0, height: 0 };
 
-        const color = options.legend?.colorFor(el) ?? LAYER_COLORS[el.layer] ?? '#666';
+        const color = options.legend?.colorFor(el, { depth }) ?? LAYER_COLORS[el.layer] ?? '#666';
         const children = tree.childrenMap.get(nodeId) || [];
         const hasChildren = children.length > 0;
         const isExpanded = options.expandedNodes.has(nodeId);
