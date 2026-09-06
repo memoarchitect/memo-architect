@@ -1,10 +1,10 @@
 // ─── Decomposition tree fan-out ──────────────────────────────────────────────
 //
-// Direction belongs to the user: every node fans its children out downward
-// unless the V/H control on it says otherwise. An automatic flip past a width
-// budget used to make a diagram look arbitrary, and it existed only because
-// views carried hundreds of unrelated roots — which rooting a BDD at its
-// subject fixed at the source. Root ROWS still wrap; that is below.
+// Direction belongs to the user: every node fans its children out downward,
+// on ONE rank, unless the V/H control on it says otherwise. An automatic flip
+// past a width budget made a diagram look arbitrary; wrapping a rank onto a
+// second row routed edges behind sibling nodes. Root ROWS still wrap — they
+// have no parent to draw an edge from, so nothing passes behind anything.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { describe, it, expect } from 'vitest';
@@ -93,25 +93,26 @@ const balancedWidth = async (branch: number, depth: number) => {
 };
 
 describe('decomposition tree fan-out', () => {
-    it('wraps a broad level instead of running it off the canvas', async () => {
-        // The IMS physical architecture has a block with 21 parts. In one row
-        // that is 7040px, which fits on screen only at 0.12 zoom. Five times
-        // the children must not be five times the width.
+    it('keeps a level on one rank, however broad', async () => {
+        // A rank is one line. Wrapping onto a second row bounded the width but
+        // sent every edge to that row down past the first, behind sibling
+        // boxes — and an arrow emerging from behind a node reads as though that
+        // node were the parent.
         const eight = await layoutWidth(8);
         const forty = await layoutWidth(40);
-        expect(forty).toBeLessThan(eight * 2);
-        expect(forty).toBeLessThan(2200);
+        expect(forty).toBeGreaterThan(eight * 2);
     });
 
-    it('spends the wrapped level on height instead', async () => {
-        const four = await layoutHeight(4);
-        const forty = await layoutHeight(40);
-        expect(forty).toBeGreaterThan(four);
-    });
-
-    it('keeps a level that fits on one row', async () => {
-        // Four children still sit side by side; wrapping is a bound, not a grid.
-        expect(await layoutWidth(4)).toBeGreaterThan(await layoutWidth(1));
+    it('puts every child of a level at the same depth', async () => {
+        const result = await computeDecompositionLayout(emptyModel, {
+            expandedNodes: new Set(['root']),
+            nodeDirections: new Map(),
+            callbacks: { onToggleExpand: () => {}, onToggleDirection: () => {} },
+            tree: tree(12) as never,
+        });
+        const children = (result.nodes as never as { id: string; position: { y: number } }[])
+            .filter(n => n.id !== 'root');
+        expect(new Set(children.map(n => n.position.y)).size).toBe(1);
     });
 
     it('takes the direction the user set, at that node only', async () => {

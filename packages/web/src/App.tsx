@@ -578,6 +578,8 @@ function UrlNavigationSync() {
     // store → URL effect does not push the view it is about to replace.
     const urlConsumed = useRef(false);
     const suppressPush = useRef(false);
+    /** The permalink path whose view the store has actually taken up. */
+    const adoptedPermalink = useRef<string | null>(null);
     const [pendingElementParam, setPendingElementParam] = useState<string | null>(null);
 
     // ── URL → Store ──────────────────────────────────────────────────────
@@ -650,16 +652,6 @@ function UrlNavigationSync() {
         // for it would drag those pages back to the root.
         if (activeView.type === 'welcome' && location.pathname !== '/') return;
 
-        // A permalink resolves against the model in its own route component,
-        // which cannot run until the model has loaded. Pushing the default view
-        // over it in the meantime is what breaks a bookmarked diagram on a cold
-        // load, so wait for the route to adopt the link.
-        if (isPermalinkPath(location.pathname)) {
-            const adopted =
-                (activeView.type === 'diagram' || activeView.type === 'element-detail');
-            if (!adopted) return;
-        }
-
         // The catalog and diagram index pages own their address outright: they
         // have no view to adopt, so there is never a moment when pushing over
         // them is right.
@@ -688,6 +680,23 @@ function UrlNavigationSync() {
             const shortId = el?.shortId ?? selectedElementId;
             const sep = url.includes('?') ? '&' : '?';
             url += `${sep}element=${encodeURIComponent(shortId)}`;
+        }
+
+        // A permalink resolves against the model in its own route component,
+        // which cannot run until the model has loaded. Until that route has
+        // taken the link up, the active view is whatever the last session left
+        // behind — and it is a diagram, so asking only whether the view IS a
+        // diagram called it adopted and pushed the restored view's address over
+        // the one being opened. Following a link to any diagram landed on the
+        // previous one, which looked like the click doing nothing.
+        //
+        // Adoption is a question about identity: the view is this permalink's
+        // when the address it would push is the address already there. Once
+        // taken up, the path is remembered so that navigating away from it
+        // still works.
+        if (isPermalinkPath(location.pathname) && adoptedPermalink.current !== location.pathname) {
+            if (!url || url.split('?')[0] !== location.pathname) return;
+            adoptedPermalink.current = location.pathname;
         }
 
         if (url && location.pathname + location.search !== url) {

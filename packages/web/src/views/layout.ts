@@ -1214,47 +1214,6 @@ const TREE_MAX_ROW_WIDTH = 5200;
  */
 const TREE_NODE_WIDTH = 240;
 
-/**
- * How wide one node's children may run before they wrap onto another row.
- *
- * A level is as broad as the model is: the IMS physical architecture has a
- * block with 21 parts, which laid out in one row is 7040px — a diagram that
- * only fits on screen at 0.12 zoom, where nothing is legible.
- *
- * Wrapping is the honest fix. Flipping such a node into a column instead was
- * the old behaviour and it read as arbitrary, because the reader cannot see
- * the width budget that caused it. A wrapped level still reads as one level:
- * same direction everywhere, same parent above it, just on more than one line.
- */
-const TREE_MAX_CHILD_ROW_WIDTH = 1800;
-const TREE_ROW_GAP = 40;
-
-/** Greedy row packing shared by measurement and placement so both agree. */
-function wrapIntoRows(
-    widths: readonly { width: number; height: number }[],
-    budget: number,
-): number[][] {
-    const rows: number[][] = [];
-    let row: number[] = [];
-    let used = 0;
-    widths.forEach((d, index) => {
-        const next = used === 0 ? d.width : used + TREE_H_GAP + d.width;
-        if (row.length > 0 && next > budget) {
-            rows.push(row);
-            row = [index];
-            used = d.width;
-            return;
-        }
-        row.push(index);
-        used = next;
-    });
-    if (row.length) rows.push(row);
-    return rows;
-}
-
-const rowWidth = (row: readonly number[], kd: readonly { width: number }[]) =>
-    row.reduce((sum, i) => sum + kd[i].width, 0) + (row.length - 1) * TREE_H_GAP;
-
 function treeNodeWidth(_el: MemoElement): number {
     return TREE_NODE_WIDTH;
 }
@@ -1322,12 +1281,8 @@ export async function computeDecompositionLayout(
         resolvedDirection.set(id, chosen);
 
         if (chosen === 'vertical') {
-            const rows = wrapIntoRows(kd, Math.max(TREE_MAX_CHILD_ROW_WIDTH, w));
-            const width = Math.max(w, ...rows.map(row => rowWidth(row, kd)));
-            const height = rows.reduce(
-                (sum, row) => sum + Math.max(...row.map(i => kd[i].height)) + TREE_ROW_GAP,
-                TREE_NODE_HEIGHT + TREE_V_GAP - TREE_ROW_GAP);
-            return { width, height };
+            const maxH = Math.max(...kd.map(d => d.height));
+            return { width: verticalWidth, height: TREE_NODE_HEIGHT + TREE_V_GAP + maxH };
         }
         const maxW = Math.max(...kd.map(d => d.width));
         const totalH = kd.reduce((sum, d) => sum + d.height, 0) + (kd.length - 1) * TREE_HMODE_V_GAP;
@@ -1392,20 +1347,20 @@ export async function computeDecompositionLayout(
         const kd = kids.map(dims);
 
         if (direction(id) === 'vertical') {
-            // Children spread horizontally below the parent, wrapping onto
-            // another row rather than running a broad level off the canvas.
-            const rows = wrapIntoRows(kd, Math.max(TREE_MAX_CHILD_ROW_WIDTH, w));
-            let rowY = pos.y + TREE_NODE_HEIGHT + TREE_V_GAP;
-            for (const row of rows) {
-                const totalW = rowWidth(row, kd);
-                let childX = pos.x + w / 2 - totalW / 2;
-                const rowHeight = Math.max(...row.map(i => kd[i].height));
-                for (const i of row) {
-                    place(kids[i], id, childX + kd[i].width / 2, rowY + TREE_NODE_HEIGHT / 2);
-                    childX += kd[i].width + TREE_H_GAP;
-                }
-                rowY += rowHeight + TREE_ROW_GAP;
-            }
+            // One row of children, centred under the parent — the reference
+            // arrangement. Wrapping a broad level onto a second row bounded the
+            // width but made every edge to that row travel down PAST the first,
+            // passing behind sibling boxes; an arrow emerging from behind a node
+            // reads as though that node were the parent. A level is one rank, and
+            // a rank is one line. A level too wide to sit on one is what the V/H
+            // control is for.
+            const totalW = kd.reduce((s, d) => s + d.width, 0) + (kd.length - 1) * TREE_H_GAP;
+            let childX = pos.x + w / 2 - totalW / 2;
+            const childCenterY = pos.y + TREE_NODE_HEIGHT + TREE_V_GAP + TREE_NODE_HEIGHT / 2;
+            kids.forEach((cid, i) => {
+                place(cid, id, childX + kd[i].width / 2, childCenterY);
+                childX += kd[i].width + TREE_H_GAP;
+            });
         } else {
             // Children stacked in a compact column to the right
             const childX = pos.x + w + TREE_HMODE_OFFSET;
