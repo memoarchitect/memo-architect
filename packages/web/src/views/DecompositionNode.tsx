@@ -31,7 +31,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
     const {
         element, layerColor, isExpanded, hasChildren, childCount,
         direction, onToggleExpand, onToggleDirection, showDirectionButton,
-        depthBgColor, isContainer,
+        depthBgColor, isContainer, label,
     } = d;
     const dirLabel = direction === 'vertical' ? 'V' : 'H';
     const isExpandedContainer = isContainer && isExpanded;
@@ -131,7 +131,14 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                 }}>
-                    {element.name}
+                    {/* `label` is the name resolved the way the explorer resolves
+                        it: a definition's `name` is its identifier
+                        (`DeliverIrrigation`) while the name a reader knows it by
+                        sits in `attributes.name`. Rendering `element.name` here
+                        made the same block read as two different things
+                        depending on whether you looked at the tree or the
+                        catalog. */}
+                    {label ?? element.name}
                 </span>
             </div>
 

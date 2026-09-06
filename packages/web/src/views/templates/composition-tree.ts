@@ -19,6 +19,27 @@ export const COMPOSITION_REL_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The name to show, resolved the way the model explorer resolves it.
+ *
+ * A definition's `name` is its identifier — `DeliverIrrigation` — while the
+ * name a reader knows it by is in `attributes.name`: "Deliver saline
+ * irrigation". Diagrams showed the identifier and the explorer showed the
+ * name, so the same block read as two different things depending on where you
+ * looked at it. A usage with no name of its own inherits its definition's, so
+ * the row reads as the thing rather than as an anonymous instance of it.
+ */
+export function displayNameOf(
+    element: MemoElement,
+    definitions?: ReadonlyMap<string, MemoElement>,
+): string {
+    if (element.name && element.name !== element.id) return element.name;
+    const own = element.attributes.name?.trim();
+    if (own) return own;
+    const definition = definitions ? resolveDefinition(element, definitions) : undefined;
+    return definition?.attributes.name?.trim() || element.name;
+}
+
+/**
  * The definition an element stands for: a definition is itself, a usage is the
  * definition that types it.
  *

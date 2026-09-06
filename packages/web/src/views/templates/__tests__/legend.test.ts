@@ -29,13 +29,13 @@ describe('resolveLegend', () => {
         expect(resolveLegend(el('view'), modelOf([]))).toBeUndefined();
     });
 
-    it('reads the entries nested under the legend', () => {
+    it('reads the swatches nested under the legend', () => {
         const { legend, l0, l1, rels } = levelLegend();
         const view = el('view', { legend: 'levels' });
         const resolved = resolveLegend(view, modelOf([legend, l0, l1], rels))!;
         expect(resolved.name).toBe('Function level');
         expect(resolved.attributeName).toBe('level');
-        expect(resolved.entries).toEqual([
+        expect(resolved.swatches).toEqual([
             { value: 'L0', color: '#111111', label: 'Level 0' },
             { value: 'L1', color: '#222222', label: 'L1' },  // label falls back to the value
         ]);
@@ -62,16 +62,26 @@ describe('resolveLegend', () => {
         expect(resolved.colorFor(el('b', { other: 'OtherKind::concept' }))).toBeUndefined();
     });
 
+    it('maps a plural scope to the construct it scopes', () => {
+        // `part` and friends are SysML keywords, so the literals are plural.
+        const { legend, l0, l1, rels } = levelLegend();
+        legend.attributes.appliesTo = 'LegendScopeKind::parts';
+        const view = el('view', { legend: 'levels' });
+        const resolved = resolveLegend(view, modelOf([legend, l0, l1], rels))!;
+        expect(resolved.colorFor(el('a', { level: 'L0' }, 'part'))).toBe('#111111');
+        expect(resolved.colorFor(el('b', { level: 'L0' }, 'action'))).toBeUndefined();
+    });
+
     it('colours only the constructs it applies to', () => {
         const { legend, l0, l1, rels } = levelLegend();
-        legend.attributes.appliesTo = 'LegendScopeKind::connection';
+        legend.attributes.appliesTo = 'LegendScopeKind::connections';
         const view = el('view', { legend: 'levels' });
         const resolved = resolveLegend(view, modelOf([legend, l0, l1], rels))!;
         expect(resolved.colorFor(el('a', { level: 'L0' }, 'part'))).toBeUndefined();
         expect(resolved.colorFor(el('b', { level: 'L0' }, 'connection'))).toBe('#111111');
     });
 
-    it('is nothing when the legend has no usable entries', () => {
+    it('is nothing when the legend has no usable swatches', () => {
         const legend = el('empty', { attributeName: 'level' });
         const noColor = el('e', { value: 'L0' });
         const view = el('view', { legend: 'empty' });

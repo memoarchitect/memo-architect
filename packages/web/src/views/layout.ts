@@ -18,7 +18,9 @@ import {
 } from '../constants';
 import { SHADOW, RADIUS, EDGE, FONT, COLOR } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
-import { pickCompartmentEntries, portCompartmentEntries } from './templates/composition-tree';
+import {
+    pickCompartmentEntries, portCompartmentEntries, displayNameOf, definitionIndex,
+} from './templates/composition-tree';
 import type { ResolvedLegend } from './templates/legend';
 
 export const elk = {
@@ -1239,6 +1241,7 @@ export async function computeDecompositionLayout(
 ): Promise<LayoutResult> {
     const tree = options.tree ?? buildDecompositionTree(model);
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
+    const definitions = definitionIndex(model.elements);
 
     const cache = options.positionCache ?? new Map<string, { x: number; y: number }>();
     const childrenOf = (id: string) =>
@@ -1323,7 +1326,7 @@ export async function computeDecompositionLayout(
             direction: direction(id),
             onToggleExpand: () => options.callbacks.onToggleExpand(id),
             onToggleDirection: () => options.callbacks.onToggleDirection(id),
-            showDirectionButton: true, label: el.name,
+            showDirectionButton: true, label: displayNameOf(el, definitions),
         };
         nodes.push({
             id, type: 'decompositionNode',
@@ -1425,6 +1428,7 @@ export function computeContainmentLayout(
 ): LayoutResult {
     const tree = options.tree ?? buildDecompositionTree(model);
     if (tree.roots.length === 0) return { nodes: [], edges: [] };
+    const definitions = definitionIndex(model.elements);
 
     const allNodes: Node[] = [];
 
@@ -1483,7 +1487,7 @@ export function computeContainmentLayout(
             onToggleExpand: () => options.callbacks.onToggleExpand(nodeId),
             onToggleDirection: () => {},
             showDirectionButton: false, depthBgColor,
-            isContainer: hasChildren, label: el.name,
+            isContainer: hasChildren, label: displayNameOf(el, definitions),
         };
 
         allNodes.push({
