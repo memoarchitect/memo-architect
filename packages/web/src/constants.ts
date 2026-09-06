@@ -188,10 +188,23 @@ export function resolveActionFlowDiagramType(
 // ─── Containment Depth Colors ────────────────────────────────────────────────
 // Background tints for nested containment diagram levels.
 
+/**
+ * One monotone ramp, white at the top and greyer with depth.
+ *
+ * The old ramp cycled hues — slate, then sky, then pink, then green — so the
+ * colour told you which level you were on only if you had memorised the order,
+ * and a pink box inside a blue one read as a category, not as depth. Nesting is
+ * ordered, so its cue has to be ordered too: each level sits a step darker than
+ * the one containing it, and a reader can tell which way is deeper at a glance.
+ *
+ * The ramp is bounded — the deepest step is about halfway to mid grey — so a
+ * label stays legible on it and a deep tree does not end in black.
+ */
 export const CONTAINMENT_DEPTH_COLORS = [
-    '#FFFFFF',   // depth 0 — white
-    '#f8fafc',   // depth 1 — slate-50
-    '#f0f9ff',   // depth 2 — sky-50
-    '#fdf2f8',   // depth 3 — pink-50
-    '#f0fdf4',   // depth 4 — green-50
+    '#FFFFFF',   // depth 0 — white, the outermost block
+    '#F4F5F7',
+    '#E9EBEF',
+    '#DDE0E6',
+    '#D1D5DD',
+    '#C5CAD4',   // depth 5 and deeper — clamped, not cycled
 ];

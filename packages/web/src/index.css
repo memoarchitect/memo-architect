@@ -368,37 +368,6 @@ body .react-flow {
     display: none;
 }
 
-/* The view-mode switch names three modes, and three 38px tiles do not fit a
-   two-column dock — the third was clipped off the edge, so the containment
-   mode looked as though it did not exist. It gets the full width and stacks,
-   with the mode written out: an icon alone cannot distinguish "tree" from
-   "nested containment", and a "View as" caption above three mystery glyphs
-   explained nothing. Overrides the compact-tile rules above by specificity. */
-.memo-diagram-tools--left > .memo-diagram-tools__view-mode {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    width: 100%;
-}
-
-.memo-diagram-tools--left > .memo-diagram-tools__view-mode > button {
-    width: 100% !important;
-    min-width: 0;
-    height: 26px !important;
-    min-height: 26px;
-    padding: 0 8px !important;
-    justify-content: flex-start;
-    gap: 6px;
-    font-size: 11px;
-    border: 1px solid #E2E1DB !important;
-    border-radius: 7px !important;
-}
-
-.memo-diagram-tools--left > .memo-diagram-tools__view-mode > button > span {
-    display: inline !important;
-}
-
 /* Keep the toolbar quiet and consistent: state uses icon variants and a fine
    outline rather than a dark filled tile. */
 .memo-diagram-tools--left button {

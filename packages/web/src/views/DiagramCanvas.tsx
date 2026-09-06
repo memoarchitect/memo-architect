@@ -1297,20 +1297,26 @@ function DiagramCanvasInner() {
 
         const sidePadding = 0.08;
         const topPadding = 0.08;
+        // A decomposition opens collapsed, so the fit is against one or two
+        // boxes and would otherwise magnify them to 2x — filling the screen
+        // with a single block and dropping its children outside the viewport
+        // the moment it is expanded. Cap it at natural size: the camera is
+        // then framed once and the tree grows into the space it left.
+        const fitMaxZoom = viewKind === 'general' ? 1 : 2;
         const fullFitZoom = Math.min(
             (viewportWidth * (1 - sidePadding * 2)) / bounds.width,
             (viewportHeight * (1 - topPadding * 2)) / bounds.height,
-            2,
+            fitMaxZoom,
         );
         if (fullFitZoom >= fitMinZoom) {
-            fitView({ padding: sidePadding, minZoom: fitMinZoom, maxZoom: 2, duration });
+            fitView({ padding: sidePadding, minZoom: fitMinZoom, maxZoom: fitMaxZoom, duration });
             return;
         }
 
         // The diagram is taller than a readable full fit. Preserve its width
         // and anchor it at 8% from the top, leaving the remaining content to
         // be reached by normal pan/zoom rather than clipping its beginning.
-        const zoom = Math.max(0.1, Math.min(2, (viewportWidth * (1 - sidePadding * 2)) / bounds.width));
+        const zoom = Math.max(0.1, Math.min(fitMaxZoom, (viewportWidth * (1 - sidePadding * 2)) / bounds.width));
         setViewport({
             x: viewportWidth * sidePadding - bounds.x * zoom,
             y: viewportHeight * topPadding - bounds.y * zoom,
@@ -3711,20 +3717,27 @@ function DiagramCanvasInner() {
                                     mode named — an icon cannot tell "tree" from "nested
                                     containment", and captioning three glyphs "View as"
                                     explained neither. */}
-                                <div className="memo-diagram-tools__view-mode">
-                                    {allowedGeneralModes.map(m => (
-                                        <button key={m}
-                                            onClick={() => { setGeneralMode(m); positionCacheRef.current.clear(); }}
-                                            aria-pressed={generalMode === m}
-                                            className="flex items-center text-xs font-medium"
-                                            title={m === 'graph' ? 'Relationship graph with compartments'
-                                                : m === 'tree' ? 'Decomposition tree with expand/collapse'
-                                                : 'Nested containment blocks'}>
-                                            {m === 'graph' ? <Icon.tidy /> : m === 'tree' ? <Icon.library /> : <Icon.rectangle />}
-                                            <span>{m === 'graph' ? 'Graph' : m === 'tree' ? 'Tree' : 'Containment'}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                                {allowedGeneralModes.includes('graph') && (
+                                    <IconToggle icon={<Icon.tidy />} active={generalMode === 'graph'}
+                                        onClick={() => { setGeneralMode('graph'); positionCacheRef.current.clear(); }}
+                                        title="Relationship graph with compartments" />
+                                )}
+                                {/* Tree and containment are two ways of drawing the same
+                                    hierarchy, so they are one control that swaps between
+                                    them — which also keeps the group inside the dock's two
+                                    columns, where a third tile was being clipped off the
+                                    edge and containment looked as though it did not exist.
+                                    The icon shows the mode you are in. */}
+                                <IconToggle
+                                    icon={generalMode === 'containment' ? <Icon.rectangle /> : <Icon.library />}
+                                    active={generalMode !== 'graph'}
+                                    onClick={() => {
+                                        setGeneralMode(generalMode === 'tree' ? 'containment' : 'tree');
+                                        positionCacheRef.current.clear();
+                                    }}
+                                    title={generalMode === 'containment'
+                                        ? 'Nested containment blocks — switch to the decomposition tree'
+                                        : 'Decomposition tree — switch to nested containment blocks'} />
                                 {generalMode !== 'graph' && (
                                     <>
                                         <IconButton icon={<Icon.expand />} onClick={expandAll}

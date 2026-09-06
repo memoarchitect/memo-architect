@@ -147,16 +147,28 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     <span style={{ fontSize: FONT.badge, color: '#9CA3AF' }}>
                         {element.kind}
                     </span>
-                    {hasChildren && (
-                        <span style={{
-                            fontSize: '9px',
-                            color: '#6B7280',
-                            background: '#F0F0ED',
-                            padding: '1px 5px',
-                            borderRadius: 2,
-                            fontWeight: 600,
-                        }}>
-                            {childCount} parts{!isExpanded ? ' (collapsed)' : ''}
+                    {hasChildren && !isExpanded && (
+                        // Just the count, in a circle. "3 parts (collapsed)"
+                        // spent two lines of a 240px node restating what the
+                        // + control beside it already says, and pushed the
+                        // block's own name out of the way to do it.
+                        <span
+                            title={`${childCount} part${childCount === 1 ? '' : 's'}`}
+                            style={{
+                                fontSize: '9px',
+                                color: '#5B6470',
+                                background: '#E8EDF2',
+                                minWidth: 16,
+                                height: 16,
+                                padding: '0 4px',
+                                borderRadius: 999,
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                            }}>
+                            {childCount}
                         </span>
                     )}
                 </div>
