@@ -3983,7 +3983,7 @@ function DiagramCanvasInner() {
                         <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 6 }}>
                             {activeLegend.attributeName ?? activeLegend.enumerationName}
                         </div>
-                        {activeLegend.entries.map(entry => (
+                        {activeLegend.swatches.map(entry => (
                             <div key={entry.value}
                                 style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <span style={{

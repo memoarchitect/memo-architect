@@ -14,7 +14,7 @@
 import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
 
-export interface LegendEntry {
+export interface LegendSwatch {
     /** The value of the legend's attribute or enumeration this entry is for. */
     value: string;
     /** Shown in the key; falls back to the value. */
@@ -33,7 +33,7 @@ export interface ResolvedLegend {
     derivedFrom?: 'hierarchyDepth' | 'elementKind';
     /** Constructs this legend colours; empty means every construct it matches. */
     appliesTo: ReadonlySet<string>;
-    entries: readonly LegendEntry[];
+    swatches: readonly LegendSwatch[];
     /**
      * The colour for an element, or undefined when the legend says nothing.
      *
@@ -64,8 +64,8 @@ export function resolveLegend(
         ?? Object.values(model.elements).find(element => element.name === wanted);
     if (!legend) return undefined;
 
-    // Entries are nested parts, which reach the model as composition.
-    const entries: LegendEntry[] = [];
+    // Swatches are nested parts, which reach the model as composition.
+    const swatches: LegendSwatch[] = [];
     for (const relationship of model.relationships) {
         if (!COMPOSITION_REL_TYPES.has(relationship.type)) continue;
         if (relationship.sourceId !== legend.id) continue;
@@ -74,19 +74,29 @@ export function resolveLegend(
         const value = unqualified(entry.attributes.value ?? '');
         const color = (entry.attributes.color ?? '').trim();
         if (!value || !color) continue;
-        entries.push({ value, color, label: entry.attributes.label?.trim() || value });
+        swatches.push({ value, color, label: entry.attributes.label?.trim() || value });
     }
-    if (entries.length === 0) return undefined;
+    if (swatches.length === 0) return undefined;
 
     const attributeName = legend.attributes.attributeName?.trim() || undefined;
     const derivedRaw = unqualified(legend.attributes.derivedFrom ?? '');
     const derivedFrom = derivedRaw === 'hierarchyDepth' || derivedRaw === 'elementKind'
         ? derivedRaw : undefined;
     const enumerationName = legend.attributes.enumerationName?.trim() || undefined;
+    // `parts`/`actions`/… are plural because SysML reserves the singular forms
+    // as keywords, so an enum literal cannot be named `part`. Map each back to
+    // the construct it scopes.
+    const CONSTRUCT_OF_SCOPE: Record<string, string> = {
+        parts: 'part', items: 'item', ports: 'port',
+        actions: 'action', connections: 'connection',
+    };
     const appliesTo = new Set(
         (legend.attributes.appliesTo ?? '')
-            .split(',').map(scope => unqualified(scope)).filter(Boolean));
-    const byValue = new Map(entries.map(entry => [entry.value, entry.color]));
+            .split(',')
+            .map(scope => unqualified(scope))
+            .filter(Boolean)
+            .map(scope => CONSTRUCT_OF_SCOPE[scope] ?? scope));
+    const byValue = new Map(swatches.map(entry => [entry.value, entry.color]));
 
     return {
         id: legend.id,
@@ -95,7 +105,7 @@ export function resolveLegend(
         enumerationName,
         derivedFrom,
         appliesTo,
-        entries,
+        swatches,
         colorFor(element, context) {
             if (appliesTo.size > 0 && !appliesTo.has(element.construct)) return undefined;
             if (derivedFrom === 'hierarchyDepth') {
