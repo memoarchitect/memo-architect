@@ -1762,6 +1762,19 @@ function DiagramCanvasInner() {
     const buildNodesFromSidecar = useCallback((
         rawNodes: FlowNode[], layout: DiagramLayout
     ): FlowNode[] => {
+        // A decomposition's geometry is DERIVED: every expand, collapse and V/H
+        // toggle recomputes where each node goes, so a saved position is a
+        // photograph of one arrangement pinned over all the others. The L1
+        // function view still carried `CoordinateWorkflows x:-510 y:242` from
+        // some earlier shape, and because those positions were reapplied after
+        // each layout, flipping a node to horizontal moved nothing at all and
+        // containment dropped its children on top of one another.
+        //
+        // Same rule as the camera above: hand-placed geometry is restored,
+        // derived geometry is derived. The reference implementation keeps
+        // positions in memory only, for exactly this reason.
+        if (isGeneralTemplate && generalMode !== 'graph') return rawNodes;
+
         const legacyContextCoordinates = !hasContextChildCoordinates(layout);
         const rawById = new Map(rawNodes.map(node => [node.id, node]));
         const positioned = rawNodes.map(n => {
@@ -1876,7 +1889,7 @@ function DiagramCanvasInner() {
             if (!rect) return node;
             return { ...node, position: rect.position, style: { ...node.style, width: rect.width, height: rect.height } };
         });
-    }, []);
+    }, [isGeneralTemplate, generalMode, ]);
 
     const moveInterconnectionPort = useCallback((ownerId: string, portId: string, y: number, side?: PortSide) => {
         suppressInspectUntilRef.current = Date.now() + 250;
