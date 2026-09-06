@@ -17,6 +17,7 @@ import {
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_SUBGROUP_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
+import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
@@ -272,7 +273,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 label: 'Delete element…',
                 danger: true,
                 action: () => {
-                    if (!window.confirm(`Delete “${el.name}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
+                    if (!confirmElementDelete(el.name)) return;
                     void deleteModelElement(el.id).then(result => {
                         if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
                     });
@@ -2458,7 +2459,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     selectViewpoint(vpId === '__model' ? null : vpId);
                     navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
-                onDelete={!diag.auto ? () => deleteDiagram(diag.id) : undefined}
+                onDelete={!diag.auto ? () => { if (confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
                 onMoveToPackage={diag.elementId ? () => moveViewToPackage(diag) : undefined}
             />
         ))
@@ -2914,7 +2915,7 @@ function DhfExplorerContent() {
                                                     </span>
                                                 </button>
                                                 <button
-                                                    onClick={e => { e.stopPropagation(); removeDhfDocument(doc.id); }}
+                                                    onClick={e => { e.stopPropagation(); if (confirmDocumentDelete(doc.title ?? doc.id)) removeDhfDocument(doc.id); }}
                                                     title="Remove document"
                                                     style={{
                                                         background: 'none', border: 'none', cursor: 'pointer',

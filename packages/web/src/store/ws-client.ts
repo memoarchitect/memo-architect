@@ -140,6 +140,23 @@ function settleRelationshipRequest<T extends { requestId: string }>(
     request.resolve(payload);
 }
 
+/**
+ * How long a mutating request may wait for its answer.
+ *
+ * Every write is answered only AFTER the server has recompiled the whole
+ * project through the selected lowering provider — `writeElement` lowers before
+ * replying, deliberately, so the identity the client edits next is the one the
+ * write produced. On a large model that lowering is seconds, not milliseconds:
+ * measured 10-14s on a ~6,000-element project, and longer when queued behind
+ * another rebuild. The previous 15s expired on writes that were succeeding, and
+ * reported "the server did not answer" for an edit already on disk.
+ *
+ * This is not an estimate of the recompile. It is "long enough that a write is
+ * bounded by the write, not by this number" — a request timeout that fires
+ * early does not fail safe, it reports a lie.
+ */
+const WRITE_REQUEST_TIMEOUT_MS = 120_000;
+
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
     for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests]) {
@@ -179,7 +196,7 @@ function sendRelationshipRequest<T extends { requestId: string }>(
         const timer = setTimeout(() => {
             pending.delete(requestId);
             reject(new Error('The server did not answer the relationship request.'));
-        }, 15000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         pending.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type, payload: { ...request, requestId } }));
     });
@@ -625,7 +642,7 @@ function sendElementMutation(
         const timer = setTimeout(() => {
             elementMutationRequests.delete(requestId);
             reject(new Error('The server did not answer the element mutation.'));
-        }, 15000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         elementMutationRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({
             type,
@@ -658,7 +675,7 @@ export function sendPackageMutation(
         const timer = setTimeout(() => {
             packageMutationRequests.delete(requestId);
             reject(new Error('The server did not answer the containment change.'));
-        }, 15000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         packageMutationRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type, payload: { ...request, requestId } }));
     });
@@ -674,7 +691,22 @@ export function sendPackageMutation(
 export function requestRelationshipCreate(
     request: Omit<RelationshipCreateRequest, 'requestId'>,
 ): Promise<RelationshipCreateResultMessage['payload']> {
-    const owningFile = request.owningFile ?? 'model/catalog/relationships.sysml';
+    // The server honours `owningFile` ahead of its own resolution (an existing
+    // relationships file in the endpoints' common package, else the source
+    // element's file, else a canonical catalog as a LAST resort), so naming the
+    // catalog here meant every authored link landed in the last resort — often
+    // outside the project's configured source roots, where `memo validate` and
+    // `syside check` never look.
+    //
+    // The field cannot simply be dropped: the write is guarded by a precondition
+    // carrying the expected hash of the file being edited, computed below from
+    // this same value, and client and server must name the SAME file or the
+    // guard would protect a file the write does not touch. So this keeps naming
+    // one and changes WHICH — the source element's own file, which is what the
+    // server's own rule picks.
+    const owningFile = request.owningFile
+        ?? useModelStore.getState().model?.elements[request.sourceId]?.file
+        ?? 'model/catalog/relationships.sysml';
     return sendRelationshipRequest('relationship:create', {
         ...request, owningFile,
         sourceIdentity: irIdentityOf(request.sourceId),
@@ -737,7 +769,7 @@ export function requestScreenCaptureUpload(request: {
         const timer = setTimeout(() => {
             screenCaptureUploadRequests.delete(requestId);
             reject(new Error('The server did not answer the screen-capture upload request.'));
-        }, 30000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         screenCaptureUploadRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type: 'screen-capture:upload', payload: { ...request, requestId } }));
     });
@@ -828,7 +860,7 @@ export function methodologySource(
         const timer = setTimeout(() => {
             methodologySourceRequests.delete(requestId);
             reject(new Error(`Timed out while trying to ${operation} methodology source.`));
-        }, 15000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         methodologySourceRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({
             type: `methodology:source:${operation === 'load' ? 'request' : 'save'}`,
@@ -980,7 +1012,7 @@ export function writeRulePolicy(request: {
         const timer = setTimeout(() => {
             rulePolicyWriteRequests.delete(requestId);
             reject(new Error('Timed out while writing the rule policy.'));
-        }, 15000);
+        }, WRITE_REQUEST_TIMEOUT_MS);
         rulePolicyWriteRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type: 'rule:policy:write', payload: { requestId, ...request } }));
     });
