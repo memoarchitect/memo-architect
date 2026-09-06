@@ -241,6 +241,56 @@ export function dominantRoot(tree: CompositionTree): string | undefined {
     return best;
 }
 
+/**
+ * Whether one kind OWNS another, or merely relates to it.
+ *
+ * `composes` is used for both, and a tree can only draw the first. A function
+ * decomposes into functions — that is ownership. A function is also `composes`-d
+ * to the ActionUsage that performs it, to the hardware it is allocated to, and a
+ * Risk to the Hazard it concerns; none of those is containment, and nesting them
+ * put a traceability action inside the function hierarchy and a Hazard inside a
+ * Risk. An operative action is DONE BY a system or an actor; it is not part of
+ * one.
+ *
+ * The test is the ontology's own: two kinds own each other's instances when they
+ * share a supertype BELOW the universal roots. `SystemFunction` and
+ * `ComponentFunction` meet at `MemoFunction`; `SoftwareSystem` and
+ * `SoftwareComponent` at `SoftwareElement`. `ComponentFunction` and
+ * `ActionUsage` meet nowhere, and `Risk` and `Hazard` root in different trees
+ * entirely (`MemoPart` vs `MemoItem`). Excluding the roots is what stops
+ * everything matching everything: `Risk` and `SoftwareSystem` both reach
+ * `MemoPart`, and neither owns the other.
+ *
+ * Measured on affera: of 2228 `composes` edges, 1266 are ownership and 959 are
+ * not.
+ */
+export function buildOwnershipTest(
+    kinds: readonly { name: string; superType?: string }[] | undefined,
+): (source: MemoElement, target: MemoElement) => boolean {
+    if (!kinds?.length) return () => true;
+    const superOf = new Map(kinds.map(kind => [kind.name, kind.superType]));
+    const roots = new Set(kinds.filter(kind => !kind.superType).map(kind => kind.name));
+    const familyCache = new Map<string, Set<string>>();
+    const familyOf = (kind: string): Set<string> => {
+        const cached = familyCache.get(kind);
+        if (cached) return cached;
+        const family = new Set<string>();
+        let current: string | undefined = kind;
+        for (let guard = 0; current && guard < 16; guard++) {
+            if (!roots.has(current)) family.add(current);
+            current = superOf.get(current);
+        }
+        familyCache.set(kind, family);
+        return family;
+    };
+    return (source, target) => {
+        if (source.kind === target.kind) return true;
+        const family = familyOf(source.kind);
+        for (const ancestor of familyOf(target.kind)) if (family.has(ancestor)) return true;
+        return false;
+    };
+}
+
 export interface CompositionTree {
     /** Elements with no parent inside the set, in insertion order */
     roots: string[];
@@ -259,6 +309,8 @@ export function buildCompositionTree(
     elements: Iterable<MemoElement>,
     relationships: MemoRelationship[],
     hierarchyRelationshipTypes: ReadonlySet<string> = COMPOSITION_REL_TYPES,
+    /** Only an edge whose ends own each other nests — see buildOwnershipTest. */
+    owns?: (source: MemoElement, target: MemoElement) => boolean,
 ): CompositionTree {
     const elementMap = new Map<string, MemoElement>();
     for (const el of elements) elementMap.set(el.id, el);
@@ -270,6 +322,7 @@ export function buildCompositionTree(
         if (!hierarchyRelationshipTypes.has(rel.type)) continue;
         if (!elementMap.has(rel.sourceId) || !elementMap.has(rel.targetId)) continue;
         if (rel.sourceId === rel.targetId) continue;
+        if (owns && !owns(elementMap.get(rel.sourceId)!, elementMap.get(rel.targetId)!)) continue;
         // First composition edge wins — an element keeps a single parent
         if (hasParent.has(rel.targetId)) continue;
         if (!childrenMap.has(rel.sourceId)) childrenMap.set(rel.sourceId, []);
