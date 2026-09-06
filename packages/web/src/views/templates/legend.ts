@@ -25,18 +25,22 @@ export interface LegendEntry {
 export interface ResolvedLegend {
     id: string;
     name: string;
-    /**
-     * The attribute each entry names a value of. `kind` addresses the element's
-     * ontology kind, which is a field rather than an attribute.
-     */
+    /** The attribute each entry names a value of. */
     attributeName?: string;
     /** The `enum def` each entry names a value of, when keyed on one. */
     enumerationName?: string;
+    /** A value the model derives rather than stores. */
+    derivedFrom?: 'hierarchyDepth' | 'elementKind';
     /** Constructs this legend colours; empty means every construct it matches. */
     appliesTo: ReadonlySet<string>;
     entries: readonly LegendEntry[];
-    /** The colour for an element, or undefined when the legend says nothing. */
-    colorFor(element: MemoElement): string | undefined;
+    /**
+     * The colour for an element, or undefined when the legend says nothing.
+     *
+     * `context.depth` is the element's depth in the hierarchy being drawn, which
+     * only the layout knows — the root is 0.
+     */
+    colorFor(element: MemoElement, context?: { depth?: number }): string | undefined;
 }
 
 /** An enum value is written `EnumName::value`; a plain value has no prefix. */
@@ -75,6 +79,9 @@ export function resolveLegend(
     if (entries.length === 0) return undefined;
 
     const attributeName = legend.attributes.attributeName?.trim() || undefined;
+    const derivedRaw = unqualified(legend.attributes.derivedFrom ?? '');
+    const derivedFrom = derivedRaw === 'hierarchyDepth' || derivedRaw === 'elementKind'
+        ? derivedRaw : undefined;
     const enumerationName = legend.attributes.enumerationName?.trim() || undefined;
     const appliesTo = new Set(
         (legend.attributes.appliesTo ?? '')
@@ -86,20 +93,28 @@ export function resolveLegend(
         name: legend.attributes.name?.trim() || legend.name,
         attributeName,
         enumerationName,
+        derivedFrom,
         appliesTo,
         entries,
-        colorFor(element) {
+        colorFor(element, context) {
             if (appliesTo.size > 0 && !appliesTo.has(element.construct)) return undefined;
+            if (derivedFrom === 'hierarchyDepth') {
+                // What "L0 / L1 / L2" means is depth in the hierarchy being
+                // drawn, and the tree already computes it. Reading a level back
+                // out of an id string would make a naming convention
+                // load-bearing and wrong the moment something is re-parented.
+                return context?.depth === undefined
+                    ? undefined
+                    : byValue.get(String(context.depth));
+            }
+            if (derivedFrom === 'elementKind') {
+                // A BDD draws definitions, which carry few attributes but always
+                // a kind. The literal comes from the model, which is the
+                // sanctioned way to compare a kind at all.
+                return byValue.get(element.kind);
+            }
             if (attributeName) {
-                // `kind` is a field rather than an entry in `attributes`, and it
-                // is the obvious thing a block diagram colours by: a BDD draws
-                // DEFINITIONS, which carry few attributes but always a kind, and
-                // SystemFunction vs ComponentFunction is exactly the distinction
-                // such a diagram exists to show. Naming it here keeps one
-                // mechanism — a legend is still tied to one named thing — and
-                // the literal comes from the model, which is the sanctioned way
-                // to compare a kind at all.
-                const raw = attributeName === 'kind' ? element.kind : element.attributes[attributeName];
+                const raw = element.attributes[attributeName];
                 return raw ? byValue.get(unqualified(raw)) : undefined;
             }
             if (enumerationName) {
