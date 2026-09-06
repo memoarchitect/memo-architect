@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { confirmElementDelete } from './confirm-destructive';
 import { FONT } from '../styles/tokens';
 
 /** Shared explorer row used by hierarchical workspaces and Browser views. */
@@ -89,7 +90,7 @@ export function ExplorerTreeRow({
             {onDelete && <button type="button" role="menuitem" onClick={async () => {
                 setMenu(null);
                 const nameStr = typeof label === 'string' ? label : (title ?? 'this element');
-                if (!window.confirm(`Delete “${nameStr}”?\n\nAll incoming and outgoing relationships will also be deleted. This cannot be undone.`)) return;
+                if (!confirmElementDelete(nameStr)) return;
                 const result = await onDelete();
                 if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
             }} style={{

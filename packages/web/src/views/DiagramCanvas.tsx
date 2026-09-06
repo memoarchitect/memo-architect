@@ -93,6 +93,7 @@ import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 import { exportDiagram, type DiagramExportFormat } from '../diagram/export-diagram';
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
 import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
+import { confirmAnnotationDelete } from '../components/confirm-destructive';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -154,12 +155,18 @@ function AnnotationNode({ data, selected }: NodeProps<FlowNode>) {
                 className="nodrag"
                 aria-label="Delete annotation"
                 title="Delete annotation"
+                // Pointerdown keeps only the job it is here for — not starting
+                // a node drag. Deleting moves behind the prompt on click:
+                // prompting in both handlers would ask twice, and pointerdown
+                // fires first, removing the node before the click can land.
                 onPointerDown={event => {
                     event.preventDefault();
                     event.stopPropagation();
-                    data.onDelete?.();
                 }}
-                onClick={event => { event.stopPropagation(); data.onDelete?.(); }}
+                onClick={event => {
+                    event.stopPropagation();
+                    if (confirmAnnotationDelete()) data.onDelete?.();
+                }}
                 style={{
                     position: 'absolute', top: 3, right: 5, border: 0, background: 'transparent',
                     color: '#64748B', cursor: 'pointer', fontSize: 14, lineHeight: 1,

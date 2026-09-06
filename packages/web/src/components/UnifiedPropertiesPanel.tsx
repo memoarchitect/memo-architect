@@ -7,6 +7,7 @@ import type { MemoElement } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 import { ElementRelationships } from './element-profile/ElementRelationships';
+import { confirmElementDelete } from './confirm-destructive';
 import { SelectionStyleSection } from './SelectionStyleSection';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
@@ -348,7 +349,17 @@ function ElementProperties() {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button
-                            onClick={() => void deleteModelElement(element.id)}
+                            onClick={() => {
+                                if (!confirmElementDelete(element.name)) return;
+                                // `void` used to discard this, so a refusal —
+                                // read-only content, a relationship with no
+                                // writable owner — was silent as well.
+                                void deleteModelElement(element.id).then(result => {
+                                    if (result && result.success === false) {
+                                        window.alert(result.error ?? 'The element could not be deleted.');
+                                    }
+                                });
+                            }}
                             title="Delete element"
                             className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
                         >
@@ -617,7 +628,10 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
         });
         try {
             const optimistic = useModelStore.getState().model?.elements[id];
-            const deadline = Date.now() + 10000;
+            // A write recompiles the whole project before the model is
+            // published — 10-14s on a large model — so a 10s wait expired
+            // mid-flight and the annotation's relationship was never written.
+            const deadline = Date.now() + 90_000;
             while (useModelStore.getState().model?.elements[id] === optimistic && Date.now() < deadline) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }

@@ -142,8 +142,26 @@ export function screenForLayout(layout: { id: string; name: string }, screens: M
     });
 }
 
+/**
+ * How long to wait for a write to come back in the rebuilt model.
+ *
+ * Several flows here are two writes that only make sense together: create the
+ * element, wait for it to appear, then connect it to its parent — the server
+ * resolves relationship endpoints against the current revision, so the wait is
+ * real. A write recompiles the whole project before the model is published,
+ * which on a large model is 10-14s, so the previous 10s expired mid-flight and
+ * the SECOND write was silently skipped: a drawn region written to source but
+ * never attached to its screen, landing at package level and never appearing on
+ * the canvas. Same for an auto-detected region once accepted, and for an
+ * annotation.
+ *
+ * These waits do not fail safe — ending one early leaves a half-made edit — so
+ * the value is chosen to be longer than any plausible recompile.
+ */
+const MODEL_ARRIVAL_TIMEOUT_MS = 90_000;
+
 async function waitForElement(id: string, optimistic: MemoElement | undefined): Promise<void> {
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
     while (Date.now() < deadline) {
         const current = useModelStore.getState().model?.elements[id];
         // createModelElement inserts an optimistic copy immediately. Relationships
@@ -154,8 +172,18 @@ async function waitForElement(id: string, optimistic: MemoElement | undefined): 
     throw new Error('The new element was saved, but the rebuilt model did not arrive.');
 }
 
+/** Wait for a declared view to come back in the rebuilt model. */
+async function waitForDiagram(id: string): Promise<boolean> {
+    const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+        if (useModelStore.getState().model?.diagrams?.some(diagram => diagram.id === id)) return true;
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return false;
+}
+
 async function waitForRelationship(type: string, sourceId: string, targetId: string): Promise<boolean> {
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
     while (Date.now() < deadline) {
         const relationship = useModelStore.getState().model?.relationships.find(candidate =>
             candidate.type.toLowerCase() === type.toLowerCase()
@@ -471,7 +499,14 @@ export function UiScreensWorkspace() {
                 kind: 'UIElement',
                 construct: 'part',
                 layer: 'implementation',
-                file: 'model/generated.sysml',
+                // A new root screen has no parent to inherit a file from, so it
+                // joins the screen currently open: UI screens are authored
+                // together and belong in the same file. Naming a generated file
+                // outright put it outside the project's configured source roots,
+                // where `memo validate` and `syside check` never look. The
+                // generated file remains only for the very first screen, with
+                // nothing open.
+                file: screen?.file || 'model/generated.sysml',
                 doc: '',
                 attributes: {
                     id: stableId,
@@ -496,6 +531,17 @@ export function UiScreensWorkspace() {
                 elementIds: [elementId],
                 activate: false,
             });
+            // `createDiagram` is fire-and-forget, and the server declares the
+            // view in SysML or refuses — there is no sidecar to fall back to. So
+            // the success message below cannot simply follow: the screen element
+            // IS written either way, and reporting success for a screen with no
+            // view would be a lie. No local view is invented to paper over it;
+            // not recording views outside the model is the point.
+            if (!await waitForDiagram(stableId)) {
+                setStatus('The screen was saved, but its view was not declared in SysML — see the server log. '
+                    + 'Views are not recorded outside the model, so no view was created.');
+                return;
+            }
             setSelectedId(stableId);
             setCaptureId('__none__');
             inspectElement(elementId);
