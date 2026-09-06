@@ -113,3 +113,34 @@ describe('decomposition tree fan-out', () => {
         expect(await layoutWidth(40, 'vertical')).toBeGreaterThan(await layoutWidth(40) * 4);
     });
 });
+
+describe('many roots', () => {
+    // A model whose hierarchy is partly undeclared has many parentless
+    // elements. Laid in one unbounded row, 225 of them reached ~99,000px —
+    // which is what actually made these diagrams unreadable, before a single
+    // child was considered.
+    const flatRoots = (count: number) => {
+        const elements = new Map<string, MemoElement>();
+        const roots: string[] = [];
+        for (let i = 0; i < count; i++) { elements.set(`r${i}`, el(`r${i}`)); roots.push(`r${i}`); }
+        return { roots, childrenMap: new Map<string, string[]>(), elements };
+    };
+
+    const rootsWidth = async (count: number) => {
+        const result = await computeDecompositionLayout(emptyModel, {
+            expandedNodes: new Set<string>(),
+            nodeDirections: new Map(),
+            callbacks: { onToggleExpand: () => {}, onToggleDirection: () => {} },
+            tree: flatRoots(count) as never,
+        });
+        return spanOf(result.nodes as never);
+    };
+
+    it('wraps a long row of roots instead of running off to the right', async () => {
+        expect(await rootsWidth(225)).toBeLessThan(6000);
+    });
+
+    it('leaves a handful of roots on one row', async () => {
+        expect(await rootsWidth(4)).toBeLessThan(2500);
+    });
+});
