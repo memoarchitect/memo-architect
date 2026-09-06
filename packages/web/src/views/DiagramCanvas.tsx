@@ -47,7 +47,7 @@ import { FONT, COLOR } from '../styles/tokens';
 import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
-    resolveGeneralMode, buildGeneralViewTree, defaultExpandedNodes,
+    resolveGeneralMode, buildGeneralViewTree,
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import {
@@ -1240,7 +1240,13 @@ function DiagramCanvasInner() {
     // A diagram opens at a size it can be read at. Fitting the whole graph on
     // screen at any cost meant a wide flow opened at a zoom where the step
     // names were illegible, and the first thing anyone did was zoom in.
-    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : 0.8;
+    // A floor stops a dense diagram fitting itself into illegibility. A general
+    // view earns a lower one: its tree is as wide as the model is broad — the
+    // IMS decomposition spans ~9000px across one level — and at 0.8 the full
+    // fit was rejected, so the diagram opened on its top-left corner with the
+    // rest off-screen. Better small and whole than large and cropped; the user
+    // can zoom, but cannot guess what is out there.
+    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : viewKind === 'general' ? 0.12 : 0.8;
 
     /**
      * Frame a diagram according to how much of it fits at the readable minimum
@@ -1441,16 +1447,17 @@ function DiagramCanvasInner() {
         const expandedHint = selectedDiagram?.properties?.styleHint?.startsWith('expanded:')
             ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
             : [];
-        // A decomposition opens showing its decomposition. Fully collapsed, a
-        // 305-element view opened as one box reading "3 parts (collapsed)" and
-        // every reader's first action was Expand All. A view that names its own
-        // expansion still wins.
-        const opensDecomposed = model
-            && resolveGeneralMode(selectedDiagram?.properties) !== 'graph'
-            && expandedHint.length === 0;
-        setExpandedNodes(opensDecomposed
-            ? defaultExpandedNodes(buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram)))
-            : new Set(expandedHint));
+        // A decomposition opens collapsed, at its root, and the reader opens
+        // what they came to look at.
+        //
+        // Auto-expanding whole levels was an attempt to fix a different
+        // problem — a view of 305 unrelated elements really did open as one
+        // box reading "3 parts (collapsed)". Rooting a BDD at its subject fixed
+        // that at the source, and the auto-expansion then became the problem:
+        // one level of the IMS decomposition is ~9000px across, so the diagram
+        // opened far too wide to read. A view that names its own expansion
+        // through `styleHint` still gets it.
+        setExpandedNodes(new Set(expandedHint));
         // collapsedInterconnectionNodes / collapsedStateNodes are seeded by the
         // default-collapsed effect below, which owns them outright — clearing
         // them here too would race it and leave the diagram fully expanded.
@@ -2315,7 +2322,16 @@ function DiagramCanvasInner() {
         drillIntoInterconnection,
         buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, commitInterconnectionPort, resizeInterconnectionPort, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
 
-    // Re-fit after layout
+    // Frame a diagram when it opens — once, the way the reference does with
+    // React Flow's `fitView` prop.
+    //
+    // This used to run on every layout pass, and a layout pass happens each
+    // time a node is expanded or collapsed or its direction flips. So the
+    // camera moved under the user on every click: the node they had just
+    // opened slid away and the whole diagram rescaled around it. Expanding
+    // never needs a new camera — the position cache leaves already-placed
+    // nodes exactly where they were, and the new children appear beside them.
+    const framedDiagramRef = useRef<string | null>(null);
     useEffect(() => {
         if (layoutVersion === 0) return;
         const timer = setTimeout(() => {
@@ -2325,13 +2341,33 @@ function DiagramCanvasInner() {
                 setViewport(preserved);
                 return;
             }
-            const saved = selectedDiagramId
-                ? useModelStore.getState().diagramLayouts[selectedDiagramId]?.canvas
+            // Already framed: this pass is an expand, a collapse or a direction
+            // change, and the camera is the user's now.
+            if (framedDiagramRef.current === (selectedDiagramId ?? null)) return;
+            // A layout pass can land before the nodes do. Framing an empty
+            // canvas would count as the one framing this diagram gets and
+            // leave the real content wherever it happened to appear.
+            if (nodesRef.current.filter(node => !node.hidden).length === 0) return;
+            framedDiagramRef.current = selectedDiagramId ?? null;
+            const layout = selectedDiagramId
+                ? useModelStore.getState().diagramLayouts[selectedDiagramId]
                 : undefined;
+            const saved = layout?.canvas;
+            // A camera is only worth restoring when the geometry it framed is
+            // still there. Node positions the user placed by hand are; a
+            // derived layout is not — a BDD's tree is recomputed from the
+            // model every time, so a pan/zoom saved against an older shape
+            // frames empty canvas. The CIU decomposition still carried
+            // `zoom: 1, pan: 141,30` from when it was a different diagram, and
+            // restoring it left the tree small in a corner.
+            //
+            // So: hand-placed geometry keeps its camera, derived geometry gets
+            // a camera derived the same way.
+            const handPlaced = Object.keys(layout?.nodes ?? {}).length > 0;
             // An action flow deliberately opens at its reading origin (left or
             // top). Restoring a generic saved camera after its layout completed
             // shifted the first visible step far to the right.
-            if (viewKind !== 'actionflow' && saved?.zoom !== undefined && saved.pan) {
+            if (viewKind !== 'actionflow' && handPlaced && saved?.zoom !== undefined && saved.pan) {
                 setViewport({ x: saved.pan.x, y: saved.pan.y, zoom: saved.zoom }, { duration: 300 });
             } else {
                 fitDiagramFrame(500);
@@ -3669,27 +3705,23 @@ function DiagramCanvasInner() {
                         {isGeneralTemplate && !isUseCaseDiagram && supportsToolbarOperation('generalMode') && (
                             <>
                                 <span style={{ color: '#E5E5E0' }}>|</span>
-                                {/* The dock is a two-column grid of 38px cells, so a
-                                    three-button group landed inside ONE cell and the
-                                    modes became three unreadable slivers. Grouped
-                                    controls take a full row and say what they are. */}
-                                <div style={{ gridColumn: '1 / -1', fontSize: 10, fontWeight: 600, color: '#6B7280', paddingLeft: 2 }}>
-                                    View as
-                                </div>
-                                <div className="flex rounded overflow-hidden"
-                                    style={{ gridColumn: '1 / -1', border: '1px solid #E5E5E0' }}>
+                                {/* Three modes in a two-column dock of 38px tiles left the
+                                    third clipped off the edge, so containment looked as
+                                    though it did not exist. Full width, stacked, and each
+                                    mode named — an icon cannot tell "tree" from "nested
+                                    containment", and captioning three glyphs "View as"
+                                    explained neither. */}
+                                <div className="memo-diagram-tools__view-mode">
                                     {allowedGeneralModes.map(m => (
                                         <button key={m}
                                             onClick={() => { setGeneralMode(m); positionCacheRef.current.clear(); }}
-                                            className="flex-1 flex items-center justify-center py-1 text-xs font-medium capitalize"
-                                            style={{
-                                                background: generalMode === m ? '#1B3A4B' : '#FFFFFF',
-                                                color: generalMode === m ? '#FFFFFF' : '#6B7280',
-                                            }}
+                                            aria-pressed={generalMode === m}
+                                            className="flex items-center text-xs font-medium"
                                             title={m === 'graph' ? 'Relationship graph with compartments'
                                                 : m === 'tree' ? 'Decomposition tree with expand/collapse'
                                                 : 'Nested containment blocks'}>
                                             {m === 'graph' ? <Icon.tidy /> : m === 'tree' ? <Icon.library /> : <Icon.rectangle />}
+                                            <span>{m === 'graph' ? 'Graph' : m === 'tree' ? 'Tree' : 'Containment'}</span>
                                         </button>
                                     ))}
                                 </div>

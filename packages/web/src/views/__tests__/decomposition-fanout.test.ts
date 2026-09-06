@@ -1,10 +1,10 @@
 // ─── Decomposition tree fan-out ──────────────────────────────────────────────
 //
-// A level laid out side by side costs the sum of its children's widths. That is
-// fine for a handful and ruinous for many: the diagram grows until fitting it
-// leaves every box unreadable. Past a threshold the children stack in a column
-// instead, so width follows DEPTH — bounded by the model — rather than BREADTH,
-// which is not.
+// Direction belongs to the user: every node fans its children out downward
+// unless the V/H control on it says otherwise. An automatic flip past a width
+// budget used to make a diagram look arbitrary, and it existed only because
+// views carried hundreds of unrelated roots — which rooting a BDD at its
+// subject fixed at the source. Root ROWS still wrap; that is below.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { describe, it, expect } from 'vitest';
@@ -85,32 +85,20 @@ describe('decomposition tree fan-out', () => {
         expect(four).toBeGreaterThan(one);
     });
 
-    it('stops width growing with breadth once a level is wide', async () => {
+    it('lays every node out the same way, whatever its breadth', async () => {
+        // Direction used to flip to a column on its own once a subtree passed a
+        // width budget. On a real diagram that read as arbitrary — one block
+        // laid its children across, the next laid them down, and nothing on
+        // screen said why. Forty children are simply wider than eight.
         const eight = await layoutWidth(8);
         const forty = await layoutWidth(40);
-        // Stacked, not spread: five times the children must not be anywhere near
-        // five times the width. Side by side, 40 children were ~10x an 8-wide
-        // level and pushed the diagram tens of thousands of pixels across.
-        expect(forty).toBeLessThan(eight * 2);
+        expect(forty).toBeGreaterThan(eight * 2);
     });
 
-
-    // The case a per-node fan-out threshold misses entirely. Every node here
-    // has only three children — nothing looks wide locally — but laying each
-    // level side by side still puts every leaf on one row. Width is cumulative;
-    // fan-out is local, which is why the budget is measured on subtree WIDTH.
-    it('bounds a deep tree whose nodes are individually narrow', async () => {
-        const shallow = await balancedWidth(3, 2);   // 13 nodes
-        const deep = await balancedWidth(3, 5);      // 364 nodes
-        expect(shallow).toBeLessThan(2000);
-        // 28x the nodes must not be 28x the width.
-        expect(deep).toBeLessThan(shallow * 4);
-    });
-
-    it('still honours a direction the user set by hand', async () => {
-        // Forced back to side by side, the level is wide again — the threshold
-        // is a starting point, not a constraint.
-        expect(await layoutWidth(40, 'vertical')).toBeGreaterThan(await layoutWidth(40) * 4);
+    it('takes the direction the user set, at that node only', async () => {
+        // The V/H control is how direction is chosen now, so a forced column
+        // has to be dramatically narrower than the default row.
+        expect(await layoutWidth(40, 'horizontal')).toBeLessThan(await layoutWidth(40) / 4);
     });
 });
 

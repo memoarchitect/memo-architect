@@ -1266,11 +1266,16 @@ export async function computeDecompositionLayout(
         const kd = kids.map(dims);
 
         const verticalWidth = Math.max(w, kd.reduce((sum, d) => sum + d.width, 0) + (kd.length - 1) * TREE_H_GAP);
-        // Stack the children in a column once spreading them would make this
-        // subtree wider than a screenful. Width then follows DEPTH, which the
-        // model bounds, instead of the leaf count, which it does not.
-        const chosen = options.nodeDirections.get(id)
-            ?? (verticalWidth > TREE_MAX_SUBTREE_WIDTH ? 'horizontal' : 'vertical');
+        // Every node fans out the same way unless the user says otherwise.
+        //
+        // This used to flip to a column on its own once a subtree passed a
+        // width budget, which read as arbitrary: one node laid its children
+        // across, the next laid them down, and nothing on screen explained
+        // why. The budget existed because views carried hundreds of unrelated
+        // roots; now that a BDD is rooted at its subject they are small enough
+        // to lay out honestly, and direction is the user's to set — which is
+        // what the V/H control on each node is for.
+        const chosen = options.nodeDirections.get(id) ?? 'vertical';
         resolvedDirection.set(id, chosen);
 
         if (chosen === 'vertical') {
