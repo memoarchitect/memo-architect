@@ -1443,7 +1443,14 @@ function DiagramCanvasInner() {
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
         setLayoutEditVersion(0);
-        setGeneralMode(resolveGeneralMode(selectedDiagram?.properties));
+        // A `layoutHint: tree` on a selection that composes nothing draws a row
+        // of orphan boxes; ask the tree itself whether there is one.
+        const generalTree = model
+            ? buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes,
+                viewElementOf(model, selectedDiagram))
+            : undefined;
+        setGeneralMode(resolveGeneralMode(
+            selectedDiagram?.properties, (generalTree?.childrenMap.size ?? 0) > 0));
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());

@@ -189,22 +189,32 @@ export function resolveActionFlowDiagramType(
 // Background tints for nested containment diagram levels.
 
 /**
- * One monotone ramp, white at the top and greyer with depth.
+ * One monotone ramp for nested containment: the outermost level is darkest and
+ * each level inside it is lighter, ending white at a block that holds nothing.
  *
- * The old ramp cycled hues — slate, then sky, then pink, then green — so the
- * colour told you which level you were on only if you had memorised the order,
- * and a pink box inside a blue one read as a category, not as depth. Nesting is
- * ordered, so its cue has to be ordered too: each level sits a step darker than
- * the one containing it, and a reader can tell which way is deeper at a glance.
+ * Depth reads as recession — an inner box looks lifted out of the one holding
+ * it, and a leaf, being white, reads as the surface rather than another
+ * container. The earlier ramp ran the other way, darkening as it went deeper,
+ * which buried the parts a reader is actually looking for under the heaviest
+ * tint. The one before that cycled hues — slate, sky, pink, green — so a pink
+ * box inside a blue one read as a category rather than a level.
  *
- * The ramp is bounded — the deepest step is about halfway to mid grey — so a
- * label stays legible on it and a deep tree does not end in black.
+ * A block with no children is always white regardless of how deep it sits;
+ * these tints are for containers. The ramp is clamped, not cycled, so a level
+ * can never take the colour of one outside it.
+ *
+ * It is deliberately shallow — the outermost tint is only a few percent off
+ * white, and each step closer again. A container is a backdrop for the blocks
+ * inside it, so it has to sit behind them; the first attempt started at
+ * `#D9DDE4`, which read as a filled slab and competed with its own contents.
  */
 export const CONTAINMENT_DEPTH_COLORS = [
-    '#FFFFFF',   // depth 0 — white, the outermost block
-    '#F4F5F7',
-    '#E9EBEF',
-    '#DDE0E6',
-    '#D1D5DD',
-    '#C5CAD4',   // depth 5 and deeper — clamped, not cycled
+    '#ECEEF1',   // L0 — the outermost container, darkest of the ramp
+    '#F1F3F5',
+    '#F6F7F9',
+    '#FAFBFC',
+    '#FDFDFE',   // deeper levels clamp here
 ];
+
+/** A block that holds nothing sits on the surface. */
+export const CONTAINMENT_LEAF_COLOR = '#FFFFFF';

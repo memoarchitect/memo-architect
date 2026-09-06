@@ -30,7 +30,14 @@ export function resolveDefinition(
     definitions: ReadonlyMap<string, MemoElement>,
 ): MemoElement | undefined {
     if (el.isDefinition) return el;
-    const name = (el.attributes.usageType ?? '').split('::').pop()?.trim();
+    // One field, because SysML has one mechanism: `part p : Board` and
+    // `action a : CoordinateWorkflows` are both a usage typed by a definition.
+    // The builder used to record the action case under `actionType` alone,
+    // which is why the function hierarchy resolved nothing; it now writes
+    // `usageType` for every usage. `actionType` is still read as a fallback so
+    // a model lowered by an older toolchain keeps working.
+    const declared = el.attributes.usageType ?? el.attributes.actionType ?? '';
+    const name = declared.split('::').pop()?.trim();
     return name ? definitions.get(name) : undefined;
 }
 
