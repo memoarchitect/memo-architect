@@ -1180,12 +1180,13 @@ const TREE_V_GAP = 110;          // vertical rank gap parent → children (V mod
 const TREE_HMODE_OFFSET = 300;   // children column offset right of parent (H mode)
 const TREE_HMODE_V_GAP = 44;     // vertical gap between stacked children (H mode)
 /**
- * Children beyond this many stack in a column instead of spreading sideways.
+ * How wide a subtree may get before its children stack in a column instead.
  *
- * Six keeps the familiar side-by-side tree for the shapes people draw by hand,
- * and switches before the width of a level starts to dominate the diagram.
+ * About two screenfuls: wide enough that ordinary trees keep the familiar
+ * side-by-side shape, narrow enough that a broad model never opens at a zoom
+ * where the boxes are unreadable.
  */
-const TREE_FANOUT_LIMIT = 6;
+const TREE_MAX_SUBTREE_WIDTH = 2600;
 
 function treeNodeWidth(el: MemoElement): number {
     return Math.max(el.name.length * 8 + 80, 220);
@@ -1215,28 +1216,20 @@ export async function computeDecompositionLayout(
         (tree.childrenMap.get(id) || []).filter(cid => tree.elements.has(cid));
 
     /**
-     * Which way a node fans its children out, when the user has not said.
+     * Which way each node fans its children out, when the user has not said.
      *
-     * Vertical means children sit side by side under the parent, which reads as
-     * a tree and is right for a handful of them. It is quadratic in the wrong
-     * direction though: every extra sibling adds its whole subtree's width, so
-     * a level with twenty children pushes the diagram tens of thousands of
-     * pixels wide and fitting it leaves every box unreadably small. A 225-node
-     * decomposition came out ~39,000px across.
+     * Decided on the WIDTH the subtree would take, not on how many children a
+     * node has. Child count is the wrong measure: a tree where every node has
+     * only three children still lays every leaf side by side, so a 225-node
+     * decomposition came out ~99,000px across while no single node ever looked
+     * unusual. Width is cumulative; fan-out is local.
      *
-     * Past a threshold the children stack in a column beside the parent
-     * instead — the shape a file tree or mind map uses for the same reason.
-     * Width then grows with DEPTH, which is bounded by the model's nesting,
-     * rather than with BREADTH, which is not.
-     *
-     * An explicit `nodeDirections` entry always wins: this is the starting
-     * point, not a constraint.
+     * Filled in by `dims` as it measures bottom-up, and read back by `place`,
+     * so both agree on the shape without measuring twice.
      */
-    const direction = (id: string): 'vertical' | 'horizontal' => {
-        const chosen = options.nodeDirections.get(id);
-        if (chosen) return chosen;
-        return childrenOf(id).length > TREE_FANOUT_LIMIT ? 'horizontal' : 'vertical';
-    };
+    const resolvedDirection = new Map<string, 'vertical' | 'horizontal'>();
+    const direction = (id: string): 'vertical' | 'horizontal' =>
+        options.nodeDirections.get(id) ?? resolvedDirection.get(id) ?? 'vertical';
 
     // Subtree extent given current expansion + per-node direction
     const dims = (id: string): { width: number; height: number } => {
@@ -1247,13 +1240,21 @@ export async function computeDecompositionLayout(
             return { width: w, height: TREE_NODE_HEIGHT };
         }
         const kd = kids.map(dims);
-        if (direction(id) === 'vertical') {
-            const totalW = kd.reduce((s, d) => s + d.width, 0) + (kd.length - 1) * TREE_H_GAP;
+
+        const verticalWidth = Math.max(w, kd.reduce((sum, d) => sum + d.width, 0) + (kd.length - 1) * TREE_H_GAP);
+        // Stack the children in a column once spreading them would make this
+        // subtree wider than a screenful. Width then follows DEPTH, which the
+        // model bounds, instead of the leaf count, which it does not.
+        const chosen = options.nodeDirections.get(id)
+            ?? (verticalWidth > TREE_MAX_SUBTREE_WIDTH ? 'horizontal' : 'vertical');
+        resolvedDirection.set(id, chosen);
+
+        if (chosen === 'vertical') {
             const maxH = Math.max(...kd.map(d => d.height));
-            return { width: Math.max(w, totalW), height: TREE_NODE_HEIGHT + TREE_V_GAP + maxH };
+            return { width: verticalWidth, height: TREE_NODE_HEIGHT + TREE_V_GAP + maxH };
         }
         const maxW = Math.max(...kd.map(d => d.width));
-        const totalH = kd.reduce((s, d) => s + d.height, 0) + (kd.length - 1) * TREE_HMODE_V_GAP;
+        const totalH = kd.reduce((sum, d) => sum + d.height, 0) + (kd.length - 1) * TREE_HMODE_V_GAP;
         return { width: w + TREE_HMODE_OFFSET + maxW, height: Math.max(TREE_NODE_HEIGHT, totalH) };
     };
 

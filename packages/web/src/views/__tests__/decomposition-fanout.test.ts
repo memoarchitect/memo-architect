@@ -47,6 +47,36 @@ const layoutWidth = async (childCount: number, forced?: 'vertical' | 'horizontal
     return spanOf(result.nodes as never);
 };
 
+/** A balanced tree: `branch` children per node, `depth` levels deep. */
+function balanced(branch: number, depth: number) {
+    const elements = new Map<string, MemoElement>();
+    const childrenMap = new Map<string, string[]>();
+    let next = 0;
+    const make = (level: number): string => {
+        const id = `n${next++}`;
+        elements.set(id, el(id));
+        if (level < depth) {
+            const kids: string[] = [];
+            for (let i = 0; i < branch; i++) kids.push(make(level + 1));
+            childrenMap.set(id, kids);
+        }
+        return id;
+    };
+    const root = make(0);
+    return { roots: [root], childrenMap, elements };
+}
+
+const balancedWidth = async (branch: number, depth: number) => {
+    const built = balanced(branch, depth);
+    const result = await computeDecompositionLayout(emptyModel, {
+        expandedNodes: new Set(built.elements.keys()),
+        nodeDirections: new Map(),
+        callbacks: { onToggleExpand: () => {}, onToggleDirection: () => {} },
+        tree: built as never,
+    });
+    return spanOf(result.nodes as never);
+};
+
 describe('decomposition tree fan-out', () => {
     it('keeps a narrow level side by side', async () => {
         const four = await layoutWidth(4);
@@ -62,6 +92,19 @@ describe('decomposition tree fan-out', () => {
         // five times the width. Side by side, 40 children were ~10x an 8-wide
         // level and pushed the diagram tens of thousands of pixels across.
         expect(forty).toBeLessThan(eight * 2);
+    });
+
+
+    // The case a per-node fan-out threshold misses entirely. Every node here
+    // has only three children — nothing looks wide locally — but laying each
+    // level side by side still puts every leaf on one row. Width is cumulative;
+    // fan-out is local, which is why the budget is measured on subtree WIDTH.
+    it('bounds a deep tree whose nodes are individually narrow', async () => {
+        const shallow = await balancedWidth(3, 2);   // 13 nodes
+        const deep = await balancedWidth(3, 5);      // 364 nodes
+        expect(shallow).toBeLessThan(2000);
+        // 28x the nodes must not be 28x the width.
+        expect(deep).toBeLessThan(shallow * 4);
     });
 
     it('still honours a direction the user set by hand', async () => {
