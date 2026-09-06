@@ -317,9 +317,11 @@ describe('definitionLevelElements', () => {
         expect(definitionLevelElements(els, index(els)).map(e => e.id)).toEqual(['Board']);
     });
 
-    it('keeps an element whose type cannot be resolved rather than dropping it', () => {
+    it('drops a usage that defines no block', () => {
+        // `action x : ComponentFunction` is classified by an ontology kind, not
+        // defined by a block — there is nothing to draw.
         const els = [use('orphan', 'Missing')];
-        expect(definitionLevelElements(els, index(els)).map(e => e.id)).toEqual(['orphan']);
+        expect(definitionLevelElements(els, index(els))).toEqual([]);
     });
 });
 

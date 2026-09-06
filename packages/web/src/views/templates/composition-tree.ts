@@ -85,9 +85,19 @@ export function definitionIndex(
  * the same type and no statement about the type at all.
  *
  * So the view's selection, which is overwhelmingly usages, is mapped to the
- * definitions those usages are typed by, and deduplicated. Elements with no
- * resolvable definition are kept as themselves rather than dropped: losing an
- * element silently is worse than showing one the model failed to type.
+ * definitions those usages are typed by, and deduplicated.
+ *
+ * A usage that resolves to no definition is DROPPED, not kept as itself. It is
+ * typed by an ontology kind — `action sysMappingFunctions : ComponentFunction`
+ * — which classifies it without defining a block, so there is no block to draw.
+ * Keeping such usages put `Map cardiac anatomy` on the canvas twice: once as
+ * the definition `MapCardiacAnatomy` that a usage folded into, and once as a
+ * different usage that happened to carry the same name. Two boxes, one name,
+ * no relationship between them.
+ *
+ * A view whose selection yields no definitions at all is not a block diagram of
+ * anything, and the canvas says so rather than drawing usages as if they were
+ * blocks.
  */
 export function definitionLevelElements(
     elements: Iterable<MemoElement>,
@@ -96,8 +106,7 @@ export function definitionLevelElements(
     const out = new Map<string, MemoElement>();
     for (const el of elements) {
         const def = resolveDefinition(el, definitions);
-        const node = def ?? el;
-        if (!out.has(node.id)) out.set(node.id, node);
+        if (def && !out.has(def.id)) out.set(def.id, def);
     }
     return [...out.values()];
 }

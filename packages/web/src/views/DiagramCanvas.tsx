@@ -90,6 +90,7 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
 import { resolveLegend } from './templates/legend';
+import { definitionIndex, resolveDefinition } from './templates/composition-tree';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 
 /** The view's own element, which carries the `expose` naming its subject. */
@@ -1590,6 +1591,27 @@ function DiagramCanvasInner() {
 
     // BDD integrity: a block definition diagram must be one connected hierarchy,
     // not a forest of disconnected/floating elements (validateSingleTree).
+    /**
+     * A block diagram whose selection defines no blocks.
+     *
+     * Its elements are usages classified by ontology kinds — `action x :
+     * ComponentFunction` — which say what something IS WITHOUT defining a block
+     * to draw. Drawing them anyway is what put one name on two unrelated boxes,
+     * so the canvas says what is missing instead.
+     */
+    const noDefinitionsIssue = useMemo(() => {
+        if (!model || !selectedDiagram || !isGeneralTemplate) return null;
+        if (generalMode === 'graph') return null;
+        const selected = (selectedDiagram.elementIds ?? []).length;
+        if (selected === 0) return null;
+        const definitions = definitionIndex(model.elements);
+        const drawn = (selectedDiagram.elementIds ?? [])
+            .map(id => model.elements[id])
+            .filter((el): el is MemoElement => Boolean(el))
+            .filter(el => resolveDefinition(el, definitions));
+        return drawn.length === 0 ? { selected } : null;
+    }, [model, selectedDiagram, isGeneralTemplate, generalMode]);
+
     /** The legend the open view names, if any — drawn as a key on the canvas. */
     const activeLegend = useMemo(
         () => (model ? resolveLegend(viewElementOf(model, selectedDiagram), model) : undefined),
@@ -3968,6 +3990,20 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {noDefinitionsIssue && !isLayouting && (
+                    <div style={{
+                        position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 6, maxWidth: 520, background: '#FFFBEB',
+                        border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px',
+                        fontSize: 12, color: '#92400E',
+                    }}>
+                        <strong>Nothing to draw:</strong> none of this view&rsquo;s{' '}
+                        {noDefinitionsIssue.selected} elements define a block. They are usages
+                        classified by ontology kinds, which say what something is without defining
+                        a block — a block definition diagram needs `part def` / `action def`
+                        elements, or usages typed by them.
+                    </div>
+                )}
                 {activeLegend && !isLayouting && (
                     <div style={{
                         position: 'absolute', right: 12, bottom: 12, zIndex: 5,
