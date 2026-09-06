@@ -27,6 +27,7 @@ import {
     COMPOSITION_REL_TYPES, type CompositionTree,
 } from './composition-tree';
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
+import { resolveLegend } from './legend';
 
 export type GeneralViewMode = 'graph' | 'tree' | 'containment';
 
@@ -186,6 +187,7 @@ export async function computeGeneralViewLayout(
 
     const tree = buildGeneralViewTree(
         model, options.viewpointFilter, options.hierarchyRelationshipTypes, options.viewElement);
+    const legend = resolveLegend(options.viewElement, model);
     if (options.mode === 'tree') {
         return computeDecompositionLayout(model, {
             expandedNodes: options.expandedNodes,
@@ -193,11 +195,13 @@ export async function computeGeneralViewLayout(
             callbacks: options.callbacks,
             tree,
             positionCache: options.positionCache,
+            legend,
         });
     }
     return computeContainmentLayout(model, {
         expandedNodes: options.expandedNodes,
         callbacks: { onToggleExpand: options.callbacks.onToggleExpand },
         tree,
+        legend,
     });
 }

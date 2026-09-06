@@ -19,6 +19,7 @@ import {
 import { SHADOW, RADIUS, EDGE, FONT, COLOR } from '../styles/tokens';
 import type { DecompositionNodeData } from './DecompositionNode';
 import { pickCompartmentEntries, portCompartmentEntries } from './templates/composition-tree';
+import type { ResolvedLegend } from './templates/legend';
 
 export const elk = {
     /** Compatibility facade while call sites migrate from the ELK-shaped graph contract. */
@@ -1232,6 +1233,8 @@ export async function computeDecompositionLayout(
         tree?: DecompositionTree;
         /** Sticky positions across re-layouts (canvas-owned); optional */
         positionCache?: Map<string, { x: number; y: number }>;
+        /** The view's legend, when it names one. */
+        legend?: ResolvedLegend;
     }
 ): Promise<LayoutResult> {
     const tree = options.tree ?? buildDecompositionTree(model);
@@ -1312,7 +1315,10 @@ export async function computeDecompositionLayout(
         }
 
         const nodeData: DecompositionNodeData = {
-            element: el, layerColor: LAYER_COLORS[el.layer] || '#666',
+            // A legend, when the view names one, is what the colour means here;
+            // the layer is the default only because it is what colour meant
+            // before anything said otherwise.
+            element: el, layerColor: options.legend?.colorFor(el) ?? LAYER_COLORS[el.layer] ?? '#666',
             isExpanded, hasChildren: kids.length > 0, childCount: kids.length,
             direction: direction(id),
             onToggleExpand: () => options.callbacks.onToggleExpand(id),
@@ -1413,6 +1419,8 @@ export function computeContainmentLayout(
         callbacks: { onToggleExpand: (id: string) => void };
         /** Prebuilt hierarchy (view-kind templates); defaults to the structural tree */
         tree?: DecompositionTree;
+        /** The view's legend, when it names one. */
+        legend?: ResolvedLegend;
     }
 ): LayoutResult {
     const tree = options.tree ?? buildDecompositionTree(model);
@@ -1427,7 +1435,7 @@ export function computeContainmentLayout(
         const el = tree.elements.get(nodeId);
         if (!el) return { width: 0, height: 0 };
 
-        const color = LAYER_COLORS[el.layer] || '#666';
+        const color = options.legend?.colorFor(el) ?? LAYER_COLORS[el.layer] ?? '#666';
         const children = tree.childrenMap.get(nodeId) || [];
         const hasChildren = children.length > 0;
         const isExpanded = options.expandedNodes.has(nodeId);
