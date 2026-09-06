@@ -7,7 +7,7 @@
 // Interconnection view derives its hierarchy from its own selection.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 
 /**
  * Relationship types that express whole→part composition.
@@ -134,6 +134,52 @@ export interface CompartmentEntry {
  * compartment (General view template). Long prose attributes are skipped;
  * enum references are shown unqualified.
  */
+/**
+ * A port usage — `port p : SomePort`, not `port def SomePort`.
+ *
+ * Asked of the element's own two fields rather than of its kind, because a
+ * kind name is an ontology string resolved at runtime and comparing one to a
+ * literal is what `semantic.ts` tells this codebase not to do. Every kind whose
+ * registry entry declares `port def` produces elements with `construct: 'port'`
+ * — 68 such kinds in the MEMO ontology, and on the IMS physical view the two
+ * tests agree on all 79 elements, with no third case either way.
+ */
+export const isPortUsage = (el: MemoElement): boolean =>
+    el.construct === 'port' && !el.isDefinition;
+
+/**
+ * A block's ports, as compartment rows.
+ *
+ * A BDD draws a port as a feature of the block that declares it, never as a
+ * box beside it — a port is not a part, and giving it its own node states a
+ * peer relationship the model does not contain. The rows come from the owner's
+ * own `ownedPorts`, which the builder already populates (145 elements carry
+ * one), so this reads structure rather than reconstructing it from edges —
+ * which would not work anyway: on the IMS physical view all 79 ports resolve an
+ * owner and only 9 of them have an edge of any kind.
+ */
+export function portCompartmentEntries(
+    el: MemoElement,
+    model: MemoModelDTO,
+    max = 6,
+): CompartmentEntry[] {
+    const owned = el.ownedPorts ?? [];
+    if (owned.length === 0) return [];
+    const rows: CompartmentEntry[] = [];
+    for (const id of owned) {
+        if (rows.length >= max) break;
+        const port = model.elements[id];
+        if (!port) continue;
+        const type = (port.portSpec?.type ?? port.kind).split('::').pop()!.trim();
+        rows.push({ key: port.name, value: type });
+    }
+    // Say how many were not listed rather than silently showing the first six.
+    if (owned.length > rows.length) {
+        rows.push({ key: '', value: `+${owned.length - rows.length} more ports` });
+    }
+    return rows;
+}
+
 export function pickCompartmentEntries(el: MemoElement, max = 4): CompartmentEntry[] {
     const entries: CompartmentEntry[] = [];
     if (el.shortId) entries.push({ key: 'id', value: el.shortId });

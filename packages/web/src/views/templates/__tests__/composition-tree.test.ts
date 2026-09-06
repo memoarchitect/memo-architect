@@ -4,8 +4,9 @@ import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
-    COMPOSITION_REL_TYPES, validateSingleTree,
+    COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
 } from '../composition-tree';
+import { generalViewFilter, hierarchyTypesFor } from '../general-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
     return {
@@ -204,5 +205,97 @@ describe('containersBelowDepth', () => {
             [rel('composes', 'a', 'b'), rel('composes', 'b', 'a')],
         );
         expect(() => containersBelowDepth(tree, 2)).not.toThrow();
+    });
+});
+
+// ─── Ports are features of a block, not boxes beside it ─────────────────────
+
+const port = (id: string, owner: string, type: string): MemoElement =>
+    el(id, { construct: 'port', kind: type, owner, portSpec: { type: `pkg::${type}`, isConjugated: false } });
+
+describe('isPortUsage', () => {
+    it('is asked of construct, not of the kind name', () => {
+        expect(isPortUsage(port('p1', 'ciu', 'PhysicalPort'))).toBe(true);
+        // A kind whose NAME ends in "Port" but which is a part is still a part.
+        expect(isPortUsage(el('panel', { kind: 'InterfacePanelPort' }))).toBe(false);
+    });
+
+    it('admits a port DEFINITION as a node — a def is a block, a usage is a feature', () => {
+        expect(isPortUsage(el('PhysicalPort', { construct: 'port', isDefinition: true }))).toBe(false);
+    });
+});
+
+describe('generalViewFilter', () => {
+    it('drops port usages and keeps everything else', () => {
+        const elements = [el('ciu'), port('p1', 'ciu', 'PhysicalPort'), el('board')];
+        expect(elements.filter(generalViewFilter()).map(e => e.id)).toEqual(['ciu', 'board']);
+    });
+
+    it('composes with the view own filter rather than replacing it', () => {
+        const elements = [el('ciu'), port('p1', 'ciu', 'PhysicalPort'), el('board')];
+        const onlyCiu = generalViewFilter(e => e.id === 'ciu' || e.id === 'p1');
+        expect(elements.filter(onlyCiu).map(e => e.id)).toEqual(['ciu']);
+    });
+});
+
+describe('portCompartmentEntries', () => {
+    const model = (els: MemoElement[]) =>
+        ({ elements: Object.fromEntries(els.map(e => [e.id, e])), relationships: [] }) as never;
+
+    it('lists an owner ports as name : type rows', () => {
+        const p1 = port('toPatient', 'ciu', 'PatientAppliedPort');
+        const owner = el('ciu', { ownedPorts: ['toPatient'] });
+        expect(portCompartmentEntries(owner, model([owner, p1])))
+            .toEqual([{ key: 'toPatient', value: 'PatientAppliedPort' }]);
+    });
+
+    it('is empty for a block that declares no ports', () => {
+        const owner = el('board');
+        expect(portCompartmentEntries(owner, model([owner]))).toEqual([]);
+    });
+
+    it('counts the remainder instead of silently truncating', () => {
+        const ports = Array.from({ length: 9 }, (_, i) => port(`p${i}`, 'ciu', 'PhysicalPort'));
+        const owner = el('ciu', { ownedPorts: ports.map(p => p.id) });
+        const rows = portCompartmentEntries(owner, model([owner, ...ports]), 6);
+        expect(rows).toHaveLength(7);
+        expect(rows[6]).toEqual({ key: '', value: '+3 more ports' });
+    });
+});
+
+// ─── Only composition makes a parent ─────────────────────────────────────────
+
+describe('hierarchyTypesFor', () => {
+    it('keeps the composition types a view declares and drops the rest', () => {
+        // The IMS physical decomposition view declares exactly this pair.
+        expect([...hierarchyTypesFor(['composes', 'memoLink'])!]).toEqual(['composes']);
+    });
+
+    it('lets a view narrow to one composition type', () => {
+        expect([...hierarchyTypesFor(['aggregation'])!]).toEqual(['aggregation']);
+    });
+
+    it('falls back to every composition type when a view declares none', () => {
+        // "Draw flows" is not a statement that the view has no hierarchy.
+        expect(hierarchyTypesFor(['flow', 'memoLink'])).toBeUndefined();
+        expect(hierarchyTypesFor([])).toBeUndefined();
+        expect(hierarchyTypesFor(undefined)).toBeUndefined();
+    });
+
+    it('never lets a declared type widen the hierarchy beyond composition', () => {
+        for (const t of hierarchyTypesFor(['composes', 'flow', 'memoLink', 'satisfies'])!) {
+            expect(COMPOSITION_REL_TYPES.has(t)).toBe(true);
+        }
+    });
+});
+
+describe('buildCompositionTree with a non-composition type', () => {
+    it('does not let memoLink invent a parent', () => {
+        const elements = [el('ciu'), el('board')];
+        const rels = [rel('memoLink', 'ciu', 'board')];
+        const viaBoth = buildCompositionTree(elements, rels, new Set(['composes', 'memoLink']));
+        expect(viaBoth.roots).toEqual(['ciu']);          // today's behaviour
+        const viaComposition = buildCompositionTree(elements, rels, hierarchyTypesFor(['composes', 'memoLink']));
+        expect(viaComposition.roots).toEqual(['ciu', 'board']);  // both roots: no composition edge exists
     });
 });

@@ -21,7 +21,9 @@ import {
     computeLayout, computeDecompositionLayout, computeContainmentLayout,
     type LayoutResult,
 } from '../layout';
-import { buildCompositionTree, type CompositionTree } from './composition-tree';
+import {
+    buildCompositionTree, isPortUsage, COMPOSITION_REL_TYPES, type CompositionTree,
+} from './composition-tree';
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
 
 export type GeneralViewMode = 'graph' | 'tree' | 'containment';
@@ -37,13 +39,60 @@ export function resolveGeneralMode(properties?: Record<string, string>): General
     return hint === 'tree' || hint === 'containment' || hint === 'graph' ? hint : 'graph';
 }
 
+/**
+ * The view's own filter, with port usages taken out.
+ *
+ * A general view is a DEFINITION-structure diagram, and a port is a feature of
+ * the block that declares it, not a peer of it. Ports arrive here because a
+ * view's membership is the UNION of `selectionQuery.includeElementKinds` and
+ * its `expose` members (see `resolveViewElementIds`) — so `expose <pkg>::*`
+ * admits the whole package and the kind list, which can only add, never
+ * narrows it back. The result was ports drawn as boxes among the assemblies
+ * that own them: 378 of GEN-21's 418 elements, 79 of the IMS physical view's
+ * 372.
+ *
+ * They are not dropped — `portCompartmentEntries` puts them in their owner's
+ * compartment, which is where a BDD shows them.
+ *
+ * Interconnection views are unaffected: ports are the subject there, and that
+ * template does not come through here.
+ */
+export function generalViewFilter(
+    viewpointFilter?: (el: MemoElement) => boolean,
+): (el: MemoElement) => boolean {
+    return el => !isPortUsage(el) && (!viewpointFilter || viewpointFilter(el));
+}
+
 /** The elements a view presents, after its selection/viewpoint filter. */
 export function visibleViewElements(
     model: MemoModelDTO,
     viewpointFilter?: (el: MemoElement) => boolean,
 ): MemoElement[] {
-    const all = Object.values(model.elements);
-    return viewpointFilter ? all.filter(viewpointFilter) : all;
+    return Object.values(model.elements).filter(generalViewFilter(viewpointFilter));
+}
+
+/**
+ * Which of a view's declared relationship types may define parent and child.
+ *
+ * A view declares one list of relationship types and it serves two purposes:
+ * which edges to DRAW, and which express containment. Passing that list
+ * straight through as the hierarchy conflated them, so a view declaring
+ * `("composes", "memoLink")` — as the IMS physical decomposition does — built
+ * its tree from `memoLink` as well, and a generic link became a claim that one
+ * block is part of another. Nothing in the model said so.
+ *
+ * Only composition makes a whole out of a part, so a view may NARROW the
+ * composition types it uses and may not add a non-composition one. A view that
+ * declares no composition type at all keeps the full set rather than
+ * collapsing to a tree of nothing but roots: it has said what to draw, not
+ * that it has no hierarchy.
+ */
+export function hierarchyTypesFor(
+    declared: readonly string[] | undefined,
+): ReadonlySet<string> | undefined {
+    if (!declared?.length) return undefined;
+    const composition = [...toModelTypeSet(declared)].filter(t => COMPOSITION_REL_TYPES.has(t));
+    return composition.length ? new Set(composition) : undefined;
 }
 
 /** Composition hierarchy over the view's visible elements. */
@@ -52,10 +101,11 @@ export function buildGeneralViewTree(
     viewpointFilter?: (el: MemoElement) => boolean,
     hierarchyRelationshipTypes?: readonly string[],
 ): CompositionTree {
-    const relationshipTypes = hierarchyRelationshipTypes?.length
-        ? toModelTypeSet(hierarchyRelationshipTypes)
-        : undefined;
-    return buildCompositionTree(visibleViewElements(model, viewpointFilter), model.relationships, relationshipTypes);
+    return buildCompositionTree(
+        visibleViewElements(model, viewpointFilter),
+        model.relationships,
+        hierarchyTypesFor(hierarchyRelationshipTypes),
+    );
 }
 
 /**
@@ -123,7 +173,7 @@ export async function computeGeneralViewLayout(
 ): Promise<LayoutResult> {
     if (options.mode === 'graph') {
         return computeLayout(model, {
-            viewpointFilter: options.viewpointFilter,
+            viewpointFilter: generalViewFilter(options.viewpointFilter),
             relationshipTypes: options.relationshipTypes,
             compartments: true,
             layoutProviderId: options.layoutProviderId,
