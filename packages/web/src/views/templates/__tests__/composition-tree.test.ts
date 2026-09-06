@@ -5,6 +5,7 @@ import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser
 import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
+    withDefinitionComposition, redundantDefinitionIds,
 } from '../composition-tree';
 import { generalViewFilter, hierarchyTypesFor } from '../general-view';
 
@@ -297,5 +298,65 @@ describe('buildCompositionTree with a non-composition type', () => {
         expect(viaBoth.roots).toEqual(['ciu']);          // today's behaviour
         const viaComposition = buildCompositionTree(elements, rels, hierarchyTypesFor(['composes', 'memoLink']));
         expect(viaComposition.roots).toEqual(['ciu', 'board']);  // both roots: no composition edge exists
+    });
+});
+
+// ─── A usage inherits the composition its definition declares ───────────────
+
+describe('withDefinitionComposition', () => {
+    const def = (id: string) => el(id, { isDefinition: true });
+    const usage = (id: string, type: string) => el(id, { attributes: { usageType: type } });
+
+    it('gives a usage the children declared on its definition', () => {
+        // dataAcquisitionBoard : DataAcquisitionBoard, which is made of fpga.
+        const els = [usage('daqBoard', 'DataAcquisitionBoard'), def('DataAcquisitionBoard'), el('fpga')];
+        const rels = [rel('composes', 'DataAcquisitionBoard', 'fpga')];
+        const byId = new Map(els.map(e => [e.id, e]));
+        const all = Object.fromEntries(els.map(e => [e.id, e]));
+        const tree = buildCompositionTree(els, withDefinitionComposition(rels, byId, all), COMPOSITION_REL_TYPES);
+        expect(tree.childrenMap.get('daqBoard')).toEqual(['fpga']);
+    });
+
+    it('resolves a qualified usageType by its last segment', () => {
+        const els = [usage('u', 'pkg::sub::Board'), def('Board'), el('chip')];
+        const rels = [rel('composes', 'Board', 'chip')];
+        const byId = new Map(els.map(e => [e.id, e]));
+        const all = Object.fromEntries(els.map(e => [e.id, e]));
+        const out = withDefinitionComposition(rels, byId, all);
+        expect(out.some(r => r.sourceId === 'u' && r.targetId === 'chip')).toBe(true);
+    });
+
+    it('leaves a usage that declares its own composition alone', () => {
+        const els = [usage('u', 'Board'), def('Board'), el('own'), el('fromDef')];
+        const rels = [rel('composes', 'u', 'own'), rel('composes', 'Board', 'fromDef')];
+        const byId = new Map(els.map(e => [e.id, e]));
+        const all = Object.fromEntries(els.map(e => [e.id, e]));
+        const tree = buildCompositionTree(els, withDefinitionComposition(rels, byId, all), COMPOSITION_REL_TYPES);
+        expect(tree.childrenMap.get('u')).toEqual(['own']);
+    });
+
+    it('adds nothing when a usage has no definition to inherit from', () => {
+        const els = [usage('u', 'Missing'), el('x')];
+        const byId = new Map(els.map(e => [e.id, e]));
+        const all = Object.fromEntries(els.map(e => [e.id, e]));
+        expect(withDefinitionComposition([], byId, all)).toEqual([]);
+    });
+});
+
+describe('redundantDefinitionIds', () => {
+    const def = (id: string) => el(id, { isDefinition: true });
+    const usage = (id: string, type: string) => el(id, { attributes: { usageType: type } });
+
+    it('drops a definition that a usage in the set is typed by', () => {
+        const ids = redundantDefinitionIds([usage('daq', 'DataAcquisitionBoard'), def('DataAcquisitionBoard')]);
+        expect([...ids]).toEqual(['DataAcquisitionBoard']);
+    });
+
+    it('keeps every definition when the view shows no usages — a taxonomy is not a duplicate', () => {
+        expect(redundantDefinitionIds([def('Board'), def('Chip')]).size).toBe(0);
+    });
+
+    it('keeps a definition no usage in the set refers to', () => {
+        expect(redundantDefinitionIds([usage('u', 'Board'), def('Unrelated')]).size).toBe(0);
     });
 });
