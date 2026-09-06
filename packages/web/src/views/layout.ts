@@ -1187,6 +1187,14 @@ const TREE_HMODE_V_GAP = 44;     // vertical gap between stacked children (H mod
  * where the boxes are unreadable.
  */
 const TREE_MAX_SUBTREE_WIDTH = 2600;
+/**
+ * How wide the row of ROOTS may get before it wraps.
+ *
+ * Wider than one subtree, because a row of roots is the diagram's whole top
+ * level and breaking it too eagerly hides the shape. Still bounded: a view with
+ * a hundred parentless elements has to become a block, not a ribbon.
+ */
+const TREE_MAX_ROW_WIDTH = 5200;
 
 function treeNodeWidth(el: MemoElement): number {
     return Math.max(el.name.length * 8 + 80, 220);
@@ -1331,12 +1339,28 @@ export async function computeDecompositionLayout(
         }
     };
 
+    // Roots wrap into rows instead of running off to the right forever.
+    //
+    // A model whose hierarchy is partly undeclared has MANY roots — most
+    // elements simply have no parent in the view — and laying them in one
+    // unbounded row is what actually produced the unreadable diagrams: 225
+    // roots at ~440px each is ~99,000px, before a single child is considered.
+    // Per-node fan-out never touched this, because roots have no parent to fan
+    // them out.
     let cursorX = 0;
+    let rowY = 100;
+    let rowHeight = 0;
     for (const rootId of tree.roots) {
         if (!tree.elements.has(rootId)) continue;
         const d = dims(rootId);
-        place(rootId, null, cursorX + d.width / 2, 100);
+        if (cursorX > 0 && cursorX + d.width > TREE_MAX_ROW_WIDTH) {
+            cursorX = 0;
+            rowY += rowHeight + TREE_V_GAP;
+            rowHeight = 0;
+        }
+        place(rootId, null, cursorX + d.width / 2, rowY);
         cursorX += d.width + TREE_H_GAP * 2;
+        rowHeight = Math.max(rowHeight, d.height);
     }
 
     return { nodes, edges };
