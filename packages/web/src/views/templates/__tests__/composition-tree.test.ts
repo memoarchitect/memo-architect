@@ -5,7 +5,9 @@ import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser
 import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
-    withDefinitionComposition, redundantDefinitionIds,
+    definitionIndex, definitionLevelElements, definitionLevelComposition,
+    declaredSubject, subtreeOf, dominantRoot,
+
 } from '../composition-tree';
 import { generalViewFilter, hierarchyTypesFor } from '../general-view';
 
@@ -301,62 +303,89 @@ describe('buildCompositionTree with a non-composition type', () => {
     });
 });
 
-// ─── A usage inherits the composition its definition declares ───────────────
 
-describe('withDefinitionComposition', () => {
-    const def = (id: string) => el(id, { isDefinition: true });
-    const usage = (id: string, type: string) => el(id, { attributes: { usageType: type } });
+// ─── A BDD is a diagram of definitions, and of one subject ──────────────────
 
-    it('gives a usage the children declared on its definition', () => {
-        // dataAcquisitionBoard : DataAcquisitionBoard, which is made of fpga.
-        const els = [usage('daqBoard', 'DataAcquisitionBoard'), def('DataAcquisitionBoard'), el('fpga')];
-        const rels = [rel('composes', 'DataAcquisitionBoard', 'fpga')];
-        const byId = new Map(els.map(e => [e.id, e]));
-        const all = Object.fromEntries(els.map(e => [e.id, e]));
-        const tree = buildCompositionTree(els, withDefinitionComposition(rels, byId, all), COMPOSITION_REL_TYPES);
-        expect(tree.childrenMap.get('daqBoard')).toEqual(['fpga']);
+const def = (id: string, name = id) => el(id, { name, isDefinition: true });
+const use = (id: string, type: string) => el(id, { attributes: { usageType: type } });
+const index = (els: MemoElement[]) => definitionIndex(Object.fromEntries(els.map(e => [e.id, e])));
+const record = (els: MemoElement[]) => Object.fromEntries(els.map(e => [e.id, e]));
+
+describe('definitionLevelElements', () => {
+    it('maps usages to the definitions that type them, deduplicated', () => {
+        const els = [use('daq1', 'Board'), use('daq2', 'Board'), def('Board')];
+        expect(definitionLevelElements(els, index(els)).map(e => e.id)).toEqual(['Board']);
     });
 
-    it('resolves a qualified usageType by its last segment', () => {
-        const els = [usage('u', 'pkg::sub::Board'), def('Board'), el('chip')];
-        const rels = [rel('composes', 'Board', 'chip')];
-        const byId = new Map(els.map(e => [e.id, e]));
-        const all = Object.fromEntries(els.map(e => [e.id, e]));
-        const out = withDefinitionComposition(rels, byId, all);
-        expect(out.some(r => r.sourceId === 'u' && r.targetId === 'chip')).toBe(true);
-    });
-
-    it('leaves a usage that declares its own composition alone', () => {
-        const els = [usage('u', 'Board'), def('Board'), el('own'), el('fromDef')];
-        const rels = [rel('composes', 'u', 'own'), rel('composes', 'Board', 'fromDef')];
-        const byId = new Map(els.map(e => [e.id, e]));
-        const all = Object.fromEntries(els.map(e => [e.id, e]));
-        const tree = buildCompositionTree(els, withDefinitionComposition(rels, byId, all), COMPOSITION_REL_TYPES);
-        expect(tree.childrenMap.get('u')).toEqual(['own']);
-    });
-
-    it('adds nothing when a usage has no definition to inherit from', () => {
-        const els = [usage('u', 'Missing'), el('x')];
-        const byId = new Map(els.map(e => [e.id, e]));
-        const all = Object.fromEntries(els.map(e => [e.id, e]));
-        expect(withDefinitionComposition([], byId, all)).toEqual([]);
+    it('keeps an element whose type cannot be resolved rather than dropping it', () => {
+        const els = [use('orphan', 'Missing')];
+        expect(definitionLevelElements(els, index(els)).map(e => e.id)).toEqual(['orphan']);
     });
 });
 
-describe('redundantDefinitionIds', () => {
-    const def = (id: string) => el(id, { isDefinition: true });
-    const usage = (id: string, type: string) => el(id, { attributes: { usageType: type } });
-
-    it('drops a definition that a usage in the set is typed by', () => {
-        const ids = redundantDefinitionIds([usage('daq', 'DataAcquisitionBoard'), def('DataAcquisitionBoard')]);
-        expect([...ids]).toEqual(['DataAcquisitionBoard']);
+describe('definitionLevelComposition', () => {
+    it('reads composition declared on the usage and on the definition alike', () => {
+        // catheterInterfaceUnit (usage) composes daqBoard (usage) : Board
+        const els = [def('CIU'), use('ciu', 'CIU'), def('Board'), use('daqBoard', 'Board')];
+        const rels = [rel('composes', 'ciu', 'daqBoard')];
+        const out = definitionLevelComposition(rels, record(els), index(els));
+        expect(out.map(r => [r.sourceId, r.targetId])).toEqual([['CIU', 'Board']]);
     });
 
-    it('keeps every definition when the view shows no usages — a taxonomy is not a duplicate', () => {
-        expect(redundantDefinitionIds([def('Board'), def('Chip')]).size).toBe(0);
+    it('states a repeated part once — how many is multiplicity, not more edges', () => {
+        const els = [def('CIU'), use('ciu', 'CIU'), def('Board'), use('b1', 'Board'), use('b2', 'Board')];
+        const rels = [rel('composes', 'ciu', 'b1'), rel('composes', 'ciu', 'b2')];
+        expect(definitionLevelComposition(rels, record(els), index(els))).toHaveLength(1);
     });
 
-    it('keeps a definition no usage in the set refers to', () => {
-        expect(redundantDefinitionIds([usage('u', 'Board'), def('Unrelated')]).size).toBe(0);
+    it('drops an edge that becomes a self-loop once both ends resolve', () => {
+        const els = [def('Board'), use('b', 'Board')];
+        const rels = [rel('composes', 'Board', 'b')];
+        expect(definitionLevelComposition(rels, record(els), index(els))).toEqual([]);
+    });
+});
+
+describe('declaredSubject', () => {
+    const els = [def('CatheterInterfaceUnit', 'CIU'), el('other')];
+
+    it('takes the specifically exposed element, not the wildcard scope', () => {
+        const subject = declaredSubject(
+            { expose: 'pkg_ciu::CatheterInterfaceUnit, pkg_ims::*' }, record(els));
+        expect(subject?.id).toBe('CatheterInterfaceUnit');
+    });
+
+    it('ignores a wildcard-only expose', () => {
+        expect(declaredSubject({ expose: 'pkg_ims::*' }, record(els))).toBeUndefined();
+    });
+
+    it('falls back to includeElementIds, matched on providedId', () => {
+        const tagged = [el('hw', { attributes: { providedId: 'HW-IMS-01' } })];
+        const subject = declaredSubject(
+            { 'selectionQuery.includeElementIds': 'HW-IMS-01' }, record(tagged));
+        expect(subject?.id).toBe('hw');
+    });
+});
+
+describe('subtreeOf', () => {
+    it('keeps what the subject reaches and drops the rest', () => {
+        const els = [el('ciu'), el('board'), el('fpga'), el('unrelated')];
+        const rels = [rel('composes', 'ciu', 'board'), rel('composes', 'board', 'fpga')];
+        const sub = subtreeOf(buildCompositionTree(els, rels), 'ciu');
+        expect(sub.roots).toEqual(['ciu']);
+        expect([...sub.elements.keys()].sort()).toEqual(['board', 'ciu', 'fpga']);
+    });
+
+    it('returns the tree untouched when the root is not in it', () => {
+        const els = [el('a')];
+        const tree = buildCompositionTree(els, []);
+        expect(subtreeOf(tree, 'nope')).toBe(tree);
+    });
+});
+
+describe('dominantRoot', () => {
+    it('picks the root that reaches the most of the diagram', () => {
+        const els = [el('big'), el('c1'), el('c2'), el('lonely')];
+        const rels = [rel('composes', 'big', 'c1'), rel('composes', 'big', 'c2')];
+        expect(dominantRoot(buildCompositionTree(els, rels))).toBe('big');
     });
 });

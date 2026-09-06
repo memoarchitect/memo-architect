@@ -19,99 +19,189 @@ export const COMPOSITION_REL_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Composition edges a usage inherits from the definition that types it.
+ * The definition an element stands for: a definition is itself, a usage is the
+ * definition that types it.
  *
- * SysML declares composition on the DEFINITION — `part def DataAcquisitionBoard
- * { part fpga : ...; }` — while a decomposition shows USAGES. Walking
- * usage-to-usage therefore stops one level in: `dataAcquisitionBoard` has no
- * composition edge of its own, and the six parts it is made of hang off
- * `DataAcquisitionBoard` instead. The tree came apart exactly there, and every
- * definition then floated as its own parentless root — 87 of the IMS physical
- * view's 146.
- *
- * So a usage inherits its definition's children, which is the hop the
- * memo-sysmlv4 reference makes when it resolves `partUsage.partDef` and
- * recurses into that definition's own parts.
- *
- * Its own edges win: a usage that overrides part of its definition keeps what
- * it declared, and the definition only fills in what the usage left unsaid.
- *
- * Inherited edges are returned FIRST so they beat the definition's own edge to
- * the child, because `buildCompositionTree` gives each element a single parent
- * and the first edge takes it. In a decomposition of usages the usage is the
- * real parent; leaving the definition to claim it is what left the usage a
- * childless leaf and the definition a parentless root.
- *
- * One consequence is worth stating: two usages of the same definition compete
- * for the same child elements and only the first gets them. A tree cannot put
- * one node under two parents, and these ids are shared model elements, not
- * per-usage copies.
+ * `usageType` is a qualified name (`pkg::sub::Board`), so it is matched on its
+ * last segment and then by id or short name.
  */
-export function withDefinitionComposition(
-    relationships: readonly MemoRelationship[],
-    elements: Map<string, MemoElement>,
+export function resolveDefinition(
+    el: MemoElement,
+    definitions: ReadonlyMap<string, MemoElement>,
+): MemoElement | undefined {
+    if (el.isDefinition) return el;
+    const name = (el.attributes.usageType ?? '').split('::').pop()?.trim();
+    return name ? definitions.get(name) : undefined;
+}
+
+/** Definitions indexed by every name a usage may refer to them by. */
+export function definitionIndex(
     allElements: Readonly<Record<string, MemoElement>>,
-    hierarchyRelationshipTypes: ReadonlySet<string> = COMPOSITION_REL_TYPES,
-): MemoRelationship[] {
-    // Definitions indexed by the names a usage can refer to them by.
+): Map<string, MemoElement> {
     const definitions = new Map<string, MemoElement>();
     for (const el of Object.values(allElements)) {
         if (!el.isDefinition) continue;
         definitions.set(el.id, el);
         if (!definitions.has(el.name)) definitions.set(el.name, el);
     }
-
-    const childrenOfDefinition = new Map<string, MemoRelationship[]>();
-    const declaresOwn = new Set<string>();
-    for (const rel of relationships) {
-        if (!hierarchyRelationshipTypes.has(rel.type)) continue;
-        declaresOwn.add(rel.sourceId);
-        const list = childrenOfDefinition.get(rel.sourceId);
-        if (list) list.push(rel); else childrenOfDefinition.set(rel.sourceId, [rel]);
-    }
-
-    const inherited: MemoRelationship[] = [];
-    for (const usage of elements.values()) {
-        if (usage.isDefinition || declaresOwn.has(usage.id)) continue;
-        const typeName = (usage.attributes.usageType ?? '').split('::').pop()?.trim();
-        if (!typeName) continue;
-        const definition = definitions.get(typeName);
-        if (!definition || definition.id === usage.id) continue;
-        for (const rel of childrenOfDefinition.get(definition.id) ?? []) {
-            inherited.push({ ...rel, id: `${rel.id}-via-${usage.id}`, sourceId: usage.id });
-        }
-    }
-    return inherited.length ? [...inherited, ...relationships] : [...relationships];
+    return definitions;
 }
 
 /**
- * Definitions whose content is already on the diagram through a usage.
+ * A block definition diagram shows DEFINITIONS.
  *
- * Once a usage inherits its definition's composition
- * (`withDefinitionComposition`), keeping the definition too draws the same
- * structure twice: `dataAcquisitionBoard` decomposes into the six parts, and
- * `DataAcquisitionBoard` sits alongside it as a parentless root holding the
- * same six. 87 of the IMS physical view's 146 roots were definitions of
- * usages already present.
+ * That is what separates a BDD from an IBD: a BDD states that a Data
+ * Acquisition Board is made of an FPGA and a relay board — a fact about the
+ * types — while an IBD shows the particular instances inside one assembly and
+ * how they are wired. Drawing usages on a BDD produces one box per instance of
+ * the same type and no statement about the type at all.
  *
- * A definition is dropped ONLY when some usage in the same set is typed by it.
- * A view that shows definitions on purpose — a taxonomy, or a package of types
- * with no instances — keeps every one of them, because nothing there is a
- * duplicate of anything.
+ * So the view's selection, which is overwhelmingly usages, is mapped to the
+ * definitions those usages are typed by, and deduplicated. Elements with no
+ * resolvable definition are kept as themselves rather than dropped: losing an
+ * element silently is worse than showing one the model failed to type.
  */
-export function redundantDefinitionIds(elements: Iterable<MemoElement>): Set<string> {
-    const all = [...elements];
-    const typed = new Set<string>();
-    for (const el of all) {
-        if (el.isDefinition) continue;
-        const name = (el.attributes.usageType ?? '').split('::').pop()?.trim();
-        if (name) typed.add(name);
+export function definitionLevelElements(
+    elements: Iterable<MemoElement>,
+    definitions: ReadonlyMap<string, MemoElement>,
+): MemoElement[] {
+    const out = new Map<string, MemoElement>();
+    for (const el of elements) {
+        const def = resolveDefinition(el, definitions);
+        const node = def ?? el;
+        if (!out.has(node.id)) out.set(node.id, node);
     }
-    const redundant = new Set<string>();
-    for (const el of all) {
-        if (el.isDefinition && (typed.has(el.id) || typed.has(el.name))) redundant.add(el.id);
+    return [...out.values()];
+}
+
+/**
+ * Composition edges projected onto the definitions at both ends.
+ *
+ * This model declares composition in both places — of 2221 `composes` edges,
+ * 2134 sit on a usage (`catheterInterfaceUnit` composes its four blocks) and
+ * 86 on a definition (`DataAcquisitionBoard` composes its six). Reading either
+ * convention alone gives a broken tree: walking usages stopped at the Data
+ * Acquisition Board, and walking definitions stopped at the CIU. Projecting
+ * both ends onto definitions reads the two as the one fact they express, and
+ * collapses those 2221 edges to 69 distinct def-to-def relationships.
+ *
+ * Duplicates are dropped: four usages of the same board state one fact about
+ * the type. How MANY is multiplicity, which belongs on an edge label rather
+ * than in a repeated edge.
+ */
+export function definitionLevelComposition(
+    relationships: readonly MemoRelationship[],
+    allElements: Readonly<Record<string, MemoElement>>,
+    definitions: ReadonlyMap<string, MemoElement>,
+    hierarchyRelationshipTypes: ReadonlySet<string> = COMPOSITION_REL_TYPES,
+): MemoRelationship[] {
+    const seen = new Set<string>();
+    const out: MemoRelationship[] = [];
+    for (const rel of relationships) {
+        if (!hierarchyRelationshipTypes.has(rel.type)) continue;
+        const source = allElements[rel.sourceId];
+        const target = allElements[rel.targetId];
+        if (!source || !target) continue;
+        const s = resolveDefinition(source, definitions) ?? source;
+        const t = resolveDefinition(target, definitions) ?? target;
+        if (s.id === t.id) continue;
+        const key = `${s.id}>${t.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ ...rel, id: `def-${key}`, sourceId: s.id, targetId: t.id });
     }
-    return redundant;
+    return out;
+}
+
+/**
+ * The element a view is the diagram OF.
+ *
+ * A block definition diagram is always a BDD of something, so it has one root
+ * and everything on it is part of that root. The subject is declared: the CIU
+ * physical decomposition exposes
+ * `..._hardware_ciu::catheterInterfaceUnit` specifically before widening to
+ * `..._physical_architecture_ims::*`, and names `HW-IMS-01` in
+ * `includeElementIds`. A wildcard is scope, not subject — it says what may be
+ * drawn, not what the diagram is about.
+ */
+export function declaredSubject(
+    viewAttributes: Readonly<Record<string, string>> | undefined,
+    allElements: Readonly<Record<string, MemoElement>>,
+): MemoElement | undefined {
+    if (!viewAttributes) return undefined;
+    const byName = new Map<string, MemoElement>();
+    for (const el of Object.values(allElements)) if (!byName.has(el.name)) byName.set(el.name, el);
+    const find = (reference: string): MemoElement | undefined => {
+        const direct = allElements[reference];
+        if (direct) return direct;
+        const short = reference.split('::').pop()!.trim();
+        return allElements[short] ?? byName.get(short)
+            ?? Object.values(allElements).find(el =>
+                el.attributes.providedId === short || el.shortId === short);
+    };
+    for (const entry of (viewAttributes.expose ?? '').split(',')) {
+        const reference = entry.trim();
+        if (!reference || reference.endsWith('::*')) continue;
+        const found = find(reference);
+        if (found) return found;
+    }
+    for (const entry of (viewAttributes['selectionQuery.includeElementIds'] ?? '').split(',')) {
+        const reference = entry.trim();
+        if (!reference) continue;
+        const found = find(reference);
+        if (found) return found;
+    }
+    return undefined;
+}
+
+/**
+ * The subtree under one root, as a tree in its own right.
+ *
+ * What a BDD of the CIU may show is the CIU and what the CIU is made of.
+ * Anything the root does not reach is not part of the subject and is dropped —
+ * which is what removes the traceability duplicates and the RFG parts that a
+ * model-wide `includeElementKinds` query drags into an IMS view. They are not
+ * laid out more tidily; they are not on this diagram.
+ */
+export function subtreeOf(tree: CompositionTree, rootId: string): CompositionTree {
+    if (!tree.elements.has(rootId)) return tree;
+    const kept = new Map<string, MemoElement>();
+    const childrenMap = new Map<string, string[]>();
+    const visit = (id: string) => {
+        if (kept.has(id)) return;
+        const el = tree.elements.get(id);
+        if (!el) return;
+        kept.set(id, el);
+        const children = (tree.childrenMap.get(id) ?? []).filter(cid => tree.elements.has(cid));
+        if (children.length) childrenMap.set(id, children);
+        for (const cid of children) visit(cid);
+    };
+    visit(rootId);
+    return { roots: [rootId], childrenMap, elements: kept };
+}
+
+/**
+ * The root a view is about when it never said.
+ *
+ * Falls back to the root that reaches the most of the diagram, because a BDD
+ * with many parentless blocks is one subject plus a scattering of elements a
+ * broad selection query pulled in, and the subject is the one the rest hangs
+ * off. Ties keep the first, so the result does not depend on map order.
+ */
+export function dominantRoot(tree: CompositionTree): string | undefined {
+    let best: string | undefined;
+    let bestReach = -1;
+    for (const rootId of tree.roots) {
+        const seen = new Set<string>();
+        const visit = (id: string) => {
+            if (seen.has(id)) return;
+            seen.add(id);
+            for (const cid of tree.childrenMap.get(id) ?? []) visit(cid);
+        };
+        visit(rootId);
+        if (seen.size > bestReach) { bestReach = seen.size; best = rootId; }
+    }
+    return best;
 }
 
 export interface CompositionTree {

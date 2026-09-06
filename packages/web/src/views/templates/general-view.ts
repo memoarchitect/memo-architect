@@ -22,7 +22,8 @@ import {
     type LayoutResult,
 } from '../layout';
 import {
-    buildCompositionTree, isPortUsage, withDefinitionComposition, redundantDefinitionIds,
+    buildCompositionTree, isPortUsage, definitionIndex, definitionLevelElements,
+    definitionLevelComposition, declaredSubject, subtreeOf, dominantRoot,
     COMPOSITION_REL_TYPES, type CompositionTree,
 } from './composition-tree';
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
@@ -101,19 +102,33 @@ export function buildGeneralViewTree(
     model: MemoModelDTO,
     viewpointFilter?: (el: MemoElement) => boolean,
     hierarchyRelationshipTypes?: readonly string[],
+    /** The view element, whose `expose` names what the diagram is OF. */
+    viewElement?: MemoElement,
 ): CompositionTree {
-    const selected = visibleViewElements(model, viewpointFilter);
-    // A definition already represented by one of its usages would otherwise
-    // stand beside it holding the same children — see redundantDefinitionIds.
-    const redundant = redundantDefinitionIds(selected);
-    const elements = redundant.size ? selected.filter(el => !redundant.has(el.id)) : selected;
     const types = hierarchyTypesFor(hierarchyRelationshipTypes);
-    const byId = new Map(elements.map(el => [el.id, el]));
-    return buildCompositionTree(
+    const definitions = definitionIndex(model.elements);
+    // A BDD states facts about TYPES — that a Data Acquisition Board is made of
+    // an FPGA — so its nodes are definitions. Usages belong on an IBD, which
+    // shows the instances inside one assembly and how they are wired.
+    const elements = definitionLevelElements(visibleViewElements(model, viewpointFilter), definitions);
+    const full = buildCompositionTree(
         elements,
-        withDefinitionComposition(model.relationships, byId, model.elements, types),
+        definitionLevelComposition(model.relationships, model.elements, definitions, types),
         types,
     );
+
+    // A BDD is a BDD OF something: one root, and everything on it part of that
+    // root. Whatever the subject does not reach was pulled in by a broad
+    // selection query and is not on this diagram.
+    const subject = declaredSubject(viewElement?.attributes, model.elements);
+    const subjectNode = subject
+        ? (subject.isDefinition ? subject : definitions.get(
+            (subject.attributes.usageType ?? '').split('::').pop()?.trim() ?? '') ?? subject)
+        : undefined;
+    const rootId = subjectNode && full.elements.has(subjectNode.id)
+        ? subjectNode.id
+        : dominantRoot(full);
+    return rootId ? subtreeOf(full, rootId) : full;
 }
 
 /**
@@ -169,6 +184,8 @@ export interface GeneralViewOptions {
         onToggleExpand: (id: string) => void;
         onToggleDirection: (id: string) => void;
     };
+    /** The view element, whose `expose` names the diagram's subject. */
+    viewElement?: MemoElement;
     /** Sticky tree positions across re-layouts (canvas-owned) */
     positionCache?: Map<string, { x: number; y: number }>;
     layoutProviderId?: string;
@@ -188,7 +205,8 @@ export async function computeGeneralViewLayout(
         });
     }
 
-    const tree = buildGeneralViewTree(model, options.viewpointFilter, options.hierarchyRelationshipTypes);
+    const tree = buildGeneralViewTree(
+        model, options.viewpointFilter, options.hierarchyRelationshipTypes, options.viewElement);
     if (options.mode === 'tree') {
         return computeDecompositionLayout(model, {
             expandedNodes: options.expandedNodes,
