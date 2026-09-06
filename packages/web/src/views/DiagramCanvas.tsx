@@ -89,6 +89,7 @@ import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicke
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
+import { resolveLegend } from './templates/legend';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 
 /** The view's own element, which carries the `expose` naming its subject. */
@@ -1589,6 +1590,11 @@ function DiagramCanvasInner() {
 
     // BDD integrity: a block definition diagram must be one connected hierarchy,
     // not a forest of disconnected/floating elements (validateSingleTree).
+    /** The legend the open view names, if any — drawn as a key on the canvas. */
+    const activeLegend = useMemo(
+        () => (model ? resolveLegend(viewElementOf(model, selectedDiagram), model) : undefined),
+        [model, selectedDiagram]);
+
     const bddTreeIssue = useMemo(() => {
         if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
         const declaredTypes = selectedDiagram.relationshipTypes ?? [];
@@ -3962,6 +3968,33 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
+                {activeLegend && !isLayouting && (
+                    <div style={{
+                        position: 'absolute', right: 12, bottom: 12, zIndex: 5,
+                        background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 8,
+                        padding: '8px 10px', boxShadow: '0 1px 3px rgba(0,0,0,.08)',
+                        maxWidth: 220, pointerEvents: 'none',
+                    }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#374151', marginBottom: 5 }}>
+                            {activeLegend.name}
+                        </div>
+                        {/* The key says what the colour is OF, not just what each
+                            colour is: a legend tied to nothing is a palette. */}
+                        <div style={{ fontSize: 9, color: '#9CA3AF', marginBottom: 6 }}>
+                            {activeLegend.attributeName ?? activeLegend.enumerationName}
+                        </div>
+                        {activeLegend.entries.map(entry => (
+                            <div key={entry.value}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                                <span style={{
+                                    width: 10, height: 10, borderRadius: 3, flexShrink: 0,
+                                    background: entry.color, border: '1px solid rgba(0,0,0,.12)',
+                                }} />
+                                <span style={{ fontSize: 10, color: '#4B5563' }}>{entry.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {bddTreeIssue && !isLayouting && (
                     <div role="alert" className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-2"
                         style={{
