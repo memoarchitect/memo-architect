@@ -1173,9 +1173,18 @@ export function computeExplorerGroupTree(
 
         if (!parent && el.owner) parent = lookup.get(el.owner) ?? nodes.get(el.owner);
 
+        // `parentAction` gets the same ownership test as `composes`, and for
+        // the same reason. A ComponentFunction authored in
+        // architecture/functional/ was arriving with its parentAction pointing
+        // at an ActionUsage declared in traceability/ — the action that
+        // PERFORMS the function, in another layer and another file. Nesting
+        // under it filed a third of the functional decomposition under
+        // Behavior, where nobody reading the functional analysis would find
+        // it. A performer is not a container.
         if (!parent && el.parentAction) {
             const candidate = lookup.get(el.parentAction) ?? nodes.get(el.parentAction);
-            if (candidate && candidate !== node && !isAncestor(node, candidate)) parent = candidate;
+            if (candidate?.element && candidate !== node && !isAncestor(node, candidate)
+                && owns(candidate.element, el)) parent = candidate;
         }
 
         // Last resort: the qualified name itself states the containment.
