@@ -14,7 +14,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_SUBGROUP_ORDER, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_CONSTRUCT_ORDER, EXPLORER_LAYER_ORDER, CONSTRUCT_LABELS, CONSTRUCT_COLORS, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
@@ -22,7 +22,7 @@ import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import { activityNodeType, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
+import { type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -824,56 +824,13 @@ function isDiagramOnlyElement(kind: string, sourceLayer: string, sourcePackage?:
 }
 
 function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackage?: string): boolean {
-    return isDiagramOnlyElement(kind, sourceLayer, sourcePackage)
-        // A generic item is not an activity-diagram node and is not a MEMO
-        // architecture element until a project gives it an ontology kind.
-        || kind === 'ItemDefinition';
-}
-
-/**
- * Native SysML activity notation is recognized by the generated SysML
- * metamodel, not by a MEMO ontology declaration. Keep it visible as diagram
- * content without calling it an undefined model kind.
- */
-function isNativeSysmlDiagramElement(
-    element: MemoElement,
-    registryKinds: KindDefinitionDTO[],
-    registryKindNames: ReadonlySet<string>,
-): boolean {
-    return !registryKindNames.has(element.kind)
-        && activityNodeType(element, { kinds: registryKinds, relationships: [] }) !== undefined;
-}
-
-/** Build ordered layer groups from the currently selected ontology packages. */
-function buildLayerGroupsFromRegistry(
-    registryKinds: KindDefinitionDTO[],
-    availableOntologies: OntologyPackageInfo[],
-): LayerGroup[] {
-    const layerMap = new Map<string, LayerGroup>();
-    const metadata = new Map<string, { label: string; color: string }>();
-    for (const pkg of availableOntologies) {
-        for (const layer of pkg.layers) {
-            if (!metadata.has(layer.id)) metadata.set(layer.id, layer);
-        }
-    }
-
-    for (const kind of registryKinds) {
-        const id = kind.namespace?.[0] ?? kind.layer;
-        if (!id || id === 'unknown') continue;
-        let group = layerMap.get(id);
-        if (!group) {
-            const display = metadata.get(id);
-            group = {
-                id,
-                label: display?.label ?? subGroupLabel(id),
-                color: display?.color ?? (LAYER_COLORS as Record<string, string>)[id] ?? '#6B7280',
-                kinds: [],
-            };
-            layerMap.set(id, group);
-        }
-        if (!group.kinds.includes(kind.name)) group.kinds.push(kind.name);
-    }
-    return [...layerMap.values()];
+    // `ItemDefinition` used to be hidden here, on the grounds that an untyped
+    // item is not yet a MEMO element. Under the construct rule it has a home
+    // the moment it is authored — Items, then its layer — and hiding it made
+    // the one thing worth seeing invisible: 394 of Affera's 440 were untyped
+    // usages in an ARCHITECTURE layer, which is exactly the gap the
+    // "architecture defines, assurance states" guideline exists to surface.
+    return isDiagramOnlyElement(kind, sourceLayer, sourcePackage);
 }
 
 /** Build kind-name → source-area map from the ontology registry. */
@@ -992,7 +949,10 @@ export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
     registryKinds: KindDefinitionDTO[],
-    availableOntologies: OntologyPackageInfo[],
+    // Kept positionally for callers. The ontology's own layer list stopped
+    // being the top-level category when the construct became it, and the
+    // colours and labels a layer sub-group needs come from constants.
+    _availableOntologies: OntologyPackageInfo[],
     _declaredPackages: { qualifiedName: string }[] = [],
     kindFilter?: ReadonlySet<string>,
     relationships: { type?: string; sourceId?: string; targetId?: string }[] = [],
@@ -1000,12 +960,8 @@ export function computeExplorerGroupTree(
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
-    const NON_ELEMENT_LAYERS = new Set(['views', 'viewpoints', 'manifest']);
     const kindToLayerId = buildKindToLayerIdMap(registryKinds);
     const kindToSubGroup = buildKindToSubGroupMap(registryKinds);
-    const layerGroups = buildLayerGroupsFromRegistry(registryKinds, availableOntologies)
-        .filter(lg => !NON_ELEMENT_LAYERS.has(lg.id));
-    const knownLayerIds = new Set(layerGroups.map(lg => lg.id));
 
     // ─── Presentation elements belong to the Viewpoints explorer ────────────
     //
@@ -1020,6 +976,16 @@ export function computeExplorerGroupTree(
         el.construct === 'view'
         || (!!el.file && viewSourceFiles.has(el.file))
         || viewpointIds.has(el.id);
+
+    // ─── Rule 4: a relationship is an edge, so it is never a row ────────────
+    //
+    // `connection` is a construct, but it is the construct of the EDGES, and
+    // this tree lists elements. Affera declares nineteen of them — `Composes`,
+    // `DeploysOnto`, `RealizesInterface` — which arrived as a Connections
+    // category listing the relationship vocabulary beside the model's parts.
+    // Composition is read from the `composes` relationships, not from these,
+    // so nothing in the tree depends on them being rows.
+    const isRelationship = (el: MemoElement): boolean => el.construct === 'connection';
 
     // ─── Definitions this project declares, indexed by every name they answer to
     const projectDefs = new Map<string, MemoElement>();
@@ -1066,9 +1032,20 @@ export function computeExplorerGroupTree(
     const typeNameOf = (el: MemoElement): string =>
         el.attributes?.actionType || el.attributes?.usageType || el.kind || '';
 
-    // A definition earns a row only when something uses it. An unused one is a
-    // finding for the Definitions tab, not a member of the model tree, and
-    // listing every one of them doubled the catalog.
+    // ─── An element earns a row by being defined or used, not by existing ───
+    //
+    // A definition nothing uses is a finding for the Definitions tab, not a
+    // member of the model tree; listing every one of them doubled the catalog.
+    //
+    // The exception is a definition the PROJECT authored rather than one the
+    // ontology declares — a function def among them. Those are the catalog the
+    // conversion is building, and an unused one is work in progress, not
+    // clutter: hiding it hides the thing the author is in the middle of. An
+    // ontology kind needs no such grace, because the ontology already lists it.
+    //
+    // Usages are never hidden. A usage whose type is missing from the model
+    // still takes its place, so a dangling type shows up as a row to chase
+    // rather than as a silent absence.
     const usedDefinitions = new Set<string>();
     for (const el of elements) {
         const typeName = typeNameOf(el);
@@ -1076,6 +1053,12 @@ export function computeExplorerGroupTree(
         usedDefinitions.add(typeName);
         if (typeName.includes('::')) usedDefinitions.add(typeName.split('::').pop()!);
     }
+    const ontologyKindNames = new Set(registryKinds.map(kind => kind.name));
+    const earnsARow = (el: MemoElement): boolean =>
+        !el.isDefinition
+        || !ontologyKindNames.has(el.kind)
+        || usedDefinitions.has(el.name)
+        || usedDefinitions.has(el.id);
 
     const validElements = new Map<string, ExplorerElement>();
     for (const el of elements) {
@@ -1083,9 +1066,9 @@ export function computeExplorerGroupTree(
         const sourceLayer = kindToLayerId[el.kind] ?? el.layer;
         const sourcePackage = kindToSubGroup[el.kind];
         if (isExplorerHiddenElement(el.kind, sourceLayer, sourcePackage)) continue;
-        if (isPresentation(el)) continue;
+        if (isPresentation(el) || isRelationship(el)) continue;
+        if (!earnsARow(el)) continue;
         const isDef = !!el.isDefinition;
-        if (isDef && !(usedDefinitions.has(el.name) || usedDefinitions.has(el.id))) continue;
         const resolvedKind = resolveOntologyKind(el.kind, el);
         if (lower && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
@@ -1255,13 +1238,31 @@ export function computeExplorerGroupTree(
         sortNodes(node.children);
     }
 
-    const toSubGroups = (rootsList: TreeNode[], groupColor: string, layerId?: string): ExplorerSubGroup[] => {
+    // ─── Rule 2: inside a category, group by the layer the element reports ──
+    //
+    // The layer comes from the ELEMENT, not from `kindToLayerId`. An element
+    // whose kind the ontology never declared still reports a layer, and taking
+    // the kind's layer stranded every one of them — all five Enumerations
+    // among them — in "Undefined" rather than under the construct they plainly
+    // are. `artifacts` keeps its own sub-grouping: those categories are a
+    // stable user-facing branch, not ontology source folders.
+    const toSubGroups = (rootsList: TreeNode[], groupColor: string): ExplorerSubGroup[] => {
         const bySub = new Map<string, Map<string, TreeNode[]>>();
         for (const root of rootsList) {
-            const kind = root.element!.kind;
-            const sub = layerId === 'artifacts'
+            const el = root.element!;
+            const kind = el.kind;
+            // The element's own `layer` first. `kindToLayerId` is the ontology's
+            // TOP namespace — `architecture`, `assurance` — which is a source
+            // tree, not a layer; `kindToSubGroup` is the directory under it and
+            // is what actually lines up with the layer an element reports.
+            // `unknown` is not a layer, it is the builder declining to name one,
+            // so those kinds sit directly under the construct rather than in a
+            // folder called Unknown.
+            const raw = normalizeLayerId(el.layer || kindToSubGroup[kind] || '');
+            const layer = raw === 'unknown' ? '' : raw;
+            const sub = kindToLayerId[kind] === 'artifacts'
                 ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
-                : (kindToSubGroup[kind] ?? '');
+                : layer;
             if (!bySub.has(sub)) bySub.set(sub, new Map());
             const byKind = bySub.get(sub)!;
             byKind.set(kind, [...(byKind.get(kind) ?? []), root]);
@@ -1271,6 +1272,8 @@ export function computeExplorerGroupTree(
         // now settles every element on a concrete ontology kind before it gets
         // here, so a folder already names a real type; climbing further merged
         // distinct types under whichever abstract ancestor they happened to share.
+        // Strict kinds are also what keeps ForkNode and JoinNode in their own
+        // folders without an exclusion rule naming them.
         const buckets = new Map<string, Map<string, TreeNode[]>>();
         for (const [sub, byKind] of bySub.entries()) {
             const subBuckets = new Map<string, TreeNode[]>();
@@ -1282,76 +1285,66 @@ export function computeExplorerGroupTree(
             buckets.set(sub, subBuckets);
         }
 
-        const subGroupRank = (id: string) => {
-            const index = EXPLORER_SUBGROUP_ORDER.indexOf(
-                id.replace(/_/g, '-') as typeof EXPLORER_SUBGROUP_ORDER[number],
-            );
-            return index < 0 ? EXPLORER_SUBGROUP_ORDER.length : index;
+        const isArtifactCategory = (id: string) => ARTIFACT_CATEGORIES.includes(id as never);
+        const layerRank = (id: string) => {
+            const index = EXPLORER_LAYER_ORDER.indexOf(id as typeof EXPLORER_LAYER_ORDER[number]);
+            return index < 0 ? EXPLORER_LAYER_ORDER.length : index;
         };
         return [...buckets.entries()]
-            .sort(([a], [b]) => layerId === 'artifacts'
-                ? ARTIFACT_CATEGORIES.indexOf(a as any) - ARTIFACT_CATEGORIES.indexOf(b as any)
-                : subGroupRank(a) - subGroupRank(b) || a.localeCompare(b))
+            .sort(([a], [b]) => (isArtifactCategory(a) && isArtifactCategory(b))
+                ? ARTIFACT_CATEGORIES.indexOf(a as never) - ARTIFACT_CATEGORIES.indexOf(b as never)
+                : layerRank(a) - layerRank(b) || a.localeCompare(b))
             .map(([id, kinds]) => ({
                 id,
-                label: id ? subGroupLabel(id) : '',
+                label: id ? (LAYER_LABELS[id] ?? subGroupLabel(id)) : '',
                 color: id ? ((LAYER_COLORS as Record<string, string>)[id] ?? groupColor) : groupColor,
                 kinds,
             }));
     };
 
+    // ─── Rule 1: the top-level category is the SysML construct ──────────────
+    //
+    // A category is a construct because the language says so. Interfaces are
+    // their own group for the same reason ports are, and neither needed a
+    // decision. This is what removed the branch-by-branch judgement the layer
+    // grouping used to require: a project modelling something the ontology has
+    // not seen still lands somewhere predictable, because every element has a
+    // construct even when its kind is unknown.
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
-    for (const lg of layerGroups) {
-        const layerRoots: TreeNode[] = [];
-        for (const root of roots) {
-            const el = root.element!;
-            const layerId = kindToLayerId[el.kind];
-            if (!layerId || layerId !== lg.id) continue;
-            layerRoots.push(root);
-        }
-        if (layerRoots.length > 0) {
-            groups.push({ group: lg, subGroups: toSubGroups(layerRoots, lg.color, lg.id) });
-        }
-    }
-
-    const standardDiagramRoots: TreeNode[] = [];
-    const uncategorizedRoots: TreeNode[] = [];
-
-    const registryKindNames = new Set(registryKinds.map(kind => kind.name));
-
+    const byConstruct = new Map<string, TreeNode[]>();
+    const constructless: TreeNode[] = [];
     for (const root of roots) {
-        const el = root.element!;
-        const layerId = kindToLayerId[el.kind];
-        
-        if (layerId && knownLayerIds.has(layerId)) continue;
-        if (layerId && NON_ELEMENT_LAYERS.has(layerId)) continue;
-        
-        if (isNativeSysmlDiagramElement(el, registryKinds, registryKindNames)) {
-            standardDiagramRoots.push(root);
-        } else {
-            uncategorizedRoots.push(root);
-        }
+        const construct = (root.element!.construct ?? '').trim().toLowerCase();
+        if (!construct) { constructless.push(root); continue; }
+        byConstruct.set(construct, [...(byConstruct.get(construct) ?? []), root]);
     }
 
-    if (standardDiagramRoots.length > 0) {
-        const standardColor = '#64748B';
+    const constructRank = (id: string) => {
+        const index = EXPLORER_CONSTRUCT_ORDER.indexOf(id as typeof EXPLORER_CONSTRUCT_ORDER[number]);
+        return index < 0 ? EXPLORER_CONSTRUCT_ORDER.length : index;
+    };
+    for (const [construct, constructRoots] of [...byConstruct.entries()]
+        .sort(([a], [b]) => constructRank(a) - constructRank(b) || a.localeCompare(b))) {
+        const color = CONSTRUCT_COLORS[construct] ?? '#6B7280';
         groups.push({
             group: {
-                id: 'standard-sysml-diagram-elements',
-                label: 'Other — SysML Diagram Elements',
-                color: standardColor,
-                kinds: [],
+                id: `construct:${construct}`,
+                label: CONSTRUCT_LABELS[construct] ?? subGroupLabel(construct),
+                color,
+                kinds: [...new Set(constructRoots.map(root => root.element!.kind))],
             },
-            subGroups: toSubGroups(standardDiagramRoots, standardColor).map(sg => ({ ...sg, id: 'diagram-elements', label: 'Diagram Elements' })),
+            subGroups: toSubGroups(constructRoots, color),
         });
     }
 
-    if (uncategorizedRoots.length > 0) {
+    // An element the builder gave no construct at all is a builder finding, not
+    // a category. It is still shown — dropping it would hide the finding.
+    if (constructless.length > 0) {
         const undefColor = '#F59E0B';
         groups.push({
-            group: { id: 'undefined', label: 'Undefined — Not in Ontology', color: undefColor, kinds: [] },
-            subGroups: toSubGroups(uncategorizedRoots, undefColor).map(sg => ({ ...sg, id: 'undefined-elements', label: 'Elements' })),
+            group: { id: 'undefined', label: 'Undefined — No SysML Construct', color: undefColor, kinds: [] },
+            subGroups: toSubGroups(constructless, undefColor).map(sg => ({ ...sg, id: 'undefined-elements', label: 'Elements' })),
         });
     }
 
