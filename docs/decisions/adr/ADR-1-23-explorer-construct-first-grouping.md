@@ -26,8 +26,17 @@ branch could not say so.
 
 **2. Inside a construct: layer → kind → parent/child hierarchy.** The layer is
 the one the *element* reports — the ontology's *second* namespace segment, not
-its first, which is the domain from rule 1. Kind folders are strict — a
-concrete kind never rolls up into an abstract ancestor.
+its first, which is the domain from rule 1.
+
+**A kind folder names the type the element DECLARES, and nothing above it.**
+Resolution used to climb — through ontology superTypes and through project
+definitions to what they specialize — until it reached a concrete ontology
+kind, so a folder always named something the ontology knows. The cost was that
+it named something the author did not write: `AfferaRosPublisher` and
+`AfferaRosSubscriber` ports were filed under `SoftwarePort`, and the type the
+model declares vanished from the tree. If the model says `RosSubscriber` the
+folder says Ros Subscriber, and a project def two levels below the ontology is
+the model's own structure, which the reader is entitled to see.
 
 **3. A usage clubs under its definition when one exists; otherwise it takes its
 own place in the breakdown.** An element earns a row by being defined or used.

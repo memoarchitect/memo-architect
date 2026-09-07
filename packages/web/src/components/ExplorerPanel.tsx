@@ -1004,38 +1004,21 @@ export function computeExplorerGroupTree(
     }
 
     /**
-     * The ontology kind an element really belongs to.
+     * The type a folder names is the one the element DECLARES.
      *
-     * `kind` may name a PROJECT definition (`part p : CatheterExtensionPort`)
-     * rather than an ontology kind, which leaves the element sorted under a
-     * type folder named after one project element. Walk up — through ontology
-     * superTypes and through project definitions to what they specialize —
-     * until a concrete ontology kind is reached. Abstract kinds are categories,
-     * not destinations, so the walk passes through them.
+     * This used to climb — through ontology superTypes and through project
+     * definitions to what they specialize — until it reached a concrete
+     * ontology kind, so that a folder always named something the ontology
+     * knows. The cost was that it named something the AUTHOR did not write:
+     * `RosPublisher` and `RosSubscriber` ports were filed under `SoftwarePort`,
+     * and the type the model actually declares disappeared from the tree.
+     *
+     * A folder now names the direct type, and only that. If the model says
+     * `RosSubscriber`, the folder says Ros Subscriber; if a project def
+     * specializes two levels down from the ontology, that is the model's
+     * structure and the reader is entitled to see it.
      */
-    const resolveOntologyKind = (kind: string, el?: MemoElement): string => {
-        let current: string | undefined = kind;
-        const seen = new Set<string>();
-        while (current && !seen.has(current)) {
-            seen.add(current);
-            const ontologyKind = registryKinds.find(definition => definition.name === current);
-            if (ontologyKind && !ontologyKind.isAbstract && !projectDefs.has(current)) return ontologyKind.name;
-            if (ontologyKind?.superType) { current = ontologyKind.superType; continue; }
-            const projectDef = projectDefs.get(current);
-            const superKind = projectDef?.kind;
-            if (superKind && superKind !== current) { current = superKind; continue; }
-            break;
-        }
-        // A functional element that resolved no further than the universal
-        // action root is still a function; say which sort, rather than
-        // stranding the whole functional layer under "Action".
-        if (!current || current === 'MemoFunction' || current === 'Function' || current === 'Action') {
-            if (el?.layer === 'functional' || el?.construct === 'action') {
-                return el.kind === 'ComponentFunction' ? 'ComponentFunction' : 'SystemFunction';
-            }
-        }
-        return current || kind;
-    };
+    const resolveOntologyKind = (kind: string): string => kind;
 
     /** The type name a usage is typed by, however the builder recorded it. */
     const typeNameOf = (el: MemoElement): string =>
@@ -1078,7 +1061,7 @@ export function computeExplorerGroupTree(
         if (isPresentation(el) || isRelationship(el)) continue;
         if (!earnsARow(el)) continue;
         const isDef = !!el.isDefinition;
-        const resolvedKind = resolveOntologyKind(el.kind, el);
+        const resolvedKind = resolveOntologyKind(el.kind);
         if (lower && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
         // A usage with no id or name of its own inherits both from the
@@ -1279,12 +1262,10 @@ export function computeExplorerGroupTree(
             byKind.set(el.kind, [...(byKind.get(el.kind) ?? []), root]);
         }
 
-        // Kinds are not rolled up to a shared ancestor. `resolveOntologyKind`
-        // settles every element on a concrete ontology kind before it gets
-        // here, so a folder already names a real type; climbing further merged
-        // distinct types under whichever abstract ancestor they shared. Strict
-        // kinds are also what keeps ForkNode and JoinNode in folders of their
-        // own without an exclusion rule naming them.
+        // Kinds are not rolled up to a shared ancestor: a folder names the
+        // type the element declares, and nothing above it. This is what keeps
+        // ForkNode and JoinNode in folders of their own without an exclusion
+        // rule naming them.
         const buckets = new Map<string, Map<string, TreeNode[]>>();
         for (const [layer, byKind] of byLayer.entries()) {
             const layerBuckets = new Map<string, TreeNode[]>();
