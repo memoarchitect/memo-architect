@@ -258,7 +258,6 @@ export const DOMAIN_COLORS: Record<string, string> = {
 export const LAYER_DOMAIN: Record<string, string> = {
     operational: 'architecture',
     functional: 'architecture',
-    behavior: 'architecture',
     logical: 'architecture',
     implementation: 'architecture',
     realization: 'architecture',
@@ -288,11 +287,30 @@ export const LAYER_DOMAIN: Record<string, string> = {
  * are one entry. Anything unlisted sorts after these, alphabetically.
  */
 export const EXPLORER_LAYER_ORDER = [
-    'core', 'operational', 'functional', 'behavior', 'logical',
+    'core', 'operational', 'functional', 'logical',
     'implementation', 'realization', 'requirements', 'safety-risk',
     'verification-validation', 'cybersecurity', 'human-factors', 'methodology',
 ] as const;
 
+/**
+ * Layers the builder reports that are not layers.
+ *
+ * `behavior` is the clearest: the ontology has no such layer. Its six
+ * architecture layers are decisions, functional, implementation, logical,
+ * operational and realization, and behavior is a sub-package INSIDE the
+ * functional one — `architecture/functional/behavior`, where
+ * `abstract action def FunctionalAction` is declared. What reports
+ * `layer: behavior` is the builder's bucket for native SysML constructs:
+ * ActionUsage, ItemDefinition, ForkNode and JoinNode, none of them an ontology
+ * kind. Surfacing that as a seventh architecture layer invented a division the
+ * methodology does not have, so it folds back into the layer it belongs to.
+ */
+export const LAYER_ALIAS: Record<string, string> = {
+    behavior: 'functional',
+};
+
 /** `safety_risk`, `safety-risk` and `Safety Risk` are the same layer. */
-export const normalizeLayerId = (layer: string): string =>
-    layer.trim().toLowerCase().replace(/[\s_]+/g, '-');
+export const normalizeLayerId = (layer: string): string => {
+    const id = layer.trim().toLowerCase().replace(/[\s_]+/g, '-');
+    return LAYER_ALIAS[id] ?? id;
+};
