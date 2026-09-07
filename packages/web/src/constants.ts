@@ -219,19 +219,6 @@ export const CONTAINMENT_DEPTH_COLORS = [
 /** A block that holds nothing sits on the surface. */
 export const CONTAINMENT_LEAF_COLOR = '#FFFFFF';
 
-// ─── The SysML construct is the explorer's top-level category ────────────────
-//
-// A category is a construct because the LANGUAGE says so, not because a
-// judgement was made about which things deserve a branch. That removes the
-// question "should interfaces be their own group?" — interface is a construct,
-// so it is, for the same reason ports are. Nothing here needs revisiting when
-// a project models something the ontology has not seen.
-//
-// `connection`, `view` and `viewpoint` are absent deliberately. A connection
-// is a relationship, and the explorer lists elements; views and viewpoints are
-// the viewer's own furniture and have their own tab.
-// ─────────────────────────────────────────────────────────────────────────────
-
 // ─── The ontology's own top-level split is the explorer's first level ───────
 //
 // `memo/src` divides into `architecture/` and `assurance/` before it divides
@@ -289,36 +276,6 @@ export const LAYER_DOMAIN: Record<string, string> = {
     // them in `core/enumerations` — a value type belongs to neither the
     // architecture nor the claims made about it.
     '': 'core',
-};
-
-export const EXPLORER_CONSTRUCT_ORDER = [
-    'part', 'action', 'port', 'item', 'interface',
-    'requirement', 'use case', 'verification', 'enumeration',
-] as const;
-
-/** Plural, because a construct group names the collection, not the type. */
-export const CONSTRUCT_LABELS: Record<string, string> = {
-    part: 'Parts',
-    action: 'Actions',
-    port: 'Ports',
-    item: 'Items',
-    interface: 'Interfaces',
-    requirement: 'Requirements',
-    'use case': 'Use Cases',
-    verification: 'Verifications',
-    enumeration: 'Enumerations',
-};
-
-export const CONSTRUCT_COLORS: Record<string, string> = {
-    part: '#7B68EE',
-    action: '#2ECC71',
-    port: '#0891B2',
-    item: '#E67E22',
-    interface: '#D35400',
-    requirement: '#4A90D9',
-    'use case': '#9333EA',
-    verification: '#27AE60',
-    enumeration: '#65A30D',
 };
 
 /**
