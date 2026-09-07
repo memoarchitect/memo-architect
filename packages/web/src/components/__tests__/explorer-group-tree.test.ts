@@ -237,6 +237,22 @@ describe('computeExplorerGroupTree', () => {
             .toEqual(['OperationalParticipant', 'OperativeAction', 'UseCase']);
     });
 
+    it('does not invent a behavior layer the ontology does not have', () => {
+        // architecture/ has six layers and behavior is not one of them: it is a
+        // sub-package inside functional. What reports `layer: behavior` is the
+        // builder's bucket for native SysML constructs — ActionUsage,
+        // ItemDefinition, ForkNode, JoinNode — so it folds into functional
+        // rather than standing beside it.
+        const groups = computeExplorerGroupTree([
+            elc('a1', 'ActionUsage', 'behavior', 'action'),
+            elc('f1', 'ForkNode', 'behavior', 'action'),
+            elc('fn1', 'SystemFunction', 'functional', 'action'),
+        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        expect(layersOf(groups[0])).toEqual(['functional']);
+        expect(kindsIn(groups[0], 'functional'))
+            .toEqual(['ActionUsage', 'ForkNode', 'SystemFunction']);
+    });
+
     it('reads safety_risk and safety-risk as one layer', () => {
         const groups = computeExplorerGroupTree([
             elc('h1', 'Hazard', 'safety_risk', 'item'),
@@ -264,8 +280,8 @@ describe('computeExplorerGroupTree', () => {
             elc('j1', 'JoinNode', 'behavior', 'action'),
             elc('fn1', 'SystemFunction', 'functional', 'action'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(kindsIn(groups[0], 'behavior')).toEqual(['ForkNode', 'JoinNode']);
-        expect(kindsIn(groups[0], 'functional')).toEqual(['SystemFunction']);
+        expect(kindsIn(groups[0], 'functional'))
+            .toEqual(['ForkNode', 'JoinNode', 'SystemFunction']);
     });
 
     it('does not nest concrete kinds under abstract ontology bases', () => {
@@ -302,8 +318,10 @@ describe('computeExplorerGroupTree', () => {
             [performer, fn], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
         // The function keeps its own layer and its own kind folder.
-        expect(kindsIn(groups[0], 'functional')).toEqual(['ComponentFunction']);
-        expect(kindsIn(groups[0], 'behavior')).toEqual(['ActionUsage']);
+        // Both land in functional now — the point is that the function is not
+        // nested INSIDE the ActionUsage that performs it.
+        expect(kindsIn(groups[0], 'functional'))
+            .toEqual(['ActionUsage', 'ComponentFunction']);
     });
 
     // ─── Rule 3 ─────────────────────────────────────────────────────────────
