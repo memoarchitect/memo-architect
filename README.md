@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <code>memo-architect 0.11.6</code> &middot; MIT &middot; SysML v2 &middot;
+  <code>memo-architect 0.11.7</code> &middot; MIT &middot; SysML v2 &middot;
   ISO 14971 &middot; IEC 62304 &middot; ISO/IEC/IEEE 42010
 </p>
 
