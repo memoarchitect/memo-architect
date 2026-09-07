@@ -14,7 +14,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_LAYER_ORDER, EXPLORER_DOMAIN_ORDER, DOMAIN_LABELS, DOMAIN_COLORS, LAYER_DOMAIN, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
@@ -945,14 +945,91 @@ function groupByElementPackage(nodes: TreeNode[]): TreeNode[] {
     return ordered;
 }
 
+/**
+ * The explorer's taxonomy, read from the ontology that declares it.
+ *
+ * `ExplorerClassification` maps a source namespace to its explorer domain and
+ * group; `LayerRendering` gives each one a label and a colour. Architect
+ * carries none of this itself. It used to — a hand-maintained copy of the same
+ * facts — and the copy drifted: it invented a `behavior` layer while EXPL-011
+ * in the ontology said behavior belongs to architecture/functional, and it put
+ * `core` in a domain of its own while EXPL-029 files it under
+ * assurance/evidence.
+ *
+ * Order comes from declaration order, because that is the only statement of
+ * intent the ontology makes about sequence, and it is the order the
+ * methodology is read in.
+ */
+export interface ExplorerTaxonomy {
+    /** namespace (normalised) → {domain, group} */
+    placement: Map<string, { domain: string; group: string }>;
+    /** kind name → {domain, group}, for kinds the ontology declares */
+    byKind: Map<string, { domain: string; group: string }>;
+    /** group id → the domain that contains it */
+    groupDomain: Map<string, string>;
+    domainRank: (id: string) => number;
+    groupRank: (id: string) => number;
+    label: (id: string) => string | undefined;
+    color: (id: string) => string | undefined;
+}
+
+export function explorerTaxonomy(ontologies: OntologyPackageInfo[]): ExplorerTaxonomy {
+    const placement = new Map<string, { domain: string; group: string }>();
+    const byKind = new Map<string, { domain: string; group: string }>();
+    const groupDomain = new Map<string, string>();
+    const domainOrder: string[] = [];
+    const groupOrder: string[] = [];
+    const labels = new Map<string, string>();
+    const colors = new Map<string, string>();
+
+    const note = (domain: string, group: string) => {
+        if (domain && !domainOrder.includes(domain)) domainOrder.push(domain);
+        if (group && !groupOrder.includes(group)) groupOrder.push(group);
+        if (group && domain && !groupDomain.has(group)) groupDomain.set(group, domain);
+    };
+
+    for (const pkg of ontologies) {
+        for (const entry of pkg.layerPalette ?? []) {
+            const id = normalizeLayerId(entry.layerId);
+            if (!labels.has(id)) { labels.set(id, entry.layerLabel); colors.set(id, entry.layerColor); }
+        }
+        for (const entry of pkg.explorerPlacements ?? []) {
+            const domain = normalizeLayerId(entry.explorerDomain);
+            const group = normalizeLayerId(entry.explorerGroup);
+            placement.set(normalizeLayerId(entry.sourceNamespace), { domain, group });
+            note(domain, group);
+        }
+        // `layers` arrives with the classification already applied: its id is
+        // the domain and each kind's `group` is the group. That is what places
+        // a kind the ontology declares, whatever namespace it was authored in.
+        for (const layer of pkg.layers ?? []) {
+            const domain = normalizeLayerId(layer.id);
+            for (const kind of layer.kinds ?? []) {
+                const group = normalizeLayerId(kind.group ?? '');
+                byKind.set(kind.name, { domain, group });
+                note(domain, group);
+            }
+        }
+    }
+
+    const rank = (order: string[]) => (id: string) => {
+        const index = order.indexOf(id);
+        return index < 0 ? order.length : index;
+    };
+    return {
+        placement, byKind, groupDomain,
+        domainRank: rank(domainOrder),
+        groupRank: rank(groupOrder),
+        label: id => labels.get(id),
+        color: id => colors.get(id),
+    };
+}
+
 export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
     registryKinds: KindDefinitionDTO[],
-    // Kept positionally for callers. The ontology's own layer list stopped
-    // being the top-level category when the construct became it, and the
-    // colours and labels a layer sub-group needs come from constants.
-    _availableOntologies: OntologyPackageInfo[],
+    availableOntologies: OntologyPackageInfo[],
     _declaredPackages: { qualifiedName: string }[] = [],
     kindFilter?: ReadonlySet<string>,
     relationships: { type?: string; sourceId?: string; targetId?: string }[] = [],
@@ -1238,17 +1315,34 @@ export function computeExplorerGroupTree(
     // with the layer an element reports. `unknown` is not a layer, it is the
     // builder declining to name one, so those kinds sit directly under their
     // construct rather than in a folder called Unknown.
-    const layerOf = (el: MemoElement): string => {
-        const raw = normalizeLayerId(el.layer || kindToSubGroup[el.kind] || '');
-        return raw === 'unknown' ? '' : raw;
+    // ─── Where an element belongs, entirely as the ontology declares ───────
+    //
+    // Three ways in, in order of how directly the ontology states it:
+    //
+    //   1. The kind. `layers` arrives classified, so a kind the ontology
+    //      declares already names its domain and group.
+    //   2. The layer read as a GROUP. The builder stamps the directory a kind
+    //      was authored under, and for `architecture/logical/` that string is
+    //      already the group.
+    //   3. The layer read as a SOURCE NAMESPACE. `behavior` is the case that
+    //      matters: it is not a group, and EXPL-011 places it in
+    //      architecture/functional. The four native SysML kinds the builder
+    //      synthesizes arrive this way and no other.
+    //
+    // An element none of the three place is left undeclared, and shown as
+    // such. Inventing a home for it is what produced a `behavior` layer.
+    const taxonomy = explorerTaxonomy(availableOntologies);
+    const placeOf = (el: MemoElement): { domain: string; group: string } | undefined => {
+        const byKind = taxonomy.byKind.get(el.kind);
+        if (byKind) return byKind;
+        const layer = normalizeLayerId(el.layer ?? '');
+        if (!layer || layer === 'unknown') return undefined;
+        const asGroup = taxonomy.groupDomain.get(layer);
+        if (asGroup) return { domain: asGroup, group: layer };
+        return taxonomy.placement.get(layer);
     };
-
-    // Architecture or assurance. Read from the kind's namespace where the
-    // ontology declares one; otherwise inferred from the layer, because native
-    // SysML kinds (ItemDefinition, ActionDefinition) have no namespace and
-    // would otherwise pile up outside both domains.
-    const domainOf = (el: MemoElement): string =>
-        kindToLayerId[el.kind] ?? LAYER_DOMAIN[layerOf(el)] ?? '';
+    const layerOf = (el: MemoElement): string => placeOf(el)?.group ?? '';
+    const domainOf = (el: MemoElement): string => placeOf(el)?.domain ?? '';
 
     // ─── Inside a domain: the layer, then the kind ──────────────────────────
     //
@@ -1286,18 +1380,16 @@ export function computeExplorerGroupTree(
         }
 
         const isArtifactCategory = (id: string) => ARTIFACT_CATEGORIES.includes(id as never);
-        const layerRank = (id: string) => {
-            const index = EXPLORER_LAYER_ORDER.indexOf(id as typeof EXPLORER_LAYER_ORDER[number]);
-            return index < 0 ? EXPLORER_LAYER_ORDER.length : index;
-        };
         return [...buckets.entries()]
             .sort(([a], [b]) => (isArtifactCategory(a) && isArtifactCategory(b))
                 ? ARTIFACT_CATEGORIES.indexOf(a as never) - ARTIFACT_CATEGORIES.indexOf(b as never)
-                : layerRank(a) - layerRank(b) || a.localeCompare(b))
+                : taxonomy.groupRank(a) - taxonomy.groupRank(b) || a.localeCompare(b))
             .map(([id, kinds]) => ({
                 id,
-                label: id ? (LAYER_LABELS[id] ?? subGroupLabel(id)) : '',
-                color: id ? ((LAYER_COLORS as Record<string, string>)[id] ?? groupColor) : groupColor,
+                label: id ? (taxonomy.label(id) ?? LAYER_LABELS[id] ?? subGroupLabel(id)) : '',
+                color: id
+                    ? (taxonomy.color(id) ?? (LAYER_COLORS as Record<string, string>)[id] ?? groupColor)
+                    : groupColor,
                 kinds,
             }));
     };
@@ -1312,17 +1404,13 @@ export function computeExplorerGroupTree(
         byDomain.set(domain, [...(byDomain.get(domain) ?? []), root]);
     }
 
-    const domainRank = (id: string) => {
-        const index = EXPLORER_DOMAIN_ORDER.indexOf(id as typeof EXPLORER_DOMAIN_ORDER[number]);
-        return index < 0 ? EXPLORER_DOMAIN_ORDER.length : index;
-    };
     for (const [domain, domainRoots] of [...byDomain.entries()]
-        .sort(([a], [b]) => domainRank(a) - domainRank(b) || a.localeCompare(b))) {
-        const color = DOMAIN_COLORS[domain] ?? '#6B7280';
+        .sort(([a], [b]) => taxonomy.domainRank(a) - taxonomy.domainRank(b) || a.localeCompare(b))) {
+        const color = taxonomy.color(domain) ?? (LAYER_COLORS as Record<string, string>)[domain] ?? '#6B7280';
         groups.push({
             group: {
                 id: `domain:${domain}`,
-                label: DOMAIN_LABELS[domain] ?? subGroupLabel(domain),
+                label: taxonomy.label(domain) ?? subGroupLabel(domain),
                 color,
                 kinds: [...new Set(domainRoots.map(root => root.element!.kind))],
             },
@@ -1330,13 +1418,20 @@ export function computeExplorerGroupTree(
         });
     }
 
-    // An element that reaches neither domain is a finding, not a category: its
-    // kind is outside the ontology AND its layer is one nothing maps. It is
-    // still shown, because dropping it would hide the finding.
+    // An element the ontology does not place is a FINDING, and it is reported
+    // as one rather than filed somewhere plausible. Its kind is not declared
+    // and its layer matches no `ExplorerClassification` — so either the
+    // ontology is missing a classification or the builder invented a layer.
+    // Both are worth seeing; guessing on its behalf is what hid them before.
     if (domainless.length > 0) {
         const undefColor = '#F59E0B';
         groups.push({
-            group: { id: 'undefined', label: 'Undefined — Outside the Ontology', color: undefColor, kinds: [] },
+            group: {
+                id: 'undefined',
+                label: 'Undeclared — No Ontology Classification',
+                color: undefColor,
+                kinds: [],
+            },
             subGroups: toSubGroups(domainless, undefColor),
         });
     }

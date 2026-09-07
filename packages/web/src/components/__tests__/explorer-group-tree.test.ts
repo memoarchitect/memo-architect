@@ -40,6 +40,33 @@ const ONTOLOGY: OntologyPackageInfo = {
             ],
         },
     ],
+    // The taxonomy the real ontology declares, in declaration order — Architect
+    // reads this rather than carrying its own copy, so a fixture that omits it
+    // is a fixture with no taxonomy at all.
+    explorerPlacements: [
+        { sourceNamespace: 'operational', explorerDomain: 'architecture', explorerGroup: 'operational' },
+        { sourceNamespace: 'use_cases', explorerDomain: 'architecture', explorerGroup: 'operational' },
+        { sourceNamespace: 'functions', explorerDomain: 'architecture', explorerGroup: 'functional' },
+        // EXPL-011: behavior is not a layer, it is a namespace inside functional.
+        { sourceNamespace: 'behavior', explorerDomain: 'architecture', explorerGroup: 'functional' },
+        { sourceNamespace: 'logical_structure', explorerDomain: 'architecture', explorerGroup: 'logical' },
+        { sourceNamespace: 'interfaces', explorerDomain: 'architecture', explorerGroup: 'logical' },
+        { sourceNamespace: 'implementation', explorerDomain: 'architecture', explorerGroup: 'implementation' },
+        { sourceNamespace: 'physical', explorerDomain: 'architecture', explorerGroup: 'realization' },
+        { sourceNamespace: 'requirements', explorerDomain: 'assurance', explorerGroup: 'requirements' },
+        { sourceNamespace: 'safety', explorerDomain: 'assurance', explorerGroup: 'safety-risk' },
+        { sourceNamespace: 'cybersecurity', explorerDomain: 'assurance', explorerGroup: 'cybersecurity' },
+        { sourceNamespace: 'human_factors', explorerDomain: 'assurance', explorerGroup: 'human-factors' },
+        { sourceNamespace: 'verification', explorerDomain: 'assurance', explorerGroup: 'verification-validation' },
+        // EXPL-029: core is evidence under assurance, not a domain of its own.
+        { sourceNamespace: 'core', explorerDomain: 'assurance', explorerGroup: 'evidence' },
+        { sourceNamespace: 'methodology', explorerDomain: 'methodology', explorerGroup: 'methodology' },
+    ],
+    layerPalette: [
+        { layerId: 'operational', layerLabel: 'Operational', layerColor: '#C0392B' },
+        { layerId: 'functional', layerLabel: 'Functional', layerColor: '#E67E22' },
+        { layerId: 'logical', layerLabel: 'Logical', layerColor: '#7B68EE' },
+    ],
 } as OntologyPackageInfo;
 
 function el(id: string, kind: string, layer: string): MemoElement {
@@ -198,16 +225,17 @@ describe('computeExplorerGroupTree', () => {
         expect(groups.map(g => g.group.id)).toEqual(['domain:architecture', 'domain:assurance']);
     });
 
-    it('files a layerless value type under Core, not Undefined', () => {
-        // Enumerations are the only thing with no layer once views, viewpoints
-        // and connections are excluded, and the ontology keeps them in
-        // core/enumerations.
+    it('reports an element the ontology does not place, rather than filing it', () => {
+        // `EnumerationDefinition` is not an ontology kind and the builder gives
+        // it `layer: unknown`, which matches no ExplorerClassification. Either
+        // the ontology is missing one or the builder invented a layer; both are
+        // worth seeing, and guessing a home is what produced a behavior layer.
         const groups = computeExplorerGroupTree(
             [elc('e1', 'EnumerationDefinition', 'unknown', 'enumeration')],
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
-        expect(groups.map(g => g.group.id)).toEqual(['domain:core']);
-        expect(layersOf(groups[0])).toEqual(['']);
+        expect(groups.map(g => g.group.id)).toEqual(['undefined']);
+        expect(groups[0].group.label).toBe('Undeclared — No Ontology Classification');
     });
 
     // ─── Rule 2 ─────────────────────────────────────────────────────────────
@@ -237,12 +265,11 @@ describe('computeExplorerGroupTree', () => {
             .toEqual(['OperationalParticipant', 'OperativeAction', 'UseCase']);
     });
 
-    it('does not invent a behavior layer the ontology does not have', () => {
-        // architecture/ has six layers and behavior is not one of them: it is a
-        // sub-package inside functional. What reports `layer: behavior` is the
-        // builder's bucket for native SysML constructs — ActionUsage,
-        // ItemDefinition, ForkNode, JoinNode — so it folds into functional
-        // rather than standing beside it.
+    it('places behavior where EXPL-011 says, not in a layer of its own', () => {
+        // The ontology declares `behavior → architecture/functional`. What
+        // reports `layer: behavior` is the builder's bucket for native SysML
+        // constructs — ActionUsage, ItemDefinition, ForkNode, JoinNode — and
+        // the classification is what places them. Architect states nothing.
         const groups = computeExplorerGroupTree([
             elc('a1', 'ActionUsage', 'behavior', 'action'),
             elc('f1', 'ForkNode', 'behavior', 'action'),

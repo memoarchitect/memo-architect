@@ -23,6 +23,29 @@ export interface OntologyPackageInfo {
     relationshipTypes: OntologyRelationshipInfo[];
     selected: boolean;         // true if in project's memo.package.yaml ontologies list
     rootDir?: string;          // absolute path to the package directory (set by dev server for Open-source deep-link)
+    /**
+     * The `ExplorerClassification` usages the ontology declares — the
+     * authoritative taxonomy for where a namespace's content belongs in the
+     * Model Explorer. `layers` has these already applied for kinds the
+     * ontology declares; these are needed for everything else, because the
+     * native SysML constructs the builder synthesizes carry a NAMESPACE and no
+     * kind entry. Architect must read the taxonomy rather than carry one.
+     */
+    explorerPlacements?: ExplorerPlacementInfo[];
+    /** The `LayerRendering` usages the ontology declares — labels and colours. */
+    layerPalette?: LayerPaletteInfo[];
+}
+
+export interface ExplorerPlacementInfo {
+    sourceNamespace: string;   // e.g. "behavior"
+    explorerDomain: string;    // e.g. "architecture"
+    explorerGroup: string;     // e.g. "functional"
+}
+
+export interface LayerPaletteInfo {
+    layerId: string;           // e.g. "operational"
+    layerLabel: string;        // e.g. "Operational"
+    layerColor: string;        // hex colour
 }
 
 export interface OntologyLayerInfo {
