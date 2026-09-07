@@ -218,3 +218,65 @@ export const CONTAINMENT_DEPTH_COLORS = [
 
 /** A block that holds nothing sits on the surface. */
 export const CONTAINMENT_LEAF_COLOR = '#FFFFFF';
+
+// ─── The SysML construct is the explorer's top-level category ────────────────
+//
+// A category is a construct because the LANGUAGE says so, not because a
+// judgement was made about which things deserve a branch. That removes the
+// question "should interfaces be their own group?" — interface is a construct,
+// so it is, for the same reason ports are. Nothing here needs revisiting when
+// a project models something the ontology has not seen.
+//
+// `connection`, `view` and `viewpoint` are absent deliberately. A connection
+// is a relationship, and the explorer lists elements; views and viewpoints are
+// the viewer's own furniture and have their own tab.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const EXPLORER_CONSTRUCT_ORDER = [
+    'part', 'action', 'port', 'item', 'interface',
+    'requirement', 'use case', 'verification', 'enumeration',
+] as const;
+
+/** Plural, because a construct group names the collection, not the type. */
+export const CONSTRUCT_LABELS: Record<string, string> = {
+    part: 'Parts',
+    action: 'Actions',
+    port: 'Ports',
+    item: 'Items',
+    interface: 'Interfaces',
+    requirement: 'Requirements',
+    'use case': 'Use Cases',
+    verification: 'Verifications',
+    enumeration: 'Enumerations',
+};
+
+export const CONSTRUCT_COLORS: Record<string, string> = {
+    part: '#7B68EE',
+    action: '#2ECC71',
+    port: '#0891B2',
+    item: '#E67E22',
+    interface: '#D35400',
+    requirement: '#4A90D9',
+    'use case': '#9333EA',
+    verification: '#27AE60',
+    enumeration: '#65A30D',
+};
+
+/**
+ * Layer ids as the MODEL spells them, which is not how `LAYER_ORDER` spells
+ * them: the builder emits `safety_risk` and `verification_validation`, while
+ * `LAYER_ORDER` carries the viewpoint vocabulary's `risk` and `verification`
+ * and never names `implementation`, `realization` or `core` at all. Rule 2
+ * orders by the layer an element actually reports, so it needs this list.
+ * Compared with separators normalised, so `safety_risk` and `safety-risk`
+ * are one entry. Anything unlisted sorts after these, alphabetically.
+ */
+export const EXPLORER_LAYER_ORDER = [
+    'core', 'operational', 'functional', 'behavior', 'logical',
+    'implementation', 'realization', 'requirements', 'safety-risk',
+    'verification-validation', 'cybersecurity', 'human-factors', 'methodology',
+] as const;
+
+/** `safety_risk`, `safety-risk` and `Safety Risk` are the same layer. */
+export const normalizeLayerId = (layer: string): string =>
+    layer.trim().toLowerCase().replace(/[\s_]+/g, '-');

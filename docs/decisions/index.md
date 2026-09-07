@@ -8,6 +8,7 @@ summarized in [../architecture/platform.md](../architecture/platform.md).
 
 | Decision | Status | Notes |
 |---|---|---|
+| [ADR-1-23](adr/ADR-1-23-explorer-construct-first-grouping.md) | Accepted | Model Explorer groups by SysML construct, then layer, then kind; usages club under their def; relationships and views are not rows |
 | [ADR-1-22](adr/ADR-1-22-npm-dependencies-meta-workspace.md) | Accepted | Exact npm dependencies in product repos; sibling workspace links in `memo-meta` |
 | [ADR-1-19](adr/ADR-1-19-geometry-view-deferred.md) | Superseded 2026-07-30 | Geometry view kind deferred until the ontology carried geometric data; superseded once `UIElement.bounds` landed — the KK-9 renderer now draws captured screens, and the kind stays reachable only by explicit declaration |
 | [ADR-1-18](adr/ADR-1-18-kerml-expression-subset.md) | Accepted | Closed KerML boolean expression subset (navigation, collection ops, comparison/boolean/arithmetic, literals) for native `require/assert constraint { … }` bodies; grammar runs ahead of evaluator (EE-2 fills deferred forms) |
