@@ -285,6 +285,27 @@ describe('computeExplorerGroupTree', () => {
         expect(kindsIn(groups[0], 'safety-risk')).toEqual(['ResidualRisk']);
     });
 
+    it('does not nest a function under the action that performs it', () => {
+        // A ComponentFunction authored in architecture/functional/ arrived
+        // with parentAction pointing at an ActionUsage declared in
+        // traceability/ — the action that PERFORMS it, in another layer and
+        // another file. `composes` was already guarded against this; the
+        // parentAction fallback was not, and it filed a third of the
+        // functional decomposition under Behavior. A performer is not a
+        // container.
+        const performer = elc('sysAuthenticate', 'ActionUsage', 'behavior', 'action');
+        const fn = {
+            ...elc('logIn', 'ComponentFunction', 'functional', 'action'),
+            parentAction: 'sysAuthenticate',
+        } as MemoElement;
+        const groups = computeExplorerGroupTree(
+            [performer, fn], '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
+        );
+        // The function keeps its own layer and its own kind folder.
+        expect(kindsIn(groups[0], 'functional')).toEqual(['ComponentFunction']);
+        expect(kindsIn(groups[0], 'behavior')).toEqual(['ActionUsage']);
+    });
+
     // ─── Rule 3 ─────────────────────────────────────────────────────────────
 
     it('hides an ontology-kind definition that nothing uses', () => {
