@@ -14,7 +14,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_CONSTRUCT_ORDER, EXPLORER_LAYER_ORDER, CONSTRUCT_LABELS, CONSTRUCT_COLORS, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_CONSTRUCT_ORDER, EXPLORER_LAYER_ORDER, EXPLORER_DOMAIN_ORDER, CONSTRUCT_LABELS, CONSTRUCT_COLORS, DOMAIN_LABELS, DOMAIN_COLORS, LAYER_DOMAIN, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
@@ -881,13 +881,22 @@ function kindFolderLabel(kind: string, count: number): string {
     return labels[kind] ?? kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
-/** One namespace sub-group inside a layer group (e.g. Risk inside Architecture). */
-export interface ExplorerSubGroup {
-    /** Sub-group id ('' for kinds sitting directly under the layer). */
+/** One layer inside a construct group (e.g. Safety Risk inside Items). */
+export interface ExplorerLayerGroup {
+    /** Layer id ('' for kinds the builder gave no layer). */
     id: string;
     label: string;
     color: string;
     kinds: Map<string, TreeNode[]>;
+}
+
+/** One construct inside a domain group (e.g. Items inside Assurance). */
+export interface ExplorerSubGroup {
+    /** Construct id ('' for elements with no construct of their own). */
+    id: string;
+    label: string;
+    color: string;
+    layers: ExplorerLayerGroup[];
 }
 
 const ARTIFACT_CATEGORIES = ['documents', 'assets', 'templates', 'analyses', 'adrs', 'reviews'] as const;
@@ -1238,51 +1247,53 @@ export function computeExplorerGroupTree(
         sortNodes(node.children);
     }
 
-    // ─── Rule 2: inside a category, group by the layer the element reports ──
+    // ─── The layer an element reports, and the domain that layer sits in ────
     //
-    // The layer comes from the ELEMENT, not from `kindToLayerId`. An element
-    // whose kind the ontology never declared still reports a layer, and taking
-    // the kind's layer stranded every one of them — all five Enumerations
-    // among them — in "Undefined" rather than under the construct they plainly
-    // are. `artifacts` keeps its own sub-grouping: those categories are a
-    // stable user-facing branch, not ontology source folders.
-    const toSubGroups = (rootsList: TreeNode[], groupColor: string): ExplorerSubGroup[] => {
-        const bySub = new Map<string, Map<string, TreeNode[]>>();
+    // The layer comes from the ELEMENT. `kindToLayerId` is the ontology's TOP
+    // namespace — `architecture`, `assurance` — which is the DOMAIN, not the
+    // layer; `kindToSubGroup` is the directory under it and is what lines up
+    // with the layer an element reports. `unknown` is not a layer, it is the
+    // builder declining to name one, so those kinds sit directly under their
+    // construct rather than in a folder called Unknown.
+    const layerOf = (el: MemoElement): string => {
+        const raw = normalizeLayerId(el.layer || kindToSubGroup[el.kind] || '');
+        return raw === 'unknown' ? '' : raw;
+    };
+
+    // Architecture or assurance. Read from the kind's namespace where the
+    // ontology declares one; otherwise inferred from the layer, because native
+    // SysML kinds (ItemDefinition, ActionDefinition) have no namespace and
+    // would otherwise pile up outside both domains.
+    const domainOf = (el: MemoElement): string =>
+        kindToLayerId[el.kind] ?? LAYER_DOMAIN[layerOf(el)] ?? '';
+
+    const toLayerGroups = (rootsList: TreeNode[], groupColor: string): ExplorerLayerGroup[] => {
+        const byLayer = new Map<string, Map<string, TreeNode[]>>();
         for (const root of rootsList) {
             const el = root.element!;
-            const kind = el.kind;
-            // The element's own `layer` first. `kindToLayerId` is the ontology's
-            // TOP namespace — `architecture`, `assurance` — which is a source
-            // tree, not a layer; `kindToSubGroup` is the directory under it and
-            // is what actually lines up with the layer an element reports.
-            // `unknown` is not a layer, it is the builder declining to name one,
-            // so those kinds sit directly under the construct rather than in a
-            // folder called Unknown.
-            const raw = normalizeLayerId(el.layer || kindToSubGroup[kind] || '');
-            const layer = raw === 'unknown' ? '' : raw;
-            const sub = kindToLayerId[kind] === 'artifacts'
-                ? artifactCategory(kind, registryKinds.find(definition => definition.name === kind)?.superType)
-                : layer;
-            if (!bySub.has(sub)) bySub.set(sub, new Map());
-            const byKind = bySub.get(sub)!;
-            byKind.set(kind, [...(byKind.get(kind) ?? []), root]);
+            const layer = kindToLayerId[el.kind] === 'artifacts'
+                ? artifactCategory(el.kind, registryKinds.find(d => d.name === el.kind)?.superType)
+                : layerOf(el);
+            if (!byLayer.has(layer)) byLayer.set(layer, new Map());
+            const byKind = byLayer.get(layer)!;
+            byKind.set(el.kind, [...(byKind.get(el.kind) ?? []), root]);
         }
 
-        // Kinds are no longer rolled up to a shared ancestor. `resolveOntologyKind`
-        // now settles every element on a concrete ontology kind before it gets
+        // Kinds are not rolled up to a shared ancestor. `resolveOntologyKind`
+        // settles every element on a concrete ontology kind before it gets
         // here, so a folder already names a real type; climbing further merged
-        // distinct types under whichever abstract ancestor they happened to share.
-        // Strict kinds are also what keeps ForkNode and JoinNode in their own
-        // folders without an exclusion rule naming them.
+        // distinct types under whichever abstract ancestor they shared. Strict
+        // kinds are also what keeps ForkNode and JoinNode in folders of their
+        // own without an exclusion rule naming them.
         const buckets = new Map<string, Map<string, TreeNode[]>>();
-        for (const [sub, byKind] of bySub.entries()) {
-            const subBuckets = new Map<string, TreeNode[]>();
+        for (const [layer, byKind] of byLayer.entries()) {
+            const layerBuckets = new Map<string, TreeNode[]>();
             for (const [kind, kindRoots] of byKind.entries()) {
                 const tree = [...kindRoots];
                 sortNodes(tree);
-                subBuckets.set(kind, groupByElementPackage(tree));
+                layerBuckets.set(kind, groupByElementPackage(tree));
             }
-            buckets.set(sub, subBuckets);
+            buckets.set(layer, layerBuckets);
         }
 
         const isArtifactCategory = (id: string) => ARTIFACT_CATEGORIES.includes(id as never);
@@ -1302,49 +1313,72 @@ export function computeExplorerGroupTree(
             }));
     };
 
-    // ─── Rule 1: the top-level category is the SysML construct ──────────────
+    // ─── Domain, then construct, then layer, then kind ──────────────────────
     //
-    // A category is a construct because the language says so. Interfaces are
-    // their own group for the same reason ports are, and neither needed a
-    // decision. This is what removed the branch-by-branch judgement the layer
-    // grouping used to require: a project modelling something the ontology has
-    // not seen still lands somewhere predictable, because every element has a
-    // construct even when its kind is unknown.
-    const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
-
-    const byConstruct = new Map<string, TreeNode[]>();
-    const constructless: TreeNode[] = [];
-    for (const root of roots) {
-        const construct = (root.element!.construct ?? '').trim().toLowerCase();
-        if (!construct) { constructless.push(root); continue; }
-        byConstruct.set(construct, [...(byConstruct.get(construct) ?? []), root]);
-    }
-
+    // The ontology splits into architecture and assurance before anything
+    // else, and that is what a reader orients by first: what the device IS
+    // versus what is claimed ABOUT it. The construct is the category within
+    // it, so Items appears under both — InterfaceItem is architecture, Hazard
+    // is assurance — which is the distinction one shared Items branch lost.
     const constructRank = (id: string) => {
         const index = EXPLORER_CONSTRUCT_ORDER.indexOf(id as typeof EXPLORER_CONSTRUCT_ORDER[number]);
         return index < 0 ? EXPLORER_CONSTRUCT_ORDER.length : index;
     };
-    for (const [construct, constructRoots] of [...byConstruct.entries()]
-        .sort(([a], [b]) => constructRank(a) - constructRank(b) || a.localeCompare(b))) {
-        const color = CONSTRUCT_COLORS[construct] ?? '#6B7280';
+    const toSubGroups = (rootsList: TreeNode[], groupColor: string): ExplorerSubGroup[] => {
+        const byConstruct = new Map<string, TreeNode[]>();
+        for (const root of rootsList) {
+            const construct = (root.element!.construct ?? '').trim().toLowerCase();
+            byConstruct.set(construct, [...(byConstruct.get(construct) ?? []), root]);
+        }
+        return [...byConstruct.entries()]
+            .sort(([a], [b]) => constructRank(a) - constructRank(b) || a.localeCompare(b))
+            .map(([id, constructRoots]) => {
+                const color = CONSTRUCT_COLORS[id] ?? groupColor;
+                return {
+                    id,
+                    label: id ? (CONSTRUCT_LABELS[id] ?? subGroupLabel(id)) : 'Elements',
+                    color,
+                    layers: toLayerGroups(constructRoots, color),
+                };
+            });
+    };
+
+    const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
+
+    const byDomain = new Map<string, TreeNode[]>();
+    const domainless: TreeNode[] = [];
+    for (const root of roots) {
+        const domain = domainOf(root.element!);
+        if (!domain) { domainless.push(root); continue; }
+        byDomain.set(domain, [...(byDomain.get(domain) ?? []), root]);
+    }
+
+    const domainRank = (id: string) => {
+        const index = EXPLORER_DOMAIN_ORDER.indexOf(id as typeof EXPLORER_DOMAIN_ORDER[number]);
+        return index < 0 ? EXPLORER_DOMAIN_ORDER.length : index;
+    };
+    for (const [domain, domainRoots] of [...byDomain.entries()]
+        .sort(([a], [b]) => domainRank(a) - domainRank(b) || a.localeCompare(b))) {
+        const color = DOMAIN_COLORS[domain] ?? '#6B7280';
         groups.push({
             group: {
-                id: `construct:${construct}`,
-                label: CONSTRUCT_LABELS[construct] ?? subGroupLabel(construct),
+                id: `domain:${domain}`,
+                label: DOMAIN_LABELS[domain] ?? subGroupLabel(domain),
                 color,
-                kinds: [...new Set(constructRoots.map(root => root.element!.kind))],
+                kinds: [...new Set(domainRoots.map(root => root.element!.kind))],
             },
-            subGroups: toSubGroups(constructRoots, color),
+            subGroups: toSubGroups(domainRoots, color),
         });
     }
 
-    // An element the builder gave no construct at all is a builder finding, not
-    // a category. It is still shown — dropping it would hide the finding.
-    if (constructless.length > 0) {
+    // An element that reaches neither domain is a finding, not a category: its
+    // kind is outside the ontology AND its layer is one nothing maps. It is
+    // still shown, because dropping it would hide the finding.
+    if (domainless.length > 0) {
         const undefColor = '#F59E0B';
         groups.push({
-            group: { id: 'undefined', label: 'Undefined — No SysML Construct', color: undefColor, kinds: [] },
-            subGroups: toSubGroups(constructless, undefColor).map(sg => ({ ...sg, id: 'undefined-elements', label: 'Elements' })),
+            group: { id: 'undefined', label: 'Undefined — Outside the Ontology', color: undefColor, kinds: [] },
+            subGroups: toSubGroups(domainless, undefColor),
         });
     }
 
@@ -1729,7 +1763,12 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 next.add(`g:${group.id}`);
                 for (const sub of subGroups) {
                     if (sub.id) next.add(`sg:${group.id}:${sub.id}`);
-                    for (const kind of sub.kinds.keys()) next.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
+                    for (const layer of sub.layers) {
+                        if (layer.id) next.add(`lg:${group.id}:${sub.id}:${layer.id}`);
+                        for (const kind of layer.kinds.keys()) {
+                            next.add(`k:${group.id}:${layer.id ? `${layer.id}:` : ''}${kind}`);
+                        }
+                    }
                 }
             }
             setExpanded(next);
@@ -1807,7 +1846,9 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         };
         for (const { subGroups } of groupTree) {
             for (const sub of subGroups) {
-                for (const nodes of sub.kinds.values()) countElements(nodes);
+                for (const layer of sub.layers) {
+                    for (const nodes of layer.kinds.values()) countElements(nodes);
+                }
             }
         }
         return ids;
@@ -1902,8 +1943,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     const countElements = (nodes: TreeNode[]): number =>
                         nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
 
+                    const countLayer = (layer: ExplorerLayerGroup): number =>
+                        Array.from(layer.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+
                     const countSubGroup = (sub: ExplorerSubGroup): number =>
-                        Array.from(sub.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+                        sub.layers.reduce((sum, layer) => sum + countLayer(layer), 0);
 
                     const totalCount = subGroups.reduce((sum, sub) => sum + countSubGroup(sub), 0);
 
@@ -2056,15 +2100,55 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 );
                             };
 
-                            if (!isExpanded) return null;
-                            return subGroups.map(sub => {
-                                // Kinds sitting directly under the layer render flat
-                                if (!sub.id) {
+                            /** The layers inside one construct, each its own folder. */
+                            const renderLayers = (sub: ExplorerSubGroup, subId: string) =>
+                                sub.layers.map(layer => {
+                                    // A layer the builder never named adds no
+                                    // folder: its kinds sit straight under the
+                                    // construct rather than under "Unknown".
+                                    if (!layer.id) {
+                                        return (
+                                            <div key="__nolayer">
+                                                {Array.from(layer.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, ''))}
+                                            </div>
+                                        );
+                                    }
+                                    const layerKey = `lg:${group.id}:${subId}:${layer.id}`;
+                                    const isLayerExpanded = expanded.has(layerKey);
                                     return (
-                                        <div key="__root">
-                                            {Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, ''))}
+                                        <div key={layer.id} style={{ marginLeft: '16px' }}>
+                                            <div
+                                                className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
+                                                style={{ borderRadius: '4px', margin: '0 4px' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                onClick={() => toggleExpand(layerKey)}
+                                            >
+                                                <ChevronIcon expanded={isLayerExpanded} size={13} color={layer.color} />
+                                                <FolderIcon open={isLayerExpanded} color={layer.color} />
+                                                <span
+                                                    className="font-semibold flex-1 truncate"
+                                                    style={{ color: COLOR.primary, fontSize: FONT.explorer.kind }}
+                                                >
+                                                    {layer.label}
+                                                </span>
+                                                <ExplorerCountBadge
+                                                    count={countLayer(layer)}
+                                                    color={layer.color}
+                                                    title={`${countLayer(layer)} elements`}
+                                                />
+                                            </div>
+                                            {isLayerExpanded && Array.from(layer.kinds.entries())
+                                                .map(([kind, nodes]) => renderKind(kind, nodes, layer.id))}
                                         </div>
                                     );
+                                });
+
+                            if (!isExpanded) return null;
+                            return subGroups.map(sub => {
+                                // Elements with no construct render flat.
+                                if (!sub.id) {
+                                    return <div key="__root">{renderLayers(sub, '')}</div>;
                                 }
                                 const subKey = `sg:${group.id}:${sub.id}`;
                                 const isSubExpanded = expanded.has(subKey);
@@ -2101,7 +2185,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 {subCount}
                                             </span>
                                         </div>
-                                        {isSubExpanded && Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, sub.id))}
+                                        {isSubExpanded && renderLayers(sub, sub.id)}
                                     </div>
                                 );
                             });

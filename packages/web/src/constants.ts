@@ -232,6 +232,65 @@ export const CONTAINMENT_LEAF_COLOR = '#FFFFFF';
 // the viewer's own furniture and have their own tab.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── The ontology's own top-level split is the explorer's first level ───────
+//
+// `memo/src` divides into `architecture/` and `assurance/` before it divides
+// into anything else, and that split is what a reader is orienting by first:
+// what the device IS versus what is claimed ABOUT it. The construct is the
+// category WITHIN that, so `Items` appears under both — InterfaceItem is
+// architecture, Hazard is assurance — which is the distinction that was lost
+// when every item shared one branch.
+// ────────────────────────────────────────────────────────────────────────────
+
+export const EXPLORER_DOMAIN_ORDER = [
+    'architecture', 'assurance', 'artifacts', 'methodology', 'core',
+] as const;
+
+export const DOMAIN_LABELS: Record<string, string> = {
+    architecture: 'Architecture',
+    assurance: 'Assurance',
+    artifacts: 'Artifacts',
+    methodology: 'Methodology',
+    core: 'Core',
+};
+
+export const DOMAIN_COLORS: Record<string, string> = {
+    architecture: '#7B68EE',
+    assurance: '#E74C3C',
+    artifacts: '#0891B2',
+    methodology: '#65A30D',
+    core: '#6B7280',
+};
+
+/**
+ * The domain a LAYER belongs to, for elements whose kind the ontology never
+ * declared and which therefore have no namespace to read it from. Native SysML
+ * kinds (`ItemDefinition`, `ActionDefinition`) arrive this way, and without
+ * this every one of them would pile up outside both domains.
+ */
+export const LAYER_DOMAIN: Record<string, string> = {
+    operational: 'architecture',
+    functional: 'architecture',
+    behavior: 'architecture',
+    logical: 'architecture',
+    implementation: 'architecture',
+    realization: 'architecture',
+    decisions: 'architecture',
+    requirements: 'assurance',
+    'safety-risk': 'assurance',
+    cybersecurity: 'assurance',
+    'verification-validation': 'assurance',
+    'human-factors': 'assurance',
+    artifacts: 'artifacts',
+    methodology: 'methodology',
+    core: 'core',
+    // No layer at all. Enumerations are the only thing that reaches here once
+    // views, viewpoints and connections are excluded, and the ontology keeps
+    // them in `core/enumerations` — a value type belongs to neither the
+    // architecture nor the claims made about it.
+    '': 'core',
+};
+
 export const EXPLORER_CONSTRUCT_ORDER = [
     'part', 'action', 'port', 'item', 'interface',
     'requirement', 'use case', 'verification', 'enumeration',
