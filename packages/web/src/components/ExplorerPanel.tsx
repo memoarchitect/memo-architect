@@ -14,7 +14,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_CONSTRUCT_ORDER, EXPLORER_LAYER_ORDER, EXPLORER_DOMAIN_ORDER, CONSTRUCT_LABELS, CONSTRUCT_COLORS, DOMAIN_LABELS, DOMAIN_COLORS, LAYER_DOMAIN, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, EXPLORER_LAYER_ORDER, EXPLORER_DOMAIN_ORDER, DOMAIN_LABELS, DOMAIN_COLORS, LAYER_DOMAIN, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
@@ -881,22 +881,13 @@ function kindFolderLabel(kind: string, count: number): string {
     return labels[kind] ?? kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
-/** One layer inside a construct group (e.g. Safety Risk inside Items). */
-export interface ExplorerLayerGroup {
+/** One layer inside a domain group (e.g. Safety Risk inside Assurance). */
+export interface ExplorerSubGroup {
     /** Layer id ('' for kinds the builder gave no layer). */
     id: string;
     label: string;
     color: string;
     kinds: Map<string, TreeNode[]>;
-}
-
-/** One construct inside a domain group (e.g. Items inside Assurance). */
-export interface ExplorerSubGroup {
-    /** Construct id ('' for elements with no construct of their own). */
-    id: string;
-    label: string;
-    color: string;
-    layers: ExplorerLayerGroup[];
 }
 
 const ARTIFACT_CATEGORIES = ['documents', 'assets', 'templates', 'analyses', 'adrs', 'reviews'] as const;
@@ -1250,7 +1241,15 @@ export function computeExplorerGroupTree(
     const domainOf = (el: MemoElement): string =>
         kindToLayerId[el.kind] ?? LAYER_DOMAIN[layerOf(el)] ?? '';
 
-    const toLayerGroups = (rootsList: TreeNode[], groupColor: string): ExplorerLayerGroup[] => {
+    // ─── Inside a domain: the layer, then the kind ──────────────────────────
+    //
+    // The construct is NOT a level here. A reader looking for the operational
+    // analysis wants everything in it — the actions, the parts that perform
+    // them, the use cases — and splitting that by construct first scattered
+    // one layer across six branches. The construct still decides what is a row
+    // at all (a connection is an edge, a view is furniture); it just does not
+    // organise the tree.
+    const toSubGroups = (rootsList: TreeNode[], groupColor: string): ExplorerSubGroup[] => {
         const byLayer = new Map<string, Map<string, TreeNode[]>>();
         for (const root of rootsList) {
             const el = root.element!;
@@ -1292,36 +1291,6 @@ export function computeExplorerGroupTree(
                 color: id ? ((LAYER_COLORS as Record<string, string>)[id] ?? groupColor) : groupColor,
                 kinds,
             }));
-    };
-
-    // ─── Domain, then construct, then layer, then kind ──────────────────────
-    //
-    // The ontology splits into architecture and assurance before anything
-    // else, and that is what a reader orients by first: what the device IS
-    // versus what is claimed ABOUT it. The construct is the category within
-    // it, so Items appears under both — InterfaceItem is architecture, Hazard
-    // is assurance — which is the distinction one shared Items branch lost.
-    const constructRank = (id: string) => {
-        const index = EXPLORER_CONSTRUCT_ORDER.indexOf(id as typeof EXPLORER_CONSTRUCT_ORDER[number]);
-        return index < 0 ? EXPLORER_CONSTRUCT_ORDER.length : index;
-    };
-    const toSubGroups = (rootsList: TreeNode[], groupColor: string): ExplorerSubGroup[] => {
-        const byConstruct = new Map<string, TreeNode[]>();
-        for (const root of rootsList) {
-            const construct = (root.element!.construct ?? '').trim().toLowerCase();
-            byConstruct.set(construct, [...(byConstruct.get(construct) ?? []), root]);
-        }
-        return [...byConstruct.entries()]
-            .sort(([a], [b]) => constructRank(a) - constructRank(b) || a.localeCompare(b))
-            .map(([id, constructRoots]) => {
-                const color = CONSTRUCT_COLORS[id] ?? groupColor;
-                return {
-                    id,
-                    label: id ? (CONSTRUCT_LABELS[id] ?? subGroupLabel(id)) : 'Elements',
-                    color,
-                    layers: toLayerGroups(constructRoots, color),
-                };
-            });
     };
 
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
@@ -1744,12 +1713,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 next.add(`g:${group.id}`);
                 for (const sub of subGroups) {
                     if (sub.id) next.add(`sg:${group.id}:${sub.id}`);
-                    for (const layer of sub.layers) {
-                        if (layer.id) next.add(`lg:${group.id}:${sub.id}:${layer.id}`);
-                        for (const kind of layer.kinds.keys()) {
-                            next.add(`k:${group.id}:${layer.id ? `${layer.id}:` : ''}${kind}`);
-                        }
-                    }
+                    for (const kind of sub.kinds.keys()) next.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
                 }
             }
             setExpanded(next);
@@ -1827,9 +1791,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         };
         for (const { subGroups } of groupTree) {
             for (const sub of subGroups) {
-                for (const layer of sub.layers) {
-                    for (const nodes of layer.kinds.values()) countElements(nodes);
-                }
+                for (const nodes of sub.kinds.values()) countElements(nodes);
             }
         }
         return ids;
@@ -1924,11 +1886,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     const countElements = (nodes: TreeNode[]): number =>
                         nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
 
-                    const countLayer = (layer: ExplorerLayerGroup): number =>
-                        Array.from(layer.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
-
                     const countSubGroup = (sub: ExplorerSubGroup): number =>
-                        sub.layers.reduce((sum, layer) => sum + countLayer(layer), 0);
+                        Array.from(sub.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
 
                     const totalCount = subGroups.reduce((sum, sub) => sum + countSubGroup(sub), 0);
 
@@ -2081,55 +2040,16 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 );
                             };
 
-                            /** The layers inside one construct, each its own folder. */
-                            const renderLayers = (sub: ExplorerSubGroup, subId: string) =>
-                                sub.layers.map(layer => {
-                                    // A layer the builder never named adds no
-                                    // folder: its kinds sit straight under the
-                                    // construct rather than under "Unknown".
-                                    if (!layer.id) {
-                                        return (
-                                            <div key="__nolayer">
-                                                {Array.from(layer.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, ''))}
-                                            </div>
-                                        );
-                                    }
-                                    const layerKey = `lg:${group.id}:${subId}:${layer.id}`;
-                                    const isLayerExpanded = expanded.has(layerKey);
-                                    return (
-                                        <div key={layer.id} style={{ marginLeft: '16px' }}>
-                                            <div
-                                                className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
-                                                style={{ borderRadius: '4px', margin: '0 4px' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                onClick={() => toggleExpand(layerKey)}
-                                            >
-                                                <ChevronIcon expanded={isLayerExpanded} size={13} color={layer.color} />
-                                                <FolderIcon open={isLayerExpanded} color={layer.color} />
-                                                <span
-                                                    className="font-semibold flex-1 truncate"
-                                                    style={{ color: COLOR.primary, fontSize: FONT.explorer.kind }}
-                                                >
-                                                    {layer.label}
-                                                </span>
-                                                <ExplorerCountBadge
-                                                    count={countLayer(layer)}
-                                                    color={layer.color}
-                                                    title={`${countLayer(layer)} elements`}
-                                                />
-                                            </div>
-                                            {isLayerExpanded && Array.from(layer.kinds.entries())
-                                                .map(([kind, nodes]) => renderKind(kind, nodes, layer.id))}
-                                        </div>
-                                    );
-                                });
-
                             if (!isExpanded) return null;
                             return subGroups.map(sub => {
-                                // Elements with no construct render flat.
+                                // Kinds the builder gave no layer render flat,
+                                // straight under the domain.
                                 if (!sub.id) {
-                                    return <div key="__root">{renderLayers(sub, '')}</div>;
+                                    return (
+                                        <div key="__root">
+                                            {Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, ''))}
+                                        </div>
+                                    );
                                 }
                                 const subKey = `sg:${group.id}:${sub.id}`;
                                 const isSubExpanded = expanded.has(subKey);
@@ -2166,7 +2086,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 {subCount}
                                             </span>
                                         </div>
-                                        {isSubExpanded && renderLayers(sub, sub.id)}
+                                        {isSubExpanded && Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, sub.id))}
                                     </div>
                                 );
                             });

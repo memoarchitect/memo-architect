@@ -58,12 +58,9 @@ function registryFromOntology(ontology: OntologyPackageInfo): KindDefinitionDTO[
     })));
 }
 
-/** All kind names across a group's constructs and their layers. */
-function allKinds(group: { subGroups: { layers: { kinds: Map<string, unknown> }[] }[] }): string[] {
-    return group.subGroups
-        .flatMap(sub => sub.layers)
-        .flatMap(layer => [...layer.kinds.keys()])
-        .sort();
+/** All kind names across a group's layers. */
+function allKinds(group: { subGroups: { kinds: Map<string, unknown> }[] }): string[] {
+    return group.subGroups.flatMap(sub => [...sub.kinds.keys()]).sort();
 }
 
 // ─── Containment ────────────────────────────────────────────────────────────
@@ -139,19 +136,21 @@ describe('buildOwnerThenPackageTree', () => {
 
 
 
-// ─── The four rules the explorer is built on ────────────────────────────────
+// ─── The rules the explorer is built on ─────────────────────────────────────
 //
 // Each case names the rule it belongs to. The point of writing them this way
 // is that none should ever need a special case added: a rule that needs an
 // exception here is a rule that was wrong.
 //
-//   1. Domain first — architecture or assurance — then the SysML construct.
-//   2. Inside a construct: layer → kind → parent/child.
+//   1. Domain first — the ontology's own architecture/assurance split.
+//   2. Then the layer, then the kind, then parent/child. A kind folder names
+//      the type the element DECLARES, never an ancestor of it.
 //   3. A usage clubs under its def when a def exists; otherwise it takes its
 //      own place. An element earns a row by being defined or used, except a
 //      def the project authored, which is shown even when unused.
 //   4. Relationships are edges, not rows; views and viewpoints are the
-//      viewer's furniture and live in their own tab.
+//      viewer's furniture and live in their own tab. The construct decides
+//      what is a ROW, but it does not organise the tree.
 // ────────────────────────────────────────────────────────────────────────────
 
 /** `el` with a construct of its own; the default helper is always a part. */
@@ -159,13 +158,13 @@ function elc(id: string, kind: string, layer: string, construct: string): MemoEl
     return { ...el(id, kind, layer), construct } as MemoElement;
 }
 
-/** The construct ids inside one domain group. */
-const constructs = (group: { subGroups: { id: string }[] }): string[] =>
+/** The layer ids inside one domain group. */
+const layersOf = (group: { subGroups: { id: string }[] }): string[] =>
     group.subGroups.map(sub => sub.id);
 
-/** The layer ids inside one construct. */
-const layersOf = (group: { subGroups: { id: string; layers: { id: string }[] }[] }, construct: string): string[] =>
-    group.subGroups.find(sub => sub.id === construct)!.layers.map(layer => layer.id);
+/** The kinds inside one layer of a domain group. */
+const kindsIn = (group: { subGroups: { id: string; kinds: Map<string, unknown> }[] }, layer: string): string[] =>
+    [...group.subGroups.find(sub => sub.id === layer)!.kinds.keys()].sort();
 
 describe('computeExplorerGroupTree', () => {
     it('uses the required Artifacts child categories', () => {
@@ -180,27 +179,12 @@ describe('computeExplorerGroupTree', () => {
     // ─── Rule 1 ─────────────────────────────────────────────────────────────
 
     it('splits architecture from assurance before anything else', () => {
-        // One Items branch could not say that InterfaceItem describes the
-        // device and Hazard is a claim about it. The domain says it first.
         const groups = computeExplorerGroupTree([
             elc('ii1', 'InterfaceItem', 'logical', 'item'),
             elc('h1', 'Hazard', 'safety_risk', 'item'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
         expect(groups.map(g => g.group.id)).toEqual(['domain:architecture', 'domain:assurance']);
-        expect(groups[0].group.label).toBe('Architecture');
-        expect(groups[1].group.label).toBe('Assurance');
-    });
-
-    it('makes the construct the category inside a domain', () => {
-        const groups = computeExplorerGroupTree([
-            elc('i1', 'Interface', 'logical', 'interface'),
-            elc('p1', 'PhysicalPort', 'logical', 'port'),
-            elc('a1', 'SystemFunction', 'functional', 'action'),
-            elc('pt1', 'StateMachine', 'logical', 'part'),
-        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(groups.map(g => g.group.id)).toEqual(['domain:architecture']);
-        // EXPLORER_CONSTRUCT_ORDER, not insertion order or alphabetical.
-        expect(constructs(groups[0])).toEqual(['part', 'action', 'port', 'interface']);
+        expect(groups.map(g => g.group.label)).toEqual(['Architecture', 'Assurance']);
     });
 
     it('reads the domain from the layer when the ontology declares no kind', () => {
@@ -223,19 +207,34 @@ describe('computeExplorerGroupTree', () => {
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
         expect(groups.map(g => g.group.id)).toEqual(['domain:core']);
-        expect(constructs(groups[0])).toEqual(['enumeration']);
+        expect(layersOf(groups[0])).toEqual(['']);
     });
 
     // ─── Rule 2 ─────────────────────────────────────────────────────────────
 
-    it('groups by layer inside a construct, in methodology order', () => {
+    it('groups by layer inside a domain, in methodology order', () => {
         const groups = computeExplorerGroupTree([
-            elc('h1', 'Hazard', 'safety_risk', 'item'),
             elc('v1', 'Vulnerability', 'cybersecurity', 'item'),
+            elc('h1', 'Hazard', 'safety_risk', 'item'),
+            elc('r1', 'Requirement', 'requirements', 'requirement'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        const assurance = groups.find(g => g.group.id === 'domain:assurance')!;
-        // Safety Risk before Cybersecurity: EXPLORER_LAYER_ORDER, not alphabetical.
-        expect(layersOf(assurance, 'item')).toEqual(['safety-risk', 'cybersecurity']);
+        // Requirements, Safety Risk, Cybersecurity — EXPLORER_LAYER_ORDER,
+        // neither alphabetical nor the order they arrived in.
+        expect(layersOf(groups[0])).toEqual(['requirements', 'safety-risk', 'cybersecurity']);
+    });
+
+    it('puts every construct of one layer in that layer, not in six branches', () => {
+        // A reader opening the operational analysis wants what is in it — the
+        // actions, the parts that perform them, the use cases. The construct
+        // decides what is a row; it does not organise the tree.
+        const groups = computeExplorerGroupTree([
+            elc('a1', 'OperativeAction', 'operational', 'action'),
+            elc('p1', 'OperationalParticipant', 'operational', 'part'),
+            elc('u1', 'UseCase', 'operational', 'use case'),
+        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        expect(layersOf(groups[0])).toEqual(['operational']);
+        expect(kindsIn(groups[0], 'operational'))
+            .toEqual(['OperationalParticipant', 'OperativeAction', 'UseCase']);
     });
 
     it('reads safety_risk and safety-risk as one layer', () => {
@@ -243,15 +242,18 @@ describe('computeExplorerGroupTree', () => {
             elc('h1', 'Hazard', 'safety_risk', 'item'),
             elc('h2', 'Hazard', 'safety-risk', 'item'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(layersOf(groups[0], 'item')).toEqual(['safety-risk']);
+        expect(layersOf(groups[0])).toEqual(['safety-risk']);
     });
 
-    it('adds no layer folder for a kind the builder left unnamed', () => {
+    it('names the type the element declares, not an ancestor of it', () => {
+        // Resolution used to climb to a concrete ontology kind, which filed
+        // AfferaRosPublisher ports under SoftwarePort and left the type the
+        // model declares out of the tree altogether.
         const groups = computeExplorerGroupTree(
-            [elc('e1', 'EnumerationDefinition', 'unknown', 'enumeration')],
+            [elc('pub1', 'AfferaRosPublisher', 'logical', 'port')],
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
-        expect(layersOf(groups[0], 'enumeration')).toEqual(['']);
+        expect(kindsIn(groups[0], 'logical')).toEqual(['AfferaRosPublisher']);
     });
 
     it('keeps fork and join in their own folders with no rule naming them', () => {
@@ -262,10 +264,8 @@ describe('computeExplorerGroupTree', () => {
             elc('j1', 'JoinNode', 'behavior', 'action'),
             elc('fn1', 'SystemFunction', 'functional', 'action'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        const actions = groups[0].subGroups.find(sub => sub.id === 'action')!;
-        const behavior = actions.layers.find(layer => layer.id === 'behavior')!;
-        expect([...behavior.kinds.keys()].sort()).toEqual(['ForkNode', 'JoinNode']);
-        expect(actions.layers.find(layer => layer.id === 'functional')).toBeDefined();
+        expect(kindsIn(groups[0], 'behavior')).toEqual(['ForkNode', 'JoinNode']);
+        expect(kindsIn(groups[0], 'functional')).toEqual(['SystemFunction']);
     });
 
     it('does not nest concrete kinds under abstract ontology bases', () => {
@@ -282,21 +282,7 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree(
             [elc('rr1', 'ResidualRisk', 'safety_risk', 'part')], '', registryFromOntology(withAbstractBase), [withAbstractBase],
         );
-        const risk = groups[0].subGroups[0].layers.find(layer => layer.id === 'safety-risk')!;
-        expect(risk.kinds.has('ResidualRisk')).toBe(true);
-        expect(risk.kinds.has('AbstractRisk')).toBe(false);
-    });
-
-    it('folds native SysML activity notation into the construct it belongs to', () => {
-        // These used to get a branch of their own, "Other — SysML Diagram
-        // Elements". An ActionUsage is an action; rule 1 admits no such
-        // category, and rule 2 already keeps the kinds apart.
-        const groups = computeExplorerGroupTree([
-            elc('receive', 'AcceptActionUsage', 'behavior', 'action'),
-            elc('route', 'DecisionNodeUsage', 'behavior', 'action'),
-        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(groups.map(g => g.group.id)).toEqual(['domain:architecture']);
-        expect(allKinds(groups[0])).toEqual(['AcceptActionUsage', 'DecisionNodeUsage']);
+        expect(kindsIn(groups[0], 'safety-risk')).toEqual(['ResidualRisk']);
     });
 
     // ─── Rule 3 ─────────────────────────────────────────────────────────────
@@ -318,7 +304,7 @@ describe('computeExplorerGroupTree', () => {
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
         expect(groups.map(g => g.group.id)).toEqual(['domain:architecture']);
-        expect(allKinds(groups[0])).toEqual(['ActionDefinition']);
+        expect(kindsIn(groups[0], 'functional')).toEqual(['ActionDefinition']);
     });
 
     it('shows an ontology-kind definition as soon as something uses it', () => {
@@ -336,8 +322,8 @@ describe('computeExplorerGroupTree', () => {
         const groups = computeExplorerGroupTree([
             { ...elc('usbHost', 'UsbConnectorPort', 'logical', 'port'), attributes: { usageType: 'UsbConnectorPort' } } as MemoElement,
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(allKinds(groups[0])).toEqual(['UsbConnectorPort']);
-        const rows = groups[0].subGroups[0].layers[0].kinds.get('UsbConnectorPort')!;
+        expect(kindsIn(groups[0], 'logical')).toEqual(['UsbConnectorPort']);
+        const rows = groups[0].subGroups[0].kinds.get('UsbConnectorPort')!;
         expect(rows.map(node => node.id)).toEqual(['usbHost']);
     });
 
@@ -351,7 +337,7 @@ describe('computeExplorerGroupTree', () => {
             elc('Composes', 'MemoRelationship', 'unknown', 'connection'),
             elc('p1', 'PhysicalPort', 'logical', 'port'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(constructs(groups[0])).toEqual(['port']);
+        expect(allKinds(groups[0])).toEqual(['PhysicalPort']);
     });
 
     it('lists no view or viewpoint: they are the viewer\'s own furniture', () => {
@@ -361,7 +347,7 @@ describe('computeExplorerGroupTree', () => {
             { ...elc('v1', 'MemoDiagramView', 'unknown', 'view'), file: 'model/views.sysml' } as MemoElement,
             elc('p1', 'PhysicalPort', 'logical', 'port'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        expect(constructs(groups[0])).toEqual(['port']);
+        expect(allKinds(groups[0])).toEqual(['PhysicalPort']);
     });
 });
 
@@ -376,8 +362,7 @@ describe('grouping by elementPackage', () => {
     const kindNodes = (elements: MemoElement[]) =>
         computeExplorerGroupTree(elements, '', registryFromOntology(ONTOLOGY), [ONTOLOGY])
             .flatMap(group => group.subGroups)
-            .flatMap(subGroup => subGroup.layers)
-            .flatMap(layer => [...layer.kinds.values()])
+            .flatMap(subGroup => [...subGroup.kinds.values()])
             .flat();
 
     // SysML lets a package group members inside a usage body, and the builder

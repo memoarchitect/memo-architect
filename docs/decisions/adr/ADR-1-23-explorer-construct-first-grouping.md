@@ -1,4 +1,4 @@
-# ADR-1-23: Domain, Then Construct, Is the Model Explorer's Category
+# ADR-1-23: The Model Explorer Groups by Domain, Layer, Then Kind
 
 **Status:** Accepted
 **Date:** 2026-09-07
@@ -11,22 +11,25 @@
 The Model Explorer groups elements by four rules, in this order, with no
 per-branch exceptions.
 
-**1. The top level is the ontology's own domain; the category within it is the
-SysML construct.** `memo/src` divides into `architecture/` and `assurance/`
-before it divides into anything else, and that is what a reader orients by
-first: what the device *is* versus what is claimed *about* it. Within a domain
-the category is the construct — Part, Action, Port, Item, Interface,
-Requirement, Use case, Verification, Enumeration — because the language says
-so, not because a judgement was made. Interfaces are separate for the same
-reason ports are: interface is a construct.
+**1. The top level is the ontology's own domain.** `memo/src` divides into
+`architecture/` and `assurance/` before it divides into anything else, and that
+is what a reader orients by first: what the device *is* versus what is claimed
+*about* it.
 
-`Items` therefore appears under both domains, which is the point:
-`InterfaceItem` is architecture and `Hazard` is assurance, and one shared Items
-branch could not say so.
+**2. Then the layer, then the kind, then the parent/child hierarchy.** The
+layer is the one the *element* reports — the ontology's *second* namespace
+segment, not its first, which is the domain. Architecture divides into
+operational, functional, behavior, logical, implementation and realization;
+assurance into requirements, safety risk, cybersecurity, verification and human
+factors.
 
-**2. Inside a construct: layer → kind → parent/child hierarchy.** The layer is
-the one the *element* reports — the ontology's *second* namespace segment, not
-its first, which is the domain from rule 1.
+**The SysML construct is not a level.** It decides what is a *row* — a
+`connection` is an edge and a `view` is furniture, so neither is listed — but
+it does not organise the tree. A reader opening the operational analysis wants
+what is in it: the operative actions, the participants that perform them, the
+use cases. Splitting a layer by construct first scattered it across six
+branches, so parts, actions and use cases sit together under the layer they
+belong to.
 
 **A kind folder names the type the element DECLARES, and nothing above it.**
 Resolution used to climb — through ontology superTypes and through project
@@ -34,9 +37,8 @@ definitions to what they specialize — until it reached a concrete ontology
 kind, so a folder always named something the ontology knows. The cost was that
 it named something the author did not write: `AfferaRosPublisher` and
 `AfferaRosSubscriber` ports were filed under `SoftwarePort`, and the type the
-model declares vanished from the tree. If the model says `RosSubscriber` the
-folder says Ros Subscriber, and a project def two levels below the ontology is
-the model's own structure, which the reader is entitled to see.
+model declares vanished from the tree. A project def two levels below the
+ontology is the model's own structure, which the reader is entitled to see.
 
 **3. A usage clubs under its definition when one exists; otherwise it takes its
 own place in the breakdown.** An element earns a row by being defined or used.
@@ -54,18 +56,19 @@ everything declared in a view's file.
 
 ## Rationale
 
-Grouping by a single flattened layer required a decision per branch, and each
-new decision contradicted an earlier one: whether interfaces deserved their own
-group, whether `UsbConnectorPort` was a folder or a row, whether fork and join
-needed excluding from the functions. Making the construct the category answers
-all three without a rule naming any of them — the third is answered by rule 2's
-strict kinds, which already put `ForkNode` and `JoinNode` in folders of their
-own.
+The tree mirrors the ontology's own directory structure, which is the thing
+both the model and the methodology are already organised by. That is what makes
+it need no per-branch judgement: there is no question of whether interfaces
+deserve their own group or whether fork and join must be excluded from the
+functions, because neither is a grouping decision the explorer makes. Strict
+kinds put `ForkNode` and `JoinNode` in folders of their own as a consequence of
+naming declared types, not as a rule about them.
 
-The domain sits above it because the construct alone flattened a distinction
-the ontology already draws. Reading one `Items` branch of 989, a reviewer could
-not tell the interface payloads from the hazard analysis without opening every
-layer folder underneath.
+An earlier revision made the SysML construct the top-level category. It read
+cleanly for ports and interfaces and badly for everything else: one `Items`
+branch of 989 could not distinguish interface payloads from hazard analysis,
+and a reader after the operational analysis had to visit Parts, Actions and Use
+Cases to assemble it.
 
 The rule also survives a model the ontology has not seen. Every element carries
 a construct even when its kind is unknown, so it lands somewhere predictable;
@@ -97,13 +100,13 @@ outside both domains.
 
 Measured against the Affera model (6,058 elements):
 
-- **Risk analysis reads as Assurance ▸ Items ▸ Safety Risk ▸ Hazard.** 249
-  assurance elements — Hazard (53), HazardousSituation (53), Harm (53),
-  SequenceOfEvents (53), RiskControlMeasure (7) — and 30 Vulnerabilities are
-  `item` construct, so the domain keeps them apart from the 298 architectural
-  `InterfaceItem`s that share it. No exception was added for them.
-- **The top level reads Architecture 884, Assurance 988, Methodology 1, Core
-  38** on the Affera model, with no Undefined branch at all.
+- **The top level reads Architecture 894, Assurance 988, Methodology 1, Core
+  41** on the Affera model, with no Undefined branch at all. Architecture
+  divides into Operational Analysis 292, Functional Analysis 84, Behavior 193,
+  Logical Architecture 108, Implementation 183, Realization 34.
+- **Risk analysis reads as Assurance ▸ Safety Risk ▸ Hazard**, and the 298
+  architectural `InterfaceItem`s stay in Architecture ▸ Logical, where a shared
+  `Items` branch had put them together.
 - **Enumerations get a home.** All five report `layer: unknown`, which stranded
   them in *"Undefined — Not in Ontology"*. `unknown` is the builder declining to
   name a layer, not a layer, so they add no layer folder; and since they are the
