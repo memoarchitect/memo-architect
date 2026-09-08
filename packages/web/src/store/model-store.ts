@@ -453,6 +453,10 @@ export interface ModelState {
         viewKind?: string;
         viewpointId: string;
         elementIds?: string[];
+        /** Kinds the view selects by, written as `includeElementKinds`. */
+        elementKinds?: string[];
+        /** Relations it draws, written as `includeRelationshipKinds`. */
+        relationshipTypes?: string[];
         activate?: boolean;
     }) => string;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
@@ -1114,15 +1118,23 @@ export const useModelStore = create<ModelState>((set, get) => ({
         userViewpoints: s.userViewpoints.filter(v => v.id !== id),
         selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
     })),
-    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], activate = true }) => {
+    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, relationshipTypes, activate = true }) => {
         const id = requestedId ?? `diag_${Math.random().toString(36).substr(2, 9)}`;
-        const diagram: DiagramDTO = { id, name, diagramType, viewKind, viewpointId, auto: false, elementIds };
+        const diagram: DiagramDTO = {
+            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds,
+            ...(elementKinds?.length ? { elementKinds } : {}),
+            ...(relationshipTypes?.length ? { relationshipTypes } : {}),
+        };
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
             selectedDiagramId: activate ? id : s.selectedDiagramId,
             activeView: activate ? { type: 'diagram', diagramId: id } : s.activeView,
         }));
-        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds });
+        sendDiagramCreate({
+            id, name, diagramType, viewKind, viewpointId, elementIds,
+            ...(elementKinds?.length ? { elementKinds } : {}),
+            ...(relationshipTypes?.length ? { relationshipTypes } : {}),
+        });
         return id;
     },
     /**
