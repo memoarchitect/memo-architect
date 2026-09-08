@@ -1017,8 +1017,13 @@ function DiagramCanvasInner() {
         const raw = viewDeclared?.[name]?.trim().toLowerCase();
         return raw === 'true' ? true : raw === 'false' ? false : undefined;
     };
-    const declaredEnum = (name: string): string | undefined =>
-        viewDeclared?.[name]?.trim().split('::').pop() || undefined;
+    // `all` and `none` are SysML keywords, so the ontology's literals are
+    // `everything` and `hidden`; map them back to the display modes they name.
+    const DISPLAY_LITERAL: Record<string, string> = { everything: 'all', hidden: 'none' };
+    const declaredEnum = (name: string): string | undefined => {
+        const literal = viewDeclared?.[name]?.trim().split('::').pop();
+        return literal ? (DISPLAY_LITERAL[literal] ?? literal) : undefined;
+    };
 
     const activeRenderer = resolveInterconnectionRenderer(declaredEnum('rendererProfile'));
     activeRendererRef.current = activeRenderer;
