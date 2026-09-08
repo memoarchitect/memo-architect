@@ -258,8 +258,9 @@ describe('computeExplorerGroupTree', () => {
             elc('h1', 'Hazard', 'safety_risk', 'item'),
             elc('r1', 'Requirement', 'requirements', 'requirement'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
-        // Requirements, Safety Risk, Cybersecurity — EXPLORER_LAYER_ORDER,
-        // neither alphabetical nor the order they arrived in.
+        // Requirements, Safety Risk, Cybersecurity — the order the ontology
+        // declares its ExplorerClassifications in, neither alphabetical nor
+        // the order they arrived in.
         expect(layersOf(groups[0])).toEqual(['requirements', 'safety-risk', 'cybersecurity']);
     });
 
