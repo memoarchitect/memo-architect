@@ -119,7 +119,12 @@ describe('buildScene', () => {
 });
 
 describe('buildViewpointFilter', () => {
-    it('treats empty auto-populated membership as viewpoint-derived, not hide-all', () => {
+    it('does not filter a view by its viewpoint', () => {
+        // A viewpoint is a container. It used to constrain a view through
+        // `visibleKinds` / `visibleLayers`, which the deriver accumulates from
+        // the selectionQueries of the views bound to it — so a view was being
+        // filtered by what its SIBLINGS happened to draw. What a view shows,
+        // the view says.
         const model = {
             elements: {}, relationships: [], errors: [],
             viewpoints: [{ id: 'vp-ui', visibleKinds: ['UIElement'], visibleLayers: ['implementation'] }],
@@ -132,22 +137,23 @@ describe('buildViewpointFilter', () => {
             model, diagram, selectedViewpointId: null, hiddenLayers: new Set(),
         });
 
-        expect(filter?.({ id: 'region', kind: 'UIElement', layer: 'implementation' } as any)).toBe(true);
+        // Nothing to constrain: no membership of its own and no hidden layer.
+        // No filter at all, which is how "show what the view resolves" is said.
+        expect(filter).toBeUndefined();
     });
 
-    it('does not turn an empty viewpoint scope into a hide-all filter', () => {
-        const model = {
-            elements: {}, relationships: [], errors: [],
-            viewpoints: [{ id: 'vp-ui', visibleKinds: [], visibleLayers: [] }],
-        } as any;
+    it('still honours the view own membership and the reader hidden layers', () => {
+        const model = { elements: {}, relationships: [], errors: [], viewpoints: [] } as any;
         const diagram = {
-            id: 'UIE-001', name: 'Layout', diagramType: 'bdd', viewKind: 'geometry',
-            viewpointId: 'vp-ui', auto: true, elementIds: [],
+            id: 'UIE-001', name: 'Layout', diagramType: 'bdd',
+            viewpointId: 'vp-ui', auto: false, elementIds: ['region'],
         } as any;
         const filter = buildViewpointFilter({
-            model, diagram, selectedViewpointId: null, hiddenLayers: new Set(),
+            model, diagram, selectedViewpointId: null, hiddenLayers: new Set(['risk']),
         });
 
         expect(filter?.({ id: 'region', kind: 'UIElement', layer: 'implementation' } as any)).toBe(true);
+        expect(filter?.({ id: 'other', kind: 'UIElement', layer: 'implementation' } as any)).toBe(false);
+        expect(filter?.({ id: 'region', kind: 'Hazard', layer: 'risk' } as any)).toBe(false);
     });
 });

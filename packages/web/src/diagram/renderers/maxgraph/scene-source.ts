@@ -56,31 +56,32 @@ export function nonCanvasKind(kind: ViewKind): NonCanvasKind | null {
     return kind === 'grid' || kind === 'browser' || kind === 'geometry' ? kind : null;
 }
 
-/** Same element predicate DiagramCanvas derives from viewpoint + layers + membership. */
+/** The element predicate a view is drawn through: its own membership, minus
+ *  whatever layers the reader has hidden. */
 export function buildViewpointFilter(request: SceneRequest): ((el: MemoElement) => boolean) | undefined {
-    const { model, diagram, selectedViewpointId, hiddenLayers } = request;
-    const effectiveVpId = diagram?.viewpointId === '__model'
-        ? null
-        : (diagram?.viewpointId || selectedViewpointId);
-
-    const hasViewpoint = effectiveVpId && model.viewpoints;
+    const { diagram, hiddenLayers } = request;
     const hasHidden = hiddenLayers.size > 0;
     // An authored auto-populated view commonly carries an empty membership
-    // array. Empty means "derive from the viewpoint/query", not "hide every
+    // array. Empty means "derive from the view's own query", not "hide every
     // element"; only a non-empty explicit membership list constrains the view.
     const diagramElementIds = diagram?.elementIds?.length ? new Set(diagram.elementIds) : undefined;
-    if (!hasViewpoint && !hasHidden && !diagramElementIds) return undefined;
+    if (!hasHidden && !diagramElementIds) return undefined;
 
-    const vp = hasViewpoint ? model.viewpoints!.find(v => v.id === effectiveVpId) : undefined;
-    const vpKinds = vp ? new Set(vp.visibleKinds) : undefined;
-    const vpLayers = vp ? new Set(vp.visibleLayers) : undefined;
-
+    // A VIEWPOINT DOES NOT FILTER ITS VIEWS.
+    //
+    // It used to: a view with no membership of its own was filtered by its
+    // viewpoint's `visibleKinds` / `visibleLayers`. Those are accumulated in
+    // the deriver from the selectionQueries of the views bound to the
+    // viewpoint — so the filter was the union of what its views already draw,
+    // applied back to those same views. It could only widen or do nothing, and
+    // where it did anything it was a view being constrained by what its
+    // SIBLINGS happened to show.
+    //
+    // A viewpoint is a container. What a view shows, the view says — through
+    // its own `expose` members and its own `selectionQuery`.
     return (el: MemoElement) => {
         if (hiddenLayers.has(el.layer)) return false;
         if (diagramElementIds) return diagramElementIds.has(el.id);
-        if ((vpKinds?.size ?? 0) > 0 || (vpLayers?.size ?? 0) > 0) {
-            return !!vpKinds?.has(el.kind) || !!vpLayers?.has(el.layer);
-        }
         return true;
     };
 }
