@@ -133,6 +133,12 @@ export function TraceabilityMatrix() {
     const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
     const [focus, setFocus] = useState<CellFocus | null>(null);
     const [status, setStatus] = useState<Status>(null);
+    // Saving the matrix as a view: the name to declare it under, and the
+    // viewpoint to declare it in. The viewpoint is chosen, never guessed — a
+    // project names its own traceability viewpoint and Architect does not get
+    // to decide which of them means "relationships".
+    const [saveName, setSaveName] = useState('');
+    const [saveViewpointId, setSaveViewpointId] = useState('');
     const [linkQuery, setLinkQuery] = useState('');
     const [busy, setBusy] = useState(false);
 
@@ -146,6 +152,39 @@ export function TraceabilityMatrix() {
     const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope, parents), [model, columnScope, parents]);
     const rowKinds = useMemo(() => scopeKinds(rowScope, model, parents), [rowScope, model, parents]);
     const columnKinds = useMemo(() => scopeKinds(columnScope, model, parents), [columnScope, model, parents]);
+
+    const createDiagram = useModelStore(s => s.createDiagram);
+    const viewpoints = model?.viewpoints ?? [];
+
+    /**
+     * Declare the current matrix as a view.
+     *
+     * What is saved is the QUERY — the kinds on each axis and the relations
+     * drawn between them — not the cells that happen to be filled right now.
+     * The view then answers the same question against a model that has grown,
+     * which is the difference between a view and a screenshot.
+     */
+    const saveAsView = useCallback(() => {
+        const name = saveName.trim();
+        if (!name || !saveViewpointId) return;
+        const kinds = [...new Set([...rowKinds, ...columnKinds])];
+        if (kinds.length === 0) {
+            setStatus({ kind: 'error', message: 'Choose what the rows and columns are before saving the matrix as a view.' });
+            return;
+        }
+        createDiagram({
+            name,
+            diagramType: 'alloc',
+            viewKind: 'grid',
+            viewpointId: saveViewpointId,
+            elementKinds: kinds,
+            relationshipTypes: linkTypes,
+            activate: false,
+        });
+        setSaveName('');
+        setStatus({ kind: 'ok', message: `Declared "${name}" under ${viewpoints.find(vp => vp.id === saveViewpointId)?.label ?? saveViewpointId}.` });
+    }, [saveName, saveViewpointId, rowKinds, columnKinds, linkTypes, createDiagram, viewpoints]);
+
 
     /** Only offer relationships that the ontology permits for a visible axis pair. */
     const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
@@ -497,6 +536,48 @@ export function TraceabilityMatrix() {
                                     padding: '6px 7px', border: 'none', borderRadius: '5px', background: 'transparent', cursor: 'pointer', fontSize: FONT.xs, color: COLOR.primary, textAlign: 'left',
                                 }}>{preset.label}</button>
                             ))}
+                        </ToolbarPopover>
+                        <ToolbarPopover label="Save as view" ariaLabel="Declare this matrix as a view" title="Declare this matrix as a view" width={leftToolbar ? 210 : 280} fullWidth={leftToolbar}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
+                                <span style={{ fontSize: FONT.xs, color: COLOR.faint }}>
+                                    Saves the query — the kinds on each axis and the relations between them — not the cells filled today.
+                                </span>
+                                <input
+                                    value={saveName}
+                                    onChange={event => setSaveName(event.target.value)}
+                                    placeholder="View name"
+                                    aria-label="View name"
+                                    style={{
+                                        padding: '4px 6px', border: `1px solid ${COLOR.border}`, borderRadius: '5px',
+                                        fontSize: FONT.xs, color: COLOR.primary,
+                                    }}
+                                />
+                                <select
+                                    value={saveViewpointId}
+                                    onChange={event => setSaveViewpointId(event.target.value)}
+                                    aria-label="Viewpoint to declare it in"
+                                    style={{
+                                        padding: '4px 6px', border: `1px solid ${COLOR.border}`, borderRadius: '5px',
+                                        fontSize: FONT.xs, color: COLOR.primary,
+                                    }}
+                                >
+                                    <option value="">Choose a viewpoint…</option>
+                                    {viewpoints.map(vp => (
+                                        <option key={vp.id} value={vp.id}>{vp.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={saveAsView}
+                                    disabled={!connected || !saveName.trim() || !saveViewpointId}
+                                    title={connected ? undefined : 'The dev server is unreachable, so nothing can be written to the model.'}
+                                    style={{
+                                        padding: '5px 7px', borderRadius: '5px', border: 'none', fontSize: FONT.xs, fontWeight: 600,
+                                        background: (connected && saveName.trim() && saveViewpointId) ? COLOR.accent : COLOR.border,
+                                        color: (connected && saveName.trim() && saveViewpointId) ? '#fff' : COLOR.faint,
+                                        cursor: (connected && saveName.trim() && saveViewpointId) ? 'pointer' : 'not-allowed',
+                                    }}
+                                >Declare view</button>
+                            </div>
                         </ToolbarPopover>
                         <label
                         title={connected
