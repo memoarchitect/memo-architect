@@ -192,3 +192,61 @@ export function IconToggle({ icon, label, onClick, active = false, title, badge,
         </button>
     );
 }
+
+/**
+ * Drill-down breadcrumb shared by the IBD, state-machine, and action-flow
+ * toolbars: a step back to the parent, a jump to the whole diagram, and the
+ * ancestry in between. All three drill-downs behave the same way, so they read
+ * the same way too.
+ */
+export function DrillBreadcrumb({ path, nameOf, onFocus, rootLabel }: {
+    path: string[];
+    nameOf: (id: string) => string;
+    onFocus: (id: string | null) => void;
+    rootLabel: string;
+}) {
+    if (path.length === 0) return null;
+    // One level up, not all the way out — the common move when reading a deep
+    // hierarchy. `⌂` remains the escape hatch to the top.
+    const parentId = path.length > 1 ? path[path.length - 2] : null;
+    return (
+        <>
+            <ToolbarSep />
+            <IconToggle
+                icon={<Icon.back />}
+                label="Parent"
+                onClick={() => onFocus(parentId)}
+                title={parentId ? `Back to ${nameOf(parentId)}` : rootLabel}
+            />
+            <button
+                onClick={() => onFocus(null)}
+                className="px-1.5 py-0.5 text-xs font-medium rounded"
+                style={{ background: '#F7F7F5', color: '#2563EB', border: '1px solid #E5E5E0' }}
+                title={rootLabel}
+            >
+                ⌂ All
+            </button>
+            {path.map((id, i) => {
+                const last = i === path.length - 1;
+                return (
+                    <span key={id} className="flex items-center gap-1" style={{ color: '#9CA3AF' }}>
+                        <span>›</span>
+                        <button
+                            onClick={() => onFocus(id)}
+                            disabled={last}
+                            className="text-xs font-medium"
+                            style={{
+                                color: last ? '#1a1a1a' : '#2563EB',
+                                fontWeight: last ? 700 : 500,
+                                cursor: last ? 'default' : 'pointer',
+                            }}
+                            title={last ? undefined : `Focus ${nameOf(id)}`}
+                        >
+                            {nameOf(id)}
+                        </button>
+                    </span>
+                );
+            })}
+        </>
+    );
+}
