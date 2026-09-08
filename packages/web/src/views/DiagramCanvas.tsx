@@ -1037,20 +1037,6 @@ function DiagramCanvasInner() {
         return entries.length > 0 ? Object.fromEntries(entries) : undefined;
     }, [declaredEdges]);
     // A view names the enum and the attribute that carries its literal. Colours
-    // are authored beside that declaration in the viewlayout, never selected by
-    // a renderer palette. Without a declaration, the old automatic layer colour
-    // path remains byte-for-byte intact.
-    const ibdLegend = useMemo(() => {
-        const legend = currentLayout?.canvas?.legend;
-        if (!legend?.enum || !legend.attribute) return undefined;
-        const definition = model?.enumerations?.find(candidate => candidate.name === legend.enum);
-        if (!definition) return undefined;
-        const colors = new Map(definition.literals.flatMap(literal => {
-            const color = legend.colors?.[literal];
-            return color ? [[literal, color] as const] : [];
-        }));
-        return { attribute: legend.attribute, colors, name: definition.name };
-    }, [currentLayout?.canvas?.legend, model?.enumerations]);
     const persistAnnotationText = useCallback((annotationId: string, text: string) => {
         if (!selectedDiagramId) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -2309,7 +2295,12 @@ function DiagramCanvasInner() {
                     labelVisibility: edgeLabelVisibility,
                     forcedPortSize: activeRenderer.forcedPortSize,
                     portWalls,
-                    legend: ibdLegend,
+                    // The legend is declared in the view's SysML. It used to be
+                    // read from the layout companion, which put a statement
+                    // about what colour MEANS in the file that records where
+                    // boxes sit — and left the SysML legend drawing a key that
+                    // coloured nothing.
+                    legendColorOf: (element: MemoElement) => activeLegend?.colorFor(element),
                     onPortMove: moveInterconnectionPort,
                     onPortCommit: commitInterconnectionPort,
                     onPortResize: resizeInterconnectionPort,
@@ -2370,7 +2361,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, ibdLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -4126,19 +4117,6 @@ function DiagramCanvasInner() {
                                 </span>
                             ))}
                         </div>
-                        {ibdLegend && (
-                            <div className="flex flex-col gap-1">
-                                <span style={{ fontWeight: 700 }}>{ibdLegend.name}</span>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                    {[...ibdLegend.colors.entries()].map(([literal, color]) => (
-                                        <span key={literal} className="flex items-center gap-1">
-                                            <span style={{ width: 11, height: 11, borderRadius: 2, background: color, border: '1px solid rgba(15,23,42,0.25)' }} />
-                                            {literal}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 
