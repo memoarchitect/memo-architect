@@ -1002,15 +1002,31 @@ function DiagramCanvasInner() {
     // Per-view renderer profile: a view opts into the dedicated IBD canvas via
     // its layout companion (`canvas.renderer`); everything else keeps the base
     // profile, so no other diagram is affected by the IBD rules.
-    const activeRenderer = resolveInterconnectionRenderer(
-        (currentLayout?.canvas as { renderer?: string } | undefined)?.renderer,
-    );
+    // ─── What the view declares it shows ────────────────────────────────
+    //
+    // These come from the view's SysML, not from its layout companion. The
+    // companion records geometry — where a box was dragged to, which wall a
+    // port straddles — and a statement about whether the drawing names its
+    // ports at all is not geometry. It survives a layout reset, it is
+    // reviewable in the model, and it is the view's own intent.
+    //
+    // `viewDeclared` reads an authored value; absent, the renderer default
+    // stands, so a view that says nothing behaves exactly as before.
+    const viewDeclared = selectedDiagram?.properties;
+    const declaredBool = (name: string): boolean | undefined => {
+        const raw = viewDeclared?.[name]?.trim().toLowerCase();
+        return raw === 'true' ? true : raw === 'false' ? false : undefined;
+    };
+    const declaredEnum = (name: string): string | undefined =>
+        viewDeclared?.[name]?.trim().split('::').pop() || undefined;
+
+    const activeRenderer = resolveInterconnectionRenderer(declaredEnum('rendererProfile'));
     activeRendererRef.current = activeRenderer;
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
-    const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation === true;
-    const showIbdPortText = currentLayout?.canvas?.showPortText !== false;
-    const showIbdConnectionText = currentLayout?.canvas?.showConnectionText !== false;
+    const flowAnimationEnabled = declaredBool('flowAnimation') === true;
+    const showIbdPortText = declaredBool('showPortText') !== false;
+    const showIbdConnectionText = declaredBool('showConnectionText') !== false;
     // Walls the view declares for its boundary ports. A constraint fed INTO
     // layout, not an override applied after it: the template sizes the box and
     // orders the wall around it, so a bottom-wall connector is placed
@@ -1463,15 +1479,15 @@ function DiagramCanvasInner() {
         // default-collapsed effect below, which owns them outright — clearing
         // them here too would race it and leave the diagram fully expanded.
         setFocusedInterconnectionId(null);
-        setInterconnectionPortDisplay(currentLayout?.canvas?.portDisplay ?? 'all');
-        setInterconnectionConnectionDisplay(currentLayout?.canvas?.connectionDisplay ?? 'summary');
+        setInterconnectionPortDisplay((declaredEnum('portDisplay') as 'all' | 'ports' | 'none') ?? 'all');
+        setInterconnectionConnectionDisplay((declaredEnum('connectionDisplay') as 'summary' | 'all' | 'none') ?? 'summary');
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
         setFocusedActionId(null);
         setActionFlowNesting('flat');
         setFocusedStateId(null);
         positionCacheRef.current.clear();
-    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, currentLayout?.canvas?.portDisplay, currentLayout?.canvas?.connectionDisplay]);
+    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, selectedDiagram?.properties?.portDisplay, selectedDiagram?.properties?.connectionDisplay]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
