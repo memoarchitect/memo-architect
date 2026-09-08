@@ -3887,7 +3887,13 @@ function DiagramCanvasInner() {
                 </aside>}
 
                 {/* ── Drawing surface ── */}
-                <div ref={canvasRef} className="flex-1 relative min-h-0" onDragOver={onDragOver} onDrop={onDrop} onDoubleClick={onPaneDoubleClick}>
+                {/* Palette drop and double-click-to-create author model
+                    elements, so they answer to the same rule as drawing a
+                    connector: a view reads the model, it does not write one. */}
+                <div ref={canvasRef} className="flex-1 relative min-h-0"
+                    onDragOver={activeRenderer.disableOnCanvasAuthoring ? undefined : onDragOver}
+                    onDrop={activeRenderer.disableOnCanvasAuthoring ? undefined : onDrop}
+                    onDoubleClick={activeRenderer.disableOnCanvasAuthoring ? undefined : onPaneDoubleClick}>
 
                 {/* Focus Mode toolbar (#22) */}
                 {focusNodeId && (
@@ -4209,10 +4215,10 @@ function DiagramCanvasInner() {
                     onNodeMouseLeave={clearConnectorHover}
                     onEdgeMouseEnter={onEdgeMouseEnter}
                     onEdgeMouseLeave={clearConnectorHover}
-                    nodesConnectable={!activeRenderer.disableConnectorCreation}
-                    onConnect={activeRenderer.disableConnectorCreation ? undefined : onConnect}
-                    onConnectStart={activeRenderer.disableConnectorCreation ? undefined : onConnectStart}
-                    onConnectEnd={activeRenderer.disableConnectorCreation ? undefined : (onConnectEnd as any)}
+                    nodesConnectable={!activeRenderer.disableOnCanvasAuthoring}
+                    onConnect={activeRenderer.disableOnCanvasAuthoring ? undefined : onConnect}
+                    onConnectStart={activeRenderer.disableOnCanvasAuthoring ? undefined : onConnectStart}
+                    onConnectEnd={activeRenderer.disableOnCanvasAuthoring ? undefined : (onConnectEnd as any)}
                     onReconnect={onReconnect}
                     onReconnectStart={onReconnectStart}
                     onReconnectEnd={onReconnectEnd}

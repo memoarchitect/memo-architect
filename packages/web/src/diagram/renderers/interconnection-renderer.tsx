@@ -263,8 +263,25 @@ export class BaseInterconnectionRenderer {
     get dragChildrenWithParent(): boolean { return false; }
     /** Resizing a part keeps its boundary ports pinned to the perimeter walls. */
     get wallSnapPortsOnResize(): boolean { return false; }
-    /** Suppress connector creation + palette drop (edits come from the model). */
-    get disableConnectorCreation(): boolean { return false; }
+    /**
+     * Whether the canvas may AUTHOR model content — draw a connector between
+     * two ports, drop a kind from the palette, double-click to create a part.
+     *
+     * Disabled, because a view is a reading of the model and not a place to
+     * write one. Dragging from a port used to open the relationship picker and
+     * write a SysML relationship; the gesture is indistinguishable from trying
+     * to pan or select, and a diagram that silently authors is a diagram you
+     * cannot explore safely.
+     *
+     * Relationships are still authored — in the SysML, or in the traceability
+     * matrix, which exists to establish trace and says so. This only removes
+     * authoring from the drawing.
+     *
+     * It stays a renderer property rather than a constant so a project can
+     * subclass and opt back in, the way every other interaction rule here can
+     * be overridden.
+     */
+    get disableOnCanvasAuthoring(): boolean { return true; }
     /** A port drag snaps to whichever of the four walls the cursor is nearest and
      *  slides along it (vs. the default vertical-only nudge). */
     get multiWallPortDrag(): boolean { return false; }
@@ -445,7 +462,6 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
 
     override get dragChildrenWithParent(): boolean { return true; }
     override get wallSnapPortsOnResize(): boolean { return true; }
-    override get disableConnectorCreation(): boolean { return true; }
     override get multiWallPortDrag(): boolean { return true; }
     override get preventPartOverlap(): boolean { return true; }
 }
