@@ -90,6 +90,7 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon, ToolbarSep, Segmented, ToolbarCluster, IconButton, IconToggle } from './DiagramToolbarControls';
 import { resolveLegend } from './templates/legend';
+import { landingsFromPoints, type Side as DiagramEdgeSide } from './templates/landing-rules';
 import { definitionIndex, resolveDefinition } from './templates/composition-tree';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 
@@ -1208,6 +1209,18 @@ function DiagramCanvasInner() {
                             target: edge.target,
                             sourcePortId: edge.data?.sourcePortId as string | undefined,
                             targetPortId: edge.data?.targetPortId as string | undefined,
+                            // Saved beside the points, not instead of them: the
+                            // points draw the route now, the landing rebuilds it
+                            // after the box has moved.
+                            ...(edge.data?.manualLanding
+                                ? {
+                                    manualLanding: true,
+                                    sourceSide: edge.data?.sourceSide as DiagramEdgeSide,
+                                    sourceT: edge.data?.sourceT as number,
+                                    targetSide: edge.data?.targetSide as DiagramEdgeSide,
+                                    targetT: edge.data?.targetT as number,
+                                }
+                                : {}),
                         }
                         : {}),
                 }])),
@@ -2066,9 +2079,16 @@ function DiagramCanvasInner() {
         markManualLayout();
         setLayoutEditVersion(version => version + 1);
         setEdges(previous => {
-            const next = previous.map(edge => edge.id === edgeId
-                ? { ...edge, data: { ...edge.data, points, manualRoute: true } }
-                : edge);
+            const next = previous.map(edge => {
+                if (edge.id !== edgeId) return edge;
+                // Record WHERE ON THE BOX each end landed, not just the two
+                // coordinates. A point is where the wall was when the route was
+                // drawn; a landing is a wall plus a fraction along it, so moving
+                // or resizing the box keeps the connector arriving in the same
+                // place instead of pointing at where the box used to be.
+                const landings = landingsFromPoints(nodesRef.current, edge, points);
+                return { ...edge, data: { ...edge.data, points, manualRoute: true, ...landings } };
+            });
             edgesRef.current = next;
             return next;
         });
@@ -2228,6 +2248,20 @@ function DiagramCanvasInner() {
                     data: {
                         ...edge.data,
                         ...(savedPoints?.length ? { points: savedPoints, manualRoute: true } : {}),
+                        // The landing comes back with the route. Without it the
+                        // points alone are restored, and the first time the box
+                        // moves the connector goes back to the template's
+                        // anchor — losing the placement on reload rather than
+                        // on the edit, which is worse because nothing was done.
+                        ...(savedPoints?.length && savedEdge?.manualLanding
+                            ? {
+                                manualLanding: true,
+                                sourceSide: savedEdge.sourceSide,
+                                sourceT: savedEdge.sourceT,
+                                targetSide: savedEdge.targetSide,
+                                targetT: savedEdge.targetT,
+                            }
+                            : {}),
                         flowAnimation: flowAnimationEnabled,
                         onRouteChange: (points: Array<{ x: number; y: number }>) => moveEdgeRoute(edge.id, points),
                         onRouteChangeComplete: (before: Array<{ x: number; y: number }>, after: Array<{ x: number; y: number }>) =>
