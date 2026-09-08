@@ -629,7 +629,15 @@ export interface InterconnectionOptions {
      */
     portWalls?: ReadonlyMap<string, PortSide>;
     /** A declared enum's literal colours, keyed by the element attribute value. */
-    legend?: { attribute: string; colors: ReadonlyMap<string, string> };
+    /**
+     * The colour a legend gives an element, or undefined when it says nothing.
+     *
+     * A function rather than an attribute-and-map, because the legend that
+     * answers this is declared in SysML and may key on an attribute, an
+     * enumeration, or something derived like hierarchy depth. The caller
+     * resolves it; this file only asks what colour a part is.
+     */
+    legendColorOf?: (element: MemoElement) => string | undefined;
     /** Interactive per-diagram port repositioning. */
     onPortMove?: (ownerId: string, portId: string, y: number, side?: PortSide) => void;
     onPortResize?: (ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
@@ -1322,9 +1330,7 @@ export async function computeInterconnectionLayout(
         // Must stay 6-digit hex: the renderer composes alpha suffixes onto it
         // (`color + 'B0'`), and a 3-digit fallback would silently produce an
         // invalid colour that CSSOM drops — border-less, fill-less boxes.
-        const legendLiteral = options?.legend && el.attributes[options.legend.attribute]
-            ?.split('::').pop();
-        const color = (legendLiteral && options?.legend?.colors.get(legendLiteral))
+        const color = options?.legendColorOf?.(el)
             || LAYER_COLORS[el.layer] || '#64748B';
         const pos = relPos ?? rootPos.get(partId)!;
         const abs = parentId
