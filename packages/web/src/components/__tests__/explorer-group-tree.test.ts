@@ -225,17 +225,29 @@ describe('computeExplorerGroupTree', () => {
         expect(groups.map(g => g.group.id)).toEqual(['domain:architecture', 'domain:assurance']);
     });
 
-    it('reports an element the ontology does not place, rather than filing it', () => {
-        // `EnumerationDefinition` is not an ontology kind and the builder gives
-        // it `layer: unknown`, which matches no ExplorerClassification. Either
-        // the ontology is missing one or the builder invented a layer; both are
-        // worth seeing, and guessing a home is what produced a behavior layer.
+    it('files valid SysML the ontology has not classified under SysML', () => {
+        // `EnumerationDefinition` is a SysML metaclass that no
+        // ExplorerClassification places, and the builder gives it
+        // `layer: unknown`. That is a question for the ontology, not a mystery.
         const groups = computeExplorerGroupTree(
             [elc('e1', 'EnumerationDefinition', 'unknown', 'enumeration')],
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
-        expect(groups.map(g => g.group.id)).toEqual(['undefined']);
-        expect(groups[0].group.label).toBe('Undeclared — No Ontology Classification');
+        expect(groups.map(g => g.group.id)).toEqual(['sysml']);
+        expect(groups[0].group.label).toBe('SysML — Not Classified by the Ontology');
+    });
+
+    it('separates what SysML does not know either', () => {
+        // Neither modelled nor standard: the question is what it IS, which is a
+        // different finding from an unclassified SysML construct, and reading
+        // the two as one hid the difference.
+        const groups = computeExplorerGroupTree([
+            elc('e1', 'EnumerationDefinition', 'unknown', 'enumeration'),
+            elc('x1', 'MysteryKind', 'unknown', 'part'),
+        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        expect(groups.map(g => g.group.id)).toEqual(['sysml', 'undefined']);
+        expect(groups[1].group.label).toBe('Undefined — Neither Ontology nor SysML');
+        expect(allKinds(groups[1])).toEqual(['MysteryKind']);
     });
 
     // ─── Rule 2 ─────────────────────────────────────────────────────────────
