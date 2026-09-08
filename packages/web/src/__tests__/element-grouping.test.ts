@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, ViewpointDTO } from '@memoarchitect/tools/browser';
 import { declarationPath, groupParentPath, siblingGroups } from '../lib/element-package';
 import { groupUiChildren } from '../views/UiScreensWorkspace';
-import { buildDefinitionTree, buildViewpointTree } from '../components/ExplorerPanel';
+import { buildViewpointTree } from '../components/ExplorerPanel';
 
 const element = (id: string, extra: Partial<MemoElement> = {}): MemoElement => ({
     id, name: id, kind: 'UIElement', construct: 'part', layer: 'implementation',
@@ -68,62 +68,5 @@ describe('nesting viewpoints', () => {
     it('does not lose a viewpoint to a cycle', () => {
         const tree = buildViewpointTree([viewpoint('a', 'b'), viewpoint('b', 'a'), viewpoint('c', 'c')]);
         expect(tree.rootViewpoints.map(vp => vp.id).sort()).toEqual(['a', 'b', 'c']);
-    });
-});
-
-const action = (id: string, kind: string, extra: Partial<MemoElement> = {}): MemoElement => ({
-    id, name: id, kind, construct: 'action', layer: 'behavior',
-    file: 'model/fn.sysml', package: 'Fn', attributes: {}, ...extra,
-});
-
-describe('a definition that carries its supertype as its kind', () => {
-    // `part def Pump :> LogicalComponent` is an element with kind
-    // LogicalComponent, so the kind name no longer says "definition" — the
-    // builder's flag does.
-    const pumpDef = element('Pump', { kind: 'LogicalComponent', isDefinition: true });
-    const pumpUsage = element('p1', { kind: 'Pump' });
-
-    it('is still found as the definition its usages name', () => {
-        const tree = buildDefinitionTree([pumpDef, pumpUsage]);
-        expect(tree).toEqual([{ layer: 'implementation', definitions: [{ definition: pumpDef, usages: [pumpUsage] }] }]);
-    });
-
-    it('survives a definition that specializes another definition', () => {
-        const base = element('Vessel', { kind: 'LogicalComponent', isDefinition: true });
-        const derived = element('Tank', { kind: 'Vessel', isDefinition: true });
-        const tree = buildDefinitionTree([base, derived]);
-        expect(tree[0].definitions.find(entry => entry.definition.id === 'Vessel')?.usages).toEqual([derived]);
-    });
-});
-
-describe('the definitions a model declares', () => {
-    const definition = action('AcquireSensorData', 'ActionDefinition');
-    const usage = action('acquireSensors', 'AcquireSensorData');
-    const otherUsage = action('acquireBackup', 'AcquireSensorData');
-    const unused = action('EvaluateAlarms', 'ActionDefinition');
-    // A usage of an ONTOLOGY kind has no local definition to sit under.
-    const ontologyUsage = action('logEvent', 'SystemFunction');
-
-    it('lists each definition with the usages that name it', () => {
-        const tree = buildDefinitionTree([definition, usage, otherUsage, ontologyUsage]);
-        expect(tree).toEqual([{
-            layer: 'behavior',
-            definitions: [{ definition, usages: [otherUsage, usage] }],
-        }]);
-    });
-
-    it('keeps a definition nothing uses — that is the finding', () => {
-        const tree = buildDefinitionTree([definition, usage, unused]);
-        expect(tree[0].definitions.map(entry => entry.definition.id)).toEqual(['AcquireSensorData', 'EvaluateAlarms']);
-        expect(tree[0].definitions[1].usages).toEqual([]);
-    });
-
-    it('matches a search against the definition and against its usages', () => {
-        expect(buildDefinitionTree([definition, usage], 'acquireSensors')[0].definitions).toHaveLength(1);
-        expect(buildDefinitionTree([definition, usage], 'nothing')).toEqual([]);
-    });
-
-    it('is empty for a model that declares no definitions of its own', () => {
-        expect(buildDefinitionTree([ontologyUsage])).toEqual([]);
     });
 });

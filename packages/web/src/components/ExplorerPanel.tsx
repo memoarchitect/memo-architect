@@ -1,7 +1,5 @@
 import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
-import { buildBreakdown, DEFAULT_FAMILIES, type BreakdownNode } from '../lib/breakdown-tree';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
-import { definitionOf, indexLocalDefinitions } from '../lib/definition-nesting';
 import { kindParents } from '../analysis/kind-hierarchy';
 import { GLOBAL_SYSTEM, groupBySystem, resolveSystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
@@ -1094,14 +1092,14 @@ export function computeExplorerGroupTree(
 
     // ─── An element earns a row by being defined or used, not by existing ───
     //
-    // A definition nothing uses is a finding for the Definitions tab, not a
-    // member of the model tree; listing every one of them doubled the catalog.
+    // A definition of an ONTOLOGY kind that nothing uses is not a member of the
+    // model tree; listing every one of them doubled the catalog, and the
+    // ontology already lists the kind.
     //
     // The exception is a definition the PROJECT authored rather than one the
     // ontology declares — a function def among them. Those are the catalog the
     // conversion is building, and an unused one is work in progress, not
-    // clutter: hiding it hides the thing the author is in the middle of. An
-    // ontology kind needs no such grace, because the ontology already lists it.
+    // clutter: hiding it hides the thing the author is in the middle of.
     //
     // Usages are never hidden. A usage whose type is missing from the model
     // still takes its place, so a dangling type shows up as a row to chase
@@ -1463,287 +1461,6 @@ export function computeExplorerGroupTree(
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * The definitions this model declares, and what uses them.
- *
- * The catalog answers "what is in the model" and the breakdown answers "how is
- * it composed". Neither answers "what types does this project define" — a
- * definition sits in a type folder among the usages, and reading the set of
- * them means picking them out by name. This is that third question, and only
- * that: the ontology's own kinds are not here, they are in the Ontology tab.
- *
- * A definition with no usage is the finding worth seeing, so it is listed with
- * a zero rather than hidden.
- */
-export function buildDefinitionTree(elements: MemoElement[], searchTerm = ''): {
-    layer: string;
-    definitions: { definition: MemoElement; usages: MemoElement[] }[];
-}[] {
-    const definitions = indexLocalDefinitions(elements);
-    const usagesOf = new Map<string, MemoElement[]>();
-    for (const element of elements) {
-        const definition = definitionOf(element, definitions);
-        if (!definition) continue;
-        usagesOf.set(definition.id, [...(usagesOf.get(definition.id) ?? []), element]);
-    }
-
-    const lower = searchTerm.trim().toLowerCase();
-    const matches = (entry: { definition: MemoElement; usages: MemoElement[] }) =>
-        !lower
-        || entry.definition.name.toLowerCase().includes(lower)
-        || entry.definition.kind.toLowerCase().includes(lower)
-        || entry.usages.some(usage => usage.name.toLowerCase().includes(lower));
-
-    const byLayer = new Map<string, { definition: MemoElement; usages: MemoElement[] }[]>();
-    for (const definition of new Set(definitions.values())) {
-        const entry = {
-            definition,
-            usages: (usagesOf.get(definition.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-        };
-        if (!matches(entry)) continue;
-        const layer = definition.layer && definition.layer !== 'unknown' ? definition.layer : 'other';
-        byLayer.set(layer, [...(byLayer.get(layer) ?? []), entry]);
-    }
-
-    return [...byLayer.entries()]
-        .sort(([a], [b]) => {
-            const rank = (layer: string) => {
-                const index = LAYER_ORDER.indexOf(layer as typeof LAYER_ORDER[number]);
-                return index < 0 ? Number.MAX_SAFE_INTEGER : index;
-            };
-            return rank(a) - rank(b) || a.localeCompare(b);
-        })
-        .map(([layer, entries]) => ({
-            layer,
-            definitions: entries.sort((a, b) => a.definition.name.localeCompare(b.definition.name)),
-        }));
-}
-
-/** The definitions tab: what this project defines, and what uses each one. */
-function DefinitionsTree({ searchTerm, selectedElementId, onSelect, onContextMenu }: {
-    searchTerm: string;
-    selectedElementId: string | null;
-    onSelect: (id: string) => void;
-    onContextMenu: (event: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
-}) {
-    const model = useModelStore(s => s.model);
-    /**
-     * Which branches are OPEN. An empty set therefore opens the tree fully
-     * collapsed, which is the readable default: these trees are wide, and
-     * opening everything buried the top-level list the reader navigates by.
-     */
-    const [expanded, setExpandedBranches] = useState<Set<string>>(new Set());
-    const layers = useMemo(
-        () => buildDefinitionTree(Object.values(model?.elements ?? {}), searchTerm),
-        [model, searchTerm],
-    );
-
-    const toggle = (id: string) => setExpandedBranches(prev => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next;
-    });
-
-    if (layers.length === 0) {
-        return (
-            <div className="flex-1 flex items-center justify-center px-4 text-center"
-                 style={{ color: COLOR.faint, fontSize: '12px', lineHeight: 1.6 }}>
-                {searchTerm
-                    ? 'No definition matches that search.'
-                    : 'This model declares no definitions of its own. The ontology\u2019s types are in the Ontology tab.'}
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-            {layers.map(({ layer, definitions }) => {
-                const layerOpen = expanded.has(`l:${layer}`);
-                const color = LAYER_COLORS[layer] ?? COLOR.muted;
-                return (
-                    <div key={layer} className="mb-0.5">
-                        <div
-                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
-                            style={{ margin: '0 4px', borderRadius: '4px' }}
-                            onClick={() => toggle(`l:${layer}`)}
-                        >
-                            <ChevronIcon expanded={layerOpen} size={13} color={color} />
-                            <FolderIcon open={layerOpen} color={color} />
-                            <span className="font-semibold flex-1 truncate"
-                                  style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>
-                                {LAYER_LABELS[layer] ?? subGroupLabel(layer)}
-                            </span>
-                            <ExplorerCountBadge count={definitions.length} color={color}
-                                title={`${definitions.length} definitions`} />
-                        </div>
-                        {layerOpen && definitions.map(({ definition, usages }) => {
-                            const open = expanded.has(definition.id);
-                            return (
-                                <div key={definition.id}>
-                                    <div
-                                        className="flex items-center gap-1.5 py-1 cursor-pointer select-none"
-                                        style={{
-                                            paddingLeft: '22px', paddingRight: '8px', borderRadius: '4px', margin: '0 4px',
-                                            background: definition.id === selectedElementId ? '#EEF2FF' : 'transparent',
-                                        }}
-                                        onClick={() => { if (usages.length) toggle(definition.id); onSelect(definition.id); }}
-                                        onContextMenu={event => onContextMenu(event, 'element', definition.id)}
-                                    >
-                                        {usages.length
-                                            ? <ChevronIcon expanded={open} size={12} />
-                                            : <span style={{ width: '12px', display: 'inline-block' }} />}
-                                        <ItemIcon color={color} />
-                                        <span className="truncate flex-1" style={{ color: COLOR.primary }}>{definition.name}</span>
-                                        {/* A definition nothing uses is worth seeing, so the count
-                                            is always shown — including the zero. */}
-                                        <span style={{ color: usages.length ? COLOR.muted : '#B45309', fontSize: FONT.explorer.count }}>
-                                            {usages.length === 0 ? 'unused' : `${usages.length}\u00d7`}
-                                        </span>
-                                    </div>
-                                    {open && usages.map(usage => (
-                                        <div
-                                            key={usage.id}
-                                            className="flex items-center gap-1.5 py-1 cursor-pointer select-none"
-                                            style={{
-                                                paddingLeft: '48px', paddingRight: '8px', borderRadius: '4px', margin: '0 4px',
-                                                background: usage.id === selectedElementId ? '#EEF2FF' : 'transparent',
-                                            }}
-                                            onClick={() => onSelect(usage.id)}
-                                            onContextMenu={event => onContextMenu(event, 'element', usage.id)}
-                                        >
-                                            <ItemIcon />
-                                            <span className="truncate flex-1" style={{ color: COLOR.secondary }}>{usage.name}</span>
-                                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{usage.construct}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * The composition reading of the model. See `lib/breakdown-tree.ts` for why
- * this exists alongside the catalog.
- */
-function BreakdownTree({ searchTerm, selectedElementId, onSelect, onContextMenu }: {
-    searchTerm: string;
-    selectedElementId: string | null;
-    onSelect: (id: string) => void;
-    /** The breakdown is where grouping packages read, so it offers to make one. */
-    onContextMenu: (event: React.MouseEvent, type: CtxMenuState['type'], id: string) => void;
-}) {
-    const model = useModelStore(s => s.model);
-    const availableOntologies = useModelStore(s => s.availableOntologies);
-    /**
-     * Which branches are OPEN. An empty set therefore opens the tree fully
-     * collapsed, which is the readable default: these trees are wide, and
-     * opening everything buried the top-level list the reader navigates by.
-     */
-    const [expanded, setExpandedBranches] = useState<Set<string>>(new Set());
-    const branches = useMemo(() => {
-        const elements = Object.values(model?.elements ?? {});
-        // Use cases are filed under the system they serve — a system-of-systems
-        // project has several, and one flat list does not say which device a use
-        // case is about. Everything untraced lands under Global.
-        const parents = kindParents(availableOntologies);
-        const byId = new Map(elements.map(element => [element.id, element]));
-        const relationships = model?.relationships ?? [];
-        const families = DEFAULT_FAMILIES.map(family => family.id === 'usecases'
-            ? { ...family, systemOf: (element: MemoElement) => resolveSystem(element, byId, relationships, parents) }
-            : family);
-        return buildBreakdown(elements, families, searchTerm);
-    }, [model, availableOntologies, searchTerm]);
-
-    const toggle = (id: string) =>
-        setExpandedBranches(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-
-    const renderNode = (node: BreakdownNode, depth: number) => {
-        const hasChildren = node.children.length > 0;
-        const isOpen = expanded.has(node.id);
-        return (
-            <div key={node.id}>
-                <div
-                    className="flex items-center gap-1.5 py-1 cursor-pointer select-none"
-                    style={{
-                        paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', borderRadius: '4px',
-                        margin: '0 4px',
-                        background: node.element && node.element.id === selectedElementId ? '#EEF2FF' : 'transparent',
-                    }}
-                    onClick={() => {
-                        if (hasChildren) toggle(node.id);
-                        if (node.element) onSelect(node.element.id);
-                    }}
-                    onContextMenu={node.element
-                        ? event => onContextMenu(event, 'element', node.element!.id)
-                        : undefined}
-                >
-                    {hasChildren
-                        ? <ChevronIcon expanded={isOpen} size={12} />
-                        : <span style={{ width: '12px', display: 'inline-block' }} />}
-                    {node.isGroup ? <FolderIcon open={isOpen} /> : <ItemIcon />}
-                    <span className="truncate flex-1" style={{ color: COLOR.primary }}>
-                        {node.name}
-                        {node.element?.isDefinition && (
-                            <span style={{ color: COLOR.muted, fontWeight: 600, marginLeft: '5px', fontSize: '0.85em' }}>def</span>
-                        )}
-                    </span>
-                    {!node.isGroup && (
-                        <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{node.kind}</span>
-                    )}
-                </div>
-                {isOpen && node.children.map(child => renderNode(child, depth + 1))}
-            </div>
-        );
-    };
-
-    if (branches.length === 0) {
-        return (
-            <div className="flex-1 flex items-center justify-center px-4 text-center"
-                 style={{ color: COLOR.faint, fontSize: '12px' }}>
-                {searchTerm ? 'Nothing matches that search.' : 'No composition to show yet.'}
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-            {branches.map(branch => {
-                const isOpen = expanded.has(`b:${branch.id}`);
-                return (
-                    <div key={branch.id} className="mb-0.5">
-                        <div
-                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
-                            style={{ margin: '0 4px', borderRadius: '4px' }}
-                            onClick={() => toggle(`b:${branch.id}`)}
-                        >
-                            <ChevronIcon expanded={isOpen} size={13} />
-                            <FolderIcon open={isOpen} />
-                            <span className="font-semibold flex-1" style={{ color: COLOR.primary, fontSize: FONT.explorer.kind }}>
-                                {branch.label}
-                            </span>
-                            <span style={{ color: COLOR.faint, fontSize: FONT.explorer.count }}>{branch.nodes.length}</span>
-                        </div>
-                        {isOpen && branch.nodes.map(node => renderNode(node, 1))}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const navigate = useNavigate();
     const model = useModelStore(s => s.model);
@@ -1774,7 +1491,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     // which is how you find an element you can name. The BREAKDOWN nests by
     // composition, which is how you read a system — a port belongs on its
     // component, not in a folder of every port in the model.
-    const [modelView, setModelView] = useState<'catalog' | 'breakdown' | 'definitions'>('catalog');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const initializedTypeBranches = useRef(false);
     const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
@@ -1973,36 +1689,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     >Select All</button>
                 </div>
             )}
-            <div className="flex px-2 pt-1.5 pb-1 gap-1 flex-shrink-0">
-                {(['catalog', 'breakdown', 'definitions'] as const).map(v => (
-                    <button
-                        key={v}
-                        onClick={() => setModelView(v)}
-                        className="px-2 py-0.5 rounded capitalize"
-                        style={{
-                            fontSize: '11px', fontWeight: 500,
-                            ...(modelView === v
-                                ? { background: COLOR.accent, color: '#fff' }
-                                : { background: 'transparent', color: COLOR.faint }),
-                        }}
-                    >{v}</button>
-                ))}
-            </div>
-            {modelView === 'definitions' ? (
-                <DefinitionsTree
-                    searchTerm={searchTerm}
-                    selectedElementId={selectedElementId}
-                    onSelect={selectElementAndNavigate}
-                    onContextMenu={onContextMenu}
-                />
-            ) : modelView === 'breakdown' ? (
-                <BreakdownTree
-                    searchTerm={searchTerm}
-                    selectedElementId={selectedElementId}
-                    onSelect={selectElementAndNavigate}
-                    onContextMenu={onContextMenu}
-                />
-            ) : (
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
                 {groupTree.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
@@ -2222,10 +1908,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     );
                 })}
             </div>
-            )}
-            {/* Outside the view switch: the breakdown offers the same menu, and
-                a menu that renders only in the catalog is a menu the other tab
-                opens into nothing. */}
             {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
         </div>
     );
