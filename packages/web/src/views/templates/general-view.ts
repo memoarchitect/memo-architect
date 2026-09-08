@@ -23,7 +23,7 @@ import {
 } from '../layout';
 import {
     buildCompositionTree, isPortUsage, definitionIndex, definitionLevelElements, buildOwnershipTest,
-    definitionLevelComposition, declaredSubject, subtreeOf, dominantRoot,
+    definitionLevelComposition, declaredSubject, subtreeOf, dominantRoot, warnIfMixedKindFamilies,
     COMPOSITION_REL_TYPES, type CompositionTree,
 } from './composition-tree';
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
@@ -132,6 +132,7 @@ export function buildGeneralViewTree(
         // performs it.
         buildOwnershipTest(model.registries?.kinds),
     );
+    warnIfMixedKindFamilies(full, model.registries?.kinds, viewElement?.name);
 
     // A BDD is a BDD OF something: one root, and everything on it part of that
     // root. Whatever the subject does not reach was pulled in by a broad

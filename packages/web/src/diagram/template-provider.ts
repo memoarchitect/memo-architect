@@ -2,10 +2,11 @@
 //
 // A template turns the model into a laid-out scene for one presentation —
 // a view kind (interconnection, actionflow, …) or a diagram type (ucd,
-// context). Providers are selected per diagram by `matches`; the first
-// registered match wins, so registration order encodes precedence exactly
-// like the if/else chain it replaces. The layer mirrors the other two
-// provider layers:
+// context). Providers are selected per diagram by `matches`, which tests the
+// single `DiagramProfile` enum computed by `resolveDiagramProfile` — see
+// ./diagram-profile.ts for why there is exactly one resolver rather than a
+// grab bag of independently-derived booleans. The layer mirrors the other
+// two provider layers:
 //
 //   layout providers   → WHERE nodes go            (ELK, Dagre, Fixed)
 //   template providers → WHAT the scene contains    (per view kind)
@@ -17,10 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
-import type {
-    LayoutResult,
-    computeContainmentLayout, computeDecompositionLayout, computeFBSLayout, computeLayout,
-} from '../views/layout';
+import type { LayoutResult, computeLayout } from '../views/layout';
 import type { computeGeneralViewLayout } from '../views/templates/general-view';
 import type { computeInterconnectionLayout } from '../views/templates/interconnection-view';
 import type { computeActionFlowViewLayout } from '../views/templates/actionflow-view';
@@ -28,16 +26,11 @@ import type { computeStateTransitionLayout } from '../views/templates/statetrans
 import type { computeSequenceLayout } from '../views/templates/sequence-view';
 import type { computeUseCaseViewLayout } from '../views/templates/use-case-view';
 import type { computeContextViewLayout } from '../views/templates/context-view';
+import type { DiagramProfile } from './diagram-profile';
 
 /** Everything the selection predicate may discriminate on. */
 export interface TemplateSelectionContext {
-    viewKind?: string;
-    diagramType?: string;
-    isFBSDiagram: boolean;
-    isDecompDiagram: boolean;
-    isGeneralTemplate: boolean;
-    generalMode: string;
-    layoutStyle: string;
+    diagramProfile: DiagramProfile;
 }
 
 /**
@@ -46,9 +39,6 @@ export interface TemplateSelectionContext {
  * template functions so they cannot drift.
  */
 export interface TemplateOptionSlices {
-    fbs: Parameters<typeof computeFBSLayout>[1];
-    decomposition: Parameters<typeof computeDecompositionLayout>[1];
-    containment: Parameters<typeof computeContainmentLayout>[1];
     useCase: Parameters<typeof computeUseCaseViewLayout>[1];
     /** Context view frames one named system and honors its authored selection. */
     context: ContextTemplateOptions;

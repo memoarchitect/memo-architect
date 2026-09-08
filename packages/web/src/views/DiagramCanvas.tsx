@@ -44,7 +44,7 @@ import {
     type ArrangeBox, type ArrangeResult, type AlignEdge, type SizeMatch, type DistributeAxis,
 } from './arrange';
 import { FONT, COLOR } from '../styles/tokens';
-import { buildDecompositionTree, buildFunctionalTree, routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
+import { routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
     resolveGeneralMode, buildGeneralViewTree,
@@ -64,6 +64,7 @@ import { isStateElement } from './templates/statetransition-view';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
+import { resolveDiagramProfile } from '../diagram/diagram-profile';
 import {
     hasContextChildCoordinates, rebaseForFrameChange, rebaseLegacyContextChildPosition, withContextChildCoordinates,
 } from '../diagram/layout-coordinate-migration';
@@ -997,8 +998,6 @@ function DiagramCanvasInner() {
     // Get the selected diagram
     const selectedDiagram = getDiagram(model, selectedDiagramId);
     const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
-    const isDecompDiagram = !!selectedDiagram?.properties?.layoutStyle;
-    const isFBSDiagram = selectedDiagram?.properties?.layoutStyle === 'fbs';
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
     // Per-view renderer profile: a view opts into the dedicated IBD canvas via
     // its layout companion (`canvas.renderer`); everything else keeps the base
@@ -1345,8 +1344,8 @@ function DiagramCanvasInner() {
             zoom,
         }, { duration });
     }, [actionFlowDirection, actionFlowLegendOpen, actionFlowLegendPlacement, actionFlowToolbarPlacement, fitMinZoom, fitView, isCanvasFullscreen, setViewport, swimlanesOn, toolbarCollapsed, viewKind]);
-    // General template mode — legacy layoutStyle diagrams keep their own controls
-    const isGeneralTemplate = viewKind === 'general' && !isDecompDiagram && !isFBSDiagram;
+    // General template mode
+    const isGeneralTemplate = viewKind === 'general';
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
     const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
@@ -1386,7 +1385,6 @@ function DiagramCanvasInner() {
         return findFloatingActions(actions, model);
     }, [model, selectedDiagram, viewKind]);
     // Decomposition state
-    const [layoutStyle, setLayoutStyle] = useState<'containment' | 'decomposition'>('containment');
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [collapsedInterconnectionNodes, setCollapsedInterconnectionNodes] = useState<Set<string>>(new Set());
     const [focusedInterconnectionId, setFocusedInterconnectionId] = useState<string | null>(null);
@@ -1651,15 +1649,15 @@ function DiagramCanvasInner() {
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
-    // Tree source: legacy layoutStyle diagrams keep their kind-scoped trees;
-    // the General template derives its tree from the view's own selection.
+    // The General template derives its tree from the view's own selection.
+    // Only reachable in general's tree/containment modes — the toolbar that
+    // triggers expand/collapse only renders there (see the KK-2 mode switcher
+    // below), so gating on isGeneralTemplate here would be redundant.
 
     const buildActiveTree = useCallback(() => {
         if (!model) return undefined;
-        if (isFBSDiagram) return buildFunctionalTree(model);
-        if (isGeneralTemplate) return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram));
-        return buildDecompositionTree(model);
-    }, [model, isFBSDiagram, isGeneralTemplate, viewpointFilter, selectedDiagram?.relationshipTypes]);
+        return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram));
+    }, [model, viewpointFilter, selectedDiagram?.relationshipTypes]);
 
     const toggleExpand = useCallback((nodeId: string) => {
         setExpandedNodes(prev => {
@@ -2310,18 +2308,12 @@ function DiagramCanvasInner() {
         // canvas only assembles the option slices.
         const dispatch = () => {
             const provider = templateRegistry.select({
-                viewKind,
-                diagramType: selectedDiagram?.diagramType,
-                isFBSDiagram, isDecompDiagram, isGeneralTemplate, generalMode, layoutStyle,
+                diagramProfile: resolveDiagramProfile({
+                    viewKind, diagramType: selectedDiagram?.diagramType, generalMode,
+                }),
             });
             const treeCallbacks = { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection };
             const options: TemplateOptionSlices = {
-                fbs: { expandedNodes, nodeDirections, callbacks: treeCallbacks, layoutProviderId },
-                decomposition: {
-                    expandedNodes, nodeDirections, callbacks: treeCallbacks,
-                    positionCache: positionCacheRef.current,
-                },
-                containment: { expandedNodes, callbacks: { onToggleExpand: toggleExpand } },
                 useCase: {
                     // A UCD selection can be derived before relationship endpoints
                     // are resolved. The template itself selects only actors linked
@@ -2412,7 +2404,7 @@ function DiagramCanvasInner() {
 
         const timer = window.setTimeout(dispatch, LAYOUT_SWITCH_DEBOUNCE_MS);
         return () => { cancelled = true; window.clearTimeout(timer); };
-    }, [model, viewpointFilter, isDecompDiagram, isFBSDiagram, layoutStyle,
+    }, [model, viewpointFilter,
         viewKind, isGeneralTemplate, generalMode, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
@@ -3467,17 +3459,6 @@ function DiagramCanvasInner() {
                             />
                         </div>}
 
-                        {/* FBS controls */}
-                        {isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
-                            <>
-                                <ToolbarSep hidden={actionFlowToolbarPlacement === 'left'} />
-                                <IconButton icon={<Icon.expand />} onClick={expandAll}
-                                    title="Expand all nodes" ariaLabel="Expand all" />
-                                <IconButton icon={<Icon.collapse />} onClick={collapseAll}
-                                    title="Collapse all nodes" ariaLabel="Collapse all" />
-                            </>
-                        )}
-
                         {/* Action Flow template controls (KK-4) — iOS-style grouped toolbar */}
                         {viewKind === 'actionflow' && supportsToolbarOperation('flowSwimlanes') && (
                             <>
@@ -3846,41 +3827,6 @@ function DiagramCanvasInner() {
                                             </button>
                                         )}
                                     </>
-                                )}
-                            </>
-                        )}
-
-                        {/* Decomposition controls */}
-                        {isDecompDiagram && !isFBSDiagram && supportsToolbarOperation('expandCollapse') && (
-                            <>
-                                <span style={{ color: '#E5E5E0' }}>|</span>
-                                <div style={{ gridColumn: '1 / -1', fontSize: 10, fontWeight: 600, color: '#6B7280', paddingLeft: 2 }}>
-                                    View as
-                                </div>
-                                <div className="flex rounded overflow-hidden"
-                                    style={{ gridColumn: '1 / -1', border: '1px solid #E5E5E0' }}>
-                                    {(['containment', 'decomposition'] as const).map(s => (
-                                        <button key={s} onClick={() => { setLayoutStyle(s); positionCacheRef.current.clear(); }}
-                                            className="flex-1 flex items-center justify-center py-1 text-xs font-medium"
-                                            style={{
-                                                background: layoutStyle === s ? '#1B3A4B' : '#FFFFFF',
-                                                color: layoutStyle === s ? '#FFFFFF' : '#6B7280',
-                                            }}>
-                                            {s === 'containment' ? <Icon.rectangle /> : <Icon.library />}
-                                        </button>
-                                    ))}
-                                </div>
-                                <ToolbarSep />
-                                <IconButton icon={<Icon.expand />} onClick={expandAll}
-                                    title="Expand all nodes" ariaLabel="Expand all" />
-                                <IconButton icon={<Icon.collapse />} onClick={collapseAll}
-                                    title="Collapse all nodes" ariaLabel="Collapse all" />
-                                {layoutStyle === 'decomposition' && (
-                                    <button onClick={resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
-                                        style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                        title="Re-layout the tree from scratch">
-                                        ↻ Reset
-                                    </button>
                                 )}
                             </>
                         )}
