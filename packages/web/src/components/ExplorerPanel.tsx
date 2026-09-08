@@ -22,7 +22,7 @@ import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import { type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
+import { isSysmlMetaclass, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -1418,21 +1418,44 @@ export function computeExplorerGroupTree(
         });
     }
 
-    // An element the ontology does not place is a FINDING, and it is reported
-    // as one rather than filed somewhere plausible. Its kind is not declared
-    // and its layer matches no `ExplorerClassification` — so either the
-    // ontology is missing a classification or the builder invented a layer.
-    // Both are worth seeing; guessing on its behalf is what hid them before.
-    if (domainless.length > 0) {
+    // ─── What the ontology does not place, split by whether SysML knows it ──
+    //
+    // Two different findings, and reading them as one hid the difference. An
+    // element whose kind IS a SysML metaclass is valid SysML the ontology has
+    // not classified — `EnumerationDefinition` is Affera's case, and the
+    // question it raises is whether the ontology should classify it. An
+    // element SysML does not know either is neither modelled nor standard, and
+    // the question is what it is at all.
+    //
+    // The vocabulary is `SYSML_METACLASS_NAME_LIST`, generated from
+    // SysML.ecore, so "is this SysML" is answered by the standard rather than
+    // by a list maintained here.
+    const sysmlRoots = domainless.filter(root => isSysmlMetaclass(root.element!.kind));
+    const unknownRoots = domainless.filter(root => !isSysmlMetaclass(root.element!.kind));
+
+    if (sysmlRoots.length > 0) {
+        const sysmlColor = '#64748B';
+        groups.push({
+            group: {
+                id: 'sysml',
+                label: 'SysML — Not Classified by the Ontology',
+                color: sysmlColor,
+                kinds: [...new Set(sysmlRoots.map(root => root.element!.kind))],
+            },
+            subGroups: toSubGroups(sysmlRoots, sysmlColor),
+        });
+    }
+
+    if (unknownRoots.length > 0) {
         const undefColor = '#F59E0B';
         groups.push({
             group: {
                 id: 'undefined',
-                label: 'Undeclared — No Ontology Classification',
+                label: 'Undefined — Neither Ontology nor SysML',
                 color: undefColor,
-                kinds: [],
+                kinds: [...new Set(unknownRoots.map(root => root.element!.kind))],
             },
-            subGroups: toSubGroups(domainless, undefColor),
+            subGroups: toSubGroups(unknownRoots, undefColor),
         });
     }
 
