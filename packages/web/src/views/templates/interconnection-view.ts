@@ -999,6 +999,13 @@ export async function computeInterconnectionLayout(
         let contentBottom = 0;
 
         if (elkKids.length > 0) {
+            // `rosHost` is the ROS extension's spelling; `host` is the generic
+            // one. Neither is inferred from a package name: where a node is
+            // DECLARED is not where it runs.
+            const hostOf = (id: string): string | undefined => {
+                const attributes = tree.elements.get(id)?.attributes;
+                return attributes?.rosHost || attributes?.host || undefined;
+            };
             const kidPorts = (id: string): { id: string; side: PortSide }[] =>
                 (portsByOwner.get(id) ?? []).map(portId => ({ id: portId, side: portSideOf(portId) }));
             const resolved = await resolveGraphLayout({
@@ -1008,6 +1015,10 @@ export async function computeInterconnectionLayout(
                     width: kidLayouts.get(id)!.width,
                     height: kidLayouts.get(id)!.height,
                     ports: kidPorts(id),
+                    // Where the element runs, when the model says so. Two hosts
+                    // among the children make the arrangement columns, which is
+                    // what a cross-host view is for.
+                    host: hostOf(id),
                 })),
                 edges: elkEdges,
                 // This container's own boundary ports take part in the same

@@ -10,7 +10,11 @@
 // worth having; the delivery mechanism was not.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { balancedGridColumns } from '../layout';
+/** Column count for a two-dimensional board near the requested aspect. */
+export function balancedGridColumns(count: number, targetAspect = 1.25): number {
+    if (count <= 1) return Math.max(count, 1);
+    return Math.min(count, Math.max(2, Math.round(Math.sqrt(count * targetAspect))));
+}
 
 /** The gap a reader needs between two sibling boxes to see them as separate. */
 export const SIBLING_GUTTER = 64;

@@ -13,6 +13,11 @@ import {
     type OrthogonalRouteRequest, type RouteObstacle, type RoutePoint,
 } from './orthogonal-router';
 import { runLayoutProvider } from '../diagram/layout-providers';
+import { arrangeSiblings, balancedGridColumns, SIBLING_GUTTER } from './templates/layout-rules';
+
+// Re-exported: it moved to `templates/layout-rules` with the other pure
+// geometry, and callers here have imported it from this module for a while.
+export { balancedGridColumns };
 import {
     LAYER_COLORS, REL_COLORS, CONTAINMENT_DEPTH_COLORS, CONTAINMENT_LEAF_COLOR,
 } from '../constants';
@@ -45,6 +50,12 @@ export interface ResolverNode {
     id: string;
     width: number;
     height: number;
+    /**
+     * Where the element runs, when the model says — `rosHost`, or an owning
+     * subsystem. Two or more hosts among the children turn the arrangement
+     * into columns, which is the drawing a cross-host IBD is asking for.
+     */
+    host?: string;
     /**
      * Boundary ports, when the view anchors connectors to them. Declaring them
      * lets a port-aware engine order each side to minimise crossings instead of
@@ -344,11 +355,6 @@ export function compactnessScore(width: number, height: number, targetAspect = 1
     return width * height * aspectPenalty;
 }
 
-/** Column count for a two-dimensional board near the requested aspect. */
-export function balancedGridColumns(count: number, targetAspect = 1.25): number {
-    if (count <= 1) return Math.max(count, 1);
-    return Math.min(count, Math.max(2, Math.round(Math.sqrt(count * targetAspect))));
-}
 
 /** Stable connectivity order: sources first, then breadth-first adjacency. */
 export function connectivityOrder(nodes: ResolverNode[], edges: ResolverEdge[]): string[] {
@@ -522,8 +528,29 @@ export async function resolveGraphLayout(options: {
     const { nodes, edges } = options;
     if (nodes.length === 0) return { strategy: 'balanced-board', width: 0, height: 0, children: [] };
     const targetAspect = options.targetAspect ?? 1.5;
-    const gapX = options.gapX ?? 54;
-    const gapY = options.gapY ?? 58;
+    const gapX = options.gapX ?? SIBLING_GUTTER;
+    const gapY = options.gapY ?? SIBLING_GUTTER;
+
+    // ─── Two shapes the candidates cannot find on their own ─────────────
+    //
+    // Children that only talk to their frame have no edges for a flow engine
+    // to work with, so every candidate degenerates to a sequence and draws a
+    // long thin line. And when the model says which host each child runs on,
+    // columns per host is the drawing a cross-host view is asking for — a
+    // fact no amount of edge-crossing minimisation can recover.
+    //
+    // Both are answered before the candidates run, because scoring cannot
+    // choose an arrangement that was never generated. Everything else falls
+    // through to the measured candidates as before.
+    const arranged = arrangeSiblings(nodes, edges, { gapX, gapY, targetAspect });
+    if (arranged.strategy === 'peer-grid' || arranged.strategy === 'host-columns') {
+        return {
+            strategy: arranged.strategy === 'peer-grid' ? 'balanced-board' : 'elk-layered',
+            width: arranged.width,
+            height: arranged.height,
+            children: arranged.children as ResolverChild[],
+        };
+    }
     const layered = (direction: 'RIGHT' | 'DOWN'): ResolvedGraphLayout => {
         const byId = new Map(nodes.map(n => [n.id, n]));
         const ordered = connectivityOrder(nodes, edges).map(nodeId => byId.get(nodeId)!);
