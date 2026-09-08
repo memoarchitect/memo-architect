@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { TemplateRegistry } from '../template-registry';
 import { templateRegistry } from '../templates';
 import type { DiagramTemplateProvider, TemplateSelectionContext } from '../template-provider';
+import { resolveDiagramProfile, type DiagramProfileInput } from '../diagram-profile';
 
 const context = (overrides: Partial<TemplateSelectionContext> = {}): TemplateSelectionContext => ({
-    viewKind: 'general',
-    diagramType: undefined,
-    isFBSDiagram: false,
-    isDecompDiagram: false,
-    isGeneralTemplate: false,
-    generalMode: 'graph',
-    layoutStyle: 'containment',
+    diagramProfile: 'standard',
     ...overrides,
+});
+
+/** Builds a context the way the canvas does: resolve the raw view fields to one profile. */
+const contextFor = (input: Partial<DiagramProfileInput>): TemplateSelectionContext => ({
+    diagramProfile: resolveDiagramProfile({ generalMode: 'graph', ...input }),
 });
 
 const provider = (id: string, matches: (ctx: TemplateSelectionContext) => boolean): DiagramTemplateProvider => ({
@@ -25,9 +25,9 @@ const provider = (id: string, matches: (ctx: TemplateSelectionContext) => boolea
 describe('TemplateRegistry', () => {
     it('selects the first registered match — registration order is precedence', () => {
         const registry = new TemplateRegistry();
-        registry.register(provider('a', ctx => ctx.isFBSDiagram));
+        registry.register(provider('a', ctx => ctx.diagramProfile === 'usecase'));
         registry.register(provider('b', () => true));
-        expect(registry.select(context({ isFBSDiagram: true })).descriptor.id).toBe('a');
+        expect(registry.select(context({ diagramProfile: 'usecase' })).descriptor.id).toBe('a');
         expect(registry.select(context()).descriptor.id).toBe('b');
     });
 
@@ -57,11 +57,8 @@ describe('TemplateRegistry', () => {
 });
 
 describe('built-in template registration', () => {
-    it('reproduces the legacy dispatch precedence', () => {
+    it('reproduces the dispatch precedence', () => {
         expect(templateRegistry.list().map(d => d.id)).toEqual([
-            'memo.template.fbs',
-            'memo.template.decomposition',
-            'memo.template.containment',
             'memo.template.usecase',
             'memo.template.context',
             'memo.template.interconnection',
@@ -73,26 +70,36 @@ describe('built-in template registration', () => {
         ]);
     });
 
-    it('selects by the same discriminators as the legacy chain', () => {
-        expect(templateRegistry.select(context({ isFBSDiagram: true, isDecompDiagram: true })).descriptor.id)
-            .toBe('memo.template.fbs');
-        expect(templateRegistry.select(context({ isDecompDiagram: true, layoutStyle: 'decomposition' })).descriptor.id)
-            .toBe('memo.template.decomposition');
-        expect(templateRegistry.select(context({ isDecompDiagram: true })).descriptor.id)
-            .toBe('memo.template.containment');
-        expect(templateRegistry.select(context({ diagramType: 'ucd', viewKind: 'interconnection' })).descriptor.id)
+    it('selects by the single resolved diagramProfile', () => {
+        expect(templateRegistry.select(contextFor({ diagramType: 'ucd', viewKind: 'interconnection' })).descriptor.id)
             .toBe('memo.template.usecase');
-        expect(templateRegistry.select(context({ diagramType: 'context' })).descriptor.id)
+        expect(templateRegistry.select(contextFor({ diagramType: 'context' })).descriptor.id)
             .toBe('memo.template.context');
-        expect(templateRegistry.select(context({ viewKind: 'interconnection' })).descriptor.id)
+        expect(templateRegistry.select(contextFor({ viewKind: 'interconnection' })).descriptor.id)
             .toBe('memo.template.interconnection');
-        expect(templateRegistry.select(context({ viewKind: 'statetransition' })).descriptor.id)
+        expect(templateRegistry.select(contextFor({ viewKind: 'actionflow' })).descriptor.id)
+            .toBe('memo.template.actionflow');
+        expect(templateRegistry.select(contextFor({ viewKind: 'statetransition' })).descriptor.id)
             .toBe('memo.template.statetransition');
-        expect(templateRegistry.select(context({ isGeneralTemplate: true, generalMode: 'tree' })).descriptor.id)
+        expect(templateRegistry.select(contextFor({ viewKind: 'sequence' })).descriptor.id)
+            .toBe('memo.template.sequence');
+        expect(templateRegistry.select(contextFor({ viewKind: 'general', generalMode: 'tree' })).descriptor.id)
             .toBe('memo.template.general');
-        expect(templateRegistry.select(context({ isGeneralTemplate: true, generalMode: 'graph' })).descriptor.id)
+        expect(templateRegistry.select(contextFor({ viewKind: 'general', generalMode: 'containment' })).descriptor.id)
+            .toBe('memo.template.general');
+        expect(templateRegistry.select(contextFor({ viewKind: 'general', generalMode: 'graph' })).descriptor.id)
             .toBe('memo.template.standard');
-        expect(templateRegistry.select(context()).descriptor.id)
+        expect(templateRegistry.select(contextFor({})).descriptor.id)
             .toBe('memo.template.standard');
+    });
+
+    it('a legacy ucd/context diagramType wins over its own general viewKind', () => {
+        // Both `ucd` and `context` resolve to the `general` view kind (see
+        // memo-tools view-kinds.ts DIAGRAM_TYPE_TO_VIEW_KIND), but keep their
+        // specialized templates rather than falling into the general template.
+        expect(templateRegistry.select(contextFor({ diagramType: 'ucd', viewKind: 'general', generalMode: 'tree' })).descriptor.id)
+            .toBe('memo.template.usecase');
+        expect(templateRegistry.select(contextFor({ diagramType: 'context', viewKind: 'general', generalMode: 'tree' })).descriptor.id)
+            .toBe('memo.template.context');
     });
 });

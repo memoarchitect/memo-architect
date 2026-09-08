@@ -391,6 +391,58 @@ export function validateSingleTree(tree: CompositionTree): SingleTreeIssue | nul
         : { rootIds: tree.roots, disconnectedIds };
 }
 
+/**
+ * Coarse content family for a kind, used only by `warnIfMixedKindFamilies`
+ * below. Not a modeling concept — SysML does not distinguish "structural"
+ * from "functional" composition — just a cheap way to flag the case a reader
+ * actually complains about: a decomposition tree with both parts and
+ * functions in it, which reads as one decomposition when it is really two
+ * unrelated ones sharing a canvas.
+ */
+type KindFamily = 'structural' | 'functional' | 'other';
+
+const STRUCTURAL_NAMESPACES = new Set(['logical', 'implementation', 'realization']);
+
+function kindFamily(kind: string, kinds: readonly { name: string; namespace?: string[] }[]): KindFamily {
+    const namespace = kinds.find(k => k.name === kind)?.namespace;
+    if (!namespace) return 'other';
+    if (namespace.includes('functional')) return 'functional';
+    if (namespace.some(segment => STRUCTURAL_NAMESPACES.has(segment))) return 'structural';
+    return 'other';
+}
+
+/**
+ * Dev-time advisory only — never thrown, never blocks rendering. The
+ * tree/containment renderers (computeDecompositionLayout,
+ * computeContainmentLayout) are deliberately content-agnostic: they draw
+ * whatever composition a view's own selectionQuery scopes it to, so any
+ * General view gets the interactive modes, not just structural ones (see
+ * general-view.ts's module doc). That is the right design — the renderer
+ * should not hardcode which kinds "belong" in a decomposition — but it means
+ * nothing stops a view's selectionQuery from pulling in both a Part and a
+ * Function and composing them into one tree, which is not a decomposition of
+ * either. This warns when that happens instead of silently drawing it.
+ */
+export function warnIfMixedKindFamilies(
+    tree: CompositionTree,
+    kinds: readonly { name: string; namespace?: string[] }[] | undefined,
+    viewName?: string,
+): void {
+    if (!kinds?.length || typeof console === 'undefined') return;
+    const families = new Set<KindFamily>();
+    for (const el of tree.elements.values()) {
+        const family = kindFamily(el.kind, kinds);
+        if (family !== 'other') families.add(family);
+    }
+    if (families.size > 1) {
+        console.warn(
+            `[general-view]${viewName ? ` "${viewName}"` : ''} decomposes both ${[...families].sort().join(' and ')} ` +
+            'elements in one tree. Scope this view\'s selectionQuery to one kind family — mixing structural parts ' +
+            'and functional actions in the same decomposition or containment tree reads as one hierarchy when it is two.',
+        );
+    }
+}
+
 // ─── Compartments ────────────────────────────────────────────────────────────
 
 /** Attribute keys that never belong in a node compartment. */

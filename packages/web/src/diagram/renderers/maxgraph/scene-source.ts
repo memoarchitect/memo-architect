@@ -9,10 +9,7 @@
 
 import type { DiagramDTO, MemoElement, MemoModelDTO, ViewKind } from '@memoarchitect/tools/browser';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../../../constants';
-import {
-    computeLayout, computeContainmentLayout, computeDecompositionLayout, computeFBSLayout,
-    buildDecompositionTree, buildFunctionalTree,
-} from '../../../views/layout';
+import { computeLayout } from '../../../views/layout';
 import {
     computeGeneralViewLayout, resolveGeneralMode, buildGeneralViewTree,
 } from '../../../views/templates/general-view';
@@ -25,6 +22,7 @@ import { computeUseCaseViewLayout, useCaseViewOptions } from '../../../views/tem
 import { computeContextViewLayout } from '../../../views/templates/context-view';
 import { projectLayoutToNotationScene, type NotationScene } from '../../notation-scene';
 import { projectIrSemantics } from '../../ir-scene-projection';
+import { resolveDiagramProfile } from '../../diagram-profile';
 
 export interface SceneRequest {
     model: MemoModelDTO;
@@ -111,32 +109,19 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
     if (nonCanvasKind(viewKind)) return null;
 
     const viewpointFilter = buildViewpointFilter(request);
-    const isDecomp = Boolean(diagram?.properties?.layoutStyle);
-    const isFBS = diagram?.properties?.layoutStyle === 'fbs';
-    const isGeneralTemplate = viewKind === 'general' && !isDecomp && !isFBS;
+    const generalMode = resolveGeneralMode(diagram?.properties);
+    const diagramProfile = resolveDiagramProfile({ viewKind, diagramType: diagram?.diagramType, generalMode });
     const positionCache = new Map<string, { x: number; y: number }>();
 
     let result: { nodes: unknown[]; edges: unknown[] };
-    if (isFBS) {
-        result = await computeFBSLayout(model, {
-            expandedNodes: expandAll(buildFunctionalTree(model)),
-            nodeDirections: new Map(),
-            callbacks: NO_CALLBACKS,
-            layoutProviderId,
-        });
-    } else if (isDecomp) {
-        result = computeContainmentLayout(model, {
-            expandedNodes: expandAll(buildDecompositionTree(model)),
-            callbacks: NO_CALLBACKS,
-        });
-    } else if (diagram?.diagramType === 'ucd') {
+    if (diagramProfile === 'usecase' && diagram) {
         result = computeUseCaseViewLayout(model, { systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
-    } else if (diagram?.diagramType === 'context') {
+    } else if (diagramProfile === 'context' && diagram) {
         result = computeContextViewLayout(model, diagram.name, {
             viewpointFilter,
             relationshipTypes: diagram.relationshipTypes,
         });
-    } else if (viewKind === 'interconnection') {
+    } else if (diagramProfile === 'interconnection') {
         result = await computeInterconnectionLayout(model, {
             viewpointFilter,
             relationshipTypes: diagram?.relationshipTypes,
@@ -146,7 +131,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
             onPortMove: () => {},
             layoutProviderId,
         });
-    } else if (viewKind === 'actionflow') {
+    } else if (diagramProfile === 'actionflow') {
         result = await computeActionFlowViewLayout(model, {
             viewpointFilter,
             swimlanes: request.actionFlow?.swimlanes ?? true,
@@ -159,31 +144,28 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
             direction: request.actionFlow?.direction ?? 'horizontal',
             layoutProviderId,
         });
-    } else if (viewKind === 'statetransition') {
+    } else if (diagramProfile === 'statetransition') {
         result = await computeStateTransitionLayout(model, { viewpointFilter, layoutProviderId });
-    } else if (viewKind === 'sequence') {
+    } else if (diagramProfile === 'sequence') {
         result = computeSequenceLayout(model, { viewpointFilter });
+    } else if (diagramProfile === 'general') {
+        result = await computeGeneralViewLayout(model, {
+            mode: generalMode,
+            viewpointFilter,
+            expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes)),
+            nodeDirections: new Map(),
+            callbacks: NO_CALLBACKS,
+            positionCache,
+            hierarchyRelationshipTypes: diagram?.relationshipTypes,
+            layoutProviderId,
+        });
     } else {
-        const mode = resolveGeneralMode(diagram?.properties);
-        if (isGeneralTemplate && mode !== 'graph') {
-            result = await computeGeneralViewLayout(model, {
-                mode,
-                viewpointFilter,
-                expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes)),
-                nodeDirections: new Map(),
-                callbacks: NO_CALLBACKS,
-                positionCache,
-                hierarchyRelationshipTypes: diagram?.relationshipTypes,
-                layoutProviderId,
-            });
-        } else {
-            result = await computeLayout(model, {
-                viewpointFilter,
-                relationshipTypes: diagram?.relationshipTypes,
-                compartments: isGeneralTemplate,
-                layoutProviderId,
-            });
-        }
+        result = await computeLayout(model, {
+            viewpointFilter,
+            relationshipTypes: diagram?.relationshipTypes,
+            compartments: viewKind === 'general',
+            layoutProviderId,
+        });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

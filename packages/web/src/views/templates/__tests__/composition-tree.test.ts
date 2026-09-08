@@ -1,12 +1,12 @@
 // ─── Composition tree tests (KK-2/KK-3 template structure logic) ────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
     buildCompositionTree, collectTreeIds, containersBelowDepth, pickCompartmentEntries,
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
     definitionIndex, definitionLevelElements, definitionLevelComposition, resolveDefinition,
-    buildOwnershipTest,
+    buildOwnershipTest, warnIfMixedKindFamilies,
     declaredSubject, subtreeOf, dominantRoot,
 
 } from '../composition-tree';
@@ -488,5 +488,59 @@ describe('buildOwnershipTest', () => {
     it('nests everything when the registry is unavailable', () => {
         const permissive = buildOwnershipTest(undefined);
         expect(permissive(of('Risk'), of('Hazard'))).toBe(true);
+    });
+});
+
+describe('warnIfMixedKindFamilies', () => {
+    const kinds = [
+        { name: 'LogicalComponent', namespace: ['logical'] },
+        { name: 'FpgaBoard', namespace: ['implementation'] },
+        { name: 'ComponentFunction', namespace: ['functional'] },
+        { name: 'Risk', namespace: ['assurance', 'safety_risk'] },
+    ];
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('warns when a tree mixes structural and functional kinds', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const tree = buildCompositionTree(
+            [el('board', { kind: 'FpgaBoard' }), el('fn', { kind: 'ComponentFunction' })],
+            [],
+        );
+        warnIfMixedKindFamilies(tree, kinds, 'GEN-3');
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toContain('GEN-3');
+        expect(spy.mock.calls[0][0]).toContain('functional');
+        expect(spy.mock.calls[0][0]).toContain('structural');
+    });
+
+    it('does not warn within a single family', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const tree = buildCompositionTree(
+            [el('board', { kind: 'FpgaBoard' }), el('sub', { kind: 'LogicalComponent' })],
+            [],
+        );
+        warnIfMixedKindFamilies(tree, kinds, 'GEN-3');
+        expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('does not warn when a kind outside either family is mixed in', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const tree = buildCompositionTree(
+            [el('board', { kind: 'FpgaBoard' }), el('risk', { kind: 'Risk' })],
+            [],
+        );
+        warnIfMixedKindFamilies(tree, kinds, 'GEN-3');
+        expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('does nothing without a kind registry', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const tree = buildCompositionTree(
+            [el('board', { kind: 'FpgaBoard' }), el('fn', { kind: 'ComponentFunction' })],
+            [],
+        );
+        warnIfMixedKindFamilies(tree, undefined, 'GEN-3');
+        expect(spy).not.toHaveBeenCalled();
     });
 });
