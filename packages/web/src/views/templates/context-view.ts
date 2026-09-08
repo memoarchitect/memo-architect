@@ -16,8 +16,11 @@
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
-    CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
-    routeOrthogonalEdges, type LayoutResult, type RouteObstacle, type RoutePoint,
+    contextCategory, isHumanKind, isStakeholderKind, isEnvironmentKind,
+    parseContextSide, straightSpokes, spokeLabelPoints,
+} from './layout-rules';
+import {
+    type LayoutResult, type RoutePoint,
 } from '../layout';
 import { isPortElement } from './interconnection-view';
 
@@ -26,7 +29,6 @@ import { isPortElement } from './interconnection-view';
 // `ExchangesWith` was replaced by `flow`. A kind that no longer exists matches
 // nothing and the context diagram just comes up empty.
 const CONTEXT_RELATIONSHIPS = new Set(['interactsincontext', 'appliesincontext', 'connect', 'flow']);
-const HUMAN_ACTOR_KINDS = new Set(['Actor', 'User']);
 
 const relationshipType = (type: string) => type.toLowerCase();
 const isEnvironment = (element: MemoElement) => element.kind === 'UseContext'
@@ -55,14 +57,8 @@ const externalWidth = (name: string): number =>
 
 type Side = 'left' | 'right' | 'top' | 'bottom';
 
-const contextSide = (relationship: MemoRelationship): Side | undefined => {
-    const value = String(relationship.attributes?.contextSide ?? '').toLowerCase().replace(/[^a-z]/g, '');
-    if (value.endsWith('actor')) return 'left';
-    if (value.endsWith('externalsystem')) return 'right';
-    if (value.endsWith('environment')) return 'top';
-    if (value.endsWith('constraint')) return 'bottom';
-    return undefined;
-};
+const contextSide = (relationship: MemoRelationship): Side | undefined =>
+    parseContextSide(relationship.attributes?.contextSide);
 
 const contextLabel = (relationship: MemoRelationship): string =>
     relationship.attributes?.interactionLabel || `«${relationshipType(relationship.type)}»`;
@@ -133,14 +129,34 @@ export function computeContextViewLayout(
     // ── Columns: direction decides the flank, then entities of a kind stay
     // together so the diagram reads as roles rather than a jumble ──
     const sides = contextEntitySides(external.map(element => element.id), exchanges, system.id);
+    const authored = new Set<string>();
     // InteractsInContext is intentionally a separate relation: its authored
     // contextSide controls the diagram, rather than inferred data flow.  The
     // source endpoint is the contextParticipant in the SysML definition.
     for (const rel of exchanges) {
         const side = contextSide(rel);
-        if (side) sides.set(rel.sourceId, side);
+        if (side) { sides.set(rel.sourceId, side); authored.add(rel.sourceId); }
     }
-    const rank = (element: MemoElement) => HUMAN_ACTOR_KINDS.has(element.kind) ? 0 : isEnvironment(element) ? 1 : 2;
+    // What something IS beats which way its arrows point.
+    //
+    // `contextEntitySides` places by data direction, which puts a physician on
+    // the right the moment the system sends them more than they send it. A
+    // person belongs on the left whatever the flow says. Only positive signals
+    // override — a kind that says nothing keeps the direction-derived side,
+    // because guessing "system" for everything unknown would undo the balance.
+    for (const element of external) {
+        if (authored.has(element.id)) continue;
+        if (isHumanKind(element.kind, element.construct)) sides.set(element.id, 'left');
+        else if (isStakeholderKind(element.kind)) sides.set(element.id, 'bottom');
+        else if (isEnvironmentKind(element.kind, element.name, element.attributes?.entityKind)) {
+            sides.set(element.id, 'top');
+        }
+    }
+    // `AfferaEpPhysicianActor` is a person and `Actor` is not the only spelling
+    // of one, so the column rank asks what the role IS rather than matching two
+    // exact kind names.
+    const rank = (element: MemoElement) =>
+        isHumanKind(element.kind, element.construct) ? 0 : isEnvironment(element) ? 1 : 2;
     const column = (side: Side) => external
         .filter(element => sides.get(element.id) === side)
         .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
@@ -207,7 +223,10 @@ export function computeContextViewLayout(
                 id: element.id, type: 'contextExternal', position: { x, y: cursor },
                 data: {
                     label: element.name, kind: element.kind,
-                    category: isEnvironment(element) ? 'environment' : HUMAN_ACTOR_KINDS.has(element.kind) ? 'person' : 'system',
+                    // Left is where people go and right is where systems go, so
+                    // the glyph reads off the side. Reading it off the kind put
+                    // stick figures on `…RecordingSystemActor`, which is a box.
+                    category: contextCategory(side),
                 },
                 style: { width, height: EXTERNAL_H },
             });
@@ -226,7 +245,10 @@ export function computeContextViewLayout(
                 id: element.id, type: 'contextExternal', position: { x: cursor, y },
                 data: {
                     label: element.name, kind: element.kind,
-                    category: isEnvironment(element) ? 'environment' : HUMAN_ACTOR_KINDS.has(element.kind) ? 'person' : 'system',
+                    // Left is where people go and right is where systems go, so
+                    // the glyph reads off the side. Reading it off the kind put
+                    // stick figures on `…RecordingSystemActor`, which is a box.
+                    category: contextCategory(side),
                 },
                 style: { width: itemWidth, height: EXTERNAL_H },
             });
@@ -299,29 +321,28 @@ export function computeContextViewLayout(
         };
     });
 
-    const obstacles: RouteObstacle[] = nodes
-        .filter(node => !node.data.isFrame)
-        .map(node => ({
-            id: node.id, x: node.position.x, y: node.position.y,
-            width: Number(node.style?.width ?? EXTERNAL_MIN_W), height: Number(node.style?.height ?? EXTERNAL_H),
-        }));
-    const routes = routeOrthogonalEdges(drafts.map(draft => ({
+    // ─── Hub and spoke is straight lines ────────────────────────────────
+    //
+    // An orthogonal router given a star topology draws a maze: every spoke
+    // leaves its box on an axis, meets the hub's wall at a right angle, and
+    // detours around the very thing it is pointing at. The entities sit in
+    // four columns around one system, so the segment from each to the system
+    // is unobstructed by construction — there is nothing to route around.
+    //
+    // A context diagram's whole claim is "these things talk to the system",
+    // and one straight segment says it.
+    const routes = straightSpokes(drafts.map(draft => ({
         id: draft.rel.id, source: draft.source, target: draft.target,
-        sourceNodeId: draft.rel.sourceId, targetNodeId: draft.rel.targetId,
-        sourceSide: draft.sourceSide, targetSide: draft.targetSide,
-    })), obstacles, 24);
+    })));
     // Placed together, so two exchanges through the same corridor do not stack
     // their stereotype labels on top of one another.
     const labels = new Map(drafts.map(draft => [draft.rel.id, contextLabel(draft.rel)]));
-    const labelPoints = placeConnectorLabels(
-        drafts.flatMap(draft => {
-            const points = routes.get(draft.rel.id);
-            const label = labels.get(draft.rel.id)!;
-            return points && points.length >= 2
-                ? [{ id: draft.rel.id, points, width: connectorLabelWidth(label), height: CONNECTOR_LABEL_HEIGHT }]
-                : [];
-        }),
-        obstacles,
+    // On the spoke and nudged outward, rather than placed by the corridor
+    // packer: with straight segments there are no corridors to share, and the
+    // midpoint of a short spoke sits on the system's own hull.
+    const labelPoints = spokeLabelPoints(
+        drafts.map(draft => ({ id: draft.rel.id, source: draft.source, target: draft.target })),
+        systemRect,
     );
 
     const edges: Edge[] = drafts.map(draft => {
@@ -334,7 +355,7 @@ export function computeContextViewLayout(
             label: labels.get(draft.rel.id),
             style: { stroke: '#0F766E', strokeWidth: 1.5 },
             data: {
-                routing: 'rounded',
+                routing: 'straight',
                 points: routes.get(draft.rel.id) ?? [draft.source, draft.target],
                 labelPoint: labelPoints.get(draft.rel.id),
                 sourceSide: draft.sourceSide, targetSide: draft.targetSide,
