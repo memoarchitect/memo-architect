@@ -29,8 +29,13 @@ export const UseCaseEdge = memo(function UseCaseEdge(props: EdgeProps) {
     const routed = Array.isArray(props.data?.points) ? props.data.points as Point[] : [];
     const points = routed.length >= 2 ? routed : [{ x: props.sourceX, y: props.sourceY }, { x: props.targetX, y: props.targetY }];
     const cornerRadius = routing === 'elbow' ? 0 : routing === 'rounded' ? 16 : routing === 'curved' ? 30 : 42;
+    // Straight means ONE SEGMENT between the routed endpoints — not a line
+    // between React Flow's handle centres. A template that computed where a
+    // connector meets each box (a context spoke lands on the hull, not on a
+    // handle) had that work thrown away here, and the line jumped to whichever
+    // handle React Flow picked.
     const path = routing === 'straight'
-        ? `M ${props.sourceX},${props.sourceY} L ${props.targetX},${props.targetY}`
+        ? `M ${points[0].x},${points[0].y} L ${points[points.length - 1].x},${points[points.length - 1].y}`
         : orthogonalPath(points, cornerRadius);
     // A template that placed all its labels together supplies the point; a lone
     // edge falls back to its own midpoint.
