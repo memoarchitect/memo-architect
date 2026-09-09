@@ -238,7 +238,7 @@ export function computeSequenceLayout(
                     target: next.step.id,
                     sourceHandle: sameLane ? 'right' : rightward ? 'right' : 'left',
                     targetHandle: sameLane ? 'right' : rightward ? 'left' : 'right',
-                    type: sameLane ? 'smoothstep' : 'straight',
+                    type: 'smoothstep',
                     label: occ.item,
                     style: { stroke: '#3498DB', strokeWidth: EDGE.flowWidth },
                     labelStyle: { fontSize: FONT.badge, fill: '#4A90D9', fontWeight: 600 },
