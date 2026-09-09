@@ -581,6 +581,9 @@ function UrlNavigationSync() {
     /** The permalink path whose view the store has actually taken up. */
     const adoptedPermalink = useRef<string | null>(null);
     const [pendingElementParam, setPendingElementParam] = useState<string | null>(null);
+    /** The diagram the last push effect ran for, so a diagram switch can drop
+     *  a selection that belonged to the one just left — see its use below. */
+    const previousDiagramId = useRef<string | null>(null);
 
     // ── URL → Store ──────────────────────────────────────────────────────
     // Applies on first load and on Back/Forward. In-app navigation is already
@@ -659,6 +662,18 @@ function UrlNavigationSync() {
 
         let url: string | null = null;
 
+        // A selection made on one diagram must not survive a navigation to a
+        // different one: this effect used to append `?element=<selectedElementId>`
+        // to whatever diagram URL it was about to push regardless of which
+        // diagram that element was actually selected on, so switching from
+        // sampleActionFlowView to sampleInterconnectionView produced
+        // /diagrams/ibd/INT-1?element=RCV-1 — an action id, on the IBD's URL.
+        const diagramChanged = activeView.type === 'diagram'
+            && previousDiagramId.current !== null
+            && previousDiagramId.current !== activeView.diagramId;
+        previousDiagramId.current = activeView.type === 'diagram' ? activeView.diagramId : null;
+        if (diagramChanged && selectedElementId) useModelStore.getState().inspectElement(null);
+
         if (activeView.type === 'element-detail' && model) {
             const element = model.elements[activeView.elementId];
             if (element) {
@@ -675,9 +690,10 @@ function UrlNavigationSync() {
             url = viewToPath(activeView);
         }
 
-        if (url && activeView.type !== 'element-detail' && activeView.type !== 'welcome' && selectedElementId) {
-            const el = model?.elements[selectedElementId];
-            const shortId = el?.shortId ?? selectedElementId;
+        const carriedElementId = diagramChanged ? null : selectedElementId;
+        if (url && activeView.type !== 'element-detail' && activeView.type !== 'welcome' && carriedElementId) {
+            const el = model?.elements[carriedElementId];
+            const shortId = el?.shortId ?? carriedElementId;
             const sep = url.includes('?') ? '&' : '?';
             url += `${sep}element=${encodeURIComponent(shortId)}`;
         }
