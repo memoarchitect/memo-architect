@@ -65,10 +65,13 @@ describe('two-column host IBD (pacing shape)', () => {
       { id: 'peaks', host: 'ciu', width: 200, height: 80 },
       { id: 'db', host: 'ciu', width: 200, height: 80 },
     ];
-    const layout = packHostColumns(nodes);
+    // Two known hosts (ws, ciu), so packHostColumns cannot return null here —
+    // it only does with fewer than two — and every id below is one of the
+    // nodes just passed in, so .find() cannot come back undefined either.
+    const layout = packHostColumns(nodes)!;
     expectEqual(layout.strategy, 'host-columns');
-    const viewer = layout.children.find((c) => c.id === 'viewer');
-    const main = layout.children.find((c) => c.id === 'main_acq');
+    const viewer = layout.children.find((c) => c.id === 'viewer')!;
+    const main = layout.children.find((c) => c.id === 'main_acq')!;
     expect(viewer.x + viewer.width + SIBLING_GUTTER <= main.x + 1).toBe(true);
     expectEqual(layout.children.filter((c) => c.x === viewer.x).length, 2);
     expectEqual(layout.children.filter((c) => c.x === main.x).length, 3);
@@ -81,8 +84,9 @@ describe('two-column host IBD (pacing shape)', () => {
       { source: 'viewer', target: 'main_acq' },
       { source: 'main_acq', target: 'peaks' },
     ]);
-    const viewer = layout.children.find((c) => c.id === 'viewer');
-    const peaks = layout.children.find((c) => c.id === 'peaks');
+    // Every id below is one of the nodes just passed in.
+    const viewer = layout.children.find((c) => c.id === 'viewer')!;
+    const peaks = layout.children.find((c) => c.id === 'peaks')!;
     expect(viewer.x < peaks.x).toBe(true);
     expectEqual(new Set(layout.children.map((c) => c.x)).size, 3);
   });
@@ -161,14 +165,15 @@ describe('context straight spokes', () => {
       target: { x: 400, y: 220 + i * 20 },
     }));
     const routes = straightSpokes(drafts);
-    expectEqual(routes.get('e0').length, 2);
+    // 'e0' is one of the drafts just built above.
+    expectEqual(routes.get('e0')!.length, 2);
     for (let i = 0; i < drafts.length; i++) {
       for (let j = i + 1; j < drafts.length; j++) {
         expectEqual(spokesCross(drafts[i], drafts[j]), false);
       }
     }
     const labels = spokeLabelPoints(drafts, system);
-    const mid0 = labels.get('e0');
+    const mid0 = labels.get('e0')!;
     expect(mid0.x < (drafts[0].source.x + drafts[0].target.x) / 2 + 1).toBe(true);
   });
 });
