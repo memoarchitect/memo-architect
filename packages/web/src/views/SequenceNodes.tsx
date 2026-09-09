@@ -134,3 +134,94 @@ function SeqOccurrenceNodeInner({ data, selected }: NodeProps) {
 }
 
 export const SeqOccurrenceNode = memo(SeqOccurrenceNodeInner);
+
+const FRAGMENT_COLOR = '#6366F1';
+
+function guardLabel(raw?: string): string | undefined {
+    if (!raw) return undefined;
+    return raw.startsWith('[') ? raw : `[${raw}]`;
+}
+
+function SeqFragmentNodeInner({ data }: NodeProps) {
+    const d = data as {
+        fragmentType: string;
+        guard?: string;
+        operandGuards?: (string | undefined)[];
+        separators?: number[];
+    };
+    const headerGuard = d.guard ?? d.operandGuards?.[0];
+    return (
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                border: `1.5px solid ${FRAGMENT_COLOR}`,
+                borderRadius: 4,
+                position: 'relative',
+                pointerEvents: 'none',
+                background: `${FRAGMENT_COLOR}06`,
+            }}
+        >
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    background: FRAGMENT_COLOR,
+                    color: '#FFFFFF',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '3px 14px 3px 8px',
+                    borderRadius: '3px 0 8px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                }}
+            >
+                {d.fragmentType}
+            </div>
+            {headerGuard && (
+                <span
+                    style={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 72,
+                        fontSize: FONT.xs,
+                        color: FRAGMENT_COLOR,
+                        fontWeight: 600,
+                    }}
+                >
+                    {guardLabel(headerGuard)}
+                </span>
+            )}
+            {d.separators?.map((sy, i) => (
+                <div
+                    key={i}
+                    style={{
+                        position: 'absolute',
+                        top: sy,
+                        left: 0,
+                        right: 0,
+                        borderTop: `1.5px dashed ${FRAGMENT_COLOR}`,
+                    }}
+                >
+                    {d.operandGuards?.[i + 1] && (
+                        <span
+                            style={{
+                                position: 'absolute',
+                                top: 4,
+                                left: 8,
+                                fontSize: FONT.xs,
+                                color: FRAGMENT_COLOR,
+                                fontWeight: 600,
+                            }}
+                        >
+                            {guardLabel(d.operandGuards[i + 1])}
+                        </span>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export const SeqFragmentNode = memo(SeqFragmentNodeInner);
