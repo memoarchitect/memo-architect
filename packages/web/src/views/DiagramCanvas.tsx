@@ -1416,9 +1416,11 @@ function DiagramCanvasInner() {
         setLayoutEditVersion(0);
         // A `layoutHint: tree` on a selection that composes nothing draws a row
         // of orphan boxes; ask the tree itself whether there is one.
+        const hint = selectedDiagram?.properties?.layoutHint;
+        const wantsUsageLevel = hint === 'tree' || hint === 'containment';
         const generalTree = model
             ? buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes,
-                viewElementOf(model, selectedDiagram))
+                viewElementOf(model, selectedDiagram), wantsUsageLevel)
             : undefined;
         setGeneralMode(resolveGeneralMode(
             selectedDiagram?.properties, (generalTree?.childrenMap.size ?? 0) > 0));
@@ -1571,6 +1573,12 @@ function DiagramCanvasInner() {
     const noDefinitionsIssue = useMemo(() => {
         if (!model || !selectedDiagram || !isGeneralTemplate) return null;
         if (generalMode === 'graph') return null;
+        // Usage-level tree/containment operates on part instances, not
+        // definitions — a view of usages all typed by the same ontology kind
+        // is exactly its purpose, so the "no definitions" warning does not
+        // apply.
+        const hint = selectedDiagram.properties?.layoutHint;
+        if (hint === 'tree' || hint === 'containment') return null;
         const selected = (selectedDiagram.elementIds ?? []).length;
         if (selected === 0) return null;
         const definitions = definitionIndex(model.elements);
@@ -1596,7 +1604,9 @@ function DiagramCanvasInner() {
         // UseCase Includes). Those may intentionally have multiple roots, so
         // the strict single-composition-tree rule does not apply.
         if (!usesComposition) return null;
-        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram)));
+        const hint = selectedDiagram.properties?.layoutHint;
+        return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
+            hint === 'tree' || hint === 'containment'));
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
@@ -1607,8 +1617,10 @@ function DiagramCanvasInner() {
 
     const buildActiveTree = useCallback(() => {
         if (!model) return undefined;
-        return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram));
-    }, [model, viewpointFilter, selectedDiagram?.relationshipTypes]);
+        const hint = selectedDiagram?.properties?.layoutHint;
+        return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram),
+            hint === 'tree' || hint === 'containment');
+    }, [model, viewpointFilter, selectedDiagram?.relationshipTypes, selectedDiagram?.properties?.layoutHint]);
 
     const toggleExpand = useCallback((nodeId: string) => {
         setExpandedNodes(prev => {

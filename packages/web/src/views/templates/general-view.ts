@@ -116,20 +116,31 @@ export function buildGeneralViewTree(
     hierarchyRelationshipTypes?: readonly string[],
     /** The view element, whose `expose` names what the diagram is OF. */
     viewElement?: MemoElement,
+    /**
+     * Build the tree from usages (part instances) instead of collapsing to
+     * definitions. A standard BDD graph shows TYPE facts — `HardwareAssembly`
+     * composes `FPGA` — so definition-level is correct. But a tree/containment
+     * decomposition shows the INSTANCE hierarchy — `rootA` contains `branchA1`
+     * — and collapsing all usages of the same definition into one node destroys
+     * that structure. Pass `true` when the view's `layoutHint` asks for tree or
+     * containment.
+     */
+    usageLevel?: boolean,
 ): CompositionTree {
     const types = hierarchyTypesFor(hierarchyRelationshipTypes);
     const definitions = definitionIndex(model.elements);
-    // A BDD states facts about TYPES — that a Data Acquisition Board is made of
-    // an FPGA — so its nodes are definitions. Usages belong on an IBD, which
-    // shows the instances inside one assembly and how they are wired.
-    const elements = definitionLevelElements(visibleViewElements(model, viewpointFilter), definitions);
+
+    const visible = visibleViewElements(model, viewpointFilter);
+    const elements = usageLevel
+        ? visible
+        : definitionLevelElements(visible, definitions);
+    const compositions = usageLevel
+        ? model.relationships.filter(r => (types ?? COMPOSITION_REL_TYPES).has(r.type))
+        : definitionLevelComposition(model.relationships, model.elements, definitions, types);
     const full = buildCompositionTree(
         elements,
-        definitionLevelComposition(model.relationships, model.elements, definitions, types),
+        compositions,
         types,
-        // `composes` states ownership and mere relation alike; only the first
-        // nests. Without this a function contained the ActionUsage that
-        // performs it.
         buildOwnershipTest(model.registries?.kinds),
     );
     warnIfMixedKindFamilies(full, model.registries?.kinds, viewElement?.name);
@@ -191,7 +202,7 @@ export async function computeGeneralViewLayout(
     }
 
     const tree = buildGeneralViewTree(
-        model, options.viewpointFilter, options.hierarchyRelationshipTypes, options.viewElement);
+        model, options.viewpointFilter, options.hierarchyRelationshipTypes, options.viewElement, true);
     const legend = resolveLegend(options.viewElement, model);
     if (options.mode === 'tree') {
         return computeDecompositionLayout(model, {

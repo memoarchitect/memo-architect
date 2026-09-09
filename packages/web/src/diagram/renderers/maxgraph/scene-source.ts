@@ -109,7 +109,10 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
     if (nonCanvasKind(viewKind)) return null;
 
     const viewpointFilter = buildViewpointFilter(request);
-    const generalMode = resolveGeneralMode(diagram?.properties);
+    const hint = diagram?.properties?.layoutHint;
+    const wantsUsageLevel = hint === 'tree' || hint === 'containment';
+    const generalTree = buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes, undefined, wantsUsageLevel);
+    const generalMode = resolveGeneralMode(diagram?.properties, generalTree.childrenMap.size > 0);
     const diagramProfile = resolveDiagramProfile({ viewKind, diagramType: diagram?.diagramType, generalMode });
     const positionCache = new Map<string, { x: number; y: number }>();
 
@@ -152,7 +155,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
         result = await computeGeneralViewLayout(model, {
             mode: generalMode,
             viewpointFilter,
-            expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes)),
+            expandedNodes: expandAll(buildGeneralViewTree(model, viewpointFilter, diagram?.relationshipTypes, undefined, wantsUsageLevel)),
             nodeDirections: new Map(),
             callbacks: NO_CALLBACKS,
             positionCache,
