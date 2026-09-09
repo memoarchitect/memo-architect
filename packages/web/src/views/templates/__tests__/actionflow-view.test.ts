@@ -334,6 +334,20 @@ describe('floating actions', () => {
         const m = model([connected, other, floating], relationships);
         expect(findFloatingActions([connected, other, floating], m).map(action => action.id)).toEqual(['floating']);
     });
+
+    it('does not report a composite action that has no external flow of its own', () => {
+        // The whole-flow root: nothing points to or from it at its own level —
+        // only its children (step1 -> step2) form a succession chain.
+        const root = el('root');
+        const step1 = el('step1', { parentAction: 'root' });
+        const step2 = el('step2', { parentAction: 'root' });
+        const relationships: MemoRelationship[] = [{
+            id: 's1', type: 'succession', sourceId: 'step1', targetId: 'step2',
+            sourceEnd: '', targetEnd: '', file: '',
+        }];
+        const m = model([root, step1, step2], relationships);
+        expect(findFloatingActions([root, step1, step2], m)).toEqual([]);
+    });
 });
 
 describe('flatExpandedGroups', () => {

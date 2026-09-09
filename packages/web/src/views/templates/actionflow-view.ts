@@ -34,7 +34,17 @@ import { COMPOSITION_REL_TYPES } from './composition-tree';
 export type { ActivityNodeType };
 export { activityNodeType, isControlNode };
 
-/** Behavioral steps with no modeled flow or succession connection. */
+/**
+ * Behavioral steps with no modeled flow or succession connection.
+ *
+ * A composite action is a container for its OWN internal control flow (its
+ * children's successions), not a step that needs an external one — the
+ * top-level action of a whole flow has nothing pointing to or from it at its
+ * own level by construction, and a nested composite like `process` may or may
+ * not also participate in the flow around it. Either way, "floating" is a
+ * question for the leaf steps that are supposed to sit in a succession chain,
+ * so any action that is itself a parent (has children) is exempt.
+ */
 export function findFloatingActions(
     actions: MemoElement[],
     model: MemoModelDTO,
@@ -47,7 +57,13 @@ export function findFloatingActions(
         if (actionIds.has(relationship.sourceId)) connected.add(relationship.sourceId);
         if (actionIds.has(relationship.targetId)) connected.add(relationship.targetId);
     }
-    return actions.filter(action => !isControlNode(action, registries) && !connected.has(action.id));
+    const hasChildren = new Set(
+        Object.values(model.elements)
+            .map(el => el.parentAction)
+            .filter((id): id is string => Boolean(id)),
+    );
+    return actions.filter(action =>
+        !isControlNode(action, registries) && !connected.has(action.id) && !hasChildren.has(action.id));
 }
 
 // ─── Element collection ──────────────────────────────────────────────────────
