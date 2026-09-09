@@ -35,11 +35,23 @@ export interface SequenceOccurrence {
     item?: string;
 }
 
+export type FragmentType = 'loop' | 'alt' | 'opt' | 'break' | 'par';
+const FRAGMENT_TYPES: ReadonlySet<string> = new Set(['loop', 'alt', 'opt', 'break', 'par']);
+
+export interface SequenceFragment {
+    element: MemoElement;
+    type: FragmentType;
+    guard?: string;
+    stepIds: Set<string>;
+    operands?: { guard?: string; stepIds: Set<string> }[];
+}
+
 export interface SequenceSection {
     chain?: MemoElement;
     /** Realized scenario name, when a Realizes edge exists */
     scenario?: string;
     occurrences: SequenceOccurrence[];
+    fragments: SequenceFragment[];
 }
 
 export interface SequenceModel {
@@ -91,9 +103,21 @@ export function buildSequenceModel(
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
     const steps = visible.filter(isStepElement);
     const stepIds = new Set(steps.map(s => s.id));
-    const chains = visible.filter(el => !isStepElement(el)
+
+    const ownsSteps = (el: MemoElement) => !isStepElement(el)
         && model.relationships.some(r =>
-            STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === el.id && stepIds.has(r.targetId)));
+            STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === el.id && stepIds.has(r.targetId));
+    const chains = visible.filter(el => ownsSteps(el));
+
+    // Fragment definitions: visible elements with a `fragmentType` attribute.
+    // Steps reference their fragment via their own `fragment` attribute (by id or name).
+    const fragmentDefsByRef = new Map<string, MemoElement>();
+    for (const el of visible) {
+        if (FRAGMENT_TYPES.has(el.attributes['fragmentType'] ?? '')) {
+            fragmentDefsByRef.set(el.name, el);
+            fragmentDefsByRef.set(el.id, el);
+        }
+    }
 
     // Lifelines: one per distinct allocation reference, in first-use order
     const lifelines: SequenceLifeline[] = [];
@@ -122,6 +146,40 @@ export function buildSequenceModel(
         return rel ? model.elements[rel.targetId]?.name : undefined;
     };
 
+    // Build fragments from step-level `fragment` attributes → fragment def elements.
+    const fragStepGroups = new Map<string, Set<string>>();
+    for (const step of steps) {
+        const ref = step.attributes['fragment'];
+        if (ref) {
+            if (!fragStepGroups.has(ref)) fragStepGroups.set(ref, new Set());
+            fragStepGroups.get(ref)!.add(step.id);
+        }
+    }
+    const fragmentObjects: SequenceFragment[] = [];
+    for (const [ref, fragStepIds] of fragStepGroups) {
+        const def = fragmentDefsByRef.get(ref);
+        if (!def) continue;
+        const fragType = def.attributes['fragmentType'] as FragmentType;
+        const guard = def.attributes['guard'];
+
+        let operands: SequenceFragment['operands'];
+        if (fragType === 'alt') {
+            const opMap = new Map<string, Set<string>>();
+            for (const sid of fragStepIds) {
+                const step = model.elements[sid];
+                const opId = step?.attributes['fragmentOperand'] ?? '1';
+                if (!opMap.has(opId)) opMap.set(opId, new Set());
+                opMap.get(opId)!.add(sid);
+            }
+            const guards = (def.attributes['fragmentGuards'] ?? `${guard ?? ''}|[else]`)
+                .split('|').map(g => g.trim()).filter(Boolean);
+            operands = [...opMap.entries()]
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([, ids], i) => ({ guard: guards[i], stepIds: ids }));
+        }
+        fragmentObjects.push({ element: def, type: fragType, guard, stepIds: fragStepIds, operands });
+    }
+
     const claimed = new Set<string>();
     const sections: SequenceSection[] = [];
     for (const chain of chains) {
@@ -129,15 +187,23 @@ export function buildSequenceModel(
             .filter(r => STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === chain.id && stepIds.has(r.targetId))
             .map(r => model.elements[r.targetId]);
         for (const m of members) claimed.add(m.id);
+        const sectionStepIds = new Set(members.map(m => m.id));
         sections.push({
             chain,
             scenario: scenarioNameFor(chain),
             occurrences: toOccurrences(members),
+            fragments: fragmentObjects.filter(f =>
+                [...f.stepIds].some(sid => sectionStepIds.has(sid))),
         });
     }
     const unclaimed = steps.filter(s => !claimed.has(s.id));
     if (unclaimed.length > 0) {
-        sections.push({ occurrences: toOccurrences(unclaimed) });
+        const unclaimedIds = new Set(unclaimed.map(s => s.id));
+        sections.push({
+            occurrences: toOccurrences(unclaimed),
+            fragments: fragmentObjects.filter(f =>
+                [...f.stepIds].some(sid => unclaimedIds.has(sid))),
+        });
     }
 
     return { lifelines, sections: sections.filter(s => s.occurrences.length > 0) };
@@ -151,6 +217,9 @@ const ROW_HEIGHT = 68;
 const SECTION_HEADER_HEIGHT = 40;
 const SECTION_GAP = 24;
 const ANCHOR_SIZE = 14;
+const FRAGMENT_PAD_X = 20;
+const FRAGMENT_PAD_TOP = 32;
+const FRAGMENT_PAD_BOTTOM = 16;
 
 export interface SequenceViewOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
@@ -254,6 +323,56 @@ export function computeSequenceLayout(
                     zIndex: 1,
                 });
             }
+        });
+
+        // ── Combined fragment frames ──
+        section.fragments.forEach((frag, fi) => {
+            const fragIndices = placed
+                .map((p, i) => frag.stepIds.has(p.step.id) ? i : -1)
+                .filter(i => i >= 0);
+            if (fragIndices.length === 0) return;
+
+            const firstOcc = placed[fragIndices[0]];
+            const lastOcc = placed[fragIndices[fragIndices.length - 1]];
+            const lanes = fragIndices.map(i => placed[i].lane);
+            const minLane = Math.min(...lanes);
+            const maxLane = Math.max(...lanes);
+
+            const fragY = firstOcc.y - FRAGMENT_PAD_TOP;
+            const fragH = (lastOcc.y - firstOcc.y) + ROW_HEIGHT / 2 + FRAGMENT_PAD_TOP + FRAGMENT_PAD_BOTTOM;
+            const fragX = minLane * LANE_WIDTH - FRAGMENT_PAD_X;
+            const fragW = (maxLane - minLane + 1) * LANE_WIDTH + 2 * FRAGMENT_PAD_X;
+
+            let separators: number[] | undefined;
+            let opGuards: (string | undefined)[] | undefined;
+            if (frag.type === 'alt' && frag.operands && frag.operands.length > 1) {
+                separators = [];
+                opGuards = frag.operands.map(op => op.guard);
+                for (let opIdx = 0; opIdx < frag.operands.length - 1; opIdx++) {
+                    const opStepIds = frag.operands[opIdx].stepIds;
+                    const opIndices = fragIndices.filter(i => opStepIds.has(placed[i].step.id));
+                    if (opIndices.length > 0) {
+                        const lastOpY = placed[opIndices[opIndices.length - 1]].y;
+                        separators.push(lastOpY + ROW_HEIGHT / 2 - fragY);
+                    }
+                }
+            }
+
+            nodes.push({
+                id: `__fragment_${si}_${fi}`,
+                type: 'seqFragment',
+                position: { x: fragX, y: fragY },
+                data: {
+                    fragmentType: frag.type,
+                    guard: frag.guard,
+                    operandGuards: opGuards,
+                    separators,
+                },
+                style: { width: fragW, height: fragH },
+                draggable: false,
+                selectable: false,
+                zIndex: 0,
+            });
         });
     });
 

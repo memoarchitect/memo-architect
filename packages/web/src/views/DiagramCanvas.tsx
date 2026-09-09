@@ -78,7 +78,7 @@ import {
 } from '../diagram/renderers/interconnection-renderer';
 import { ActionFlowNode, ActionFlowLaneNode, ActionFlowLaneLabelNode } from './ActionFlowNode';
 import { StateNode } from './StateNode';
-import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode } from './SequenceNodes';
+import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode, SeqFragmentNode } from './SequenceNodes';
 import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
 import { UseCaseEdge } from './UseCaseEdge';
 import { ContextBoundaryNode, ContextExternalNode, ContextSystemNode } from './ContextNodes';
@@ -1469,6 +1469,7 @@ function DiagramCanvasInner() {
         seqLifeline: SeqLifelineNode,
         seqSection: SeqSectionNode,
         seqOccurrence: SeqOccurrenceNode,
+        seqFragment: SeqFragmentNode,
         useCase: UseCaseNode,
         useCaseActor: UseCaseActorNode,
         useCaseBoundary: UseCaseBoundaryNode,
