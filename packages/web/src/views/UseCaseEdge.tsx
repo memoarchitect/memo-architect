@@ -20,12 +20,26 @@ function orthogonalPath(points: Point[], radius = 0): string {
     return `${path} L ${last.x},${last.y}`;
 }
 
+/** Hollow triangle arrowhead for UML generalization edges. */
+function GeneralizationArrowhead({ id, stroke, strokeWidth }: { id: string; stroke: string; strokeWidth: number }) {
+    const markerId = `gen-arrow-${id}`;
+    return <defs>
+        <marker id={markerId} viewBox="0 0 14 14" refX="13" refY="7"
+            markerWidth="14" markerHeight="14" orient="auto-start-reverse"
+            markerUnits="userSpaceOnUse">
+            <path d="M 1,1 L 13,7 L 1,13 Z" fill="white" stroke={stroke} strokeWidth={strokeWidth} />
+        </marker>
+    </defs>;
+}
+
 export const UseCaseEdge = memo(function UseCaseEdge(props: EdgeProps) {
     // Unrelated associations are dimmed by ConnectorHoverStyles; this edge adds
     // the ornament for the one being traced.
     const highlighted = useConnectorHighlighted(props.id, [props.source, props.target]);
     const labelDimmed = useConnectorHoverActive() && !highlighted;
     const routing = (props.data?.routing as string | undefined) ?? 'rounded';
+    const relType = (props.data?.relType as string | undefined) ?? '';
+    const isSpecialization = relType === 'specialization';
     const routed = Array.isArray(props.data?.points) ? props.data.points as Point[] : [];
     const points = routed.length >= 2 ? routed : [{ x: props.sourceX, y: props.sourceY }, { x: props.targetX, y: props.targetY }];
     const cornerRadius = routing === 'elbow' ? 0 : routing === 'rounded' ? 16 : routing === 'curved' ? 30 : 42;
@@ -44,7 +58,9 @@ export const UseCaseEdge = memo(function UseCaseEdge(props: EdgeProps) {
         ?? { x: (props.sourceX + props.targetX) / 2, y: (props.sourceY + props.targetY) / 2 };
     const stroke = String(props.style?.stroke ?? '#64748B');
     const baseWidth = Number(props.style?.strokeWidth ?? 1.5);
+    const markerId = isSpecialization ? `gen-arrow-${props.id}` : undefined;
     return <>
+        {isSpecialization && <GeneralizationArrowhead id={props.id} stroke={stroke} strokeWidth={baseWidth} />}
         {highlighted && (
             <path
                 d={path}
@@ -58,6 +74,7 @@ export const UseCaseEdge = memo(function UseCaseEdge(props: EdgeProps) {
         )}
         <BaseEdge
             path={path}
+            markerEnd={markerId ? `url(#${markerId})` : undefined}
             style={highlighted ? { ...props.style, strokeWidth: baseWidth + 1.4 } : props.style}
         />
         {props.label && <EdgeLabelRenderer>
