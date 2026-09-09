@@ -93,7 +93,7 @@ import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon } from './DiagramToolbarControls';
 import { resolveLegend } from './templates/legend';
 import { landingsFromPoints, type Side as DiagramEdgeSide } from './templates/landing-rules';
-import { definitionIndex, resolveDefinition } from './templates/composition-tree';
+import { declaredSubject, definitionIndex, resolveDefinition } from './templates/composition-tree';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
 
 /** The view's own element, which carries the `expose` naming its subject. */
@@ -1517,6 +1517,43 @@ function DiagramCanvasInner() {
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
 
+    // Element → child-view index: for each element that is the subject of another
+    // view, map its ID to that view's diagram ID. Used by IBD and action-flow
+    // templates to show a "navigate to view" button on nodes.
+    const childViewIndex = useMemo(() => {
+        const index = new Map<string, string>();
+        if (!model?.diagrams || !model.elements) return index;
+        const byName = new Map<string, MemoElement>();
+        for (const el of Object.values(model.elements)) if (!byName.has(el.name)) byName.set(el.name, el);
+        const findEl = (ref: string): MemoElement | undefined => {
+            if (model.elements[ref]) return model.elements[ref];
+            const coloned = ref.split('::').pop()!.trim();
+            if (model.elements[coloned]) return model.elements[coloned];
+            const dotted = coloned.split('.').pop()!.trim();
+            return model.elements[dotted] ?? byName.get(dotted) ?? byName.get(coloned);
+        };
+        for (const diag of model.diagrams) {
+            if (diag.id === selectedDiagramId) continue;
+            const viewEl = diag.elementId ? model.elements[diag.elementId] : undefined;
+            if (!viewEl) continue;
+            let subject = declaredSubject(viewEl.attributes, model.elements);
+            if (!subject) {
+                for (const entry of (viewEl.attributes?.expose ?? '').split(',')) {
+                    const ref = entry.trim();
+                    if (!ref) continue;
+                    const base = ref.replace(/::\*{1,2}$/, '');
+                    if (base && base !== ref) { subject = findEl(base); if (subject) break; }
+                }
+            }
+            if (subject) index.set(subject.id, diag.id);
+        }
+        return index;
+    }, [model, selectedDiagramId]);
+
+    const navigateToView = useCallback((diagramId: string) => {
+        setActiveView({ type: 'diagram', diagramId });
+    }, [setActiveView]);
+
     /**
      * IBD containers deep enough to fold on open.
      *
@@ -2316,6 +2353,8 @@ function DiagramCanvasInner() {
                         inspectElement(portId);
                     },
                     layoutProviderId,
+                    onNavigateToView: navigateToView,
+                    childViewIds: childViewIndex,
                 },
                 actionflow: {
                     viewpointFilter,
@@ -2328,6 +2367,8 @@ function DiagramCanvasInner() {
                     focusActionId: focusedActionId ?? undefined,
                     visibleFlowKinds: visibleActionFlowKinds,
                     direction: actionFlowDirection,
+                    onNavigateToView: navigateToView,
+                    childViewIds: childViewIndex,
                     nesting: actionFlowNesting,
                     layoutProviderId,
                 },
