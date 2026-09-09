@@ -474,9 +474,23 @@ function nodeSize(
     uniformExtent?: number,
 ) {
     const type = activityNodeType(el, registries);
-    // A decision's layout boundary is the diamond itself. Its name is a visual
-    // label below the glyph, not part of the flow-routing box.
-    if (type === 'decision' || type === 'merge') return { width: 64, height: 64 };
+    // The diamond is 64×64; the name is drawn below it (6px gap + ~16px per
+    // line at font-size 13). ELK must reserve that space so adjacent nodes in
+    // the same layer do not overlap the label. The label width (132px, centred)
+    // extends 34px beyond each side of the diamond in the cross-axis for
+    // vertical flow.
+    if (type === 'decision' || type === 'merge') {
+        const labelGap = 6;
+        const labelCharWidth = 7.5;
+        const labelLineHeight = 16;
+        const labelAreaWidth = 132;
+        const nameLen = el.name?.length ?? 0;
+        const labelLines = Math.max(1, Math.ceil((nameLen * labelCharWidth) / labelAreaWidth));
+        const labelHeight = labelGap + labelLines * labelLineHeight;
+        return direction === 'vertical'
+            ? { width: Math.max(64, labelAreaWidth), height: 64 + labelHeight }
+            : { width: 64, height: 64 + labelHeight };
+    }
     if (type === 'activityFinal' || type === 'flowFinal') return { width: 28, height: 28 };
     if (type === 'fork' || type === 'join') {
         // A bar drawn perpendicular to the reading direction.
