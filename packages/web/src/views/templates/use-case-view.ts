@@ -7,7 +7,7 @@ import {
 
 const ACTOR_KINDS = /(?:Actor|User)$/;
 const USE_CASE_KINDS = new Set(['UseCase']);
-const ASSOCIATION_TYPES = new Set(['initiates', 'participatesin', 'performs', 'interactswith', 'includes', 'extends']);
+const ASSOCIATION_TYPES = new Set(['initiates', 'participatesin', 'performs', 'interactswith', 'includes', 'extends', 'specialization']);
 export type UseCaseEdgeStyle = 'straight' | 'elbow' | 'rounded' | 'curved' | 'arc';
 
 const relationshipType = (type: string) => type.toLowerCase();
@@ -115,8 +115,21 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         }
     }
     const useCases = allUseCases.filter(element => useCaseIds.has(element.id));
-    const actors = visible.filter(isUseCaseActor).filter(actor => !hiddenActorIds.has(actor.id)).filter(actor => relationships.some(rel =>
+    const allVisibleActors = visible.filter(isUseCaseActor).filter(actor => !hiddenActorIds.has(actor.id));
+    const actorIds = new Set(allVisibleActors.map(a => a.id));
+    const actors = allVisibleActors.filter(actor => relationships.some(rel =>
         (rel.sourceId === actor.id && useCaseIds.has(rel.targetId)) || (rel.targetId === actor.id && useCaseIds.has(rel.sourceId))));
+    const actorIdSet = new Set(actors.map(a => a.id));
+    for (const rel of relationships.filter(r => relationshipType(r.type) === 'specialization')) {
+        if (actorIdSet.has(rel.sourceId) && actorIds.has(rel.targetId) && !actorIdSet.has(rel.targetId)) {
+            actors.push(allVisibleActors.find(a => a.id === rel.targetId)!);
+            actorIdSet.add(rel.targetId);
+        }
+        if (actorIdSet.has(rel.targetId) && actorIds.has(rel.sourceId) && !actorIdSet.has(rel.sourceId)) {
+            actors.push(allVisibleActors.find(a => a.id === rel.sourceId)!);
+            actorIdSet.add(rel.sourceId);
+        }
+    }
     const shown = new Set([...actors, ...useCases].map(element => element.id));
     if (useCases.length === 0) return { nodes: [], edges: [] };
 
@@ -273,11 +286,13 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             const sourceIsRightActor = rightActors.some(actor => actor.id === rel.sourceId);
             const source = sourceIsRightActor ? rel.targetId : rel.sourceId;
             const target = sourceIsRightActor ? rel.sourceId : rel.targetId;
+            const rt = relationshipType(rel.type);
+            const isSpecialization = rt === 'specialization';
             return { edge: {
             id: rel.id, source, target,
-            label: /^(includes|extends)$/.test(relationshipType(rel.type)) ? `«${relationshipType(rel.type)}»` : undefined,
-            type: 'useCaseEdge', data: { routing },
-            style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(includes|extends)$/.test(relationshipType(rel.type)) ? '5 4' : undefined },
+            label: /^(includes|extends)$/.test(rt) ? `«${rt}»` : undefined,
+            type: 'useCaseEdge', data: { routing, relType: rt },
+            style: { stroke: '#64748B', strokeWidth: 1.4, strokeDasharray: /^(includes|extends)$/.test(rt) ? '5 4' : undefined },
         } as Edge, source, target }; });
     const nodeById = new Map(nodes.map(node => [node.id, node]));
     const dimensions = (node: Node) => ({
