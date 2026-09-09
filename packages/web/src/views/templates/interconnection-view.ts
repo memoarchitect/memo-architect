@@ -649,6 +649,10 @@ export interface InterconnectionOptions {
     /** Deliberate density control: bundle repeated rendered endpoint pairs,
      * show every connector, or suppress wiring while inspecting structure. */
     connectionDisplay?: 'summary' | 'all' | 'none';
+    /** Navigate to a separate view whose subject is a given element. */
+    onNavigateToView?: (diagramId: string) => void;
+    /** Map from element ID to the diagram ID of a child view about that element. */
+    childViewIds?: ReadonlyMap<string, string>;
 }
 
 /** Bundle repeated connectors after endpoint projection. The representative
@@ -1381,6 +1385,9 @@ export async function computeInterconnectionLayout(
                 // The frame is the diagram's root; drilling into it is a no-op.
                 onDrillIn: hasChildren && !!parentId && options?.onDrillIn
                     ? () => options.onDrillIn!(partId)
+                    : undefined,
+                onNavigateToView: options?.childViewIds?.has(partId) && options?.onNavigateToView
+                    ? () => options.onNavigateToView!(options.childViewIds!.get(partId)!)
                     : undefined,
                 ports: portInfoByOwner.get(partId) ?? [],
                 showPortText: options?.showPortText !== false,

@@ -55,6 +55,8 @@ export interface ActionFlowNodeData {
     onToggleExpand?: () => void;
     /** Open this composite action as its own diagram (drill-down mode). */
     onDrillIn?: () => void;
+    /** Navigate to a separate view whose subject is this element. */
+    onNavigateToView?: () => void;
     flowDirection?: 'horizontal' | 'vertical';
 }
 
@@ -78,6 +80,29 @@ function ActionDrillInButton({ onDrillIn, color, label }: {
             }}
         >
             ↳
+        </button>
+    );
+}
+
+function ActionViewNavigateButton({ onNavigate, label }: {
+    onNavigate: () => void; label: string;
+}) {
+    return (
+        <button
+            onClick={e => { e.stopPropagation(); onNavigate(); }}
+            onDoubleClick={e => e.stopPropagation()}
+            className="nodrag"
+            title={`Navigate to ${label}'s own view`}
+            aria-label={`Go to ${label} view`}
+            style={{
+                width: 16, height: 16, flexShrink: 0, padding: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid #2563EB66', borderRadius: 4,
+                background: '#FFFFFF', color: '#2563EB',
+                fontSize: 10, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+            }}
+        >
+            ↗
         </button>
     );
 }
@@ -230,6 +255,9 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     {d.onDrillIn && (
                         <ActionDrillInButton onDrillIn={d.onDrillIn} color={color} label={label} />
                     )}
+                    {d.onNavigateToView && (
+                        <ActionViewNavigateButton onNavigate={d.onNavigateToView} label={label} />
+                    )}
                     <span style={{ fontSize: FONT.md, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
                         {label}
                     </span>
@@ -299,6 +327,22 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                         }}
                     >
                         ↳
+                    </button>
+                )}
+                {d.onNavigateToView && (
+                    <button
+                        aria-label={`Go to ${label} view`}
+                        title={`Navigate to ${label}'s own view`}
+                        className="nodrag"
+                        onClick={event => { event.stopPropagation(); d.onNavigateToView!(); }}
+                        onDoubleClick={event => event.stopPropagation()}
+                        style={{
+                            float: 'right', marginLeft: 4, width: 18, height: 18, padding: 0,
+                            border: '1px solid #2563EB', borderRadius: 2, background: '#FFFFFF',
+                            color: '#2563EB', fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                        }}
+                    >
+                        ↗
                     </button>
                 )}
                 {d.hasChildren && d.onToggleExpand && (

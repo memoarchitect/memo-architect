@@ -537,6 +537,10 @@ export interface ActionFlowViewOptions {
     /** Visible connection categories. Omit to render all flow categories. */
     visibleFlowKinds?: ReadonlySet<ActionFlowKind>;
     layoutProviderId?: string;
+    /** Navigate to a separate view whose subject is a given element. */
+    onNavigateToView?: (diagramId: string) => void;
+    /** Map from element ID to the diagram ID of a child view about that element. */
+    childViewIds?: ReadonlyMap<string, string>;
 }
 
 export type ActionFlowKind = 'control' | 'data' | 'energy' | 'material';
@@ -1068,6 +1072,9 @@ export async function computeActionFlowViewLayout(
                 onDrillIn: options?.onDrillInAction
                     ? () => options.onDrillInAction!(compositeId)
                     : undefined,
+                onNavigateToView: options?.childViewIds?.has(compositeId) && options?.onNavigateToView
+                    ? () => options.onNavigateToView!(options.childViewIds!.get(compositeId)!)
+                    : undefined,
                 flowDirection: direction,
             };
             groupNodes.push({
@@ -1166,6 +1173,9 @@ export async function computeActionFlowViewLayout(
                 : undefined,
             onDrillIn: options?.onDrillInAction
                 ? () => options.onDrillInAction!(el.id)
+                : undefined,
+            onNavigateToView: options?.childViewIds?.has(el.id) && options?.onNavigateToView
+                ? () => options.onNavigateToView!(options.childViewIds!.get(el.id)!)
                 : undefined,
             flowDirection: direction,
         };

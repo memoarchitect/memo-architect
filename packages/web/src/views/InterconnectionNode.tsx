@@ -40,6 +40,8 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     onToggleCollapse?: () => void;
     /** Open this part's own internals as the diagram frame (nested browsing). */
     onDrillIn?: () => void;
+    /** Navigate to a separate view whose subject is this element. */
+    onNavigateToView?: () => void;
     /** Ports straddling this part's boundary */
     ports: PortInfo[];
     showPortText?: boolean;
@@ -510,6 +512,32 @@ function DrillInButton({ label, onDrillIn, color, onColor }: {
     );
 }
 
+function ViewNavigateButton({ label, onNavigate, color, onColor }: {
+    label: string; onNavigate: () => void; color: string; onColor?: boolean;
+}) {
+    return (
+        <button
+            aria-label={`Go to ${label} view`}
+            title={`Navigate to ${label}'s own view`}
+            className="nodrag nopan"
+            onClick={event => { event.stopPropagation(); onNavigate(); }}
+            onMouseDown={event => event.stopPropagation()}
+            onDoubleClick={event => event.stopPropagation()}
+            style={{
+                width: 18, height: 18, padding: 0, borderRadius: 3, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: onColor ? '1px solid rgba(255,255,255,0.7)' : `1px solid ${color}88`,
+                background: onColor ? 'rgba(255,255,255,0.18)' : '#FFFFFF',
+                color: onColor ? '#FFFFFF' : '#2563EB',
+                fontSize: 11, lineHeight: 1, cursor: 'pointer', fontWeight: 700,
+                position: 'relative', zIndex: 10,
+            }}
+        >
+            ↗
+        </button>
+    );
+}
+
 function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
     label: string; isCollapsed?: boolean; onToggle: () => void; color: string; onColor?: boolean;
 }) {
@@ -537,7 +565,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, minWidth, minHeight,
+        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView, minWidth, minHeight,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -655,6 +683,9 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         not: a collapsed part is still worth descending into. */}
                     {hasChildren && onDrillIn && (
                         <DrillInButton label={label} onDrillIn={onDrillIn} color={color} />
+                    )}
+                    {onNavigateToView && (
+                        <ViewNavigateButton label={label} onNavigate={onNavigateToView} color={color} />
                     )}
                     {hasChildren && onToggleCollapse && (
                         <CollapseButton label={label} isCollapsed={isCollapsed} onToggle={onToggleCollapse} color={color} />
