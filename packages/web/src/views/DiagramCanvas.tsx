@@ -1452,7 +1452,32 @@ function DiagramCanvasInner() {
         setInterconnectionConnectionDisplay((declaredEnum('connectionDisplay') as 'summary' | 'all' | 'none') ?? 'summary');
         setInterconnectionLegendOpen(false);
         setExpandedActionNodes(new Set());
-        setFocusedActionId(null);
+        // A child action-flow view exposes a composite action's descendants
+        // (`process::**`). Auto-focus on that action so the template renders
+        // its children directly — the same behaviour as drilling in from the
+        // parent view.
+        let autoFocusAction: string | null = null;
+        if (model && selectedDiagram
+            && (selectedDiagram.viewKind === 'actionflow' || selectedDiagram.diagramType === 'afd'
+                || selectedDiagram.diagramType === 'ofd' || selectedDiagram.diagramType === 'ffd')) {
+            const viewEl = viewElementOf(model, selectedDiagram);
+            if (viewEl) {
+                const byName = new Map<string, MemoElement>();
+                for (const el of Object.values(model.elements)) if (!byName.has(el.name)) byName.set(el.name, el);
+                for (const entry of (viewEl.attributes?.expose ?? '').split(',')) {
+                    const ref = entry.trim();
+                    if (!ref) continue;
+                    const base = ref.replace(/::\*{1,2}$/, '');
+                    if (!base || base === ref) continue;
+                    const dotted = base.split('.').pop()!.split('::').pop()!.trim();
+                    const subject = model.elements[base] ?? model.elements[dotted] ?? byName.get(dotted);
+                    if (!subject) continue;
+                    const hasChildren = Object.values(model.elements).some(el => el.parentAction === subject.id);
+                    if (hasChildren) { autoFocusAction = subject.id; break; }
+                }
+            }
+        }
+        setFocusedActionId(autoFocusAction);
         setActionFlowNesting('flat');
         setFocusedStateId(null);
         positionCacheRef.current.clear();
