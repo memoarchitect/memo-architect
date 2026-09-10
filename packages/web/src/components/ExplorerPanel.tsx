@@ -2253,6 +2253,58 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectedDiagramId = activeView.type === 'diagram' ? activeView.diagramId : null;
 
+    // Auto-expand the viewpoint tree to reveal the currently active diagram
+    useEffect(() => {
+        if (!selectedDiagramId || !model) return;
+
+        const diagram = model.diagrams?.find(d => d.id === selectedDiagramId);
+        if (!diagram) return;
+
+        const vpId = diagram.viewpointId;
+        const owningVp = vpId ? viewpoints.find(vp => vp.id === vpId) : undefined;
+
+        if (!owningVp) {
+            if (uncategorizedDiagrams.some(d => d.id === selectedDiagramId)) {
+                setExpandedVps(prev => {
+                    if (prev.has(UNCATEGORIZED_ID)) return prev;
+                    const next = new Set(prev);
+                    next.add(UNCATEGORIZED_ID);
+                    return next;
+                });
+            }
+            return;
+        }
+
+        const toExpand: string[] = [];
+        const byId = new Map(viewpoints.map(vp => [vp.id, vp]));
+        let cursor: string | undefined = owningVp.id;
+        const seen = new Set<string>();
+        while (cursor && byId.has(cursor) && !seen.has(cursor)) {
+            seen.add(cursor);
+            toExpand.push(cursor);
+            cursor = byId.get(cursor)!.parentId ?? undefined;
+        }
+
+        const pkg = (diagram as PackagedDiagram).package;
+        if (pkg) {
+            const parts = pkg.split('::').filter(Boolean);
+            let path = '';
+            for (const part of parts) {
+                path = path ? `${path}::${part}` : part;
+                toExpand.push(`vp-pkg:${owningVp.id}:${path}`);
+            }
+        }
+
+        setExpandedVps(prev => {
+            const next = new Set(prev);
+            let changed = false;
+            for (const id of toExpand) {
+                if (!next.has(id)) { next.add(id); changed = true; }
+            }
+            return changed ? next : prev;
+        });
+    }, [selectedDiagramId, model, viewpoints, uncategorizedDiagrams]);
+
     // Keep the explorer consistent with the Viewpoints landing page: every
     // unbound view still needs a visible route to open it.
     const uncategorizedViews = filterDiagrams(uncategorizedDiagrams);
@@ -2495,11 +2547,19 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete, onMoveToPackage }: {
     onMoveToPackage?: () => void;
 }) {
     const [hovered, setHovered] = useState(false);
+    const rowRef = useRef<HTMLDivElement>(null);
     const meta = DIAGRAM_TYPE_META[diag.diagramType];
     const elCount = diag.elementIds?.length ?? 0;
 
+    useEffect(() => {
+        if (isSelected && rowRef.current) {
+            rowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }, [isSelected]);
+
     return (
         <div
+            ref={rowRef}
             className="flex items-center gap-2 px-2 py-1 cursor-pointer group"
             style={{
                 borderRadius: '4px', margin: '0 4px',
