@@ -3699,8 +3699,8 @@ function DiagramCanvasInner() {
                             Control flow
                         </span>}
                         {visibleActionFlowKinds.has('data') && <span className="flex items-center gap-2">
-                            <span style={{ width: 24, height: 0, borderTop: '2.5px solid #3498DB' }} />
-                            Object flow
+                            <span style={{ width: 24, height: 0, borderTop: '2.5px dashed #3498DB' }} />
+                            Data flow
                         </span>}
                         {visibleActionFlowKinds.has('energy') && <span className="flex items-center gap-2">
                             <span style={{ width: 24, height: 0, borderTop: '2.5px solid #D97706' }} />
