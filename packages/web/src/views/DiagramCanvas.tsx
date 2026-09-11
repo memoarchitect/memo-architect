@@ -1575,6 +1575,62 @@ function DiagramCanvasInner() {
         return index;
     }, [model, selectedDiagramId]);
 
+    // Reverse of childViewIndex: if the current view is a child view that
+    // drills into a composite element, find which diagram is its parent (the
+    // diagram whose visible elements include that composite).
+    const parentViewId = useMemo<string | null>(() => {
+        if (!model?.diagrams || !model.elements || !selectedDiagram) return null;
+        const viewEl = viewElementOf(model, selectedDiagram);
+        if (!viewEl) return null;
+        // Find the subject element this child view drills into — same logic as
+        // the auto-focus detection in the diagram-change effect.
+        const byName = new Map<string, MemoElement>();
+        for (const el of Object.values(model.elements)) if (!byName.has(el.name)) byName.set(el.name, el);
+        let subjectId: string | undefined;
+        for (const entry of (viewEl.attributes?.expose ?? '').split(',')) {
+            const ref = entry.trim();
+            if (!ref) continue;
+            const base = ref.replace(/::\*{1,2}$/, '');
+            if (!base || base === ref) continue;
+            const dotted = base.split('.').pop()!.split('::').pop()!.trim();
+            const subject = model.elements[base] ?? model.elements[dotted] ?? byName.get(dotted);
+            if (subject) { subjectId = subject.id; break; }
+        }
+        if (!subjectId) return null;
+        // Find a diagram whose visible elements include this subject.
+        for (const diag of model.diagrams) {
+            if (diag.id === selectedDiagramId) continue;
+            const dViewEl = diag.elementId ? model.elements[diag.elementId] : undefined;
+            if (!dViewEl) continue;
+            for (const entry of (dViewEl.attributes?.expose ?? '').split(',')) {
+                const ref = entry.trim();
+                if (!ref) continue;
+                const clean = ref.replace(/::\*{1,2}$/, '');
+                const dotted = clean.split('.').pop()!.split('::').pop()!.trim();
+                const el = model.elements[clean] ?? model.elements[dotted];
+                if (el?.id === subjectId) return diag.id;
+                // The parent view may expose the composite's owner (e.g.
+                // `sampleActionFlow::**`), which indirectly includes the
+                // composite as a descendant.
+                if (el) {
+                    const isAncestor = (ancestorId: string, childId: string): boolean => {
+                        const seen = new Set<string>();
+                        let cur: string | undefined = childId;
+                        while (cur && !seen.has(cur)) {
+                            seen.add(cur);
+                            const parent = model.elements[cur]?.parentAction;
+                            if (parent === ancestorId) return true;
+                            cur = parent;
+                        }
+                        return false;
+                    };
+                    if (isAncestor(el.id, subjectId)) return diag.id;
+                }
+            }
+        }
+        return null;
+    }, [model, selectedDiagramId, selectedDiagram]);
+
     const navigateToView = useCallback((diagramId: string) => {
         setActiveView({ type: 'diagram', diagramId });
     }, [setActiveView]);
@@ -3346,6 +3402,7 @@ function DiagramCanvasInner() {
         setExpandedActionNodes, flowFiltersOpen, setFlowFiltersOpen,
         visibleActionFlowKinds, setVisibleActionFlowKinds,
         actionPath, setFocusedActionId,
+        parentViewId, navigateToParentView: parentViewId ? () => navigateToView(parentViewId) : undefined,
         interconnectionContainerIds, setCollapsedInterconnectionNodes,
         interconnectionPortDisplay, setInterconnectionPortDisplay,
         interconnectionConnectionDisplay, setInterconnectionConnectionDisplay,
@@ -3480,6 +3537,23 @@ function DiagramCanvasInner() {
                             Exit Focus
                         </button>
                     </div>
+                )}
+
+                {/* Parent-view breadcrumb: child action-flow views show a
+                    floating bar to navigate back to the parent diagram. */}
+                {parentViewId && (
+                    <button
+                        className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
+                        style={{
+                            background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #D1D5DB',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.10)', cursor: 'pointer', fontWeight: 600,
+                        }}
+                        onClick={() => navigateToView(parentViewId)}
+                        title={`Back to ${model?.diagrams?.find(d => d.id === parentViewId)?.name ?? 'parent diagram'}`}
+                    >
+                        <span style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+                        <span>{model?.diagrams?.find(d => d.id === parentViewId)?.name ?? 'Parent view'}</span>
+                    </button>
                 )}
 
                 {/* Source file toast (#38) */}
