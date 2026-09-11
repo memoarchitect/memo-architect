@@ -30,7 +30,7 @@ function TreeRow({ node, depth, expanded, visible, forceExpanded, onToggle }: {
     forceExpanded?: Set<string>;
     onToggle: (id: string) => void;
 }) {
-    const selectElement = useModelStore(s => s.selectElement);
+    const inspectElement = useModelStore(s => s.inspectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
 
@@ -57,7 +57,7 @@ function TreeRow({ node, depth, expanded, visible, forceExpanded, onToggle }: {
                 title={node.title ?? node.kind}
                 onClick={() => {
                     if (hasChildren) onToggle(node.id);
-                    if (node.element) selectElement(node.id);
+                    if (node.element) inspectElement(node.id);
                 }}
                 onDelete={node.element ? () => deleteModelElement(node.id) : undefined}
             />
