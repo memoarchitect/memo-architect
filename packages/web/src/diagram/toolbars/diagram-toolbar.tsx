@@ -110,6 +110,8 @@ export interface DiagramToolbarContext {
     setVisibleActionFlowKinds: Dispatch<SetStateAction<Set<'control' | 'data' | 'energy' | 'material'>>>;
     actionPath: string[];
     setFocusedActionId: Dispatch<SetStateAction<string | null>>;
+    parentViewId: string | null;
+    navigateToParentView?: () => void;
 
     // ── Interconnection ──────────────────────────────────────────────────────
     interconnectionContainerIds: string[];

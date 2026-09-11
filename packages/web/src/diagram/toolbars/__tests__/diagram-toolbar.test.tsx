@@ -51,6 +51,7 @@ function makeContext(overrides: Partial<DiagramToolbarContext> = {}): DiagramToo
         setExpandedActionNodes: noop, flowFiltersOpen: true, setFlowFiltersOpen: noop,
         visibleActionFlowKinds: new Set(['control', 'data']), setVisibleActionFlowKinds: noop,
         actionPath: ['a1', 'a2'], setFocusedActionId: noop,
+        parentViewId: null, navigateToParentView: undefined,
 
         interconnectionContainerIds: ['p1'], setCollapsedInterconnectionNodes: noop,
         interconnectionPortDisplay: 'all', setInterconnectionPortDisplay: noop,
