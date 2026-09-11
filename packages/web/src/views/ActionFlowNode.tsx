@@ -312,52 +312,56 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     : { whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.25 }),
             }}>
                 {actionStereotype && <div style={{ fontSize: 10, color, fontStyle: 'italic', marginBottom: 2 }}>{actionStereotype}</div>}
-                {label}
-                {d.hasChildren && d.onDrillIn && (
-                    <button
-                        aria-label={`Drill into ${label}`}
-                        title={`Open ${label} as its own diagram`}
-                        className="nodrag"
-                        onClick={event => { event.stopPropagation(); d.onDrillIn!(); }}
-                        onDoubleClick={event => event.stopPropagation()}
-                        style={{
-                            float: 'right', marginLeft: 4, width: 18, height: 18, padding: 0,
-                            border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
-                            color, fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
-                        }}
-                    >
-                        ↳
-                    </button>
-                )}
-                {d.onNavigateToView && (
-                    <button
-                        aria-label={`Go to ${label} view`}
-                        title={`Navigate to ${label}'s own view`}
-                        className="nodrag"
-                        onClick={event => { event.stopPropagation(); d.onNavigateToView!(); }}
-                        onDoubleClick={event => event.stopPropagation()}
-                        style={{
-                            float: 'right', marginLeft: 4, width: 18, height: 18, padding: 0,
-                            border: '1px solid #2563EB', borderRadius: 2, background: '#FFFFFF',
-                            color: '#2563EB', fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
-                        }}
-                    >
-                        ↗
-                    </button>
-                )}
-                {d.hasChildren && d.onToggleExpand && (
-                    <button
-                        aria-label={d.isExpanded ? `Collapse ${label}` : `Expand ${label}`}
-                        onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
-                        style={{
-                            float: 'right', marginLeft: 8, width: 18, height: 18, padding: 0,
-                            border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
-                            color, fontSize: 13, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
-                        }}
-                    >
-                        {d.isExpanded ? '−' : '+'}
-                    </button>
-                )}
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                    <span>{label}</span>
+                    {d.onNavigateToView && (
+                        <button
+                            aria-label={`Go to ${label} view`}
+                            title={`Navigate to ${label}'s own view`}
+                            className="nodrag"
+                            onClick={event => { event.stopPropagation(); d.onNavigateToView!(); }}
+                            onDoubleClick={event => event.stopPropagation()}
+                            style={{
+                                flexShrink: 0, width: 18, height: 18, padding: 0,
+                                border: '1px solid #2563EB', borderRadius: 2, background: '#FFFFFF',
+                                color: '#2563EB', fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                            }}
+                        >
+                            ↗
+                        </button>
+                    )}
+                    {d.hasChildren && d.onDrillIn && (
+                        <button
+                            aria-label={`Drill into ${label}`}
+                            title={`Open ${label} as its own diagram`}
+                            className="nodrag"
+                            onClick={event => { event.stopPropagation(); d.onDrillIn!(); }}
+                            onDoubleClick={event => event.stopPropagation()}
+                            style={{
+                                flexShrink: 0, width: 18, height: 18, padding: 0,
+                                border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
+                                color, fontSize: 11, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                            }}
+                        >
+                            ↳
+                        </button>
+                    )}
+                    {d.hasChildren && d.onToggleExpand && (
+                        <button
+                            aria-label={d.isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+                            className="nodrag"
+                            onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
+                            onDoubleClick={event => event.stopPropagation()}
+                            style={{
+                                flexShrink: 0, width: 18, height: 18, padding: 0,
+                                border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
+                                color, fontSize: 13, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                            }}
+                        >
+                            {d.isExpanded ? '−' : '+'}
+                        </button>
+                    )}
+                </span>
             </div>
 
             {/* Ports section */}
