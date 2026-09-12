@@ -848,8 +848,7 @@ function DiagramCanvasInner() {
     // graph / tree / containment — opening a second diagram silently took those
     // modes away again. A control that has to be rediscovered per diagram reads
     // as a control that was removed.
-    const [toolbarCollapsed, setToolbarCollapsed] = useState(
-        () => localStorage.getItem('memo.diagram.toolbar.open') !== 'true');
+    const [toolbarCollapsed, setToolbarCollapsed] = useState(true);
     useEffect(() => {
         try {
             localStorage.setItem('memo.diagram.toolbar.open', String(!toolbarCollapsed));
