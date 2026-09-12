@@ -1213,6 +1213,22 @@ export async function computeActionFlowViewLayout(
     }
 
     // ── Edges: item flows (labeled, animated) + successions (control) ──
+    // The orthogonal router needs the connection point expressed as an offset
+    // within the node and the side the connector leaves/enters from. Handles
+    // sit at the centre of their respective side.
+    type Side = 'left' | 'right' | 'top' | 'bottom';
+    const outSide: Side = direction === 'vertical' ? 'bottom' : 'right';
+    const inSide: Side = direction === 'vertical' ? 'top' : 'left';
+    const edgeAnchor = (nodeId: string, side: Side) => {
+        const p = positions.get(nodeId);
+        if (!p) return undefined;
+        switch (side) {
+            case 'left': return { x: 0, y: p.height / 2 };
+            case 'right': return { x: p.width, y: p.height / 2 };
+            case 'top': return { x: p.width / 2, y: 0 };
+            case 'bottom': return { x: p.width / 2, y: p.height };
+        }
+    };
     const edges: Edge[] = [];
     for (const rel of visibleFlows) {
         const flowKind = classifyFlowItem(rel.flowItem);
@@ -1226,10 +1242,8 @@ export async function computeActionFlowViewLayout(
             target: rel.targetId,
             ...(rel.sourceEnd ? { sourceHandle: `out:${rel.sourceEnd}` } : {}),
             ...(rel.targetEnd ? { targetHandle: `in:${rel.targetEnd}` } : {}),
-            // Parameter names are already printed at the pins. Repeating the
-            // item name on short connectors makes compact flows unreadable.
             label: undefined,
-            type: 'smoothstep',
+            type: 'interconnectionEdge',
             animated: false,
             style: {
                 stroke: flowColor,
@@ -1247,7 +1261,14 @@ export async function computeActionFlowViewLayout(
                 height: EDGE.arrowSize,
             },
             zIndex: 2,
-            data: { flowCategory: flowKind, flowItem: rel.flowItem },
+            data: {
+                flowCategory: flowKind,
+                flowItem: rel.flowItem,
+                sourceOffset: edgeAnchor(rel.sourceId, outSide),
+                targetOffset: edgeAnchor(rel.targetId, inSide),
+                sourceSide: outSide,
+                targetSide: inSide,
+            },
         });
     }
     for (const rel of visibleSuccs) {
@@ -1256,22 +1277,21 @@ export async function computeActionFlowViewLayout(
             id: rel.id,
             source: rel.sourceId,
             target: rel.targetId,
-            // Control flow enters and leaves at the card edge. Left implicit,
-            // ReactFlow resolves it to whichever handle it finds first, which
-            // on a card with parameter pins can be a pin in the middle of the
-            // block — the connector then loops back on itself to reach it.
             sourceHandle: CONTROL_OUT,
             targetHandle: CONTROL_IN,
-            // Forward vertical flow runs directly down the common centreline.
-            // A feedback edge deliberately routes around the ranked sequence
-            // to show the loop instead of cutting upward through its actions.
-            type: direction === 'vertical' && !isFeedback ? 'straight' : 'smoothstep',
+            type: 'interconnectionEdge',
             animated: false,
             style: { stroke: FLOW_COLORS.control, strokeWidth: 1.5 },
             markerEnd: { type: 'arrowclosed' as never, color: FLOW_COLORS.control, width: 12, height: 12 },
             zIndex: 2,
             label: rel.sourceEnd?.startsWith('[') ? rel.sourceEnd : undefined,
-            data: { flowCategory: 'control' satisfies ActionFlowKind },
+            data: {
+                flowCategory: 'control' satisfies ActionFlowKind,
+                sourceOffset: edgeAnchor(rel.sourceId, outSide),
+                targetOffset: edgeAnchor(rel.targetId, inSide),
+                sourceSide: outSide,
+                targetSide: inSide,
+            },
         });
     }
 
