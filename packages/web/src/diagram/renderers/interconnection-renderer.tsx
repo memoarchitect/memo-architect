@@ -256,7 +256,7 @@ export class BaseInterconnectionRenderer {
     }
 
     /** Auto-route quality used when a view first lays its edges out. */
-    get routeQuality(): RouteQuality { return 'direct'; }
+    get routeQuality(): RouteQuality { return 'tidy'; }
 
     // ── Interaction ──────────────────────────────────────────────────────────────
     /** Dragging a part carries its nested child parts with it. */
