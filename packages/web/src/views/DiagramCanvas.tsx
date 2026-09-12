@@ -3787,7 +3787,7 @@ function DiagramCanvasInner() {
 
                 {/* Arrange bar: only a real multi-selection has anything to align
                     against, so a single selected block keeps the canvas clear. */}
-                {selectedNodes.length >= 1 && (
+                {selectedNodes.length >= 2 && (
                     <SelectionToolbar
                         count={selectedNodes.length}
                         onClose={dismissSelectionTools}

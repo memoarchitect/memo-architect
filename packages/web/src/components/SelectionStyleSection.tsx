@@ -36,7 +36,7 @@ const labelStyle: React.CSSProperties = { width: 62, flexShrink: 0 };
 
 export function SelectionStyleSection() {
     const selectionStyle = useModelStore(s => s.selectionStyle);
-    const [open, setOpen] = useState(true);
+    const [open, setOpen] = useState(false);
     const [customFill, setCustomFill] = useState('#FFFFFF');
 
     // Nothing selected on a canvas means nothing to style. The section is
