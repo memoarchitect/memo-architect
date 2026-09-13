@@ -968,7 +968,10 @@ function DiagramCanvasInner() {
         return literal ? (DISPLAY_LITERAL[literal] ?? literal) : undefined;
     };
 
-    const activeRenderer = resolveInterconnectionRenderer(declaredEnum('rendererProfile'));
+    const isIbdView = (selectedDiagram?.viewKind ?? diagramMeta?.viewKind) === 'interconnection';
+    const activeRenderer = resolveInterconnectionRenderer(
+        declaredEnum('rendererProfile') ?? (isIbdView ? 'ibd' : undefined),
+    );
     activeRendererRef.current = activeRenderer;
     const layoutProviderId = selectedLayoutProviderId(currentLayout);
     const autoLayoutEnabled = currentLayout?.canvas?.autoLayout !== false;
@@ -1409,6 +1412,18 @@ function DiagramCanvasInner() {
                 .map(r => r.sourceId),
         )];
     }, [model]);
+    /** Containers that are themselves children — nested inside another container.
+     *  The frame (root) stays expanded so its parts are visible; only nested
+     *  containers start collapsed. */
+    const nestedInterconnectionContainerIds = useMemo(() => {
+        if (!model) return [] as string[];
+        const compositionChildren = new Set(
+            model.relationships
+                .filter(r => COMPOSITION_REL_TYPES.has(r.type))
+                .map(r => r.targetId),
+        );
+        return interconnectionContainerIds.filter(id => compositionChildren.has(id));
+    }, [model, interconnectionContainerIds]);
 
     // Fresh per-diagram state: honor the view's declared layoutHint
     useEffect(() => {
@@ -1672,12 +1687,17 @@ function DiagramCanvasInner() {
             if (compositeStateIds.length === 0) return;
             setCollapsedStateNodes(new Set(compositeStateIds));
         } else if (viewKind === 'interconnection') {
-            // Open fully expanded, and record that this diagram has been
-            // seeded so a later render cannot re-fold what the user opened.
-            setCollapsedInterconnectionNodes(new Set());
+            // The view author decides whether nested containers start folded.
+            // `defaultCollapsed = true` on the view folds every container that
+            // is itself a child of another container; otherwise parts open
+            // fully expanded (the original behaviour).
+            const wantsCollapsed = selectedDiagram?.properties?.defaultCollapsed?.trim().toLowerCase() === 'true';
+            setCollapsedInterconnectionNodes(
+                wantsCollapsed ? new Set(nestedInterconnectionContainerIds) : new Set(),
+            );
         }
         seededCollapseRef.current = key;
-    }, [model, selectedDiagramId, viewKind, compositeStateIds]);
+    }, [model, selectedDiagramId, viewKind, compositeStateIds, nestedInterconnectionContainerIds, selectedDiagram?.properties]);
 
     // BDD integrity: a block definition diagram must be one connected hierarchy,
     // not a forest of disconnected/floating elements (validateSingleTree).

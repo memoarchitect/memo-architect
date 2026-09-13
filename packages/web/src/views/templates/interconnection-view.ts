@@ -715,7 +715,8 @@ export async function computeInterconnectionLayout(
         : null;
     const partVisible = (id: string) => tree.elements.has(id) && (!visibleParts || visibleParts.has(id));
 
-    const childrenOf = (id: string) => options?.collapsedNodes?.has(id)
+    const frameIds = new Set(focusId ? [focusId] : tree.roots);
+    const childrenOf = (id: string) => (options?.collapsedNodes?.has(id) && !frameIds.has(id))
         ? []
         : (tree.childrenMap.get(id) ?? []).filter(partVisible);
 
