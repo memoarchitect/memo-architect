@@ -3576,6 +3576,43 @@ function DiagramCanvasInner() {
                     </button>
                 )}
 
+                {/* Drill-in breadcrumb: always visible when focused on
+                    a nested action, independent of toolbar collapsed state. */}
+                {actionPath.length > 0 && !parentViewId && (
+                    <div
+                        className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
+                        style={{
+                            background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #D1D5DB',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.10)', fontWeight: 600,
+                        }}
+                    >
+                        <button
+                            onClick={() => setFocusedActionId(actionPath.length > 1 ? actionPath[actionPath.length - 2] : null)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', background: 'none', border: 'none', color: '#1B3A4B', fontWeight: 600, fontSize: 12, padding: 0 }}
+                            title={actionPath.length > 1
+                                ? `Back to ${model?.elements[actionPath[actionPath.length - 2]]?.name ?? 'parent'}`
+                                : 'Back to full action flow'}
+                        >
+                            <span style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+                            <span>{actionPath.length > 1
+                                ? (model?.elements[actionPath[actionPath.length - 2]]?.name ?? 'Parent')
+                                : 'All actions'}</span>
+                        </button>
+                        {actionPath.length > 1 && (
+                            <>
+                                <span style={{ color: '#D1D5DB' }}>│</span>
+                                <button
+                                    onClick={() => setFocusedActionId(null)}
+                                    style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#2563EB', fontWeight: 500, fontSize: 12, padding: 0 }}
+                                    title="Back to full action flow"
+                                >
+                                    ⌂ All
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+
                 {/* Source file toast (#38) */}
                 {sourceToast && (
                     <div
