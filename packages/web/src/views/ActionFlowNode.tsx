@@ -233,31 +233,9 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                 }}
             >
                 <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
+                    display: 'flex', alignItems: 'center', gap: 4,
                     padding: '10px 14px 0',
                 }}>
-                    {d.onToggleExpand && (
-                        <button
-                            aria-label={`Collapse ${label}`}
-                            className="nodrag"
-                            onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
-                            onDoubleClick={event => event.stopPropagation()}
-                            style={{
-                                width: 16, height: 16, flexShrink: 0, padding: 0,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: `1px solid ${color}66`, borderRadius: 4, background: '#FFFFFF',
-                                color, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
-                            }}
-                        >
-                            −
-                        </button>
-                    )}
-                    {d.onDrillIn && (
-                        <ActionDrillInButton onDrillIn={d.onDrillIn} color={color} label={label} />
-                    )}
-                    {d.onNavigateToView && (
-                        <ActionViewNavigateButton onNavigate={d.onNavigateToView} label={label} />
-                    )}
                     <span style={{ fontSize: FONT.md, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
                         {label}
                     </span>
@@ -265,6 +243,28 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                         <span style={{ fontSize: '9px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>
                             {'→'} {d.allocatedTo}
                         </span>
+                    )}
+                    {d.onNavigateToView && (
+                        <ActionViewNavigateButton onNavigate={d.onNavigateToView} label={label} />
+                    )}
+                    {d.onDrillIn && (
+                        <ActionDrillInButton onDrillIn={d.onDrillIn} color={color} label={label} />
+                    )}
+                    {d.onToggleExpand && (
+                        <button
+                            aria-label={`Collapse ${label}`}
+                            className="nodrag"
+                            onClick={event => { event.stopPropagation(); d.onToggleExpand!(); }}
+                            onDoubleClick={event => event.stopPropagation()}
+                            style={{
+                                width: 18, height: 18, flexShrink: 0, padding: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: `1px solid ${color}`, borderRadius: 2, background: '#FFFFFF',
+                                color, fontSize: 13, fontWeight: 700, lineHeight: '16px', cursor: 'pointer',
+                            }}
+                        >
+                            −
+                        </button>
                     )}
                 </div>
                 <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}
