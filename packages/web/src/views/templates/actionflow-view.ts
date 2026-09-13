@@ -712,12 +712,28 @@ export async function computeActionFlowViewLayout(
         for (const [frameId, childIds] of frameChildren) {
             for (const childId of childIds) frameOfNode.set(childId, frameId);
         }
+    } else if (options?.expandedActionIds?.size) {
+        for (const compositeId of options.expandedActionIds) {
+            if (graphIds.has(compositeId)) continue;
+            const directChildren: string[] = [];
+            for (const el of Object.values(model.elements)) {
+                if (el.parentAction !== compositeId) continue;
+                if (graphIds.has(el.id)) directChildren.push(el.id);
+                else if (options.expandedActionIds.has(el.id)) directChildren.push(el.id);
+            }
+            if (directChildren.length > 0) frameChildren.set(compositeId, directChildren);
+        }
+        for (const [frameId, childIds] of frameChildren) {
+            for (const childId of childIds) frameOfNode.set(childId, frameId);
+        }
     }
 
+    interface ElkEdge { id: string; sources: string[]; targets: string[] }
     interface ElkActionNode {
         id: string;
         width?: number; height?: number; x?: number; y?: number;
         children?: ElkActionNode[];
+        edges?: ElkEdge[];
         layoutOptions?: Record<string, string>;
     }
 
@@ -730,7 +746,65 @@ export async function computeActionFlowViewLayout(
             ? nodeSize(el, portsByAction.get(id)!, direction, model.registries, cardExtent)
             : { width: PSEUDO_NODE_SIZE, height: PSEUDO_NODE_SIZE };
     };
+    const allElkEdges: ElkEdge[] = [...visibleFlows, ...layoutSuccs].map((rel, i) => ({
+        id: `afe-${i}`,
+        sources: [rel.sourceId],
+        targets: [rel.targetId],
+    }));
+    const containerEdges = new Map<string, ElkEdge[]>();
+    const rootEdges: ElkEdge[] = [];
+    if (frameChildren.size > 0 && nesting !== 'nested') {
+        for (const edge of allElkEdges) {
+            const sc = frameOfNode.get(edge.sources[0]);
+            const tc = frameOfNode.get(edge.targets[0]);
+            if (sc && sc === tc) {
+                if (!containerEdges.has(sc)) containerEdges.set(sc, []);
+                containerEdges.get(sc)!.push(edge);
+            } else {
+                rootEdges.push({
+                    ...edge,
+                    sources: [sc ?? edge.sources[0]],
+                    targets: [tc ?? edge.targets[0]],
+                });
+            }
+        }
+    } else {
+        rootEdges.push(...allElkEdges);
+    }
+
+    // Pass 1: layout each flat-mode container's children to determine its size.
+    const containerSizes = new Map<string, { width: number; height: number }>();
+    const containerLayouts = new Map<string, ElkActionNode>();
+    if (frameChildren.size > 0 && nesting !== 'nested') {
+        const PAD_TOP = GROUP_HEADER + GROUP_PADDING;
+        const PAD_SIDE = GROUP_PADDING;
+        const PAD_BOTTOM = GROUP_PADDING;
+        for (const [containerId, childIds] of frameChildren) {
+            const innerGraph: ElkActionNode = {
+                id: containerId,
+                layoutOptions: {
+                    'elk.algorithm': 'layered',
+                    'elk.direction': direction === 'vertical' ? 'DOWN' : 'RIGHT',
+                    'elk.padding': `[top=${PAD_TOP},left=${PAD_SIDE},bottom=${PAD_BOTTOM},right=${PAD_SIDE}]`,
+                    'elk.spacing.nodeNode': '36',
+                    'elk.layered.spacing.nodeNodeBetweenLayers': '68',
+                    'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+                },
+                children: childIds.map(id => ({ id, ...leafBox(id) })),
+                edges: containerEdges.get(containerId),
+            };
+            const result = await elk.layout(innerGraph, { providerId: options?.layoutProviderId }) as ElkActionNode;
+            containerSizes.set(containerId, {
+                width: result.width ?? 400,
+                height: result.height ?? 200,
+            });
+            containerLayouts.set(containerId, result);
+        }
+    }
+
     const buildElkActionNode = (id: string): ElkActionNode => {
+        const sz = containerSizes.get(id);
+        if (sz) return { id, ...sz };
         const childIds = frameChildren.get(id) ?? [];
         if (childIds.length === 0) return { id, ...leafBox(id) };
         return {
@@ -738,7 +812,6 @@ export async function computeActionFlowViewLayout(
             layoutOptions: {
                 'elk.algorithm': 'layered',
                 'elk.direction': direction === 'vertical' ? 'DOWN' : 'RIGHT',
-                // Room at the top for the frame header that names the composite.
                 'elk.padding': '[top=44,left=24,bottom=24,right=24]',
                 'elk.spacing.nodeNode': '36',
                 'elk.layered.spacing.nodeNodeBetweenLayers': '68',
@@ -747,10 +820,13 @@ export async function computeActionFlowViewLayout(
             children: childIds.map(buildElkActionNode),
         };
     };
-    const topLevelIds = [...pseudoIds, ...actions.map(el => el.id)]
-        .filter(id => !frameOfNode.has(id));
+    const topLevelIds = [
+        ...pseudoIds,
+        ...actions.map(el => el.id),
+        ...[...frameChildren.keys()],
+    ].filter(id => !frameOfNode.has(id));
 
-    const elkGraph = {
+    const elkGraph: ElkActionNode = {
         id: 'root',
         layoutOptions: {
             'elk.algorithm': 'layered',
@@ -762,14 +838,10 @@ export async function computeActionFlowViewLayout(
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             'elk.separateConnectedComponents': 'true',
             'elk.spacing.componentComponent': '56',
-            ...(nesting === 'nested' ? { 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' } : {}),
+            ...(nesting === 'nested' && frameChildren.size > 0 ? { 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' } : {}),
         },
         children: topLevelIds.map(buildElkActionNode),
-        edges: [...visibleFlows, ...layoutSuccs].map((rel, i) => ({
-            id: `afe-${i}`,
-            sources: [rel.sourceId],
-            targets: [rel.targetId],
-        })),
+        edges: rootEdges,
     };
 
     const layouted = await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkActionNode;
@@ -785,6 +857,22 @@ export async function computeActionFlowViewLayout(
         for (const child of node.children ?? []) collectPositions(child);
     };
     for (const child of layouted.children ?? []) collectPositions(child);
+
+    if (nesting !== 'nested' && containerLayouts.size > 0) {
+        for (const [containerId, innerResult] of containerLayouts) {
+            const cp = positions.get(containerId);
+            if (!cp) continue;
+            for (const child of innerResult.children ?? []) {
+                positions.set(child.id, {
+                    x: cp.x + (child.x ?? 0),
+                    y: cp.y + (child.y ?? 0),
+                    width: child.width ?? 140,
+                    height: child.height ?? 56,
+                });
+            }
+        }
+        frameOfNode.clear();
+    }
 
     // ── Swimlane banding: rows for horizontal flow, columns for vertical flow ──
     const laneColor = new Map(lanes.map(l => [l.id, l.color]));

@@ -33,7 +33,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
         direction, onToggleExpand, onToggleDirection, showDirectionButton,
         depthBgColor, isContainer, label,
     } = d;
-    const dirLabel = direction === 'vertical' ? 'V' : 'H';
+    const dirLabel = direction === 'vertical' ? 'H' : 'V';
     const isExpandedContainer = isContainer && isExpanded;
 
     return (
@@ -116,7 +116,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                             flexShrink: 0,
                             transition: 'background 200ms ease',
                         }}
-                        title={`Direction: ${direction}. Click to toggle`}
+                        title={`Children laid out ${direction === 'vertical' ? 'horizontally' : 'vertically'}. Click to toggle`}
                     >
                         {dirLabel}
                     </button>
