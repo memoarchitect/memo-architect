@@ -1667,8 +1667,8 @@ function DiagramCanvasInner() {
                         let cur: string | undefined = childId;
                         while (cur && !seen.has(cur)) {
                             seen.add(cur);
-                            const el = model.elements[cur];
-                            const parent = el?.parentAction ?? el?.owner;
+                            const node: (typeof model.elements)[string] | undefined = model.elements[cur];
+                            const parent: string | undefined = node?.parentAction ?? node?.owner;
                             if (parent === ancestorId) return true;
                             cur = parent;
                         }

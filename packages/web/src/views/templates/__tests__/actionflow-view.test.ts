@@ -577,7 +577,10 @@ describe('computeActionFlowViewLayout: feedback loops', () => {
         expect(centerX('validUserDecision')).toBe(centerX('customerLogsIn'));
         expect(centerX('browseCatalog')).toBe(centerX('viewBookStore'));
         expect(centerX('shoppingDecision')).toBe(centerX('viewBookStore'));
-        expect(edges.find(edge => edge.id === 'loop')?.type).toBe('smoothstep');
+        // The feedback edge goes through the obstacle-avoiding router like every
+        // other action-flow edge, which is what takes it around the ranked
+        // sequence instead of cutting upward through its actions.
+        expect(edges.find(edge => edge.id === 'loop')?.type).toBe('interconnectionEdge');
     });
 
     it('keeps a terminal branch inside its single resolved swimlane', async () => {
