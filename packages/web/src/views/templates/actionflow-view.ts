@@ -1360,7 +1360,6 @@ export async function computeActionFlowViewLayout(
         });
     }
     for (const rel of visibleSuccs) {
-        const isFeedback = feedbackSuccessionIds.has(rel.id);
         edges.push({
             id: rel.id,
             source: rel.sourceId,
