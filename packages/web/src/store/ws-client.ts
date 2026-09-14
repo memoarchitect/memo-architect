@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -500,6 +500,19 @@ function handleMessage(msg: ExtendedServerMessage): void {
                 store.resolveLlmRequest(msg.payload.requestId, msg.payload.suggestions);
             }
             break;
+        case 'dashboards':
+            store.setDashboards(msg.payload.dashboards);
+            break;
+        case 'dashboard:result': {
+            const pending = msg.payload.requestId ? dashboardRequests.get(msg.payload.requestId) : undefined;
+            if (pending) {
+                dashboardRequests.delete(msg.payload.requestId!);
+                clearTimeout(pending.timer);
+                if (msg.payload.ok) pending.resolve();
+                else pending.reject(new Error(msg.payload.error ?? 'The dashboard could not be written.'));
+            }
+            break;
+        }
         case 'dhf:docs':
             applyServerDhfSnapshot(() => store.setDhfDocuments(msg.payload.docs as DhfDoc[]));
             break;
@@ -608,6 +621,41 @@ export function sendDhfTemplateSave(requestId: string, title: string, content: s
 }
 
 export type { DhfRepoTemplateInfo };
+
+// ─── Custom dashboards ───────────────────────────────────────────────────────
+//
+// Writes go straight to the server and resolve on its `dashboard:result`; the
+// list itself is never patched locally — the server's `dashboards` push that
+// follows every write (and every external file edit) is the only source.
+
+const dashboardRequests = new Map<string, { resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
+
+function sendDashboardRequest(type: 'dashboard:save' | 'dashboard:delete' | 'dashboard:move', payload: Record<string, unknown>): Promise<void> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `dashboard-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            dashboardRequests.delete(requestId);
+            reject(new Error('Timed out waiting for the server to write the dashboard.'));
+        }, 10000);
+        dashboardRequests.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type, payload: { requestId, ...payload } }));
+    });
+}
+
+export function saveDashboard(id: string, scope: DashboardScope, content: string): Promise<void> {
+    return sendDashboardRequest('dashboard:save', { dashboard: { id, scope, content } });
+}
+
+export function deleteDashboard(id: string, scope: DashboardScope): Promise<void> {
+    return sendDashboardRequest('dashboard:delete', { id, scope });
+}
+
+export function moveDashboard(id: string, from: DashboardScope, to: DashboardScope): Promise<void> {
+    return sendDashboardRequest('dashboard:move', { id, from, to });
+}
 
 export function requestRefresh(): void {
     if (ws && ws.readyState === WebSocket.OPEN) {

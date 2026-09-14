@@ -145,6 +145,7 @@ const TOOLS: ToolItem[] = [
     { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', view: { type: 'compliance-wizard' } },
     { id: 'model-diff', label: 'Model Diff', icon: '↔', view: { type: 'model-diff' } },
     { id: 'review-dashboard', label: 'Design Review Dashboard', icon: '📋', view: { type: 'review-dashboard' } },
+    { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', view: { type: 'dashboards' } },
     { id: 'workflow-wizard', label: 'Workflow Wizard', icon: '🧙', view: { type: 'workflow-wizard' } },
 ];
 
@@ -273,7 +274,7 @@ export function ModeSwitcher() {
         // still the dashboard, though: otherwise Model Explorer is treated as
         // already active and its click only toggles the sidebar instead of
         // navigating to /catalog.
-        if (activeView.type === 'dashboard') return 'dashboard';
+        if (activeView.type === 'dashboard' || activeView.type === 'dashboards') return 'dashboard';
         if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
         if (activeMode === 'catalog') return 'catalog';
         return activeMode;

@@ -28,6 +28,7 @@ import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
+import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -2168,6 +2169,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
+    const dashboards = useModelStore(s => s.dashboards);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
     const createPackage = useModelStore(s => s.createPackage);
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
@@ -2404,6 +2406,47 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     };
 
     /**
+     * The viewpoint's dashboard, first in its branch: the page that says who the
+     * viewpoint is for and what its views mean. It always exists — generated
+     * until someone writes it — so the row is never a dead link.
+     */
+    const renderViewpointDashboardRow = (vp: ViewpointDTO) => {
+        const id = viewpointDashboardId(vp.id);
+        const file = dashboards.find(d => d.id === id);
+        const isActive = activeView.type === 'custom-dashboard' && activeView.dashboardId === id;
+        return (
+            <button
+                type="button"
+                data-testid="viewpoint-dashboard-row"
+                // Navigate, as the view rows do: /diagrams is owned by its own
+                // route, so a store change alone leaves that page on screen.
+                onClick={() => {
+                    selectViewpoint(vp.id);
+                    setActiveView({ type: 'custom-dashboard', dashboardId: id });
+                    navigate(`/dashboards/${encodeURIComponent(id)}`);
+                }}
+                title={file ? `${file.path}` : 'Generated — customize it to add stakeholder concerns and commentary'}
+                className="flex items-center gap-2 px-2 py-1 w-full text-left"
+                style={{
+                    borderRadius: '6px', margin: '2px 4px', fontSize: FONT.explorer.item, border: 0, cursor: 'pointer',
+                    background: isActive ? COLOR.accent + '1A' : 'transparent', color: COLOR.primary,
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F0F0ED'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+            >
+                <span aria-hidden="true" style={{
+                    fontSize: FONT.badge, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                    background: '#EEF2FF', color: '#4338CA',
+                }}>DASH</span>
+                <span className="flex-1 truncate">Dashboard</span>
+                <span style={{ fontSize: FONT.badge, color: COLOR.faint }}>
+                    {file ? (file.scope === 'shared' ? 'shared' : 'only me') : 'generated'}
+                </span>
+            </button>
+        );
+    };
+
+    /**
      * One viewpoint branch, and beneath it the viewpoints it frames.
      *
      * A nesting viewpoint may bind no view of its own — the system-of-systems
@@ -2444,6 +2487,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         </div>
                         {isExpanded && (
                             <div style={{ marginLeft: '16px' }}>
+                                {renderViewpointDashboardRow(vp)}
                                 {children.map(child => renderViewpoint(child, depth + 1))}
                                 {renderGroupedDiagramList(displayedDiags, vp.id)}
                                 <button

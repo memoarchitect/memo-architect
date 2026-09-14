@@ -16,7 +16,7 @@ import type {
     EditConflictMessage,
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
-import type { ValidationResult, CompletenessReport, LlmSettingsStatus } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus, DashboardDTO, DashboardScope } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -154,6 +154,8 @@ export type ActiveView =
     | { type: 'ask' }                    // E: model Q&A (#52) (gated: ai-tools)
     | { type: 'sysml-generator' }        // E: NL → SysML (#54) (gated: ai-tools)
     | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
+    | { type: 'dashboards' }          // custom dashboards: list
+    | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
     | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
     | { type: 'import' }
@@ -464,6 +466,13 @@ export interface ModelState {
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
+    // ─── Custom dashboards (plans/memo-custom-dashboards.md) ───────────
+    /** Every dashboard file in both scopes, as last pushed by the server */
+    dashboards: DashboardDTO[];
+    /** False until the server's first `dashboards` push — "none yet" vs "not loaded" */
+    dashboardsLoaded: boolean;
+    setDashboards: (dashboards: DashboardDTO[]) => void;
+
     // ─── DHF document actions ─────────────────────────────────────────
     dhfDocuments: DhfDoc[];
     addDhfDocument: (doc: DhfDoc) => void;
@@ -584,6 +593,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Diagram parse errors
     diagramParseErrors: {},
+
+    dashboards: [],
+    dashboardsLoaded: false,
+    setDashboards: (dashboards) => set({ dashboards, dashboardsLoaded: true }),
 
     // DHF documents
     dhfDocuments: [],

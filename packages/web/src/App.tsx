@@ -35,6 +35,8 @@ const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ defa
 const AiWorkspace = lazy(() => import('./views/AiWorkspace').then(m => ({ default: m.AiWorkspace })));
 const ElementDetailView = lazy(() => import('./views/ElementDetailView').then(m => ({ default: m.ElementDetailView })));
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
+const CustomDashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.CustomDashboard })));
+const DashboardList = lazy(() => import('./views/DashboardList').then(m => ({ default: m.DashboardList })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
 const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
@@ -107,6 +109,10 @@ function UnifiedCanvas() {
                 return <ElementDetailView />;
             case 'dashboard':
                 return <Dashboard />;
+            case 'dashboards':
+                return <DashboardList />;
+            case 'custom-dashboard':
+                return <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} />;
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
             case 'workflow-wizard':
@@ -309,6 +315,7 @@ export function App() {
     const showExplorer = activeView.type !== 'dsm'
         && activeView.type !== 'traceability'
         && activeView.type !== 'dashboard'
+        && activeView.type !== 'dashboards'
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
         && activeView.type !== 'sysml-generator'
@@ -452,6 +459,7 @@ export function App() {
                         <Route path="/ontology/:packageName" element={<UnifiedCanvas />} />
                         <Route path="/ontology/:packageName/:layerId" element={<UnifiedCanvas />} />
                         <Route path="/dhf/:docId" element={<UnifiedCanvas />} />
+                        <Route path="/dashboards/:dashboardId" element={<UnifiedCanvas />} />
                         {/* Default: existing state-driven canvas */}
                         <Route path="*" element={<UnifiedCanvas />} />
                     </Routes>

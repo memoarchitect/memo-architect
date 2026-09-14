@@ -35,7 +35,8 @@ type RFAny = any;
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
-import { requestRelationshipUpdate, sendElementCreate, sendDiagramLayoutUpdate, sendElementUpdate } from '../store/ws-client';
+import { requestRelationshipUpdate, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
+import { useDiagramEmbed } from '../diagram/diagram-embed-context';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { sysmlIdentifier } from '../authoring';
 import { SelectionToolbar } from './SelectionToolbar';
@@ -747,14 +748,24 @@ function compositionPath(model: MemoModelDTO | null, focusId: string | null): st
 
 // ─── Main canvas inner (inside ReactFlowProvider) ─────────────────────────────
 
+const noWrite = () => {};
+
 function DiagramCanvasInner() {
+    // An embed (dashboard, document) pins its own diagram and never writes: the
+    // layout and model writers below are swapped for no-ops, so no effect or
+    // stray handler inside the canvas can persist anything from a read-only view.
+    const embed = useDiagramEmbed();
+    const readOnly = embed?.readOnly === true;
     const updateNodeInternals = useUpdateNodeInternals();
     const model = useModelStore(s => s.model);
-    const createRelationship = useModelStore(s => s.createRelationship);
+    const storeCreateRelationship = useModelStore(s => s.createRelationship);
+    const createRelationship = readOnly ? (noWrite as unknown as typeof storeCreateRelationship) : storeCreateRelationship;
     const registries = useMemo(() => getRegistries(model), [model]);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
-    const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const storeSelectedDiagramId = useModelStore(s => s.selectedDiagramId);
+    const selectedDiagramId = embed ? embed.diagramId : storeSelectedDiagramId;
+    const sendDiagramLayoutUpdate = readOnly ? (noWrite as unknown as typeof sendDiagramLayoutUpdateToServer) : sendDiagramLayoutUpdateToServer;
     const hiddenLayers = useModelStore(s => s.hiddenLayers);
     const selectElement = useModelStore(s => s.selectElement);
     const inspectElement = useModelStore(s => s.inspectElement);
@@ -765,9 +776,12 @@ function DiagramCanvasInner() {
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
     const diagramLayouts = useModelStore(s => s.diagramLayouts);
-    const setNodeLayout = useModelStore(s => s.setNodeLayout);
-    const mergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
-    const updateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
+    const storeSetNodeLayout = useModelStore(s => s.setNodeLayout);
+    const storeMergeDiagramLayouts = useModelStore(s => s.mergeDiagramLayouts);
+    const storeUpdateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
+    const setNodeLayout = readOnly ? (noWrite as unknown as typeof storeSetNodeLayout) : storeSetNodeLayout;
+    const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
+    const updateDiagramElementIds = readOnly ? (noWrite as unknown as typeof storeUpdateDiagramElementIds) : storeUpdateDiagramElementIds;
     const { fitView, screenToFlowPosition, getViewport, setViewport } = useReactFlow();
 
     const [nodes, setNodes] = useNodesState<FlowNode>([]);
@@ -896,6 +910,23 @@ function DiagramCanvasInner() {
         document.addEventListener('fullscreenchange', syncFullscreenState);
         return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
     }, []);
+
+    // An embed's frame changes size — full screen, a narrower window — and a camera fitted to the old size frames the diagram
+    // wrongly in the new one. Refit whenever the drawing surface resizes.
+    useEffect(() => {
+        const surface = canvasRef.current;
+        if (!readOnly || !surface || typeof ResizeObserver === 'undefined') return;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let first = true;
+        const observer = new ResizeObserver(() => {
+            // The initial observation is the mount; the layout pass frames that.
+            if (first) { first = false; return; }
+            clearTimeout(timer);
+            timer = setTimeout(() => fitDiagramFrameRef.current(200), 120);
+        });
+        observer.observe(surface);
+        return () => { clearTimeout(timer); observer.disconnect(); };
+    }, [readOnly]);
 
     // Quick create popup state
     const [quickCreate, setQuickCreate] = useState<{
@@ -1213,7 +1244,9 @@ function DiagramCanvasInner() {
     // fit was rejected, so the diagram opened on its top-left corner with the
     // rest off-screen. Better small and whole than large and cropped; the user
     // can zoom, but cannot guess what is out there.
-    const fitMinZoom = viewKind === 'interconnection' ? 0.72 : viewKind === 'general' ? 0.12 : 0.8;
+    // An embed is the opposite trade: it is a fixed-height figure on a page
+    // with an "Open diagram" link beside it, so whole beats legible there.
+    const fitMinZoom = readOnly ? 0.1 : viewKind === 'interconnection' ? 0.72 : viewKind === 'general' ? 0.12 : 0.8;
 
     /**
      * Frame a diagram according to how much of it fits at the readable minimum
@@ -1290,6 +1323,8 @@ function DiagramCanvasInner() {
             zoom,
         }, { duration });
     }, [actionFlowDirection, actionFlowLegendOpen, actionFlowLegendPlacement, actionFlowToolbarPlacement, fitMinZoom, fitView, isCanvasFullscreen, setViewport, swimlanesOn, toolbarCollapsed, viewKind]);
+    const fitDiagramFrameRef = useRef(fitDiagramFrame);
+    fitDiagramFrameRef.current = fitDiagramFrame;
     // General template mode
     const isGeneralTemplate = viewKind === 'general';
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
@@ -2561,14 +2596,16 @@ function DiagramCanvasInner() {
             // An action flow deliberately opens at its reading origin (left or
             // top). Restoring a generic saved camera after its layout completed
             // shifted the first visible step far to the right.
-            if (viewKind !== 'actionflow' && handPlaced && saved?.zoom !== undefined && saved.pan) {
+            // An embed never restores the editor's camera: it was saved for
+            // a different viewport size, and a page wants the whole diagram.
+            if (!readOnly && viewKind !== 'actionflow' && handPlaced && saved?.zoom !== undefined && saved.pan) {
                 setViewport({ x: saved.pan.x, y: saved.pan.y, zoom: saved.zoom }, { duration: 300 });
             } else {
                 fitDiagramFrame(500);
             }
         }, 200);
         return () => clearTimeout(timer);
-    }, [layoutVersion, selectedDiagramId, fitDiagramFrame, setViewport, viewKind]);
+    }, [layoutVersion, selectedDiagramId, fitDiagramFrame, setViewport, viewKind, readOnly]);
 
     // Moving the legend into or out of its reserved strip changes the usable
     // React Flow area. Reframe on the next paint so the lanes keep their
@@ -2680,9 +2717,10 @@ function DiagramCanvasInner() {
                 fitDiagramFrame(400);
             }
         };
+        if (readOnly) return;
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [fitDiagramFrame, dismissSelectionTools, undoLastDiagramEdit, redoLastDiagramEdit]);
+    }, [readOnly, fitDiagramFrame, dismissSelectionTools, undoLastDiagramEdit, redoLastDiagramEdit]);
 
     // ─── Drag/drop from palette ───────────────────────────────────────────────
 
@@ -3439,11 +3477,39 @@ function DiagramCanvasInner() {
         expandAll, collapseAll, resetLayout,
     };
 
+    /** Fit and full screen: shared by the editor's controls and an embed's. */
+    const viewControls = (
+        <>
+            <ControlButton
+                title="Fit diagram to view"
+                aria-label="Fit diagram to view"
+                onClick={() => fitDiagramFrame(250)}
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
+                    <path d="M3 8l5-5M21 8l-5-5M21 16l-5 5M3 16l5 5" />
+                </svg>
+            </ControlButton>
+            <ControlButton
+                title="Toggle fullscreen canvas"
+                aria-label="Toggle fullscreen canvas"
+                onClick={event => {
+                    const canvas = event.currentTarget.closest('.react-flow');
+                    if (!canvas) return;
+                    if (document.fullscreenElement) void document.exitFullscreen();
+                    else void canvas.requestFullscreen?.();
+                }}
+            >
+                ⛶
+            </ControlButton>
+        </>
+    );
+
     return (
         <InterconnectionRendererContext.Provider value={activeRenderer}>
         <div className="flex flex-1 overflow-hidden">
             {/* ── Palette ── */}
-            <DiagramPalette
+            {!readOnly && <DiagramPalette
                 collapsed={paletteCollapsed}
                 onToggleCollapse={() => setPaletteCollapsed(!paletteCollapsed)}
                 elementIds={selectedDiagram?.elementIds}
@@ -3458,13 +3524,13 @@ function DiagramCanvasInner() {
                             model.viewpoints.find(v => v.id === selectedDiagram.viewpointId)?.visibleKinds ?? []
                         )
                         : undefined}
-            />
+            />}
 
             {/* The dock is a sibling of the drawing surface.  Keeping controls
                 out of the canvas prevents it from covering nodes or edges. */}
             <div className="flex-1 flex min-w-0">
                 {/* Diagram controls */}
-                {!toolbarCollapsed && <aside
+                {!toolbarCollapsed && !readOnly && <aside
                     aria-label="Diagram tools"
                     className="flex shrink-0 flex-col border-r"
                     style={{ width: 126, background: '#FAFAF8', borderColor: '#E5E5E0' }}
@@ -3520,9 +3586,14 @@ function DiagramCanvasInner() {
                     elements, so they answer to the same rule as drawing a
                     connector: a view reads the model, it does not write one. */}
                 <div ref={canvasRef} className="flex-1 relative min-h-0"
-                    onDragOver={activeRenderer.disableOnCanvasAuthoring ? undefined : onDragOver}
-                    onDrop={activeRenderer.disableOnCanvasAuthoring ? undefined : onDrop}
-                    onDoubleClick={activeRenderer.disableOnCanvasAuthoring ? undefined : onPaneDoubleClick}>
+                    onDragOver={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onDragOver}
+                    onDrop={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onDrop}
+                    onDoubleClick={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onPaneDoubleClick}
+                    // Nodes carry their own double-click (inline rename) and
+                    // context-menu handlers; an embed stops both before they
+                    // reach a node, so a read-only view cannot start an edit.
+                    onDoubleClickCapture={readOnly ? event => { event.stopPropagation(); event.preventDefault(); } : undefined}
+                    onContextMenuCapture={readOnly ? event => { event.stopPropagation(); } : undefined}>
 
                 {/* Focus Mode toolbar (#22) */}
                 {focusNodeId && (
@@ -3561,7 +3632,7 @@ function DiagramCanvasInner() {
 
                 {/* Parent-view breadcrumb: child action-flow views show a
                     floating bar to navigate back to the parent diagram. */}
-                {parentViewId && (
+                {parentViewId && !readOnly && (
                     <button
                         className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
                         style={{
@@ -3871,27 +3942,30 @@ function DiagramCanvasInner() {
                     edges={edges}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
-                    onNodesChange={onNodesChangeWithResize}
-                    onEdgesChange={onEdgesChange}
-                    onNodeClick={onNodeClick}
-                    onNodeDoubleClick={onNodeDoubleClick}
-                    onEdgeClick={onEdgeClick}
-                    onPaneClick={onPaneClick}
-                    onNodeDragStart={onNodeDragStart}
-                    onNodeDragStop={onNodeDragStop}
-                    onNodeContextMenu={handleNodeContextMenu}
-                    onEdgeContextMenu={handleEdgeContextMenu}
-                    onNodeMouseEnter={onNodeMouseEnter}
-                    onNodeMouseLeave={clearConnectorHover}
-                    onEdgeMouseEnter={onEdgeMouseEnter}
-                    onEdgeMouseLeave={clearConnectorHover}
-                    nodesConnectable={!activeRenderer.disableOnCanvasAuthoring}
-                    onConnect={activeRenderer.disableOnCanvasAuthoring ? undefined : onConnect}
-                    onConnectStart={activeRenderer.disableOnCanvasAuthoring ? undefined : onConnectStart}
-                    onConnectEnd={activeRenderer.disableOnCanvasAuthoring ? undefined : (onConnectEnd as any)}
-                    onReconnect={onReconnect}
-                    onReconnectStart={onReconnectStart}
-                    onReconnectEnd={onReconnectEnd}
+                    onNodesChange={readOnly ? undefined : onNodesChangeWithResize}
+                    onEdgesChange={readOnly ? undefined : onEdgesChange}
+                    onNodeClick={readOnly ? undefined : onNodeClick}
+                    onNodeDoubleClick={readOnly ? undefined : onNodeDoubleClick}
+                    onEdgeClick={readOnly ? undefined : onEdgeClick}
+                    onPaneClick={readOnly ? undefined : onPaneClick}
+                    onNodeDragStart={readOnly ? undefined : onNodeDragStart}
+                    onNodeDragStop={readOnly ? undefined : onNodeDragStop}
+                    onNodeContextMenu={readOnly ? undefined : handleNodeContextMenu}
+                    onEdgeContextMenu={readOnly ? undefined : handleEdgeContextMenu}
+                    onNodeMouseEnter={readOnly ? undefined : onNodeMouseEnter}
+                    onNodeMouseLeave={readOnly ? undefined : clearConnectorHover}
+                    onEdgeMouseEnter={readOnly ? undefined : onEdgeMouseEnter}
+                    onEdgeMouseLeave={readOnly ? undefined : clearConnectorHover}
+                    nodesDraggable={!readOnly}
+                    elementsSelectable={!readOnly}
+                    edgesReconnectable={!readOnly}
+                    nodesConnectable={!activeRenderer.disableOnCanvasAuthoring && !readOnly}
+                    onConnect={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onConnect}
+                    onConnectStart={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onConnectStart}
+                    onConnectEnd={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : (onConnectEnd as any)}
+                    onReconnect={readOnly ? undefined : onReconnect}
+                    onReconnectStart={readOnly ? undefined : onReconnectStart}
+                    onReconnectEnd={readOnly ? undefined : onReconnectEnd}
                     reconnectRadius={10}
                     connectionMode={ConnectionMode.Loose}
                     defaultEdgeOptions={{ interactionWidth: 24 }}
@@ -3903,15 +3977,20 @@ function DiagramCanvasInner() {
                     fitViewOptions={{ ...RF_FIT_VIEW_OPTIONS, minZoom: fitMinZoom }}
                     minZoom={0.1}
                     maxZoom={3}
-                    zoomOnScroll
-                    panOnScroll
+                    // An embed sits in a scrolling page: a wheel over it must
+                    // scroll the page, so zoom there is pinch or ⌘/Ctrl-wheel.
+                    zoomOnScroll={!readOnly || isCanvasFullscreen}
+                    panOnScroll={!readOnly}
+                    zoomOnPinch
+                    zoomOnDoubleClick={!readOnly}
+                    preventScrolling={!readOnly || isCanvasFullscreen}
                     panOnScrollMode={'free' as any}
                     // Board-tool convention: dragging empty canvas rubber-bands a
                     // selection, and panning moves to the middle and right buttons
                     // (trackpad two-finger scroll still pans, via panOnScroll).
                     // Shift or Cmd/Ctrl extends a selection one block at a time.
-                    selectionOnDrag
-                    panOnDrag={[1, 2]}
+                    selectionOnDrag={!readOnly}
+                    panOnDrag={readOnly ? true : [1, 2]}
                     multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
                     selectionKeyCode={null}
                     proOptions={RF_PRO_OPTIONS}
@@ -3934,7 +4013,12 @@ function DiagramCanvasInner() {
                         it is ~160px with its margin, so on any diagram large
                         enough to show one the two overlapped and the maximise
                         button underneath could not be clicked. */}
-                    <Controls position="bottom-right" showFitView={false} style={{ zIndex: 6 }}>
+                    {/* An embed keeps the view controls — zoom, fit, full screen —
+                        and drops everything that edits: lock, reset, undo, redo. */}
+                    {readOnly && <Controls position="bottom-right" showFitView={false} showInteractive={false} style={{ zIndex: 6 }}>
+                        {viewControls}
+                    </Controls>}
+                    {!readOnly && <Controls position="bottom-right" showFitView={false} style={{ zIndex: 6 }}>
                         <ControlButton
                             title="Reset this view to its default layout"
                             aria-label="Reset this view to its default layout"
@@ -3955,30 +4039,9 @@ function DiagramCanvasInner() {
                             aria-label="Redo last diagram edit"
                             onClick={redoLastDiagramEdit}
                         >↷</ControlButton>
-                        <ControlButton
-                            title="Fit diagram to view"
-                            aria-label="Fit diagram to view"
-                            onClick={() => fitDiagramFrame(250)}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
-                                <path d="M3 8l5-5M21 8l-5-5M21 16l-5 5M3 16l5 5" />
-                            </svg>
-                        </ControlButton>
-                        <ControlButton
-                            title="Toggle fullscreen canvas"
-                            aria-label="Toggle fullscreen canvas"
-                            onClick={event => {
-                                const canvas = event.currentTarget.closest('.react-flow');
-                                if (!canvas) return;
-                                if (document.fullscreenElement) void document.exitFullscreen();
-                                else void canvas.requestFullscreen?.();
-                            }}
-                        >
-                            ⛶
-                        </ControlButton>
-                    </Controls>
-                    {nodes.length > 20 && (
+                        {viewControls}
+                    </Controls>}
+                    {nodes.length > 20 && !readOnly && (
                         miniMapOpen ? (
                             <MiniMap
                                 position="bottom-left"
@@ -3991,7 +4054,7 @@ function DiagramCanvasInner() {
                             />
                         ) : null
                     )}
-                    {nodes.length > 20 && (
+                    {nodes.length > 20 && !readOnly && (
                         <button
                             type="button"
                             title={miniMapOpen ? 'Hide the overview map' : 'Show the overview map'}
