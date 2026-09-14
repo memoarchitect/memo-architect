@@ -175,3 +175,20 @@ describe('isRouteOwnedPath', () => {
         }
     });
 });
+
+describe('custom dashboards', () => {
+    it('round-trips a dashboard, with and without a pinned scope', () => {
+        const bare: ActiveView = { type: 'custom-dashboard', dashboardId: 'pump-arch' };
+        expect(viewToPath(bare)).toBe('/dashboards/pump-arch');
+        expect(pathToView('/dashboards/pump-arch')).toEqual(bare);
+
+        const pinned: ActiveView = { type: 'custom-dashboard', dashboardId: 'home', scope: 'shared' };
+        expect(viewToPath(pinned)).toBe('/dashboards/home?scope=shared');
+        expect(pathToView('/dashboards/home', '?scope=shared')).toEqual(pinned);
+        expect(pathToView('/dashboards/home', '?scope=bogus')).toEqual({ type: 'custom-dashboard', dashboardId: 'home' });
+    });
+
+    it('keeps the list distinct from a dashboard', () => {
+        expect(pathToView('/dashboards')).toEqual({ type: 'dashboards' });
+    });
+});

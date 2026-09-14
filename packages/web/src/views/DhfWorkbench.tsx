@@ -25,7 +25,9 @@ import { useModelStore } from '../store/model-store';
 import { sendLlmDraft } from '../store/ws-client';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { DhfSettings, DhfDoc } from '../store/model-store';
-import { renderDhfDocumentHtml, DIAGRAM_MARKER_RE } from '../dhf/document-renderer';
+import { renderDhfDocumentHtml } from '../dhf/document-renderer';
+import { MemoMarkdownView } from '../components/memo-markdown/MemoMarkdownView';
+import { DASHBOARD_WIDGETS } from './Dashboard';
 import { documentThemeCss } from '../dhf/document-theme';
 import { exportDocumentWord, exportDocumentPdf, exportDocumentHtml, exportDocumentMarkdown } from '../dhf/document-export';
 import { MemoBrandMark } from '../components/MemoBrandMark';
@@ -499,8 +501,9 @@ function GearIcon({ size }: { size: number }) {
 // ─── Markdown preview ─────────────────────────────────────────────────────────
 //
 // Rendering lives in ../dhf/document-renderer.ts; styling in ../dhf/document-theme.ts
-// so exports share the exact same output. {{diagram:id}} markers are split out
-// of the HTML and replaced with live diagram cards.
+// so exports share the exact same output. {{diagram:…}} and {{widget:…}} markers
+// are filled with live content by MemoMarkdownView — the same component that
+// renders dashboards.
 
 function MarkdownPreview({ content, model, settings, doc }: {
     content: string;
@@ -510,83 +513,11 @@ function MarkdownPreview({ content, model, settings, doc }: {
 }) {
     const html = useMemo(() => renderDhfDocumentHtml(content, model, settings, doc), [content, model, settings, doc]);
     const css = useMemo(() => documentThemeCss(settings), [settings]);
-    const segments = useMemo(() => html.split(new RegExp(DIAGRAM_MARKER_RE, 'g')), [html]);
 
-    // split() with one capture group alternates [html, diagramId, html, ...]
     return (
         <div className="memo-doc">
             <style>{css}</style>
-            {segments.map((seg, i) => i % 2 === 0 ? (
-                <div key={i}
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: controlled markdown preview
-                    dangerouslySetInnerHTML={{ __html: seg }}
-                />
-            ) : (
-                <DiagramEmbedCard key={i} diagramRef={seg} model={model} />
-            ))}
-        </div>
-    );
-}
-
-// ─── Diagram embed card ───────────────────────────────────────────────────────
-
-function DiagramEmbedCard({ diagramRef, model }: { diagramRef: string; model: MemoModelDTO | null }) {
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const selectDiagram = useModelStore(s => s.selectDiagram);
-
-    // Match tolerantly: exact id, then case/punctuation-insensitive with an
-    // optional "view" suffix, then containment ({{diagram:software-architecture}}
-    // should find "GPCA_SoftwareArchitectureView").
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/view$/, '');
-    const ref = norm(diagramRef);
-    const diagrams = model?.diagrams ?? [];
-    const diagram =
-        diagrams.find(d => d.id === diagramRef)
-        ?? diagrams.find(d => norm(d.id) === ref || norm(d.name) === ref)
-        ?? diagrams.find(d => ref.length >= 6 && (norm(d.name).includes(ref) || norm(d.id).includes(ref)));
-
-    if (!diagram) {
-        return (
-            <div style={{
-                margin: '10px 0', padding: '10px 14px', borderRadius: '6px',
-                border: '1px dashed #FCA5A5', background: '#FEF2F2', fontSize: '12px', color: '#DC2626',
-            }}>
-                ⚠ Diagram <code style={{ background: '#FEE2E2', padding: '0 4px', borderRadius: '3px' }}>{diagramRef}</code> not
-                found in the model — check the id in <code style={{ background: '#FEE2E2', padding: '0 4px', borderRadius: '3px' }}>{'{{diagram:…}}'}</code>.
-            </div>
-        );
-    }
-
-    const openDiagram = () => {
-        selectDiagram(diagram.id);
-        setActiveView({ type: 'diagram', diagramId: diagram.id });
-    };
-
-    return (
-        <div style={{
-            margin: '10px 0', borderRadius: '8px', border: '1px solid #E2E8F0',
-            background: '#F8FAFC', overflow: 'hidden',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px' }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2DD4A8" strokeWidth="1.8">
-                    <rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
-                    <rect x="8.5" y="16" width="7" height="5" rx="1"/>
-                    <path d="M6.5 8v4h11V8M12 12v4"/>
-                </svg>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1B3A4B' }}>{diagram.name}</div>
-                    <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                        {diagram.viewKind || diagram.diagramType}
-                        {diagram.elementIds?.length ? ` · ${diagram.elementIds.length} elements` : ''}
-                    </div>
-                </div>
-                <button onClick={openDiagram} style={{
-                    padding: '5px 12px', borderRadius: '6px', border: 'none', background: '#1B3A4B',
-                    color: '#fff', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                }}>
-                    Open diagram →
-                </button>
-            </div>
+            <MemoMarkdownView html={html} model={model} widgets={DASHBOARD_WIDGETS} />
         </div>
     );
 }

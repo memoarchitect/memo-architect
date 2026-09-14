@@ -1,19 +1,26 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
-import type { MemoModelDTO } from '@memoarchitect/tools/browser';
+import type { MemoModelDTO, DashboardScope } from '@memoarchitect/tools/browser';
+import { DashboardPage } from './DashboardPage';
+import { HOME_DASHBOARD_ID, viewpointDashboardId } from '../dashboard/dashboards';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
 //
-// Default landing view shown after the model loads.
-// Replaces the minimal WelcomeCanvas for populated models.
+// Default landing view shown after the model loads. The page itself is a
+// markdown dashboard (id `home`) — built-in unless the project or the user has
+// customized it — and the sections below are its widgets:
 //
-// Sections:
-//   1. Headline stat cards (elements, relationships, completeness, violations)
-//   2. CoSMA coverage tiles (risk / requirements / architecture)
-//   3. Quick-action buttons (navigates to relevant views)
-//   4. NextActionPanel — contextual "what to do next" (#131)
+//   {{widget:header}}      project name and date
+//   {{widget:stats}}       headline stat cards (elements, relationships, …)
+//   {{widget:coverage}}    CoSMA coverage tiles (risk / requirements / …)
+//   {{widget:next-action}} NextActionPanel (#131)
+//   {{widget:next-steps}}  NextActionPanel beside the quick-action buttons
+//   {{widget:viewpoint-dashboards}}  a link to every viewpoint's dashboard
+//   {{widget:diagrams}}    model view count
+//
+// Any dashboard or document can use them. See plans/memo-custom-dashboards.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Stats computation ───────────────────────────────────────────────────────
@@ -272,16 +279,12 @@ function QuickActionButton({ icon, label, onClick, variant = 'secondary' }: {
     );
 }
 
-// ─── Main Dashboard component ─────────────────────────────────────────────────
+// ─── Widget data ─────────────────────────────────────────────────────────────
 
-export function Dashboard() {
+function useDashboardData() {
     const model = useModelStore(s => s.model);
     const validation = useModelStore(s => s.validation);
     const completeness = useModelStore(s => s.completeness);
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const setExplorerTab = useModelStore(s => s.setExplorerTab);
-    const navigate = useNavigate();
-    const toggleGapBar = useModelStore(s => s.toggleGapBar);
 
     const violationCount = validation?.violations?.length ?? 0;
     const completenessPercent = useMemo(() => {
@@ -295,182 +298,274 @@ export function Dashboard() {
         () => model ? computeDashboardStats(model, violationCount, completenessPercent) : null,
         [model, violationCount, completenessPercent]
     );
+    return { stats, violationCount, completenessPercent };
+}
 
-    const nextAction = useMemo(() => stats ? computeNextAction(stats) : null, [stats]);
+const SECTION_HEADING: React.CSSProperties = {
+    fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', margin: '0 0 12px 0',
+};
 
-    if (!stats || !model) {
-        return (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F7F5' }}>
-                <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Loading dashboard…</div>
-            </div>
-        );
-    }
+// ─── Widgets ─────────────────────────────────────────────────────────────────
 
-    const GRADIENT = 'linear-gradient(135deg, #EEF7F3 0%, #EAF2F8 55%, #F2EEF8 100%)';
-
+function HeaderWidget() {
+    const { stats } = useDashboardData();
+    if (!stats) return null;
     return (
-        <div style={{ flex: 1, overflowY: 'auto', background: GRADIENT, padding: '32px 40px' }}>
-            <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-
-                {/* Header */}
-                <div style={{ marginBottom: '28px' }}>
-                    <div style={{ position: 'relative', width: 260, height: 154, overflow: 'hidden', margin: '0 auto -10px', opacity: 0.62 }} title="MEMO Architect" aria-label="MEMO Architect">
-                        <img src="/logo.png" alt="" aria-hidden="true" style={{ width: 260, height: 260, objectFit: 'contain', transform: 'translateY(-32px)', mixBlendMode: 'multiply' }} />
-                        <span style={{ position: 'absolute', left: '59%', top: 115, color: '#8B949E', fontSize: 20, fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
-                            Architect
-                        </span>
-                    </div>
-                    <div>
-                        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B3A4B', margin: '0 0 4px 0' }}>
-                            {stats.projectName}
-                        </h1>
-                        <p style={{ fontSize: '13px', color: '#4B6E80', margin: 0 }}>
-                            Model dashboard · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Stat cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                    <StatCard label="Elements" value={stats.totalElements} color="#1B3A4B" />
-                    <StatCard label="Relationships" value={stats.totalRelationships} color="#4A90D9" />
-                    <StatCard
-                        label="Completeness"
-                        value={`${completenessPercent}%`}
-                        color={completenessPercent >= 70 ? '#2ECC71' : completenessPercent >= 40 ? '#F39C12' : '#E74C3C'}
-                    />
-                    <StatCard
-                        label="Violations"
-                        value={violationCount}
-                        color={violationCount === 0 ? '#2ECC71' : '#E74C3C'}
-                        subtitle={violationCount === 0 ? 'All rules passing' : 'Open the GapBar'}
-                    />
-                </div>
-
-                {/* CoSMA coverage tiles */}
-                <div style={{ marginBottom: '24px' }}>
-                    <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', margin: '0 0 12px 0' }}>
-                        Layer Coverage
-                    </h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                        <CoverageTile
-                            layer="requirements" label="Requirements"
-                            count={stats.requirementsCount}
-                            color={LAYER_COLORS['requirements'] || '#4A90D9'}
-                            onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
-                        />
-                        <CoverageTile
-                            layer="risk" label="Risk"
-                            count={stats.riskCount}
-                            color={LAYER_COLORS['risk'] || '#E74C3C'}
-                            onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
-                        />
-                        <CoverageTile
-                            layer="logical" label="Architecture"
-                            count={stats.architectureCount}
-                            color={LAYER_COLORS['logical'] || '#7B68EE'}
-                            onClick={() => { setExplorerTab('views'); setActiveView({ type: 'welcome' }); }}
-                        />
-                        <CoverageTile
-                            layer="verification" label="Verification"
-                            count={stats.verificationCount}
-                            color={LAYER_COLORS['verification'] || '#2DD4A8'}
-                            onClick={() => setActiveView({ type: 'traceability' })}
-                        />
-                    </div>
-                </div>
-
-                {/* Two-column: next action + quick actions */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-
-                    {/* Next action panel (#131) */}
-                    {nextAction && (
-                        <div style={{
-                            background: nextAction.urgency === 'high'
-                                ? 'rgba(231,76,60,0.06)'
-                                : nextAction.urgency === 'medium'
-                                    ? 'rgba(243,156,18,0.06)'
-                                    : 'rgba(46,204,113,0.06)',
-                            border: `1px solid ${nextAction.urgency === 'high' ? '#E74C3C30' : nextAction.urgency === 'medium' ? '#F39C1230' : '#2ECC7130'}`,
-                            borderRadius: '12px', padding: '20px',
-                        }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', marginBottom: '10px' }}>
-                                💡 Suggested Next Step
-                            </div>
-                            <div style={{ fontSize: '16px', marginBottom: '6px' }}>{nextAction.icon}</div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#1B3A4B', marginBottom: '6px' }}>
-                                {nextAction.title}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#4B6E80', lineHeight: '1.6' }}>
-                                {nextAction.description}
-                            </div>
-                            {nextAction.urgency !== 'low' && (
-                                <button
-                                    onClick={() => setActiveView({ type: 'workflow-wizard' })}
-                                    style={{
-                                        marginTop: '14px', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
-                                        background: '#1B3A4B', color: '#FFFFFF', border: 'none',
-                                        borderRadius: '6px', cursor: 'pointer',
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#244D63'}
-                                    onMouseLeave={e => e.currentTarget.style.background = '#1B3A4B'}
-                                >
-                                    Open Workflow Wizard →
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Quick actions */}
-                    <div style={{
-                        background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)',
-                        borderRadius: '12px', padding: '20px', backdropFilter: 'blur(4px)',
-                    }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', marginBottom: '14px' }}>
-                            Quick Actions
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {/* The explorer is a side panel, and `showExplorer`
-                                in App.tsx hides it on the dashboard — so
-                                setting its tab without also leaving the
-                                dashboard changes a tab on a panel that is not
-                                mounted, which is why these two did nothing at
-                                all. The layer-coverage cards above always got
-                                this right; these did not. */}
-                            <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); navigate('/catalog'); }} />
-                            <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }} />
-                            <QuickActionButton icon="↔️" label="Traceability Matrix" onClick={() => setActiveView({ type: 'traceability' })} />
-                            <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
-                            <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
-                            <QuickActionButton icon="📈" label="Full Statistics" onClick={() => setActiveView({ type: 'statistics' })} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Diagrams row */}
-                {stats.diagramCount > 0 && (
-                    <div style={{
-                        background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)',
-                        borderRadius: '12px', padding: '16px 20px', backdropFilter: 'blur(4px)',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                                {stats.diagramCount} model view{stats.diagramCount !== 1 ? 's' : ''} in this project
-                            </div>
-                            <button
-                                onClick={() => setExplorerTab('views')}
-                                style={{
-                                    fontSize: '12px', color: '#4A90D9', background: 'none', border: 'none',
-                                    cursor: 'pointer', fontWeight: 600,
-                                }}
-                            >
-                                Browse viewpoints →
-                            </button>
-                        </div>
-                    </div>
-                )}
-
+        <div className="memo-widget" style={{ marginBottom: '28px' }}>
+            <div style={{ position: 'relative', width: 260, height: 154, overflow: 'hidden', margin: '0 auto -10px', opacity: 0.62 }} title="MEMO Architect" aria-label="MEMO Architect">
+                <img src="/logo.png" alt="" aria-hidden="true" style={{ width: 260, height: 260, objectFit: 'contain', transform: 'translateY(-32px)', mixBlendMode: 'multiply' }} />
+                <span style={{ position: 'absolute', left: '59%', top: 115, color: '#8B949E', fontSize: 20, fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                    Architect
+                </span>
+            </div>
+            <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B3A4B', margin: '0 0 4px 0' }}>
+                    {stats.projectName}
+                </h1>
+                <p style={{ fontSize: '13px', color: '#4B6E80', margin: 0 }}>
+                    Model dashboard · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
             </div>
         </div>
     );
+}
+
+function StatsWidget() {
+    const { stats, violationCount, completenessPercent } = useDashboardData();
+    if (!stats) return null;
+    return (
+        <div className="memo-widget" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <StatCard label="Elements" value={stats.totalElements} color="#1B3A4B" />
+            <StatCard label="Relationships" value={stats.totalRelationships} color="#4A90D9" />
+            <StatCard
+                label="Completeness"
+                value={`${completenessPercent}%`}
+                color={completenessPercent >= 70 ? '#2ECC71' : completenessPercent >= 40 ? '#F39C12' : '#E74C3C'}
+            />
+            <StatCard
+                label="Violations"
+                value={violationCount}
+                color={violationCount === 0 ? '#2ECC71' : '#E74C3C'}
+                subtitle={violationCount === 0 ? 'All rules passing' : 'Open the GapBar'}
+            />
+        </div>
+    );
+}
+
+function CoverageWidget() {
+    const { stats } = useDashboardData();
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    if (!stats) return null;
+    return (
+        <div className="memo-widget" style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <CoverageTile
+                    layer="requirements" label="Requirements"
+                    count={stats.requirementsCount}
+                    color={LAYER_COLORS['requirements'] || '#4A90D9'}
+                    onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
+                />
+                <CoverageTile
+                    layer="risk" label="Risk"
+                    count={stats.riskCount}
+                    color={LAYER_COLORS['risk'] || '#E74C3C'}
+                    onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
+                />
+                <CoverageTile
+                    layer="logical" label="Architecture"
+                    count={stats.architectureCount}
+                    color={LAYER_COLORS['logical'] || '#7B68EE'}
+                    onClick={() => { setExplorerTab('views'); setActiveView({ type: 'welcome' }); }}
+                />
+                <CoverageTile
+                    layer="verification" label="Verification"
+                    count={stats.verificationCount}
+                    color={LAYER_COLORS['verification'] || '#2DD4A8'}
+                    onClick={() => setActiveView({ type: 'traceability' })}
+                />
+            </div>
+        </div>
+    );
+}
+
+function NextActionPanel({ stats, compact }: { stats: DashboardStats; compact?: boolean }) {
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const nextAction = computeNextAction(stats);
+    return (
+        <div style={{
+            background: nextAction.urgency === 'high'
+                ? 'rgba(231,76,60,0.06)'
+                : nextAction.urgency === 'medium'
+                    ? 'rgba(243,156,18,0.06)'
+                    : 'rgba(46,204,113,0.06)',
+            border: `1px solid ${nextAction.urgency === 'high' ? '#E74C3C30' : nextAction.urgency === 'medium' ? '#F39C1230' : '#2ECC7130'}`,
+            borderRadius: '12px', padding: '16px 20px',
+        }}>
+            {!compact && (
+                <div style={{ ...SECTION_HEADING, marginBottom: '10px' }}>
+                    💡 Suggested Next Step
+                </div>
+            )}
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#1B3A4B', marginBottom: '6px' }}>
+                <span style={{ marginRight: 8 }}>{nextAction.icon}</span>{nextAction.title}
+            </div>
+            <div style={{ fontSize: '12px', color: '#4B6E80', lineHeight: '1.6' }}>
+                {nextAction.description}
+            </div>
+            {nextAction.urgency !== 'low' && (
+                <button
+                    onClick={() => setActiveView({ type: 'workflow-wizard' })}
+                    style={{
+                        marginTop: '14px', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
+                        background: '#1B3A4B', color: '#FFFFFF', border: 'none',
+                        borderRadius: '6px', cursor: 'pointer',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#244D63'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#1B3A4B'}
+                >
+                    Open Workflow Wizard →
+                </button>
+            )}
+        </div>
+    );
+}
+
+/** The contextual "what to do next" card on its own; the heading lives in markdown. */
+function NextActionWidget() {
+    const { stats } = useDashboardData();
+    if (!stats) return null;
+    return <div className="memo-widget" style={{ marginBottom: '16px' }}><NextActionPanel stats={stats} compact /></div>;
+}
+
+/**
+ * The original two-column card: next step beside quick actions.
+ *
+ * Kept for pages that already use it. The built-in home now writes the quick
+ * actions as a markdown link list, which a user can read and edit.
+ */
+function NextStepsWidget() {
+    const { stats } = useDashboardData();
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const toggleGapBar = useModelStore(s => s.toggleGapBar);
+    const navigate = useNavigate();
+    if (!stats) return null;
+
+    return (
+        <div className="memo-widget" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <NextActionPanel stats={stats} />
+
+            {/* Quick actions */}
+            <div style={{
+                background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)',
+                borderRadius: '12px', padding: '20px', backdropFilter: 'blur(4px)',
+            }}>
+                <div style={{ ...SECTION_HEADING, marginBottom: '14px' }}>
+                    Quick Actions
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* The explorer is a side panel, and `showExplorer`
+                        in App.tsx hides it on the dashboard — so
+                        setting its tab without also leaving the
+                        dashboard changes a tab on a panel that is not
+                        mounted, which is why these two did nothing at
+                        all. The layer-coverage cards above always got
+                        this right; these did not. */}
+                    <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); navigate('/catalog'); }} />
+                    <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }} />
+                    <QuickActionButton icon="↔️" label="Traceability Matrix" onClick={() => setActiveView({ type: 'traceability' })} />
+                    <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
+                    <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
+                    <QuickActionButton icon="📈" label="Full Statistics" onClick={() => setActiveView({ type: 'statistics' })} />
+                    <QuickActionButton icon="🧩" label="Custom Dashboards" onClick={() => setActiveView({ type: 'dashboards' })} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/** One row per viewpoint, each linking to its dashboard — generated or customized. */
+function ViewpointDashboardsWidget() {
+    const model = useModelStore(s => s.model);
+    const dashboards = useModelStore(s => s.dashboards);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const viewpoints = useMemo(
+        () => (model?.viewpoints ?? []).filter(vp => !vp.id.startsWith('__'))
+            .sort((a, b) => (a.explorerOrder ?? 999) - (b.explorerOrder ?? 999) || a.label.localeCompare(b.label)),
+        [model?.viewpoints],
+    );
+    if (viewpoints.length === 0) {
+        return <p className="memo-widget" style={{ fontSize: 12, color: '#6B7280' }}><em>This model declares no viewpoints yet.</em></p>;
+    }
+    return (
+        <div className="memo-widget" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px', marginBottom: '16px' }}>
+            {viewpoints.map(vp => {
+                const id = viewpointDashboardId(vp.id);
+                const file = dashboards.find(d => d.id === id);
+                const views = (model?.diagrams ?? []).filter(d => d.viewpointId === vp.id || d.viewpointIds?.includes(vp.id)).length;
+                return (
+                    <button key={vp.id} type="button" onClick={() => setActiveView({ type: 'custom-dashboard', dashboardId: id })} style={{
+                        textAlign: 'left', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.75)', border: '1px solid #E2E8F0',
+                    }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1B3A4B' }}>{vp.label}</div>
+                        <div style={{ fontSize: 11, color: '#6B7280' }}>
+                            {views} view{views === 1 ? '' : 's'} · {file ? (file.scope === 'shared' ? 'written by the team' : 'your notes') : 'not written yet'}
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function DiagramsWidget() {
+    const { stats } = useDashboardData();
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const navigate = useNavigate();
+    if (!stats || stats.diagramCount === 0) return null;
+    return (
+        <div className="memo-widget" style={{
+            background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)',
+            borderRadius: '12px', padding: '16px 20px', backdropFilter: 'blur(4px)', marginBottom: '24px',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                    {stats.diagramCount} model view{stats.diagramCount !== 1 ? 's' : ''} in this project
+                </div>
+                <button
+                    onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }}
+                    style={{
+                        fontSize: '12px', color: '#4A90D9', background: 'none', border: 'none',
+                        cursor: 'pointer', fontWeight: 600,
+                    }}
+                >
+                    Browse viewpoints →
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/** Every `{{widget:name}}` a dashboard or document can use. */
+export const DASHBOARD_WIDGETS: Record<string, () => ReactNode> = {
+    header: () => <HeaderWidget />,
+    stats: () => <StatsWidget />,
+    coverage: () => <CoverageWidget />,
+    'next-action': () => <NextActionWidget />,
+    'next-steps': () => <NextStepsWidget />,
+    'viewpoint-dashboards': () => <ViewpointDashboardsWidget />,
+    diagrams: () => <DiagramsWidget />,
+};
+
+// ─── Home dashboard ──────────────────────────────────────────────────────────
+
+export function Dashboard() {
+    return <DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_WIDGETS} />;
+}
+
+/** Any custom dashboard, by id; `scope` pins a shadowed shared copy. */
+export function CustomDashboard({ dashboardId, scope }: { dashboardId: string; scope?: DashboardScope }) {
+    return <DashboardPage dashboardId={dashboardId} scope={scope} widgets={DASHBOARD_WIDGETS} />;
 }

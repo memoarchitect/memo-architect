@@ -10,6 +10,13 @@
 //     resolved to a real list when `resolveToc` is set, used on export)
 //   - ```memo-query```             → live query against the model
 //   - ```memo-script```            → placeholder (executed by the CLI on export)
+//   - {{diagram:ref [height=px]}}   → live, read-only diagram embed (preview)
+//   - {{widget:name}}              → live dashboard widget (preview)
+//   - {{model.name|elements|relationships|views|viewpoints}} → live value, inline
+//
+// Embeds are emitted as one renderer-neutral marker; the React side splits the
+// HTML on EMBED_MARKER_RE and mounts live content in each gap. Dashboards
+// (plans/memo-custom-dashboards.md) and DHF documents share this one dialect.
 //
 // The markdown pass is a small block parser (headings, tables, lists, quotes,
 // code fences, paragraphs). Raw HTML lines pass through untouched so directive
@@ -23,15 +30,53 @@ export interface RenderOptions {
     /** Replace {{toc}} with a generated table of contents (export) instead of a placeholder (preview) */
     resolveToc?: boolean;
     /**
-     * How {{diagram:id}} renders: 'marker' (default) emits an empty
-     * `.memo-doc-diagram` div the preview replaces with a live diagram card;
+     * How {{diagram:…}} and {{widget:…}} render: 'marker' (default) emits an
+     * empty `.memo-doc-embed` div the preview replaces with live content;
      * 'note' emits a static reference note (export).
      */
     diagrams?: 'marker' | 'note';
 }
 
-/** Marker element the preview splits on to mount live diagram embeds */
-export const DIAGRAM_MARKER_RE = /<div class="memo-doc-diagram" data-diagram-id="([^"]*)"><\/div>/;
+/**
+ * Marker element the preview splits on to mount live embeds. The single
+ * capture group holds the escaped embed spec, e.g. `diagram:PumpIbd height=520`.
+ */
+export const EMBED_MARKER_RE = /<div class="memo-doc-embed" data-embed="([^"]*)"><\/div>/;
+
+export interface EmbedSpec {
+    kind: 'diagram' | 'widget';
+    /** Diagram reference (id, short id or name) or widget name */
+    ref: string;
+    /** Trailing `key=value` tokens */
+    options: Record<string, string>;
+}
+
+function unescapeHtml(s: string): string {
+    return s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
+/** Parse a captured marker spec back into its parts. */
+export function parseEmbedSpec(raw: string): EmbedSpec | null {
+    const spec = unescapeHtml(raw);
+    const colon = spec.indexOf(':');
+    if (colon < 0) return null;
+    const kind = spec.slice(0, colon);
+    if (kind !== 'diagram' && kind !== 'widget') return null;
+    const tokens = spec.slice(colon + 1).trim().split(/\s+/).filter(Boolean);
+    const options: Record<string, string> = {};
+    // Options are trailing key=value tokens; everything before them is the ref,
+    // so a diagram referenced by a name with spaces still resolves.
+    while (tokens.length > 1 && /^[a-zA-Z]+=\S*$/.test(tokens[tokens.length - 1])) {
+        const [key, value] = tokens.pop()!.split('=');
+        options[key] = value;
+    }
+    const ref = tokens.join(' ');
+    return ref ? { kind, ref, options } : null;
+}
+
+function embedMarker(kind: EmbedSpec['kind'], body: string): string {
+    return `<div class="memo-doc-embed" data-embed="${escapeHtml(`${kind}:${body.trim()}`)}"></div>`;
+}
 
 export function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -108,6 +153,22 @@ function resolveDirectives(
         return `<span class="directive-error">⚠ {{project.${escapeHtml(key)}}} — not set</span>`;
     });
 
+    // {{model.*}} — live model facts, inline in prose. They re-render with the
+    // model like everything else here, so text can carry a number, not only a card.
+    content = content.replace(/\{\{model\.(\w+)\}\}/g, (m, key: string) => {
+        if (!model) return '<span class="directive-placeholder">…</span>';
+        const values: Record<string, string | number> = {
+            name: model.metadata?.projectName || (model as { projectName?: string }).projectName || 'this project',
+            elements: Object.keys(model.elements).length,
+            relationships: model.relationships.length,
+            views: model.diagrams?.length ?? 0,
+            viewpoints: model.viewpoints?.length ?? 0,
+        };
+        return key in values
+            ? escapeHtml(String(values[key]))
+            : `<span class="directive-error">⚠ ${escapeHtml(m)} — unknown; use name, elements, relationships, views or viewpoints</span>`;
+    });
+
     // {{ref:ID.attr}} — element lookup
     content = content.replace(/\{\{ref:([^.}]+)(?:\.(\w+))?\}\}/g, (_m, id, attr) => {
         if (!model) return `<code>${escapeHtml(id)}</code>`;
@@ -117,11 +178,18 @@ function resolveDirectives(
         return escapeHtml(String((el as unknown as Record<string, unknown>)[attr] ?? el.name));
     });
 
-    // {{diagram:id}} — live embed marker in preview, reference note on export
-    content = content.replace(/\{\{diagram:([^}]+)\}\}/g, (_m, id: string) =>
+    // {{diagram:ref [height=px]}} — live embed marker in preview, reference note on export
+    content = content.replace(/\{\{diagram:([^}]+)\}\}/g, (_m, body: string) => {
+        if (opts.diagrams !== 'note') return embedMarker('diagram', body);
+        const ref = parseEmbedSpec(escapeHtml(`diagram:${body}`))?.ref ?? body.trim();
+        return `<p><strong>[Diagram: ${escapeHtml(ref)}]</strong> <em>— view in MEMO Architect</em></p>`;
+    });
+
+    // {{widget:name}} — live dashboard widget in preview, placeholder on export
+    content = content.replace(/\{\{widget:([^}]+)\}\}/g, (_m, name: string) =>
         opts.diagrams === 'note'
-            ? `<p><strong>[Diagram: ${escapeHtml(id.trim())}]</strong> <em>— view in MEMO Architect</em></p>`
-            : `<div class="memo-doc-diagram" data-diagram-id="${escapeHtml(id.trim())}"></div>`);
+            ? `<span class="directive-placeholder">[Widget: ${escapeHtml(name.trim())} — live in MEMO Architect]</span>`
+            : embedMarker('widget', name));
 
     // {{toc}} / {{glossary}} / any other directive
     content = content.replace(/\{\{toc\}\}/g, () => opts.resolveToc
@@ -211,7 +279,20 @@ function inline(text: string): string {
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
         .replace(/_([^_]+)_/g, '<em>$1</em>')
         .replace(/`([^`]+)`/g, (_m, code) => `<code>${escapeHtml(code)}</code>`)
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label: string, href: string) => safeHref(href)
+            ? `<a href="${escapeHtml(href.trim())}">${label}</a>`
+            : label);
+}
+
+/**
+ * Whether a markdown link target may become an href. Dashboards arrive through
+ * git from other people, so a `javascript:` or `data:` link must never render
+ * as something clickable — it renders as its plain label instead.
+ */
+function safeHref(href: string): boolean {
+    const target = href.trim();
+    if (/^(https?:|mailto:)/i.test(target)) return true;
+    return !/^[a-z][a-z0-9+.-]*:/i.test(target) && !/^\/\//.test(target);
 }
 
 const TABLE_SEPARATOR_RE = /^\|\s*:?-{2,}.*\|$/;
@@ -327,7 +408,21 @@ export function renderMarkdownBody(md: string): string {
     return out.join('\n');
 }
 
-// ─── Entry point ─────────────────────────────────────────────────────────────
+// ─── Entry points ────────────────────────────────────────────────────────────
+
+const NO_PEOPLE_DOC = { authors: '', approvers: '' } as DhfDoc;
+
+/**
+ * Render a dashboard page. Same dialect as a DHF document; a dashboard simply
+ * has no authors or approvers of its own.
+ */
+export function renderDashboardHtml(
+    content: string,
+    model: MemoModelDTO | null,
+    settings: DhfSettings,
+): string {
+    return renderDhfDocumentHtml(content, model, settings, NO_PEOPLE_DOC);
+}
 
 /**
  * Render a DHF document's markdown to themed-classes HTML (no styles inlined —

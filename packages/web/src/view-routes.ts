@@ -42,6 +42,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     import: '/import',
     analysis: '/analysis',
     'ui-screens': '/ui-screens',
+    dashboards: '/dashboards',
 };
 
 /**
@@ -83,6 +84,10 @@ export function viewToPath(view: ActiveView): string | null {
                 : `/ontology/${encodeURIComponent(view.packageName)}`;
         case 'dhf-document':
             return `/dhf/${encodeURIComponent(view.docId)}`;
+        // The scope is only spelled out when it pins a shadowed copy; a bare
+        // /dashboards/:id resolves user-then-shared like the list does.
+        case 'custom-dashboard':
+            return `/dashboards/${encodeURIComponent(view.dashboardId)}${view.scope ? `?scope=${view.scope}` : ''}`;
         case 'tabular': {
             // Both parameters are optional; keep them as query params so the
             // bare /table path stays valid on its own.
@@ -126,6 +131,16 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     // /dhf/:docId — but /dhf and /dhf/legacy are static and matched above.
     if (segments[0] === 'dhf' && segments.length === 2) {
         return { type: 'dhf-document', docId: decodeURIComponent(segments[1]) };
+    }
+
+    // /dashboards/:dashboardId[?scope=shared|user]
+    if (segments[0] === 'dashboards' && segments.length === 2) {
+        const scope = new URLSearchParams(search).get('scope');
+        return {
+            type: 'custom-dashboard',
+            dashboardId: decodeURIComponent(segments[1]),
+            scope: scope === 'shared' || scope === 'user' ? scope : undefined,
+        };
     }
 
     // /ontology/:packageName[/:layerId]
@@ -192,7 +207,7 @@ export function addressableViewTypes(): string[] {
     return [
         ...Object.keys(STATIC_VIEW_PATHS),
         'welcome',
-        'ontology-detail', 'dhf-document', 'tabular',
+        'ontology-detail', 'dhf-document', 'tabular', 'custom-dashboard',
         'element-detail', 'diagram',
     ];
 }

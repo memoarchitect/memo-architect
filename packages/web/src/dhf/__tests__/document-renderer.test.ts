@@ -170,3 +170,51 @@ describe('renderDhfDocumentHtml', () => {
         expect(exported).toContain('Purpose');
     });
 });
+
+describe('embeds', () => {
+    it('emits one renderer-neutral marker per diagram and widget, with options', async () => {
+        const { renderDashboardHtml, EMBED_MARKER_RE, parseEmbedSpec } = await import('../document-renderer');
+        const html = renderDashboardHtml(
+            '# Page\n\n{{diagram:Pump IBD height=640}}\n\n{{widget:stats}}\n\nText after.',
+            null, settings(),
+        );
+        const parts = html.split(new RegExp(EMBED_MARKER_RE, 'g'));
+        expect(parts).toHaveLength(5);
+        expect(parseEmbedSpec(parts[1])).toEqual({ kind: 'diagram', ref: 'Pump IBD', options: { height: '640' } });
+        expect(parseEmbedSpec(parts[3])).toEqual({ kind: 'widget', ref: 'stats', options: {} });
+        expect(parts[4]).toContain('Text after.');
+    });
+
+    it('escapes a hostile reference inside the marker', async () => {
+        const { renderDashboardHtml, EMBED_MARKER_RE, parseEmbedSpec } = await import('../document-renderer');
+        const html = renderDashboardHtml('{{diagram:"><img src=x onerror=alert(1)>}}', null, settings());
+        expect(html).not.toContain('<img');
+        const [, spec] = html.split(new RegExp(EMBED_MARKER_RE, 'g'));
+        expect(parseEmbedSpec(spec)?.ref).toContain('<img');
+    });
+
+    it('renders embeds as reference notes on export', () => {
+        const html = renderDhfDocumentHtml('{{diagram:PumpIbd height=640}}\n\n{{widget:stats}}', null, settings(), doc(), { diagrams: 'note' });
+        expect(html).toContain('[Diagram: PumpIbd]');
+        expect(html).toContain('[Widget: stats');
+        expect(html).not.toContain('memo-doc-embed');
+    });
+});
+
+describe('dashboard prose', () => {
+    it('fills {{model.*}} values inline and flags an unknown key', async () => {
+        const { renderDashboardHtml } = await import('../document-renderer');
+        const m = { elements: { a: {}, b: {} }, relationships: [{}], diagrams: [{}, {}, {}], viewpoints: [{}], metadata: { projectName: 'Pump' } } as any;
+        const html = renderDashboardHtml('**{{model.name}}** has {{model.elements}} elements, {{model.relationships}} relationship, {{model.views}} views, {{model.viewpoints}} viewpoint. {{model.bogus}}', m, settings());
+        expect(html).toContain('<strong>Pump</strong> has 2 elements, 1 relationship, 3 views, 1 viewpoint.');
+        expect(html).toContain('unknown; use name');
+    });
+
+    it('never renders a script or data URL as a link', () => {
+        const html = renderMarkdownBody('[bad](javascript:alert(1)) [data](data:text/html,x) [ok](/traceability) [web](https://example.com)');
+        expect(html).not.toContain('javascript:');
+        expect(html).not.toContain('href="data:');
+        expect(html).toContain('<a href="/traceability">ok</a>');
+        expect(html).toContain('<a href="https://example.com">web</a>');
+    });
+});
