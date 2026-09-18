@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@memoarchitect/ontology':
-        specifier: ^0.10.0
-        version: 0.10.9
+        specifier: 0.13.2
+        version: 0.13.2
       '@memoarchitect/tools':
-        specifier: ^0.10.0
-        version: 0.10.8
+        specifier: 0.13.2
+        version: 0.13.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -774,12 +774,12 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
-  '@memoarchitect/ontology@0.10.9':
-    resolution: {integrity: sha512-aG0HsZdZlyirlCD3EFjBwHhJDPgXkhHqg4B5ofrZr3p/EoNq76ESMhmQ4GSVg4iWlfORzKsTVEKAxwhNHObr3g==}
+  '@memoarchitect/ontology@0.13.2':
+    resolution: {integrity: sha512-H4gy+BZiwr4PN12+ck8Y2oPfy76gIWRmVUoAbo/yLdiExwB303Gzdgo6TjzJ/A3UTbuZgdEGmEQsE7VeavTW4w==}
     engines: {node: '>=26.0.0'}
 
-  '@memoarchitect/tools@0.10.8':
-    resolution: {integrity: sha512-FYowEP11jRWmtL9+f5Ej7s1hd/dJ6wx1Swgao/BiKXHEy0PtSRIkbdPGuF/FcGfdG7vy+BRion7XTkSqgQ/4Ow==}
+  '@memoarchitect/tools@0.13.2':
+    resolution: {integrity: sha512-aJWldYGaF/bjDMnLetRs8EQeOcqMB6LhBj74ln81q4HZW62l1X7GkXqYVaMaPWjbUtcJe5Dumk+2UQV5gorq1Q==}
     engines: {node: '>=26.0.0'}
     hasBin: true
 
@@ -2197,9 +2197,6 @@ packages:
   vscode-languageserver-protocol@3.18.2:
     resolution: {integrity: sha512-XRyDbT0Pp3sSNti3JmxVEUMySWCSi1hhM+/KUlCy1hV1zmrqpM1OwO12EAki8blhmLuIMpaJrYbo0OzGVfK2Qg==}
 
-  vscode-languageserver-textdocument@1.0.12:
-    resolution: {integrity: sha512-cxWNPesCnQCcMPeenjKKsOCKQZ/L6Tv19DTRIGuLWe32lyzWhihGVJ/rcckZXJxfdKCFvRLS3fpBIsV/ZGX4zA==}
-
   vscode-languageserver-textdocument@1.0.13:
     resolution: {integrity: sha512-nx0ZHwMGIsVkzFG3/VLeJYBLTaFBRuNdGDvevvjuoayU5EOS2fEYazOhtCM3PI9ClMMg5igc0uwXtAq4tJj+Dw==}
 
@@ -2784,11 +2781,11 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
-  '@memoarchitect/ontology@0.10.9': {}
+  '@memoarchitect/ontology@0.13.2': {}
 
-  '@memoarchitect/tools@0.10.8':
+  '@memoarchitect/tools@0.13.2':
     dependencies:
-      '@memoarchitect/ontology': 0.10.9
+      '@memoarchitect/ontology': 0.13.2
       chalk: 5.6.2
       chokidar: 4.0.3
       commander: 12.1.0
@@ -2799,7 +2796,7 @@ snapshots:
       uuid: 11.1.1
       vscode-jsonrpc: 8.2.1
       vscode-languageserver: 9.0.1
-      vscode-languageserver-textdocument: 1.0.12
+      vscode-languageserver-textdocument: 1.0.13
       ws: 8.21.3
       yaml: 2.8.2
     transitivePeerDependencies:
@@ -4184,8 +4181,6 @@ snapshots:
     dependencies:
       vscode-jsonrpc: 9.0.1
       vscode-languageserver-types: 3.18.0
-
-  vscode-languageserver-textdocument@1.0.12: {}
 
   vscode-languageserver-textdocument@1.0.13: {}
 
