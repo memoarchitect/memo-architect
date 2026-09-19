@@ -141,30 +141,53 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
 
         return useCases
             .map(useCase => {
-                const supportedWorkflows = byType('Supports', 'supportsUseCase')
+                // The operational chain is two hops, and the ontology names both of
+                // them: RealizesUseCase from a workflow to the use case it serves,
+                // and HasScenario from a workflow to each path through it. A
+                // scenario reaches its use case THROUGH its workflow. There is no
+                // scenario-to-use-case relation, because a scenario is a path
+                // through a body of work and not a second statement of the goal.
+                //
+                // This read used to be `Supports` / `supportsUseCase`, plus
+                // `parentUseCase` and `parentWorkflow` attributes on the scenario,
+                // plus a direct `scenarioRealizesUseCase`. The ontology declares
+                // none of those four: not the relations (memo_workflows.sysml has
+                // RealizesUseCase, memo_scenarios.sysml has HasScenario) and not
+                // the attributes (OperativeScenario has no parent refs — its own
+                // comment says the workflow expresses the relationship). So the
+                // view asked for a vocabulary that never existed and every model
+                // read as "No workflows".
+                const workflowElements = [...new Map(byType('RealizesUseCase')
                     .filter(r => r.targetId === useCase.id)
                     .map(r => byId[r.sourceId])
-                    .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow');
-                const scenarioElements = elements
-                    .filter(candidate => candidate.kind.endsWith('Scenario'))
-                    .filter(candidate => refMatches(candidate.attributes.parentUseCase, useCase.id)
-                        || byType('Realizes', 'scenarioRealizesUseCase').some(r => r.sourceId === candidate.id && r.targetId === useCase.id));
-                const parentWorkflows = scenarioElements
-                    .map(scenario => elements.find(candidate => refMatches(scenario.attributes.parentWorkflow, candidate.id)))
-                    .filter((el): el is MemoElement => Boolean(el));
-                const workflowElements = [...new Map([...supportedWorkflows, ...parentWorkflows].map(workflow => [workflow.id, workflow])).values()];
-                const scenarioDetails = scenarioElements
-                    .map(scenario => {
+                    .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow')
+                    .map(workflow => [workflow.id, workflow] as const)).values()];
+                // A workflow owns its scenarios by the HasScenario relation, by
+                // nesting them, or by both. The reference model (gpca-pump) nests
+                // them so each scenario can own the operative actions on its path;
+                // the builder records that as `parentAction`.
+                const scenariosOfWorkflow = (workflow: MemoElement) => {
+                    const linked = new Set(byType('HasScenario')
+                        .filter(r => r.sourceId === workflow.id || refMatches(r.sourceId, workflow.id))
+                        .map(r => r.targetId.split('::').at(-1)?.trim() ?? r.targetId));
+                    return elements.filter(candidate => candidate.kind.endsWith('Scenario')
+                        && (linked.has(candidate.id) || candidate.parentAction === workflow.id));
+                };
+                // Nominal first: the expected path is what a reader needs before
+                // the exceptions, and ScenarioKind defaults to nominal when unset.
+                const nominalFirst = (a: MemoElement, b: MemoElement) => {
+                    const rank = (el: MemoElement) => (el.attributes.scenarioKind ?? 'nominal') === 'nominal' ? 0 : 1;
+                    return rank(a) - rank(b) || a.name.localeCompare(b.name);
+                };
+                const workflows = workflowElements.map(workflow => ({
+                    workflow,
+                    scenarios: scenariosOfWorkflow(workflow).sort(nominalFirst).map(scenario => ({
+                        scenario,
                         // MEMO diagrams are linked to a scenario by an explicit
                         // authored `scenario` reference. Do not infer a link
                         // from selected elements or matching names.
-                        const views = (model.diagrams ?? [])
-                            .filter(d => d.scenarioIds?.includes(scenario.id));
-                        return { scenario, views };
-                    });
-                const workflows = workflowElements.map(workflow => ({
-                    workflow,
-                    scenarios: scenarioDetails.filter(({ scenario }) => refMatches(scenario.attributes.parentWorkflow, workflow.id)),
+                        views: (model.diagrams ?? []).filter(d => d.scenarioIds?.includes(scenario.id)),
+                    })),
                 }));
                 return {
                     useCase,
