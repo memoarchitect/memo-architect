@@ -115,7 +115,10 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
         const useCaseIds = new Set(rawUseCases.map(useCase => useCase.id));
         const childrenByUseCase = new Map<string, string[]>();
         const includedUseCaseIds = new Set<string>();
-        for (const rel of byType('Includes')) {
+        // `include` lowers to an `includesStep` relationship in the builder, not
+        // `Includes`. byType compares lowercased, so the old single name matched
+        // nothing and every use case rendered at the root with no parent.
+        for (const rel of byType('includesStep', 'Includes')) {
             if (!useCaseIds.has(rel.sourceId) || !useCaseIds.has(rel.targetId)) continue;
             const children = childrenByUseCase.get(rel.sourceId) ?? [];
             children.push(rel.targetId);
