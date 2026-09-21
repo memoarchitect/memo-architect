@@ -300,16 +300,20 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                             onSave={next => saveField('doc', next)}
                         />
                     ) : writable ? (
+                        // Prose is native `doc`. `attributes.description` is the
+                        // pre-migration spelling and is read, never written back:
+                        // the MEMO bases no longer declare the attribute, so
+                        // saving one would not compile.
                         <EditableValue
-                            value={element.attributes.description || ''}
-                            onSave={next => saveAttribute('description', next)}
+                            value={element.doc || element.attributes.description || ''}
+                            onSave={next => saveField('doc', next)}
                             density={DENSITY}
                             multiline
                             placeholder="Click to add a description…"
                         />
                     ) : (
                         <ReadOnlyValue
-                            value={element.attributes.description || element.doc || ''}
+                            value={element.doc || element.attributes.description || ''}
                             editability={{ kind: 'derived', reason: `This ${declaration?.origin ?? 'library'} declaration is read-only.` }}
                             density={DENSITY}
                         />

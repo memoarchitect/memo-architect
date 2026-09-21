@@ -65,7 +65,7 @@ Use stable identifiers from the beginning:
 requirement detectFault : Requirement {
     attribute :>> id = "REQ-001";
     attribute :>> requirementKind = RequirementKind::system;
-    attribute :>> name = "DetectDeliveryFault";
+    @MemoIdentity { :>> label = "DetectDeliveryFault"; }
     attribute :>> statement =
         "The device shall detect a delivery fault within two seconds.";
 }

@@ -303,6 +303,11 @@ function ElementProperties() {
         applyEdit(selectedElementId);
     };
 
+    const handleDocSave = (newValue: string) => {
+        updateElementField(selectedElementId, 'doc', newValue);
+        applyEdit(selectedElementId);
+    };
+
     const handleNameSave = (newValue: string) => {
         const name = newValue.trim();
         if (!name || name === element.name) return;
@@ -329,9 +334,12 @@ function ElementProperties() {
                                 />
                             </div>
                             <div className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                                {/* Prose is native `doc`; `attributes.description`
+                                    is the pre-migration spelling, read but never
+                                    written back. */}
                                 <EditableValue
-                                    value={element.attributes.description || ''}
-                                    onSave={newValue => handleAttrSave('description', newValue)}
+                                    value={element.doc || element.attributes.description || ''}
+                                    onSave={newValue => handleDocSave(newValue)}
                                     density={PANEL_DENSITY}
                                     multiline
                                     placeholder="Add a detailed description..."

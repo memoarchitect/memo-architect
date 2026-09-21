@@ -21,7 +21,7 @@ Choose an element by the engineering statement you want to preserve.
 requirement reqBolusLimit : Requirement {
     attribute :>> id = "REQ-025";
     attribute :>> requirementKind = RequirementKind::system;
-    attribute :>> name = "EnforceBolusLimit";
+    @MemoIdentity { :>> label = "EnforceBolusLimit"; }
     attribute :>> statement =
         "The pump shall reject a bolus request that exceeds the configured limit.";
 }
