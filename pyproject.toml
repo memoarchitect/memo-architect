@@ -9,9 +9,14 @@ dependencies = [
     "pymdown-extensions>=10.0",
 ]
 
+# `python -m` is load-bearing: mkdocs.yml's sysml fence resolves
+# `sysml_highlight.sysml_fence_format` from sysml_highlight.py at the repo
+# root, and only `python -m` puts the working directory on sys.path. A bare
+# `mkdocs build` dies in config parsing with "No module named sysml_highlight"
+# — which is what the previous bare script did, every time it was run.
 [tool.pdm.scripts]
-docs-serve = "mkdocs serve"
-docs-build = "mkdocs build"
+docs-serve = "python -m mkdocs serve"
+docs-build = "python -m mkdocs build --strict"
 
 [build-system]
 requires = ["pdm-backend"]
