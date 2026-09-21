@@ -64,8 +64,13 @@ packages/core/syntaxes/
 # Python (pdm / mkdocs)
 .venv/
 __pypackages__/
+__pycache__/
 site/
 *.egg-info/
+
+# pdm's pointer at this machine's interpreter — an absolute path, so it is
+# never shareable. pdm.lock and .python-version ARE committed.
+.pdm-python
 
 # Roadmap plans are tracked docs, not generated GitLab truth.
 .claude/settings.local.json
