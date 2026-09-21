@@ -63,7 +63,7 @@ A view binds to that viewpoint and owns a separate stable ID:
 ```sysml
 view gpcaActionFlowView : MemoDiagramView {
     attribute :>> id = "VIEW-BHV-003";
-    attribute :>> name = "GPCA_InfusionDeliveryActionFlowView";
+    @MemoIdentity { :>> label = "GPCA_InfusionDeliveryActionFlowView"; }
     attribute :>> title = "GPCA Infusion Delivery Action Flow";
     attribute :>> diagramType = "afd";
     part :>> viewpointDefinition = logicalArchitectureViewpoint;

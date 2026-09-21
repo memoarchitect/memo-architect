@@ -27,7 +27,6 @@ package infusion_pump {
 
     requirement safeDelivery : Need {
         attribute :>> id = "NEED-001";
-        attribute :>> name = "SafeDelivery";
         attribute :>> needKind = NeedKind::stakeholder;
         attribute :>> statement =
             "The patient needs medication delivered without unintended over-infusion.";
@@ -36,34 +35,30 @@ package infusion_pump {
     requirement detectOverDelivery : Requirement {
         attribute :>> id = "REQ-001";
         attribute :>> requirementKind = RequirementKind::system;
-        attribute :>> name = "DetectOverDelivery";
         attribute :>> statement =
             "The pump shall detect flow above the configured limit.";
     }
 
     part monitorFlow : LogicalFunction {
         attribute :>> id = "LF-001";
-        attribute :>> name = "MonitorFlow";
     }
 
     part safetyMonitor : LogicalComponent {
         attribute :>> id = "LC-001";
-        attribute :>> name = "SafetyMonitor";
     }
 
     item overInfusion : Hazard {
         attribute :>> id = "HAZ-001";
-        attribute :>> name = "OverInfusion";
     }
 
     item independentMonitor : RiskControlMeasure {
         attribute :>> id = "RC-001";
-        attribute :>> name = "IndependentFlowMonitor";
+        @MemoIdentity { :>> label = "IndependentFlowMonitor"; }
     }
 
     part shutoffTest : VerificationCase {
         attribute :>> id = "VER-001";
-        attribute :>> name = "OverDeliveryShutoffTest";
+        @MemoIdentity { :>> label = "OverDeliveryShutoffTest"; }
     }
 }
 ```

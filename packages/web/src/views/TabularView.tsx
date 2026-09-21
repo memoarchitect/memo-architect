@@ -12,7 +12,7 @@ type SortKey = 'name' | 'kind' | 'layer' | 'status' | string;
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function StatusDot({ element }: { element: MemoElement }) {
-    const hasDoc = Boolean(element.attributes.description?.trim());
+    const hasDoc = Boolean(element.doc?.trim() || element.attributes.description?.trim());
     const attrCount = Object.keys(element.attributes).length;
     // Simple completeness heuristic: doc + ≥1 attribute = complete
     const complete = hasDoc && attrCount >= 1;
@@ -118,7 +118,7 @@ export function TabularView() {
             else if (sortKey === 'status') {
                 // sort by completeness
                 const score = (el: MemoElement) => {
-                    const hasDoc = Boolean(el.attributes.description?.trim());
+                    const hasDoc = Boolean(el.doc?.trim() || el.attributes.description?.trim());
                     const hasAttr = Object.keys(el.attributes).length >= 1;
                     return hasDoc && hasAttr ? 2 : hasDoc || hasAttr ? 1 : 0;
                 };

@@ -100,7 +100,7 @@ export function resolveLegend(
 
     return {
         id: legend.id,
-        name: legend.attributes.name?.trim() || legend.name,
+        name: legend.attributes.label?.trim() || legend.attributes.name?.trim() || legend.name,
         attributeName,
         enumerationName,
         derivedFrom,
