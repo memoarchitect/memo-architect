@@ -64,6 +64,21 @@ export function isStepElement(el: MemoElement): boolean {
     return el.kind.endsWith('Step') || !!el.attributes['stepOrder'];
 }
 
+/**
+ * An action nested in a chain the view shows is one of that chain's steps.
+ *
+ * A step is its function performed at one position — `action sense :>
+ * fnAcquireSensors;` inside the flow — so it builds as an untyped
+ * `ActionUsage` owned by the flow through `parentAction`, with no step kind a
+ * view could select it by. `ActionUsage` is the builder's metaclass fallback
+ * for an untyped action, not an ontology kind; a TYPED nested action (an
+ * OperativeAction inside a scenario) is its own element and is not taken as a
+ * step.
+ */
+export function isNestedStep(el: MemoElement, shownIds: ReadonlySet<string>): boolean {
+    return el.kind === 'ActionUsage' && !!el.parentAction && shownIds.has(el.parentAction);
+}
+
 /** "DD-002: BolusRequestSignal" → "BolusRequestSignal" */
 export function itemShortName(raw: string | undefined): string | undefined {
     if (!raw) return undefined;
@@ -72,11 +87,22 @@ export function itemShortName(raw: string | undefined): string | undefined {
 }
 
 /**
+ * The reference without a trailing label: "FUNC-001: AcquireSensorData" →
+ * "FUNC-001". Only a colon followed by a space starts a label — a qualified
+ * element id (`pkg::pumpController`) is kept whole. Cutting at the first colon
+ * reduced every qualified allocation to its package, so all of a chain's
+ * steps shared one lifeline.
+ */
+export function referenceKey(ref: string): string {
+    return ref.split(/:\s/)[0].trim() || ref;
+}
+
+/**
  * Resolve a step's allocatedFunction reference ("FUNC-001" or an element
  * id) to a display label, searching attribute ids and element ids.
  */
 export function resolveLifelineLabel(ref: string, model: MemoModelDTO): string {
-    const key = ref.split(':')[0].trim();
+    const key = referenceKey(ref);
     const direct = model.elements[key];
     if (direct) return direct.name;
     for (const el of Object.values(model.elements)) {
@@ -101,13 +127,21 @@ export function buildSequenceModel(
 ): SequenceModel {
     const all = Object.values(model.elements);
     const visible = viewpointFilter ? all.filter(viewpointFilter) : all;
-    const steps = visible.filter(isStepElement);
+    const visibleIds = new Set(visible.map(el => el.id));
+    const steps = all.filter(el =>
+        (visibleIds.has(el.id) && isStepElement(el)) || isNestedStep(el, visibleIds));
     const stepIds = new Set(steps.map(s => s.id));
 
-    const ownsSteps = (el: MemoElement) => !isStepElement(el)
-        && model.relationships.some(r =>
-            STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === el.id && stepIds.has(r.targetId));
-    const chains = visible.filter(el => ownsSteps(el));
+    const membersOf = (chain: MemoElement): MemoElement[] => {
+        const ids = new Set([
+            ...model.relationships
+                .filter(r => STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === chain.id && stepIds.has(r.targetId))
+                .map(r => r.targetId),
+            ...steps.filter(s => s.parentAction === chain.id).map(s => s.id),
+        ]);
+        return steps.filter(s => ids.has(s.id));
+    };
+    const chains = visible.filter(el => !stepIds.has(el.id) && membersOf(el).length > 0);
 
     // Fragment definitions: visible elements with a `fragmentType` attribute.
     // Steps reference their fragment via their own `fragment` attribute (by id or name).
@@ -116,6 +150,10 @@ export function buildSequenceModel(
         if (FRAGMENT_TYPES.has(el.attributes['fragmentType'] ?? '')) {
             fragmentDefsByRef.set(el.name, el);
             fragmentDefsByRef.set(el.id, el);
+            // A step writes the fragment's declared name (`fragment =
+            // "monitorLoop"`), which is neither its label nor, since ids were
+            // qualified, its id.
+            if (el.shortName) fragmentDefsByRef.set(el.shortName, el);
         }
     }
 
@@ -123,7 +161,7 @@ export function buildSequenceModel(
     const lifelines: SequenceLifeline[] = [];
     const laneOf = new Map<string, number>();
     const laneFor = (ref: string): number => {
-        const key = ref.split(':')[0].trim() || ref;
+        const key = referenceKey(ref);
         if (!laneOf.has(key)) {
             laneOf.set(key, lifelines.length);
             lifelines.push({ id: key, label: resolveLifelineLabel(ref, model) });
@@ -136,8 +174,11 @@ export function buildSequenceModel(
             .sort((a, b) => numericOrder(a) - numericOrder(b))
             .map(step => ({
                 step,
-                lane: laneFor(step.attributes['allocatedFunction'] ?? step.allocatedTo ?? step.id),
-                item: itemShortName(step.attributes['exchangeItem']),
+                // A nested step with no allocation takes the function it
+                // performs as its lifeline.
+                lane: laneFor(step.attributes['allocatedFunction'] ?? step.allocatedTo ?? step.attributes['subsets'] ?? step.id),
+                item: itemShortName(step.attributes['exchangeItem'])
+                    ?? step.parameters?.find(parameter => parameter.direction === 'out')?.type,
             }));
 
     const scenarioNameFor = (chain: MemoElement): string | undefined => {
@@ -183,9 +224,7 @@ export function buildSequenceModel(
     const claimed = new Set<string>();
     const sections: SequenceSection[] = [];
     for (const chain of chains) {
-        const members = model.relationships
-            .filter(r => STEP_MEMBERSHIP_TYPES.has(r.type) && r.sourceId === chain.id && stepIds.has(r.targetId))
-            .map(r => model.elements[r.targetId]);
+        const members = membersOf(chain);
         for (const m of members) claimed.add(m.id);
         const sectionStepIds = new Set(members.map(m => m.id));
         sections.push({

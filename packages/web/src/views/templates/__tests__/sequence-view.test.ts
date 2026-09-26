@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
-    buildSequenceModel, itemShortName, resolveLifelineLabel, isStepElement,
+    buildSequenceModel, itemShortName, resolveLifelineLabel, isStepElement, referenceKey,
 } from '../sequence-view';
 
 function el(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
@@ -71,6 +71,32 @@ describe('itemShortName / resolveLifelineLabel / isStepElement', () => {
     });
 });
 
+describe('referenceKey', () => {
+    it('drops a trailing label but keeps a qualified id whole', () => {
+        expect(referenceKey('FUNC-001: AcquireSensorData')).toBe('FUNC-001');
+        expect(referenceKey('pkg::pumpController')).toBe('pkg::pumpController');
+        expect(referenceKey('pkg::sub::pumpMechanism')).toBe('pkg::sub::pumpMechanism');
+    });
+
+    it('gives steps allocated to different qualified parts different lifelines', () => {
+        const chain = el('pkg::fc', { kind: 'FunctionalFlow', construct: 'action' });
+        const a = el('pkg::fc::a', { kind: 'ActionUsage', construct: 'action', parentAction: 'pkg::fc', allocatedTo: 'pkg::clinician' });
+        const b = el('pkg::fc::b', { kind: 'ActionUsage', construct: 'action', parentAction: 'pkg::fc', allocatedTo: 'pkg::pumpController' });
+        const seq = buildSequenceModel(model([chain, a, b]), e => e.id === 'pkg::fc');
+        expect(seq.lifelines.map(l => l.id)).toEqual(['pkg::clinician', 'pkg::pumpController']);
+    });
+});
+
+describe('fragments', () => {
+    it('finds a fragment by the declared name a step writes', () => {
+        const chain = el('pkg::fc', { kind: 'FunctionalFlow', construct: 'action' });
+        const loop = el('pkg::monitorLoop', { shortName: 'monitorLoop', name: 'Monitor Loop', kind: 'Part', attributes: { fragmentType: 'loop' } });
+        const read = el('pkg::fc::read', { kind: 'ActionUsage', construct: 'action', parentAction: 'pkg::fc', attributes: { fragment: 'monitorLoop' } });
+        const seq = buildSequenceModel(model([chain, loop, read]), e => e.id !== 'pkg::fc::read');
+        expect(seq.sections[0].fragments.map(f => f.type)).toEqual(['loop']);
+    });
+});
+
 describe('buildSequenceModel', () => {
     it('groups steps per chain via IncludesStep edges, ordered by stepOrder', () => {
         const chain = el('fc1', { kind: 'FunctionalChain', name: 'BolusChain' });
@@ -93,6 +119,34 @@ describe('buildSequenceModel', () => {
         expect(seq.sections[0].occurrences.map(o => o.lane)).toEqual([0, 1, 0]);
         expect(seq.sections[0].occurrences[0].item).toBe('BolusRequestSignal');
         expect(seq.lifelines.map(l => l.id)).toEqual(['FUNC-001', 'FUNC-006']);
+    });
+
+    it('takes the untyped actions nested in a shown chain as its steps', () => {
+        // `action fcsAlarmSense :> fnAcquireSensors { out item sensorVector :> ddSensorVector; }`
+        // inside the flow: no step kind, owned through parentAction. The view
+        // selects the flow; its steps come with it.
+        const chain = el('fc', { kind: 'FunctionalFlow', name: 'AlarmChain', construct: 'action' });
+        const nested = (id: string, fn: string, out?: string): MemoElement => el(id, {
+            kind: 'ActionUsage', construct: 'action', parentAction: 'fc',
+            attributes: { subsets: fn },
+            ...(out ? { parameters: [{ name: 'x', direction: 'out', type: out }] } : {}),
+        });
+        const sense = nested('sense', 'fnAcquireSensors', 'ddSensorVector');
+        const evaluate = nested('evaluate', 'fnMonitorAlarm');
+        const typed = el('oa', { kind: 'OperativeAction', construct: 'action', parentAction: 'fc' });
+        const seq = buildSequenceModel(model([chain, sense, evaluate, typed]), e => e.id === 'fc');
+
+        expect(seq.sections).toHaveLength(1);
+        expect(seq.sections[0].chain?.id).toBe('fc');
+        expect(seq.sections[0].occurrences.map(o => o.step.id)).toEqual(['sense', 'evaluate']);
+        expect(seq.lifelines.map(l => l.id)).toEqual(['fnAcquireSensors', 'fnMonitorAlarm']);
+        expect(seq.sections[0].occurrences[0].item).toBe('ddSensorVector');
+    });
+
+    it('does not take nested actions of a chain the view does not show', () => {
+        const chain = el('fc', { kind: 'FunctionalFlow', construct: 'action' });
+        const nested = el('sense', { kind: 'ActionUsage', construct: 'action', parentAction: 'fc' });
+        expect(buildSequenceModel(model([chain, nested]), () => false).sections).toEqual([]);
     });
 
     it('collects unclaimed steps into a trailing section', () => {
