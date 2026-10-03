@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { architectDevCommand } from '../commands/dev.js';
+import { architectDevToolchainOptions } from '../commands/dev-toolchain.js';
 import {
     architectExampleCommand, listArchitectExamples, listArchitectTemplates,
 } from '../commands/example.js';
@@ -27,19 +28,6 @@ function toolchainOptionsFrom(options: Record<string, unknown>): Record<string, 
             .filter(name => options[name] !== undefined)
             .map(name => [name, options[name]]),
     );
-}
-
-/**
- * Architect is a SysML workbench, so its validity verdict comes from the
- * compiler of record unless the caller deliberately selects another validator.
- * The internal provider still lowers the model into Architect's IR; it is not
- * allowed to redefine what valid SysML means.
- */
-function architectDevToolchainOptions(options: Record<string, unknown>): Record<string, unknown> {
-    const selected = toolchainOptionsFrom(options);
-    return selected['toolchain.validator'] === undefined
-        ? { ...selected, 'toolchain.validator': 'syside' }
-        : selected;
 }
 
 program
@@ -99,7 +87,7 @@ defaultRegistry,
     const open = resolveOption(this, 'open', options.open as boolean);
     const experimental = resolveOption(this, 'experimental', options.experimental as boolean | undefined);
     const keepAlive = resolveOption(this, 'keepAlive', options.keepAlive as boolean | undefined);
-    const toolchainOptions = architectDevToolchainOptions(options);
+    const toolchainOptions = architectDevToolchainOptions(toolchainOptionsFrom(options));
     await architectDevCommand({
         port: Number.parseInt(String(port), 10),
         open,
