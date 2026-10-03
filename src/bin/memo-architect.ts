@@ -3,12 +3,13 @@
 import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { architectDevCommand } from '../commands/dev.js';
-import { architectDevToolchainOptions } from '../commands/dev-toolchain.js';
 import {
     architectExampleCommand, listArchitectExamples, listArchitectTemplates,
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
-import { applyToolchainCliOptions, defaultRegistry, toolchainOptionName } from '@memoarchitect/tools';
+import {
+    applyToolchainCliOptions, defaultRegistry, toolchainOptionName, ToolchainNotConfiguredError,
+} from '@memoarchitect/tools';
 
 const program = new Command();
 
@@ -87,7 +88,9 @@ defaultRegistry,
     const open = resolveOption(this, 'open', options.open as boolean);
     const experimental = resolveOption(this, 'experimental', options.experimental as boolean | undefined);
     const keepAlive = resolveOption(this, 'keepAlive', options.keepAlive as boolean | undefined);
-    const toolchainOptions = architectDevToolchainOptions(toolchainOptionsFrom(options));
+    // Exactly what the caller passed. The compiler is the project's setting;
+    // Architect chooses none for a project that does not.
+    const toolchainOptions = toolchainOptionsFrom(options);
     await architectDevCommand({
         port: Number.parseInt(String(port), 10),
         open,
@@ -134,4 +137,12 @@ program
         });
     });
 
-program.parse();
+// A project whose settings name no compiler is told what to set, not shown a
+// stack: Architect chooses none for it. Anything else is still a crash.
+program.parseAsync().catch((error: unknown) => {
+    if (error instanceof ToolchainNotConfiguredError) {
+        console.error(`\n❌ ${error.message}\n`);
+        process.exit(1);
+    }
+    throw error;
+});
