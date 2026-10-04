@@ -1057,7 +1057,10 @@ export function sendLlmSuggest(requestId: string): void {
  * in a text editor.
  */
 export function writeRulePolicy(request: {
-    targetRuleType: string;
+    /** Exactly one of a rule, a standard (qualified name) or a layer. */
+    targetRuleType?: string;
+    targetStandard?: string;
+    targetCategory?: string;
     disposition: 'enabled' | 'disabled' | 'replaced';
     severityOverride?: 'error' | 'warning' | 'info';
     replacementRuleType?: string;

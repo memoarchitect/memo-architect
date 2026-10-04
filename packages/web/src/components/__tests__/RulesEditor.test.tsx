@@ -26,7 +26,7 @@ let root: Root | undefined;
 let container: HTMLElement;
 
 const clauses = [
-    { qualifiedName: 'p::iso14971::c7', standard: 'ISO 14971:2019', clauseNumber: '7', title: 'risk control' },
+    { qualifiedName: 'p::iso14971::c7', standard: 'ISO 14971:2019', standardName: 'p::iso14971', clauseNumber: '7', title: 'risk control' },
 ];
 const rule = (over: Record<string, unknown> = {}) => ({
     sourceRuleId: 'CR-MED-001', sourceRuleType: 'HazardMitigationRule', activeRuleId: 'CR-MED-001', activeRuleType: 'HazardMitigationRule',

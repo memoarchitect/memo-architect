@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { layersWithRules, rulesSelectedBy, standardsWithRules } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { methodologySource, writeRulePolicy } from '../store/ws-client';
 import { COLOR, FONT } from '../styles/tokens';
@@ -24,14 +25,22 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
     const rules = useModelStore(state => state.effectiveRules);
     const diagnostics = useModelStore(state => state.ruleDiagnostics);
     const methodology = useModelStore(state => state.methodology);
+    const clauses = useModelStore(state => state.ruleClauses);
 
     const targets = useMemo(() => [...new Set(
         (methodology?.folders ?? []).flatMap(folder => folder.sourceFiles),
     )].sort(), [methodology]);
 
+    // One policy selects what it governs one way: a rule, every rule of a standard,
+    // or every rule on a layer (the discipline of the rule's subject kind).
+    const [selector, setSelector] = useState<'rule' | 'standard' | 'category'>('rule');
+    const [standard, setStandard] = useState('');
+    const [category, setCategory] = useState('');
+    const standards = useMemo(() => standardsWithRules(rules, clauses), [rules, clauses]);
+    const layers = useMemo(() => layersWithRules(rules), [rules]);
     const [ruleType, setRuleType] = useState(chosen ?? '');
     // The rule list above can pick the rule to tailor.
-    useEffect(() => { if (chosen) setRuleType(chosen); }, [chosen]);
+    useEffect(() => { if (chosen) { setRuleType(chosen); setSelector('rule'); } }, [chosen]);
     const [disposition, setDisposition] = useState<'enabled' | 'disabled' | 'replaced'>('disabled');
     const [severity, setSeverity] = useState('');
     const [replacement, setReplacement] = useState('');
@@ -42,13 +51,21 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
     const [message, setMessage] = useState('');
     const [busy, setBusy] = useState(false);
 
-    const selected = rules.find((rule: any) => rule.sourceRuleType === ruleType);
+    const selected = selector === 'rule' ? rules.find((rule: any) => rule.sourceRuleType === ruleType) : undefined;
     const isInvariant = selected?.tailoring === 'invariant';
+    const reached = selector === 'standard' ? rulesSelectedBy(rules, { targetStandard: standard })
+        : selector === 'category' ? rulesSelectedBy(rules, { targetCategory: category }) : [];
+    const keepRunning = reached.filter((rule: any) => rule.tailoring === 'invariant');
+    const bulk = selector !== 'rule';
+    const hasTarget = selector === 'rule' ? Boolean(ruleType) : selector === 'standard' ? Boolean(standard) : Boolean(category);
     // Mirrors the server's refusals so the button is disabled for the same
     // reasons the write would be rejected. The server check is the real one;
     // this only avoids a pointless round trip.
     const blocked =
-        !ruleType || !sourceFile
+        !hasTarget || !sourceFile
+        || (bulk && reached.length === 0)
+        || (bulk && disposition === 'replaced')
+        || (bulk && disposition === 'disabled' && keepRunning.length === reached.length)
         || (isInvariant && disposition !== 'enabled')
         || (disposition !== 'enabled' && !rationale.trim())
         || (disposition === 'replaced' && !replacement.trim());
@@ -63,7 +80,8 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
                 return;
             }
             const result = await writeRulePolicy({
-                targetRuleType: ruleType,
+                ...(selector === 'rule' ? { targetRuleType: ruleType }
+                    : selector === 'standard' ? { targetStandard: standard } : { targetCategory: category }),
                 disposition,
                 severityOverride: severity ? severity as 'error' | 'warning' | 'info' : undefined,
                 replacementRuleType: disposition === 'replaced' ? replacement.trim() : undefined,
@@ -94,17 +112,50 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
                 <span style={{ fontWeight: 400, color: COLOR.muted }}> — {rules.length} rules in the effective set</span>
             </div>
 
-            <select aria-label="Rule" value={ruleType} style={field}
-                onChange={event => setRuleType(event.target.value)}>
-                <option value="">Select a rule…</option>
-                {rules.map((rule: any) => (
-                    <option key={rule.sourceRuleType} value={rule.sourceRuleType}>
-                        {rule.sourceRuleId} — {rule.sourceRuleType}
-                        {rule.tailoring === 'invariant' ? ' (invariant)' : ''}
-                        {rule.disposition !== 'enabled' ? ` [${rule.disposition}]` : ''}
-                    </option>
-                ))}
+            <select aria-label="Selects" value={selector} style={field}
+                onChange={event => {
+                    setSelector(event.target.value as typeof selector);
+                    if (event.target.value !== 'rule' && disposition === 'replaced') setDisposition('disabled');
+                }}>
+                <option value="rule">One rule</option>
+                <option value="standard">Every rule of a standard</option>
+                <option value="category">Every rule on a layer</option>
             </select>
+
+            {selector === 'rule' && (
+                <select aria-label="Rule" value={ruleType} style={field}
+                    onChange={event => setRuleType(event.target.value)}>
+                    <option value="">Select a rule…</option>
+                    {rules.map((rule: any) => (
+                        <option key={rule.sourceRuleType} value={rule.sourceRuleType}>
+                            {rule.sourceRuleId} — {rule.sourceRuleType}
+                            {rule.tailoring === 'invariant' ? ' (invariant)' : ''}
+                            {rule.disposition !== 'enabled' ? ` [${rule.disposition}]` : ''}
+                        </option>
+                    ))}
+                </select>
+            )}
+            {selector === 'standard' && (
+                <select aria-label="Standard" value={standard} style={field}
+                    onChange={event => setStandard(event.target.value)}>
+                    <option value="">Select a standard…</option>
+                    {standards.map(entry => <option key={entry.standardName} value={entry.standardName}>{entry.standard}</option>)}
+                </select>
+            )}
+            {selector === 'category' && (
+                <select aria-label="Layer" value={category} style={field}
+                    onChange={event => setCategory(event.target.value)}>
+                    <option value="">Select a layer…</option>
+                    {layers.map(layer => <option key={layer} value={layer}>{layer}</option>)}
+                </select>
+            )}
+            {bulk && hasTarget && (
+                <div className="px-3 pb-1" role="status" style={{ fontSize: 11, color: COLOR.muted }}>
+                    Reaches {reached.length} rule{reached.length === 1 ? '' : 's'}
+                    {keepRunning.length > 0 && ` · ${keepRunning.length} invariant keep${keepRunning.length === 1 ? 's' : ''} running`}
+                    {reached.length > 0 && `: ${reached.map((rule: any) => rule.sourceRuleId).join(', ')}`}
+                </div>
+            )}
 
             {selected && (
                 <div className="px-3 pb-1" style={{ fontSize: 11, color: COLOR.muted }}>
@@ -125,7 +176,7 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
             <select aria-label="Disposition" value={disposition} style={field}
                 onChange={event => setDisposition(event.target.value as typeof disposition)}>
                 <option value="disabled">Disable</option>
-                <option value="replaced">Replace</option>
+                {!bulk && <option value="replaced">Replace</option>}
                 <option value="enabled">Enable (severity override only)</option>
             </select>
 
