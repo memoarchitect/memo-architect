@@ -503,7 +503,7 @@ export function UiScreensWorkspace() {
                 // joins the screen currently open: UI screens are authored
                 // together and belong in the same file. Naming a generated file
                 // outright put it outside the project's configured source roots,
-                // where `memo validate` and `syside check` never look. The
+                // where `memo validate` and the selected compiler never look. The
                 // generated file remains only for the very first screen, with
                 // nothing open.
                 file: screen?.file || 'model/generated.sysml',

@@ -744,7 +744,7 @@ export function requestRelationshipCreate(
     // element's file, else a canonical catalog as a LAST resort), so naming the
     // catalog here meant every authored link landed in the last resort — often
     // outside the project's configured source roots, where `memo validate` and
-    // `syside check` never look.
+    // the selected compiler never look.
     //
     // The field cannot simply be dropped: the write is guarded by a precondition
     // carrying the expected hash of the file being edited, computed below from
@@ -1039,7 +1039,7 @@ export function sendLlmSuggest(requestId: string): void {
  * The browser sends the decision, never the SysML. Tools renders the policy and
  * writes it through the same precondition-checked path as every other mutation,
  * so a rule tailored here is subject to the same conflict handling as one typed
- * in SysIDE.
+ * in a text editor.
  */
 export function writeRulePolicy(request: {
     targetRuleType: string;
