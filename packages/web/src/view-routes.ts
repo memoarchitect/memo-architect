@@ -42,6 +42,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     import: '/import',
     analysis: '/analysis',
     'ui-screens': '/ui-screens',
+    rules: '/rules',
     dashboards: '/dashboards',
 };
 

@@ -43,6 +43,7 @@ const TabularView = lazy(() => import('./views/TabularView').then(m => ({ defaul
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
 const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(m => ({ default: m.UiScreensWorkspace })));
+const RulesWorkspace = lazy(() => import('./views/RulesWorkspace').then(m => ({ default: m.RulesWorkspace })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -123,6 +124,8 @@ function UnifiedCanvas() {
                 return isFeatureEnabled('analysis') ? <AnalysisWorkspace /> : <Dashboard />;
             case 'ui-screens':
                 return <UiScreensWorkspace />;
+            case 'rules':
+                return <RulesWorkspace />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;
