@@ -15,7 +15,7 @@ import { COLOR, FONT } from '../styles/tokens';
  * It composes no SysML. The decision goes to Tools, which renders the
  * `RulePolicy` and writes it through the precondition-checked path. That is
  * what "through the command boundary" means: a rule tailored here and a rule
- * tailored in SysIDE produce the same construct in the same file.
+ * tailored in a text editor produce the same construct in the same file.
  *
  * Section 10.4: this governs a rule's IDENTITY and DISPOSITION. It is not
  * evidence that the model was validated.
