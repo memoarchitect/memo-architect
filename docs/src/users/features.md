@@ -115,9 +115,9 @@ seven model-independent notebooks:
 | Ownership graph | SVG graph of model ownership relationships |
 | Model inventory table | HTML inventory with filters and CSV export |
 
-The samples use the licensed Syside Python API and automatically locate either
-the nearest `model/` or `src/` directory. Start JupyterLab from `analysis/` on
-port 8888 before opening the menu.
+The samples read the model through `analysis/memo_model.py`, compiled by the
+project's selected compiler (`toolchain.compiler`). Start JupyterLab from
+`analysis/` on port 8888 before opening the menu.
 
 See [Analysis Tools](analysis-tools.md).
 
