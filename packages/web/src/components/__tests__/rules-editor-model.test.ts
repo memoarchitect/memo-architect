@@ -8,8 +8,8 @@ import {
 } from '../rules-editor-model';
 
 const clauses: ClauseFact[] = [
-    { qualifiedName: 'p::iso14971::c7', standard: 'ISO 14971:2019', clauseNumber: '7', title: 'risk control' },
-    { qualifiedName: 'p::iec62304::c5_2', standard: 'IEC 62304:2006+AMD1:2015', clauseNumber: '5.2', title: 'software requirements analysis' },
+    { qualifiedName: 'p::iso14971::c7', standard: 'ISO 14971:2019', standardName: 'p::iso14971', clauseNumber: '7', title: 'risk control' },
+    { qualifiedName: 'p::iec62304::c5_2', standard: 'IEC 62304:2006+AMD1:2015', standardName: 'p::iec62304', clauseNumber: '5.2', title: 'software requirements analysis' },
 ];
 const rule = (over: Partial<EditorRule> = {}): EditorRule => ({
     sourceRuleId: 'CR-MED-001', sourceRuleType: 'HazardMitigationRule', disposition: 'enabled',
