@@ -16,7 +16,7 @@ import type {
     EditConflictMessage,
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
-import type { ValidationResult, CompletenessReport, LlmSettingsStatus, DashboardDTO, DashboardScope } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus, DashboardDTO, DashboardScope, ClauseFact } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -132,7 +132,7 @@ export interface SourceChange {
 }
 
 /** Primary navigation modes — mirrors the top-nav in ModeSwitcher. */
-export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'ui-screens' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai' | 'analysis';
+export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'ui-screens' | 'scenario' | 'ontology' | 'dsm' | 'dhf' | 'import' | 'ai' | 'analysis' | 'rules';
 
 /** Active view in the unified canvas */
 export type ActiveView =
@@ -161,6 +161,7 @@ export type ActiveView =
     | { type: 'import' }
     | { type: 'analysis' }
     | { type: 'ui-screens' }
+    | { type: 'rules' }                // the rules the project is checked against, and the means to change them
     | { type: 'welcome' };
 
 /** A presentation patch the canvas can apply to its current selection. */
@@ -278,6 +279,10 @@ export interface ModelState {
      */
     effectiveRules: any[];
     ruleDiagnostics: any[];
+    /** Every clause of every standard the model carries, to name and choose what a rule enforces. */
+    ruleClauses: ClauseFact[];
+    /** The project's own source files: where a rule of the user's may be written. */
+    ruleProjectFiles: string[];
     /** Last source-change notification from the dev server, or null. */
     lastSourceChange: SourceChange | null;
 
@@ -374,7 +379,7 @@ export interface ModelState {
     /** Record which source files the server just rebuilt from. */
     applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
     setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
-    setEffectiveRules: (rules: any[], diagnostics: any[]) => void;
+    setEffectiveRules: (rules: any[], diagnostics: any[], clauses?: ClauseFact[], projectFiles?: string[]) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -524,6 +529,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     methodology: null,
     effectiveRules: [],
     ruleDiagnostics: [],
+    ruleClauses: [],
+    ruleProjectFiles: [],
     lastSourceChange: null,
 
     // UI state
@@ -792,8 +799,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
         lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
     })),
     setMethodology: (m) => set({ methodology: m }),
-    setEffectiveRules: (rules, diagnostics) =>
-        set({ effectiveRules: rules ?? [], ruleDiagnostics: diagnostics ?? [] }),
+    setEffectiveRules: (rules, diagnostics, clauses, projectFiles) =>
+        set({
+            effectiveRules: rules ?? [], ruleDiagnostics: diagnostics ?? [],
+            ruleClauses: clauses ?? [], ruleProjectFiles: projectFiles ?? [],
+        }),
     setModel: (model) => set((s) => {
         let activeView = s.activeView;
         let selectedDiagramId = s.selectedDiagramId;

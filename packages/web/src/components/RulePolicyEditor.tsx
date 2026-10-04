@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useModelStore } from '../store/model-store';
 import { methodologySource, writeRulePolicy } from '../store/ws-client';
 import { COLOR, FONT } from '../styles/tokens';
@@ -20,7 +20,7 @@ import { COLOR, FONT } from '../styles/tokens';
  * Section 10.4: this governs a rule's IDENTITY and DISPOSITION. It is not
  * evidence that the model was validated.
  */
-export function RulePolicyEditor() {
+export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {}) {
     const rules = useModelStore(state => state.effectiveRules);
     const diagnostics = useModelStore(state => state.ruleDiagnostics);
     const methodology = useModelStore(state => state.methodology);
@@ -29,7 +29,9 @@ export function RulePolicyEditor() {
         (methodology?.folders ?? []).flatMap(folder => folder.sourceFiles),
     )].sort(), [methodology]);
 
-    const [ruleType, setRuleType] = useState('');
+    const [ruleType, setRuleType] = useState(chosen ?? '');
+    // The rule list above can pick the rule to tailor.
+    useEffect(() => { if (chosen) setRuleType(chosen); }, [chosen]);
     const [disposition, setDisposition] = useState<'enabled' | 'disabled' | 'replaced'>('disabled');
     const [severity, setSeverity] = useState('');
     const [replacement, setReplacement] = useState('');

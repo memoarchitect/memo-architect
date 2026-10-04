@@ -17,6 +17,10 @@ const NAV_MODES = [
     { id: 'ui-screens', label: 'UI Screens', icon: '▣' },
     { id: 'dhf', label: 'Documents', icon: '⊞' },
     { id: 'scenario', label: 'Use Cases', icon: '▶' },
+    // Rules are part of the regulated workspace, not an advanced surface: what
+    // the project is checked against, which clause each enforces, and how to
+    // change it on the record.
+    { id: 'rules', label: 'Rules', icon: '⚖' },
     // Deliberately top-level while enabled: AI work is a distinct workspace,
     // not a document action.  The feature gate keeps it absent by default and
     // exposes it only when Architect was started with --experimental.
@@ -268,6 +272,7 @@ export function ModeSwitcher() {
         // in the center pane without entering the Viewpoints workbench.
         if (activeMode === 'scenario' && activeView.type === 'diagram') return 'scenario';
         if (activeView.type === 'analysis') return 'analysis';
+        if (activeView.type === 'rules') return 'rules';
         if (activeView.type === 'ui-screens' || activeMode === 'ui-screens') return 'ui-screens';
         if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
         // The dashboard retains the last explorer mode in `activeMode`. It is
@@ -313,6 +318,10 @@ export function ModeSwitcher() {
             case 'ui-screens':
                 setActiveView({ type: 'ui-screens' });
                 navigate('/ui-screens');
+                break;
+            case 'rules':
+                setActiveView({ type: 'rules' });
+                navigate('/rules');
                 break;
             case 'dhf':
                 setActiveView({ type: 'dhf-dashboard' });

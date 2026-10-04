@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -121,6 +121,8 @@ const elementMutationRequests = new Map<string, PendingRequest<ElementMutationRe
 const packageMutationRequests = new Map<string, PendingRequest<PackageMutationResultMessage['payload']>>();
 const methodologySourceRequests = new Map<string, PendingRequest<MethodologySourceResultMessage['payload']>>();
 const rulePolicyWriteRequests = new Map<string, PendingRequest<any>>();
+const rulePreviewRequests = new Map<string, PendingRequest<RulePreviewResultMessage['payload']>>();
+const ruleCreateRequests = new Map<string, PendingRequest<RuleCreateResultMessage['payload']>>();
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
 
 /**
@@ -176,6 +178,13 @@ function rejectRelationshipRequests(message: string): void {
         pending.reject(new Error('The development server disconnected.'));
     }
     rulePolicyWriteRequests.clear();
+    for (const requests of [rulePreviewRequests, ruleCreateRequests]) {
+        for (const pending of requests.values()) {
+            clearTimeout(pending.timer);
+            pending.reject(new Error('The development server disconnected.'));
+        }
+        requests.clear();
+    }
     for (const pending of methodologySourceRequests.values()) {
         clearTimeout(pending.timer);
         pending.reject(new Error(message));
@@ -345,10 +354,16 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'rules:update':
             if (restartPending) return;
-            store.setEffectiveRules(msg.payload.rules, msg.payload.diagnostics);
+            store.setEffectiveRules(msg.payload.rules, msg.payload.diagnostics, msg.payload.clauses, msg.payload.projectFiles);
             break;
         case 'rule:policy:write:result':
             settleRelationshipRequest(msg.payload, rulePolicyWriteRequests);
+            break;
+        case 'rule:preview:result':
+            settleRelationshipRequest(msg.payload, rulePreviewRequests);
+            break;
+        case 'rule:create:result':
+            settleRelationshipRequest(msg.payload, ruleCreateRequests);
             break;
         case 'error':
             console.error('[MEMO] Server error:', msg.payload.message);
@@ -1063,5 +1078,42 @@ export function writeRulePolicy(request: {
         }, WRITE_REQUEST_TIMEOUT_MS);
         rulePolicyWriteRequests.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type: 'rule:policy:write', payload: { requestId, ...request } }));
+    });
+}
+
+
+/**
+ * What a rule of the user's would flag in the model as it stands. The form
+ * names the rule and a condition; the server builds the expression, checks the
+ * rule and answers. Nothing is written.
+ */
+export function previewRule(form: Omit<RuleFormPayload, 'requestId'>): Promise<RulePreviewResultMessage['payload']> {
+    return sendRuleRequest('rule:preview', 'rule-preview', form, rulePreviewRequests, 'previewing the rule');
+}
+
+/**
+ * Write a rule of the user's. The server renders it, checks it, and writes it
+ * through the compile-before-commit path; `baseRevision` is the file's revision
+ * from the preview, so a file that changed since is refused, not overwritten.
+ */
+export function createRule(form: Omit<RuleFormPayload, 'requestId'> & { baseRevision: string }): Promise<RuleCreateResultMessage['payload']> {
+    return sendRuleRequest('rule:create', 'rule-create', form, ruleCreateRequests, 'writing the rule');
+}
+
+function sendRuleRequest<T>(
+    type: 'rule:preview' | 'rule:create', prefix: string, form: object,
+    pending: Map<string, PendingRequest<T>>, doing: string,
+): Promise<T> {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error('The development server is not connected.'));
+    }
+    const requestId = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            pending.delete(requestId);
+            reject(new Error(`Timed out while ${doing}.`));
+        }, WRITE_REQUEST_TIMEOUT_MS);
+        pending.set(requestId, { resolve, reject, timer });
+        ws!.send(JSON.stringify({ type, payload: { requestId, ...form } }));
     });
 }
