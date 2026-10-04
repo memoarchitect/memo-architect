@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/src/**"
       - "mkdocs.yml"
+      - "overrides/**"
       - "pyproject.toml"
       - "src/bin/memo-architect.ts"
       - "src/commands/example.ts"
