@@ -123,7 +123,7 @@ for a project.
 ```bash
 memo ontology show
 memo validate .
-memo rules coverage .
+memo standards check
 ```
 
 Validation identifies unresolved source, unsupported kinds, relationship gaps,
