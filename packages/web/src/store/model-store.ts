@@ -16,7 +16,7 @@ import type {
     EditConflictMessage,
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
-import type { ValidationResult, CompletenessReport, LlmSettingsStatus, DashboardDTO, DashboardScope, ClauseFact } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, DashboardDTO, DashboardScope, ClauseFact } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -509,6 +509,9 @@ export interface ModelState {
     /** Provider/model/key-origin as resolved by the server. Never holds the key. */
     llmSettings: LlmSettingsStatus | null;
     setLlmSettings: (settings: LlmSettingsStatus) => void;
+    /** The user's own toolchain settings (which compiler, where its tools are), and the layer that decided each. */
+    toolchainSettings: UserToolchainStatus | null;
+    setToolchainSettings: (settings: UserToolchainStatus) => void;
     setLlmStatus: (available: boolean, provider?: string, model?: string) => void;
     registerLlmRequest: (requestId: string, resolve: (v: any) => void, reject: (e: Error) => void) => void;
     resolveLlmRequest: (requestId: string, value: any) => void;
@@ -633,6 +636,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     llmProvider: undefined,
     llmModel: undefined,
     llmPending: new Map(),
+    toolchainSettings: null,
+    setToolchainSettings: (settings) => set({ toolchainSettings: settings }),
     llmSettings: null,
     setLlmSettings: (settings) => set({
         llmSettings: settings,

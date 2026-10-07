@@ -440,6 +440,17 @@ function handleMessage(msg: ExtendedServerMessage): void {
         case 'llm:settings':
             store.setLlmSettings(msg.payload.settings);
             break;
+        case 'toolchain:settings':
+            store.setToolchainSettings(msg.payload.settings);
+            break;
+        case 'toolchain:settings:save:result':
+            // Requests share the pending-request registry the LLM calls use.
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, msg.payload);
+            }
+            break;
         case 'llm:ask:result':
             if (msg.payload.error) {
                 store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
@@ -1013,6 +1024,13 @@ export function sendLlmChat(
 export function sendLlmApply(requestId: string, changes: ProposedChange[]): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'llm:chat:apply', payload: { requestId, changes } }));
+    }
+}
+
+/** Set (or, with no value, remove) one of the user's own toolchain settings. It is written to their settings file, not the project. */
+export function sendToolchainSettingsSave(requestId: string, path: string, value?: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'toolchain:settings:save', payload: { requestId, path, ...(value ? { value } : {}) } }));
     }
 }
 
