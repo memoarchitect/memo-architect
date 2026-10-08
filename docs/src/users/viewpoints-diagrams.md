@@ -110,8 +110,8 @@ memo-architect build --output review-viewer --standalone
 Export model data or Graphviz through MEMO Tools:
 
 ```bash
-memo export json --output model.json
-memo export dot --output model.dot --viewpoint VP-LOG
+memo-architect export json --output model.json
+memo-architect export dot --output model.dot --viewpoint VP-LOG
 ```
 
 ## Add a view

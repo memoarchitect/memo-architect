@@ -27,7 +27,7 @@ viewer, and checks both command entry points.
 npm install ./memo-ontology-*.tgz ./memo-tools-*.tgz ./memo-architect-*.tgz
 
 mkdir my-device && cd my-device
-memo init .
+memo-architect init .
 memo validate .
 memo-architect dev   # http://127.0.0.1:3000
 ```

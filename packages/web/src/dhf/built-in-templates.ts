@@ -47,7 +47,7 @@ export const builtInTemplateCount = Object.keys(TEMPLATE_MAP).length;
 //
 // Only the three keys the wizard groups and labels by. This is deliberately a
 // reader for the shipped subset, not a YAML parser: the templates are content
-// this repo ships, `memo dhf lint` already rejects frontmatter it cannot parse,
+// this repo ships, `memo-architect dhf lint` already rejects frontmatter it cannot parse,
 // and pulling a YAML dependency into the web bundle to read three scalar keys
 // would cost more than it explains.
 export interface BuiltInTemplateInfo {

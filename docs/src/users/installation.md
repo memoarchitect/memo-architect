@@ -54,7 +54,7 @@ npm install @memoarchitect/tools
 npm install @memoarchitect/architect
 ```
 
-`memo init` creates a project `package.json` and installs
+`memo-architect init` creates a project `package.json` and installs
 `@memoarchitect/ontology` in that project's `node_modules`. It also creates
 `syside.toml`, which indexes the project source and the installed ontology
 source. Then initialize a product model in its own directory:
@@ -62,7 +62,7 @@ source. Then initialize a product model in its own directory:
 ```bash
 mkdir my-device
 cd my-device
-memo init .
+memo-architect init .
 memo validate .
 memo-architect dev
 ```

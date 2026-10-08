@@ -17,7 +17,7 @@ check its own work afterwards.
 From your project directory:
 
 ```bash
-memo mcp init
+memo-architect mcp init
 ```
 
 That writes two files:
@@ -29,29 +29,29 @@ That writes two files:
 
 Restart Cursor, then check **Settings → MCP** for a server named `memo`.
 
-If you already have MCP servers configured, `memo mcp init` merges into the existing
+If you already have MCP servers configured, `memo-architect mcp init` merges into the existing
 `.cursor/mcp.json` rather than replacing it — your other servers are left alone.
 
 To skip the rules file:
 
 ```bash
-memo mcp init --no-rules
+memo-architect mcp init --no-rules
 ```
 
 ### Claude Code
 
 ```bash
-claude mcp add memo -- npx -y --package=@memoarchitect/tools memo mcp --project /path/to/your/project
+claude mcp add memo -- npx -y --package=@memoarchitect/architect memo-architect mcp --project /path/to/your/project
 ```
 
-`memo mcp init` prints this line with your project path already filled in.
+`memo-architect mcp init` prints this line with your project path already filled in.
 
 ### Any other MCP client
 
 The server speaks MCP over stdio. Point your client at:
 
 ```bash
-npx -y --package=@memoarchitect/tools memo mcp --project /path/to/your/project
+npx -y --package=@memoarchitect/architect memo-architect mcp --project /path/to/your/project
 ```
 
 !!! note "No API key needed"
@@ -88,7 +88,7 @@ through your editor, where you review the diff as you would any other code chang
 To let the agent create elements directly:
 
 ```bash
-memo mcp init --write
+memo-architect mcp init --write
 ```
 
 That adds one more tool:
@@ -115,7 +115,7 @@ you to restart with `--write`, rather than failing silently.
 Useful when debugging a client that will not connect:
 
 ```bash
-memo mcp --project .
+memo-architect mcp --project .
 ```
 
 The server speaks JSON-RPC on stdout and logs to stderr, so a bare run looks like it has
@@ -135,18 +135,18 @@ agent to check the ontology before editing, to use exact element ids, to treat t
 drawn from a standard as regulated vocabulary rather than paraphrasing them, and to run
 `memo_validate` afterwards.
 
-It is a normal file — edit it to suit your team's conventions. `memo mcp init` overwrites
+It is a normal file — edit it to suit your team's conventions. `memo-architect mcp init` overwrites
 it, so keep local changes elsewhere or re-apply them after re-running init.
 
 ---
 
 ## Troubleshooting
 
-**The server does not appear in Cursor.** Restart Cursor after `memo mcp init` —
+**The server does not appear in Cursor.** Restart Cursor after `memo-architect mcp init` —
 it reads `.cursor/mcp.json` at startup.
 
 **"No MEMO project found."** The `--project` path must contain the native entrypoint
-`model/catalog/project.sysml`. Run `memo mcp init` from the project root so the
+`model/catalog/project.sysml`. Run `memo-architect mcp init` from the project root so the
 generated path is correct.
 
 **Answers look stale.** The server reloads when your `.sysml` files change, checked per

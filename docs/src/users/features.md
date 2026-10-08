@@ -102,7 +102,7 @@ Use this area to answer:
 v2 models.
 
 Choose **Analysis → Jupyter Notebooks** to open the live local JupyterLab server.
-Every project created by `memo init` includes `analysis/Samples/README.md` and
+Every project created by `memo-architect init` includes `analysis/Samples/README.md` and
 seven model-independent notebooks:
 
 | Notebook | Analysis |

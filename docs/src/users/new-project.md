@@ -6,9 +6,9 @@ traceability, and validation issues before the model becomes large.
 ## 1. Scaffold
 
 ```bash
-memo init my-device
+memo-architect init my-device
 cd my-device
-memo ontology show
+memo-architect ontology show
 memo validate .
 ```
 
@@ -35,7 +35,7 @@ node_modules/@memoarchitect/ontology/
 as one model.
 
 `analysis/Samples` contains seven model-independent Jupyter notebooks created by
-`memo init`, including charts, an SVG ownership graph, and an HTML/CSV inventory
+`memo-architect init`, including charts, an SVG ownership graph, and an HTML/CSV inventory
 table. Start JupyterLab from the project's `analysis` directory, then use
 **Analysis → Jupyter Notebooks** in Architect to open it.
 

@@ -32,7 +32,7 @@ cloning the repo to passing design reviews with complete traceability.
 
 ```mermaid
 graph LR
-    A[Clone MEMO] --> B[memo init my-device]
+    A[Clone MEMO] --> B[memo-architect init my-device]
     B --> C[Import CSV data]
     C --> D[Add relationships in .sysml]
     D --> E[memo-architect dev — visual review]

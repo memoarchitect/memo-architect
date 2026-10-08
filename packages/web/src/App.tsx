@@ -409,10 +409,10 @@ export function App() {
                                     Create a <code>.sysml</code> file in your <code>model/</code> directory
                                 </li>
                                 <li style={{ marginBottom: '6px' }}>
-                                    Import from CSV: <code>pnpm memo import template elements</code>
+                                    Import from CSV: <code>pnpm memo-architect import template elements</code>
                                 </li>
                                 <li>
-                                    Scaffold a new project: <code>pnpm memo init my-device</code>
+                                    Scaffold a new project: <code>pnpm memo-architect init my-device</code>
                                 </li>
                             </ol>
                         </div>
