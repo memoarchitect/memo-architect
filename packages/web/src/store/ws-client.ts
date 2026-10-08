@@ -1027,10 +1027,13 @@ export function sendLlmApply(requestId: string, changes: ProposedChange[]): void
     }
 }
 
-/** Set (or, with no value, remove) one of the user's own toolchain settings. It is written to their settings file, not the project. */
-export function sendToolchainSettingsSave(requestId: string, path: string, value?: string): void {
+/**
+ * Set (or, with no value, remove) a toolchain setting. By default it is the user's own, written to
+ * their settings file; with `scope: 'project'` it is the project's, written to its checked-in file.
+ */
+export function sendToolchainSettingsSave(requestId: string, path: string, value?: string, scope: 'user' | 'project' = 'user'): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'toolchain:settings:save', payload: { requestId, path, ...(value ? { value } : {}) } }));
+        ws.send(JSON.stringify({ type: 'toolchain:settings:save', payload: { requestId, path, scope, ...(value ? { value } : {}) } }));
     }
 }
 

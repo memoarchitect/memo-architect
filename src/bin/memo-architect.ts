@@ -2,13 +2,14 @@
 
 import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
+import { ConfigSettingError, configGetCommand, configSetCommand, configUnsetCommand } from '../commands/config.js';
 import { architectDevCommand } from '../commands/dev.js';
 import {
     architectExampleCommand, listArchitectExamples, listArchitectTemplates,
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 import {
-    applyToolchainCliOptions, defaultRegistry, toolchainOptionName, ToolchainNotConfiguredError,
+    applyToolchainCliOptions, defaultRegistry, initializeProject, ProjectNamesUserSettingError, toolchainOptionName, ToolchainNotConfiguredError,
 } from '@memoarchitect/tools';
 
 const program = new Command();
@@ -102,6 +103,53 @@ defaultRegistry,
     });
 });
 
+// ─── Creating a project, and its settings ───────────────────────────────────
+// MEMO Tools compiles and validates; creating a project and choosing its
+// compiler are Architect's.
+
+program
+    .command('init')
+    .description('Create a new MEMO project (it names opensysml as its compiler)')
+    .argument('[name]', 'Project directory (omit or "." to initialize the current directory)')
+    .option('-t, --template <id>', 'Create from an ontology template')
+    .option('--ontology <package>', 'Logical ontology package to use (defaults from the content manifest)')
+    .option('--example <id>', 'Create from an example project (e.g. gpca)')
+    .option('--list', 'List installed ontology templates and examples')
+    .option('--no-install', 'Create the project without running npm install')
+    .action(async (name: string | undefined, options: { template?: string; ontology?: string; example?: string; list?: boolean; install?: boolean }) => {
+        await initializeProject(name, options);
+    });
+
+const configCommand = program
+    .command('config')
+    .description('Choose the compiler: for yourself, or with --project for everyone on the project');
+
+configCommand
+    .command('set')
+    .description('Set a setting for yourself (overrides the project\'s), or with --project for the whole project')
+    .argument('<setting>', 'compiler. (Low-level overrides such as opensysml.binary or syside.python exist for unusual installs; MEMO finds tools in the usual places.)')
+    .argument('<value>', 'the value')
+    .option('--project', 'Write the project\'s checked-in settings file instead of your own')
+    .action((setting: string, value: string, options: { project?: boolean }) => {
+        configSetCommand(setting, value, options.project ? { root: process.cwd() } : undefined);
+    });
+
+configCommand
+    .command('get')
+    .description('Show your settings and which layer decided each: the command line, the environment, yours, the project\'s')
+    .argument('[setting]', 'One setting; the compiler when omitted')
+    .option('--all', 'Also list the low-level overrides (where a tool is, the validator and lowering roles)')
+    .action((setting: string | undefined, options: { all?: boolean }) => { configGetCommand(setting, options); });
+
+configCommand
+    .command('unset')
+    .description('Remove a setting of your own, or with --project the project\'s')
+    .argument('<setting>', 'the setting')
+    .option('--project', 'Remove it from the project\'s checked-in settings file instead of your own')
+    .action((setting: string, options: { project?: boolean }) => {
+        configUnsetCommand(setting, options.project ? { root: process.cwd() } : undefined);
+    });
+
 program
     .command('examples')
     .description('List bundled example IDs accepted by --example')
@@ -140,7 +188,7 @@ program
 // A project whose settings name no compiler is told what to set, not shown a
 // stack: Architect chooses none for it. Anything else is still a crash.
 program.parseAsync().catch((error: unknown) => {
-    if (error instanceof ToolchainNotConfiguredError) {
+    if (error instanceof ToolchainNotConfiguredError || error instanceof ProjectNamesUserSettingError || error instanceof ConfigSettingError) {
         console.error(`\n❌ ${error.message}\n`);
         process.exit(1);
     }

@@ -1,10 +1,11 @@
 // ─── Compiler settings ───────────────────────────────────────────────────────
 //
-// The project names the compiler it uses, in its own (checked-in) settings. A
-// user who wants another sets their own here: it is written to their settings
-// file, outside the project, so it overrides the project's for them and is never
+// The project names the compiler it uses, in its own (checked-in) settings, and
+// this is where that is changed for everyone on the project. A user who wants
+// another for themselves sets their own: it is written to their settings file,
+// outside the project, so it overrides the project's for them and is never
 // committed. Only the choice is asked: MEMO finds the compiler's tools in the usual
-// places. This is the browser side of `memo config set`; both go through the same
+// places. This is the browser side of `memo-architect config set`; both go through the same
 // server code, and the server's registry says which settings a user is shown.
 //
 // A change applies when Architect is restarted: the toolchain is resolved once,
@@ -40,17 +41,19 @@ export function CompilerSettings() {
         return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', escape); };
     }, [open]);
 
-    const save = useCallback(async (path: string, value: string | undefined) => {
+    const save = useCallback(async (path: string, value: string | undefined, scope: 'user' | 'project') => {
         setSaving(true);
         setNote(null);
         const requestId = `toolchain-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         try {
             const result = await new Promise<{ appliesOnRestart?: boolean }>((resolve, reject) => {
                 registerLlmRequest(requestId, resolve, reject);
-                sendToolchainSettingsSave(requestId, path, value);
+                sendToolchainSettingsSave(requestId, path, value, scope);
                 setTimeout(() => reject(new Error('The save timed out.')), 20_000);
             });
-            setNote(result.appliesOnRestart ? 'Saved. It applies when Architect is restarted.' : 'Saved.');
+            setNote(scope === 'project'
+                ? 'Saved in the project\'s settings file. Architect restarts to apply it; commit the file so everyone on the project uses it.'
+                : result.appliesOnRestart ? 'Saved. It applies when Architect is restarted.' : 'Saved.');
         } catch (e: any) {
             setNote(e?.message ?? 'The setting could not be saved.');
         } finally {
@@ -61,6 +64,7 @@ export function CompilerSettings() {
     if (!status) return null;
     const compiler = status.settings.find(s => s.path === 'compiler');
     const chosen = compiler?.value;
+    const projectValue = compiler?.layers.find(l => l.layer === 'project')?.value;
 
     const field: React.CSSProperties = {
         width: '100%', padding: '5px 8px', border: '1px solid #CBD5E1', borderRadius: 6,
@@ -96,25 +100,38 @@ export function CompilerSettings() {
                     }}
                 >
                     <div style={{ fontSize: 12, fontWeight: 700 }}>Compiler</div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>
-                        {compiler?.layers.find(l => l.layer === 'project')
-                            ? `The project uses ${compiler.layers.find(l => l.layer === 'project')!.value}. `
-                            : 'The project names none. '}
-                        A choice here is yours alone: it is saved in {status.file}, not in the project.
+                    <div>
+                        <label style={label} htmlFor="memo-compiler-project">This project uses</label>
+                        <select
+                            id="memo-compiler-project"
+                            style={field}
+                            value={projectValue ?? ''}
+                            disabled={saving}
+                            onChange={e => { void save('compiler', e.target.value || undefined, 'project'); }}
+                        >
+                            <option value="">(none named)</option>
+                            {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                            Written to the project's settings file, so everyone who opens the project uses it. Commit it.
+                        </div>
                     </div>
                     <div>
-                        <label style={label} htmlFor="memo-compiler">Compiler</label>
+                        <label style={label} htmlFor="memo-compiler">Just for me</label>
                         <select
                             id="memo-compiler"
                             style={field}
                             value={compiler?.layers.find(l => l.layer === 'user settings')?.value ?? ''}
                             disabled={saving}
-                            onChange={e => { void save('compiler', e.target.value || undefined); }}
+                            onChange={e => { void save('compiler', e.target.value || undefined, 'user'); }}
                         >
                             <option value="">(the project's)</option>
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
-                        {compiler?.layer && compiler.layer !== 'user settings' && (
+                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                            Overrides the project's choice for you only. Saved in {status.file}, not in the project.
+                        </div>
+                        {compiler?.layer && compiler.layer !== 'user settings' && compiler.layer !== 'project' && (
                             <div style={{ fontSize: 11, color: '#B45309', marginTop: 4 }}>
                                 {LAYER_LABEL[compiler.layer] ?? compiler.layer} decides the compiler for this run: {compiler.value}.
                             </div>
