@@ -21,7 +21,7 @@ Plugins in MEMO are designed to be decoupled from the core logic, allowing for e
 Use the CLI to scaffold a new plugin project:
 
 ```bash
-memo-architect plugin create my-custom-exporter
+memo-architect new plugin my-custom-exporter
 ```
 
 This will create a new directory with the following structure:
