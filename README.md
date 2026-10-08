@@ -66,7 +66,7 @@ interaction; it does not maintain a second engineering model.
 
 ### Jupyter analysis
 
-Projects created with `memo init` include seven notebooks under
+Projects created with `memo-architect init` include seven notebooks under
 `analysis/Samples/`: overview and quality reports, architecture hotspots,
 change-impact exploration, charts, an SVG ownership graph, and an inventory
 table with CSV export. Start JupyterLab from the project and select

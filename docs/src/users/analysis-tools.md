@@ -5,7 +5,7 @@ MEMO includes a suite of advanced analysis tools for design verification, depend
 ## Jupyter notebooks
 
 **Analysis → Jupyter Notebooks** opens the project's live JupyterLab workspace
-at `http://127.0.0.1:8888`. New projects created with `memo init` contain an
+at `http://127.0.0.1:8888`. New projects created with `memo-architect init` contain an
 `analysis/Samples` folder with seven sample notebooks:
 
 - model overview and semantic composition;
@@ -28,7 +28,7 @@ jupyter lab --port 8888
 ```
 
 The `memo` command must be on `PATH` there (or `MEMO_CLI` set to the command
-that runs it), with whatever the selected compiler needs: `memo toolchain probe`
+that runs it), with whatever the selected compiler needs: `memo compile --probe`
 reports it. MEMO's internal compiler builds no SysML v2 model, so it cannot
 serve the notebooks; `memo_model.load()` says so.
 

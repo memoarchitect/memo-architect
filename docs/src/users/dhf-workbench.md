@@ -58,10 +58,10 @@ You can generate documents individually or as a "Review Packet."
 **Using the CLI:**
 ```bash
 # Export the Risk Management Plan to Word
-memo export dhf --target rmp --format docx
+memo-architect export dhf --target rmp --format docx
 
 # Generate a full review packet for a design review
-memo dhf review-packet --output ./v1-baseline
+memo-architect dhf review-packet --output ./v1-baseline
 ```
 
 ## Configuration

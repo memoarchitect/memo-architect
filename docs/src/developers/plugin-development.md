@@ -21,7 +21,7 @@ Plugins in MEMO are designed to be decoupled from the core logic, allowing for e
 Use the CLI to scaffold a new plugin project:
 
 ```bash
-memo plugin create my-custom-exporter
+memo-architect plugin create my-custom-exporter
 ```
 
 This will create a new directory with the following structure:
@@ -75,15 +75,15 @@ Once installed, you can list and execute plugins via the CLI:
 
 ```bash
 # List all installed plugins
-memo plugin list
+memo-architect plugin list
 
 # Run a specific plugin against your current project
-memo plugin run acme-mtbf-viz
+memo-architect plugin run acme-mtbf-viz
 ```
 
 ## 6. Distribution
 
 Plugins can be shared as npm packages or git subtrees. To install a plugin:
 ```bash
-memo install https://github.com/acme/memo-plugin-mtbf.git
+memo-architect install https://github.com/acme/memo-plugin-mtbf.git
 ```

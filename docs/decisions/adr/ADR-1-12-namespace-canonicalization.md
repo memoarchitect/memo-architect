@@ -56,7 +56,7 @@ A canonical namespace scheme is required before incremental migration epics (Bâ€
 | L0 helpers | `memo::base::*` | `memo::base::dimensions::ElementKind` |
 | L1 ontology | `memo::ontology::*` | `memo::ontology::architecture::software::SoftwareElement` |
 | L2 methodology | `memo::methodology::<id>::*` | `memo::methodology::default::scope::defaultScope` |
-| L3 project | project package per `memo init` | `gpca::pump::system::PumpSystem` |
+| L3 project | project package per `memo-architect init` | `gpca::pump::system::PumpSystem` |
 | Vendor / domain extension | `memo::ext::<vendor>::*` | `memo::ext::aerospace::AerospaceProfile` |
 
 Within `memo::ontology`, the second segment names the **dimension** (`architecture`, `compliance`, `artifacts`, `viewpoints`, `views`, `relationships`, `rules`). The third segment refines the dimension by sublayer, standard, or document kind â€” e.g. `memo::ontology::architecture::software`, `memo::ontology::compliance::iso_14971`, `memo::ontology::artifacts::software_architecture_document`.

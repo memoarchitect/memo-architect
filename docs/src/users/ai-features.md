@@ -47,7 +47,7 @@ MEMO_LLM_MODEL=claude-opus-5
 ```
 
 !!! warning "Keep `.env` out of version control"
-    `memo init` adds `.env` to `.gitignore`. If you created the project another way,
+    `memo-architect init` adds `.env` to `.gitignore`. If you created the project another way,
     add it yourself before committing.
 
 ### Resolution order
@@ -133,8 +133,8 @@ description. MEMO supplies your ontology — the kinds and relationships your pr
 actually defines — so the output fits your profile rather than generic SysML v2.
 
 ```bash
-memo generate "Create a software item called AlarmsModule and allocate it to the microcontroller."
-memo generate "Create 5 stakeholder needs for a portable ventilator, focusing on battery and portability."
+memo-architect generate "Create a software item called AlarmsModule and allocate it to the microcontroller."
+memo-architect generate "Create 5 stakeholder needs for a portable ventilator, focusing on battery and portability."
 ```
 
 In the workbench, review the generated SysML in the preview panel and commit it if it
@@ -149,7 +149,7 @@ Regulatory drafting is among the most time-consuming parts of device development
 sections of a technical file.
 
 ```bash
-memo dhf draft --target rmp --section "Risk Acceptability"
+memo-architect dhf draft --target rmp --section "Risk Acceptability"
 ```
 
 Templates are tuned for ISO 14971, IEC 62304, and IEC 60601.

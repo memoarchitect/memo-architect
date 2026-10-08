@@ -9,7 +9,7 @@ import {
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 import {
-    applyToolchainCliOptions, defaultRegistry, initializeProject, ProjectNamesUserSettingError, toolchainOptionName, ToolchainNotConfiguredError,
+    applyToolchainCliOptions, defaultRegistry, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError,
 } from '@memoarchitect/tools';
 
 const program = new Command();
@@ -103,26 +103,16 @@ defaultRegistry,
     });
 });
 
-// ─── Creating a project, and its settings ───────────────────────────────────
-// MEMO Tools compiles and validates; creating a project and choosing its
-// compiler are Architect's.
-
-program
-    .command('init')
-    .description('Create a new MEMO project (it names opensysml as its compiler)')
-    .argument('[name]', 'Project directory (omit or "." to initialize the current directory)')
-    .option('-t, --template <id>', 'Create from an ontology template')
-    .option('--ontology <package>', 'Logical ontology package to use (defaults from the content manifest)')
-    .option('--example <id>', 'Create from an example project (e.g. gpca)')
-    .option('--list', 'List installed ontology templates and examples')
-    .option('--no-install', 'Create the project without running npm install')
-    .action(async (name: string | undefined, options: { template?: string; ontology?: string; example?: string; list?: boolean; install?: boolean }) => {
-        await initializeProject(name, options);
-    });
+// ─── The project commands, and settings ────────────────────────────────────
+// MEMO Tools' program compiles and validates; everything else a person does with a
+// project (create it, author, package, export, the AI helpers, the regulatory
+// workbench) is registered from MEMO Tools' implementations here. Choosing the
+// compiler is Architect's own.
+registerProjectCommands(program);
 
 const configCommand = program
     .command('config')
-    .description('Choose the compiler: for yourself, or with --project for everyone on the project');
+    .description('Settings: choose the compiler, for yourself or with --project for everyone on the project (what is in effect: memo compile --effective)');
 
 configCommand
     .command('set')
@@ -165,7 +155,7 @@ program
     .action(() => {
         console.log('Available project templates:');
         for (const id of listArchitectTemplates()) console.log(`  ${id}`);
-        console.log('\nCreate one with: memo init <project> --template <id>');
+        console.log('\nCreate one with: memo-architect init <project> --template <id>');
     });
 
 program

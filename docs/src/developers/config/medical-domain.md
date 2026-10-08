@@ -115,15 +115,15 @@ The profile uses typed relationships rather than labels embedded in prose.
 | `DeploysTo` | Software component | Host assembly |
 | `DependsOnSoup` | Software component | SOUP item |
 
-Use `memo ontology show` to inspect the complete relationship registry resolved
+Use `memo-architect ontology show` to inspect the complete relationship registry resolved
 for a project.
 
 ## Project validation
 
 ```bash
-memo ontology show
+memo-architect ontology show
 memo validate .
-memo standards check
+memo validate --standards
 ```
 
 Validation identifies unresolved source, unsupported kinds, relationship gaps,

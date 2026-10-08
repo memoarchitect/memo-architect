@@ -40,7 +40,7 @@ MEMO uses **two distinct configuration formats**, one per artifact type. The can
 
 ## Format 1: Device Project — `memo.config.yaml`
 
-Device projects (created with `memo init`) use a **single monolithic file** at the project root.
+Device projects (created with `memo-architect init`) use a **single monolithic file** at the project root.
 
 ### File: `memo.config.yaml`
 
@@ -152,7 +152,7 @@ The directory path determines the CoSMA layer (`sysml/risk/` → risk layer): th
 
 | Concern | Device project | Ontology/profile package |
 |---------|---------------|--------------------------|
-| Who creates it | End users (`memo init`) | Framework maintainers / package authors |
+| Who creates it | End users (`memo-architect init`) | Framework maintainers / package authors |
 | What it declares | Which profile + extensions to use | What kinds, rules, and layers exist |
 | Kind definitions | Inherited, never repeated | Defined in `.sysml` files |
 | Closure rules | Inherited, never repeated | Defined in `memo.rules.yaml` |

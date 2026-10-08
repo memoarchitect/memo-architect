@@ -72,6 +72,6 @@ the [`memo` CLI](https://memoarchitect.github.io/memo-tools/reference/commands/)
 ```bash
 memo templates
 memo examples
-memo init my-device --template infusion-pump
+memo-architect init my-device --template infusion-pump
 memo validate my-device
 ```

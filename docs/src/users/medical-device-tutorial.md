@@ -80,6 +80,6 @@ workbench update. Rerun validation. Confirm that:
 
 ## 6. Apply the pattern to your project
 
-Create a new project with `memo init`, then build one vertical scenario slice.
+Create a new project with `memo-architect init`, then build one vertical scenario slice.
 Use [Start a New Project](new-project.md) and
 [Model Your Device](modeling-guide.md) as the checklist.
