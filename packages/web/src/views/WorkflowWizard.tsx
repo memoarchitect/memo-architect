@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 // ─── WorkflowWizard (#40) ───────────────────────────────────────────────────
 //
@@ -88,13 +89,13 @@ const STEPS: WizardStep[] = [
         title: 'Connect Risk Chain',
         description: 'Add risk controls and connect them to hazards with Mitigates relationships. Verify the ISO 14971 chain.',
         standard: 'ISO 14971 §7–8',
-        getCount: (m) => m.relationships.filter(r => r.type.toLowerCase() === 'mitigates').length,
+        getCount: (m) => relationshipsOfType(m, 'mitigates').length,
         getTarget: () => 2,
         actionLabel: 'Traceability Matrix',
         actionView: 'traceability',
         getDetails: (m) => {
             const controls = Object.values(m.elements).filter(el => el.kind.toLowerCase() === 'riskcontrol').length;
-            const mitigates = m.relationships.filter(r => r.type.toLowerCase() === 'mitigates').length;
+            const mitigates = relationshipsOfType(m, 'mitigates').length;
             return `${controls} risk control(s) · ${mitigates} mitigates link(s)`;
         },
     },
@@ -127,9 +128,7 @@ const STEPS: WizardStep[] = [
         actionView: 'traceability',
         getDetails: (m) => {
             const tests = Object.values(m.elements).filter(el => el.kind.toLowerCase() === 'test').length;
-            const tracesLinks = m.relationships.filter(r =>
-                ['satisfies', 'refines', 'traces', 'verifies'].includes(r.type.toLowerCase())
-            ).length;
+            const tracesLinks = relationshipsOfType(m, 'satisfies', 'refines', 'traces', 'verifies').length;
             return `${tests} test(s) · ${tracesLinks} traceability link(s)`;
         },
     },

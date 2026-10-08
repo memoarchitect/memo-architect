@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 // ─── First-Review Dashboard (#132) ─────────────────────────────────────────
 //
@@ -184,7 +185,7 @@ function RiskSection({ model }: { model: MemoModelDTO }) {
         const elements = Object.values(model.elements);
         const hazards = elements.filter(el => el.kind.toLowerCase() === 'hazard');
         const riskControls = elements.filter(el => el.kind.toLowerCase() === 'riskcontrol');
-        const mitigatesRels = model.relationships.filter(r => r.type.toLowerCase() === 'mitigates');
+        const mitigatesRels = relationshipsOfType(model, 'mitigates');
         const mitigatesCount = mitigatesRels.length;
         // Hazards with at least one Mitigates relation
         const mitigatedHazardIds = new Set(mitigatesRels.map(r => r.targetId));

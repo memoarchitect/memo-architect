@@ -16,6 +16,7 @@ import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { CONTROL_IN, CONTROL_OUT } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 /**
  * Which activity symbol an element draws as.
@@ -52,8 +53,7 @@ export function findFloatingActions(
     const registries = model.registries;
     const actionIds = new Set(actions.filter(action => !isControlNode(action, registries)).map(action => action.id));
     const connected = new Set<string>();
-    for (const relationship of model.relationships) {
-        if (relationship.type !== 'flow' && relationship.type !== 'succession') continue;
+    for (const relationship of relationshipsOfType(model, 'flow', 'succession')) {
         if (actionIds.has(relationship.sourceId)) connected.add(relationship.sourceId);
         if (actionIds.has(relationship.targetId)) connected.add(relationship.targetId);
     }
@@ -642,8 +642,8 @@ export async function computeActionFlowViewLayout(
     const swimlanes = nesting !== 'nested' && (options?.swimlanes ?? true) && lanes.length >= 1;
 
     // ── Pseudo start/done nodes (builder convention: <parent>__start/__done) ──
-    const rawSuccRels = model.relationships.filter(r => r.type === 'succession');
-    const rawFlowRels = model.relationships.filter(r => r.type === 'flow');
+    const rawSuccRels = relationshipsOfType(model, 'succession');
+    const rawFlowRels = relationshipsOfType(model, 'flow');
     // Flat mode splices an expanded composite out of the flow, so edges that
     // addressed it must move to its first/last step. Nested mode keeps the
     // composite as a frame, and edges stay attached to the frame itself.

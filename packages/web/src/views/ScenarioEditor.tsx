@@ -7,6 +7,7 @@ import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
 import { ExplorerCountBadge } from '../components/ExplorerCountBadge';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 const SCENARIO_VIEW_GROUPS = [
     { label: 'Activity diagram', types: new Set(['act']) },
@@ -105,20 +106,14 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
         if (!model) return [];
         const elements = Object.values(model.elements);
         const byId = model.elements;
-        const byType = (...types: string[]) => {
-            const accepted = new Set(types.map(type => type.toLowerCase()));
-            return model.relationships.filter(r => accepted.has(r.type.toLowerCase()));
-        };
-        const refMatches = (value: unknown, id: string) => typeof value === 'string'
-            && value.split('::').at(-1)?.trim() === id;
+        const byType = (...types: string[]) => relationshipsOfType(model, ...types);
         const rawUseCases = elements.filter(e => e.kind.endsWith('UseCase'));
         const useCaseIds = new Set(rawUseCases.map(useCase => useCase.id));
         const childrenByUseCase = new Map<string, string[]>();
         const includedUseCaseIds = new Set<string>();
         // `include` lowers to an `includesStep` relationship in the builder, not
-        // `Includes`. byType compares lowercased, so the old single name matched
-        // nothing and every use case rendered at the root with no parent.
-        for (const rel of byType('includesStep', 'Includes')) {
+        // `Includes`, which the ontology never declared.
+        for (const rel of byType('includesStep')) {
             if (!useCaseIds.has(rel.sourceId) || !useCaseIds.has(rel.targetId)) continue;
             const children = childrenByUseCase.get(rel.sourceId) ?? [];
             children.push(rel.targetId);
@@ -144,9 +139,9 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
 
         return useCases
             .map(useCase => {
-                // The operational chain is two hops, and the ontology names both of
-                // them: RealizesUseCase from a workflow to the use case it serves,
-                // and HasScenario from a workflow to each path through it. A
+                // The operational chain is two hops: RealizesUseCase from a workflow
+                // to the use case it serves, and the scenario nested in the workflow
+                // (the ontology removed a `HasScenario` relation for that). A
                 // scenario reaches its use case THROUGH its workflow. There is no
                 // scenario-to-use-case relation, because a scenario is a path
                 // through a body of work and not a second statement of the goal.
@@ -155,7 +150,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                 // `parentUseCase` and `parentWorkflow` attributes on the scenario,
                 // plus a direct `scenarioRealizesUseCase`. The ontology declares
                 // none of those four: not the relations (memo_workflows.sysml has
-                // RealizesUseCase, memo_scenarios.sysml has HasScenario) and not
+                // RealizesUseCase) and not
                 // the attributes (OperativeScenario has no parent refs — its own
                 // comment says the workflow expresses the relationship). So the
                 // view asked for a vocabulary that never existed and every model
@@ -165,17 +160,11 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                     .map(r => byId[r.sourceId])
                     .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow')
                     .map(workflow => [workflow.id, workflow] as const)).values()];
-                // A workflow owns its scenarios by the HasScenario relation, by
-                // nesting them, or by both. The reference model (gpca-pump) nests
-                // them so each scenario can own the operative actions on its path;
-                // the builder records that as `parentAction`.
-                const scenariosOfWorkflow = (workflow: MemoElement) => {
-                    const linked = new Set(byType('HasScenario')
-                        .filter(r => r.sourceId === workflow.id || refMatches(r.sourceId, workflow.id))
-                        .map(r => r.targetId.split('::').at(-1)?.trim() ?? r.targetId));
-                    return elements.filter(candidate => candidate.kind.endsWith('Scenario')
-                        && (linked.has(candidate.id) || candidate.parentAction === workflow.id));
-                };
+                // A workflow owns its scenarios by nesting them, so each scenario can
+                // own the operative actions on its path; the builder records that
+                // as `parentAction`.
+                const scenariosOfWorkflow = (workflow: MemoElement) => elements.filter(
+                    candidate => candidate.kind.endsWith('Scenario') && candidate.parentAction === workflow.id);
                 // Nominal first: the expected path is what a reader needs before
                 // the exceptions, and ScenarioKind defaults to nominal when unset.
                 const nominalFirst = (a: MemoElement, b: MemoElement) => {

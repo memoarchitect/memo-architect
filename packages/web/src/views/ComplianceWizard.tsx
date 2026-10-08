@@ -3,6 +3,7 @@ import { useModelStore } from '../store/model-store';
 import { sendElementUpdate } from '../store/ws-client';
 import { LAYER_COLORS } from '../constants';
 import type { MemoElement, OntologyPackageInfo } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 // ─── Compliance Wizard Steps ────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ function checkISO14971(model: ReturnType<typeof useModelStore.getState>['model']
 
     // Check that every hazard has at least one mitigates relationship
     const mitigatedHazards = new Set(
-        model.relationships.filter(r => r.type === 'mitigates').map(r => r.targetId)
+        relationshipsOfType(model, 'mitigates').map(r => r.targetId)
     );
     const unmitigated = hazards.filter(h => !mitigatedHazards.has(h.id));
     checks.push({
@@ -102,7 +103,7 @@ function checkISO14971(model: ReturnType<typeof useModelStore.getState>['model']
 
     // Check verification
     const verifiedControls = new Set(
-        model.relationships.filter(r => r.type === 'verify').map(r => r.targetId)
+        relationshipsOfType(model, 'verify').map(r => r.targetId)
     );
     const unverified = controls.filter(c => !verifiedControls.has(c.id));
     checks.push({
@@ -140,7 +141,7 @@ function checkIEC62304(model: ReturnType<typeof useModelStore.getState>['model']
 
     // Check traceability
     const tracedReqs = new Set(
-        model.relationships.filter(r => r.type === 'traceTo').map(r => r.sourceId)
+        relationshipsOfType(model, 'traceTo').map(r => r.sourceId)
     );
     const untracedReqs = swReqs.filter(r => !tracedReqs.has(r.id));
     checks.push({

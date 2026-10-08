@@ -13,7 +13,8 @@
 // resolved by the properties panel, the same as for any other part.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 /** A rectangle in frame coordinates: 0..1 of the capture, origin top-left. */
 export interface Rect {
@@ -99,10 +100,9 @@ export function toFrame(parent: Rect, child: Rect): Rect {
     };
 }
 
-function relatedIds(rels: MemoRelationship[], type: string): Map<string, string[]> {
+function relatedIds(model: MemoModelDTO, type: string): Map<string, string[]> {
     const out = new Map<string, string[]>();
-    for (const r of rels) {
-        if (r.type.toLowerCase() !== type) continue;
+    for (const r of relationshipsOfType(model, type)) {
         const list = out.get(r.sourceId) ?? [];
         list.push(r.targetId);
         out.set(r.sourceId, list);
@@ -121,7 +121,6 @@ export function computeScreenLayout(
 ): ScreenLayoutScene {
     const elements = Object.values(model.elements ?? {});
     const byId = new Map(elements.map(e => [e.id, e]));
-    const rels = model.relationships ?? [];
 
     const captures = elements.filter(e => e.kind === 'ScreenCapture');
     const capture = options.captureId
@@ -132,7 +131,7 @@ export function computeScreenLayout(
     }
 
     // CapturesScreen: capture → the screen UIElement it depicts.
-    const capturesScreen = relatedIds(rels, 'capturesscreen');
+    const capturesScreen = relatedIds(model, 'capturesScreen');
     const screenId = (capturesScreen.get(capture.id) ?? [])[0];
     const screen = screenId ? byId.get(screenId) : undefined;
     if (!screen) {
@@ -143,8 +142,8 @@ export function computeScreenLayout(
         };
     }
 
-    const composes = relatedIds(rels, 'composes');
-    const navigates = relatedIds(rels, 'navigatesto');
+    const composes = relatedIds(model, 'composes');
+    const navigates = relatedIds(model, 'navigatesTo');
 
     // A capture may depict a full screen or a recursively focused sub-region.
     // Its captured root always owns the full frame; authored bounds remain
@@ -221,8 +220,7 @@ export function listCaptures(model: MemoModelDTO): MemoElement[] {
  * one layout to the next.
  */
 export function captureForScreen(model: MemoModelDTO, screenId: string): MemoElement | undefined {
-    const rels = model.relationships ?? [];
-    const rel = rels.find(r => r.type.toLowerCase() === 'capturesscreen' && r.targetId === screenId);
+    const rel = relationshipsOfType(model, 'capturesScreen').find(r => r.targetId === screenId);
     if (!rel) return undefined;
     // Project DTO dictionaries may be keyed by authored usage name while
     // relationship endpoints carry the stable authored id. Resolve by value id
@@ -243,8 +241,7 @@ export function captureForSelectionContext(
     selectedElementId: string,
 ): MemoElement | undefined {
     const composedParent = new Map(
-        (model.relationships ?? [])
-            .filter(relationship => relationship.type.toLowerCase() === 'composes')
+        relationshipsOfType(model, 'composes')
             .map(relationship => [relationship.targetId, relationship.sourceId]),
     );
     const seen = new Set<string>();
