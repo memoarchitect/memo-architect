@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 const FUNCTIONAL_KINDS = new Set(['Function', 'Function', 'UserActivity']);
 const STRUCTURAL_KINDS = new Set([
@@ -55,8 +56,7 @@ export function analyzeConsistency(model: MemoModelDTO): ConsistencyResult {
         componentFunctions.set(structEl.id, []);
     }
 
-    for (const rel of model.relationships) {
-        if (rel.type !== 'allocatedTo') continue;
+    for (const rel of relationshipsOfType(model, 'allocatedTo')) {
 
         const func = model.elements[rel.sourceId];
         const struct = model.elements[rel.targetId];
@@ -137,8 +137,7 @@ export function analyzeConsistency(model: MemoModelDTO): ConsistencyResult {
         funcToComponent.set(alloc.functionId, alloc.targetId);
     }
 
-    for (const rel of model.relationships) {
-        if (rel.type !== 'flow') continue;
+    for (const rel of relationshipsOfType(model, 'flow')) {
         const srcComp = funcToComponent.get(rel.sourceId);
         const tgtComp = funcToComponent.get(rel.targetId);
         if (srcComp && tgtComp && srcComp !== tgtComp) {

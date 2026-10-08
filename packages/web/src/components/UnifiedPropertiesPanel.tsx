@@ -12,6 +12,7 @@ import { SelectionStyleSection } from './SelectionStyleSection';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
 import type { Density } from './element-profile/density';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 /** This panel is the compact rendering of the same profile as ElementDetailView. */
 const PANEL_DENSITY: Density = 'panel';
@@ -600,13 +601,12 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
     const [message, setMessage] = useState('');
     if (!model) return null;
 
-    const relationTypes = new Set(Object.values(ANNOTATION_TYPES).map(value => value.relation.toLowerCase()));
-    const annotationIds = new Set(model.relationships
-        .filter(rel => relationTypes.has(rel.type.toLowerCase()) && rel.targetId === subject.id)
+    const annotationIds = new Set(relationshipsOfType(model, ...Object.values(ANNOTATION_TYPES).map(value => value.relation))
+        .filter(rel => rel.targetId === subject.id)
         .map(rel => rel.sourceId));
     const annotations = [...annotationIds].map(id => model.elements[id]).filter((value): value is MemoElement => !!value);
     const replies = new Map<string, MemoElement[]>();
-    for (const rel of model.relationships.filter(rel => rel.type.toLowerCase() === 'composes')) {
+    for (const rel of relationshipsOfType(model, 'composes')) {
         if (model.elements[rel.sourceId]?.kind !== 'ModelComment' || model.elements[rel.targetId]?.kind !== 'ModelComment') continue;
         replies.set(rel.sourceId, [...(replies.get(rel.sourceId) ?? []), model.elements[rel.targetId]]);
     }

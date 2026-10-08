@@ -15,6 +15,7 @@ import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { EDGE, FONT } from '../../styles/tokens';
 import type { LayoutResult } from '../layout';
 import { COMPOSITION_REL_TYPES } from './composition-tree';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 // ─── Structure derivation ────────────────────────────────────────────────────
 
@@ -182,8 +183,7 @@ export function buildSequenceModel(
             }));
 
     const scenarioNameFor = (chain: MemoElement): string | undefined => {
-        const rel = model.relationships.find(r =>
-            r.type === 'realizesScenario' && r.sourceId === chain.id);
+        const rel = relationshipsOfType(model, 'realizesScenario').find(r => r.sourceId === chain.id);
         return rel ? model.elements[rel.targetId]?.name : undefined;
     };
 

@@ -13,6 +13,7 @@ import { TypeFilterSelect } from '../components/TypeFilterSelect';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 import { ExplorerElementIdentity } from '../components/ExplorerElementIdentity';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
+import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 const UI_SCREENS_WIDTH_STORAGE_KEY = 'memo-uiscreens-width';
 const UI_SCREENS_DEFAULT_WIDTH = 250;
@@ -300,8 +301,8 @@ export function UiScreensWorkspace() {
     );
     const captureOwner = useMemo(() => {
         const owners = new Map<string, string>();
-        for (const relationship of model?.relationships ?? []) {
-            if (relationship.type.toLowerCase() === 'capturesscreen') owners.set(relationship.sourceId, relationship.targetId);
+        for (const relationship of model ? relationshipsOfType(model, 'capturesScreen') : []) {
+            owners.set(relationship.sourceId, relationship.targetId);
         }
         return owners;
     }, [model]);
@@ -331,8 +332,7 @@ export function UiScreensWorkspace() {
     const screen = selectedScreen ?? scene.screen;
     const byStableId = new Map(uiElements.map(element => [element.id, element]));
     const composedChildren = new Map<string, MemoElement[]>();
-    for (const relationship of model.relationships) {
-        if (relationship.type.toLowerCase() !== 'composes') continue;
+    for (const relationship of relationshipsOfType(model, 'composes')) {
         const child = byStableId.get(relationship.targetId);
         if (!child) continue;
         composedChildren.set(relationship.sourceId, [...(composedChildren.get(relationship.sourceId) ?? []), child]);
