@@ -51,5 +51,5 @@ according to your project process rather than creating a false trace.
 ## External portability checks
 
 If the project selects SysIDE, `memo validate` can run strict external
-diagnostics before semantic checks. `memo-architect pack` can delegate packaging to
+diagnostics before semantic checks. `memo pack` can delegate packaging to
 SysAnd. These checks complement MEMO closure validation; they do not replace it.
