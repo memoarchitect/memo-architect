@@ -116,7 +116,7 @@ seven model-independent notebooks:
 | Model inventory table | HTML inventory with filters and CSV export |
 
 The samples read the model through `analysis/memo_model.py`, compiled by the
-compiler (`toolchain.compiler`: the project's, or the one you chose for yourself with the **Compiler** control in the toolbar or `memo config set compiler`). Start JupyterLab from
+compiler (`toolchain.compiler`: the project's, or the one you chose for yourself with the **Compiler** control in the toolbar or `memo-architect config set compiler`). Start JupyterLab from
 `analysis/` on port 8888 before opening the menu.
 
 See [Analysis Tools](analysis-tools.md).
