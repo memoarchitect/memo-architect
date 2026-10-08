@@ -10,13 +10,13 @@ project when every YAML file beside it is deleted.
 ```bash
 memo-architect --help
 memo-architect examples
-memo-architect templates
 ```
 
 `examples` lists the example IDs bundled by the installed ontology package.
-`templates` lists the project templates that can be created with MEMO Tools.
 The choices come from the installed content manifest, so the CLI does not rely
-on a hard-coded list that can drift from the package.
+on a hard-coded list that can drift from the package. A new project starts from
+one empty skeleton (`memo-architect init`) or from a copy of an example
+(`memo-architect init --example <id>`).
 
 ## Open a project
 
@@ -70,8 +70,7 @@ Project creation, validation, import, export, and package management belong to
 the [`memo` CLI](https://memoarchitect.github.io/memo-tools/reference/commands/):
 
 ```bash
-memo templates
-memo examples
-memo-architect init my-device --template infusion-pump
+memo-architect init my-device
+memo-architect init my-pump --example gpca
 memo validate my-device
 ```

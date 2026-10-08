@@ -5,7 +5,7 @@ import { architectBuildCommand } from '../commands/build.js';
 import { ConfigSettingError, configGetCommand, configSetCommand, configUnsetCommand } from '../commands/config.js';
 import { architectDevCommand } from '../commands/dev.js';
 import {
-    architectExampleCommand, listArchitectExamples, listArchitectTemplates,
+    architectExampleCommand, listArchitectExamples,
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 import {
@@ -147,15 +147,6 @@ program
         console.log('Available examples:');
         for (const id of listArchitectExamples()) console.log(`  ${id}`);
         console.log('\nOpen one with: memo-architect --example <id>');
-    });
-
-program
-    .command('templates')
-    .description('List project templates available through MEMO Tools')
-    .action(() => {
-        console.log('Available project templates:');
-        for (const id of listArchitectTemplates()) console.log(`  ${id}`);
-        console.log('\nCreate one with: memo-architect init <project> --template <id>');
     });
 
 program

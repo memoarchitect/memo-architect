@@ -54,7 +54,7 @@ function resolveExampleDir(ontologyRoot: string, name: string): string {
     );
 }
 
-function listManifestKeys(ontologyRoot: string, section: 'examples' | 'templates'): string[] {
+function listManifestKeys(ontologyRoot: string, section: 'examples'): string[] {
     const manifestPath = resolve(ontologyRoot, 'memo.manifest.yaml');
     if (!existsSync(manifestPath)) return [];
     const lines = readFileSync(manifestPath, 'utf-8').split(/\r?\n/);
@@ -73,11 +73,6 @@ function listManifestKeys(ontologyRoot: string, section: 'examples' | 'templates
 /** IDs accepted by `memo-architect --example`. */
 export function listArchitectExamples(): string[] {
     return listManifestKeys(resolveOntologyRoot(), 'examples');
-}
-
-/** Project templates supplied by the same ontology content package. */
-export function listArchitectTemplates(): string[] {
-    return listManifestKeys(resolveOntologyRoot(), 'templates');
 }
 
 /**
