@@ -1,11 +1,11 @@
 // ─── Compiler settings ───────────────────────────────────────────────────────
 //
-// Which SysML compiler runs, and where its tools are on this machine, are the
-// user's own: they are written to the user's settings file, outside the project,
-// so they are never checked in and each person on a project chooses for
-// themselves. This is the browser side of `memo config set`; both go through the
-// same server code, and the server's registry says which settings are the
-// user's.
+// The project names the compiler it uses, in its own (checked-in) settings. A
+// user who wants another sets their own here: it is written to their settings
+// file, outside the project, so it overrides the project's for them and is never
+// committed. Only the choice is asked: MEMO finds the compiler's tools in the usual
+// places. This is the browser side of `memo config set`; both go through the same
+// server code, and the server's registry says which settings a user is shown.
 //
 // A change applies when Architect is restarted: the toolchain is resolved once,
 // at start. The panel says so rather than leaving the old compiler running
@@ -20,13 +20,13 @@ const LAYER_LABEL: Record<string, string> = {
     'command line': 'the command line',
     'environment': 'an environment variable',
     'user settings': 'your settings',
+    'project': 'the project',
 };
 
 export function CompilerSettings() {
     const status = useModelStore(s => s.toolchainSettings);
     const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
     const [open, setOpen] = useState(false);
-    const [drafts, setDrafts] = useState<Record<string, string>>({});
     const [note, setNote] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -50,7 +50,6 @@ export function CompilerSettings() {
                 sendToolchainSettingsSave(requestId, path, value);
                 setTimeout(() => reject(new Error('The save timed out.')), 20_000);
             });
-            setDrafts(d => { const { [path]: _gone, ...rest } = d; return rest; });
             setNote(result.appliesOnRestart ? 'Saved. It applies when Architect is restarted.' : 'Saved.');
         } catch (e: any) {
             setNote(e?.message ?? 'The setting could not be saved.');
@@ -62,7 +61,6 @@ export function CompilerSettings() {
     if (!status) return null;
     const compiler = status.settings.find(s => s.path === 'compiler');
     const chosen = compiler?.value;
-    const machine = status.settings.filter(s => s.path.includes('.'));
 
     const field: React.CSSProperties = {
         width: '100%', padding: '5px 8px', border: '1px solid #CBD5E1', borderRadius: 6,
@@ -77,7 +75,7 @@ export function CompilerSettings() {
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 onClick={() => setOpen(o => !o)}
-                title="Which SysML compiler runs. Your setting, not the project's."
+                title="Which SysML compiler runs. The project names one; your own setting overrides it for you."
                 style={{
                     background: 'none', cursor: 'pointer', fontSize: 12, padding: '4px 10px', borderRadius: 6,
                     color: chosen ? 'rgba(255,255,255,0.8)' : '#FCA5A5',
@@ -97,20 +95,23 @@ export function CompilerSettings() {
                         color: '#0B1E2D',
                     }}
                 >
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>Your compiler</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>Compiler</div>
                     <div style={{ fontSize: 11, color: '#64748B' }}>
-                        Saved in {status.file}, not in the project, so each person on it chooses their own.
+                        {compiler?.layers.find(l => l.layer === 'project')
+                            ? `The project uses ${compiler.layers.find(l => l.layer === 'project')!.value}. `
+                            : 'The project names none. '}
+                        A choice here is yours alone: it is saved in {status.file}, not in the project.
                     </div>
                     <div>
                         <label style={label} htmlFor="memo-compiler">Compiler</label>
                         <select
                             id="memo-compiler"
                             style={field}
-                            value={drafts.compiler ?? compiler?.layers.find(l => l.layer === 'user settings')?.value ?? ''}
+                            value={compiler?.layers.find(l => l.layer === 'user settings')?.value ?? ''}
                             disabled={saving}
                             onChange={e => { void save('compiler', e.target.value || undefined); }}
                         >
-                            <option value="">(not chosen)</option>
+                            <option value="">(the project's)</option>
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         {compiler?.layer && compiler.layer !== 'user settings' && (
@@ -119,32 +120,6 @@ export function CompilerSettings() {
                             </div>
                         )}
                     </div>
-                    {machine.map(setting => {
-                        const saved = setting.layers.find(l => l.layer === 'user settings')?.value ?? '';
-                        const draft = drafts[setting.path] ?? saved;
-                        return (
-                            <div key={setting.path}>
-                                <label style={label} htmlFor={`memo-${setting.path}`}>{setting.path}</label>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    <input
-                                        id={`memo-${setting.path}`}
-                                        style={field}
-                                        value={draft}
-                                        placeholder={setting.description}
-                                        onChange={e => setDrafts(d => ({ ...d, [setting.path]: e.target.value }))}
-                                    />
-                                    <button
-                                        type="button"
-                                        disabled={saving || draft === saved}
-                                        onClick={() => { void save(setting.path, draft || undefined); }}
-                                        style={{ fontSize: 11, padding: '0 10px', borderRadius: 6, border: '1px solid #CBD5E1', background: '#F1F5F9', cursor: 'pointer' }}
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
                     {note && <div role="status" style={{ fontSize: 11, color: '#334155' }}>{note}</div>}
                 </div>
             )}
