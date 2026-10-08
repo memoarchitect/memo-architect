@@ -17,9 +17,9 @@ at `http://127.0.0.1:8888`. New projects created with `memo init` contain an
 - an HTML inventory table with CSV export.
 
 The samples use standard SysML v2 types and read the model through
-`analysis/memo_model.py`, which compiles the project with the compiler you
-chose (`toolchain.compiler` in your own settings), as every MEMO command does:
-change it and the notebooks follow. Start the local service with:
+`analysis/memo_model.py`, which compiles the project with its compiler
+(`toolchain.compiler`: the project's, or the one you chose for yourself), as every MEMO
+command does: change it and the notebooks follow. Start the local service with:
 
 ```bash
 source analysis/.venv/bin/activate

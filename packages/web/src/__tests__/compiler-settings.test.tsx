@@ -26,8 +26,7 @@ const status = (value?: string, layer = 'user settings') => ({
     file: '/home/me/.config/memo/settings.yaml',
     compilerFromEnvironment: layer === 'environment',
     settings: [
-        { path: 'compiler', description: 'compiler', type: 'enum' as const, values: ['syside', 'opensysml'], value, layer: value ? layer : undefined, layers: value ? [{ layer, value }] : [] },
-        { path: 'opensysml.binary', description: 'the sysml-grpc executable', type: 'string' as const, layers: [] },
+        { path: 'compiler', description: 'compiler', type: 'enum' as const, values: ['syside', 'opensysml'], value, layer: value ? layer : undefined, layers: (value ? [{ layer, value }] : []) as { layer: string; value: string }[] },
     ],
 });
 
@@ -61,6 +60,7 @@ describe('CompilerSettings', () => {
         act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         expect(view.textContent).toContain('/home/me/.config/memo/settings.yaml');
         expect(view.textContent).toContain('not in the project');
+        expect(view.textContent).toContain('The project names none');
     });
 
     it('saves a chosen compiler as the user\'s setting and says it applies on restart', async () => {
@@ -75,6 +75,23 @@ describe('CompilerSettings', () => {
         });
         expect(sent).toEqual([{ path: 'compiler', value: 'opensysml' }]);
         expect(view.textContent).toContain('applies when Architect is restarted');
+    });
+
+    it('asks only for the choice, not where a tool is', () => {
+        useModelStore.setState({ toolchainSettings: status('syside') });
+        const view = render();
+        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
+        expect(view.querySelectorAll('input')).toHaveLength(0);
+        expect(view.querySelectorAll('select')).toHaveLength(1);
+    });
+
+    it('shows what the project uses, which the user\'s choice overrides', () => {
+        const s = status('syside');
+        s.settings[0].layers.push({ layer: 'project', value: 'opensysml' });
+        useModelStore.setState({ toolchainSettings: s });
+        const view = render();
+        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
+        expect(view.textContent).toContain('The project uses opensysml');
     });
 
     it('says when something above the user decides the compiler', () => {
