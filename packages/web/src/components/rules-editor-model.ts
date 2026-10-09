@@ -19,6 +19,22 @@ export const DOMAIN_LABEL: Record<RuleDomain, string> = {
     organisation: 'Organisation',
 };
 
+/** A rule's normative strength: a standard's shall, should and may. Separate from how a violation is reported. */
+export type RuleObligation = 'required' | 'recommended' | 'bestPractice';
+export const OBLIGATIONS: readonly RuleObligation[] = ['required', 'recommended', 'bestPractice'];
+export type ObligationFilter = 'any' | RuleObligation;
+
+export const OBLIGATION_LABEL: Record<RuleObligation, string> = {
+    required: 'Required',
+    recommended: 'Recommended',
+    bestPractice: 'Best practice',
+};
+
+/** The severity a rule takes when it states none: what `memo-architect new rule` and the tools default to. */
+export function severityForObligation(obligation: RuleObligation | ''): 'error' | 'warning' | 'info' {
+    return obligation === 'required' ? 'error' : obligation === 'bestPractice' ? 'info' : 'warning';
+}
+
 /** The parts of an effective rule the editor reads. */
 export interface EditorRule {
     sourceRuleId: string;
@@ -28,6 +44,7 @@ export interface EditorRule {
     effectiveSeverity: string;
     tailoring: string;
     domain?: RuleDomain;
+    obligation?: RuleObligation;
     enforces?: readonly string[];
 }
 
@@ -46,9 +63,9 @@ export interface RuleRow {
     severity: string;
     state: RuleState;
     invariant: boolean;
+    obligation: RuleObligation | 'unstated';
+    /** The rule's `EnforcesClause` traces. Zero is allowed: a rule need not trace to a standard. */
     clauses: { qualifiedName: string; label: string }[];
-    /** A medical-device rule that enforces no clause: it should say why it exists. */
-    untraced: boolean;
 }
 
 /** `ISO 14971:2019 §7`, or the qualified name when the model does not carry the clause. */
@@ -59,10 +76,12 @@ export function clauseLabel(clauses: readonly ClauseFact[], qualifiedName: strin
 
 export function ruleRows(
     rules: readonly EditorRule[], clauses: readonly ClauseFact[], filter: DomainFilter, search: string,
+    obligation: ObligationFilter = 'any',
 ): RuleRow[] {
     const needle = search.trim().toLowerCase();
     return rules
         .filter(rule => filter === 'all' || rule.domain === filter)
+        .filter(rule => obligation === 'any' || rule.obligation === obligation)
         .map<RuleRow>(rule => ({
             id: rule.sourceRuleId,
             type: rule.sourceRuleType,
@@ -70,12 +89,13 @@ export function ruleRows(
             severity: rule.effectiveSeverity,
             state: ruleState(rule),
             invariant: rule.tailoring === 'invariant',
+            obligation: rule.obligation ?? 'unstated',
             clauses: (rule.enforces ?? []).map(qualifiedName => ({ qualifiedName, label: clauseLabel(clauses, qualifiedName) })),
-            untraced: rule.domain === 'medicalDevice' && (rule.enforces ?? []).length === 0,
         }))
         .filter(row => !needle
             || row.id.toLowerCase().includes(needle)
             || row.type.toLowerCase().includes(needle)
+            || row.obligation.toLowerCase().includes(needle)
             || row.clauses.some(c => c.label.toLowerCase().includes(needle)))
         .sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -119,7 +139,9 @@ export interface RuleFormState {
     count: string;
     attribute: string;
     expression: string;
-    severity: 'error' | 'warning' | 'info';
+    /** Empty: the severity the obligation implies. */
+    severity: 'error' | 'warning' | 'info' | '';
+    obligation: RuleObligation | '';
     rationale: string;
     enforces: string[];
     file: string;
@@ -127,7 +149,7 @@ export interface RuleFormState {
 
 export const EMPTY_FORM: RuleFormState = {
     id: '', typeName: '', appliesTo: '', conditionKind: 'atLeast', relation: '', count: '1', attribute: '',
-    expression: '', severity: 'warning', rationale: '', enforces: [], file: '',
+    expression: '', severity: '', obligation: '', rationale: '', enforces: [], file: '',
 };
 
 export function conditionOf(form: RuleFormState): ConditionSpec | undefined {
@@ -172,9 +194,15 @@ export function toPayload(form: RuleFormState): Omit<RuleFormPayload, 'requestId
         typeName: form.typeName.trim(),
         appliesTo: form.appliesTo.trim(),
         condition,
-        severity: form.severity,
+        severity: form.severity || severityForObligation(form.obligation),
+        ...(form.obligation ? { obligation: form.obligation } : {}),
         rationaleText: form.rationale.trim(),
         ...(form.enforces.length > 0 ? { enforces: form.enforces } : {}),
         file: form.file.trim(),
     };
+}
+
+/** The statement a chosen clause is written as, so the form shows the trace and not only the clause. */
+export function traceStatement(typeName: string, clauseQualifiedName: string): string {
+    return `#EnforcesClause dependency from ${typeName.trim() || '<rule>'} to ${clauseQualifiedName};`;
 }

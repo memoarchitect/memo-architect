@@ -39,7 +39,7 @@ beforeEach(() => {
     createRule.mockReset();
     useModelStore.setState({
         effectiveRules: [
-            rule(),
+            rule({ obligation: 'required' }),
             rule({ sourceRuleId: 'CR-MED-021', sourceRuleType: 'SwComponentReqRule', enforces: [] }),
             rule({ sourceRuleId: 'CR-ONT-001', sourceRuleType: 'ContainmentAcyclicRule', domain: 'modelling', tailoring: 'invariant', enforces: [] }),
         ],
@@ -68,14 +68,22 @@ function type(element: HTMLElement, value: string): void {
 describe('the rule list', () => {
     it('shows each rule with the clause it enforces', () => {
         expect(text()).toContain('CR-MED-001');
-        expect(text()).toContain('enforces ISO 14971:2019 §7');
+        expect(text()).toContain('EnforcesClause → ISO 14971:2019 §7');
     });
-    it('says a medical-device rule traces to no clause yet', () => {
+    it('shows a rule\'s obligation, and a rule with no clause is not called a gap', () => {
         const rows = [...container.querySelectorAll('li')];
-        const untraced = rows.find(row => row.textContent?.includes('CR-MED-021'))!;
-        expect(untraced.textContent).toContain('traces to no clause yet');
         const traced = rows.find(row => row.textContent?.includes('CR-MED-001'))!;
-        expect(traced.textContent).not.toContain('traces to no clause yet');
+        expect(traced.querySelector('[data-testid="obligation"]')?.textContent).toBe('Required');
+        const untraced = rows.find(row => row.textContent?.includes('CR-MED-021'))!;
+        expect(untraced.textContent).not.toContain('no clause');
+        expect(untraced.querySelector('[data-testid="obligation"]')).toBeNull();
+        expect(untraced.querySelector('[data-testid="trace"]')).toBeNull();
+    });
+    it('narrows to an obligation', () => {
+        act(() => { button('Required').click(); });
+        const list = byLabel('Rule list').textContent ?? '';
+        expect(list).toContain('CR-MED-001');
+        expect(list).not.toContain('CR-ONT-001');
     });
     it('narrows to a domain', () => {
         act(() => { button('Modelling 1').click(); });
@@ -144,7 +152,19 @@ describe('writing a rule', () => {
         act(() => { button('New rule').click(); });
         type(byLabel('Find a clause'), '14971 risk');
         act(() => { [...container.querySelectorAll('[aria-label="Clause matches"] button')][0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-        expect(byLabel('Chosen clauses').textContent).toContain('enforces ISO 14971:2019 §7');
+        expect(byLabel('Chosen clauses').textContent).toContain('EnforcesClause → ISO 14971:2019 §7');
+    });
+
+    it('sends the obligation and takes the severity from it, and the clause as the trace', async () => {
+        previewRule.mockResolvedValue({ success: true, subjects: 0, flagged: [], baseRevision: 'rev1' });
+        fill();
+        type(byLabel('Obligation'), 'required');
+        expect(byLabel('Severity').textContent).toContain('error (from the obligation)');
+        type(byLabel('Find a clause'), '14971 risk');
+        act(() => { [...container.querySelectorAll('[aria-label="Clause matches"] button')][0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+        expect(byLabel('Chosen clauses').innerHTML).toContain('#EnforcesClause dependency from TwoControls to p::iso14971::c7;');
+        await act(async () => { button('Preview').click(); });
+        expect(previewRule.mock.calls[0][0]).toMatchObject({ obligation: 'required', severity: 'error', enforces: ['p::iso14971::c7'] });
     });
 
     it('reports a file that changed after the preview, and writes nothing', async () => {
