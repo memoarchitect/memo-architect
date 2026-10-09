@@ -4,17 +4,19 @@ import { createRule, previewRule } from '../store/ws-client';
 import { COLOR, FONT } from '../styles/tokens';
 import { RulePolicyEditor } from './RulePolicyEditor';
 import {
-    CONDITION_LABEL, DOMAIN_LABEL, EMPTY_FORM, domainCounts, formGaps, ruleRows, searchClauses, suggestTypeName, toPayload,
-    type ConditionKind, type DomainFilter, type EditorRule, type RuleFormState,
+    CONDITION_LABEL, DOMAIN_LABEL, EMPTY_FORM, OBLIGATIONS, OBLIGATION_LABEL, domainCounts, formGaps, ruleRows, searchClauses,
+    severityForObligation, suggestTypeName, toPayload, traceStatement,
+    type ConditionKind, type DomainFilter, type EditorRule, type ObligationFilter, type RuleFormState, type RuleObligation,
 } from './rules-editor-model';
 
 /**
  * The rules a project is checked against, what each enforces, and the means to
  * change them.
  *
- * Every rule says why it exists (its domain) and which clause of a standard or
- * guidance it enforces; a medical-device rule that enforces none says so rather
- * than staying quiet. Any rule may be tailored — switched off, downgraded or
+ * Every rule says why it exists (its domain), how strongly it binds (its
+ * obligation: required, recommended or best practice) and which clauses of a
+ * standard or guidance it enforces, by a typed `EnforcesClause` trace. A rule
+ * may trace to several clauses or to none; none is not a gap. Any rule may be tailored — switched off, downgraded or
  * replaced — on the record. A rule of the user's own is written here too.
  *
  * It composes no SysML. The form names the rule and a condition; Tools builds
@@ -35,11 +37,12 @@ export function RulesEditor() {
 
     const [filter, setFilter] = useState<DomainFilter>('all');
     const [search, setSearch] = useState('');
+    const [obligation, setObligation] = useState<ObligationFilter>('any');
     const [tailoring, setTailoring] = useState('');
     const [creating, setCreating] = useState(false);
 
     const counts = useMemo(() => domainCounts(rules), [rules]);
-    const rows = useMemo(() => ruleRows(rules, clauses, filter, search), [rules, clauses, filter, search]);
+    const rows = useMemo(() => ruleRows(rules, clauses, filter, search, obligation), [rules, clauses, filter, search, obligation]);
 
     if (rules.length === 0) return null;
 
@@ -64,7 +67,21 @@ export function RulesEditor() {
                 ))}
             </div>
 
-            <input aria-label="Search rules" value={search} placeholder="Search by id, name or clause"
+            <div className="flex flex-wrap gap-1 px-3 pb-2" role="group" aria-label="Filter by obligation">
+                {(['any', ...OBLIGATIONS] as ObligationFilter[]).map(name => (
+                    <button key={name} aria-pressed={obligation === name} onClick={() => setObligation(name)}
+                        style={{
+                            fontSize: 11, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+                            border: `1px solid ${obligation === name ? COLOR.primary : COLOR.border}`,
+                            background: obligation === name ? COLOR.primary : COLOR.surface,
+                            color: obligation === name ? COLOR.surface : COLOR.secondary,
+                        }}>
+                        {name === 'any' ? 'Any obligation' : OBLIGATION_LABEL[name]}
+                    </button>
+                ))}
+            </div>
+
+            <input aria-label="Search rules" value={search} placeholder="Search by id, name, obligation or clause"
                 onChange={event => setSearch(event.target.value)}
                 style={{ width: 'calc(100% - 24px)', margin: '0 12px 6px', fontSize: FONT.xs }} />
 
@@ -79,6 +96,9 @@ export function RulesEditor() {
                                     {DOMAIN_LABEL[row.domain]}
                                 </span>
                             )}
+                            {row.obligation !== 'unstated' && (
+                                <span data-testid="obligation" style={{ color: COLOR.secondary }}>{OBLIGATION_LABEL[row.obligation]}</span>
+                            )}
                             <span style={{ color: COLOR.muted }}>{row.severity}</span>
                             {row.state !== 'on' && <span style={{ color: '#B45309' }}>{row.state}</span>}
                             <button style={{ marginLeft: 'auto', fontSize: 11 }} aria-label={`Tailor ${row.id}`}
@@ -87,11 +107,10 @@ export function RulesEditor() {
                             </button>
                         </div>
                         {row.clauses.map(clause => (
-                            <div key={clause.qualifiedName} style={{ color: COLOR.muted, paddingLeft: 8 }}>enforces {clause.label}</div>
+                            <div key={clause.qualifiedName} data-testid="trace" style={{ color: COLOR.muted, paddingLeft: 8 }}>
+                                EnforcesClause → {clause.label}
+                            </div>
                         ))}
-                        {row.untraced && (
-                            <div style={{ color: '#B45309', paddingLeft: 8 }}>traces to no clause yet</div>
-                        )}
                     </li>
                 ))}
                 {rows.length === 0 && <li style={{ padding: '4px 12px', color: COLOR.muted, fontSize: FONT.xs }}>No rule matches.</li>}
@@ -220,8 +239,15 @@ function NewRuleForm(props: {
                     onChange={event => update({ expression: event.target.value })} />
             )}
 
+            <select aria-label="Obligation" value={form.obligation} style={field}
+                onChange={event => update({ obligation: event.target.value as RuleObligation | '' })}>
+                <option value="">Obligation (optional)…</option>
+                {OBLIGATIONS.map(name => <option key={name} value={name}>{OBLIGATION_LABEL[name]}</option>)}
+            </select>
+
             <select aria-label="Severity" value={form.severity} style={field}
                 onChange={event => update({ severity: event.target.value as RuleFormState['severity'] })}>
+                <option value="">Severity: {severityForObligation(form.obligation)} ({form.obligation ? 'from the obligation' : 'default'})</option>
                 <option value="error">error</option>
                 <option value="warning">warning</option>
                 <option value="info">info</option>
@@ -245,11 +271,16 @@ function NewRuleForm(props: {
                     ))}
                 </ul>
             )}
+            {form.enforces.length === 0 && (
+                <div className="px-3 pb-1" style={{ fontSize: 11, color: COLOR.muted }}>
+                    A rule need not trace to a clause. Each clause chosen is written as a typed trace beside the rule.
+                </div>
+            )}
             {form.enforces.length > 0 && (
                 <ul aria-label="Chosen clauses" style={{ listStyle: 'none', margin: '0 12px 6px', padding: 0, fontSize: 11 }}>
                     {form.enforces.map(name => (
                         <li key={name}>
-                            enforces {labelOf(name)}{' '}
+                            <span title={traceStatement(form.typeName, name)}>EnforcesClause → {labelOf(name)}</span>{' '}
                             <button aria-label={`Remove ${labelOf(name)}`}
                                 onClick={() => update({ enforces: form.enforces.filter(other => other !== name) })}>×</button>
                         </li>

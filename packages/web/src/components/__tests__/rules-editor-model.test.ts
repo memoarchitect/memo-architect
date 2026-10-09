@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClauseFact } from '@memoarchitect/tools/browser';
 import {
-    EMPTY_FORM, clauseLabel, conditionOf, domainCounts, formGaps, ruleRows, ruleState, searchClauses, suggestTypeName, toPayload,
+    EMPTY_FORM, clauseLabel, conditionOf, domainCounts, formGaps, ruleRows, ruleState, searchClauses, severityForObligation, suggestTypeName, toPayload, traceStatement,
     type EditorRule, type RuleFormState,
 } from '../rules-editor-model';
 
@@ -39,9 +39,21 @@ describe('ruleRows', () => {
         expect(first.id).toBe('CR-MED-001');
         expect(first.clauses[0].label).toBe('ISO 14971:2019 §7');
     });
-    it('marks a medical-device rule that traces to nothing, and only that', () => {
+    it('allows a rule that traces to nothing: zero traces is not a gap', () => {
         const rows = ruleRows(rules, clauses, 'all', '');
-        expect(rows.filter(r => r.untraced).map(r => r.id)).toEqual(['CR-MED-021']);
+        expect(rows.filter(r => r.clauses.length === 0).map(r => r.id)).toEqual(['CR-MED-021', 'CR-ONT-001']);
+        expect(rows.some(r => 'untraced' in r)).toBe(false);
+    });
+    it('carries the obligation, filters by it, and finds it by search', () => {
+        const withObligation = [
+            rule({ obligation: 'required' }),
+            rule({ sourceRuleId: 'CR-MED-002', sourceRuleType: 'B', obligation: 'recommended' }),
+            rule({ sourceRuleId: 'CR-MED-003', sourceRuleType: 'C' }),
+        ];
+        const all = ruleRows(withObligation, clauses, 'all', '');
+        expect(all.map(r => r.obligation)).toEqual(['required', 'recommended', 'unstated']);
+        expect(ruleRows(withObligation, clauses, 'all', '', 'recommended').map(r => r.id)).toEqual(['CR-MED-002']);
+        expect(ruleRows(withObligation, clauses, 'all', 'required').map(r => r.id)).toEqual(['CR-MED-001']);
     });
     it('filters by domain and counts them', () => {
         expect(ruleRows(rules, clauses, 'organisation', '').map(r => r.id)).toEqual(['ORG-001']);
@@ -102,5 +114,37 @@ describe('the new-rule form', () => {
         expect(suggestTypeName('org 001')).toBe('Org001');
         expect(suggestTypeName('two  independent controls')).toBe('TwoIndependentControls');
         expect(suggestTypeName('')).toBe('');
+    });
+});
+
+describe('obligation and the typed trace in the form', () => {
+    const complete: RuleFormState = {
+        ...EMPTY_FORM, id: 'ORG-001', typeName: 'TwoControls', appliesTo: 'Hazard', relation: 'mitigates', count: '2',
+        rationale: 'SOP 4.1', file: 'model/catalog/project.sysml',
+    };
+
+    it('takes the severity from the obligation when none is chosen, as the tools do', () => {
+        expect(severityForObligation('required')).toBe('error');
+        expect(severityForObligation('recommended')).toBe('warning');
+        expect(severityForObligation('bestPractice')).toBe('info');
+        expect(severityForObligation('')).toBe('warning');
+        expect(toPayload({ ...complete, obligation: 'required' })).toMatchObject({ severity: 'error', obligation: 'required' });
+        expect(toPayload({ ...complete, obligation: 'bestPractice' })).toMatchObject({ severity: 'info', obligation: 'bestPractice' });
+    });
+    it('keeps a severity the person chose over the obligation\'s', () => {
+        expect(toPayload({ ...complete, obligation: 'required', severity: 'warning' })).toMatchObject({ severity: 'warning', obligation: 'required' });
+    });
+    it('states no obligation unless one was chosen', () => {
+        const payload = toPayload(complete)!;
+        expect(payload.severity).toBe('warning');
+        expect('obligation' in payload).toBe(false);
+    });
+    it('sends every chosen clause, and none is also fine', () => {
+        expect(toPayload({ ...complete, enforces: ['p::iso14971::c7', 'p::iec62304::c5_2'] })!.enforces).toEqual(['p::iso14971::c7', 'p::iec62304::c5_2']);
+        expect('enforces' in toPayload(complete)!).toBe(false);
+    });
+    it('shows the trace as the statement that is written', () => {
+        expect(traceStatement('TwoControls', 'p::iso14971::c7')).toBe('#EnforcesClause dependency from TwoControls to p::iso14971::c7;');
+        expect(traceStatement('', 'p::iso14971::c7')).toContain('from <rule> to');
     });
 });

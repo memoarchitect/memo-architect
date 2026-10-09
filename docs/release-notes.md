@@ -12,4 +12,4 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
 ### Added
 
 - **Choose the compiler in Architect.** The Compiler control sets the project's compiler and, separately, your own ("just for me"). `memo-architect config set|get|unset` does the same from a terminal.
-- Not in this release: obligation and the typed trace in the rule editor.
+- **Rule editor: obligation and the typed trace.** The Rules view shows each rule's obligation (required, recommended or best practice) and each `EnforcesClause` trace, filters by obligation, and no longer calls a rule with no clause a gap. The new-rule form takes an obligation (the severity follows it unless you choose one) and shows each chosen clause as the typed trace it writes.
