@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { artifactCategory, buildOwnerThenPackageTree, buildOwnershipTree, buildTree, computeExplorerGroupTree } from '../ExplorerPanel';
+import { artifactCategory, buildOwnerThenPackageTree, buildOwnershipTree, buildTree, computeExplorerGroupTree, explorerRowCounts } from '../ExplorerPanel';
 import type { KindDefinitionDTO, MemoElement } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../../types/ontology';
 
@@ -201,6 +201,22 @@ describe('computeExplorerGroupTree', () => {
         expect(artifactCategory('AnalysisNotebook', 'ModelOwnedArtifact')).toBe('analyses');
         expect(artifactCategory('ADRArtifact', 'ModelOwnedArtifact')).toBe('adrs');
         expect(artifactCategory('DesignReview', 'ModelOwnedArtifact')).toBe('reviews');
+    });
+
+    it('counts per domain and group exactly what the explorer badges show', () => {
+        // The dashboard's coverage tiles read these; they used to count raw
+        // `el.layer` ids (`risk`, `assurance`) and showed 0 for Risk and
+        // Verification beside a full explorer.
+        const { byDomain, byGroup } = explorerRowCounts(computeExplorerGroupTree([
+            elc('ii1', 'InterfaceItem', 'logical', 'item'),
+            elc('h1', 'Hazard', 'safety_risk', 'item'),
+            elc('h2', 'Hazard', 'safety_risk', 'item'),
+            elc('r1', 'Requirement', 'requirements', 'requirement'),
+        ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]));
+        expect(byGroup.get('safety-risk')).toBe(2);
+        expect(byGroup.get('requirements')).toBe(1);
+        expect(byDomain.get('architecture')).toBe(1);
+        expect(byDomain.get('assurance')).toBe(3);
     });
 
     // ─── Rule 1 ─────────────────────────────────────────────────────────────

@@ -1024,6 +1024,34 @@ export function explorerTaxonomy(ontologies: OntologyPackageInfo[]): ExplorerTax
     };
 }
 
+/** The rows under some explorer nodes, as the explorer's count badges show them. */
+const countExplorerRows = (nodes: TreeNode[]): number =>
+    nodes.reduce((sum, n) => sum + (n.type === 'element' ? 1 : countExplorerRows(n.children)), 0);
+
+export const countExplorerSubGroup = (sub: ExplorerSubGroup): number =>
+    Array.from(sub.kinds.values()).reduce((sum, nodes) => sum + countExplorerRows(nodes), 0);
+
+/**
+ * The explorer's badge counts, per domain and per group, so a page that
+ * reports coverage (the dashboard) shows the numbers the explorer shows rather
+ * than re-deriving a placement of its own from `el.layer`.
+ */
+export function explorerRowCounts(
+    groupTree: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[],
+): { byDomain: Map<string, number>; byGroup: Map<string, number> } {
+    const byDomain = new Map<string, number>();
+    const byGroup = new Map<string, number>();
+    for (const { group, subGroups } of groupTree) {
+        for (const sub of subGroups) {
+            const n = countExplorerSubGroup(sub);
+            const domain = group.id.replace(/^domain:/, '');
+            byDomain.set(domain, (byDomain.get(domain) ?? 0) + n);
+            if (sub.id) byGroup.set(sub.id, (byGroup.get(sub.id) ?? 0) + n);
+        }
+    }
+    return { byDomain, byGroup };
+}
+
 export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
@@ -1696,12 +1724,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     const isExpanded = expanded.has(groupKey);
                     const isUndefinedGroup = group.id === 'undefined';
 
-                    // Recursive element counter for group badges
-                    const countElements = (nodes: TreeNode[]): number =>
-                        nodes.reduce((s, n) => s + (n.type === 'element' ? 1 : countElements(n.children)), 0);
-
-                    const countSubGroup = (sub: ExplorerSubGroup): number =>
-                        Array.from(sub.kinds.values()).reduce((sum, nodes) => sum + countElements(nodes), 0);
+                    const countSubGroup = countExplorerSubGroup;
 
                     const totalCount = subGroups.reduce((sum, sub) => sum + countSubGroup(sub), 0);
 
