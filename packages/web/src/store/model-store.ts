@@ -163,6 +163,8 @@ export type ActiveView =
     | { type: 'analysis' }
     | { type: 'ui-screens' }
     | { type: 'rules' }                // the rules the project is checked against, and the means to change them
+    | { type: 'change' }               // projects and their impact (placeholder until A10)
+    | { type: 'releases' }             // release records (placeholder until A11)
     | { type: 'welcome' };
 
 /** A presentation patch the canvas can apply to its current selection. */

@@ -44,6 +44,8 @@ const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default:
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
 const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(m => ({ default: m.UiScreensWorkspace })));
 const RulesWorkspace = lazy(() => import('./views/RulesWorkspace').then(m => ({ default: m.RulesWorkspace })));
+const ChangePage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ChangePage })));
+const ReleasesPage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ReleasesPage })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);
@@ -126,6 +128,10 @@ function UnifiedCanvas() {
                 return <UiScreensWorkspace />;
             case 'rules':
                 return <RulesWorkspace />;
+            case 'change':
+                return <ChangePage />;
+            case 'releases':
+                return <ReleasesPage />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;

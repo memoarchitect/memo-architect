@@ -98,9 +98,10 @@ describe('AI tools stay behind the gate', () => {
         expect(explorer).not.toContain("type: 'sysml-generator'");
     });
 
-    it('marks the nav entry with the flag that gates it', () => {
+    it('marks the nav entry with the flag that gates it', async () => {
+        const { NAV_ENTRIES } = await import('../navigation/nav-sections');
+        expect(NAV_ENTRIES.find(entry => entry.id === 'ai')?.feature).toBe('ai-tools');
         const nav = readFileSync(resolve(webSrc, 'components/ModeSwitcher.tsx'), 'utf8');
-        expect(nav).toContain("feature: 'ai-tools'");
-        expect(nav).toContain('isFeatureEnabled(mode.feature)');
+        expect(nav).toContain('isFeatureEnabled(entry.feature)');
     });
 });
