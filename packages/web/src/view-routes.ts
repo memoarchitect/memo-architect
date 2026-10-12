@@ -44,6 +44,8 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     'ui-screens': '/ui-screens',
     rules: '/rules',
     dashboards: '/dashboards',
+    change: '/change',
+    releases: '/releases',
 };
 
 /**

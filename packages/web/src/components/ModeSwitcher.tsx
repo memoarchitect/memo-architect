@@ -1,242 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
-import { isFeatureEnabled, type FeatureId } from '../config/feature-flags';
+import { isFeatureEnabled } from '../config/feature-flags';
 import { WorkspaceManager } from './WorkspaceManager';
 import { DhfSettingsPanel } from '../views/DhfSettingsPanel';
+import { viewToPath } from '../view-routes';
+import {
+    NAV_ENTRIES, NAV_SECTIONS, VIEW_OF_MODE, sectionOf,
+    type NavEntry, type NavModeId,
+} from '../navigation/nav-sections';
 
 const DOCS_URL = '/help/';
-
-// ─── Primary navigation modes ────────────────────────────────────────────────
-
-// `feature` gates the entry: the mode only renders when that flag is on.
-const NAV_MODES = [
-    { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
-    { id: 'catalog', label: 'Model Explorer', icon: '☰' },
-    { id: 'diagram', label: 'Viewpoints', icon: '⊟' },
-    { id: 'ui-screens', label: 'UI Screens', icon: '▣' },
-    { id: 'dhf', label: 'Documents', icon: '⊞' },
-    { id: 'scenario', label: 'Use Cases', icon: '▶' },
-    // Rules are part of the regulated workspace, not an advanced surface: what
-    // the project is checked against, which clause each enforces, and how to
-    // change it on the record.
-    { id: 'rules', label: 'Rules', icon: '⚖' },
-    // Deliberately top-level while enabled: AI work is a distinct workspace,
-    // not a document action.  The feature gate keeps it absent by default and
-    // exposes it only when Architect was started with --experimental.
-    { id: 'ai', label: 'AI Tools', icon: '✦', feature: 'ai-tools' },
-] as const satisfies readonly { id: string; label: string; icon: string; feature?: FeatureId }[];
-
-type NavModeId = typeof NAV_MODES[number]['id'];
-
-// Tool view types — when one of these is active, no nav mode is highlighted
-const TOOL_VIEW_TYPES = new Set(['dsm', 'traceability', 'statistics', 'compliance-wizard', 'model-diff', 'review-dashboard', 'workflow-wizard', 'ontology', 'ontology-detail', 'import']);
-
-// ─── Tools dropdown items ────────────────────────────────────────────────────
-
-interface ToolItem {
-    id: string;
-    label: string;
-    icon: string;
-    view: ActiveView;
-}
-
-// ─── Analysis dropdown ───────────────────────────────────────────────────────
-
-function AnalysisDropdown() {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const setActiveView = useModelStore(s => s.setActiveView);
-
-    useEffect(() => {
-        function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        }
-        if (open) document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [open]);
-
-    return (
-        <div ref={ref} style={{ position: 'relative' }}>
-            <button
-                onClick={() => setOpen(value => !value)}
-                aria-expanded={open}
-                aria-haspopup="menu"
-                className="flex items-center gap-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                style={open
-                    ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
-                    : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }}
-            >
-                <span className="mr-0.5">◫</span>
-                Analysis
-                <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }}>▾</span>
-            </button>
-
-            {open && (
-                <div
-                    role="menu"
-                    style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 6px)',
-                        left: 0,
-                        zIndex: 100,
-                        background: '#132D3E',
-                        border: '1px solid rgba(45,212,168,0.2)',
-                        borderRadius: '8px',
-                        minWidth: '220px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                        overflow: 'hidden',
-                    }}
-                >
-                    {/* The Analysis workspace *is* the notebook surface: it
-                        writes the notebook into the local JupyterLab and then
-                        offers the open link. Linking straight at 127.0.0.1:8888
-                        from here skipped that and landed on an empty lab. */}
-                    <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setActiveView({ type: 'analysis' }); setOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                        <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>⌁</span>
-                        Jupyter Notebooks
-                    </button>
-                    <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setActiveView({ type: 'dsm' }); setOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                        style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                        <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>▤</span>
-                        Design Structure Matrix
-                    </button>
-                    {/* Traceability is the DSM's sibling — same grid, for
-                        establishing trace rather than reading structure — so it
-                        belongs next to it, on the same `analysis` gate. */}
-                    {isFeatureEnabled('analysis') && (
-                        <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { setActiveView({ type: 'traceability' }); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                            style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                        >
-                            <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>{'☷'}</span>
-                            Traceability Matrix
-                        </button>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
-const TOOLS: ToolItem[] = [
-    { id: 'ontology', label: 'Ontology Explorer', icon: '◉', view: { type: 'ontology' } },
-    { id: 'import', label: 'Import Model', icon: '↓', view: { type: 'import' } },
-    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', view: { type: 'traceability' } },
-    { id: 'statistics', label: 'Statistics Dashboard', icon: '⊠', view: { type: 'statistics' } },
-    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', view: { type: 'compliance-wizard' } },
-    { id: 'model-diff', label: 'Model Diff', icon: '↔', view: { type: 'model-diff' } },
-    { id: 'review-dashboard', label: 'Design Review Dashboard', icon: '📋', view: { type: 'review-dashboard' } },
-    { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', view: { type: 'dashboards' } },
-    { id: 'workflow-wizard', label: 'Workflow Wizard', icon: '🧙', view: { type: 'workflow-wizard' } },
-];
-
-// ─── Tools dropdown ──────────────────────────────────────────────────────────
-
-function ToolsDropdown({ activeViewType }: { activeViewType: string }) {
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const setActiveMode = useModelStore(s => s.setActiveMode);
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    const toolIds = TOOLS.map(t => t.id);
-    const isAnyToolActive = toolIds.includes(activeViewType);
-
-    useEffect(() => {
-        function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        }
-        if (open) document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [open]);
-
-    return (
-        <div ref={ref} style={{ position: 'relative' }}>
-            <button
-                onClick={() => setOpen(o => !o)}
-                className="flex items-center gap-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all"
-                style={
-                    isAnyToolActive || open
-                        ? { background: 'rgba(45, 212, 168, 0.15)', color: '#2DD4A8' }
-                        : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
-                }
-            >
-                <span className="mr-0.5">⚙</span>
-                Tools
-                <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }}>▾</span>
-            </button>
-
-            {open && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 6px)',
-                        left: 0,
-                        zIndex: 100,
-                        background: '#132D3E',
-                        border: '1px solid rgba(45,212,168,0.2)',
-                        borderRadius: '8px',
-                        minWidth: '220px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                        overflow: 'hidden',
-                    }}
-                >
-                    {TOOLS.filter(tool =>
-                        (tool.id !== 'ontology' || isFeatureEnabled('ontology'))
-                        && (tool.id !== 'import' || isFeatureEnabled('import'))
-                    ).map((tool, i) => {
-                        const isActive = activeViewType === tool.view.type;
-                        return (
-                            <button
-                                key={tool.id}
-                                onClick={() => {
-                                    setActiveView(isActive ? { type: 'welcome' } : tool.view);
-                                    setOpen(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                                style={{
-                                    fontSize: '13px',
-                                    color: isActive ? '#2DD4A8' : 'rgba(255,255,255,0.75)',
-                                    background: isActive ? 'rgba(45,212,168,0.1)' : 'transparent',
-                                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                }}
-                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                            >
-                                <span style={{ width: '18px', textAlign: 'center', opacity: 0.7 }}>{tool.icon}</span>
-                                {tool.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}
 
 // ─── Main ModeSwitcher ───────────────────────────────────────────────────────
 
@@ -250,7 +24,6 @@ export function ModeSwitcher() {
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [analysisOpen, setAnalysisOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
 
     useEffect(() => {
@@ -262,28 +35,40 @@ export function ModeSwitcher() {
     // Modes that have a left sidebar explorer
     const explorerModes: NavModeId[] = ['catalog', 'diagram', 'dhf', 'scenario'];
 
-    // Determine which nav mode is "active" from the current view type
-    // Returns '' when a tool is open so no nav button is highlighted
+    // The section the current page is in, and the explorer mode it shows,
+    // so clicking the open explorer mode again toggles its sidebar.
+    const activeSection = sectionOf(activeView, activeMode);
     const activeNavMode: string = (() => {
-        if (TOOL_VIEW_TYPES.has(activeView.type)) return '';
-        if (activeMode === 'dhf' || activeView.type === 'dhf-dashboard') return 'dhf';
+        if (activeView.type === 'dhf-dashboard' || activeView.type === 'dhf-document' || activeMode === 'dhf') return 'dhf';
         if (activeView.type === 'scenario-editor') return 'scenario';
-        // Scenario diagrams retain their origin context; they are rendered
-        // in the center pane without entering the Viewpoints workbench.
         if (activeMode === 'scenario' && activeView.type === 'diagram') return 'scenario';
-        if (activeView.type === 'analysis') return 'analysis';
-        if (activeView.type === 'rules') return 'rules';
-        if (activeView.type === 'ui-screens' || activeMode === 'ui-screens') return 'ui-screens';
-        if (activeView.type === 'ai' || activeView.type === 'ask' || activeView.type === 'sysml-generator') return 'ai';
-        // The dashboard retains the last explorer mode in `activeMode`. It is
-        // still the dashboard, though: otherwise Model Explorer is treated as
-        // already active and its click only toggles the sidebar instead of
-        // navigating to /catalog.
-        if (activeView.type === 'dashboard' || activeView.type === 'dashboards') return 'dashboard';
-        if (activeView.type === 'diagram' || activeMode === 'diagram') return 'diagram';
-        if (activeMode === 'catalog') return 'catalog';
-        return activeMode;
+        if (activeView.type === 'diagram' || (activeView.type === 'welcome' && activeMode === 'diagram')) return 'diagram';
+        if (activeView.type === 'welcome' && activeMode === 'catalog') return 'catalog';
+        const mode = (Object.keys(VIEW_OF_MODE) as NavModeId[])
+            .find(id => VIEW_OF_MODE[id] === activeView.type && activeView.type !== 'welcome');
+        return mode ?? '';
     })();
+    const isActiveEntry = (entry: NavEntry): boolean =>
+        'mode' in entry.target ? entry.target.mode === activeNavMode
+            : 'view' in entry.target ? entry.target.view.type === activeView.type
+            : false;
+
+    // The catalog and viewpoint index pages own their address, and the store →
+    // URL sync never pushes over them (isRouteOwnedPath). So every page the
+    // drawer opens is navigated to as well as set: from /catalog, setting a
+    // view alone left the address, and the page, where they were.
+    function show(view: ActiveView) {
+        setActiveView(view);
+        const path = viewToPath(view);
+        if (path) navigate(path);
+    }
+
+    function openEntry(entry: NavEntry) {
+        setDrawerOpen(false);
+        if ('mode' in entry.target) handleNavClick(entry.target.mode);
+        else if ('view' in entry.target) show(entry.target.view);
+        else setSettingsOpen(true);
+    }
 
     function handleNavClick(modeId: NavModeId) {
         // Clicking the already-active explorer mode toggles the sidebar (VS Code pattern)
@@ -302,7 +87,7 @@ export function ModeSwitcher() {
         // '/' here is what used to leave the address bar stuck at the root.
         switch (modeId) {
             case 'dashboard':
-                setActiveView({ type: 'dashboard' });
+                show({ type: 'dashboard' });
                 break;
             case 'catalog':
                 // The catalog page is route-driven rather than view-driven.
@@ -324,13 +109,13 @@ export function ModeSwitcher() {
                 navigate('/rules');
                 break;
             case 'dhf':
-                setActiveView({ type: 'dhf-dashboard' });
+                show({ type: 'dhf-dashboard' });
                 break;
             case 'scenario':
-                setActiveView({ type: 'scenario-editor' });
+                show({ type: 'scenario-editor' });
                 break;
             case 'ai':
-                setActiveView({ type: 'ai' });
+                show({ type: 'ai' });
                 break;
         }
     }
@@ -343,24 +128,39 @@ export function ModeSwitcher() {
                 <button onClick={() => { setDrawerOpen(false); handleNavClick('dashboard'); }} style={{ color: '#2DD4A8', fontWeight: 700, fontSize: 18, letterSpacing: '0.04em', border: 'none', background: 'none', cursor: 'pointer' }}>MEMO Architect</button>
                 <button aria-label="Close navigation" onClick={() => setDrawerOpen(false)} style={{ width: 36, height: 36, color: '#2DD4A8', fontSize: 24, border: 'none', background: 'transparent', cursor: 'pointer' }}>×</button>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.09)', paddingTop: 8 }}>
-                {NAV_MODES.filter(mode => !('feature' in mode) || isFeatureEnabled(mode.feature)).map(mode => <button key={mode.id} onClick={() => { handleNavClick(mode.id); setDrawerOpen(false); }} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ border: 'none', cursor: 'pointer', fontSize: 15, background: activeNavMode === mode.id ? 'rgba(45,212,168,0.15)' : 'transparent', color: activeNavMode === mode.id ? '#2DD4A8' : 'rgba(255,255,255,0.78)' }}><span style={{ width: 20, textAlign: 'center' }}>{mode.icon}</span>{mode.label}</button>)}
-                {isFeatureEnabled('analysis') && <>
-                    <button onClick={() => setAnalysisOpen(open => !open)} aria-expanded={analysisOpen} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ border: 'none', cursor: 'pointer', fontSize: 15, background: analysisOpen ? 'rgba(45,212,168,0.10)' : 'transparent', color: 'rgba(255,255,255,0.78)' }}>
-                        <span style={{ width: 20, textAlign: 'center' }}>◫</span>Analysis<span style={{ marginLeft: 'auto', fontSize: 11 }}>{analysisOpen ? '▾' : '▸'}</span>
-                    </button>
-                    {analysisOpen && <div style={{ margin: '0 0 4px 36px', borderLeft: '1px solid rgba(45,212,168,0.25)' }}>
-                        <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>◫</span>Analysis workspace</button>
-                        <button onClick={() => { setActiveView({ type: 'dsm' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>▤</span>Design Structure Matrix</button>
-                        <button onClick={() => { setActiveView({ type: 'traceability' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>{'☷'}</span>Traceability Matrix</button>
-                        <button onClick={() => { setActiveView({ type: 'analysis' }); setDrawerOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left" style={{ border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.68)', fontSize: 14 }}><span>⌁</span>Jupyter Notebooks</button>
-                    </div>}
-                </>}
-            </div>
+            <nav style={{ borderTop: '1px solid rgba(255,255,255,0.09)', paddingTop: 8 }}>
+                {NAV_SECTIONS.map(section => {
+                    const entries = NAV_ENTRIES.filter(entry => entry.section === section.id
+                        && (!entry.feature || isFeatureEnabled(entry.feature)));
+                    const current = activeSection === section.id;
+                    return (
+                        <div key={section.id} style={{ marginBottom: 6 }}>
+                            <div
+                                className="flex items-center gap-3 px-3 py-2"
+                                style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: current ? '#2DD4A8' : 'rgba(255,255,255,0.45)' }}
+                            >
+                                <span style={{ width: 20, textAlign: 'center' }}>{section.icon}</span>{section.label}
+                            </div>
+                            {entries.map(entry => {
+                                const active = isActiveEntry(entry);
+                                return (
+                                    <button
+                                        key={entry.id}
+                                        onClick={() => openEntry(entry)}
+                                        aria-current={active ? 'page' : undefined}
+                                        className="flex w-full items-center gap-3 rounded-md py-2 text-left"
+                                        style={{ border: 'none', cursor: 'pointer', fontSize: 14, paddingLeft: 44, paddingRight: 12, background: active ? 'rgba(45,212,168,0.15)' : 'transparent', color: active ? '#2DD4A8' : 'rgba(255,255,255,0.78)' }}
+                                    >
+                                        <span style={{ width: 18, textAlign: 'center', opacity: 0.75 }}>{entry.icon}</span>{entry.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+            </nav>
             <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '14px 4px' }} />
             <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Workspaces</span><WorkspaceManager /></div>
-            {isFeatureEnabled('model-tools') && <div className="px-2 py-1"><ToolsDropdown activeViewType={activeView.type} /></div>}
-            <button onClick={() => setSettingsOpen(true)} className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left" style={{ color: 'rgba(255,255,255,0.72)', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>⚙</span>Project Settings</button>
             <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
         </aside>
         {settingsOpen && <DhfSettingsPanel onClose={() => setSettingsOpen(false)} />}
