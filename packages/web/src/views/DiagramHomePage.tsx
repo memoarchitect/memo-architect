@@ -15,9 +15,11 @@ import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
 import { UNCATEGORIZED_ID, buildViewpointTree, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
 import { MemoBrandMark } from '../components/MemoBrandMark';
+import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 
 export function DiagramHomePage() {
     const model = useModelStore(s => s.model);
+    const role = useModelStore(s => s.role);
     const navigate = useNavigate();
 
     /** Model views grouped by the viewpoint they conform to, Uncategorized last. */
@@ -47,7 +49,7 @@ export function DiagramHomePage() {
         // agree. A viewpoint frames viewpoints in a system-of-systems model,
         // and a page that lists the constituents beside the whole says the
         // model is flat when it is not.
-        const declared = sortViewpointsByOntologyLayer([...viewpointMetadata.values()]);
+        const declared = sortViewpointsByOntologyLayer(viewpointsVisibleToRole([...viewpointMetadata.values()], role));
         const { rootViewpoints, viewpointChildren } = buildViewpointTree(declared);
         const flattened: { viewpoint: (typeof declared)[number]; depth: number }[] = [];
         const walk = (viewpoint: (typeof declared)[number], depth: number, seen: Set<string>) => {
@@ -83,7 +85,7 @@ export function DiagramHomePage() {
                 items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)),
             }]
             : ordered;
-    }, [model]);
+    }, [model, role]);
 
     if (!model) {
         return (

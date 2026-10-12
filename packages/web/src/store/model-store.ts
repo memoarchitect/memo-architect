@@ -28,6 +28,7 @@ import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memo
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
     requestRelationshipCreate, requestRelationshipDelete, requestElementDelete, sendPackageMutation,
+    sendUserPreferencesSave,
 } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
 import type { ViewpointDTO } from '@memoarchitect/tools/browser';
@@ -471,6 +472,18 @@ export interface ModelState {
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
+    // ─── The role this person works as (memo.user.yaml, git-ignored) ───
+    /**
+     * A stakeholder usage name (`safetyEngineer`) from the viewpoints'
+     * `stakeholders`, or null for every role. It narrows the viewpoints the
+     * views lists show; the server keeps it per person, per model.
+     */
+    role: string | null;
+    /** The server's copy arrived (on connect, or after a save). */
+    applyUserPreferences: (preferences: { role?: string }) => void;
+    /** Choose a role and save it for this person. */
+    setRole: (role: string | null) => void;
+
     // ─── Custom dashboards (plans/memo-custom-dashboards.md) ───────────
     /** Every dashboard file in both scopes, as last pushed by the server */
     dashboards: DashboardDTO[];
@@ -603,6 +616,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Diagram parse errors
     diagramParseErrors: {},
+
+    role: null,
+    applyUserPreferences: (preferences) => set({ role: preferences.role ?? null }),
+    setRole: (role) => {
+        set({ role });
+        sendUserPreferencesSave({ ...(role ? { role } : {}) });
+    },
 
     dashboards: [],
     dashboardsLoaded: false,

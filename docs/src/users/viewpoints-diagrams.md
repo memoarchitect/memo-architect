@@ -32,6 +32,18 @@ authored ID, for example:
 `VW-003` as an error when a view has no `viewpointDefinition` binding.
 Architect does not infer a “Document Views” viewpoint from presentation kind.
 
+## Showing the viewpoints for your role
+
+The **Role** control in the top bar lists the stakeholders the model's
+viewpoints are written for — each viewpoint's `stakeholders`, for example
+`ref :>> stakeholders = (safetyEngineer);`. Choosing one lists only the
+viewpoints that name that role, plus any viewpoint that names no stakeholder
+and the viewpoint a kept one is nested in. **All roles** lists everything.
+
+The choice is yours alone: Architect saves it in `memo.user.yaml` at the model
+root and adds that file to the model's `.gitignore` the first time it writes it.
+Delete the file to go back to all roles.
+
 ## Ontology source
 
 A viewpoint usage defines its ID, title, purpose, audience, concerns, layers,
