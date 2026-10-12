@@ -29,6 +29,7 @@ import { isFeatureEnabled } from '../config/feature-flags';
 import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
+import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -2252,10 +2253,14 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     // `__model` are synthetic buckets the deriver produces for views with no
     // viewpoint binding and for renderer samples — neither is a real viewpoint,
     // so both are folded into a single Uncategorized section rendered last.
-    const { viewpoints, uncategorized: uncategorizedDiagrams } = useMemo(
-        () => partitionViewsByViewpoint(model),
-        [model],
-    );
+    // The role narrows which viewpoints are listed; partitioning stays over
+    // every viewpoint, so a hidden viewpoint's views do not turn up as
+    // Uncategorized.
+    const role = useModelStore(s => s.role);
+    const { viewpoints, uncategorized: uncategorizedDiagrams } = useMemo(() => {
+        const partition = partitionViewsByViewpoint(model);
+        return { ...partition, viewpoints: viewpointsVisibleToRole(partition.viewpoints, role) };
+    }, [model, role]);
     // Display labels only — vp.label stays the authored title everywhere else.
     const viewpointLabels = useMemo(() => {
         const stripped = stripSharedLabelPrefix(viewpoints.map(vp => vp.label));

@@ -526,6 +526,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
                 store.resolveLlmRequest(msg.payload.requestId, msg.payload.suggestions);
             }
             break;
+        case 'user-preferences':
+            store.applyUserPreferences(msg.payload);
+            break;
         case 'dashboards':
             store.setDashboards(msg.payload.dashboards);
             break;
@@ -1034,6 +1037,13 @@ export function sendLlmApply(requestId: string, changes: ProposedChange[]): void
 export function sendToolchainSettingsSave(requestId: string, path: string, value?: string, scope: 'user' | 'project' = 'user'): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'toolchain:settings:save', payload: { requestId, path, scope, ...(value ? { value } : {}) } }));
+    }
+}
+
+/** Save this person's own choices for the model (memo.user.yaml, ignored by git). */
+export function sendUserPreferencesSave(preferences: { role?: string }): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'user-preferences:save', payload: preferences }));
     }
 }
 
