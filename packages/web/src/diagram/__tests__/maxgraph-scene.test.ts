@@ -29,22 +29,11 @@ describe('buildScene', () => {
         expect(scene!.nodes.map(node => node.glyph)).toEqual(expect.arrayContaining(['decision', 'merge', 'fork', 'join', 'activity-final']));
         // `receiveOrder` is an AcceptActionUsage, `sendReceipt` a SendActionUsage, and a
         // guard a TransitionFeatureMembership of kind `guard` (SysML-textual-bnf, SysML.ecore).
-        // OpenSysML's API JSON does not export them so yet (memo-meta
-        // plans/opensysml-upstream-drafts.md), and stage 2 is not bent around it: under
-        // OpenSysML the scene draws a plain usage and no guard label. Those expectations
-        // fail once OpenSysML exports the spec's structure, and are then replaced by the
-        // positive ones (memo-tools opensysml-upstream-gaps.test.ts fails at the same time).
+        // Every supported compiler exports them so (OpenSysML since 0.10.0).
         const glyphOf = (label: string) => scene!.nodes.find(node => node.label === label)?.glyph;
-        const guardLabel = scene!.edges.some(edge => edge.label === '[true]');
-        if (process.env.MEMO_TOOLCHAIN_COMPILER === 'syside') {
-            expect(glyphOf('receiveOrder')).toBe('accept');
-            expect(glyphOf('sendReceipt')).toBe('send');
-            expect(guardLabel).toBe(true);
-        } else {
-            expect(glyphOf('receiveOrder'), 'OpenSysML exports AcceptActionUsage now: assert the accept glyph under every compiler').not.toBe('accept');
-            expect(glyphOf('sendReceipt'), 'OpenSysML exports a named send as one SendActionUsage now: assert the send glyph under every compiler').not.toBe('send');
-            expect(guardLabel, "OpenSysML owns a guard through a TransitionFeatureMembership now: assert '[true]' under every compiler").toBe(false);
-        }
+        expect(glyphOf('receiveOrder')).toBe('accept');
+        expect(glyphOf('sendReceipt')).toBe('send');
+        expect(scene!.edges.some(edge => edge.label === '[true]')).toBe(true);
         expect(scene!.edges.some(edge => edge.subjectId && edge.color !== '#9CA3AF')).toBe(true);
         expect(scene!.nodes.every(node => node.subjectId.length > 0)).toBe(true);
     }, 120_000);
