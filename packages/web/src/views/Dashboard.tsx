@@ -5,6 +5,7 @@ import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import type { MemoModelDTO, DashboardScope } from '@memoarchitect/tools/browser';
 import { DashboardPage } from './DashboardPage';
 import { HOME_DASHBOARD_ID, viewpointDashboardId } from '../dashboard/dashboards';
+import { computeExplorerGroupTree, explorerRowCounts } from '../components/ExplorerPanel';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
 //
@@ -49,13 +50,16 @@ interface DashboardStats {
     projectName: string;
 }
 
-function computeDashboardStats(model: MemoModelDTO, violations: number, completenessPercent: number): DashboardStats {
+/** What the explorer counts per domain and per group; see `explorerRowCounts`. */
+type ExplorerCounts = ReturnType<typeof explorerRowCounts>;
+
+function computeDashboardStats(
+    model: MemoModelDTO, violations: number, completenessPercent: number, explorer: ExplorerCounts,
+): DashboardStats {
     const elements = Object.values(model.elements);
 
-    const layerCounts: Record<string, number> = {};
     const kindLower: Record<string, number> = {};
     for (const el of elements) {
-        layerCounts[el.layer] = (layerCounts[el.layer] || 0) + 1;
         kindLower[el.kind.toLowerCase()] = (kindLower[el.kind.toLowerCase()] || 0) + 1;
     }
 
@@ -69,16 +73,15 @@ function computeDashboardStats(model: MemoModelDTO, violations: number, complete
         totalRelationships: model.relationships.length,
         violations,
         completenessPercent,
-        riskCount: (layerCounts['risk'] || 0) + (layerCounts['analysis'] || 0),
-        requirementsCount: layerCounts['requirements'] || 0,
-        // Architecture spans both the legacy Apollo-11 layer names and the
-        // memo ontology layer directories (src/architecture/<layer>/)
-        architectureCount: [
-            'logical', 'physical', 'functional',
-            'logical_structure', 'software_structure', 'hardware_structure',
-            'functions', 'interfaces', 'system', 'context', 'operational', 'behavior',
-        ].reduce((sum, l) => sum + (layerCounts[l] || 0), 0),
-        verificationCount: (layerCounts['verification'] || 0) + (layerCounts['assurance'] || 0),
+        // The coverage tiles read the explorer's own placement (the ontology's
+        // ExplorerClassification), so a tile and the explorer branch it names
+        // agree. Reading `el.layer` here counted layer ids the ontology no
+        // longer declares (`risk`, `assurance`), and Risk and Verification
+        // showed 0 beside an explorer listing hundreds.
+        riskCount: explorer.byGroup.get('safety-risk') ?? 0,
+        requirementsCount: explorer.byGroup.get('requirements') ?? 0,
+        architectureCount: explorer.byDomain.get('architecture') ?? 0,
+        verificationCount: explorer.byGroup.get('verification-validation') ?? 0,
         hazardCount: kindLower['hazard'] || 0,
         // All ontology requirement defs: Requirement (requirementType:
         // system/software/hardware/…), SecurityRequirement
@@ -285,6 +288,7 @@ function useDashboardData() {
     const model = useModelStore(s => s.model);
     const validation = useModelStore(s => s.validation);
     const completeness = useModelStore(s => s.completeness);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
 
     const violationCount = validation?.violations?.length ?? 0;
     const completenessPercent = useMemo(() => {
@@ -294,9 +298,22 @@ function useDashboardData() {
         return Math.round(avg);
     }, [completeness]);
 
+    const explorer = useMemo(
+        () => explorerRowCounts(model ? computeExplorerGroupTree(
+            Object.values(model.elements),
+            '',
+            model.registries?.kinds ?? [],
+            availableOntologies,
+            model.packages ?? [],
+            undefined,
+            model.relationships ?? [],
+            model.viewpoints ?? [],
+        ) : []),
+        [model, availableOntologies],
+    );
     const stats = useMemo(
-        () => model ? computeDashboardStats(model, violationCount, completenessPercent) : null,
-        [model, violationCount, completenessPercent]
+        () => model ? computeDashboardStats(model, violationCount, completenessPercent, explorer) : null,
+        [model, violationCount, completenessPercent, explorer]
     );
     return { stats, violationCount, completenessPercent };
 }
