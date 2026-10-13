@@ -155,6 +155,24 @@ but not removed by id; name it in the source first.
 
 ---
 
+## 1c. Suspect links
+
+When a requirements tool, PLM or quality system stays the owner of some records,
+import them as a *source* (Import Model › Sources; in the command line,
+`memo-architect import source`). A link you author to an imported record can note
+the revision it was made against. After a re-import, **Assurance › Suspect Links**
+lists the links whose record has moved to another revision or left its source.
+
+- **Mark reviewed** rewrites the revision the link was made against to the record's
+  current one, in the file that declares the link. Nothing else about the link changes.
+- **Remove link** is the action for a record that left its source: it has no revision
+  to review against.
+- The list follows the workspace you chose: a link is shown when either end is in it.
+
+The Sources panel previews a re-import before it writes anything: what is new,
+what changed, what left the export, and how many links each change makes suspect.
+Import Model is an experimental feature (`--experimental`).
+
 ## 2. Consistency Analysis
 
 The Consistency Panel provides real-time feedback on logical gaps in your model that simple schema validation cannot catch.

@@ -9,7 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -124,6 +124,8 @@ const rulePolicyWriteRequests = new Map<string, PendingRequest<any>>();
 const rulePreviewRequests = new Map<string, PendingRequest<RulePreviewResultMessage['payload']>>();
 const ruleCreateRequests = new Map<string, PendingRequest<RuleCreateResultMessage['payload']>>();
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
+const sourceImportRequests = new Map<string, PendingRequest<SourceImportResultMessage['payload']>>();
+const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResultMessage['payload']>>();
 
 /**
  * Resolve an in-flight mutation with the server's answer.
@@ -161,7 +163,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -193,7 +195,8 @@ function rejectRelationshipRequests(message: string): void {
 }
 
 function sendRelationshipRequest<T extends { requestId: string }>(
-    type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete',
+    type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
+        | 'import:preview' | 'import:apply' | 'suspect:review',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -382,6 +385,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'relationship:update:result':
             settleRelationshipRequest(msg.payload, relationshipUpdateRequests);
+            break;
+        case 'source-import:result':
+            settleRelationshipRequest(msg.payload, sourceImportRequests);
+            break;
+        case 'suspect:review:result':
+            settleRelationshipRequest(msg.payload, suspectReviewRequests);
             break;
         case 'element:delete:result':
             settleRelationshipRequest(msg.payload, elementDeleteRequests);
@@ -802,6 +811,32 @@ export function requestRelationshipDelete(
         ...request,
         precondition: sourceFile ? sourcePrecondition(sourceFile, [relationship?.sourceId, relationship?.targetId].filter(Boolean) as string[]) : undefined,
     }, relationshipDeleteRequests);
+}
+
+/**
+ * Preview or apply an import from another system. A preview writes nothing; the
+ * apply writes the one file the source owns. Both answer with the diff.
+ */
+export function requestSourceImport(
+    mode: 'preview' | 'apply', request: Omit<SourceImportPayload, 'requestId'>,
+): Promise<SourceImportResultMessage['payload']> {
+    return sendRelationshipRequest(mode === 'preview' ? 'import:preview' : 'import:apply', request, sourceImportRequests);
+}
+
+/**
+ * Mark suspect links reviewed. One precondition per file the links are declared in,
+ * from the hashes the model on screen carries; the server decides what is suspect.
+ */
+export function requestSuspectReview(
+    reviews: { relationshipId: string; elementId: string }[],
+): Promise<SuspectReviewResultMessage['payload']> {
+    const model = useModelStore.getState().model;
+    const preconditions: ModelMutationPrecondition[] = [];
+    for (const file of new Set(reviews.map(r => model?.relationships.find(rel => rel.id === r.relationshipId)?.file).filter(Boolean) as string[])) {
+        const precondition = sourcePrecondition(file, reviews.map(r => r.elementId));
+        if (precondition) preconditions.push(precondition);
+    }
+    return sendRelationshipRequest('suspect:review', { reviews, preconditions }, suspectReviewRequests);
 }
 
 /** Atomically move one or both endpoints of a relationship usage. */
