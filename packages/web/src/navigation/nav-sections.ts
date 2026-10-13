@@ -47,6 +47,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     analysis: 'assurance',
     dsm: 'assurance',
     traceability: 'assurance',
+    'suspect-links': 'assurance',
     statistics: 'assurance',
     'compliance-wizard': 'assurance',
     'review-dashboard': 'assurance',
@@ -121,6 +122,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 
     { id: 'rules', label: 'Rules', icon: '⚖', section: 'assurance', target: { mode: 'rules' } },
     { id: 'traceability', label: 'Traceability Matrix', icon: '☷', section: 'assurance', target: { view: { type: 'traceability' } }, feature: 'analysis' },
+    { id: 'suspect-links', label: 'Suspect Links', icon: '⚑', section: 'assurance', target: { view: { type: 'suspect-links' } } },
     { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'assurance', target: { view: { type: 'dsm' } }, feature: 'analysis' },
     { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'assurance', target: { view: { type: 'analysis' } }, feature: 'analysis' },
     { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'assurance', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },

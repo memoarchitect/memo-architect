@@ -28,6 +28,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     dsm: '/dsm',
     ontology: '/ontology',
     traceability: '/traceability',
+    'suspect-links': '/suspect-links',
     'scenario-editor': '/use-cases',
     'model-diff': '/diff',
     'compliance-wizard': '/compliance',

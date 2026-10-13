@@ -1,4 +1,5 @@
 import { useModelStore } from '../store/model-store';
+import { ImportSources } from '../components/ImportSources';
 
 interface ImportOption {
     icon: string;
@@ -37,6 +38,8 @@ export function ImportView() {
                 <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: 36 }}>
                     Bring data into your model from external sources.
                 </p>
+
+                <ImportSources />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {options.map((opt) => {
