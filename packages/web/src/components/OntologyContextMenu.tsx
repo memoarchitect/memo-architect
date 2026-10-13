@@ -91,7 +91,7 @@ export function OntologyContextMenu({
                 <Divider />
                 <MenuItem
                     icon={target.isSelected ? '☑' : '☐'}
-                    label={target.isSelected ? 'Deselect for Project' : 'Select for Project'}
+                    label={target.isSelected ? 'Deselect for Model' : 'Select for Model'}
                     onClick={() => onToggleSelection(target.pkgName)}
                 />
             </div>

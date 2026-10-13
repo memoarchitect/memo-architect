@@ -438,7 +438,7 @@ export function OntologyBrowserTab() {
                                     onChange={e => handleCheckboxChange(e, pkg.name, isSelected)}
                                     onClick={e => e.stopPropagation()}
                                     style={{ cursor: 'pointer', accentColor: '#2563EB', flexShrink: 0 }}
-                                    title={isSelected ? 'Deselect for project' : 'Select for project'}
+                                    title={isSelected ? 'Deselect for model' : 'Select for model'}
                                 />
                                 <span style={{ color: COLOR.muted, fontSize: '10px' }}>{isPkgExpanded ? '\u25BE' : '\u25B8'}</span>
                                 <span>{typeIcon}</span>

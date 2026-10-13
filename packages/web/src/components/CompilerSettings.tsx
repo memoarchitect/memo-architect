@@ -21,7 +21,7 @@ const LAYER_LABEL: Record<string, string> = {
     'command line': 'the command line',
     'environment': 'an environment variable',
     'user settings': 'your settings',
-    'project': 'the project',
+    'project': 'the model',
 };
 
 export function CompilerSettings() {
@@ -52,7 +52,7 @@ export function CompilerSettings() {
                 setTimeout(() => reject(new Error('The save timed out.')), 20_000);
             });
             setNote(scope === 'project'
-                ? 'Saved in the project\'s settings file. Architect restarts to apply it; commit the file so everyone on the project uses it.'
+                ? 'Saved in the model\'s settings file. Architect restarts to apply it; commit the file so everyone working on the model uses it.'
                 : result.appliesOnRestart ? 'Saved. It applies when Architect is restarted.' : 'Saved.');
         } catch (e: any) {
             setNote(e?.message ?? 'The setting could not be saved.');
@@ -79,7 +79,7 @@ export function CompilerSettings() {
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 onClick={() => setOpen(o => !o)}
-                title="Which SysML compiler runs. The project names one; your own setting overrides it for you."
+                title="Which SysML compiler runs. The model names one; your own setting overrides it for you."
                 style={{
                     background: 'none', cursor: 'pointer', fontSize: 12, padding: '4px 10px', borderRadius: 6,
                     color: chosen ? 'rgba(255,255,255,0.8)' : '#FCA5A5',
@@ -101,7 +101,7 @@ export function CompilerSettings() {
                 >
                     <div style={{ fontSize: 12, fontWeight: 700 }}>Compiler</div>
                     <div>
-                        <label style={label} htmlFor="memo-compiler-project">This project uses</label>
+                        <label style={label} htmlFor="memo-compiler-project">This model uses</label>
                         <select
                             id="memo-compiler-project"
                             style={field}
@@ -113,7 +113,7 @@ export function CompilerSettings() {
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
-                            Written to the project's settings file, so everyone who opens the project uses it. Commit it.
+                            Written to the model's settings file, so everyone who opens the model uses it. Commit it.
                         </div>
                     </div>
                     <div>
@@ -125,11 +125,11 @@ export function CompilerSettings() {
                             disabled={saving}
                             onChange={e => { void save('compiler', e.target.value || undefined, 'user'); }}
                         >
-                            <option value="">(the project's)</option>
+                            <option value="">(the model's)</option>
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                         <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
-                            Overrides the project's choice for you only. Saved in {status.file}, not in the project.
+                            Overrides the model's choice for you only. Saved in {status.file}, not in the model.
                         </div>
                         {compiler?.layer && compiler.layer !== 'user settings' && compiler.layer !== 'project' && (
                             <div style={{ fontSize: 11, color: '#B45309', marginTop: 4 }}>

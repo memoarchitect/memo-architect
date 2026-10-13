@@ -1,7 +1,7 @@
 // ─── DHF Settings Panel ───────────────────────────────────────────────────────
 //
 // Global settings for DHF document generation:
-//   - Project identity (company, product, device type, version, phase)
+//   - Model identity (company, product, device type, version, phase)
 //   - Branding (logo, compact logo, primary color)
 //   - Document layout (compact mode, header/footer templates)
 //   - Document numbering prefix
@@ -134,7 +134,7 @@ export function DhfSettingsPanel({ onClose }: Props) {
                                 marginBottom: '-1px', textTransform: 'capitalize',
                             }}
                         >
-                            {tab === 'identity' ? 'Project' : tab === 'branding' ? 'Branding' : 'Layout'}
+                            {tab === 'identity' ? 'Model' : tab === 'branding' ? 'Branding' : 'Layout'}
                         </button>
                     ))}
                 </div>
@@ -143,7 +143,7 @@ export function DhfSettingsPanel({ onClose }: Props) {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
                     {activeTab === 'identity' && (
                         <div>
-                            <p style={SECTION_TITLE}>Project Identity</p>
+                            <p style={SECTION_TITLE}>Model Identity</p>
                             <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px', lineHeight: '1.5' }}>
                                 These values resolve <code style={{ background: '#F3F4F6', padding: '1px 4px', borderRadius: '3px' }}>{'{{project.*}}'}</code> directives in all templates and the AI drafting context.
                             </p>

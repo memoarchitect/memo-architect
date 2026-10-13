@@ -120,7 +120,10 @@ export function ModeSwitcher() {
         }
     }
 
-    if (!drawerOpen) return null;
+    // The settings panel outlives the drawer: opening it from the drawer
+    // closes the drawer, so it cannot be rendered inside it.
+    const settingsPanel = settingsOpen ? <DhfSettingsPanel onClose={() => setSettingsOpen(false)} /> : null;
+    if (!drawerOpen) return settingsPanel;
     return <>
         <div onClick={() => setDrawerOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(4, 18, 28, 0.35)' }} />
         <aside aria-label="Main navigation" style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 296, zIndex: 81, background: '#0B1E2D', borderRight: '1px solid rgba(45,212,168,0.28)', boxShadow: '12px 0 32px rgba(0,0,0,0.32)', padding: '18px 12px', overflowY: 'auto' }}>
@@ -163,6 +166,6 @@ export function ModeSwitcher() {
             <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Workspaces</span><WorkspaceManager /></div>
             <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
         </aside>
-        {settingsOpen && <DhfSettingsPanel onClose={() => setSettingsOpen(false)} />}
+        {settingsPanel}
     </>;
 }

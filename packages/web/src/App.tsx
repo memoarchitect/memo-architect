@@ -360,7 +360,7 @@ export function App() {
                             }}>
                                 pnpm architect -- dev --port 3000
                             </code>
-                            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or try the example project:</p>
+                            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or try the example model:</p>
                             <code style={{
                                 display: 'block', padding: '8px 14px',
                                 background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',

@@ -15,8 +15,8 @@ import { sendLlmSettingsSave } from '../store/ws-client';
 
 const ORIGIN_LABEL: Record<LlmSettingsOrigin, string> = {
     'env': 'an environment variable',
-    'env-file': 'the project .env file',
-    'project-settings': 'project settings',
+    'env-file': 'the model .env file',
+    'project-settings': 'the model settings',
     'user-credentials': 'your saved credentials',
     'default': 'the default',
 };
@@ -146,7 +146,7 @@ export function LlmSettings({ onClose }: { onClose: () => void }) {
                         <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', lineHeight: 1.5 }}>
                             Stored in <code>~/.memo/credentials.json</code> with owner-only permissions —
                             outside this project, so it is never committed. You can also set{' '}
-                            <code>ANTHROPIC_API_KEY</code> in the environment or a project <code>.env</code>.
+                            <code>ANTHROPIC_API_KEY</code> in the environment or the model’s <code>.env</code>.
                         </div>
                     </>
                 )}

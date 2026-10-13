@@ -158,7 +158,7 @@ function resolveDirectives(
     content = content.replace(/\{\{model\.(\w+)\}\}/g, (m, key: string) => {
         if (!model) return '<span class="directive-placeholder">…</span>';
         const values: Record<string, string | number> = {
-            name: model.metadata?.projectName || (model as { projectName?: string }).projectName || 'this project',
+            name: model.metadata?.modelName || 'this model',
             elements: Object.keys(model.elements).length,
             relationships: model.relationships.length,
             views: model.diagrams?.length ?? 0,

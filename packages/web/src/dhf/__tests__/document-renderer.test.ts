@@ -204,7 +204,7 @@ describe('embeds', () => {
 describe('dashboard prose', () => {
     it('fills {{model.*}} values inline and flags an unknown key', async () => {
         const { renderDashboardHtml } = await import('../document-renderer');
-        const m = { elements: { a: {}, b: {} }, relationships: [{}], diagrams: [{}, {}, {}], viewpoints: [{}], metadata: { projectName: 'Pump' } } as any;
+        const m = { elements: { a: {}, b: {} }, relationships: [{}], diagrams: [{}, {}, {}], viewpoints: [{}], metadata: { modelName: 'Pump' } } as any;
         const html = renderDashboardHtml('**{{model.name}}** has {{model.elements}} elements, {{model.relationships}} relationship, {{model.views}} views, {{model.viewpoints}} viewpoint. {{model.bogus}}', m, settings());
         expect(html).toContain('<strong>Pump</strong> has 2 elements, 1 relationship, 3 views, 1 viewpoint.');
         expect(html).toContain('unknown; use name');

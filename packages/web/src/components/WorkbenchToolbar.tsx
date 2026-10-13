@@ -55,13 +55,13 @@ export function WorkbenchToolbar() {
 
             <CompilerSettings />
 
-            {(metadata?.projectName || metadata?.gitUser) && (
+            {(metadata?.modelName || metadata?.gitUser) && (
                 <span
-                    title="Current project and Git revision"
+                    title="Current model and Git revision"
                     style={{ color: 'rgba(255,255,255,0.62)', fontSize: '12px', whiteSpace: 'nowrap' }}
                 >
-                    {metadata?.projectName && <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{metadata.projectName}</span>}
-                    {metadata?.projectName && metadata?.gitUser && <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.32)' }}>|</span>}
+                    {metadata?.modelName && <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{metadata.modelName}</span>}
+                    {metadata?.modelName && metadata?.gitUser && <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.32)' }}>|</span>}
                     {metadata?.gitUser && <>
                         @{metadata.gitUser}
                         {metadata.gitBranch && <> · {metadata.gitBranch}</>}

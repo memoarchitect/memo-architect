@@ -50,7 +50,7 @@ export function RulesEditor() {
         <section aria-label="Rules" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
             <div className="px-3 py-2 font-semibold" style={{ fontSize: FONT.xs, color: COLOR.primary }}>
                 Rules
-                <span style={{ fontWeight: 400, color: COLOR.muted }}> — what the project is checked against, and why</span>
+                <span style={{ fontWeight: 400, color: COLOR.muted }}> — what the model is checked against, and why</span>
             </div>
 
             <div className="flex flex-wrap gap-1 px-3 pb-2" role="group" aria-label="Filter by domain">

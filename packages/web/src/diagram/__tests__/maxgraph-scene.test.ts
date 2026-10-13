@@ -12,7 +12,7 @@ describe('buildScene', () => {
         // model alongside the rest of its SysML.
         const project = await loadProjectModel({
             projectRoot: resolve(workspaceRoot, 'memo/examples/sysml-diagram-samples'),
-            config: { projectName: 'FulfillOrder', toolchain: { compiler: process.env.MEMO_TOOLCHAIN_COMPILER ?? 'opensysml' } } as never,
+            config: { modelName: 'FulfillOrder', toolchain: { compiler: process.env.MEMO_TOOLCHAIN_COMPILER ?? 'opensysml' } } as never,
             cache: false,
         });
         const model = modelToDTO(project.model);
