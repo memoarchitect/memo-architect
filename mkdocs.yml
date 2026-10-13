@@ -105,6 +105,7 @@ nav:
           - Viewpoints and Diagrams: users/viewpoints-diagrams.md
           - Validation and Closure: users/validation.md
           - Analysis Tools: users/analysis-tools.md
+          - Features and Design Options: users/variability.md
           - Custom Dashboards: users/dashboards.md
           - DHF Workbench: users/dhf-workbench.md
           - Intelligence and AI: users/ai-features.md

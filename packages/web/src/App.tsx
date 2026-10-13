@@ -44,6 +44,7 @@ const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default:
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
 const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(m => ({ default: m.UiScreensWorkspace })));
 const RulesWorkspace = lazy(() => import('./views/RulesWorkspace').then(m => ({ default: m.RulesWorkspace })));
+const VariabilityPage = lazy(() => import('./views/Variability').then(m => ({ default: m.Variability })));
 const SuspectLinksPage = lazy(() => import('./views/SuspectLinksPage').then(m => ({ default: m.SuspectLinksPage })));
 const ChangePage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ChangePage })));
 const ReleasesPage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ReleasesPage })));
@@ -129,6 +130,8 @@ function UnifiedCanvas() {
                 return <UiScreensWorkspace />;
             case 'rules':
                 return <RulesWorkspace />;
+            case 'variability':
+                return <VariabilityPage />;
             case 'suspect-links':
                 return <SuspectLinksPage />;
             case 'change':
