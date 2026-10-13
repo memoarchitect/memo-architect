@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { elementUrl } from '../router';
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function ElementCollectionPage({ family }: Props) {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
 

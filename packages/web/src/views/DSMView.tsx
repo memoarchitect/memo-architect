@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { legalRelationshipTypes } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import {
     collectNodeIds,
     computeHierarchicalDSM,
@@ -60,7 +61,7 @@ function markColor(cell: DsmAggregateCell): string {
 }
 
 export function DSMView() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const setAnalysisIssues = useModelStore(s => s.setAnalysisIssues);

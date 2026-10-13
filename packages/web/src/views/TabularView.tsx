@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import { FONT } from '../styles/tokens';
 import type { MemoElement } from '@memoarchitect/tools/browser';
@@ -36,7 +37,7 @@ function SortIcon({ col, sortKey, sortDir }: { col: string; sortKey: SortKey; so
 // ─── TabularView ───────────────────────────────────────────────────────────
 
 export function TabularView() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const activeView = useModelStore(s => s.activeView);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectElement = useModelStore(s => s.selectElement);

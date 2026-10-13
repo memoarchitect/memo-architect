@@ -10,6 +10,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DiagramDTO, ViewKind } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
@@ -18,7 +19,7 @@ import { MemoBrandMark } from '../components/MemoBrandMark';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 
 export function DiagramHomePage() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const role = useModelStore(s => s.role);
     const navigate = useNavigate();
 

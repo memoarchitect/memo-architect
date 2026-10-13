@@ -19,6 +19,7 @@ import {
     type MemoRelationship,
 } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import {
     computeHierarchicalDSM,
     collectNodeIds,
@@ -109,7 +110,7 @@ interface CellFocus {
 type Status = { kind: 'ok' | 'error'; message: string } | null;
 
 export function TraceabilityMatrix() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const connected = useModelStore(s => s.connected);
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);

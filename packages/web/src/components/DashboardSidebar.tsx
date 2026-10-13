@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -13,7 +14,7 @@ import { COLOR, FONT } from '../styles/tokens';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function DashboardSidebar() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const recentlyVisited = useModelStore(s => s.recentlyVisited);
     const selectElement = useModelStore(s => s.selectElement);
 

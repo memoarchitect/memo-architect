@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import type { MemoModelDTO, MemoElement } from '@memoarchitect/tools/browser';
 
@@ -122,7 +123,7 @@ function computeStats(model: MemoModelDTO): ModelStats {
 // ─── Dashboard Component ────────────────────────────────────────────────────
 
 export function StatisticsDashboard() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const validation = useModelStore(s => s.validation);
     const completeness = useModelStore(s => s.completeness);
 

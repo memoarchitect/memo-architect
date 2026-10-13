@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DashboardScope } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { saveDashboard, deleteDashboard, moveDashboard } from '../store/ws-client';
 import { renderDashboardHtml } from '../dhf/document-renderer';
 import { documentThemeCss } from '../dhf/document-theme';
@@ -73,7 +74,7 @@ export function DashboardPage({ dashboardId, scope, widgets }: {
     scope?: DashboardScope;
     widgets: WidgetRegistry;
 }) {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const dashboards = useModelStore(s => s.dashboards);
     const dashboardsLoaded = useModelStore(s => s.dashboardsLoaded);
     const dhfSettings = useModelStore(s => s.dhfSettings);
@@ -301,7 +302,7 @@ function MarkdownEditor({ value, onChange, onSave }: {
     onChange: (value: string) => void;
     onSave: () => void;
 }) {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const diagrams = useMemo(
         () => [...(model?.diagrams ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
