@@ -481,10 +481,17 @@ export interface ModelState {
      * views lists show; the server keeps it per person, per model.
      */
     role: string | null;
+    /**
+     * The workspace this person works in: the id of a system (or system of systems) definition from
+     * `model.workspaceMembership`, or null for the whole model. Saved with the role.
+     */
+    workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
-    applyUserPreferences: (preferences: { role?: string }) => void;
+    applyUserPreferences: (preferences: { role?: string; workspace?: string }) => void;
     /** Choose a role and save it for this person. */
     setRole: (role: string | null) => void;
+    /** Choose a workspace and save it for this person. */
+    setWorkspace: (workspace: string | null) => void;
 
     // ─── Custom dashboards (plans/memo-custom-dashboards.md) ───────────
     /** Every dashboard file in both scopes, as last pushed by the server */
@@ -620,10 +627,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
     diagramParseErrors: {},
 
     role: null,
-    applyUserPreferences: (preferences) => set({ role: preferences.role ?? null }),
+    workspace: null,
+    applyUserPreferences: (preferences) => set({ role: preferences.role ?? null, workspace: preferences.workspace ?? null }),
+    // A save replaces the person's choices, so each one is sent with the other.
     setRole: (role) => {
         set({ role });
-        sendUserPreferencesSave({ ...(role ? { role } : {}) });
+        sendUserPreferencesSave({ ...(role ? { role } : {}), ...(get().workspace ? { workspace: get().workspace! } : {}) });
+    },
+    setWorkspace: (workspace) => {
+        set({ workspace });
+        sendUserPreferencesSave({ ...(get().role ? { role: get().role! } : {}), ...(workspace ? { workspace } : {}) });
     },
 
     dashboards: [],

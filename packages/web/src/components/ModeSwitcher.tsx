@@ -163,7 +163,7 @@ export function ModeSwitcher() {
                 })}
             </nav>
             <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '14px 4px' }} />
-            <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Workspaces</span><WorkspaceManager /></div>
+            <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Working sets</span><WorkspaceManager /></div>
             <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
         </aside>
         {settingsPanel}

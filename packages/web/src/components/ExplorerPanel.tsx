@@ -30,6 +30,7 @@ import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
+import { useScopedModel } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1493,7 +1494,7 @@ export function computeExplorerGroupTree(
 
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const navigate = useNavigate();
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
     const setActiveView = useModelStore(s => s.setActiveView);

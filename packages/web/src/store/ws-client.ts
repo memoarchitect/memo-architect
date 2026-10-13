@@ -1041,7 +1041,7 @@ export function sendToolchainSettingsSave(requestId: string, path: string, value
 }
 
 /** Save this person's own choices for the model (memo.user.yaml, ignored by git). */
-export function sendUserPreferencesSave(preferences: { role?: string }): void {
+export function sendUserPreferencesSave(preferences: { role?: string; workspace?: string }): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'user-preferences:save', payload: preferences }));
     }

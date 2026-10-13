@@ -92,7 +92,7 @@ export function WorkspaceManager() {
                         ? { background: 'rgba(45,212,168,0.15)', color: '#2DD4A8' }
                         : { background: 'transparent', color: 'rgba(255,255,255,0.5)' }
                 }
-                title="Workspaces (Ctrl+1/2/3 to restore, Ctrl+Shift+1/2/3 to save)"
+                title="Working sets (Ctrl+1/2/3 to restore, Ctrl+Shift+1/2/3 to save)"
             >
                 <span>⊟</span>
                 <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }}>▾</span>
