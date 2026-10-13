@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_LABELS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 
@@ -29,7 +30,7 @@ export function GapBar() {
     const validation = useModelStore(s => s.validation);
     const analysisIssues = useModelStore(s => s.analysisIssues);
     const selectElement = useModelStore(s => s.selectElement);
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const completeness = useModelStore(s => s.completeness);
     const gapBarExpanded = useModelStore(s => s.gapBarExpanded);
     const toggleGapBar = useModelStore(s => s.toggleGapBar);

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
@@ -383,7 +384,7 @@ const diagramChipStyle: React.CSSProperties = {
 // ─── Main ReviewDashboard component ─────────────────────────────────────────
 
 export function ReviewDashboard() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const setActiveView = useModelStore(s => s.setActiveView);
 
     if (!model) {

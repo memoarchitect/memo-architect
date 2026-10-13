@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
@@ -22,7 +23,7 @@ function layerLabel(layer: string): string {
 }
 
 export function CatalogHomePage() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const navigate = useNavigate();
 
     const familiesByLayer = useMemo(() => {

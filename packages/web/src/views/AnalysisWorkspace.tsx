@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useModelStore } from '../store/model-store';
+import { useScopedModel } from '../store/scoped-model';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 
 type Folder = { id: string; name: string };
@@ -148,7 +149,7 @@ async function liveNotebookExists(notebook: Notebook): Promise<boolean> {
  * model unless a notebook author deliberately adds such a cell.
  */
 export function AnalysisWorkspace() {
-    const model = useModelStore(s => s.model);
+    const model = useScopedModel();
     const [library, setLibrary] = useState<AnalysisLibrary>(loadLibrary);
     const [selectedFolder, setSelectedFolder] = useState(ROOT_FOLDER);
     const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(
