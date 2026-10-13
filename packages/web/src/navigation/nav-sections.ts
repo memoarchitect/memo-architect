@@ -36,6 +36,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     'workflow-wizard': 'guide',
     welcome: 'guide',
     'element-detail': 'model',
+    variability: 'model',
     'scenario-editor': 'model',
     ai: 'model',
     ask: 'model',
@@ -115,6 +116,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 
     { id: 'catalog', label: 'Model Explorer', icon: '☰', section: 'model', target: { mode: 'catalog' } },
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'model', target: { mode: 'scenario' } },
+    { id: 'variability', label: 'Variability', icon: '⑂', section: 'model', target: { view: { type: 'variability' } } },
     { id: 'ai', label: 'AI Tools', icon: '✦', section: 'model', target: { mode: 'ai' }, feature: 'ai-tools' },
 
     { id: 'diagram', label: 'Viewpoints', icon: '⊟', section: 'views', target: { mode: 'diagram' } },
