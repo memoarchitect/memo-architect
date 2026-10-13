@@ -7,7 +7,7 @@ model content.
 > meant before.
 
 This page is the settings half. What the model *contains* is declared natively —
-see [Native project format](https://memoarchitect.com/memo/reference/native-project-format/)
+see [Native model format](https://memoarchitect.com/memo/reference/native-model-format/)
 in the ontology reference.
 
 ## Three kinds of file, and the line between them
@@ -41,7 +41,7 @@ used as a fallback.
 | Retired | What decides it now |
 |---|---|
 | `extends:` | A native `private import` of the package in `model/catalog/project.sysml` |
-| `methodology:` | The `ProjectMethodBinding`, whose `selectedMethodology` is a typed SysML reference |
+| `methodology:` | The `ModelMethodBinding`, whose `selectedMethodology` is a typed SysML reference |
 | `ontologies:` | A native `private import` of the ontology package |
 | `modules:`, `optionalModules:` | `includedModule` on the methodology |
 | `projectType:`, `type:`, `usage:` | Nothing — a package's authority comes from the resolved root its files sit under |
@@ -59,9 +59,9 @@ package infusion_pump_catalog {
     private import memo_methodology_profiles::*;
     private import infusion_pump_architecture::*;
 
-    part projectMethodBinding : ProjectMethodBinding {
+    part projectMethodBinding : ModelMethodBinding {
         attribute :>> id = "PMB-001";
-        attribute :>> projectName = "Infusion Pump";
+        attribute :>> modelName = "Infusion Pump";
         ref :>> selectedMethodology = mdDefaultDefinition;
         attribute :>> scopeMode = ScopeModeKind::explicit;
     }

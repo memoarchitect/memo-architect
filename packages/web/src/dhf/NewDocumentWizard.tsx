@@ -322,7 +322,7 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                                     onChange={e => setSystemId(e.target.value)}
                                     style={{ flex: 1, padding: '5px 8px', border: '1px solid #E5E7EB', borderRadius: '5px', fontSize: '12px', color: '#1B3A4B', background: '#fff' }}
                                 >
-                                    <option value="">Global — project-wide</option>
+                                    <option value="">Global — model-wide</option>
                                     {systems.map(system => (
                                         <option key={system.id} value={system.id}>{system.name || system.id}</option>
                                     ))}
@@ -336,7 +336,7 @@ export function NewDocumentWizard({ initialGroupId, existingDocs, numberingPrefi
                                     onChange={e => setTitleOverrides(o => ({ ...o, [d.key]: e.target.value }))}
                                     style={{ flex: 1, padding: '4px 8px', border: '1px solid #E5E7EB', borderRadius: '5px', fontSize: '12px', color: '#1B3A4B', outline: 'none' }} />
                                 <span style={{ fontSize: '10px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>
-                                    {d.templateId === 'blank' ? 'blank' : d.templateId === 'new-template' ? 'new template' : d.templateId.startsWith('repo:') ? 'project' : 'meMO'}
+                                    {d.templateId === 'blank' ? 'blank' : d.templateId === 'new-template' ? 'new template' : d.templateId.startsWith('repo:') ? 'model' : 'meMO'}
                                 </span>
                             </div>
                         ))}

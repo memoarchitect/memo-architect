@@ -47,7 +47,7 @@ interface DashboardStats {
     // Diagrams
     diagramCount: number;
     // Project name
-    projectName: string;
+    modelName: string;
 }
 
 /** What the explorer counts per domain and per group; see `explorerRowCounts`. */
@@ -108,7 +108,7 @@ function computeDashboardStats(
             .filter(([t]) => t.startsWith('verif') || t.startsWith('validate') || t === 'testedbyusability')
             .reduce((sum, [, n]) => sum + n, 0),
         diagramCount: model.diagrams?.length ?? 0,
-        projectName: model.metadata?.projectName || (model as any).projectName || (model as any).name || 'My Device Project',
+        modelName: model.metadata?.modelName || (model as any).name || 'My Device Model',
     };
 }
 
@@ -337,7 +337,7 @@ function HeaderWidget() {
             </div>
             <div>
                 <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1B3A4B', margin: '0 0 4px 0' }}>
-                    {stats.projectName}
+                    {stats.modelName}
                 </h1>
                 <p style={{ fontSize: '13px', color: '#4B6E80', margin: 0 }}>
                     Model dashboard · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

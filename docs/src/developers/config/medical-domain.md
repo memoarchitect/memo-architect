@@ -20,7 +20,7 @@ methodology:
 ```sysml
 private import memo_methodology_profiles::*;
 
-part projectMethodBinding : ProjectMethodBinding {
+part projectMethodBinding : ModelMethodBinding {
     ref :>> selectedMethodology = mdDefaultDefinition;
 }
 ```

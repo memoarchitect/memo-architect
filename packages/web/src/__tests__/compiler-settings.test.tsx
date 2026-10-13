@@ -59,8 +59,8 @@ describe('CompilerSettings', () => {
         expect(view.textContent).toContain('Compiler: not chosen');
         act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         expect(view.textContent).toContain('/home/me/.config/memo/settings.yaml');
-        expect(view.textContent).toContain('not in the project');
-        expect(view.textContent).toContain('This project uses');
+        expect(view.textContent).toContain('not in the model');
+        expect(view.textContent).toContain('This model uses');
     });
 
     it('saves a chosen compiler as the user\'s setting and says it applies on restart', async () => {

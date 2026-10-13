@@ -134,7 +134,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 
     { id: 'dhf', label: 'Documents', icon: '⊞', section: 'documents', target: { mode: 'dhf' } },
 
-    { id: 'settings', label: 'Project Settings', icon: '⚙', section: 'settings', target: { panel: 'settings' } },
+    { id: 'settings', label: 'Model Settings', icon: '⚙', section: 'settings', target: { panel: 'settings' } },
     { id: 'import', label: 'Import Model', icon: '↓', section: 'settings', target: { view: { type: 'import' } }, feature: 'import' },
     { id: 'ontology', label: 'Ontology Explorer', icon: '◉', section: 'settings', target: { view: { type: 'ontology' } }, feature: 'ontology' },
 ];

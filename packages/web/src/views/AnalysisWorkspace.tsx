@@ -35,7 +35,7 @@ const STARTERS: { template: Exclude<StarterTemplate, 'custom'>; title: string; d
     { template: 'part-inventory', title: 'Part inventory', description: 'List part usages and their owners.', icon: '▦' },
     { template: 'requirements-review', title: 'Requirements review', description: 'List requirements and their declared text.', icon: '☑' },
     { template: 'ownership-tree', title: 'Ownership tree', description: 'Print the model hierarchy for review.', icon: '⌘' },
-    { template: 'sysml-part-api', title: 'SysML v2 model API', description: 'Query PartUsage elements of the SysML v2 model, compiled by the project\'s selected compiler.', icon: '⌁' },
+    { template: 'sysml-part-api', title: 'SysML v2 model API', description: 'Query PartUsage elements of the SysML v2 model, compiled by the model\'s selected compiler.', icon: '⌁' },
 ];
 
 function templateCells(template: StarterTemplate): string[] {
@@ -258,7 +258,7 @@ export function AnalysisWorkspace() {
                         <div>
                             <div style={{ color: '#2D8D70', fontSize: 12, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>Model analysis</div>
                             <h1 style={{ color: '#173B4E', fontSize: 28, margin: '6px 0 8px' }}>Analysis</h1>
-                            <p style={{ color: '#587487', margin: 0, lineHeight: 1.55, maxWidth: 620 }}>Create live Jupyter notebooks that query the currently loaded MEMO model with Python. The SysML v2 model API template reads the model the project's selected compiler builds.</p>
+                            <p style={{ color: '#587487', margin: 0, lineHeight: 1.55, maxWidth: 620 }}>Create live Jupyter notebooks that query the currently loaded MEMO model with Python. The SysML v2 model API template reads the model its selected compiler builds.</p>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}><MemoBrandMark size={118} /><button onClick={() => addNotebook()} style={{ ...buttonStyle, whiteSpace: 'nowrap' }}>+ New notebook</button></div>
                     </div>
@@ -285,7 +285,7 @@ export function AnalysisWorkspace() {
                     <section style={{ background: '#FFF', border: '1px solid #D9E6E9', borderRadius: 10, padding: 20 }}>
                         {selectedNotebook ? <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}><div><h2 style={{ margin: 0, color: '#173B4E', fontSize: 18 }}>{selectedNotebook.title}</h2><div style={{ color: '#7892A1', fontSize: 12, marginTop: 5 }}>{liveReadyId === selectedNotebook.id ? 'Saved and ready in local JupyterLab' : 'Preparing live notebook…'}</div></div>{liveReadyId === selectedNotebook.id ? <a href={`http://127.0.0.1:8888/lab/tree/${encodeURIComponent(notebookFileName(selectedNotebook))}`} target="_blank" rel="noopener noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>▶ Open live JupyterLab</a> : <button disabled style={{ ...buttonStyle, opacity: .55, cursor: 'wait' }}>Preparing…</button>}</div>
-                            {liveError && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 7, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.55 }}><strong>Start JupyterLab first.</strong> From the project’s <code>analysis</code> folder, run <code style={{ padding: '1px 4px', borderRadius: 3, background: '#FEF3C7' }}>jupyter lab --port 8888</code>, then return here and retry. Architect cannot start a local process from the browser automatically. <button onClick={retryLiveNotebook} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#176B55', fontWeight: 700, cursor: 'pointer' }}>Retry connection</button></div>}
+                            {liveError && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 7, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.55 }}><strong>Start JupyterLab first.</strong> From the model’s <code>analysis</code> folder, run <code style={{ padding: '1px 4px', borderRadius: 3, background: '#FEF3C7' }}>jupyter lab --port 8888</code>, then return here and retry. Architect cannot start a local process from the browser automatically. <button onClick={retryLiveNotebook} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#176B55', fontWeight: 700, cursor: 'pointer' }}>Retry connection</button></div>}
                             <pre style={{ whiteSpace: 'pre-wrap', margin: '18px 0 0', padding: 14, borderRadius: 7, background: '#102A3A', color: '#BDEFE1', fontSize: 12, lineHeight: 1.55 }}>{`elements = list(model.get('elements', {}).values())\nparts = [e for e in elements if 'part' in (e.get('kind', '') + ' ' + e.get('construct', '')).lower()]\n[(p.get('shortId'), p.get('name'), p.get('kind')) for p in parts[:100]]`}</pre>
                         </> : <div style={{ color: '#587487', lineHeight: 1.6 }}><strong style={{ color: '#173B4E' }}>Start an analysis notebook.</strong><br />Choose a starter to create it instantly, then open it in live JupyterLab.</div>}
                     </section>

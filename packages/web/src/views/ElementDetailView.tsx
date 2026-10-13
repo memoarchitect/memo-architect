@@ -399,7 +399,7 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                 <ReadOnlyValue value={`${declaration.packageName}${declaration.packageVersion ? ` v${declaration.packageVersion}` : ''}`} editability={fieldEditability('package')} density={DENSITY} />
                             </ProfileField>
                             <ProfileField label="Access" editability={fieldEditability('access')} density={DENSITY}>
-                                <ReadOnlyValue value={declaration.writable ? 'Editable project content' : 'Read-only reusable content'} editability={fieldEditability('access')} density={DENSITY} />
+                                <ReadOnlyValue value={declaration.writable ? 'Editable model content' : 'Read-only reusable content'} editability={fieldEditability('access')} density={DENSITY} />
                             </ProfileField>
                         </>}
                     </div>
