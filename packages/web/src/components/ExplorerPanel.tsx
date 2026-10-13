@@ -1020,7 +1020,11 @@ export function explorerTaxonomy(ontologies: OntologyPackageInfo[]): ExplorerTax
             const domain = normalizeLayerId(layer.id);
             for (const kind of layer.kinds ?? []) {
                 const group = normalizeLayerId(kind.group ?? '');
-                byKind.set(kind.name, { domain, group });
+                // A classified placement is never replaced by an unclassified one. A methodology
+                // package's source directory sits inside the ontology's, so it lists the ontology's own
+                // kinds too, with no group of its own; letting it win put the model binding in a bare Core.
+                const earlier = byKind.get(kind.name);
+                if (!earlier || (!earlier.group && group)) byKind.set(kind.name, { domain, group });
                 note(domain, group);
             }
         }

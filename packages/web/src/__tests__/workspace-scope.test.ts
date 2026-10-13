@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
+import { explorerTaxonomy } from '../components/ExplorerPanel';
 import { idsInWorkspace, scopeModel, validationForWorkspace, workspaceOptions } from '../lib/workspace-scope';
 
 const el = (id: string): MemoElement => ({
@@ -69,5 +70,26 @@ describe('validationForWorkspace', () => {
         expect(validationForWorkspace(whole, null)).toBe(whole);
         expect(validationForWorkspace(whole, 'Pump')).toBe(whole);
         expect(validationForWorkspace(null, 'Gen')).toBeNull();
+    });
+});
+
+describe('explorerTaxonomy', () => {
+    const pkg = (name: string, layers: { id: string; kinds: { name: string; group?: string }[] }[]) =>
+        ({ name, layers, explorerPlacements: [], layerPalette: [] }) as never;
+
+    it('keeps a classified placement when a later package lists the same kind unclassified', () => {
+        const taxonomy = explorerTaxonomy([
+            pkg('ontology', [{ id: 'methodology', kinds: [{ name: 'ModelMethodBinding', group: 'methodology' }] }]),
+            pkg('methodology-default', [{ id: 'core', kinds: [{ name: 'ModelMethodBinding' }] }]),
+        ]);
+        expect(taxonomy.byKind.get('ModelMethodBinding')).toEqual({ domain: 'methodology', group: 'methodology' });
+    });
+
+    it('lets a classified placement replace an unclassified one listed first', () => {
+        const taxonomy = explorerTaxonomy([
+            pkg('methodology-default', [{ id: 'core', kinds: [{ name: 'ModelMethodBinding' }] }]),
+            pkg('ontology', [{ id: 'methodology', kinds: [{ name: 'ModelMethodBinding', group: 'methodology' }] }]),
+        ]);
+        expect(taxonomy.byKind.get('ModelMethodBinding')).toEqual({ domain: 'methodology', group: 'methodology' });
     });
 });
