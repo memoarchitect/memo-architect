@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
+import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import type { MemoModelDTO, DashboardScope } from '@memoarchitect/tools/browser';
 import { DashboardPage } from './DashboardPage';
@@ -287,7 +287,7 @@ function QuickActionButton({ icon, label, onClick, variant = 'secondary' }: {
 
 function useDashboardData() {
     const model = useScopedModel();
-    const validation = useModelStore(s => s.validation);
+    const validation = useScopedValidation();
     const completeness = useModelStore(s => s.completeness);
     const availableOntologies = useModelStore(s => s.availableOntologies);
 

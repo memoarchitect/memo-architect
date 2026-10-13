@@ -14,7 +14,7 @@
 // A relationship is kept when both of its ends are.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
+import type { MemoModelDTO, ValidationResult, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
 
 export interface WorkspaceOption {
     root: string;
@@ -64,4 +64,13 @@ export function scopeModel(model: MemoModelDTO, workspace: string | null): MemoM
     };
     byWorkspace.set(workspace, scoped);
     return scoped;
+}
+
+/**
+ * The validation result for a workspace: the one memo-tools computed for it, or the whole result
+ * when none is chosen or none was sent. Never a client-side filter of the whole result by element;
+ * see `useScopedValidation`.
+ */
+export function validationForWorkspace<T extends Pick<ValidationResult, 'byWorkspace'>>(validation: T | null, workspace: string | null): T | null {
+    return ((workspace && validation?.byWorkspace?.[workspace]) as T | undefined) || validation;
 }

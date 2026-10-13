@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
+import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import type { MemoModelDTO, MemoElement } from '@memoarchitect/tools/browser';
 
@@ -124,7 +124,7 @@ function computeStats(model: MemoModelDTO): ModelStats {
 
 export function StatisticsDashboard() {
     const model = useScopedModel();
-    const validation = useModelStore(s => s.validation);
+    const validation = useScopedValidation();
     const completeness = useModelStore(s => s.completeness);
 
     const stats = useMemo(() => model ? computeStats(model) : null, [model]);
