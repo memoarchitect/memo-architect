@@ -30,7 +30,7 @@ import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
-import { useScopedModel } from '../store/scoped-model';
+import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1504,7 +1504,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const clearElementSelection = useModelStore(s => s.clearElementSelection);
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const movePackage = useModelStore(s => s.movePackage);
-    const validation = useModelStore(s => s.validation);
+    const validation = useScopedValidation();
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const setActiveMode = useModelStore(s => s.setActiveMode);

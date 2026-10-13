@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
+import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_LABELS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 
@@ -27,7 +27,7 @@ const SEVERITY_STYLES: Record<string, { color: string; bg: string; icon: string 
 type BottomTab = 'problems' | 'completeness';
 
 export function GapBar() {
-    const validation = useModelStore(s => s.validation);
+    const validation = useScopedValidation();
     const analysisIssues = useModelStore(s => s.analysisIssues);
     const selectElement = useModelStore(s => s.selectElement);
     const model = useScopedModel();

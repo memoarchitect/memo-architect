@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
-import { idsInWorkspace, scopeModel, workspaceOptions } from '../lib/workspace-scope';
+import { idsInWorkspace, scopeModel, validationForWorkspace, workspaceOptions } from '../lib/workspace-scope';
 
 const el = (id: string): MemoElement => ({
     id, name: id, kind: 'LogicalComponent', construct: 'part', layer: 'logical', file: 'm.sysml', attributes: {},
@@ -54,5 +54,19 @@ describe('which part of the model a workspace shows', () => {
 
     it('returns the same scoped model for the same choice', () => {
         expect(scopeModel(model, 'Pump')).toBe(scopeModel(model, 'Pump'));
+    });
+});
+
+describe('validationForWorkspace', () => {
+    const whole = { violations: [{ ruleId: 'A' }, { ruleId: 'B' }], byWorkspace: { Gen: { violations: [{ ruleId: 'B' }] } } } as any;
+
+    it("returns the workspace's own result, computed by memo-tools, not a filter of the whole one", () => {
+        expect(validationForWorkspace(whole, 'Gen')).toBe(whole.byWorkspace.Gen);
+    });
+
+    it('returns the whole result for no workspace, or one the server sent no result for', () => {
+        expect(validationForWorkspace(whole, null)).toBe(whole);
+        expect(validationForWorkspace(whole, 'Pump')).toBe(whole);
+        expect(validationForWorkspace(null, 'Gen')).toBeNull();
     });
 });
