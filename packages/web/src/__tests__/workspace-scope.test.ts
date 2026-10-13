@@ -21,6 +21,7 @@ const membership: WorkspaceMembershipDTO = {
     },
     shared: ['cable'],
     unassigned: ['stray'],
+    definitionOf: {},
     missingSystem: false,
 };
 const model = {

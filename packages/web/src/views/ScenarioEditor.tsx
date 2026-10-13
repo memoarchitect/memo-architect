@@ -1,3 +1,5 @@
+import { useScopedModel } from '../store/scoped-model';
+import { groupUseCases } from '../lib/use-case-groups';
 import { useState, useMemo, useCallback } from 'react';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
 import { sendElementUpdate } from '../store/ws-client';
@@ -91,6 +93,7 @@ function serializeSteps(steps: ScenarioStep[]): string {
 
 export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolean }) {
     const model = useModelStore(s => s.model);
+    const scoped = useScopedModel();
     const createRelationship = useModelStore(s => s.createRelationship);
     const inspectElement = useModelStore(s => s.inspectElement);
     const setActiveView = useModelStore(s => s.setActiveView);
@@ -103,42 +106,32 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
     const [linkSearch, setLinkSearch] = useState('');
 
     const scenarioTree = useMemo(() => {
-        if (!model) return [];
+        // The listing reads the workspace the person chose; the editors below keep the whole model.
+        if (!scoped) return [];
+        const model = scoped;
         const elements = Object.values(model.elements);
         const byId = model.elements;
         const byType = (...types: string[]) => relationshipsOfType(model, ...types);
         const rawUseCases = elements.filter(e => e.kind.endsWith('UseCase'));
         const useCaseIds = new Set(rawUseCases.map(useCase => useCase.id));
-        const childrenByUseCase = new Map<string, string[]>();
-        const includedUseCaseIds = new Set<string>();
-        // `include` lowers to an `includesStep` relationship in the builder, not
-        // `Includes`, which the ontology never declared.
-        for (const rel of byType('includesStep')) {
-            if (!useCaseIds.has(rel.sourceId) || !useCaseIds.has(rel.targetId)) continue;
-            const children = childrenByUseCase.get(rel.sourceId) ?? [];
-            children.push(rel.targetId);
-            childrenByUseCase.set(rel.sourceId, children);
-            includedUseCaseIds.add(rel.targetId);
-        }
-        const useCaseDepth = new Map<string, number>();
-        const orderedUseCaseIds: string[] = [];
-        const visitUseCase = (id: string, depth: number) => {
-            if (useCaseDepth.has(id)) return;
-            useCaseDepth.set(id, depth);
-            orderedUseCaseIds.push(id);
-            for (const childId of childrenByUseCase.get(id) ?? []) visitUseCase(childId, depth + 1);
-        };
-        for (const useCase of rawUseCases) {
-            if (!includedUseCaseIds.has(useCase.id)) visitUseCase(useCase.id, 0);
-        }
-        for (const useCase of rawUseCases) visitUseCase(useCase.id, 0);
-        const useCases = orderedUseCaseIds.map(id => byId[id]).filter((el): el is MemoElement => Boolean(el));
+        // O8: procedures first, the system use cases they include nested under them, then the rest
+        // under their system (lib/use-case-groups.ts). `include` lowers to an `includesStep`
+        // relationship in the builder, not `Includes`, which the ontology never declared.
+        const grouped = groupUseCases(
+            [...useCaseIds],
+            byType('includesStep'),
+            scoped?.workspaceMembership,
+            id => byId[id]?.name ?? id,
+        );
+        const useCases = grouped.flatMap(group => group.entries.map((entry, index) => ({
+            element: byId[entry.id], depth: entry.depth, group, firstInGroup: index === 0,
+        }))).filter((row): row is typeof row & { element: MemoElement } => Boolean(row.element));
         const matchesSearch = (el: MemoElement) => !searchTerm
             || el.name.toLowerCase().includes(searchTerm.toLowerCase())
             || el.kind.toLowerCase().includes(searchTerm.toLowerCase());
 
         return useCases
-            .map(useCase => {
+            .map(({ element: useCase, depth, group, firstInGroup }) => {
                 // The operational chain is two hops: RealizesUseCase from a workflow
                 // to the use case it serves, and the scenario nested in the workflow
                 // (the ontology removed a `HasScenario` relation for that). A
@@ -181,17 +174,12 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                         views: (model.diagrams ?? []).filter(d => d.scenarioIds?.includes(scenario.id)),
                     })),
                 }));
-                return {
-                    useCase,
-                    workflows,
-                    depth: useCaseDepth.get(useCase.id) ?? 0,
-                    hasChildren: (childrenByUseCase.get(useCase.id)?.length ?? 0) > 0,
-                };
+                return { useCase, workflows, depth, group, firstInGroup };
             })
             .filter(branch => matchesSearch(branch.useCase)
                 || branch.workflows.some(({ workflow, scenarios }) => matchesSearch(workflow)
                     || scenarios.some(({ scenario }) => matchesSearch(scenario))));
-    }, [model, searchTerm]);
+    }, [scoped, searchTerm]);
 
     const selectedElement = selectedElementId && model ? model.elements[selectedElementId] : null;
     const rels = useMemo(() => getRelationshipsForElement(model, selectedElementId || ''), [model, selectedElementId]);
@@ -360,12 +348,19 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                     />
                 </div>
                 <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-                    {scenarioTree.map(({ useCase, workflows, depth }) => {
-                        const useCaseKey = 'use-case:' + useCase.id;
+                    {scenarioTree.map(({ useCase, workflows, depth, group, firstInGroup }) => {
+                        // A system use case a procedure does not include may be listed under each
+                        // system that holds it, so its expand key carries the group too.
+                        const useCaseKey = `use-case:${group.id}:${useCase.id}`;
                         const isExpanded = expandedGroups.has(useCaseKey);
                         const useCaseCount = workflows.reduce((total, { scenarios }) => total + scenarios.length, 0);
                         return (
-                            <div key={useCase.id} className="mb-0.5">
+                            <div key={useCaseKey} className="mb-0.5">
+                                {firstInGroup && group.label && (
+                                    <div className="px-3 pt-2 pb-1 font-semibold uppercase" style={{ color: COLOR.muted, fontSize: FONT.xs, letterSpacing: '0.04em' }}>
+                                        {group.label}
+                                    </div>
+                                )}
                                 <div
                                     className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
                                     style={{ borderRadius: '4px', margin: '0 4px', marginLeft: 4 + depth * 16 }}

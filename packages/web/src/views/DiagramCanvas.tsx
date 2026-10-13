@@ -12,6 +12,7 @@
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { childrenOf, drillTarget } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
@@ -1835,13 +1836,15 @@ function DiagramCanvasInner() {
     }, [inspectElement]);
 
     const drillIntoInterconnection = useCallback((nodeId: string) => {
-        setFocusedInterconnectionId(nodeId);
+        // A usage is made of its definition's parts: the same rule the Explorer's system navigator
+        // follows (lib/system-navigator.ts), so both open the same level.
+        setFocusedInterconnectionId((model && drillTarget(model, nodeId)) ?? nodeId);
         // The part being descended into becomes the frame, so whatever was
         // folded in the wider diagram says nothing about what should be folded
         // here — start the new level fully open, as the other two views do.
         setCollapsedInterconnectionNodes(new Set());
         inspectElement(null);
-    }, [inspectElement]);
+    }, [inspectElement, model]);
 
     const toggleStateCollapse = useCallback((nodeId: string) => {
         setCollapsedStateNodes(previous => {
@@ -3169,10 +3172,11 @@ function DiagramCanvasInner() {
             // A collapsed container still owns parts, so it can be descended
             // into; only a genuine leaf falls through to inspection.
             const data = node.data as { isContainer?: boolean; hasChildren?: boolean };
-            if (!data.isContainer && !data.hasChildren) { inspectElement(node.id); return; }
+            const opensDefinition = !!model && childrenOf(model, node.id).length > 0;
+            if (!data.isContainer && !data.hasChildren && !opensDefinition) { inspectElement(node.id); return; }
             drillIntoInterconnection(node.id);
         }
-    }, [viewKind, model?.elements, inspectElement, drillIntoAction, drillIntoState, drillIntoInterconnection]);
+    }, [viewKind, model, inspectElement, drillIntoAction, drillIntoState, drillIntoInterconnection]);
 
     const onPaneClick = dismissSelectionTools;
 
