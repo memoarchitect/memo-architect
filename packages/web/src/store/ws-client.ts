@@ -818,9 +818,13 @@ export function requestRelationshipDelete(
  * apply writes the one file the source owns. Both answer with the diff.
  */
 export function requestSourceImport(
-    mode: 'preview' | 'apply', request: Omit<SourceImportPayload, 'requestId'>,
+    mode: 'preview' | 'apply', request: Omit<SourceImportPayload, 'requestId' | 'precondition'>,
+    /** The file the preview named and the hash it was computed from: an apply is refused if the file has changed since. */
+    previewed?: { sourceFile: string; sourceHash: string },
 ): Promise<SourceImportResultMessage['payload']> {
-    return sendRelationshipRequest(mode === 'preview' ? 'import:preview' : 'import:apply', request, sourceImportRequests);
+    const base = mode === 'apply' && previewed ? sourcePrecondition(previewed.sourceFile, []) : undefined;
+    const precondition = base && previewed ? { ...base, expectedSourceHash: previewed.sourceHash } : undefined;
+    return sendRelationshipRequest(mode === 'preview' ? 'import:preview' : 'import:apply', { ...request, precondition }, sourceImportRequests);
 }
 
 /**
