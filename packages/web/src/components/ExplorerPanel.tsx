@@ -1,7 +1,9 @@
-import { Fragment, lazy, Suspense, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 import { kindParents } from '../analysis/kind-hierarchy';
-import { GLOBAL_SYSTEM, groupBySystem, resolveSystem } from '../lib/system-grouping';
+import { EXPLORER_MODES, isFlatMode, partitionsOf, sharedIds, type ExplorerPartition } from '../lib/explorer-modes';
+import { SystemNavigator } from './SystemNavigator';
+import { GLOBAL_SYSTEM, groupBySystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
 import {
     useModelStore,
@@ -591,6 +593,11 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
 /** A folded usage is tinted so it reads as an instance, not a peer definition. */
 const USAGE_TINT = '#7C3AED';
 
+/** Which group a subtree sits in, so a row listed under two groups (a shared element) expands in one only. */
+const ExpandScopeContext = createContext('');
+/** The elements more than one system holds. They carry a Shared badge in every explorer mode. */
+const SharedIdsContext = createContext<ReadonlySet<string>>(new Set());
+
 function RecursiveTree({
     nodes,
     level,
@@ -622,11 +629,14 @@ function RecursiveTree({
     onDrop: (e: React.DragEvent, folderPath: string) => void;
     isUndefined?: boolean;
 }) {
+    const scope = useContext(ExpandScopeContext);
+    const shared = useContext(SharedIdsContext);
+    const keyOf = (id: string) => (scope ? `${scope}|${id}` : id);
     return (
         <>
             {nodes.map(node => {
                 if (node.type === 'folder') {
-                    const isExpanded = expanded.has(node.id);
+                    const isExpanded = expanded.has(keyOf(node.id));
                     return (
                         <div
                             key={node.id}
@@ -641,7 +651,7 @@ function RecursiveTree({
                                 style={{ borderRadius: '4px', margin: '0 4px' }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                onClick={() => toggleExpand(node.id)}
+                                onClick={() => toggleExpand(keyOf(node.id))}
                                 onContextMenu={e => onContextMenu(e, 'folder', node.id)}
                             >
                                 <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
@@ -687,7 +697,7 @@ function RecursiveTree({
                     // it composes, and its Usages folder — so it needs the same
                     // disclosure control a package folder has.
                     const hasChildren = node.children.length > 0;
-                    const isOpen = expanded.has(el.id);
+                    const isOpen = expanded.has(keyOf(el.id));
 
                     return (
                         <Fragment key={el.id}>
@@ -712,14 +722,14 @@ function RecursiveTree({
                                     // Selecting a parent also opens it: the row
                                     // is both the element and the way into it.
                                     selectElement(el.id);
-                                    if (hasChildren) toggleExpand(el.id);
+                                    if (hasChildren) toggleExpand(keyOf(el.id));
                                 }
                             }}
                             onContextMenu={e => onContextMenu(e, 'element', el.id)}
                         >
                             {hasChildren ? (
                                 <span
-                                    onClick={e => { e.stopPropagation(); toggleExpand(el.id); }}
+                                    onClick={e => { e.stopPropagation(); toggleExpand(keyOf(el.id)); }}
                                     className="cursor-pointer flex items-center justify-center"
                                     style={{ width: '14px', height: '14px', flexShrink: 0 }}
                                 >
@@ -744,6 +754,9 @@ function RecursiveTree({
                             />
                             <ItemIcon color={isUndefined ? '#F59E0B' : layerClr} />
                             <ExplorerElementIdentity element={el} selected={isSelected} tint={node.isUsage ? USAGE_TINT : undefined} />
+                            {shared.has(el.id) && (
+                                <span title="Held by more than one system" style={{ background: '#E0F2FE', color: '#0369A1', fontSize: '10px', fontWeight: 600, borderRadius: '9999px', padding: '0 6px', flexShrink: 0 }}>Shared</span>
+                            )}
                             {hasChildren && (
                                 <span
                                     className="px-1.5 py-0.5 rounded-full ml-auto text-xs"
@@ -1063,6 +1076,12 @@ export function computeExplorerGroupTree(
     kindFilter?: ReadonlySet<string>,
     relationships: { type?: string; sourceId?: string; targetId?: string }[] = [],
     viewpoints: ViewpointDTO[] = [],
+    modes?: {
+        /** The groups a root is listed under (see lib/explorer-modes.ts); undefined leaves it to the domains. */
+        partition?: (el: MemoElement) => ExplorerPartition[] | undefined;
+        /** List definitions and usages as separate rows: no folding of usages, no nesting. */
+        flat?: boolean;
+    },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
 
@@ -1228,7 +1247,7 @@ export function computeExplorerGroupTree(
         for (const key of [node.element.name, node.element.id]) if (key) definitionNodes.set(key, node);
     }
     const canonical = (node: TreeNode | undefined): TreeNode | undefined => {
-        if (!node || node.element?.__isDef) return node;
+        if (!node || node.element?.__isDef || modes?.flat) return node;
         const typeName = node.element ? typeNameOf(node.element) : '';
         const definition = definitionNodes.get(typeName)
             ?? (typeName.includes('::') ? definitionNodes.get(typeName.split('::').pop()!) : undefined);
@@ -1272,6 +1291,7 @@ export function computeExplorerGroupTree(
         if (foldedInto.has(node.id)) continue;
         const el = node.element!;
         let parent: TreeNode | undefined;
+        if (modes?.flat) { roots.push(node); continue; }
 
         const composedUnder = parentOf.get(node.id) ?? parentOf.get(el.shortId ?? '')
             ?? parentOf.get(el.id) ?? parentOf.get(el.attributes?.providedId ?? '');
@@ -1425,9 +1445,35 @@ export function computeExplorerGroupTree(
 
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
+    // A mode may list a root under groups of its own before the ontology's domains see it.
+    const partitions = new Map<string, { partition: ExplorerPartition; roots: TreeNode[] }>();
+    const unpartitioned: TreeNode[] = [];
+    for (const root of roots) {
+        const listed = modes?.partition?.(root.element!);
+        if (!listed || listed.length === 0) { unpartitioned.push(root); continue; }
+        for (const partition of listed) {
+            const entry = partitions.get(partition.id) ?? { partition, roots: [] };
+            entry.roots.push(root);
+            partitions.set(partition.id, entry);
+        }
+    }
+    const partitionGroups = [...partitions.values()]
+        .sort((a, b) => a.partition.rank - b.partition.rank || a.partition.label.localeCompare(b.partition.label))
+        .map(({ partition, roots: listed }) => ({
+            partition,
+            entry: {
+                group: {
+                    id: `mode:${partition.id}`, label: partition.label, color: partition.color,
+                    kinds: [...new Set(listed.map(root => root.element!.kind))],
+                },
+                subGroups: toSubGroups(listed, partition.color),
+            },
+        }));
+    for (const { partition, entry } of partitionGroups) if (partition.rank < 900) groups.push(entry);
+
     const byDomain = new Map<string, TreeNode[]>();
     const domainless: TreeNode[] = [];
-    for (const root of roots) {
+    for (const root of unpartitioned) {
         const domain = domainOf(root.element!);
         if (!domain) { domainless.push(root); continue; }
         byDomain.set(domain, [...(byDomain.get(domain) ?? []), root]);
@@ -1488,6 +1534,8 @@ export function computeExplorerGroupTree(
         });
     }
 
+    for (const { partition, entry } of partitionGroups) if (partition.rank >= 900) groups.push(entry);
+
     return groups;
 }
 
@@ -1510,6 +1558,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
     const registryKinds = model?.registries?.kinds ?? [];
+    const explorerMode = useModelStore(s => s.explorerMode);
+    const setExplorerMode = useModelStore(s => s.setExplorerMode);
+    const workspace = useModelStore(s => s.workspace);
+    const membership = model?.workspaceMembership;
+    const shared = useMemo(() => sharedIds(membership), [membership]);
 
     const selectElementAndNavigate = useCallback((id: string) => {
         selectElement(id);
@@ -1561,8 +1614,12 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             kindFilter.size ? kindFilter : undefined,
             model.relationships ?? [],
             model.viewpoints ?? [],
+            {
+                partition: el => partitionsOf(el, { mode: explorerMode, membership, workspace }),
+                flat: isFlatMode(explorerMode),
+            },
         ) : [],
-        [model, searchTerm, availableOntologies, kindFilter],
+        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace],
     );
 
     // The explorer opens fully collapsed.
@@ -1673,8 +1730,42 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectionCount = selectedElementIds.size;
 
+    const modeBar = (
+        <div className="flex items-center gap-1 px-3 py-1.5 flex-shrink-0 flex-wrap" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }} role="tablist" aria-label="Explorer mode">
+            {EXPLORER_MODES.map(mode => (
+                <button
+                    key={mode.id}
+                    role="tab"
+                    aria-selected={explorerMode === mode.id}
+                    onClick={() => setExplorerMode(mode.id)}
+                    style={{
+                        padding: '2px 8px', borderRadius: '9999px', fontSize: FONT.xs,
+                        background: explorerMode === mode.id ? COLOR.accent : 'transparent',
+                        color: explorerMode === mode.id ? '#fff' : COLOR.secondary,
+                        border: `1px solid ${explorerMode === mode.id ? COLOR.accent : COLOR.border}`,
+                    }}
+                >{mode.label}</button>
+            ))}
+        </div>
+    );
+
+    if (explorerMode === 'navigator') {
+        return (
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {modeBar}
+                {model && <SystemNavigator model={model} workspace={workspace} onSelect={selectElementAndNavigate} />}
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
+            {modeBar}
+            {explorerMode === 'system' && membership?.missingSystem && (
+                <div className="px-3 py-2 flex-shrink-0" style={{ background: '#FFFBEB', color: '#92400E', fontSize: FONT.xs }}>
+                    This model declares no System, so nothing can be grouped by system (rule CR-ONT-084). Declare a part def that specializes System.
+                </div>
+            )}
             <details className="px-3 py-1.5 flex-shrink-0" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }}>
                 <summary style={{ cursor: 'pointer', color: COLOR.secondary }}>Filter element types{kindFilter.size ? ` (${kindFilter.size})` : ''}</summary>
                 <div className="mt-1 max-h-32 overflow-y-auto">
@@ -1720,6 +1811,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     >Select All</button>
                 </div>
             )}
+            <SharedIdsContext.Provider value={shared}>
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
                 {groupTree.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
@@ -1731,7 +1823,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     const totalCount = subGroups.reduce((sum, sub) => sum + countSubGroup(sub), 0);
 
                     return (
-                        <div key={group.id} className="mb-0.5">
+                        <ExpandScopeContext.Provider key={group.id} value={group.id.startsWith('mode:') ? group.id : ''}>
+                        <div className="mb-0.5">
                             {/* ── Group header (folder-like) ── */}
                             <div
                                 className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
@@ -1931,9 +2024,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                             });
                             })()}
                         </div>
+                        </ExpandScopeContext.Provider>
                     );
                 })}
             </div>
+            </SharedIdsContext.Provider>
             {ctxMenu && <ElementContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
         </div>
     );

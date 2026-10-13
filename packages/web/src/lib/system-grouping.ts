@@ -1,5 +1,9 @@
 // ─── Which system does this belong to? ───────────────────────────────────────
 //
+// Which system an ELEMENT belongs to is the workspace membership's answer (memo-tools, plan T2),
+// not computed here. What is left is grouping items that name a system themselves, such as a DHF
+// document with a `systemId`.
+//
 // A system-of-systems project has more than one device in it, and a flat list
 // of use cases or DHF documents across all of them is unreadable: the reader
 // cannot tell which pump a use case is about. Both surfaces group by system,
@@ -13,7 +17,6 @@
 // which is the one thing that cannot be derived from the chain itself.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import type { KindParents } from '../analysis/kind-hierarchy';
 
 /** Where an element lands when nothing ties it to a system. */
@@ -39,56 +42,6 @@ export interface SystemResolution {
     systemId?: string;
     /** What the group header reads. */
     label: string;
-}
-
-/**
- * The system an element belongs to.
- *
- * Two ways in, in order of how much they claim:
- *
- *   1. Ownership — a use case declared inside a system is that system's. This
- *      is a containment fact and needs no interpretation.
- *   2. One relationship hop to a system, whatever the relation is called. A use
- *      case whose subject is the pump is the pump's use case, and so is one
- *      allocated to it; the ontology names those edges differently and the
- *      answer is the same.
- *
- * A hop that reaches *two* different systems resolves to Global rather than
- * picking one: an element that spans systems belongs to neither, and guessing
- * would file it somewhere the reader cannot predict.
- */
-export function resolveSystem(
-    element: MemoElement,
-    elements: ReadonlyMap<string, MemoElement>,
-    relationships: readonly MemoRelationship[],
-    parents: KindParents,
-): SystemResolution {
-    const system = (id: string): SystemResolution => ({
-        systemId: id,
-        label: elements.get(id)?.name || id,
-    });
-
-    if (isSystemKind(element.kind, parents)) return system(element.id);
-
-    const seen = new Set<string>([element.id]);
-    for (let owner = element.owner; owner && !seen.has(owner); owner = elements.get(owner)?.owner) {
-        seen.add(owner);
-        const ancestor = elements.get(owner);
-        if (ancestor && isSystemKind(ancestor.kind, parents)) return system(ancestor.id);
-    }
-
-    const linked = new Set<string>();
-    for (const relationship of relationships) {
-        const other = relationship.sourceId === element.id ? relationship.targetId
-            : relationship.targetId === element.id ? relationship.sourceId
-                : undefined;
-        if (!other) continue;
-        const candidate = elements.get(other);
-        if (candidate && isSystemKind(candidate.kind, parents)) linked.add(candidate.id);
-    }
-    if (linked.size === 1) return system([...linked][0]);
-
-    return { label: GLOBAL_SYSTEM };
 }
 
 /**

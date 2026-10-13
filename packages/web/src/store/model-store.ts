@@ -230,6 +230,7 @@ export interface DhfSettings {
 }
 
 /** Which explorer tab is active in the left panel */
+import type { ExplorerMode } from '../lib/explorer-modes';
 export type ExplorerTab = 'model' | 'views' | 'worksets' | 'ontologies';
 
 /** Generic analysis issue surfaced by tools (DSM, traceability, etc.) */
@@ -293,6 +294,9 @@ export interface ModelState {
     activeMode: AppMode;
     activeView: ActiveView;
     explorerTab: ExplorerTab;
+    /** How the Model explorer groups its rows (plan A6). */
+    explorerMode: ExplorerMode;
+    setExplorerMode: (mode: ExplorerMode) => void;
     selectedElementId: string | null;
     selectedRelationshipId: string | null;
     selectedElementIds: Set<string>;
@@ -562,6 +566,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     activeMode: restoredActiveView.type === 'diagram' ? 'diagram' : 'catalog' as AppMode,
     activeView: restoredActiveView,
     explorerTab: 'model' as ExplorerTab,
+    explorerMode: 'layer' as ExplorerMode,
     selectedElementId: null,
     selectedRelationshipId: null,
     selectedElementIds: new Set<string>(),
@@ -885,6 +890,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set({ activeView: view });
     },
     setExplorerTab: (tab) => set({ explorerTab: tab }),
+    setExplorerMode: (mode) => set({ explorerMode: mode }),
     selectElement: (id) => {
         if (id) {
             set((s) => {
