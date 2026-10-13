@@ -93,6 +93,8 @@ function ImportPanel({ system: initialSystem, format: initialFormat, onClose }: 
     const [preview, setPreview] = useState<Preview | null>(null);
     const [note, setNote] = useState<{ ok: boolean; lines: string[] } | null>(null);
     const [applied, setApplied] = useState<string | null>(null);
+    // The file the preview said it would write, which the apply is held to.
+    const [previewed, setPreviewed] = useState<{ sourceFile: string; sourceHash: string } | undefined>(undefined);
 
     const ready = Boolean(file && system.trim());
     const request = () => ({
@@ -105,11 +107,12 @@ function ImportPanel({ system: initialSystem, format: initialFormat, onClose }: 
         setBusy(true);
         setNote(null);
         try {
-            const result = await requestSourceImport(mode, request());
+            const result = await requestSourceImport(mode, request(), previewed);
             const lines = [...(result.errors ?? []), ...(result.warnings ?? []),
                 ...((result.dropped?.length ?? 0) > 0 ? [`Not written, the kind declares no such attribute: ${result.dropped!.join(', ')}`] : [])];
             if (!result.success) { setPreview(null); setNote({ ok: false, lines }); return; }
             setPreview(result.preview ?? null);
+            if (mode === 'preview' && result.sourceFile) setPreviewed({ sourceFile: result.sourceFile, sourceHash: result.sourceHash ?? '' });
             if (mode === 'apply') setApplied(result.sourceFile ?? '');
             setNote({ ok: true, lines });
         } catch (error) {
