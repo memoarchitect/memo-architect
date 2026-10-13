@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { CompilerSettings } from './CompilerSettings';
 import { RoleSelector } from './RoleSelector';
+import { WorkspaceSelector } from './WorkspaceSelector';
 
 export function WorkbenchToolbar() {
     const model = useModelStore(s => s.model);
@@ -50,6 +51,8 @@ export function WorkbenchToolbar() {
             </button>
 
             <div className="flex-1" />
+
+            <WorkspaceSelector />
 
             <RoleSelector />
 
