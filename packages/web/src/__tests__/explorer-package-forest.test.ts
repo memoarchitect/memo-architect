@@ -32,8 +32,24 @@ describe('a layer as the packages that hold it', () => {
 
     it('splits a package that holds several kinds into kind folders in declaration order, and leaves one kind alone', () => {
         const mixed = build([el('r1', 'p', 'Requirement'), el('n1', 'p', 'Need'), el('s1', 'p', 'NotificationSpec'), el('r2', 'p', 'Requirement')]);
-        expect(shape(mixed)).toEqual([{ 'f:p': [{ 'kf:p:Need': ['n1'] }, { 'kf:p:Requirement': ['r1', 'r2'] }, { 'kf:p:NotificationSpec': ['s1'] }] }]);
+        expect(shape(mixed)).toEqual([{ 'f:p': [{ 'kf:p|Need': ['n1'] }, { 'kf:p|Requirement': ['r1', 'r2'] }, { 'kf:p|NotificationSpec': ['s1'] }] }]);
         expect(mixed[0].children[0].name).toBe('Need 1');
         expect(shape(build([el('r1', 'q'), el('r2', 'q')]))).toEqual([{ 'f:q': ['r1', 'r2'] }]);
+    });
+
+    it('splits a folder by the attribute a person chose, when its elements differ in it', () => {
+        const withValue = (name: string, value?: string): N => ({ ...el(name, 'p'), value } as N);
+        const forest = buildPackageForest([withValue('a', 'system'), withValue('b', 'software'), withValue('c', 'system'), withValue('d')], {
+            packageOf: n => n.pkg, kindOf: () => 'Requirement', kindRank: () => 0, kindLabel: (k, c) => `${k} ${c}`,
+            folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+            attributeOf: n => (n as N & { value?: string }).value,
+        });
+        expect(shape(forest)).toEqual([{ 'f:p': [{ 'af:p|software': ['b'] }, { 'af:p|system': ['a', 'c'] }, 'd'] }]);
+        // one value everywhere is not a split
+        expect(shape(buildPackageForest([withValue('a', 'x'), withValue('b', 'x')], {
+            packageOf: n => n.pkg, kindOf: () => 'R', kindRank: () => 0, kindLabel: () => '',
+            folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+            attributeOf: n => (n as N & { value?: string }).value,
+        }))).toEqual([{ 'f:p': ['a', 'b'] }]);
     });
 });
