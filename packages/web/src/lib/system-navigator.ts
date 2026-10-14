@@ -63,6 +63,18 @@ export function navigatorRoots(model: MemoModelDTO, workspace: string | null): N
 }
 
 /**
+ * The element whose child actions drilling into an action shows: the action itself when it owns some, else
+ * the definition it is typed by (an action usage is made of its definition's actions, as a part usage is of
+ * its definition's parts). Undefined for an action with nothing to open.
+ */
+export function actionDrillSource(model: MemoModelDTO, id: string): string | undefined {
+    const owns = (owner: string) => Object.values(model.elements).some(element => element.parentAction === owner);
+    if (owns(id)) return id;
+    const definition = model.workspaceMembership?.definitionOf?.[id];
+    return definition && owns(definition) ? definition : undefined;
+}
+
+/**
  * A definition and everything it owns, at any depth: what drilling into a usage typed by it has to be able to
  * draw. A view exposes the elements somebody put in it, and the parts of a definition a usage is typed by are
  * usually not among them (the system of systems' view does not list each system's insides), so the level
@@ -71,7 +83,9 @@ export function navigatorRoots(model: MemoModelDTO, workspace: string | null): N
 export function definitionSubtree(model: MemoModelDTO, definitionId: string): string[] {
     const owned = new Map<string, string[]>();
     for (const element of Object.values(model.elements)) {
-        if (element.owner) owned.set(element.owner, [...(owned.get(element.owner) ?? []), element.id]);
+        // An action step is owned by its parent action, not by an owner; a part is the other way round.
+        const parent = element.parentAction ?? element.owner;
+        if (parent) owned.set(parent, [...(owned.get(parent) ?? []), element.id]);
     }
     const out: string[] = [];
     const seen = new Set<string>();
@@ -83,4 +97,15 @@ export function definitionSubtree(model: MemoModelDTO, definitionId: string): st
     };
     walk(definitionId);
     return out;
+}
+
+/** The way a drill came in when it ended on the focused level; otherwise the ancestry derived from the model. */
+export function drillPath(trail: readonly string[], focus: string | null, derived: string[]): string[] {
+    return focus && trail[trail.length - 1] === focus ? [...trail] : derived;
+}
+
+/** The trail after a level is entered: a level already on it is returned to, a new one is added. */
+export function enterLevel(trail: readonly string[], id: string): string[] {
+    const at = trail.indexOf(id);
+    return at >= 0 ? trail.slice(0, at + 1) : [...trail, id];
 }

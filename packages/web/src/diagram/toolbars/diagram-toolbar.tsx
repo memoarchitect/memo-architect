@@ -109,7 +109,7 @@ export interface DiagramToolbarContext {
     visibleActionFlowKinds: Set<'control' | 'data' | 'energy' | 'material'>;
     setVisibleActionFlowKinds: Dispatch<SetStateAction<Set<'control' | 'data' | 'energy' | 'material'>>>;
     actionPath: string[];
-    setFocusedActionId: Dispatch<SetStateAction<string | null>>;
+    setFocusedActionId: (id: string | null) => void;
     parentViewId: string | null;
     navigateToParentView?: () => void;
 
@@ -122,7 +122,7 @@ export interface DiagramToolbarContext {
     setInterconnectionConnectionDisplay: Dispatch<SetStateAction<'summary' | 'all' | 'none'>>;
     saveIbdDisplay: (patch: { portDisplay?: PortDisplay; connectionDisplay?: 'summary' | 'all' | 'none' }) => void;
     interconnectionPath: string[];
-    setFocusedInterconnectionId: Dispatch<SetStateAction<string | null>>;
+    setFocusedInterconnectionId: (id: string | null) => void;
     addAnnotation: (kind: AnnotationKind) => void;
     flowAnimationEnabled: boolean;
     setEdges: Dispatch<SetStateAction<FlowEdge[]>>;
