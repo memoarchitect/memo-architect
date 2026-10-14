@@ -166,6 +166,11 @@ export async function architectDevCommand(options: ArchitectDevOptions): Promise
         exitWhenIdle: !options.keepAlive,
         supervisedRuntime: true,
         toolchainOptions: options.toolchainOptions,
+        // A pinned view is another `dev` of this same program, so it looks like this one.
+        versionChild: {
+            entry: process.argv[1],
+            args: [...(options.toolchainArgv ?? []), ...(options.featureGrants?.experimental === true ? ['--experimental'] : [])],
+        },
         // Tools serves the shell; Architect decides what goes into it.
         transformClientHtml: options.featureGrants
             ? html => injectFeatureGrants(html, options.featureGrants!)

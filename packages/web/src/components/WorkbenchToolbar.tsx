@@ -3,6 +3,8 @@ import { useModelStore } from '../store/model-store';
 import { CompilerSettings } from './CompilerSettings';
 import { RoleSelector } from './RoleSelector';
 import { WorkspaceSelector } from './WorkspaceSelector';
+import { VersionSelector } from './VersionSelector';
+import { PinnedBanner } from './PinnedBanner';
 
 export function WorkbenchToolbar() {
     const model = useModelStore(s => s.model);
@@ -18,6 +20,7 @@ export function WorkbenchToolbar() {
     }
 
     return (
+        <>
         <div
             className="flex items-center gap-3 px-4 py-2"
             style={{ background: '#0B1E2D', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 10 }}
@@ -52,6 +55,8 @@ export function WorkbenchToolbar() {
 
             <div className="flex-1" />
 
+            <VersionSelector />
+
             <WorkspaceSelector />
 
             <RoleSelector />
@@ -85,5 +90,7 @@ export function WorkbenchToolbar() {
                 title="Go to home"
             />
         </div>
+        <PinnedBanner />
+        </>
     );
 }
