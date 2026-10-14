@@ -31,7 +31,7 @@ import {
     sendUserPreferencesSave,
 } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
-import type { ViewpointDTO } from '@memoarchitect/tools/browser';
+import type { ViewpointDTO, PinnedInfo } from '@memoarchitect/tools/browser';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
@@ -480,6 +480,19 @@ export interface ModelState {
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
+    // ─── Versions: the working model, a pinned release, or an unreleased ref ───
+    /** Set when this server is a read-only view of a pinned release or ref. */
+    pinned: PinnedInfo | null;
+    /** The latest tag and the tip of the current branch, offered as unreleased versions. */
+    versionRefs: { name: string; kind: 'tag' | 'branch'; commit: string; label: string }[];
+    /** What is being opened (a record id or a ref), while the server prepares it. */
+    versionOpening: string | null;
+    versionError: string | null;
+    setPinned: (info: PinnedInfo | null) => void;
+    setVersionRefs: (refs: { name: string; kind: 'tag' | 'branch'; commit: string; label: string }[]) => void;
+    setVersionOpening: (key: string | null) => void;
+    setVersionError: (error: string | null) => void;
+
     // ─── The role this person works as (memo.user.yaml, git-ignored) ───
     /**
      * A stakeholder usage name (`safetyEngineer`) from the viewpoints'
@@ -632,6 +645,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Diagram parse errors
     diagramParseErrors: {},
+
+    pinned: null,
+    versionRefs: [],
+    versionOpening: null,
+    versionError: null,
+    setPinned: (pinned) => set({ pinned }),
+    setVersionRefs: (versionRefs) => set({ versionRefs }),
+    setVersionOpening: (versionOpening) => set({ versionOpening, versionError: null }),
+    setVersionError: (versionError) => set({ versionError }),
 
     role: null,
     workspace: null,

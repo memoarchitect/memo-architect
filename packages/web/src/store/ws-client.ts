@@ -9,6 +9,7 @@
 
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
+import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
 import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
@@ -268,6 +269,20 @@ export function connectWebSocket(url?: string): void {
 
     ws = new WebSocket(wsUrl);
     const store = useModelStore.getState();
+    // A pinned view sends only reads. The server refuses the rest by name; this keeps the refusal from
+    // being the first the person learns of, and stops a save of a role or workspace being sent at all.
+    const send = ws.send.bind(ws);
+    ws.send = (data: Parameters<WebSocket['send']>[0]) => {
+        if (useModelStore.getState().pinned && typeof data === 'string') {
+            let type = '';
+            try { type = JSON.parse(data).type; } catch { /* sent as is */ }
+            if (type && !isReadOnlyMessage(type)) {
+                store.setVersionError('This is a pinned, read-only view; nothing can be changed in it. Open the working version to edit.');
+                return;
+            }
+        }
+        send(data);
+    };
 
     ws.onopen = () => {
         store.setConnected(true);
@@ -278,6 +293,7 @@ export function connectWebSocket(url?: string): void {
         workspaceRevision = null;
         awaitingWorkspaceSnapshot = false;
         store.setRestartRequired(null);
+        sendVersionsList();
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -537,6 +553,21 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'user-preferences':
             store.applyUserPreferences(msg.payload);
+            break;
+        case 'pinned:info':
+            store.setPinned(msg.payload);
+            break;
+        case 'versions:update':
+            store.setVersionRefs(msg.payload.refs);
+            break;
+        case 'version:ready':
+            // The pinned view is a server of its own: go there.
+            store.setVersionOpening(null);
+            window.location.assign(msg.payload.url);
+            break;
+        case 'version:error':
+            store.setVersionOpening(null);
+            store.setVersionError(msg.payload.error);
             break;
         case 'dashboards':
             store.setDashboards(msg.payload.dashboards);
@@ -1079,8 +1110,23 @@ export function sendToolchainSettingsSave(requestId: string, path: string, value
     }
 }
 
+/** Ask for the unreleased refs the Version selector offers. */
+export function sendVersionsList(): void {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'versions:list', payload: {} }));
+}
+
+/** Open a release record (by element id) or an unreleased ref as a pinned, read-only view. */
+export function sendVersionOpen(selection: { release?: string; ref?: string }): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        useModelStore.getState().setVersionOpening(selection.release ?? selection.ref ?? '');
+        ws.send(JSON.stringify({ type: 'version:open', payload: { requestId: `ver-${Date.now()}`, ...selection } }));
+    }
+}
+
 /** Save this person's own choices for the model (memo.user.yaml, ignored by git). */
 export function sendUserPreferencesSave(preferences: { role?: string; workspace?: string }): void {
+    // A pinned view reads the choices from the working project and saves none: they last for the session.
+    if (useModelStore.getState().pinned) return;
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'user-preferences:save', payload: preferences }));
     }
