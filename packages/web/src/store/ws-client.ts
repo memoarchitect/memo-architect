@@ -1193,7 +1193,7 @@ export function sendVersionOpen(selection: { release?: string; ref?: string }): 
 }
 
 /** Save this person's own choices for the model (memo.user.yaml, ignored by git). */
-export function sendUserPreferencesSave(preferences: { role?: string; workspace?: string }): void {
+export function sendUserPreferencesSave(preferences: { role?: string; workspace?: string; explorerSplit?: string }): void {
     // A pinned view reads the choices from the working project and saves none: they last for the session.
     if (useModelStore.getState().pinned) return;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -1304,4 +1304,34 @@ function sendRuleRequest<T>(
         pending.set(requestId, { resolve, reject, timer });
         ws!.send(JSON.stringify({ type, payload: { requestId, ...form } }));
     });
+}
+
+/**
+ * Record how a view shows itself (port and connection display, captions, animation) in the view's own declaration.
+ *
+ * These are what the view SAYS about itself, written as its attributes, the same place the canvas reads them from
+ * on load. They used to be saved into the layout, which the canvas never read them back from, so a toggle held for
+ * the session and was gone on reload. `display` names the choice in the canvas's terms; the SysML spelling of an
+ * enum literal is the ontology's (`everything` and `hidden`, because `all` and `none` are keywords).
+ */
+export function saveViewDisplay(diagramId: string, patch: {
+    portDisplay?: 'all' | 'ports' | 'none';
+    connectionDisplay?: 'summary' | 'all' | 'none';
+    flowAnimation?: boolean;
+    showPortText?: boolean;
+    showConnectionText?: boolean;
+}): Promise<unknown> {
+    const literal: Record<string, string> = { all: 'everything', none: 'hidden' };
+    const display: Record<string, string> = {};
+    if (patch.portDisplay) display.portDisplay = `PortDisplayKind::${literal[patch.portDisplay] ?? patch.portDisplay}`;
+    if (patch.connectionDisplay) display.connectionDisplay = `ConnectionDisplayKind::${patch.connectionDisplay === 'all' ? 'everything' : patch.connectionDisplay === 'none' ? 'hidden' : patch.connectionDisplay}`;
+    for (const key of ['flowAnimation', 'showPortText', 'showConnectionText'] as const) {
+        if (patch[key] !== undefined) display[key] = String(patch[key]);
+    }
+    // Only the statements that change are written; the server edits the view's own declaration.
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'diagram:display:update', payload: { diagramId, display } }));
+        return Promise.resolve();
+    }
+    return Promise.reject(new Error('The development server is not connected.'));
 }
