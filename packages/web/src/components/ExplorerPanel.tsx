@@ -1716,7 +1716,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, []);
 
-    const [groupBy, setGroupBy] = useState('');
+    const groupBy = useModelStore(s => s.explorerSplit);
+    const setGroupBy = useModelStore(s => s.setExplorerSplit);
 
     // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
@@ -1854,7 +1855,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectionCount = selectedElementIds.size;
 
-    // The attributes a person can split folders by: those whose values are enum literals somewhere in the model.
+    // The attributes a person can split folders by: enum-valued attributes with between two and eight distinct values.
     // Read from the elements, so a project's own enum attribute is offered the same as an ontology one.
     const groupableAttributes = useMemo(() => {
         const names = new Map<string, Set<string>>();
@@ -1865,7 +1866,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 }
             }
         }
-        return [...names].filter(([, values]) => values.size > 1).map(([name]) => name).sort();
+        // A few values make a split a reader can use; dozens make a list.
+        return [...names].filter(([, values]) => values.size > 1 && values.size <= 8).map(([name]) => name).sort();
     }, [model]);
 
     const modeBar = (

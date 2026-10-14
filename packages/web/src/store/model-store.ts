@@ -511,7 +511,10 @@ export interface ModelState {
      */
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
-    applyUserPreferences: (preferences: { role?: string; workspace?: string }) => void;
+    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string }) => void;
+    /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
+    explorerSplit: string;
+    setExplorerSplit: (attribute: string) => void;
     /** Choose a role and save it for this person. */
     setRole: (role: string | null) => void;
     /** Choose a workspace and save it for this person. */
@@ -565,6 +568,15 @@ export interface ModelState {
 }
 
 const restoredActiveView = restoreActiveView();
+
+/** The choices one person keeps for this model, as they are saved. */
+function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string }) {
+    return {
+        ...(state.role ? { role: state.role } : {}),
+        ...(state.workspace ? { workspace: state.workspace } : {}),
+        ...(state.explorerSplit ? { explorerSplit: state.explorerSplit } : {}),
+    };
+}
 
 export const useModelStore = create<ModelState>((set, get) => ({
     // Data
@@ -664,15 +676,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     role: null,
     workspace: null,
-    applyUserPreferences: (preferences) => set({ role: preferences.role ?? null, workspace: preferences.workspace ?? null }),
-    // A save replaces the person's choices, so each one is sent with the other.
+    explorerSplit: '',
+    applyUserPreferences: (preferences) => set({
+        role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
+    }),
+    // A save replaces the person's choices, so every one is sent with the others.
     setRole: (role) => {
         set({ role });
-        sendUserPreferencesSave({ ...(role ? { role } : {}), ...(get().workspace ? { workspace: get().workspace! } : {}) });
+        sendUserPreferencesSave(preferencesOf(get()));
     },
     setWorkspace: (workspace) => {
         set({ workspace });
-        sendUserPreferencesSave({ ...(get().role ? { role: get().role! } : {}), ...(workspace ? { workspace } : {}) });
+        sendUserPreferencesSave(preferencesOf(get()));
+    },
+    setExplorerSplit: (explorerSplit) => {
+        set({ explorerSplit });
+        sendUserPreferencesSave(preferencesOf(get()));
     },
 
     dashboards: [],

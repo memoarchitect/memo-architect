@@ -36,7 +36,7 @@ type RFAny = any;
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
-import { requestRelationshipUpdate, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
+import { requestRelationshipUpdate, saveViewDisplay, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
 import { useDiagramEmbed } from '../diagram/diagram-embed-context';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { sysmlIdentifier } from '../authoring';
@@ -1383,11 +1383,9 @@ function DiagramCanvasInner() {
     const [expandedActionNodes, setExpandedActionNodes] = useState<Set<string>>(new Set());
     const saveIbdDisplay = useCallback((patch: { portDisplay?: PortDisplay; connectionDisplay?: 'summary' | 'all' | 'none' }) => {
         if (!selectedDiagramId) return;
-        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
-        const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, ...patch } };
-        mergeDiagramLayouts({ [selectedDiagramId]: layout });
-        sendDiagramLayoutUpdate(selectedDiagramId, layout);
-    }, [selectedDiagramId, mergeDiagramLayouts]);
+        // A view's display is part of the view's declaration, not of its layout.
+        void saveViewDisplay(selectedDiagramId, patch).catch(error => console.warn('[View] display not saved:', error));
+    }, [selectedDiagramId]);
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
     const [actionFlowNesting, setActionFlowNesting] = useState<ActionFlowNesting>('flat');
     // State machine nesting: composites folded in place, or one drilled into.

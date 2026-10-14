@@ -36,7 +36,7 @@ import type { DiagramToolbarOperation } from '../../views/diagram-toolbar-capabi
 import type { DiagramProfile } from '../diagram-profile';
 import { Icon, ToolbarSep, Segmented, IconButton, IconToggle, DrillBreadcrumb } from '../../views/DiagramToolbarControls';
 import { useModelStore } from '../../store/model-store';
-import { sendDiagramLayoutUpdate } from '../../store/ws-client';
+import { saveViewDisplay, sendDiagramLayoutUpdate } from '../../store/ws-client';
 
 type FlowEdge = RFEdge<Record<string, unknown>>;
 type AnnotationKind = 'note' | 'text' | 'constraint';
@@ -627,13 +627,7 @@ export class InterconnectionToolbar extends BaseDiagramToolbar {
                     title="Add an editable note" ariaLabel="Add note" />
                 <IconToggle icon={<Icon.arrowRight />} active={ctx.flowAnimationEnabled}
                     onClick={() => {
-                        const previous = currentLayout(ctx.selectedDiagramId!);
-                        const layout: DiagramLayout = {
-                            ...previous,
-                            canvas: { ...previous.canvas, flowAnimation: !ctx.flowAnimationEnabled },
-                        };
-                        ctx.mergeDiagramLayouts({ [ctx.selectedDiagramId!]: layout });
-                        sendDiagramLayoutUpdate(ctx.selectedDiagramId!, layout);
+                        void saveViewDisplay(ctx.selectedDiagramId!, { flowAnimation: !ctx.flowAnimationEnabled }).catch(() => undefined);
                         ctx.setEdges(current => current.map(edge => ({
                             ...edge,
                             data: { ...edge.data, flowAnimation: !ctx.flowAnimationEnabled },
@@ -642,20 +636,10 @@ export class InterconnectionToolbar extends BaseDiagramToolbar {
                 <IconToggle icon={<Icon.library />} active={ctx.interconnectionLegendOpen}
                     onClick={() => ctx.setInterconnectionLegendOpen(open => !open)} title="Show or hide the IBD notation legend" />
                 <IconToggle icon={<Icon.elements />} active={ctx.showIbdPortText}
-                    onClick={() => {
-                        const previous = currentLayout(ctx.selectedDiagramId!);
-                        const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, showPortText: !ctx.showIbdPortText } };
-                        ctx.mergeDiagramLayouts({ [ctx.selectedDiagramId!]: layout });
-                        sendDiagramLayoutUpdate(ctx.selectedDiagramId!, layout);
-                    }}
+                    onClick={() => { void saveViewDisplay(ctx.selectedDiagramId!, { showPortText: !ctx.showIbdPortText }).catch(() => undefined); }}
                     title="Show or hide port captions" />
                 <IconToggle icon={<Icon.code />} active={ctx.showIbdConnectionText}
-                    onClick={() => {
-                        const previous = currentLayout(ctx.selectedDiagramId!);
-                        const layout: DiagramLayout = { ...previous, canvas: { ...previous.canvas, showConnectionText: !ctx.showIbdConnectionText } };
-                        ctx.mergeDiagramLayouts({ [ctx.selectedDiagramId!]: layout });
-                        sendDiagramLayoutUpdate(ctx.selectedDiagramId!, layout);
-                    }}
+                    onClick={() => { void saveViewDisplay(ctx.selectedDiagramId!, { showConnectionText: !ctx.showIbdConnectionText }).catch(() => undefined); }}
                     title="Show or hide connector labels" />
             </>
         );
