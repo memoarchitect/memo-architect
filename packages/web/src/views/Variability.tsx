@@ -95,7 +95,7 @@ export function Variability() {
             <h2 style={section}>Design options</h2>
             {view.points.length === 0 ? <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>No variation points.</p> : (
                 <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 900 }}>
-                    <thead><tr>{['Variation point', 'Variant', 'Status', 'Realizes feature', 'Selected by'].map(h => <th key={h} style={head}>{h}</th>)}</tr></thead>
+                    <thead><tr>{['Variation point', 'Variant', 'Status', 'Realizes feature', 'Introduced by', 'Selected by'].map(h => <th key={h} style={head}>{h}</th>)}</tr></thead>
                     <tbody>
                         {view.points.flatMap(point => point.variants.map((variant, index) => (
                             <tr key={`${point.id}|${variant.id}`} data-testid="variant-row">
@@ -103,6 +103,7 @@ export function Variability() {
                                 <td style={cell}>{variant.label}</td>
                                 <td style={cell}>{variant.status || '—'}</td>
                                 <td style={cell}>{variant.features.length === 0 ? <em style={{ color: COLOR.muted }}>none: always built</em> : names(variant.features)}</td>
+                                <td style={cell}>{variant.introducedBy ?? '—'}</td>
                                 <td style={cell}>{names(view.releases.filter(r => (r.chosen[point.id] ?? []).includes(variant.id)).map(r => r.id))}</td>
                             </tr>
                         )))}
@@ -128,7 +129,7 @@ export function Variability() {
                 </table>
             )}
             <p style={{ fontSize: FONT.xs, color: COLOR.muted, marginTop: 18 }}>
-                Requires and excludes are declared in the model source. A variant's introducing project arrives with projects (plan O7).
+                Requires and excludes are declared in the model source. A variant's introducing project is the one that `#IntroducedBy` names.
             </p>
         </div>
     );
