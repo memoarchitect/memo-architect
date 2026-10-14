@@ -25,7 +25,7 @@ views, or validation obligations exist.
 
 ## Starting the workbench
 
-A project is found by its native entrypoint, `model/catalog/project.sysml` — not
+A project is found by its native entrypoint, `model/methodology/project.sysml` — not
 by a settings file. Run from the project root:
 
 ```bash
@@ -35,13 +35,13 @@ memo-architect dev
 ## `memo.config.yaml` is gone
 
 It existed to carry project semantics, and every field it carried now lives in
-`model/catalog/project.sysml`. A project that still has one is told so, with the
+`model/methodology/project.sysml`. A project that still has one is told so, with the
 native construct that replaced it named. The file is not merged, compared, or
 used as a fallback.
 
 | Retired | What decides it now |
 |---|---|
-| `extends:` | A native `private import` of the package in `model/catalog/project.sysml` |
+| `extends:` | A native `private import` of the package in `model/methodology/project.sysml` |
 | `methodology:` | The `ModelMethodBinding`, whose `selectedMethodology` is a typed SysML reference |
 | `ontologies:` | A native `private import` of the ontology package |
 | `modules:`, `optionalModules:` | `includedModule` on the methodology |
@@ -100,7 +100,7 @@ package my_company_software {
 }
 ```
 
-Import that package from `model/catalog/project.sysml` and its kinds load into
+Import that package from `model/methodology/project.sysml` and its kinds load into
 the same registry as MEMO's. View selection, palette eligibility, and
 relationship checks walk the transitive specialization chain, so a viewpoint or
 rule targeting `SoftwareComponent` also recognizes `FirmwareComponent`. The

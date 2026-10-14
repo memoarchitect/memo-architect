@@ -13,7 +13,7 @@ the same `.sysml` sources meant different things depending on a sidecar.
 
 The contract is now native:
 
-- a project's identity and method binding live in `model/catalog/project.sysml`,
+- a project's identity and method binding live in `model/methodology/project.sysml`,
   as a `ProjectMethodBinding` whose `selectedMethodology` is a typed SysML
   reference;
 - what a project depends on is its SysML import graph;
