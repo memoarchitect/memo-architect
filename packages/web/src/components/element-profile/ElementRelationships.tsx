@@ -58,14 +58,16 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
 
     const [expanded, setExpanded] = useState(false);
     const [status, setStatus] = useState<RelationshipStatus | null>(null);
-    const [visibleKinds, setVisibleKinds] = useState<string[]>(['Requirement', 'Risk', 'Function', 'SystemFunction', 'ComponentFunction']);
+    // Every kind of counterpart is shown until the person narrows it: a default list of five kinds hid the
+    // links a person came to see (a test case, a hazard, a component) behind a filter they had not set.
+    const [chosenKinds, setChosenKinds] = useState<string[] | null>(null);
 
     const registries = useMemo(() => getRegistries(model), [model]);
 
     // Reset transient state whenever the inspected element changes.
     useEffect(() => {
         setStatus(null); setExpanded(false);
-        setVisibleKinds(['Requirement', 'Risk', 'Function', 'SystemFunction', 'ComponentFunction']);
+        setChosenKinds(null);
     }, [element.id]);
 
     const mine = pendingRelationships.filter(p =>
@@ -122,28 +124,28 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
         }
     }, [deleteRelationship]);
 
-    const groups = useMemo(() => {
-        const map = new Map<string, Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>>();
-        const add = (rel: MemoRelationship, direction: RelationshipDirection) => {
+    type Links = Map<string, Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>>;
+    /** The links of one direction, by the kind of the element at the other end. */
+    const groupsOf = (rels: MemoRelationship[], direction: RelationshipDirection): Links => {
+        const map: Links = new Map();
+        for (const rel of rels) {
             const oppositeId = direction === 'outgoing' ? rel.targetId : rel.sourceId;
-            const opposite = model?.elements[oppositeId];
-            const groupName = opposite?.kind || 'Unknown Type';
-            const currentGroup = map.get(groupName) ?? new Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>();
-            const currentElementLinks = currentGroup.get(oppositeId) ?? [];
-            currentElementLinks.push({ rel, direction });
-            currentGroup.set(oppositeId, currentElementLinks);
-            map.set(groupName, currentGroup);
-        };
-        if (model) {
-            outgoing.forEach(r => add(r, 'outgoing'));
-            incoming.forEach(r => add(r, 'incoming'));
+            const groupName = model?.elements[oppositeId]?.kind || 'Unknown Type';
+            const group = map.get(groupName) ?? new Map();
+            group.set(oppositeId, [...(group.get(oppositeId) ?? []), { rel, direction }]);
+            map.set(groupName, group);
         }
         return map;
-    }, [outgoing, incoming, model]);
+    };
+    const outwardGroups = useMemo(() => groupsOf(outgoing, 'outgoing'), [outgoing, model]);   // eslint-disable-line react-hooks/exhaustive-deps
+    const inwardGroups = useMemo(() => groupsOf(incoming, 'incoming'), [incoming, model]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-    const allKinds = Array.from(groups.keys()).sort();
-    
-    const visibleGroups = new Map([...groups.entries()].filter(([kind]) => visibleKinds.includes(kind)));
+    const allKinds = [...new Set([...outwardGroups.keys(), ...inwardGroups.keys()])].sort();
+    const visibleKinds = chosenKinds ?? allKinds;
+    const shown = (groups: Links) => new Map([...groups.entries()].filter(([kind]) => visibleKinds.includes(kind)));
+    const visibleOutward = shown(outwardGroups);
+    const visibleInward = shown(inwardGroups);
+    const visibleGroups = new Map([...visibleOutward, ...visibleInward]);
 
     if (!model) return null;
 
@@ -180,7 +182,7 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                                 label=""
                                 options={allKinds.map(kind => ({ value: kind, label: kind }))}
                                 selected={visibleKinds}
-                                onChange={setVisibleKinds}
+                                onChange={setChosenKinds}
                                 allLabel="None"
                                 iconOnly={true}
                                 align="right"
@@ -231,9 +233,14 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {[...visibleGroups.entries()].map(([groupName, itemsMap]) => (
-                        <div key={groupName}>
+                {([['Outward', 'what this element points to', visibleOutward], ['Inward', 'what points to this element', visibleInward]] as const).map(([title, hint, groups]) => groups.size === 0 ? null : (
+                    <div key={title} data-testid={`links-${title.toLowerCase()}`} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 8px' }} title={hint}>
+                            {title} <span style={{ fontWeight: 400, textTransform: 'none' }}>· {hint}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {[...groups.entries()].map(([groupName, itemsMap]) => (
+                        <div key={`${title}|${groupName}`}>
                             <div style={{ fontSize: '10px', color: COLOR.muted, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 6 }}>
                                 {groupName}
                             </div>
@@ -255,8 +262,10 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                                 ))}
                             </div>
                         </div>
-                    ))}
-                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
 
                 {mine.map(pending => (
                     <PendingRelationshipRow
