@@ -33,6 +33,7 @@ import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
+import { buildPackageForest } from '../lib/explorer-package-forest';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
@@ -904,6 +905,11 @@ export interface ExplorerSubGroup {
     label: string;
     color: string;
     kinds: Map<string, TreeNode[]>;
+    /**
+     * The layer's elements in the packages that declare them: what the tree draws. `kinds` stays for
+     * the counts and the selections that ask "all of this type".
+     */
+    tree: TreeNode[];
 }
 
 const ARTIFACT_CATEGORIES = ['documents', 'assets', 'templates', 'analyses', 'adrs', 'reviews'] as const;
@@ -1434,6 +1440,19 @@ export function computeExplorerGroupTree(
             buckets.set(layer, layerBuckets);
         }
 
+        const kindOrder = new Map(registryKinds.map((definition, index) => [definition.name, index]));
+        const layerTree = (kinds: Map<string, TreeNode[]>): TreeNode[] => {
+            const roots = [...kinds.values()].flatMap(kindRoots => kindRoots);
+            sortNodes(roots);
+            return buildPackageForest<TreeNode>(roots, {
+                packageOf: node => node.element?.package ?? node.element?.attributes?.['elementPackage'],
+                kindOf: node => node.element?.kind ?? '',
+                kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
+                kindLabel: (kind, count) => kindFolderLabel(kind, count),
+                folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+            });
+        };
+
         const isArtifactCategory = (id: string) => ARTIFACT_CATEGORIES.includes(id as never);
         return [...buckets.entries()]
             .sort(([a], [b]) => (isArtifactCategory(a) && isArtifactCategory(b))
@@ -1446,6 +1465,7 @@ export function computeExplorerGroupTree(
                     ? (taxonomy.color(id) ?? (LAYER_COLORS as Record<string, string>)[id] ?? groupColor)
                     : groupColor,
                 kinds,
+                tree: layerTree(byLayer.get(id)!),
             }));
     };
 
@@ -1651,6 +1671,14 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 for (const sub of subGroups) {
                     if (sub.id) next.add(`sg:${group.id}:${sub.id}`);
                     for (const kind of sub.kinds.keys()) next.add(`k:${group.id}:${sub.id ? `${sub.id}:` : ''}${kind}`);
+                    // Every package and kind folder below the layer, and every element that has rows of its own.
+                    const scope = `${group.id.startsWith('mode:') ? group.id : ''}|${sub.id}`;
+                    const open = (nodes: TreeNode[]) => {
+                        for (const node of nodes) {
+                            if (node.children.length > 0) { next.add(`${scope}|${node.id}`); open(node.children); }
+                        }
+                    };
+                    open(sub.tree);
                 }
             }
             setExpanded(next);
@@ -1978,6 +2006,30 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 );
                             };
 
+                            // The layer's packages and what they hold; the kind rows above stay for the
+                            // groups that have no layer to split by package.
+                            const renderLayerTree = (sub: ExplorerSubGroup) => (
+                                <ExpandScopeContext.Provider value={`${group.id.startsWith('mode:') ? group.id : ''}|${sub.id}`}>
+                                    <div style={{ marginLeft: '8px' }}>
+                                        <RecursiveTree
+                                            nodes={sub.tree}
+                                            level={0}
+                                            expanded={expanded}
+                                            toggleExpand={toggleExpand}
+                                            selectedElementId={selectedElementId}
+                                            selectElement={selectElementAndNavigate}
+                                            selectedElementIds={selectedElementIds}
+                                            toggleElementSelection={toggleElementSelection}
+                                            violationCounts={violationCounts}
+                                            baseColor={sub.color}
+                                            onContextMenu={(e, type, id) => onContextMenu(e, type, id)}
+                                            onDragStart={(e, node) => handleDragStart(e, node, '')}
+                                            onDrop={(e, folderPath) => handleDrop(e, folderPath, '')}
+                                            isUndefined={isUndefinedGroup}
+                                        />
+                                    </div>
+                                </ExpandScopeContext.Provider>
+                            );
                             if (!isExpanded) return null;
                             return subGroups.map(sub => {
                                 // Kinds the builder gave no layer render flat,
@@ -2024,7 +2076,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 {subCount}
                                             </span>
                                         </div>
-                                        {isSubExpanded && Array.from(sub.kinds.entries()).map(([kind, nodes]) => renderKind(kind, nodes, sub.id))}
+                                        {isSubExpanded && renderLayerTree(sub)}
                                     </div>
                                 );
                             });
