@@ -10,7 +10,7 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage, ImpactResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -129,6 +129,7 @@ const sourceImportRequests = new Map<string, PendingRequest<SourceImportResultMe
 const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResultMessage['payload']>>();
 const releaseCreateRequests = new Map<string, PendingRequest<ReleaseCreateResultMessage['payload'] & { requestId: string }>>();
 const guideRequests = new Map<string, PendingRequest<GuideResultMessage['payload'] & { requestId: string }>>();
+const impactRequests = new Map<string, PendingRequest<ImpactResultMessage['payload'] & { requestId: string }>>();
 const deviceDhfRequests = new Map<string, PendingRequest<DeviceDhfResultMessage['payload'] & { requestId: string }>>();
 const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
 
@@ -168,7 +169,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests, impactRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -201,7 +202,7 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate',
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate' | 'impact:compute',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -408,6 +409,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'release:create:result':
             settleRelationshipRequest(msg.payload as ReleaseCreateResultMessage['payload'] & { requestId: string }, releaseCreateRequests);
+            break;
+        case 'impact:result':
+            settleRelationshipRequest(msg.payload as ImpactResultMessage['payload'] & { requestId: string }, impactRequests);
             break;
         case 'guide:result':
             settleRelationshipRequest(msg.payload as GuideResultMessage['payload'] & { requestId: string }, guideRequests);
@@ -890,6 +894,14 @@ export interface ReleaseCreateInput {
  */
 export function requestReleaseCreate(request: ReleaseCreateInput): Promise<ReleaseCreateResultMessage['payload'] & { requestId: string }> {
     return sendRelationshipRequest('release:create', { ...request, precondition: sourcePrecondition(request.file, [request.itemId]) }, releaseCreateRequests);
+}
+
+/**
+ * What the working tree's change reaches, measured from where it branched from `target` (a ref or commit; HEAD by
+ * default). The server computes all of it; the page shows it as returned.
+ */
+export function requestImpact(target?: string): Promise<ImpactResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('impact:compute', { target: target || undefined }, impactRequests);
 }
 
 /**

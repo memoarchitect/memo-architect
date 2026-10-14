@@ -11,6 +11,7 @@
 
 import { indexKinds, kindConformsTo, relationshipsOfType, selectRelease, type MemoModelDTO, type ValidationResult } from '@memoarchitect/tools/browser';
 import { idsInWorkspace } from './workspace-scope';
+import { introducingProject } from './projects-view';
 
 /** The two kinds the page is about; a specialization of either counts. */
 export const FEATURE_KIND = 'ProductFeature';
@@ -29,6 +30,8 @@ export interface VariantRow {
     label: string;
     status: string;
     features: string[];
+    /** The project that introduced it, when one is recorded (`#IntroducedBy`). */
+    introducedBy?: string;
 }
 export interface PointRow {
     id: string;
@@ -81,7 +84,7 @@ export function variabilityView(model: MemoModelDTO, validation: ValidationResul
     const points = new Map<string, VariantRow[]>();
     for (const r of edges('variant')) {
         const rows = points.get(r.sourceId) ?? [];
-        rows.push({ id: r.targetId, label: labelOf(model, r.targetId), status: statusOf(model, r.targetId), features: realized.get(r.targetId) ?? [] });
+        rows.push({ id: r.targetId, label: labelOf(model, r.targetId), status: statusOf(model, r.targetId), features: realized.get(r.targetId) ?? [], introducedBy: introducingProject(model, r.targetId) });
         points.set(r.sourceId, rows);
     }
     const pointRows: PointRow[] = [...points].filter(([id]) => shown(id))
