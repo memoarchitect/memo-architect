@@ -358,21 +358,21 @@ export function App() {
                         </h2>
                         <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '20px' }}>Connecting to dev server…</p>
                         <div style={{ color: '#6B7280', fontSize: '13px', lineHeight: '1.6', textAlign: 'left', background: 'rgba(255,255,255,0.6)', borderRadius: '10px', padding: '16px 20px', border: '1px solid rgba(255,255,255,0.9)' }}>
-                            <p style={{ fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Start the MEMO dev server:</p>
+                            <p style={{ fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Start Architect in your model's folder:</p>
                             <code style={{
                                 display: 'block', margin: '0 0 12px', padding: '8px 14px',
                                 background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',
                                 fontFamily: 'monospace', fontSize: '13px',
                             }}>
-                                pnpm architect -- dev --port 3000
+                                memo-architect dev
                             </code>
-                            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or try the example model:</p>
+                            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Or open a bundled example (memo-architect examples lists them):</p>
                             <code style={{
                                 display: 'block', padding: '8px 14px',
                                 background: '#1B3A4B', color: '#2DD4A8', borderRadius: '6px',
                                 fontFamily: 'monospace', fontSize: '13px',
                             }}>
-                                pnpm example:dev
+                                memo-architect --example gpca
                             </code>
                         </div>
                     </div>
