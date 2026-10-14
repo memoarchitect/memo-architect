@@ -84,19 +84,25 @@ export function RelationshipBoard({
     onDelete?: (id: string) => void;
 }) {
     const [filter, setFilter] = useState('');
-    const groups = useMemo(
-        () => linkedElementsByLayer(outgoing, incoming, model, registries),
-        [outgoing, incoming, model, registries],
-    );
+    // Two directions, two sections: what this element points to, and what points to it. A neighbour linked
+    // both ways is listed in each, with the links of that direction.
+    const sections = useMemo(() => ([
+        { title: 'Outward', hint: 'what this element points to', groups: linkedElementsByLayer(outgoing, [], model, registries) },
+        { title: 'Inward', hint: 'what points to this element', groups: linkedElementsByLayer([], incoming, model, registries) },
+    ]), [outgoing, incoming, model, registries]);
     const needle = filter.trim().toLowerCase();
-    const visible = useMemo(() => groups.map(group => ({
-        ...group,
-        elements: group.elements.filter(linked => !needle || [
-            linked.element?.name, linked.element?.kind, linked.element?.shortId,
-            linked.id, group.layer, ...linked.links.map(link => link.label),
-        ].filter(Boolean).join(' ').toLowerCase().includes(needle)),
-    })).filter(group => group.elements.length > 0), [groups, needle]);
-    const linkedCount = groups.reduce((count, group) => count + group.elements.length, 0);
+    const visibleSections = useMemo(() => sections.map(section => ({
+        ...section,
+        groups: section.groups.map(group => ({
+            ...group,
+            elements: group.elements.filter(linked => !needle || [
+                linked.element?.name, linked.element?.kind, linked.element?.shortId,
+                linked.id, group.layer, ...linked.links.map(link => link.label),
+            ].filter(Boolean).join(' ').toLowerCase().includes(needle)),
+        })).filter(group => group.elements.length > 0),
+    })), [sections, needle]);
+    const linkedCount = new Set(sections.flatMap(section => section.groups.flatMap(group => group.elements.map(linked => linked.id)))).size;
+    const layerCount = new Set(sections.flatMap(section => section.groups.map(group => group.layer))).size;
 
     return (
         <div style={{
@@ -109,7 +115,7 @@ export function RelationshipBoard({
                 <div>
                     <div style={{ color: COLOR.primary, fontSize: 13, fontWeight: 700 }}>Linked elements</div>
                     <div style={{ color: COLOR.muted, fontSize: 11 }}>
-                        {linkedCount} element{linkedCount === 1 ? '' : 's'} across {groups.length} layer{groups.length === 1 ? '' : 's'}
+                        {linkedCount} element{linkedCount === 1 ? '' : 's'} across {layerCount} layer{layerCount === 1 ? '' : 's'}
                     </div>
                 </div>
                 {linkedCount > 6 && (
@@ -128,46 +134,53 @@ export function RelationshipBoard({
                 <div style={{ color: COLOR.faint, fontSize: 12 }}>No linked elements.</div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {visible.map(group => {
-                    const color = LAYER_COLORS[group.layer] || COLOR.muted;
-                    return (
-                        <section key={group.layer} style={{
-                            padding: '16px 20px',
-                            background: color + '08',
-                            border: `1px solid ${color}15`,
-                            borderRadius: 12,
-                        }}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
-                                <strong style={{ color: COLOR.primary, fontSize: 14, letterSpacing: '0.02em' }}>
-                                    {LAYER_LABELS[group.layer] ?? group.layer}
-                                </strong>
-                                <span style={{ color: COLOR.faint, fontSize: 12, background: color + '15', padding: '1px 6px', borderRadius: 10 }}>{group.elements.length}</span>
-                            </div>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: density === 'page' ? 'repeat(auto-fill, 264px)' : '1fr',
-                                justifyContent: 'start',
-                                gap: 7,
-                            }}>
-                                {group.elements.map(linked => (
-                                    <LinkedElementCard 
-                                        key={linked.id} 
-                                        element={element}
-                                        linked={linked} 
-                                        registries={registries}
-                                        color={color} 
-                                        onNavigate={onNavigate} 
-                                        onCreate={onCreate}
-                                        onDelete={onDelete}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    );
-                })}
-            </div>
+            {visibleSections.map(section => section.groups.length === 0 ? null : (
+                <div key={section.title} data-testid={`board-${section.title.toLowerCase()}`} style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLOR.muted, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>
+                        {section.title} <span style={{ fontWeight: 400, textTransform: 'none' }}>· {section.hint}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {section.groups.map(group => {
+                            const color = LAYER_COLORS[group.layer] || COLOR.muted;
+                            return (
+                                <section key={group.layer} style={{
+                                    padding: '16px 20px',
+                                    background: color + '08',
+                                    border: `1px solid ${color}15`,
+                                    borderRadius: 12,
+                                }}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                                        <strong style={{ color: COLOR.primary, fontSize: 14, letterSpacing: '0.02em' }}>
+                                            {LAYER_LABELS[group.layer] ?? group.layer}
+                                        </strong>
+                                        <span style={{ color: COLOR.faint, fontSize: 12, background: color + '15', padding: '1px 6px', borderRadius: 10 }}>{group.elements.length}</span>
+                                    </div>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: density === 'page' ? 'repeat(auto-fill, 264px)' : '1fr',
+                                        justifyContent: 'start',
+                                        gap: 7,
+                                    }}>
+                                        {group.elements.map(linked => (
+                                            <LinkedElementCard
+                                                key={linked.id}
+                                                element={element}
+                                                linked={linked}
+                                                registries={registries}
+                                                color={color}
+                                                onNavigate={onNavigate}
+                                                onCreate={onCreate}
+                                                onDelete={onDelete}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
