@@ -12,7 +12,7 @@
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { childrenOf, drillTarget } from '../lib/system-navigator';
+import { childrenOf, definitionSubtree, drillTarget } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
@@ -1572,6 +1572,10 @@ function DiagramCanvasInner() {
         const diagramElementIds = selectedDiagram?.elementIds?.length
             ? new Set(selectedDiagram.elementIds)
             : undefined;
+        // Drilling into a usage opens the definition it is typed by; its parts come with the level.
+        if (diagramElementIds && model && focusedInterconnectionId && !diagramElementIds.has(focusedInterconnectionId)) {
+            for (const id of definitionSubtree(model, focusedInterconnectionId)) diagramElementIds.add(id);
+        }
 
         if (!hasViewpoint && !hasHidden && !diagramElementIds) return undefined;
 
@@ -1588,7 +1592,7 @@ function DiagramCanvasInner() {
             }
             return true;
         };
-    }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers]);
+    }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers, focusedInterconnectionId, model?.elements]);
 
     // Element → child-view index: for each element that is the subject of another
     // view, map its ID to that view's diagram ID. Used by IBD and action-flow
