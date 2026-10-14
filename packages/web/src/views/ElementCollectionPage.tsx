@@ -11,6 +11,7 @@ import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { elementUrl } from '../router';
+import { buildPackageTree, countIn, type PackageNode } from '../lib/package-tree';
 import type { MemoElement } from '@memoarchitect/tools/browser';
 
 interface Props {
@@ -39,6 +40,11 @@ export function ElementCollectionPage({ family }: Props) {
             el.kind.toLowerCase().includes(q)
         );
     }, [elements, search]);
+
+    const folders = useMemo(
+        () => buildPackageTree(filtered, el => el.package, el => el.shortId ?? el.name),
+        [filtered],
+    );
 
     // Group by kind for the summary header
     const byKind = useMemo(() => {
@@ -139,14 +145,9 @@ export function ElementCollectionPage({ family }: Props) {
                         No results for "{search}"
                     </div>
                 ) : (
-                    filtered.map((el, i) => (
-                        <ElementRow
-                            key={el.id}
-                            element={el}
-                            zebra={i % 2 === 1}
-                            onClick={() => navigate(elementUrl(el.shortId ?? el.id))}
-                        />
-                    ))
+                    // A package is a folder: the elements are listed in the package that declares them, so two
+                    // packages that contribute the same kind stay apart (plan WI-007).
+                    <PackageFolders nodes={folders} open={search.trim() !== ''} navigate={navigate} />
                 )}
             </div>
 
@@ -154,6 +155,30 @@ export function ElementCollectionPage({ family }: Props) {
                 {filtered.length} of {elements.length} elements shown
             </p>
         </CollectionShell>
+    );
+}
+
+function PackageFolders({ nodes, open, navigate, depth = 0 }: {
+    nodes: PackageNode<MemoElement>[]; open: boolean; navigate: (to: string) => void; depth?: number;
+}) {
+    let row = 0;
+    return (
+        <>
+            {nodes.map(node => (
+                <details key={node.id} open={open || depth === 0} data-testid="catalog-package" style={{ marginLeft: depth ? 18 : 0 }}>
+                    <summary style={{
+                        padding: '8px 16px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted, cursor: 'pointer',
+                        background: COLOR.surfaceAlt, borderBottom: `1px solid ${COLOR.borderLight}`,
+                    }}>
+                        {node.name} <span style={{ fontWeight: 400, color: COLOR.faint }}>{countIn(node)}</span>
+                    </summary>
+                    {node.items.map(el => (
+                        <ElementRow key={el.id} element={el} zebra={row++ % 2 === 1} onClick={() => navigate(elementUrl(el.shortId ?? el.id))} />
+                    ))}
+                    <PackageFolders nodes={node.children} open={open} navigate={navigate} depth={depth + 1} />
+                </details>
+            ))}
+        </>
     );
 }
 

@@ -641,7 +641,7 @@ function RecursiveTree({
                     return (
                         <div
                             key={node.id}
-                            style={{ marginLeft: node.isUsagesFolder ? `${16 + level * 16}px` : level > 0 ? '16px' : '0' }}
+                            style={{ marginLeft: node.isUsagesFolder ? `${16 + level * ELEMENT_INDENT}px` : level > 0 ? '16px' : '0' }}
                             draggable
                             onDragStart={e => onDragStart(e, node)}
                             onDragOver={e => e.preventDefault()}
@@ -707,7 +707,8 @@ function RecursiveTree({
                             style={{
                                 borderRadius: '4px',
                                 margin: '0 4px',
-                                marginLeft: 16 + level * 16 + (node.isUsage ? 16 : 0) + (hasChildren ? 0 : 16) + 'px',
+                                // A part it composes is a level down: a full step, so the tree reads as one without hovering.
+                                marginLeft: 16 + level * ELEMENT_INDENT + (node.isUsage ? 16 : 0) + (hasChildren ? 0 : 16) + 'px',
                                 background: isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent',
                                 fontWeight: isSelected || isChecked ? 500 : 400,
                             }}
@@ -2141,6 +2142,8 @@ const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
 
 /** Expansion key for the Uncategorized section; shared with the /diagrams page. */
 const FEATURE_VP_PREFIX = 'fvp:';
+/** Pixels a composed element sits to the right of the element that composes it. */
+const ELEMENT_INDENT = 28;
 export const UNCATEGORIZED_ID = '__uncategorized';
 
 /**
