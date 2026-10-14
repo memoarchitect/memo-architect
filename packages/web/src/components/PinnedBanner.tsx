@@ -17,6 +17,7 @@ export function PinnedBanner() {
             <strong>{pinned.notARelease ? 'This is not a release.' : 'Pinned release.'}</strong>
             <span>
                 {pinned.label}{commits ? ` · ${commits}` : ''} — read only.
+                {pinned.ontologyDrift?.length ? ` Built with ${pinned.ontologyDrift.map(d => `${d.name} ${d.used}, not the ${d.locked} it was made with`).join('; ')}.` : ''}
                 {pinned.notARelease ? ' Content can change with every commit and may be incomplete.' : ''}
                 {' '}Role and workspace changes last for this session only.
             </span>
