@@ -1124,7 +1124,7 @@ export function sendOntologyRemove(packageName: string): void {
     }
 }
 
-/** Save per-diagram positions/edge styles to the view's .viewlayout companion. */
+/** Save per-diagram positions/edge styles into the view's layout statements (the server writes them into the `view`). */
 export function sendDiagramLayoutUpdate(diagramId: string, layout: DiagramLayout): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'diagram:layout:update', payload: { diagramId, layout } }));

@@ -10,7 +10,7 @@
 // the moment the selection changed.
 //
 // It only ever changes presentation. Every edit here lands in the diagram's
-// `.viewlayout` companion, never in SysML, because where a box sits says
+// layout statements, never in a model declaration, because where a box sits says
 // nothing about the system being modelled.
 // ─────────────────────────────────────────────────────────────────────────────
 

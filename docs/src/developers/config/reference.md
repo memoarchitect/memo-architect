@@ -16,7 +16,8 @@ in the ontology reference.
 |---|---|---|
 | **Semantic model source** | `model/catalog/**/*.sysml` | The only thing that decides which elements, relationships, viewpoints, rules and obligations exist |
 | **Application project settings** | `memo.tools.yaml`, `memo.architect.yaml`, `memo.package.yaml`, `syside.toml` | May change how a command or the workbench *runs*. May never change what the model means |
-| **Transient workspace state** | `.memo/architect/`, caches, `.viewlayout` sidecars | Regenerable. Deleting it costs you diagram positions and caches, nothing else |
+| **Transient workspace state** | `.memo/architect/`, caches | Regenerable. Deleting it costs you caches, nothing else |
+| **Diagram layout** | the `@MemoLayout…` statements inside each `view` in the `.sysml` that declares it | Presentation, written by the canvas at the end of a drag. It is in the view file so it is reviewed, compiled and pinned with the view, but it says nothing about the model; removing the statements returns the view to automatic layout |
 
 Removing a settings file may change how an application runs or looks. It must
 not change which model elements, relationships, methodology, rules, portable

@@ -6,8 +6,8 @@
 // the very diagram it was recolouring and closed the moment the selection
 // changed.
 //
-// Everything here is presentation and lands in the diagram's `.viewlayout`
-// companion, never in SysML: what colour a box is says nothing about the
+// Everything here is presentation and lands in the diagram's layout statements,
+// never in a model declaration: what colour a box is says nothing about the
 // system being modelled.
 // ─────────────────────────────────────────────────────────────────────────────
 
