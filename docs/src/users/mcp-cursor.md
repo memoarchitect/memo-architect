@@ -146,7 +146,7 @@ it, so keep local changes elsewhere or re-apply them after re-running init.
 it reads `.cursor/mcp.json` at startup.
 
 **"No MEMO project found."** The `--project` path must contain the native entrypoint
-`model/catalog/project.sysml`. Run `memo-architect mcp init` from the project root so the
+`model/methodology/project.sysml`. Run `memo-architect mcp init` from the project root so the
 generated path is correct.
 
 **Answers look stale.** The server reloads when your `.sysml` files change, checked per

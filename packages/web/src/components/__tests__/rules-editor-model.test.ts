@@ -120,7 +120,7 @@ describe('the new-rule form', () => {
 describe('obligation and the typed trace in the form', () => {
     const complete: RuleFormState = {
         ...EMPTY_FORM, id: 'ORG-001', typeName: 'TwoControls', appliesTo: 'Hazard', relation: 'mitigates', count: '2',
-        rationale: 'SOP 4.1', file: 'model/catalog/project.sysml',
+        rationale: 'SOP 4.1', file: 'model/methodology/project.sysml',
     };
 
     it('takes the severity from the obligation when none is chosen, as the tools do', () => {

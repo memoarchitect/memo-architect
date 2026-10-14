@@ -44,7 +44,7 @@ beforeEach(() => {
             { qualifiedName: 'p::iso14971::c7', standard: 'ISO 14971:2019', standardName: 'p::iso14971', clauseNumber: '7' },
             { qualifiedName: 'p::iec62304::c5', standard: 'IEC 62304:2006', standardName: 'p::iec62304', clauseNumber: '5' },
         ],
-        methodology: { folders: [{ sourceFiles: ['model/catalog/project.sysml'] }] },
+        methodology: { folders: [{ sourceFiles: ['model/methodology/project.sysml'] }] },
     } as never);
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -76,7 +76,7 @@ describe('a policy that selects by standard', () => {
         expect(text()).toContain('Reaches 2 rules · 1 invariant keeps running: CR-MED-001, CR-ONT-001');
 
         pick(byLabel('Rationale'), 'out of scope');
-        pick(byLabel('Target methodology file'), 'model/catalog/project.sysml');
+        pick(byLabel('Target methodology file'), 'model/methodology/project.sysml');
         await act(async () => { button('Write policy').click(); });
         expect(writeRulePolicy).toHaveBeenCalledOnce();
         const request = writeRulePolicy.mock.calls[0][0];
@@ -101,7 +101,7 @@ describe('a policy that selects by layer', () => {
         pick(byLabel('Selects'), 'category');
         pick(byLabel('Layer'), 'memo_assurance_safety_risk');
         pick(byLabel('Rationale'), 'x');
-        pick(byLabel('Target methodology file'), 'model/catalog/project.sysml');
+        pick(byLabel('Target methodology file'), 'model/methodology/project.sysml');
         expect(button('Write policy').disabled).toBe(true);
     });
 });

@@ -43,7 +43,7 @@ beforeEach(() => {
             rule({ sourceRuleId: 'CR-MED-021', sourceRuleType: 'SwComponentReqRule', enforces: [] }),
             rule({ sourceRuleId: 'CR-ONT-001', sourceRuleType: 'ContainmentAcyclicRule', domain: 'modelling', tailoring: 'invariant', enforces: [] }),
         ],
-        ruleDiagnostics: [], ruleClauses: clauses, ruleProjectFiles: ['model/catalog/project.sysml'],
+        ruleDiagnostics: [], ruleClauses: clauses, ruleProjectFiles: ['model/methodology/project.sysml'],
     } as never);
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -102,7 +102,7 @@ describe('writing a rule', () => {
         type(byLabel('Relation'), 'mitigates');
         type(byLabel('Count'), '2');
         type(byLabel('Rule rationale'), 'SOP 4.1');
-        type(byLabel('Write the rule into'), 'model/catalog/project.sysml');
+        type(byLabel('Write the rule into'), 'model/methodology/project.sysml');
     }
 
     it('cannot be previewed until it is complete, and says what is missing', () => {
@@ -125,7 +125,7 @@ describe('writing a rule', () => {
         expect(text()).toContain('UndetectedTemperatureDeviation');
         expect(previewRule.mock.calls[0][0]).toMatchObject({
             id: 'ORG-001', typeName: 'TwoControls', appliesTo: 'Hazard',
-            condition: { kind: 'atLeast', relation: 'mitigates', count: 2 }, file: 'model/catalog/project.sysml',
+            condition: { kind: 'atLeast', relation: 'mitigates', count: 2 }, file: 'model/methodology/project.sysml',
         });
         expect(button('Write rule').disabled).toBe(false);
 

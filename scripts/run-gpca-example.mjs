@@ -17,7 +17,7 @@ cpSync(installedExample, exampleRoot, { recursive: true });
 writeFileSync(resolve(exampleRoot, 'memo.package.yaml'), [
     'name: GPCA Sample',
     'version: 1.0.0',
-    'entrypoint: model/catalog/project.sysml',
+    'entrypoint: model/methodology/project.sysml',
     'include: [model]',
     'toolchain:',
     '  validator: syside',

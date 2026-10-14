@@ -772,7 +772,7 @@ function sendElementMutation(
     }
     const requestId = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const model = useModelStore.getState().model;
-    const sourceFile = (element.file as string | undefined) ?? 'model/catalog/project.sysml';
+    const sourceFile = (element.file as string | undefined) ?? 'model/methodology/project.sysml';
     const expectedSourceHash = model?.sourceHashes?.[sourceFile] ?? '';
     const precondition = workspaceSessionId && workspaceRevision !== null
         ? { workspaceSessionId, baseRevision: workspaceRevision, sourceFile, expectedSourceHash, targetElementIds: [element.id] }

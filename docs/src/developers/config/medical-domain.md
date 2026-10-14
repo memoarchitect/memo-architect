@@ -14,7 +14,7 @@ modeling rules, viewpoints, archetypes, and project templates.
 | `@memoarchitect/methodology-gpca` | Methodology content used by the GPCA reference project |
 
 Projects normally select the medical profile natively, in
-`model/catalog/project.sysml` — by importing it and binding it as the
+`model/methodology/project.sysml` — by importing it and binding it as the
 methodology:
 
 ```sysml
