@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
+import { RegulatedDevices } from '../components/RegulatedDevices';
 import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import type { ValidationResult, CompletenessReport, Violation } from '@memoarchitect/tools/browser';
 import type { StandardsReport } from '@memoarchitect/tools/browser';
@@ -189,6 +190,8 @@ export function DhfDashboard() {
                     {completeness && ` | Overall completeness: ${completeness.overall}%`}
                 </p>
             </div>
+
+            <RegulatedDevices />
 
             {/* Summary metrics */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>

@@ -10,7 +10,7 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -128,6 +128,7 @@ const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCapture
 const sourceImportRequests = new Map<string, PendingRequest<SourceImportResultMessage['payload']>>();
 const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResultMessage['payload']>>();
 const releaseCreateRequests = new Map<string, PendingRequest<ReleaseCreateResultMessage['payload'] & { requestId: string }>>();
+const deviceDhfRequests = new Map<string, PendingRequest<DeviceDhfResultMessage['payload'] & { requestId: string }>>();
 const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
 
 /**
@@ -166,7 +167,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -199,7 +200,7 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff',
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -406,6 +407,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'release:create:result':
             settleRelationshipRequest(msg.payload as ReleaseCreateResultMessage['payload'] & { requestId: string }, releaseCreateRequests);
+            break;
+        case 'dhf:device:result':
+            settleRelationshipRequest(msg.payload as DeviceDhfResultMessage['payload'] & { requestId: string }, deviceDhfRequests);
             break;
         case 'release:diff:result':
             settleRelationshipRequest(msg.payload as ReleaseDiffResultMessage['payload'] & { requestId: string }, releaseDiffRequests);
@@ -882,6 +886,14 @@ export interface ReleaseCreateInput {
  */
 export function requestReleaseCreate(request: ReleaseCreateInput): Promise<ReleaseCreateResultMessage['payload'] & { requestId: string }> {
     return sendRelationshipRequest('release:create', { ...request, precondition: sourcePrecondition(request.file, [request.itemId]) }, releaseCreateRequests);
+}
+
+/**
+ * Generate the design history of one regulated device (documents under dhf-output/, built from the releases
+ * it covers). Not a model write: the answer names the folder and the documents.
+ */
+export function requestDeviceDhf(device: string): Promise<DeviceDhfResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('dhf:device:generate', { device }, deviceDhfRequests);
 }
 
 /** What changed in `release` since `against` (another record's id, or 'previous'). */
