@@ -61,3 +61,26 @@ export function navigatorRoots(model: MemoModelDTO, workspace: string | null): N
         .filter((element): element is MemoElement => !!element)
         .map(element => nodeOf(model, element));
 }
+
+/**
+ * A definition and everything it owns, at any depth: what drilling into a usage typed by it has to be able to
+ * draw. A view exposes the elements somebody put in it, and the parts of a definition a usage is typed by are
+ * usually not among them (the system of systems' view does not list each system's insides), so the level
+ * drilled into brings its own.
+ */
+export function definitionSubtree(model: MemoModelDTO, definitionId: string): string[] {
+    const owned = new Map<string, string[]>();
+    for (const element of Object.values(model.elements)) {
+        if (element.owner) owned.set(element.owner, [...(owned.get(element.owner) ?? []), element.id]);
+    }
+    const out: string[] = [];
+    const seen = new Set<string>();
+    const walk = (id: string) => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        out.push(id);
+        for (const child of owned.get(id) ?? []) walk(child);
+    };
+    walk(definitionId);
+    return out;
+}

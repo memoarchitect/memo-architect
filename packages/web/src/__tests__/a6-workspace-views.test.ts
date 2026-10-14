@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
 import { partitionsOf, sharedIds } from '../lib/explorer-modes';
-import { childrenOf, drillTarget, navigatorRoots } from '../lib/system-navigator';
+import { childrenOf, definitionSubtree, drillTarget, navigatorRoots } from '../lib/system-navigator';
 import { groupUseCases } from '../lib/use-case-groups';
 
 // A small copy of E0's shape: a lab (SoS) made of a mapping system and a recording system, a part
@@ -136,5 +136,14 @@ describe('use case groups', () => {
     it('never hides a use case nothing holds', () => {
         const groups = groupUseCases([...ids, 'ucLost'], includes, membership, id => id);
         expect(groups.at(-1)).toMatchObject({ label: 'Unassigned', entries: [{ id: 'ucLost', depth: 0 }] });
+    });
+});
+
+describe('what drilling into a usage has to draw', () => {
+    it('is the definition and everything it owns, at any depth, and not the definition\'s neighbours', () => {
+        const model = { elements: Object.fromEntries(elements.map(e => [e.id, e])) } as unknown as MemoModelDTO;
+        expect(definitionSubtree(model, 'Mapping').sort()).toEqual(
+            ['Dangling', 'Mapping', 'Mapping::engine', 'Mapping::isolation', 'Mapping::port']);
+        expect(definitionSubtree(model, 'Isolation')).toEqual(['Isolation']);
     });
 });
