@@ -102,14 +102,43 @@ export function Change() {
                         </button>
                     </div>
                     {problem && <p data-testid="impact-problem" style={{ fontSize: FONT.sm, color: '#B42318' }}>{problem}</p>}
-                    {report && <Impact report={report} group={group} />}
+                    {report && <Impact report={report} group={group} packageOf={id => model.elements[id]?.package} />}
                 </>
             )}
         </div>
     );
 }
 
-function Impact({ report, group }: { report: Report; group: (title: string, items: string[]) => JSX.Element | null }) {
+type ImpactItem = Report['changed']['elements'][number];
+
+/**
+ * The elements a change touches, in the package that declares each: a package is a folder,
+ * as it is in the Views tree. An element no longer in the model (removed) has no package and
+ * is listed under its own heading.
+ */
+function byPackage(title: string, items: ImpactItem[], packageOf: (id: string) => string | undefined, describe: (item: ImpactItem) => string) {
+    if (items.length === 0) return null;
+    const folders = new Map<string, ImpactItem[]>();
+    for (const item of items) {
+        const key = packageOf(item.id) ?? '(no longer in the model)';
+        folders.set(key, [...(folders.get(key) ?? []), item]);
+    }
+    return (
+        <div style={{ margin: '8px 0' }}>
+            <div style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600 }}>{title} ({items.length})</div>
+            {[...folders].sort(([a], [b]) => a.localeCompare(b)).map(([folder, members]) => (
+                <details key={folder} data-testid="impact-package" open style={{ margin: '2px 0 2px 6px' }}>
+                    <summary style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted, cursor: 'pointer' }}>{folder} ({members.length})</summary>
+                    <ul style={{ margin: '2px 0', paddingLeft: 18, fontSize: FONT.sm }}>{members.map(item => <li key={`${item.id}|${item.via ?? ''}`}>{describe(item)}</li>)}</ul>
+                </details>
+            ))}
+        </div>
+    );
+}
+
+function Impact({ report, group, packageOf }: {
+    report: Report; group: (title: string, items: string[]) => JSX.Element | null; packageOf: (id: string) => string | undefined;
+}) {
     const empty = report.changed.elements.length === 0 && report.changed.addedLinks + report.changed.removedLinks === 0;
     return (
         <div data-testid="impact-report" style={{ border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: '12px 16px', maxWidth: 900 }}>
@@ -117,8 +146,8 @@ function Impact({ report, group }: { report: Report; group: (title: string, item
                 Working tree against <b className="mono">{report.base.commit.slice(0, 7)}</b>, where it left {report.target}.
             </div>
             {empty && <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>Nothing has changed.</p>}
-            {group('Changed', report.changed.elements.map(e => `${e.name} (${e.kind}), ${e.via}`))}
-            {Object.entries(report.reached).map(([layer, items]) => group(`Reached: ${words(layer)}`, items.map(i => `${i.name} (${i.kind}), by ${i.via}`)))}
+            {byPackage('Changed', report.changed.elements, packageOf, e => `${e.name} (${e.kind}), ${e.via}`)}
+            {Object.entries(report.reached).map(([layer, items]) => byPackage(`Reached: ${words(layer)}`, items, packageOf, i => `${i.name} (${i.kind}), by ${i.via}`))}
             {group('Systems', report.systems.map(s => `${s.name} (${s.scope === 'sos' ? 'system of systems' : 'system'})`))}
             {group('Releases', report.releases.map(r => `${r.name}, ${r.status || 'no status'}${r.commit ? ` @ ${r.commit}` : ''}${r.needsNewRelease ? ': needs a new release' : ''}`))}
             {group('Regulated devices', report.devices.map(d => `${d.name} (${d.jurisdiction})`))}

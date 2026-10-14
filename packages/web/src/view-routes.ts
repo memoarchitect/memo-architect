@@ -89,6 +89,8 @@ export function viewToPath(view: ActiveView): string | null {
             return view.layerId
                 ? `/ontology/${encodeURIComponent(view.packageName)}/${encodeURIComponent(view.layerId)}`
                 : `/ontology/${encodeURIComponent(view.packageName)}`;
+        case 'feature':
+            return `/features/${encodeURIComponent(view.featureId)}`;
         case 'dhf-document':
             return `/dhf/${encodeURIComponent(view.docId)}`;
         // The scope is only spelled out when it pins a shadowed copy; a bare
@@ -138,6 +140,11 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     // /dhf/:docId — but /dhf and /dhf/legacy are static and matched above.
     if (segments[0] === 'dhf' && segments.length === 2) {
         return { type: 'dhf-document', docId: decodeURIComponent(segments[1]) };
+    }
+
+    // /features/:featureId
+    if (segments[0] === 'features' && segments.length === 2) {
+        return { type: 'feature', featureId: decodeURIComponent(segments[1]) };
     }
 
     // /dashboards/:dashboardId[?scope=shared|user]
@@ -214,7 +221,7 @@ export function addressableViewTypes(): string[] {
     return [
         ...Object.keys(STATIC_VIEW_PATHS),
         'welcome',
-        'ontology-detail', 'dhf-document', 'tabular', 'custom-dashboard',
+        'ontology-detail', 'dhf-document', 'tabular', 'custom-dashboard', 'feature',
         'element-detail', 'diagram',
     ];
 }
