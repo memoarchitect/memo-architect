@@ -1,7 +1,7 @@
 // ─── DiagramCanvas ────────────────────────────────────────────────────────────
 //
 // Interactive diagram canvas with:
-//   - Per-view position persistence (<view>.viewlayout)
+//   - Per-view position persistence (the view's @MemoLayout statements)
 //   - Palette sidebar (drag-to-create elements)
 //   - On-canvas creation (double-click canvas, drop from palette)
 //   - Edge drawing (handle-to-handle, relationship type picker)
@@ -1023,7 +1023,7 @@ function DiagramCanvasInner() {
             });
         return entries.length > 0 ? new Map<string, PortSide>(entries) : undefined;
     }, [declaredPortWalls]);
-    // Per-edge label overrides authored on the .viewlayout edges
+    // Per-edge label overrides authored on the view's layout edges
     // (`DiagramEdgeLayout.labelVisible`). With `showConnectionText` on, these let
     // a dense IBD name only the few flows that carry the story.
     const declaredEdges = currentLayout?.edges;
@@ -1891,7 +1891,7 @@ function DiagramCanvasInner() {
      * Throw away every saved position for this diagram and lay it out again.
      *
      * A diagram the user has dragged into a corner has no way back short of
-     * editing the .viewlayout by hand, which is why this is a first-class
+     * editing the layout statements by hand, which is why this is a first-class
      * control rather than a per-view-kind affordance.
      */
     const resetViewToDefault = useCallback(() => {
