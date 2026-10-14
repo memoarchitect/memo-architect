@@ -47,7 +47,7 @@ const RulesWorkspace = lazy(() => import('./views/RulesWorkspace').then(m => ({ 
 const VariabilityPage = lazy(() => import('./views/Variability').then(m => ({ default: m.Variability })));
 const SuspectLinksPage = lazy(() => import('./views/SuspectLinksPage').then(m => ({ default: m.SuspectLinksPage })));
 const ChangePage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ChangePage })));
-const ReleasesPage = lazy(() => import('./views/SectionPlaceholder').then(m => ({ default: m.ReleasesPage })));
+const ReleasesPage = lazy(() => import('./views/Releases').then(m => ({ default: m.Releases })));
 
 function UnifiedCanvas() {
     const activeView = useModelStore(s => s.activeView);

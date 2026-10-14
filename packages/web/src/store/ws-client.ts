@@ -10,7 +10,7 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -127,6 +127,8 @@ const ruleCreateRequests = new Map<string, PendingRequest<RuleCreateResultMessag
 const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCaptureUploadResultMessage['payload']>>();
 const sourceImportRequests = new Map<string, PendingRequest<SourceImportResultMessage['payload']>>();
 const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResultMessage['payload']>>();
+const releaseCreateRequests = new Map<string, PendingRequest<ReleaseCreateResultMessage['payload'] & { requestId: string }>>();
+const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
 
 /**
  * Resolve an in-flight mutation with the server's answer.
@@ -164,7 +166,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -197,7 +199,7 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review',
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -401,6 +403,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'relationship:update:result':
             settleRelationshipRequest(msg.payload, relationshipUpdateRequests);
+            break;
+        case 'release:create:result':
+            settleRelationshipRequest(msg.payload as ReleaseCreateResultMessage['payload'] & { requestId: string }, releaseCreateRequests);
+            break;
+        case 'release:diff:result':
+            settleRelationshipRequest(msg.payload as ReleaseDiffResultMessage['payload'] & { requestId: string }, releaseDiffRequests);
             break;
         case 'source-import:result':
             settleRelationshipRequest(msg.payload, sourceImportRequests);
@@ -856,6 +864,27 @@ export function requestSourceImport(
     const base = mode === 'apply' && previewed ? sourcePrecondition(previewed.sourceFile, []) : undefined;
     const precondition = base && previewed ? { ...base, expectedSourceHash: previewed.sourceHash } : undefined;
     return sendRelationshipRequest(mode === 'preview' ? 'import:preview' : 'import:apply', { ...request, precondition }, sourceImportRequests);
+}
+
+/** What the page sends to create a release record; the file it is written to is named by the page. */
+export interface ReleaseCreateInput {
+    name: string; label?: string; itemId: string; partNumber: string; revision: string;
+    softwareVersion?: string; codeTag?: string; status?: string; modelCommit?: string;
+    contains?: string[]; implements?: string[]; features?: string[]; verifiedBy?: string[];
+    file: string;
+}
+
+/**
+ * Create one release record and all its statements: one write, refused whole. Guarded by the hash of
+ * the file it is written into, as every semantic write is.
+ */
+export function requestReleaseCreate(request: ReleaseCreateInput): Promise<ReleaseCreateResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('release:create', { ...request, precondition: sourcePrecondition(request.file, [request.itemId]) }, releaseCreateRequests);
+}
+
+/** What changed in `release` since `against` (another record's id, or 'previous'). */
+export function requestReleaseDiff(release: string, against: string): Promise<ReleaseDiffResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('release:diff', { release, against }, releaseDiffRequests);
 }
 
 /**

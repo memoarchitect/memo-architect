@@ -1,72 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
-import type { MemoModelDTO, MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import { computeModelDiff, type ModelDiff, type MemoModelDTO, type MemoElement, type MemoRelationship } from '@memoarchitect/tools/browser';
 
-// ─── Diff Types ──────────────────────────────────────────────────────────────
+// ─── Diff ────────────────────────────────────────────────────────────────────
+// The comparison itself is MEMO Tools' (`computeModelDiff`): the Releases page asks the server for the
+// same one between two pinned builds. Links are matched by type and ends, not by the id they were numbered with.
 
-export interface DiffResult {
-    added: MemoElement[];
-    removed: MemoElement[];
-    changed: { element: MemoElement; changes: string[] }[];
-    addedRels: MemoRelationship[];
-    removedRels: MemoRelationship[];
-    summary: { added: number; removed: number; changed: number; addedRels: number; removedRels: number };
-}
-
-export function computeModelDiff(before: MemoModelDTO, after: MemoModelDTO): DiffResult {
-    const added: MemoElement[] = [];
-    const removed: MemoElement[] = [];
-    const changed: { element: MemoElement; changes: string[] }[] = [];
-
-    // Elements
-    const beforeIds = new Set(Object.keys(before.elements));
-    const afterIds = new Set(Object.keys(after.elements));
-
-    for (const id of afterIds) {
-        if (!beforeIds.has(id)) {
-            added.push(after.elements[id]);
-        }
-    }
-
-    for (const id of beforeIds) {
-        if (!afterIds.has(id)) {
-            removed.push(before.elements[id]);
-        }
-    }
-
-    for (const id of beforeIds) {
-        if (!afterIds.has(id)) continue;
-        const b = before.elements[id];
-        const a = after.elements[id];
-        const changes: string[] = [];
-        if (b.name !== a.name) changes.push(`name: "${b.name}" → "${a.name}"`);
-        if (b.kind !== a.kind) changes.push(`kind: ${b.kind} → ${a.kind}`);
-        if (b.layer !== a.layer) changes.push(`layer: ${b.layer} → ${a.layer}`);
-        if (b.doc !== a.doc) changes.push('doc changed');
-        const bAttrs = JSON.stringify(b.attributes);
-        const aAttrs = JSON.stringify(a.attributes);
-        if (bAttrs !== aAttrs) changes.push('attributes changed');
-        if (changes.length > 0) {
-            changed.push({ element: a, changes });
-        }
-    }
-
-    // Relationships
-    const beforeRelIds = new Set(before.relationships.map(r => r.id));
-    const afterRelIds = new Set(after.relationships.map(r => r.id));
-
-    const addedRels = after.relationships.filter(r => !beforeRelIds.has(r.id));
-    const removedRels = before.relationships.filter(r => !afterRelIds.has(r.id));
-
-    return {
-        added, removed, changed, addedRels, removedRels,
-        summary: {
-            added: added.length, removed: removed.length, changed: changed.length,
-            addedRels: addedRels.length, removedRels: removedRels.length,
-        },
-    };
-}
+export type DiffResult = ModelDiff<MemoElement, MemoRelationship>;
 
 // ─── Model Diff View ────────────────────────────────────────────────────────
 
