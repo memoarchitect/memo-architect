@@ -564,6 +564,8 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'pinned:info':
             store.setPinned(msg.payload);
+            // A release of one system opens on that system, for this session only (a pinned view saves nothing).
+            if (msg.payload.workspace) useModelStore.setState({ workspace: msg.payload.workspace });
             break;
         case 'versions:update':
             store.setVersionRefs(msg.payload.refs);
