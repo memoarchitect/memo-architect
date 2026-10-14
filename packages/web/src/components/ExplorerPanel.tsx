@@ -2617,6 +2617,12 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     return globalDiagramsFor(node.id).length
                         + (viewpointChildren.get(node.id) ?? []).reduce((sum, child) => sum + total(child), 0);
                 })(vp);
+                // A viewpoint whose every view a feature claimed has nothing global left to list.
+                const hadViews = (function had(node: ViewpointDTO): number {
+                    return getDiagramsForViewpoint(model, node.id).length
+                        + (viewpointChildren.get(node.id) ?? []).reduce((sum, child) => sum + had(child), 0);
+                })(vp);
+                if (hadViews > 0 && familyCount === 0) return null;
 
                 return (
                     <div key={vp.id} className="mb-0.5" style={{ marginLeft: depth ? '14px' : 0 }}>
@@ -2678,7 +2684,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         const key = `${FEATURE_VP_PREFIX}${fv.featureId}`;
         const isExpanded = expandedVps.has(key);
         const shown = filterDiagrams(fv.diagrams);
-        if (searchTerm && shown.length === 0) return null;
+        if (searchTerm && shown.length === 0 && !fv.label.toLowerCase().includes(searchTerm.toLowerCase())) return null;
         return (
             <div key={key} className="mb-0.5" data-testid="feature-viewpoint">
                 <div
@@ -2686,9 +2692,17 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     style={{ borderRadius: '4px', margin: '0 4px' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    onClick={() => { selectViewpoint(null); toggleExpand(key); }}
+                    // The row opens the feature's page; the chevron opens its views.
+                    onClick={() => {
+                        selectViewpoint(null);
+                        setActiveView({ type: 'feature', featureId: fv.featureId });
+                        navigate(`/features/${encodeURIComponent(fv.featureId)}`);
+                        if (!isExpanded) toggleExpand(key);
+                    }}
                 >
-                    <ChevronIcon expanded={isExpanded} size={14} color={COLOR.accent} />
+                    <span onClick={e => { e.stopPropagation(); toggleExpand(key); }} style={{ display: 'inline-flex' }}>
+                        <ChevronIcon expanded={isExpanded} size={14} color={COLOR.accent} />
+                    </span>
                     <FolderIcon open={isExpanded} color={COLOR.accent} />
                     <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{fv.label}</span>
                     <ExplorerCountBadge count={shown.length} color={COLOR.accent} title={`${shown.length} views of the ${fv.label} feature`} />

@@ -37,6 +37,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     welcome: 'guide',
     'element-detail': 'model',
     variability: 'model',
+    feature: 'views',
     'scenario-editor': 'model',
     ai: 'model',
     ask: 'model',

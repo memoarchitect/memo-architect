@@ -14,7 +14,9 @@ import { useScopedModel } from '../store/scoped-model';
 import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
-import { UNCATEGORIZED_ID, buildViewpointTree, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
+import { UNCATEGORIZED_ID, buildViewPackageTree, buildViewpointTree, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
+import { featureViewpoints } from '../lib/feature-viewpoints';
+import { useModelStore as useStore } from '../store/model-store';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 
@@ -23,10 +25,15 @@ export function DiagramHomePage() {
     const role = useModelStore(s => s.role);
     const roleViews = useModelStore(s => s.methodology?.roleViews);
     const navigate = useNavigate();
+    const setActiveView = useStore(s => s.setActiveView);
+    const open = (diagram: DiagramDTO) => navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id));
 
     /** Model views grouped by the viewpoint they conform to, Uncategorized last. */
+    // Each feature is a viewpoint of its own; a view a feature lists is shown there, not under a global viewpoint.
+    const { features, featureSpecific } = useMemo(() => featureViewpoints(model), [model]);
+
     const groups = useMemo(() => {
-        const diagrams = model?.diagrams ?? [];
+        const diagrams = (model?.diagrams ?? []).filter(diagram => !featureSpecific.has(diagram.id));
         const byViewpoint = new Map<string, { id: string; label: string; items: DiagramDTO[] }>();
         const viewpointMetadata = new Map((model?.viewpoints ?? []).map(vp => [vp.id, vp]));
         for (const diagram of diagrams) {
@@ -87,7 +94,7 @@ export function DiagramHomePage() {
                 items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)),
             }]
             : ordered;
-    }, [model, role, roleViews]);
+    }, [model, role, roleViews, featureSpecific]);
 
     if (!model) {
         return (
@@ -110,6 +117,30 @@ export function DiagramHomePage() {
                 <p style={{ color: COLOR.muted, fontSize: FONT.sm }}>
                     This model defines no model views yet.
                 </p>
+            )}
+
+            {features.length > 0 && (
+                <>
+                    <h2 style={SECTION_LABEL}>Feature viewpoints</h2>
+                    {features.map(feature => (
+                        <section key={feature.featureId} data-testid="feature-section" style={{ marginBottom: '28px' }}>
+                            <h3 style={{ fontSize: FONT.sm, fontWeight: 700, color: COLOR.primary, margin: '0 0 8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActiveView({ type: 'feature', featureId: feature.featureId }); navigate(`/features/${encodeURIComponent(feature.featureId)}`); }}
+                                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', color: COLOR.accent }}
+                                >
+                                    {feature.label}
+                                </button>
+                                <span style={{ marginLeft: 8, fontWeight: 400, color: COLOR.muted }}>{feature.diagrams.length}</span>
+                            </h3>
+                            {feature.diagrams.length === 0
+                                ? <p style={{ color: COLOR.faint, fontSize: FONT.sm, margin: 0 }}>No views chosen yet. Open the feature to choose them.</p>
+                                : <CardsByPackage diagrams={feature.diagrams} onOpen={open} />}
+                        </section>
+                    ))}
+                    <h2 style={SECTION_LABEL}>Global viewpoints</h2>
+                </>
             )}
 
             {groups.map(group => (
@@ -150,24 +181,38 @@ export function DiagramHomePage() {
                             No views of its own — the viewpoints it frames are below.
                         </p>
                     ) : (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                            gap: '12px',
-                        }}>
-                            {group.items.map(diagram => (
-                                <DiagramCard
-                                    key={diagram.id}
-                                    diagram={diagram}
-                                    onClick={() => navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id))}
-                                />
-                            ))}
-                        </div>
+                        <CardsByPackage diagrams={group.items} onOpen={open} />
                     )}
                 </section>
             ))}
         </div>
     );
+}
+
+const SECTION_LABEL = {
+    fontSize: '11px', fontWeight: 700, color: COLOR.muted, textTransform: 'uppercase' as const,
+    letterSpacing: '0.06em', margin: '0 0 12px 0',
+};
+
+/**
+ * Cards in the package folders that declare their views, the grouping the Explorer tree
+ * uses. A list with no package among its views is one grid.
+ */
+function CardsByPackage({ diagrams, onOpen }: { diagrams: DiagramDTO[]; onOpen: (diagram: DiagramDTO) => void }) {
+    const grid = (items: DiagramDTO[]) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+            {items.map(diagram => <DiagramCard key={diagram.id} diagram={diagram} onClick={() => onOpen(diagram)} />)}
+        </div>
+    );
+    if (!diagrams.some(d => (d as DiagramDTO & { package?: string }).package)) return grid(diagrams);
+    const render = (nodes: ReturnType<typeof buildViewPackageTree>, depth: number): React.ReactNode => nodes.map(node => (
+        <div key={node.id} data-testid="package-folder" style={{ marginLeft: depth ? 14 : 0, marginBottom: 10 }}>
+            <div style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted, margin: '0 0 6px' }}>▸ {node.name}</div>
+            {node.diagrams.length > 0 && grid(node.diagrams)}
+            {render(node.children, depth + 1)}
+        </div>
+    ));
+    return <>{render(buildViewPackageTree(diagrams as (DiagramDTO & { package?: string })[]), 0)}</>;
 }
 
 function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () => void }) {
