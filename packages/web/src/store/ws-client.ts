@@ -1141,7 +1141,7 @@ export function sendCsvImport(payload: CsvImportMessage['payload']): void {
 /** Send a model Q&A question to the LLM via the CLI server */
 export function sendLlmAsk(requestId: string, question: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'llm:ask', payload: { requestId, question } }));
+        ws.send(JSON.stringify({ type: 'llm:ask', payload: { requestId, question, workspace: useModelStore.getState().workspace ?? undefined } }));
     }
 }
 
@@ -1158,7 +1158,7 @@ export function sendLlmChat(
     allowEdits: boolean,
 ): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'llm:chat', payload: { requestId, question, history, allowEdits } }));
+        ws.send(JSON.stringify({ type: 'llm:chat', payload: { requestId, question, history, allowEdits, workspace: useModelStore.getState().workspace ?? undefined } }));
     }
 }
 
@@ -1221,14 +1221,14 @@ export function sendLlmGenerate(requestId: string, description: string): void {
 /** Send a DHF section draft request to the LLM via the CLI server */
 export function sendLlmDraft(requestId: string, documentTypeId: string, targetSections?: string[]): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'llm:draft', payload: { requestId, documentTypeId, targetSections } }));
+        ws.send(JSON.stringify({ type: 'llm:draft', payload: { requestId, documentTypeId, targetSections, workspace: useModelStore.getState().workspace ?? undefined } }));
     }
 }
 
 /** Send a completeness suggestion request to the LLM via the CLI server */
 export function sendLlmSuggest(requestId: string): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'llm:suggest', payload: { requestId } }));
+        ws.send(JSON.stringify({ type: 'llm:suggest', payload: { requestId, workspace: useModelStore.getState().workspace ?? undefined } }));
     }
 }
 
