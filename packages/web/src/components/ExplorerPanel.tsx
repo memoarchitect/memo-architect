@@ -2357,10 +2357,11 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     // every viewpoint, so a hidden viewpoint's views do not turn up as
     // Uncategorized.
     const role = useModelStore(s => s.role);
+    const roleViews = useModelStore(s => s.methodology?.roleViews);
     const { viewpoints, uncategorized: uncategorizedDiagrams } = useMemo(() => {
         const partition = partitionViewsByViewpoint(model);
-        return { ...partition, viewpoints: viewpointsVisibleToRole(partition.viewpoints, role) };
-    }, [model, role]);
+        return { ...partition, viewpoints: viewpointsVisibleToRole(partition.viewpoints, role, roleViews) };
+    }, [model, role, roleViews]);
     // Display labels only — vp.label stays the authored title everywhere else.
     const viewpointLabels = useMemo(() => {
         const stripped = stripSharedLabelPrefix(viewpoints.map(vp => vp.label));

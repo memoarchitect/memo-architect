@@ -13,13 +13,19 @@
 // hidden viewpoint is not "uncategorized".
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { viewpointsForRole, type ViewpointDTO } from '@memoarchitect/tools/browser';
+import { viewpointsForRole, type RoleViewDTO, type ViewpointDTO } from '@memoarchitect/tools/browser';
 
-export function viewpointsVisibleToRole<T extends ViewpointDTO>(viewpoints: readonly T[], role: string | null): T[] {
+export function viewpointsVisibleToRole<T extends ViewpointDTO>(
+    viewpoints: readonly T[], role: string | null,
+    /** The method's role views (O12): for a role one names, they are the whole list, not an addition to it. */
+    roleViews: readonly RoleViewDTO[] = [],
+): T[] {
     if (!role) return [...viewpoints];
-    const kept = new Set<string>(viewpointsForRole(viewpoints, role).map(viewpoint => viewpoint.id));
+    const remapped = roleViews.some(view => view.stakeholder === role);
+    const kept = new Set<string>(viewpointsForRole(viewpoints, role, roleViews).map(viewpoint => viewpoint.id));
+    // A viewpoint that names no stakeholder is shown to every role, unless the method said what this one sees.
     for (const viewpoint of viewpoints) {
-        if ((viewpoint.stakeholders ?? []).length === 0) kept.add(viewpoint.id);
+        if (!remapped && (viewpoint.stakeholders ?? []).length === 0) kept.add(viewpoint.id);
     }
     const byId = new Map(viewpoints.map(viewpoint => [viewpoint.id, viewpoint]));
     for (const id of [...kept]) {

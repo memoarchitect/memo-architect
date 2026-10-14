@@ -160,7 +160,7 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
-    | { type: 'workflow-wizard' }     // N1: guided multi-step workflow panel (#40)
+    | { type: 'guide' }               // the Guide: where the model stands against its method
     | { type: 'import' }
     | { type: 'analysis' }
     | { type: 'ui-screens' }
@@ -480,6 +480,10 @@ export interface ModelState {
     deleteDiagram: (diagramId: string) => void;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
+    // ─── The Guide: the method's steps evaluated for a workspace ───
+    guide: import('../lib/guide-view').GuideResult | null;
+    setGuide: (guide: import('../lib/guide-view').GuideResult | null) => void;
+
     // ─── Versions: the working model, a pinned release, or an unreleased ref ───
     /** Set when this server is a read-only view of a pinned release or ref. */
     pinned: PinnedInfo | null;
@@ -646,6 +650,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     // Diagram parse errors
     diagramParseErrors: {},
 
+    guide: null,
+    setGuide: (guide) => set({ guide }),
     pinned: null,
     versionRefs: [],
     versionOpening: null,

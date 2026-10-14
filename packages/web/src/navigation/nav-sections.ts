@@ -33,7 +33,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     dashboard: 'guide',
     dashboards: 'guide',
     'custom-dashboard': 'guide',
-    'workflow-wizard': 'guide',
+    guide: 'guide',
     welcome: 'guide',
     'element-detail': 'model',
     variability: 'model',
@@ -112,7 +112,7 @@ export interface NavEntry {
 export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂', section: 'guide', target: { mode: 'dashboard' } },
     { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', section: 'guide', target: { view: { type: 'dashboards' } } },
-    { id: 'workflow-wizard', label: 'Workflow Wizard', icon: '🧙', section: 'guide', target: { view: { type: 'workflow-wizard' } }, feature: 'model-tools' },
+    { id: 'guide', label: 'Guide', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } } },
 
     { id: 'catalog', label: 'Model Explorer', icon: '☰', section: 'model', target: { mode: 'catalog' } },
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'model', target: { mode: 'scenario' } },

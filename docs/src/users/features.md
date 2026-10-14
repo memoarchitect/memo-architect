@@ -149,7 +149,7 @@ surfaces:
 | Compliance Wizard | Find consistency and compliance candidates for review |
 | Model Diff | Compare model states and changed engineering content |
 | Review Dashboard | Collect review-oriented status in one workspace |
-| Workflow Wizard | Guide modeled workflow creation and review |
+| Guide | Where the model stands against its method: each step done, open or blocked for a workspace, and the next step |
 | AI Tools | Ask model-aware questions and generate supported SysML drafts |
 
 Ontology and Import appear under **Tools** rather than as permanent top-level

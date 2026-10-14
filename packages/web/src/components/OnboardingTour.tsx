@@ -60,7 +60,7 @@ const TOUR_STEPS: TourStep[] = [
     },
     {
         title: 'You\'re all set!',
-        description: 'Start from the Dashboard — it shows your model status and suggests the next step. Use the Workflow Wizard (Tools menu) for a guided path through requirements, risk, and verification.',
+        description: 'Start from the Dashboard — it shows your model status and the next step of your method. Open the Guide (Guide section) for every step of the method, which are done, open or blocked, and what each one needs.',
         target: 'center',
         position: 'center',
     },

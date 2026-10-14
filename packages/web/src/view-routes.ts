@@ -40,7 +40,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     ask: '/ask',
     'sysml-generator': '/generate',
     'review-dashboard': '/review',
-    'workflow-wizard': '/workflow',
+    guide: '/guide',
     import: '/import',
     analysis: '/analysis',
     'ui-screens': '/ui-screens',
@@ -58,6 +58,8 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
 const ALIAS_PATHS: Record<string, string> = {
     '/dashboard': 'dashboard',
     '/scenarios': 'scenario-editor',
+    // The Workflow Wizard this page replaced.
+    '/workflow': 'guide',
 };
 
 /** Reverse of STATIC_VIEW_PATHS, plus the aliases. Built once. */
