@@ -9,7 +9,7 @@ import {
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 import {
-    applyToolchainCliOptions, defaultRegistry, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError,
+    applyToolchainCliOptions, defaultRegistry, pinnedTarget, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError,
 } from '@memoarchitect/tools';
 
 const program = new Command();
@@ -82,6 +82,9 @@ applyToolchainCliOptions(
         .option('-p, --port <port>', 'Server port', '3000')
         .option('--no-open', 'Do not open a browser')
 .option('--keep-alive', 'Keep running after the last browser disconnects')
+        .option('--at <ref>', 'Open the model as it was at this commit, tag or branch, read-only')
+        .option('--release <record>', 'Open the SoS version a release record names, read-only')
+        .option('--pinned-dir <dir>', 'Internal: the directory a pinned server opened by another server serves')
 .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION),
 defaultRegistry,
 ).action(async function (this: Command, options: Record<string, unknown>) {
@@ -92,14 +95,21 @@ defaultRegistry,
     // Exactly what the caller passed. The compiler is the project's setting;
     // Architect chooses none for a project that does not.
     const toolchainOptions = toolchainOptionsFrom(options);
+    const toolchainArgv = Object.entries(toolchainOptions).flatMap(([name, value]) => [`--${name}`, String(value)]);
+    // A pinned view: resolved here (or by the server that opened this one), served read-only.
+    const pinned = options.pinnedDir
+        ? { dir: String(options.pinnedDir), info: JSON.parse(process.env.MEMO_PINNED_INFO ?? '{"kind":"read-only","label":"read-only"}'), preferencesRoot: process.env.MEMO_PINNED_PREFERENCES ?? String(options.pinnedDir) }
+        : await pinnedTarget(process.cwd(), { ...options, ...toolchainOptions }).then(target => target
+            ? { dir: target.dir, info: target.info, preferencesRoot: process.cwd() }
+            : undefined);
     await architectDevCommand({
+        pinned,
         port: Number.parseInt(String(port), 10),
         open,
         featureGrants: resolveFeatureGrants({ experimental }),
         keepAlive: keepAlive === true,
         toolchainOptions,
-        toolchainArgv: Object.entries(toolchainOptions)
-            .flatMap(([name, value]) => [`--${name}`, String(value)]),
+        toolchainArgv,
     });
 });
 

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { promisify } from 'node:util';
-import { startProjectServer } from '@memoarchitect/tools';
+import { startProjectServer, type PinnedInfo } from '@memoarchitect/tools';
 import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
 
 const execFileAsync = promisify(execFile);
@@ -69,6 +69,13 @@ export interface ArchitectDevOptions {
     toolchainOptions?: Record<string, unknown>;
     /** The same flags as argv, so the supervised child runs the same toolchain. */
     toolchainArgv?: string[];
+    /**
+     * Serve a pinned release or ref, read-only. `dir` is the checked-out or assembled directory,
+     * made by MEMO Tools (`pinnedTarget`); `preferencesRoot` is the working project, where the
+     * person's role and workspace live. A pinned server is never supervised: it has no watcher to
+     * ask for a relaunch, and a parent that opened it owns its life.
+     */
+    pinned?: { dir: string; info: PinnedInfo; preferencesRoot: string };
 }
 
 /**
@@ -94,6 +101,23 @@ export function supervisedChildArgs(
 }
 
 export async function architectDevCommand(options: ArchitectDevOptions): Promise<void> {
+    if (options.pinned) {
+        process.chdir(options.pinned.dir);
+        await startProjectServer({
+            port: options.port,
+            open: options.open,
+            clientRoot: clientRoot(),
+            exitWhenIdle: !options.keepAlive,
+            toolchainOptions: options.toolchainOptions,
+            readOnly: true,
+            pinned: options.pinned.info,
+            preferencesRoot: options.pinned.preferencesRoot,
+            transformClientHtml: options.featureGrants
+                ? html => injectFeatureGrants(html, options.featureGrants!)
+                : undefined,
+        });
+        return;
+    }
     if (process.env.MEMO_ARCHITECT_RUNTIME_CHILD !== '1') {
         const port = options.port ?? 3000;
         const existing = await runningArchitectsForProject(process.cwd());
