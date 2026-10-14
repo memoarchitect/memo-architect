@@ -5,7 +5,7 @@
 // system-of-systems versions with the releases they pin, which features each release selects, what changed
 // since the previous release (found by ancestry), and creates a release as one write. A release or a
 // ref opens as a pinned, read-only view through the Version selector or the Open button. The markets a
-// feature is offered in arrive with regulated devices (plan M5); until then the matrix is features by releases.
+// feature is offered in are read from the regulated devices: a device covers releases, and a release selects features.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react';
@@ -15,6 +15,7 @@ import { requestReleaseCreate, requestReleaseDiff, sendVersionOpen } from '../st
 import { releaseRecords, releasesByItem, type ReleaseRecordRow } from '../lib/releases-view';
 import { variabilityView } from '../lib/variability-view';
 import { diffForRole } from '../lib/release-diff-view';
+import { featuresByMarket, regulatedDevices } from '../lib/devices-view';
 import { COLOR, FONT } from '../styles/tokens';
 
 const STATUS_FALLBACK = ['proposed', 'draft', 'inReview', 'approved', 'released', 'deprecated', 'retired'];
@@ -29,6 +30,7 @@ export function Releases() {
     const rows = useMemo(() => (model ? releaseRecords(model, validation, workspace) : []), [model, validation, workspace]);
     const groups = useMemo(() => releasesByItem(rows), [rows]);
     const features = useMemo(() => (model ? variabilityView(model, validation, workspace).features : []), [model, validation, workspace]);
+    const devices = useMemo(() => (model ? regulatedDevices(model, workspace) : []), [model, workspace]);
     const [diff, setDiff] = useState<{ title: string; summary?: ModelDiffSummary; error?: string; busy?: boolean } | null>(null);
     const [creating, setCreating] = useState(false);
     if (!model) return <div style={{ padding: 40, color: COLOR.muted }}>Loading the model…</div>;
@@ -132,8 +134,26 @@ export function Releases() {
                     </tbody>
                 </table>
             )}
+            <h2 style={section}>Features by market</h2>
+            {(() => {
+                const market = featuresByMarket(devices, id => byId.get(id)?.features ?? []);
+                if (devices.length === 0 || features.length === 0) return <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>No regulated device covers a release yet, so no feature has a market.</p>;
+                return (
+                    <table data-testid="market-matrix" style={{ borderCollapse: 'collapse', maxWidth: 1100 }}>
+                        <thead><tr><th style={head}>Feature</th>{market.jurisdictions.map(j => <th key={j} style={head}>{j}</th>)}</tr></thead>
+                        <tbody>
+                            {features.map(feature => (
+                                <tr key={feature.id}>
+                                    <td style={cell}>{feature.label}</td>
+                                    {market.jurisdictions.map(j => <td key={j} style={{ ...cell, textAlign: 'center' }}>{market.offered.get(feature.id)?.has(j) ? '✓' : ''}</td>)}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                );
+            })()}
             <p style={{ fontSize: FONT.xs, color: COLOR.muted, marginTop: 18 }}>
-                The markets a feature is offered in come from regulated devices (plan M5); until then this is features by releases.
+                A feature is offered in a market when a regulated device of that jurisdiction covers a release that selects it.
             </p>
         </div>
     );

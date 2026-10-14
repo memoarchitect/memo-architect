@@ -83,6 +83,19 @@ describe('the Releases page', () => {
         expect([...row.querySelectorAll('td')].map(c => c.textContent)).toEqual(['featA', '✓', '', '']);
     });
 
+    it('shows which features each market has, from the devices that cover the releases that select them', () => {
+        const withDevices = {
+            ...model,
+            elements: { ...model.elements, devEu: el('devEu', 'RegulatedDevice', {}, { jurisdiction: 'RegulatoryRegimeKind::MDR' }) },
+            relationships: [...model.relationships, edge('covers', 'devEu', 'relPumpA')],
+            registries: { ...model.registries, kinds: [...model.registries.kinds, { name: 'RegulatedDevice', superType: 'MemoPart' }] },
+        };
+        useModelStore.setState({ model: withDevices as never });
+        const matrix = render().querySelector('[data-testid="market-matrix"]')!;
+        expect([...matrix.querySelectorAll('thead th')].map(c => c.textContent)).toEqual(['Feature', 'MDR']);
+        expect([...matrix.querySelectorAll('tbody tr')].map(r => r.textContent)).toEqual(['featA✓']);
+    });
+
     it('asks for the changes since the previous release and shows them for the chosen role', async () => {
         diffAnswer = {
             before: { label: 'relPumpA', commit: 'a' }, after: { label: 'relPumpB', commit: 'b' }, previous: true,
