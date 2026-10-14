@@ -1,8 +1,7 @@
 // ─── A navigation section whose pages are not built yet ─────────────────────
 //
-// Change and Releases are sections of the navigation now, so the shape of the
-// app is the one the product-family plan describes, and their pages arrive
-// with later milestones. Until then each says what it will hold and where that
+// Change is a section of the navigation now, so the shape of the app is the one
+// the product-family plan describes, and its page arrives with a later milestone. Until then each says what it will hold and where that
 // work stands today.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -30,20 +29,6 @@ export function ChangePage() {
                 'Projects: name, tracker link, and the releases each one feeds.',
                 'Impact of a branch: the requirements, risks, tests, systems, releases and regulated devices it reaches.',
                 'Model Diff, under Change in the navigation, compares two states of the model today.',
-            ]}
-        />
-    );
-}
-
-export function ReleasesPage() {
-    return (
-        <SectionPlaceholder
-            title="Releases"
-            summary="Every released item has a part number and revision, held in a release record. This page will list them by item and state."
-            items={[
-                'Release records through their lifecycle, with the features each selects and the interface revisions it implements.',
-                'System-of-systems versions: the validated configuration of system releases, and its evidence.',
-                'Features by market, and a diff of any two releases.',
             ]}
         />
     );
