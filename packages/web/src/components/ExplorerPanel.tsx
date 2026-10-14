@@ -32,6 +32,7 @@ import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
+import { featureViewpoints } from '../lib/feature-viewpoints';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
@@ -2139,6 +2140,7 @@ function NewDiagramModal({ viewpointId, onClose }: { viewpointId: string; onClos
 const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
 
 /** Expansion key for the Uncategorized section; shared with the /diagrams page. */
+const FEATURE_VP_PREFIX = 'fvp:';
 export const UNCATEGORIZED_ID = '__uncategorized';
 
 /**
@@ -2362,6 +2364,11 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         const partition = partitionViewsByViewpoint(model);
         return { ...partition, viewpoints: viewpointsVisibleToRole(partition.viewpoints, role, roleViews) };
     }, [model, role, roleViews]);
+    // A feature is a viewpoint of its own, and a view that belongs to a feature is listed under
+    // it and not under a global viewpoint: global viewpoints are feature-agnostic.
+    const { features: featureVps, featureSpecific } = useMemo(() => featureViewpoints(model), [model]);
+    const globalDiagramsFor = (viewpointId: string) =>
+        getDiagramsForViewpoint(model, viewpointId).filter(d => !featureSpecific.has(d.id));
     // Display labels only — vp.label stays the authored title everywhere else.
     const viewpointLabels = useMemo(() => {
         const stripped = stripSharedLabelPrefix(viewpoints.map(vp => vp.label));
@@ -2390,6 +2397,23 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
         const diagram = model.diagrams?.find(d => d.id === selectedDiagramId);
         if (!diagram) return;
+
+        // A feature-specific view lives under its feature viewpoint(s).
+        const owningFeatures = featureVps.filter(fv => fv.diagrams.some(d => d.id === selectedDiagramId));
+        if (owningFeatures.length > 0) {
+            const pkgParts = ((diagram as PackagedDiagram).package ?? '').split('::').filter(Boolean);
+            setExpandedVps(prev => {
+                const next = new Set(prev);
+                for (const fv of owningFeatures) {
+                    const key = `${FEATURE_VP_PREFIX}${fv.featureId}`;
+                    next.add(key);
+                    let path = '';
+                    for (const part of pkgParts) { path = path ? `${path}::${part}` : part; next.add(`vp-pkg:${key}:${path}`); }
+                }
+                return next;
+            });
+            return;
+        }
 
         const vpId = diagram.viewpointId;
         const owningVp = vpId ? viewpoints.find(vp => vp.id === vpId) : undefined;
@@ -2434,11 +2458,11 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             }
             return changed ? next : prev;
         });
-    }, [selectedDiagramId, model, viewpoints, uncategorizedDiagrams]);
+    }, [selectedDiagramId, model, viewpoints, uncategorizedDiagrams, featureVps]);
 
     // Keep the explorer consistent with the Viewpoints landing page: every
     // unbound view still needs a visible route to open it.
-    const uncategorizedViews = filterDiagrams(uncategorizedDiagrams);
+    const uncategorizedViews = filterDiagrams(uncategorizedDiagrams.filter(d => !featureSpecific.has(d.id)));
 
     /** Fallback clubbing for uncategorized views, which have no authored group. */
     const uncategorizedByLayer = useMemo(() => {
@@ -2469,7 +2493,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 isSelected={selectedDiagramId === diag.id}
                 onSelect={() => {
                     setActiveView({ type: 'diagram', diagramId: diag.id });
-                    selectViewpoint(vpId === '__model' ? null : vpId);
+                    selectViewpoint(vpId === '__model' || vpId.startsWith(FEATURE_VP_PREFIX) ? null : vpId);
                     navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
                 onDelete={!diag.auto ? () => { if (confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
@@ -2587,10 +2611,10 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 const children = viewpointChildren.get(vp.id) ?? [];
                 const isExpanded = expandedVps.has(vp.id);
                 const vpColor = vp.visibleLayers?.[0] ? (LAYER_COLORS[vp.visibleLayers[0]] || COLOR.muted) : COLOR.muted;
-                const allDiagrams = getDiagramsForViewpoint(model, vp.id);
+                const allDiagrams = globalDiagramsFor(vp.id);
                 const displayedDiags = filterDiagrams(allDiagrams);
                 const familyCount = (function total(node: ViewpointDTO): number {
-                    return getDiagramsForViewpoint(model, node.id).length
+                    return globalDiagramsFor(node.id).length
                         + (viewpointChildren.get(node.id) ?? []).reduce((sum, child) => sum + total(child), 0);
                 })(vp);
 
@@ -2649,8 +2673,55 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 );
     };
 
+    /** One feature, as a viewpoint: its views, grouped by the package that declares them. */
+    const renderFeatureViewpoint = (fv: { featureId: string; label: string; diagrams: DiagramDTO[] }) => {
+        const key = `${FEATURE_VP_PREFIX}${fv.featureId}`;
+        const isExpanded = expandedVps.has(key);
+        const shown = filterDiagrams(fv.diagrams);
+        if (searchTerm && shown.length === 0) return null;
+        return (
+            <div key={key} className="mb-0.5" data-testid="feature-viewpoint">
+                <div
+                    className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                    style={{ borderRadius: '4px', margin: '0 4px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => { selectViewpoint(null); toggleExpand(key); }}
+                >
+                    <ChevronIcon expanded={isExpanded} size={14} color={COLOR.accent} />
+                    <FolderIcon open={isExpanded} color={COLOR.accent} />
+                    <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{fv.label}</span>
+                    <ExplorerCountBadge count={shown.length} color={COLOR.accent} title={`${shown.length} views of the ${fv.label} feature`} />
+                </div>
+                {isExpanded && <div style={{ marginLeft: '16px' }}>{renderGroupedDiagramList(shown, key)}</div>}
+            </div>
+        );
+    };
+
+    const sectionHeading = (text: string, hint: string) => (
+        <div
+            className="px-3 pt-2 pb-1 font-semibold uppercase"
+            style={{ color: COLOR.faint, fontSize: FONT.badge, letterSpacing: '0.04em' }}
+            title={hint}
+        >
+            {text}
+        </div>
+    );
+
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+            {/* Feature viewpoints: one per product feature, made from the feature, so a feature
+                always has a place for its views. */}
+            {featureVps.length > 0 && (
+                <>
+                    {sectionHeading('Feature viewpoints', 'One for each product feature; its views are the ones that show the feature or what realizes it')}
+                    {featureVps.map(renderFeatureViewpoint)}
+                </>
+            )}
+
+            {/* Global viewpoints sit directly above the views they list: they are
+                feature-agnostic, and what a feature claims is not listed here. */}
+            {featureVps.length > 0 && sectionHeading('Global viewpoints', 'Feature-agnostic: the views no feature claims')}
             {/* Named viewpoints — the primary organisation */}
             {rootViewpoints.map(vp => renderViewpoint(vp, 0))}
 
@@ -2677,7 +2748,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
                 {expandedVps.has(UNCATEGORIZED_ID) && (
                     <div style={{ marginLeft: '16px' }}>
-                        {uncategorizedViews.some(d => (d as DiagramDTO & { group?: string }).group)
+                        {uncategorizedViews.some(d => (d as DiagramDTO & { group?: string }).group || (d as PackagedDiagram).package)
                             ? renderGroupedDiagramList(uncategorizedViews, UNCATEGORIZED_ID)
                             : uncategorizedByLayer.map(([layer, diagrams]) => (
                                 <div key={layer} style={{ margin: '5px 4px 2px' }}>
