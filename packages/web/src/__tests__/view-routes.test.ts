@@ -57,6 +57,7 @@ describe('viewToPath / pathToView round trip', () => {
             // path that does not serialise back to itself.
             const expected = path === '/dashboard' ? '/'
                 : path === '/scenarios' ? '/use-cases'
+                : path === '/workflow' ? '/guide'
                 : path;
             expect(viewToPath(view!)).toBe(expected);
         }

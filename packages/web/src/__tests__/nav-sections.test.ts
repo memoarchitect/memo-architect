@@ -45,7 +45,7 @@ describe('the navigation', () => {
         for (const id of [
             'dashboard', 'catalog', 'diagram', 'ui-screens', 'dhf', 'scenario', 'rules', 'ai',
             'ontology', 'import', 'traceability', 'statistics', 'compliance-wizard', 'model-diff',
-            'review-dashboard', 'dashboards', 'workflow-wizard', 'analysis', 'dsm', 'settings',
+            'review-dashboard', 'dashboards', 'guide', 'analysis', 'dsm', 'settings',
         ]) expect(ids, id).toContain(id);
     });
 

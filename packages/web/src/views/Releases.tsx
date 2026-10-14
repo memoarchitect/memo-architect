@@ -25,6 +25,7 @@ export function Releases() {
     const validation = useModelStore(s => s.validation);
     const workspace = useModelStore(s => s.workspace);
     const role = useModelStore(s => s.role);
+    const roleViews = useModelStore(s => s.methodology?.roleViews);
     const pinned = useModelStore(s => s.pinned);
     const connected = useModelStore(s => s.connected);
     const rows = useMemo(() => (model ? releaseRecords(model, validation, workspace) : []), [model, validation, workspace]);
@@ -102,7 +103,7 @@ export function Releases() {
                     <strong>{diff.title}</strong> <button style={button} onClick={() => setDiff(null)}>Close</button>
                     {diff.busy && <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>Building both releases…</p>}
                     {diff.error && <p data-testid="release-diff-error" style={{ fontSize: FONT.sm, color: '#B42318' }}>{diff.error}</p>}
-                    {diff.summary && <DiffBody diff={diffForRole(diff.summary, model, role)} />}
+                    {diff.summary && <DiffBody diff={diffForRole(diff.summary, model, role, roleViews)} />}
                 </div>
             )}
 

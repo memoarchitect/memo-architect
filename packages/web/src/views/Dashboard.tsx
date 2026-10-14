@@ -1,6 +1,8 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
+import { requestGuide } from '../store/ws-client';
+import { nextStep, stepsForRole } from '../lib/guide-view';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS } from '../constants';
 import type { MemoModelDTO, DashboardScope } from '@memoarchitect/tools/browser';
@@ -110,80 +112,6 @@ function computeDashboardStats(
             .reduce((sum, [, n]) => sum + n, 0),
         diagramCount: model.diagrams?.length ?? 0,
         modelName: model.metadata?.modelName || (model as any).name || 'My Device Model',
-    };
-}
-
-// ─── Next-action logic (#131) ─────────────────────────────────────────────────
-
-interface NextAction {
-    icon: string;
-    title: string;
-    description: string;
-    urgency: 'high' | 'medium' | 'low';
-}
-
-function computeNextAction(stats: DashboardStats): NextAction {
-    if (stats.totalElements === 0) {
-        return {
-            icon: '🚀',
-            title: 'Add your first model elements',
-            description: 'Start with intended use, actors, and a system requirement. Or use the Workflow Wizard to guide you step by step.',
-            urgency: 'high',
-        };
-    }
-    if (stats.requirementCount === 0) {
-        return {
-            icon: '📋',
-            title: 'Define your first requirement',
-            description: 'Your model has elements but no system requirements yet. Add a Requirement in the Model Explorer.',
-            urgency: 'high',
-        };
-    }
-    if (stats.hazardCount === 0) {
-        return {
-            icon: '⚠️',
-            title: 'Add your first hazard',
-            description: `You have ${stats.requirementCount} requirement(s) but no hazard analysis yet. ISO 14971 requires hazard identification early.`,
-            urgency: 'high',
-        };
-    }
-    if (stats.hazardCount > 0 && stats.mitigatesCount === 0) {
-        return {
-            icon: '🔗',
-            title: 'Connect hazards to risk controls',
-            description: `You have ${stats.hazardCount} hazard(s) but no MitigatesHazard relationships. Connect hazards to risk controls to complete the ISO 14971 chain.`,
-            urgency: 'high',
-        };
-    }
-    if (stats.systemCount === 0) {
-        return {
-            icon: '🏗️',
-            title: 'Define your system architecture',
-            description: 'No architecture components found (SoftwareSystem, LogicalComponent, HardwareAssembly, …). Add an architecture layer to ground your requirements and risk analysis.',
-            urgency: 'medium',
-        };
-    }
-    if (stats.testCount === 0) {
-        return {
-            icon: '🧪',
-            title: 'Add verification tests',
-            description: `${stats.requirementCount} requirement(s) have no verification tests yet. Add VerificationCases and link them to requirements with VerifiedBy.`,
-            urgency: 'medium',
-        };
-    }
-    if (stats.verificationLinkCount === 0 && stats.testCount > 0) {
-        return {
-            icon: '↔️',
-            title: 'Link tests to requirements',
-            description: 'Verification cases exist but no VerifiedBy links found. Open the Traceability Matrix to connect tests to their requirements.',
-            urgency: 'medium',
-        };
-    }
-    return {
-        icon: '✅',
-        title: 'Good coverage so far',
-        description: `Requirements, hazards, and risk controls are in place. Check the GapBar (⌘⇧P) for completeness gaps before your review.`,
-        urgency: 'low',
     };
 }
 
@@ -407,49 +335,57 @@ function CoverageWidget() {
     );
 }
 
-function NextActionPanel({ stats, compact }: { stats: DashboardStats; compact?: boolean }) {
+/**
+ * The next step of the method, from the Guide: the first step the person's role works at that is open for
+ * the workspace they are in. It replaces a hand-written ladder of kind counts, which named kinds and
+ * thresholds of its own and knew nothing of the method the model is governed by.
+ */
+function NextActionPanel({ compact }: { stats?: DashboardStats; compact?: boolean }) {
+    const guide = useModelStore(s => s.guide);
+    const role = useModelStore(s => s.role);
+    const workspace = useModelStore(s => s.workspace);
+    const model = useModelStore(s => s.model);
+    const connected = useModelStore(s => s.connected);
     const setActiveView = useModelStore(s => s.setActiveView);
-    const nextAction = computeNextAction(stats);
+    const revision = model?.revision;
+    useEffect(() => {
+        if (!connected) return;
+        requestGuide(workspace ? model?.elements[workspace]?.name ?? workspace : null).catch(() => undefined);
+    }, [connected, workspace, revision]); // eslint-disable-line react-hooks/exhaustive-deps
+    const steps = stepsForRole(guide?.steps ?? [], role);
+    const next = nextStep(steps);
+    const done = steps.length > 0 && steps.every(step => step.state === 'done' || step.state === 'no-criterion');
     return (
-        <div style={{
-            background: nextAction.urgency === 'high'
-                ? 'rgba(231,76,60,0.06)'
-                : nextAction.urgency === 'medium'
-                    ? 'rgba(243,156,18,0.06)'
-                    : 'rgba(46,204,113,0.06)',
-            border: `1px solid ${nextAction.urgency === 'high' ? '#E74C3C30' : nextAction.urgency === 'medium' ? '#F39C1230' : '#2ECC7130'}`,
+        <div data-testid="next-action" style={{
+            background: next ? 'rgba(243,156,18,0.06)' : 'rgba(46,204,113,0.06)',
+            border: `1px solid ${next ? '#F39C1230' : '#2ECC7130'}`,
             borderRadius: '12px', padding: '16px 20px',
         }}>
             {!compact && (
                 <div style={{ ...SECTION_HEADING, marginBottom: '10px' }}>
-                    💡 Suggested Next Step
+                    🧭 Next Step of the Method
                 </div>
             )}
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#1B3A4B', marginBottom: '6px' }}>
-                <span style={{ marginRight: 8 }}>{nextAction.icon}</span>{nextAction.title}
+                {!guide ? 'Reading the method…' : guide.error ? 'The method could not be read' : next ? (next.label ?? next.name) : done ? 'Every step is done' : 'No step is open'}
             </div>
             <div style={{ fontSize: '12px', color: '#4B6E80', lineHeight: '1.6' }}>
-                {nextAction.description}
+                {guide?.error ?? (next ? `${next.objective ?? ''}${next.reasons.length > 0 ? ` Missing: ${next.reasons.join('; ')}.` : ''}` : done ? 'Open the Guide to see each step.' : 'The remaining steps wait behind one that is not done.')}
             </div>
-            {nextAction.urgency !== 'low' && (
-                <button
-                    onClick={() => setActiveView({ type: 'workflow-wizard' })}
-                    style={{
-                        marginTop: '14px', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
-                        background: '#1B3A4B', color: '#FFFFFF', border: 'none',
-                        borderRadius: '6px', cursor: 'pointer',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#244D63'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#1B3A4B'}
-                >
-                    Open Workflow Wizard →
-                </button>
-            )}
+            <button
+                onClick={() => setActiveView({ type: 'guide' })}
+                style={{
+                    marginTop: '14px', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
+                    background: '#1B3A4B', color: '#FFFFFF', border: 'none',
+                    borderRadius: '6px', cursor: 'pointer',
+                }}
+            >
+                Open the Guide →
+            </button>
         </div>
     );
 }
 
-/** The contextual "what to do next" card on its own; the heading lives in markdown. */
 function NextActionWidget() {
     const { stats } = useDashboardData();
     if (!stats) return null;

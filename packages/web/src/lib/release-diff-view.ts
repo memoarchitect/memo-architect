@@ -15,9 +15,9 @@ export interface RoleDiff {
     hidden: number;
 }
 
-export function diffForRole(diff: ModelDiffSummary, model: MemoModelDTO, role: string | null): RoleDiff {
+export function diffForRole(diff: ModelDiffSummary, model: MemoModelDTO, role: string | null, roleViews: Parameters<typeof viewpointsVisibleToRole>[2] = []): RoleDiff {
     if (!role) return { diff, hidden: 0 };
-    const visible = viewpointsVisibleToRole(model.viewpoints ?? [], role);
+    const visible = viewpointsVisibleToRole(model.viewpoints ?? [], role, roleViews);
     if (visible.length === 0 || visible.some(viewpoint => viewpoint.visibleKinds.length === 0)) return { diff, hidden: 0 };
     const admitted = [...new Set(visible.flatMap(viewpoint => viewpoint.visibleKinds))];
     const kinds = indexKinds(model.registries?.kinds ?? []);

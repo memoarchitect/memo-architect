@@ -10,7 +10,7 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -128,6 +128,7 @@ const screenCaptureUploadRequests = new Map<string, PendingRequest<ScreenCapture
 const sourceImportRequests = new Map<string, PendingRequest<SourceImportResultMessage['payload']>>();
 const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResultMessage['payload']>>();
 const releaseCreateRequests = new Map<string, PendingRequest<ReleaseCreateResultMessage['payload'] & { requestId: string }>>();
+const guideRequests = new Map<string, PendingRequest<GuideResultMessage['payload'] & { requestId: string }>>();
 const deviceDhfRequests = new Map<string, PendingRequest<DeviceDhfResultMessage['payload'] & { requestId: string }>>();
 const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
 
@@ -167,7 +168,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -200,7 +201,7 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate',
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -407,6 +408,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'release:create:result':
             settleRelationshipRequest(msg.payload as ReleaseCreateResultMessage['payload'] & { requestId: string }, releaseCreateRequests);
+            break;
+        case 'guide:result':
+            settleRelationshipRequest(msg.payload as GuideResultMessage['payload'] & { requestId: string }, guideRequests);
             break;
         case 'dhf:device:result':
             settleRelationshipRequest(msg.payload as DeviceDhfResultMessage['payload'] & { requestId: string }, deviceDhfRequests);
@@ -886,6 +890,16 @@ export interface ReleaseCreateInput {
  */
 export function requestReleaseCreate(request: ReleaseCreateInput): Promise<ReleaseCreateResultMessage['payload'] & { requestId: string }> {
     return sendRelationshipRequest('release:create', { ...request, precondition: sourcePrecondition(request.file, [request.itemId]) }, releaseCreateRequests);
+}
+
+/**
+ * Where the model stands against its method, for one workspace (a system or the system of systems by name or id;
+ * none for the whole model). The server judges each step; the answer is also kept in the store for the Dashboard.
+ */
+export async function requestGuide(workspace?: string | null): Promise<GuideResultMessage['payload'] & { requestId: string }> {
+    const result = await sendRelationshipRequest('guide:evaluate', { workspace: workspace ?? undefined }, guideRequests);
+    useModelStore.getState().setGuide(result);
+    return result;
 }
 
 /**

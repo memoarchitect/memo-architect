@@ -38,7 +38,7 @@ const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m
 const CustomDashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.CustomDashboard })));
 const DashboardList = lazy(() => import('./views/DashboardList').then(m => ({ default: m.DashboardList })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
-const WorkflowWizard = lazy(() => import('./views/WorkflowWizard').then(m => ({ default: m.WorkflowWizard })));
+const GuidePage = lazy(() => import('./views/Guide').then(m => ({ default: m.Guide })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
@@ -120,8 +120,8 @@ function UnifiedCanvas() {
                 return <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} />;
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
-            case 'workflow-wizard':
-                return isFeatureEnabled('model-tools') ? <WorkflowWizard /> : <Dashboard />;
+            case 'guide':
+                return <GuidePage />;
             case 'import':
                 return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
             case 'analysis':

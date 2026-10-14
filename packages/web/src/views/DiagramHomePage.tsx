@@ -21,6 +21,7 @@ import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 export function DiagramHomePage() {
     const model = useScopedModel();
     const role = useModelStore(s => s.role);
+    const roleViews = useModelStore(s => s.methodology?.roleViews);
     const navigate = useNavigate();
 
     /** Model views grouped by the viewpoint they conform to, Uncategorized last. */
@@ -50,7 +51,7 @@ export function DiagramHomePage() {
         // agree. A viewpoint frames viewpoints in a system-of-systems model,
         // and a page that lists the constituents beside the whole says the
         // model is flat when it is not.
-        const declared = sortViewpointsByOntologyLayer(viewpointsVisibleToRole([...viewpointMetadata.values()], role));
+        const declared = sortViewpointsByOntologyLayer(viewpointsVisibleToRole([...viewpointMetadata.values()], role, roleViews));
         const { rootViewpoints, viewpointChildren } = buildViewpointTree(declared);
         const flattened: { viewpoint: (typeof declared)[number]; depth: number }[] = [];
         const walk = (viewpoint: (typeof declared)[number], depth: number, seen: Set<string>) => {
@@ -86,7 +87,7 @@ export function DiagramHomePage() {
                 items: [...leftover.items].sort((a, b) => a.name.localeCompare(b.name)),
             }]
             : ordered;
-    }, [model, role]);
+    }, [model, role, roleViews]);
 
     if (!model) {
         return (
