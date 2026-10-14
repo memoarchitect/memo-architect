@@ -17,7 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ForestNode {
-    /** `f:<qualified package>` for a package, `kf:<package>:<kind>` for a kind folder. */
+    /** `f:<package>` for a package; `kf:<package>|<kind>` and `af:<package>[|<kind>]|<value>` for the folders inside one. */
     id: string;
     name: string;
     type: 'folder' | 'element';
@@ -32,6 +32,12 @@ export interface ForestOptions<N extends ForestNode> {
     kindRank: (kind: string) => number;
     kindLabel: (kind: string, count: number) => string;
     folder: (id: string, name: string, children: N[]) => N;
+    /**
+     * A person-chosen way to split a folder's elements further: the value an element has for the attribute
+     * they chose, or undefined when it has none. Elements split into a folder per value, and a folder
+     * with one value (or none) is left alone. Nothing here names an attribute.
+     */
+    attributeOf?: (node: N) => string | undefined;
 }
 
 export function buildPackageForest<N extends ForestNode>(roots: readonly N[], options: ForestOptions<N>): N[] {
@@ -54,16 +60,32 @@ export function buildPackageForest<N extends ForestNode>(roots: readonly N[], op
         branch!.direct.push(root);
     }
 
+    const splitByAttribute = (members: N[], scope: string): N[] => {
+        if (!options.attributeOf) return members;
+        const values = [...new Set(members.map(options.attributeOf).filter((v): v is string => v !== undefined))];
+        if (values.length < 2) return members;
+        const without = members.filter(node => options.attributeOf!(node) === undefined);
+        return [
+            ...values.sort((a, b) => a.localeCompare(b)).map(value => options.folder(
+                `af:${scope}|${value}`, `${value} ${members.filter(node => options.attributeOf!(node) === value).length}`,
+                members.filter(node => options.attributeOf!(node) === value))),
+            ...without,
+        ];
+    };
+
     const render = (branch: Branch): N => {
         const kinds = [...new Set(branch.direct.map(options.kindOf))];
-        let members: N[] = branch.direct;
+        let members: N[];
         if (kinds.length > 1) {
             members = kinds
                 .sort((a, b) => options.kindRank(a) - options.kindRank(b) || a.localeCompare(b))
                 .map(kind => {
                     const ofKind = branch.direct.filter(node => options.kindOf(node) === kind);
-                    return options.folder(`kf:${branch.id}:${kind}`, options.kindLabel(kind, ofKind.length), ofKind);
+                    return options.folder(`kf:${branch.id}|${kind}`, options.kindLabel(kind, ofKind.length),
+                        splitByAttribute(ofKind, `${branch.id}|${kind}`));
                 });
+        } else {
+            members = splitByAttribute(branch.direct, branch.id);
         }
         const inner = [...branch.children].sort((a, b) => a.name.localeCompare(b.name)).map(render);
         return options.folder(`f:${branch.id}`, branch.name, [...members, ...inner]);

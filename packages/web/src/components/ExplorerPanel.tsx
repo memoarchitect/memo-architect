@@ -666,8 +666,8 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
  * folder inside one, so dropping on it drops into that package.
  */
 function folderPackage(id: string): string {
-    const kind = /^kf:(.*):[^:]+$/.exec(id);
-    return kind ? kind[1] : id.replace(/^f:/, '');
+    const inner = /^(?:kf|af):([^|]*)\|/.exec(id);
+    return inner ? inner[1] : id.replace(/^f:/, '');
 }
 
 /** A folded usage is tinted so it reads as an instance, not a peer definition. */
@@ -1171,6 +1171,8 @@ export function computeExplorerGroupTree(
         partition?: (el: MemoElement) => ExplorerPartition[] | undefined;
         /** List definitions and usages as separate rows: no folding of usages, no nesting. */
         flat?: boolean;
+        /** An attribute the person chose to split folders by (its enum literal is the folder name). */
+        groupBy?: string;
     },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
@@ -1528,6 +1530,12 @@ export function computeExplorerGroupTree(
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
                 kindLabel: (kind, count) => kindFolderLabel(kind, count),
                 folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+                attributeOf: modes?.groupBy
+                    ? node => {
+                        const raw = node.element?.attributes?.[modes.groupBy!];
+                        return raw ? raw.split('::').pop() : undefined;
+                    }
+                    : undefined,
             });
         };
 
@@ -1708,6 +1716,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, []);
 
+    const [groupBy, setGroupBy] = useState('');
+
     // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
         () => model ? computeExplorerGroupTree(
@@ -1722,9 +1732,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             {
                 partition: el => partitionsOf(el, { mode: explorerMode, membership, workspace }),
                 flat: isFlatMode(explorerMode),
+                groupBy: groupBy || undefined,
             },
         ) : [],
-        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace],
+        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy],
     );
 
     // The explorer opens fully collapsed.
@@ -1843,6 +1854,20 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectionCount = selectedElementIds.size;
 
+    // The attributes a person can split folders by: those whose values are enum literals somewhere in the model.
+    // Read from the elements, so a project's own enum attribute is offered the same as an ontology one.
+    const groupableAttributes = useMemo(() => {
+        const names = new Map<string, Set<string>>();
+        for (const element of Object.values(model?.elements ?? {})) {
+            for (const [name, value] of Object.entries(element.attributes ?? {})) {
+                if (typeof value === 'string' && /^\w+::\w+$/.test(value)) {
+                    names.set(name, (names.get(name) ?? new Set()).add(value));
+                }
+            }
+        }
+        return [...names].filter(([, values]) => values.size > 1).map(([name]) => name).sort();
+    }, [model]);
+
     const modeBar = (
         <div className="flex items-center gap-1 px-3 py-1.5 flex-shrink-0 flex-wrap" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }} role="tablist" aria-label="Explorer mode">
             {EXPLORER_MODES.map(mode => (
@@ -1859,6 +1884,18 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     }}
                 >{mode.label}</button>
             ))}
+            {explorerMode !== 'navigator' && groupableAttributes.length > 0 && (
+                <label style={{ marginLeft: 'auto', color: COLOR.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    Split by
+                    <select
+                        data-testid="explorer-group-by" value={groupBy} onChange={e => setGroupBy(e.target.value)}
+                        style={{ fontSize: FONT.xs, padding: '1px 4px', maxWidth: 130, border: `1px solid ${COLOR.border}`, borderRadius: 6 }}
+                    >
+                        <option value="">nothing</option>
+                        {groupableAttributes.map(name => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                </label>
+            )}
         </div>
     );
 
@@ -2103,8 +2140,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                 const kinds = [...new Set(members.map(m => m.kind))];
                                 const elementIds = members.map(m => m.id);
                                 if (id.startsWith('kf:')) {
-                                    const [, pkg, kind] = /^kf:(.*):([^:]+)$/.exec(id) ?? [];
+                                    const [, pkg, kind] = /^kf:([^|]*)\|(.+)$/.exec(id) ?? [];
                                     return onContextMenu(e, 'kind', id, kind, { packageName: pkg, elementIds });
+                                }
+                                if (id.startsWith('af:')) {
+                                    return onContextMenu(e, 'folder', id, undefined, { packageName: folderPackage(id), kinds, elementIds });
                                 }
                                 return onContextMenu(e, type, id, undefined, { kinds, elementIds });
                             };
