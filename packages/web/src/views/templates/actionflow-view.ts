@@ -537,6 +537,8 @@ export interface ActionFlowViewOptions {
     /** Visible connection categories. Omit to render all flow categories. */
     visibleFlowKinds?: ReadonlySet<ActionFlowKind>;
     layoutProviderId?: string;
+    /** Whether an action opens steps the view does not draw (those of the definition it is typed by). */
+    canDrillIn?: (actionId: string) => boolean;
     /** Navigate to a separate view whose subject is a given element. */
     onNavigateToView?: (diagramId: string) => void;
     /** Map from element ID to the diagram ID of a child view about that element. */
@@ -1254,6 +1256,7 @@ export async function computeActionFlowViewLayout(
             inPorts: ports.inPorts,
             outPorts: ports.outPorts,
             hasChildren: Object.values(model.elements).some(child => child.parentAction === el.id),
+            canDrill: options?.canDrillIn?.(el.id) ?? false,
             isExpanded: options?.expandedActionIds?.has(el.id) ?? false,
             isFrame,
             onToggleExpand: options?.onToggleAction

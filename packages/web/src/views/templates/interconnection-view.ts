@@ -649,6 +649,11 @@ export interface InterconnectionOptions {
     /** Deliberate density control: bundle repeated rendered endpoint pairs,
      * show every connector, or suppress wiring while inspecting structure. */
     connectionDisplay?: 'summary' | 'all' | 'none';
+    /**
+     * Whether a part opens a level the view does not itself draw (the parts of the definition it is typed by).
+     * Without it a part is drillable only when its own children are in the view.
+     */
+    canDrillIn?: (partId: string) => boolean;
     /** Navigate to a separate view whose subject is a given element. */
     onNavigateToView?: (diagramId: string) => void;
     /** Map from element ID to the diagram ID of a child view about that element. */
@@ -1384,7 +1389,9 @@ export async function computeInterconnectionLayout(
                     ? () => options.onToggleCollapse!(partId)
                     : undefined,
                 // The frame is the diagram's root; drilling into it is a no-op.
-                onDrillIn: hasChildren && !!parentId && options?.onDrillIn
+                // A part with parts in the view drills unless it is the frame; a part without any drills when
+                // the definition it is typed by has some.
+                onDrillIn: (hasChildren ? !!parentId : !!options?.canDrillIn?.(partId)) && options?.onDrillIn
                     ? () => options.onDrillIn!(partId)
                     : undefined,
                 onNavigateToView: options?.childViewIds?.has(partId) && options?.onNavigateToView

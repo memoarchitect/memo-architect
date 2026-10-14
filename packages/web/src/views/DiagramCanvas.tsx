@@ -12,7 +12,7 @@
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { childrenOf, definitionSubtree, drillTarget } from '../lib/system-navigator';
+import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
@@ -1387,6 +1387,11 @@ function DiagramCanvasInner() {
         void saveViewDisplay(selectedDiagramId, patch).catch(error => console.warn('[View] display not saved:', error));
     }, [selectedDiagramId]);
     const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    // The levels drilled through, outermost first. A drill that lands on a definition (a usage is made of the
+    // definition it is typed by) has no composition or parent-action chain back to where it came from, so the
+    // way out is the way in, not a reconstruction.
+    const [interconnectionTrail, setInterconnectionTrail] = useState<string[]>([]);
+    const [actionTrail, setActionTrail] = useState<string[]>([]);
     const [actionFlowNesting, setActionFlowNesting] = useState<ActionFlowNesting>('flat');
     // State machine nesting: composites folded in place, or one drilled into.
     const [collapsedStateNodes, setCollapsedStateNodes] = useState<Set<string>>(new Set());
@@ -1396,8 +1401,8 @@ function DiagramCanvasInner() {
 
     // Drill-down breadcrumb: composition ancestry of the focused IBD part.
     const interconnectionPath = useMemo(
-        () => compositionPath(model, focusedInterconnectionId),
-        [model, focusedInterconnectionId],
+        () => drillPath(interconnectionTrail, focusedInterconnectionId, compositionPath(model, focusedInterconnectionId)),
+        [model, focusedInterconnectionId, interconnectionTrail],
     );
     // Same breadcrumb for a drilled-into composite state.
     const statePath = useMemo(
@@ -1418,8 +1423,8 @@ function DiagramCanvasInner() {
             seen.add(parent);
             current = parent;
         }
-        return path;
-    }, [model, focusedActionId]);
+        return drillPath(actionTrail, focusedActionId, path);
+    }, [model, focusedActionId, actionTrail]);
     /**
      * Every composite state — the target set for "collapse all". The owning
      * state machine is excluded: folding the frame would collapse the whole
@@ -1496,6 +1501,8 @@ function DiagramCanvasInner() {
         // default-collapsed effect below, which owns them outright — clearing
         // them here too would race it and leave the diagram fully expanded.
         setFocusedInterconnectionId(null);
+        setInterconnectionTrail([]);
+        setActionTrail([]);
         setInterconnectionPortDisplay((declaredEnum('portDisplay') as 'all' | 'ports' | 'none') ?? 'all');
         setInterconnectionConnectionDisplay((declaredEnum('connectionDisplay') as 'summary' | 'all' | 'none') ?? 'summary');
         setInterconnectionLegendOpen(false);
@@ -1573,8 +1580,10 @@ function DiagramCanvasInner() {
             ? new Set(selectedDiagram.elementIds)
             : undefined;
         // Drilling into a usage opens the definition it is typed by; its parts come with the level.
-        if (diagramElementIds && model && focusedInterconnectionId && !diagramElementIds.has(focusedInterconnectionId)) {
-            for (const id of definitionSubtree(model, focusedInterconnectionId)) diagramElementIds.add(id);
+        for (const focus of [focusedInterconnectionId, focusedActionId]) {
+            if (diagramElementIds && model && focus && !diagramElementIds.has(focus)) {
+                for (const id of definitionSubtree(model, focus)) diagramElementIds.add(id);
+            }
         }
 
         if (!hasViewpoint && !hasHidden && !diagramElementIds) return undefined;
@@ -1592,7 +1601,7 @@ function DiagramCanvasInner() {
             }
             return true;
         };
-    }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers, focusedInterconnectionId, model?.elements]);
+    }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers, focusedInterconnectionId, focusedActionId, model?.elements]);
 
     // Element → child-view index: for each element that is the subject of another
     // view, map its ID to that view's diagram ID. Used by IBD and action-flow
@@ -1843,15 +1852,30 @@ function DiagramCanvasInner() {
     }, [inspectElement]);
 
     const drillIntoAction = useCallback((nodeId: string) => {
-        setFocusedActionId(nodeId);
+        // An action is made of the steps it owns, else of its definition's: the part rule, for actions.
+        const target = (model && actionDrillSource(model, nodeId)) ?? nodeId;
+        setFocusedActionId(target);
+        setActionTrail(trail => enterLevel(trail, target));
         setExpandedActionNodes(new Set());
         inspectElement(null);
-    }, [inspectElement]);
+    }, [inspectElement, model]);
+
+    // Leaving a level (breadcrumb, Parent, All) also forgets the levels below it.
+    const focusInterconnection = useCallback((id: string | null) => {
+        setFocusedInterconnectionId(id);
+        setInterconnectionTrail(trail => (id === null ? [] : trail.slice(0, Math.max(trail.indexOf(id) + 1, 0))));
+    }, []);
+    const focusAction = useCallback((id: string | null) => {
+        setFocusedActionId(id);
+        setActionTrail(trail => (id === null ? [] : trail.includes(id) ? trail.slice(0, trail.indexOf(id) + 1) : trail));
+    }, []);
 
     const drillIntoInterconnection = useCallback((nodeId: string) => {
         // A usage is made of its definition's parts: the same rule the Explorer's system navigator
         // follows (lib/system-navigator.ts), so both open the same level.
-        setFocusedInterconnectionId((model && drillTarget(model, nodeId)) ?? nodeId);
+        const target = (model && drillTarget(model, nodeId)) ?? nodeId;
+        setFocusedInterconnectionId(target);
+        setInterconnectionTrail(trail => enterLevel(trail, target));
         // The part being descended into becomes the frame, so whatever was
         // folded in the wider diagram says nothing about what should be folded
         // here — start the new level fully open, as the other two views do.
@@ -2506,6 +2530,7 @@ function DiagramCanvasInner() {
                     },
                     layoutProviderId,
                     onNavigateToView: navigateToView,
+                    canDrillIn: (partId: string) => !!model && childrenOf(model, partId).length > 0,
                     childViewIds: childViewIndex,
                 },
                 actionflow: {
@@ -2520,6 +2545,7 @@ function DiagramCanvasInner() {
                     visibleFlowKinds: visibleActionFlowKinds,
                     direction: actionFlowDirection,
                     onNavigateToView: navigateToView,
+                    canDrillIn: (actionId: string) => !!model && !!actionDrillSource(model, actionId),
                     childViewIds: childViewIndex,
                     nesting: actionFlowNesting,
                     layoutProviderId,
@@ -3166,8 +3192,7 @@ function DiagramCanvasInner() {
     const onNodeDoubleClick = useCallback((event: RFAny, node: FlowNode) => {
         event?.stopPropagation?.();
         if (viewKind === 'actionflow') {
-            const hasChildren = Object.values(model?.elements ?? {}).some(el => el.parentAction === node.id);
-            if (!hasChildren) return;
+            if (!model || !actionDrillSource(model, node.id)) return;
             drillIntoAction(node.id);
             return;
         }
@@ -3476,12 +3501,12 @@ function DiagramCanvasInner() {
         actionFlowLegendPlacement, setActionFlowLegendPlacement,
         setExpandedActionNodes, flowFiltersOpen, setFlowFiltersOpen,
         visibleActionFlowKinds, setVisibleActionFlowKinds,
-        actionPath, setFocusedActionId,
+        actionPath, setFocusedActionId: focusAction,
         parentViewId, navigateToParentView: parentViewId ? () => navigateToView(parentViewId) : undefined,
         interconnectionContainerIds, setCollapsedInterconnectionNodes,
         interconnectionPortDisplay, setInterconnectionPortDisplay,
         interconnectionConnectionDisplay, setInterconnectionConnectionDisplay,
-        saveIbdDisplay, interconnectionPath, setFocusedInterconnectionId,
+        saveIbdDisplay, interconnectionPath, setFocusedInterconnectionId: focusInterconnection,
         addAnnotation, flowAnimationEnabled, setEdges,
         interconnectionLegendOpen, setInterconnectionLegendOpen,
         showIbdPortText, showIbdConnectionText,
@@ -3675,7 +3700,7 @@ function DiagramCanvasInner() {
                         }}
                     >
                         <button
-                            onClick={() => setFocusedActionId(actionPath.length > 1 ? actionPath[actionPath.length - 2] : null)}
+                            onClick={() => focusAction(actionPath.length > 1 ? actionPath[actionPath.length - 2] : null)}
                             style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', background: 'none', border: 'none', color: '#1B3A4B', fontWeight: 600, fontSize: 12, padding: 0 }}
                             title={actionPath.length > 1
                                 ? `Back to ${model?.elements[actionPath[actionPath.length - 2]]?.name ?? 'parent'}`
@@ -3690,7 +3715,7 @@ function DiagramCanvasInner() {
                             <>
                                 <span style={{ color: '#D1D5DB' }}>│</span>
                                 <button
-                                    onClick={() => setFocusedActionId(null)}
+                                    onClick={() => focusAction(null)}
                                     style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#2563EB', fontWeight: 500, fontSize: 12, padding: 0 }}
                                     title="Back to full action flow"
                                 >

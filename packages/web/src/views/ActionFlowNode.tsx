@@ -49,6 +49,8 @@ export interface ActionFlowNodeData {
     inPorts: string[];
     outPorts: string[];
     hasChildren?: boolean;
+    /** Opens steps owned by the definition the action is typed by, which the view does not draw. */
+    canDrill?: boolean;
     isExpanded?: boolean;
     /** Nested mode: this composite is drawn as a frame around its own steps. */
     isFrame?: boolean;
@@ -330,7 +332,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                             ↗
                         </button>
                     )}
-                    {d.hasChildren && d.onDrillIn && (
+                    {(d.hasChildren || d.canDrill) && d.onDrillIn && (
                         <button
                             aria-label={`Drill into ${label}`}
                             title={`Open ${label} as its own diagram`}

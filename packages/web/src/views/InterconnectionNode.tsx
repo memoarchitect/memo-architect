@@ -679,9 +679,9 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         typeColor={isContainer ? color : '#64748B'}
                         style={{ textColor, fontSize, fontWeight, textAlign }}
                     />
-                    {/* Both controls sit on a part that owns parts, folded or
+                    {/* The drill button is the template's decision: it sets onDrillIn only for a part that opens a level. Both controls sit on a part that owns parts, folded or
                         not: a collapsed part is still worth descending into. */}
-                    {hasChildren && onDrillIn && (
+                    {onDrillIn && (
                         <DrillInButton label={label} onDrillIn={onDrillIn} color={color} />
                     )}
                     {onNavigateToView && (
