@@ -3,6 +3,7 @@ import { useModelStore } from '../store/model-store';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_LABELS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
+import { buildPackageTree, countIn, type PackageNode } from '../lib/package-tree';
 
 // Inject keyframes for pulse animation once
 const PULSE_STYLE_ID = 'memo-gapbar-pulse';
@@ -212,24 +213,44 @@ export function GapBar() {
                             {hasAnyIssues ? (
                                 <>
                                     {/* Validation violations */}
-                                    {totalViolations > 0 && validation?.violations.map((v, i) => {
-                                        const sev = SEVERITY_STYLES[v.severity] || SEVERITY_STYLES.info;
-                                        return (
-                                            <div
-                                                key={`${v.ruleId}-${v.elementId}-${i}`}
-                                                className="flex items-center gap-2 px-4 py-1.5 cursor-pointer transition-colors"
-                                                style={{ color: sev.color, fontSize: FONT.xs }}
-                                                onMouseEnter={e => (e.currentTarget.style.background = sev.bg)}
-                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                                onClick={() => selectElement(v.elementId)}
-                                            >
-                                                <span>{sev.icon}</span>
-                                                <span style={{ color: COLOR.faint }}>[{v.ruleId}]</span>
-                                                <span className="font-medium">{v.elementKind}/{v.elementName}</span>
-                                                <span className="truncate flex-1" style={{ color: COLOR.muted }}>{v.description}</span>
-                                            </div>
+                                    {totalViolations > 0 && (() => {
+                                        // Findings in the package that declares the element they are about, as every
+                                        // other list shows it: a package is a folder. A model-wide finding has no element.
+                                        type Violation = NonNullable<typeof validation>['violations'][number];
+                                        const tree = buildPackageTree<Violation>(
+                                            validation!.violations,
+                                            v => model?.elements[v.elementId]?.package,
+                                            v => `${v.elementKind}/${v.elementName}/${v.ruleId}`,
                                         );
-                                    })}
+                                        const renderViolation = (v: Violation, i: number) => {
+                                            const sev = SEVERITY_STYLES[v.severity] || SEVERITY_STYLES.info;
+                                            return (
+                                                <div
+                                                    key={`${v.ruleId}-${v.elementId}-${i}`}
+                                                    className="flex items-center gap-2 px-4 py-1.5 cursor-pointer transition-colors"
+                                                    style={{ color: sev.color, fontSize: FONT.xs }}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = sev.bg)}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                                    onClick={() => selectElement(v.elementId)}
+                                                >
+                                                    <span>{sev.icon}</span>
+                                                    <span style={{ color: COLOR.faint }}>[{v.ruleId}]</span>
+                                                    <span className="font-medium">{v.elementKind}/{v.elementName}</span>
+                                                    <span className="truncate flex-1" style={{ color: COLOR.muted }}>{v.description}</span>
+                                                </div>
+                                            );
+                                        };
+                                        const renderPackage = (node: PackageNode<Violation>, depth: number): React.ReactNode => (
+                                            <details key={node.id} open data-testid="problems-package" style={{ marginLeft: depth ? 14 : 0 }}>
+                                                <summary style={{ padding: '4px 16px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted, cursor: 'pointer' }}>
+                                                    {node.name} <span style={{ fontWeight: 400, color: COLOR.faint }}>{countIn(node)}</span>
+                                                </summary>
+                                                {node.items.map(renderViolation)}
+                                                {node.children.map(child => renderPackage(child, depth + 1))}
+                                            </details>
+                                        );
+                                        return tree.map(node => renderPackage(node, 0));
+                                    })()}
                                     {/* Analysis issues */}
                                     {analysisIssues.length > 0 && (
                                         <>

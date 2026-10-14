@@ -111,7 +111,11 @@ interface CtxMenuState {
     /** Qualified name of the package the menu was opened on. */
     packageName?: string;
     kind?: string;
-    type: 'element' | 'folder' | 'kind' | 'group';
+    /** The kinds of the elements under a package folder, in the layer the menu was opened in. */
+    kinds?: string[];
+    /** Every element under the folder, for "select all here". */
+    elementIds?: string[];
+    type: 'element' | 'folder' | 'kind' | 'group' | 'view-package';
 }
 
 /**
@@ -207,6 +211,12 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const renamePackage = useModelStore(s => s.renamePackage);
     const deletePackage = useModelStore(s => s.deletePackage);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
+    const selectAllElements = useModelStore(s => s.selectAllElements);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
+    const setActiveView = useModelStore(s => s.setActiveView);
     const [showChangeType, setShowChangeType] = useState<{ elementId: string; currentKind: string } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -290,17 +300,27 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 action: () => setShowChangeType({ elementId: el.id, currentKind: el.kind }),
             }] : []),
         ];
-    } else if (menu.type === 'folder' && menu.packageName && menu.kind) {
+    } else if (menu.type === 'folder' && menu.packageName) {
         const packageName = menu.packageName;
         title = `Package: ${packageName.split('::').pop()}`;
+        // The package may hold several kinds; the new element needs one, so ask when it is not obvious.
+        const kindsHere = menu.kinds ?? (menu.kind ? [menu.kind] : []);
         actions = [
             {
                 label: 'Add Element here',
                 action: () => {
+                    const kind = kindsHere.length === 1
+                        ? kindsHere[0]
+                        : window.prompt(`Which kind of element?${kindsHere.length ? ` (${kindsHere.join(', ')})` : ''}`, kindsHere[0] ?? '')?.trim();
+                    if (!kind) return;
                     const name = window.prompt('Enter element name:');
-                    if (name) addElement(menu.kind!, name, packageName);
+                    if (name) addElement(kind, name, packageName);
                 }
             },
+            ...((menu.elementIds?.length ?? 0) > 0 ? [{
+                label: `Select all ${menu.elementIds!.length} elements here`,
+                action: () => selectAllElements(menu.elementIds!),
+            }] : []),
             {
                 label: 'New Package…',
                 action: () => {
@@ -328,21 +348,70 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }
             }
         ];
+    } else if (menu.type === 'view-package' && menu.packageName) {
+        // The package a view is declared in, seen from the Views tree: its elements are views, so no "add element".
+        const packageName = menu.packageName;
+        title = `Package: ${packageName.split('::').pop()}`;
+        actions = [
+            {
+                label: 'New Package…',
+                action: () => {
+                    const name = window.prompt(`New package under ${packageName}`);
+                    if (name?.trim()) void reportPackageResult(createPackage(name.trim(), packageName));
+                }
+            },
+            {
+                label: 'Rename Package…',
+                action: () => {
+                    const name = window.prompt('Enter new package name:', packageName.split('::').pop() ?? '');
+                    if (name?.trim()) void reportPackageResult(renamePackage(packageName, name.trim()));
+                }
+            },
+            {
+                label: 'Delete Package (keep contents)',
+                danger: true,
+                action: () => {
+                    if (window.confirm(
+                        `Remove the package "${packageName}"?\n\n`
+                        + 'Everything it declares, the views included, moves into the enclosing package. '
+                        + 'Qualified names that refer to it will need updating by hand.')) {
+                        void reportPackageResult(deletePackage(packageName));
+                    }
+                }
+            }
+        ];
     } else if (menu.type === 'kind' && menu.kind) {
         title = `Category: ${menu.kind}`;
+        const inPackage = menu.packageName ?? '';
         actions = [
             {
                 label: 'Add Element',
                 action: () => {
                     const name = window.prompt('Enter element name:');
-                    if (name) addElement(menu.kind!, name, '');
+                    if (name) addElement(menu.kind!, name, inPackage);
                 }
             },
+            ...((menu.elementIds?.length ?? 0) > 0 ? [{
+                label: `Select all ${menu.elementIds!.length} of this type`,
+                action: () => selectAllElements(menu.elementIds!),
+            }] : []),
+            ...(isFeatureEnabled('ontology') ? availableOntologies.flatMap(pkg => pkg.layers
+                .filter(layer => layer.kinds.some(k => k.name === menu.kind))
+                .slice(0, 1)
+                .map(layer => ({
+                    label: 'View type in Ontology',
+                    action: () => {
+                        setSelectedOntologyKind(menu.kind!);
+                        setExplorerTab('ontologies');
+                        setActiveMode('ontology');
+                        setActiveView({ type: 'ontology-detail', packageName: pkg.name, layerId: layer.id });
+                    },
+                }))).slice(0, 1) : []),
             {
                 label: 'New Package…',
                 action: () => {
                     const name = window.prompt('Enter package name:');
-                    if (name) void reportPackageResult(createPackage(name.trim()));
+                    if (name) void reportPackageResult(createPackage(name.trim(), inPackage || undefined));
                 }
             }
         ];
@@ -592,6 +661,15 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
     return roots;
 }
 
+/**
+ * The package a folder row stands for: `f:<package>` is the package, and `kf:<package>:<Kind>` is a kind
+ * folder inside one, so dropping on it drops into that package.
+ */
+function folderPackage(id: string): string {
+    const kind = /^kf:(.*):[^:]+$/.exec(id);
+    return kind ? kind[1] : id.replace(/^f:/, '');
+}
+
 /** A folded usage is tinted so it reads as an instance, not a peer definition. */
 const USAGE_TINT = '#7C3AED';
 
@@ -646,7 +724,7 @@ function RecursiveTree({
                             draggable
                             onDragStart={e => onDragStart(e, node)}
                             onDragOver={e => e.preventDefault()}
-                            onDrop={e => onDrop(e, node.id.replace('f:', ''))}
+                            onDrop={e => onDrop(e, folderPackage(node.id))}
                         >
                             <div
                                 className="flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none"
@@ -714,7 +792,7 @@ function RecursiveTree({
                                 fontWeight: isSelected || isChecked ? 500 : 400,
                             }}
                             draggable
-                            onDragStart={e => onDragStart(e, { type: 'element', element: el, id: el.id, name: el.name, children: [] })}
+                            onDragStart={e => { e.stopPropagation(); onDragStart(e, { type: 'element', element: el, id: el.id, name: el.name, children: [] }); }}
                             onMouseEnter={e => { if (!isSelected && !isChecked) e.currentTarget.style.background = '#F0F0ED'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent'; }}
                             onClick={e => {
@@ -1617,15 +1695,16 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, []);
 
-    const onContextMenu = useCallback((e: React.MouseEvent, type: CtxMenuState['type'], id: string, kind?: string) => {
+    const onContextMenu = useCallback((e: React.MouseEvent, type: CtxMenuState['type'], id: string, kind?: string, extra?: Partial<CtxMenuState>) => {
         e.preventDefault();
         setCtxMenu({
             x: e.clientX,
             y: e.clientY,
             type,
             elementId: type === 'element' ? id : undefined,
-            packageName: type === 'folder' ? id.replace('f:', '') : undefined,
+            packageName: type === 'folder' ? id.replace(/^f:/, '') : undefined,
             kind: kind || (type === 'kind' ? id.replace('k:', '').split(':').pop() : undefined),
+            ...extra,
         });
     }, []);
 
@@ -1702,7 +1781,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             kind: kind,
             name: node.name,
             elementId: node.element?.id,
-            packageName: node.type === 'folder' ? node.id.replace('f:', '') : undefined
+            packageName: node.type === 'folder' ? folderPackage(node.id) : undefined
         }));
         e.dataTransfer.effectAllowed = 'move';
     }, []);
@@ -2008,6 +2087,27 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
                             // The layer's packages and what they hold; the kind rows above stay for the
                             // groups that have no layer to split by package.
+                            // A package or kind folder in a layer: the menu knows which kinds and elements are under it.
+                            const layerMenu = (sub: ExplorerSubGroup, e: React.MouseEvent, type: CtxMenuState['type'], id: string) => {
+                                const find = (nodes: TreeNode[]): TreeNode | undefined => {
+                                    for (const node of nodes) {
+                                        if (node.id === id) return node;
+                                        const inner = find(node.children);
+                                        if (inner) return inner;
+                                    }
+                                };
+                                const node = type === 'element' ? undefined : find(sub.tree);
+                                const members: ExplorerElement[] = [];
+                                const walk = (nodes: TreeNode[]) => nodes.forEach(n => { if (n.type === 'element' && n.element) members.push(n.element); walk(n.children); });
+                                if (node) walk(node.children);
+                                const kinds = [...new Set(members.map(m => m.kind))];
+                                const elementIds = members.map(m => m.id);
+                                if (id.startsWith('kf:')) {
+                                    const [, pkg, kind] = /^kf:(.*):([^:]+)$/.exec(id) ?? [];
+                                    return onContextMenu(e, 'kind', id, kind, { packageName: pkg, elementIds });
+                                }
+                                return onContextMenu(e, type, id, undefined, { kinds, elementIds });
+                            };
                             const renderLayerTree = (sub: ExplorerSubGroup) => (
                                 <ExpandScopeContext.Provider value={`${group.id.startsWith('mode:') ? group.id : ''}|${sub.id}`}>
                                     <div style={{ marginLeft: '8px' }}>
@@ -2022,7 +2122,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                             toggleElementSelection={toggleElementSelection}
                                             violationCounts={violationCounts}
                                             baseColor={sub.color}
-                                            onContextMenu={(e, type, id) => onContextMenu(e, type, id)}
+                                            onContextMenu={(e, type, id) => layerMenu(sub, e, type, id)}
                                             onDragStart={(e, node) => handleDragStart(e, node, '')}
                                             onDrop={(e, folderPath) => handleDrop(e, folderPath, '')}
                                             isUndefined={isUndefinedGroup}
@@ -2396,6 +2496,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     // contain many views and the Explorer should first present the hierarchy.
     const [expandedVps, setExpandedVps] = useState<Set<string>>(new Set());
     const [newDiagramVp, setNewDiagramVp] = useState<string | null>(null);
+    const [packageMenu, setPackageMenu] = useState<CtxMenuState | null>(null);
 
     const toggleExpand = (id: string) => {
         setExpandedVps(prev => {
@@ -2574,6 +2675,10 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     <button
                         type="button"
                         onClick={() => toggleExpand(key)}
+                        onContextMenu={node.id === '__unpackaged' ? undefined : (e => {
+                            e.preventDefault();
+                            setPackageMenu({ x: e.clientX, y: e.clientY, type: 'view-package', packageName: node.id });
+                        })}
                         aria-expanded={isExpanded}
                         className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
                         style={{
@@ -2779,6 +2884,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     return (
         <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
+            {packageMenu && <ElementContextMenu menu={packageMenu} onClose={() => setPackageMenu(null)} />}
             {/* Feature viewpoints: one per product feature, made from the feature, so a feature
                 always has a place for its views. */}
             {featureVps.length > 0 && (
