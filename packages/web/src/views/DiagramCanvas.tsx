@@ -1624,6 +1624,12 @@ function DiagramCanvasInner() {
             }
             if (subject) index.set(subject.id, diag.id);
         }
+        // A usage is made of the definition it is typed by (the rule drilling in follows), so a view about
+        // the definition is the child view of every usage typed by it, unless a view names that usage itself.
+        for (const [usage, definition] of Object.entries(model.workspaceMembership?.definitionOf ?? {})) {
+            const view = index.get(definition);
+            if (view && !index.has(usage)) index.set(usage, view);
+        }
         return index;
     }, [model, selectedDiagramId]);
 
@@ -1680,6 +1686,11 @@ function DiagramCanvasInner() {
                     if (isAncestor(el.id, subjectId)) return diag.id;
                 }
             }
+        }
+        // A view about a definition is entered from any view that draws a usage typed by it.
+        const typedBy = model.workspaceMembership?.definitionOf ?? {};
+        for (const diag of model.diagrams) {
+            if (diag.id !== selectedDiagramId && diag.elementIds?.some(id => typedBy[id] === subjectId)) return diag.id;
         }
         return null;
     }, [model, selectedDiagramId, selectedDiagram]);
