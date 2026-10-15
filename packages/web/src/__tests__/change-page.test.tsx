@@ -75,10 +75,10 @@ describe('the Change page', () => {
             target: 'main', base: { commit: 'c8c8c8c8c8', ref: 'main' }, head: 'working tree',
             changed: { added: 0, removed: 0, changed: 1, addedLinks: 0, removedLinks: 0, elements: [{ id: 'f', name: 'fnDeliverEnergy', kind: 'SystemFunction', layer: 'functional', via: 'changed', depth: 0 }] },
             reached: { requirements: [{ id: 'r', name: 'reqEnergyLimits', kind: 'Requirement', layer: 'requirements', via: 'satisfiedBy', depth: 1 }], verification: [{ id: 'v', name: 'vcEnergyLimits', kind: 'VerificationCase', layer: 'verification', via: 'verifiedBy', depth: 1 }] },
-            systems: [{ id: 's', name: 'AblationGeneratorSystem', scope: 'system' }],
-            releases: [{ id: 'a', name: 'relAblation', status: 'released', commit: 'abc1234', needsNewRelease: true }],
+            systems: [{ id: 's', name: 'ManipulatorSystem', scope: 'system' }],
+            releases: [{ id: 'a', name: 'relManipulation', status: 'released', commit: 'abc1234', needsNewRelease: true }],
             devices: [{ id: 'd', name: 'devFda', jurisdiction: 'FDA_510k' }],
-            reopened: [{ workspace: 'AblationGeneratorSystem', step: 's', label: 'Sys Verification' }],
+            reopened: [{ workspace: 'ManipulatorSystem', step: 's', label: 'Sys Verification' }],
             limits: ['A rename shows as a removal and an addition.'],
         } };
         const view = render();
@@ -91,10 +91,10 @@ describe('the Change page', () => {
         expect(text).toContain('Reached: Requirements (1)');
         expect(text).toContain('reqEnergyLimits (Requirement), by satisfiedBy');
         expect(text).toContain('Reached: Verification (1)');
-        expect(text).toContain('AblationGeneratorSystem (system)');
-        expect(text).toContain('relAblation, released @ abc1234: needs a new release');
+        expect(text).toContain('ManipulatorSystem (system)');
+        expect(text).toContain('relManipulation, released @ abc1234: needs a new release');
         expect(text).toContain('devFda (FDA_510k)');
-        expect(text).toContain('AblationGeneratorSystem: Sys Verification');
+        expect(text).toContain('ManipulatorSystem: Sys Verification');
         expect(text).toContain('A rename shows as a removal');
         const input = view.querySelector('[data-testid="impact-target"]') as HTMLInputElement;
         await act(async () => {
