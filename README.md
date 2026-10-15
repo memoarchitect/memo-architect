@@ -9,11 +9,11 @@
 </p>
 
 <p align="center">
-  <code>memo-architect 0.14.0</code> &middot; MIT &middot; SysML v2 &middot;
+  <code>memo-architect 0.15.0</code> &middot; MIT &middot; SysML v2 &middot;
   ISO 14971 &middot; IEC 62304 &middot; ISO/IEC/IEEE 42010
 </p>
 
-> **0.14.0 is an experimental release.** It adds support for the OpenSysML compiler alongside SysIDE; the OpenSysML path is new and has had less use. The next version will be more stable. Pin an exact version.
+> **0.15.0 is an experimental release.** It adds support for the OpenSysML compiler alongside SysIDE; the OpenSysML path is new and has had less use. The next version will be more stable. Pin an exact version.
 
 <p align="center">
   <a href="https://memoarchitect.com/memo-architect.html">Product website</a> &middot;

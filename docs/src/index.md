@@ -9,8 +9,8 @@ Architect is the highest layer of the MEMO product family. The
 **Ontology** supplies meaning and methodology; **Tools** reads and validates the
 source; **Architect** makes that shared model easier to explore and review.
 
-!!! warning "0.14.0 is an experimental release"
-    0.14.0 adds support for the OpenSysML compiler alongside SysIDE. The OpenSysML
+!!! warning "0.15.0 is an experimental release"
+    0.15.0 adds support for the OpenSysML compiler alongside SysIDE. The OpenSysML
     path is new and has had less use, and some of what it enables (such as the
     compact transport form) is not switched on yet. The next version will be more
     stable. Pin an exact version.
