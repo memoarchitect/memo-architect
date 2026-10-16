@@ -30,8 +30,10 @@ export function CatalogHomePage() {
         if (!model) return [];
         const map: Record<string, FamilyInfo> = {};
         for (const el of Object.values(model.elements)) {
-            const prefix = kindToPrefix(el.kind);
-            const family = prefixToFamily(prefix);
+            // The family is the one the id carries: the server decides it, from the ontology kind, and the
+            // collection page filters on the same id. Recomputing it from `kind` here split one family into
+            // a card per project definition.
+            const family = el.shortId ? prefixToFamily(el.shortId) : prefixToFamily(kindToPrefix(el.kind));
             if (!map[family]) {
                 map[family] = { count: 0, kinds: new Set(), layer: el.layer };
             }
