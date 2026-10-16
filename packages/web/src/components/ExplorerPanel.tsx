@@ -1246,20 +1246,16 @@ export function computeExplorerGroupTree(
     const typeNameOf = (el: MemoElement): string =>
         el.attributes?.actionType || el.attributes?.usageType || el.kind || '';
 
-    // ─── An element earns a row by being defined or used, not by existing ───
+    // ─── A definition the project declares is a row, used or not ────────────
     //
-    // A definition of an ONTOLOGY kind that nothing uses is not a member of the
-    // model tree; listing every one of them doubled the catalog, and the
-    // ontology already lists the kind.
+    // The Model Explorer lists the model, and a definition nothing uses yet is work in progress, not
+    // clutter: hiding it hides the thing the author is in the middle of. Only a definition that
+    // comes from a dependency (the ontology's own) stays out until something uses it, because the
+    // ontology already lists its kinds and listing every one doubled the catalog.
     //
-    // The exception is a definition the PROJECT authored rather than one the
-    // ontology declares — a function def among them. Those are the catalog the
-    // conversion is building, and an unused one is work in progress, not
-    // clutter: hiding it hides the thing the author is in the middle of.
-    //
-    // Usages are never hidden. A usage whose type is missing from the model
-    // still takes its place, so a dangling type shows up as a row to chase
-    // rather than as a silent absence.
+    // Usages are never hidden. A usage whose type is missing from the model still takes its place,
+    // so a dangling type shows up as a row to chase rather than as a silent absence. A definition's
+    // usages are folded beneath it, in a Usages folder.
     const usedDefinitions = new Set<string>();
     for (const el of elements) {
         const typeName = typeNameOf(el);
@@ -1267,10 +1263,9 @@ export function computeExplorerGroupTree(
         usedDefinitions.add(typeName);
         if (typeName.includes('::')) usedDefinitions.add(typeName.split('::').pop()!);
     }
-    const ontologyKindNames = new Set(registryKinds.map(kind => kind.name));
     const earnsARow = (el: MemoElement): boolean =>
         !el.isDefinition
-        || !ontologyKindNames.has(el.kind)
+        || el.provenance?.declaration.origin !== 'dependency'
         || usedDefinitions.has(el.name)
         // A usage names its type by the name the definition declares; `name` is the label once one is authored.
         || (!!el.shortName && usedDefinitions.has(el.shortName))

@@ -382,12 +382,21 @@ describe('computeExplorerGroupTree', () => {
 
     // ─── Rule 3 ─────────────────────────────────────────────────────────────
 
-    it('hides an ontology-kind definition that nothing uses', () => {
+    it('hides a definition from a dependency that nothing uses', () => {
+        const dependency = { declaration: { origin: 'dependency' } } as MemoElement['provenance'];
+        const groups = computeExplorerGroupTree(
+            [{ ...elc('h1', 'Hazard', 'safety_risk', 'item'), isDefinition: true, provenance: dependency } as MemoElement],
+            '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
+        );
+        expect(groups).toEqual([]);
+    });
+
+    it('shows an unused definition the project declares, whatever its kind', () => {
         const groups = computeExplorerGroupTree(
             [{ ...elc('h1', 'Hazard', 'safety_risk', 'item'), isDefinition: true } as MemoElement],
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
-        expect(groups).toEqual([]);
+        expect(groups.length).toBeGreaterThan(0);
     });
 
     it('shows an unused definition the project authored itself', () => {
