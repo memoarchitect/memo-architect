@@ -1,9 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
-import { CompilerSettings } from './CompilerSettings';
-import { RoleSelector } from './RoleSelector';
-import { WorkspaceSelector } from './WorkspaceSelector';
-import { VersionSelector } from './VersionSelector';
 import { PinnedBanner } from './PinnedBanner';
 
 export function WorkbenchToolbar() {
@@ -55,13 +51,12 @@ export function WorkbenchToolbar() {
 
             <div className="flex-1" />
 
-            <VersionSelector />
-
-            <WorkspaceSelector />
-
-            <RoleSelector />
-
-            <CompilerSettings />
+            <button
+                onClick={() => { setActiveView({ type: 'settings' }); navigate('/settings'); }}
+                title="Settings"
+                aria-label="Settings"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.75)', fontSize: 20, padding: '4px 8px' }}
+            >⚙</button>
 
             {(metadata?.modelName || metadata?.gitUser) && (
                 <span

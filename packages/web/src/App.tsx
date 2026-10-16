@@ -48,6 +48,7 @@ const FeaturePage = lazy(() => import('./views/FeaturePage').then(m => ({ defaul
 const VariabilityPage = lazy(() => import('./views/Variability').then(m => ({ default: m.Variability })));
 const SuspectLinksPage = lazy(() => import('./views/SuspectLinksPage').then(m => ({ default: m.SuspectLinksPage })));
 const ChangePage = lazy(() => import('./views/Change').then(m => ({ default: m.Change })));
+const SettingsPage = lazy(() => import('./views/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ReleasesPage = lazy(() => import('./views/Releases').then(m => ({ default: m.Releases })));
 
 function UnifiedCanvas() {
@@ -141,6 +142,8 @@ function UnifiedCanvas() {
                 return <ChangePage />;
             case 'releases':
                 return <ReleasesPage />;
+            case 'settings':
+                return <SettingsPage />;
             case 'welcome':
             default:
                 return <WelcomeCanvas />;

@@ -62,6 +62,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     import: 'settings',
     ontology: 'settings',
     'ontology-detail': 'settings',
+    settings: 'settings',
 };
 
 /**
@@ -96,8 +97,7 @@ export function sectionOf(view: ActiveView, activeMode: string): NavSectionId {
 
 export type NavTarget =
     | { mode: NavModeId }
-    | { view: ActiveView }
-    | { panel: 'settings' };
+    | { view: ActiveView };
 
 export interface NavEntry {
     id: string;
@@ -139,7 +139,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 
     { id: 'dhf', label: 'Documents', icon: '⊞', section: 'documents', target: { mode: 'dhf' } },
 
-    { id: 'settings', label: 'Model Settings', icon: '⚙', section: 'settings', target: { panel: 'settings' } },
+    { id: 'settings', label: 'Settings', icon: '⚙', section: 'settings', target: { view: { type: 'settings' } } },
     { id: 'import', label: 'Import Model', icon: '↓', section: 'settings', target: { view: { type: 'import' } }, feature: 'import' },
     { id: 'ontology', label: 'Ontology Explorer', icon: '◉', section: 'settings', target: { view: { type: 'ontology' } }, feature: 'ontology' },
 ];

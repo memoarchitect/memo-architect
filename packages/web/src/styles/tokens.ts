@@ -11,14 +11,14 @@ export const FONT = {
     lg: '15px',
     /** Explorer panel specific sizes */
     explorer: {
-        heading: '14px',
-        group: '13px',
-        kind: '12px',
-        item: '13px',
-        element: '13px',
+        heading: '15px',
+        group: '14px',
+        kind: '14px',
+        item: '14px',
+        element: '14px',
         count: '12px',
-        search: '13px',
-        tab: '13px',
+        search: '14px',
+        tab: '14px',
     },
 } as const;
 
@@ -41,6 +41,9 @@ export const COLOR = {
     /** Accent */
     accent: '#2DD4A8',
     accentDark: '#0B1E2D',
+    /** A SysML package, wherever it is drawn as a folder. */
+    packageFolder: '#F6C945',
+    packageFolderEdge: '#C9971A',
 } as const;
 
 /** Tree icons for file-explorer style */

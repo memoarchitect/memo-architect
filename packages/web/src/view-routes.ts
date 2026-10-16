@@ -48,6 +48,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     dashboards: '/dashboards',
     change: '/change',
     releases: '/releases',
+    settings: '/settings',
 };
 
 /**

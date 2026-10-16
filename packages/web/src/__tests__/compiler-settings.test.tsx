@@ -56,8 +56,7 @@ describe('CompilerSettings', () => {
     it('says when no compiler is chosen, and names the user\'s file in the panel', () => {
         useModelStore.setState({ toolchainSettings: status() });
         const view = render();
-        expect(view.textContent).toContain('Compiler: not chosen');
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
+        expect(view.textContent).toContain('No compiler is chosen');
         expect(view.textContent).toContain('/home/me/.config/memo/settings.yaml');
         expect(view.textContent).toContain('not in the model');
         expect(view.textContent).toContain('This model uses');
@@ -66,8 +65,7 @@ describe('CompilerSettings', () => {
     it('saves a chosen compiler as the user\'s setting and says it applies on restart', async () => {
         useModelStore.setState({ toolchainSettings: status('syside') });
         const view = render();
-        expect(view.textContent).toContain('Compiler: syside');
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
+        expect(view.textContent).toContain('syside');
         const select = view.querySelector('#memo-compiler') as HTMLSelectElement;
         await act(async () => {
             select.value = 'opensysml';
@@ -80,7 +78,6 @@ describe('CompilerSettings', () => {
     it('asks only for the choice, not where a tool is', () => {
         useModelStore.setState({ toolchainSettings: status('syside') });
         const view = render();
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         expect(view.querySelectorAll('input')).toHaveLength(0);
         expect(view.querySelectorAll('select')).toHaveLength(2);
     });
@@ -90,7 +87,6 @@ describe('CompilerSettings', () => {
         s.settings[0].layers.push({ layer: 'project', value: 'syside' });
         useModelStore.setState({ toolchainSettings: s });
         const view = render();
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         const project = view.querySelector('#memo-compiler-project') as HTMLSelectElement;
         expect(project.value).toBe('syside');
         await act(async () => {
@@ -107,7 +103,6 @@ describe('CompilerSettings', () => {
         s.settings[0].layers.push({ layer: 'project', value: 'opensysml' });
         useModelStore.setState({ toolchainSettings: s });
         const view = render();
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         expect((view.querySelector('#memo-compiler-project') as HTMLSelectElement).value).toBe('opensysml');
         expect((view.querySelector('#memo-compiler') as HTMLSelectElement).value).toBe('syside');
     });
@@ -115,7 +110,6 @@ describe('CompilerSettings', () => {
     it('says when something above the user decides the compiler', () => {
         useModelStore.setState({ toolchainSettings: status('syside', 'environment') });
         const view = render();
-        act(() => { (view.querySelector('button') as HTMLButtonElement).click(); });
         expect(view.textContent).toContain('an environment variable decides the compiler');
     });
 });

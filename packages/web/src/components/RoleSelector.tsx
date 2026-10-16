@@ -12,7 +12,8 @@ import { viewpointRoles } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { roleLabel } from '../lib/role-viewpoints';
 
-export function RoleSelector() {
+export function RoleSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+    const light = tone === 'light';
     const viewpoints = useModelStore(s => s.model?.viewpoints);
     const role = useModelStore(s => s.role);
     const setRole = useModelStore(s => s.setRole);
@@ -22,7 +23,7 @@ export function RoleSelector() {
     return (
         <label
             title="Show the viewpoints written for this role. Saved for you only, in memo.user.yaml (ignored by git)."
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.62)', fontSize: '12px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, color: light ? '#324E67' : 'rgba(255,255,255,0.62)', fontSize: light ? '14px' : '12px' }}
         >
             Role
             <select
@@ -30,8 +31,8 @@ export function RoleSelector() {
                 value={role ?? ''}
                 onChange={event => setRole(event.target.value || null)}
                 style={{
-                    background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.85)',
-                    border: '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: '3px 6px', fontSize: '12px',
+                    background: light ? '#fff' : 'rgba(255,255,255,0.06)', color: light ? '#082744' : 'rgba(255,255,255,0.85)',
+                    border: light ? '1px solid #D8E2E9' : '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: light ? '5px 8px' : '3px 6px', fontSize: light ? '14px' : '12px',
                 }}
             >
                 <option value="">All roles</option>
