@@ -29,7 +29,7 @@ export interface FeatureFlag {
     stage: FeatureStage;
 }
 
-export type FeatureId = 'ai-tools' | 'ontology' | 'import' | 'model-tools' | 'analysis';
+export type FeatureId = 'ai-tools' | 'ontology' | 'import' | 'model-tools' | 'analysis' | 'guide' | 'custom-dashboards';
 
 export const FEATURE_FLAGS: readonly FeatureFlag[] = [
     {
@@ -57,6 +57,18 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
         id: 'model-tools',
         label: 'Model Tools',
         description: 'Matrices, diagnostics, review, and workflow tools are available together only in the experimental workbench.',
+        stage: 'experimental',
+    },
+    {
+        id: 'guide',
+        label: 'Method Guide',
+        description: 'The Guide, and the next-step panel on the dashboard, read the model against its method. The method is not finished, and the panel adds to what a person has to read, so it stays off by default.',
+        stage: 'experimental',
+    },
+    {
+        id: 'custom-dashboards',
+        label: 'Custom Dashboards',
+        description: 'Markdown dashboards with live embeds. Off by default so the navigation lists only what the regulated workflow needs.',
         stage: 'experimental',
     },
     {

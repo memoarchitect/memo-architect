@@ -117,13 +117,13 @@ function UnifiedCanvas() {
             case 'dashboard':
                 return <Dashboard />;
             case 'dashboards':
-                return <DashboardList />;
+                return isFeatureEnabled('custom-dashboards') ? <DashboardList /> : <Dashboard />;
             case 'custom-dashboard':
-                return <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} />;
+                return isFeatureEnabled('custom-dashboards') ? <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} /> : <Dashboard />;
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
             case 'guide':
-                return <GuidePage />;
+                return isFeatureEnabled('guide') ? <GuidePage /> : <Dashboard />;
             case 'import':
                 return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
             case 'analysis':
