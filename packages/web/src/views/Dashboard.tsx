@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
+import { isFeatureEnabled } from '../config/feature-flags';
 import { requestGuide } from '../store/ws-client';
 import { nextStep, stepsForRole } from '../lib/guide-view';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
@@ -388,7 +389,7 @@ function NextActionPanel({ compact }: { stats?: DashboardStats; compact?: boolea
 
 function NextActionWidget() {
     const { stats } = useDashboardData();
-    if (!stats) return null;
+    if (!stats || !isFeatureEnabled('guide')) return null;
     return <div className="memo-widget" style={{ marginBottom: '16px' }}><NextActionPanel stats={stats} compact /></div>;
 }
 
@@ -408,7 +409,7 @@ function NextStepsWidget() {
 
     return (
         <div className="memo-widget" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <NextActionPanel stats={stats} />
+            {isFeatureEnabled('guide') && <NextActionPanel stats={stats} />}
 
             {/* Quick actions */}
             <div style={{
@@ -432,7 +433,7 @@ function NextStepsWidget() {
                     <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
                     <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
                     <QuickActionButton icon="📈" label="Full Statistics" onClick={() => setActiveView({ type: 'statistics' })} />
-                    <QuickActionButton icon="🧩" label="Custom Dashboards" onClick={() => setActiveView({ type: 'dashboards' })} />
+                    {isFeatureEnabled('custom-dashboards') && <QuickActionButton icon="🧩" label="Custom Dashboards" onClick={() => setActiveView({ type: 'dashboards' })} />}
                 </div>
             </div>
         </div>

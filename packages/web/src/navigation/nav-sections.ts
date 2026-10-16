@@ -112,8 +112,8 @@ export interface NavEntry {
 /** What the drawer lists, in order within each section. */
 export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂', section: 'guide', target: { mode: 'dashboard' } },
-    { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', section: 'guide', target: { view: { type: 'dashboards' } } },
-    { id: 'guide', label: 'Guide', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } } },
+    { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', section: 'guide', target: { view: { type: 'dashboards' } }, feature: 'custom-dashboards' },
+    { id: 'guide', label: 'Guide', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } }, feature: 'guide' },
 
     { id: 'catalog', label: 'Model Explorer', icon: '☰', section: 'model', target: { mode: 'catalog' } },
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'model', target: { mode: 'scenario' } },
