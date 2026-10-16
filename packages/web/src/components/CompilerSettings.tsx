@@ -13,7 +13,7 @@
 // under a new label.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useModelStore } from '../store/model-store';
 import { sendToolchainSettingsSave } from '../store/ws-client';
 
@@ -27,19 +27,8 @@ const LAYER_LABEL: Record<string, string> = {
 export function CompilerSettings() {
     const status = useModelStore(s => s.toolchainSettings);
     const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
-    const [open, setOpen] = useState(false);
     const [note, setNote] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const away = (event: MouseEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false); };
-        const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-        document.addEventListener('mousedown', away);
-        document.addEventListener('keydown', escape);
-        return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', escape); };
-    }, [open]);
 
     const save = useCallback(async (path: string, value: string | undefined, scope: 'user' | 'project') => {
         setSaving(true);
@@ -68,38 +57,13 @@ export function CompilerSettings() {
 
     const field: React.CSSProperties = {
         width: '100%', padding: '5px 8px', border: '1px solid #CBD5E1', borderRadius: 6,
-        fontSize: 12, background: '#fff', color: '#0B1E2D', fontFamily: 'inherit',
+        fontSize: 14, background: '#fff', color: '#0B1E2D', fontFamily: 'inherit',
     };
-    const label: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 3 };
+    const label: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 3 };
 
-    return (
-        <div ref={ref} style={{ position: 'relative' }}>
-            <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={open}
-                onClick={() => setOpen(o => !o)}
-                title="Which SysML compiler runs. The model names one; your own setting overrides it for you."
-                style={{
-                    background: 'none', cursor: 'pointer', fontSize: 12, padding: '4px 10px', borderRadius: 6,
-                    color: chosen ? 'rgba(255,255,255,0.8)' : '#FCA5A5',
-                    border: `1px solid ${chosen ? 'rgba(255,255,255,0.18)' : '#EF4444'}`,
-                }}
-            >
-                Compiler: {chosen ?? 'not chosen'}
-            </button>
-            {open && (
-                <div
-                    role="dialog"
-                    aria-label="Compiler settings"
-                    style={{
-                        position: 'absolute', right: 0, top: 'calc(100% + 6px)', width: 340, zIndex: 50,
-                        background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: 14,
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 10,
-                        color: '#0B1E2D',
-                    }}
-                >
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>Compiler</div>
+    const fields = (
+        <>
+            {!chosen && <div role="alert" style={{ fontSize: 13, color: '#B91C1C' }}>No compiler is chosen.</div>}
                     <div>
                         <label style={label} htmlFor="memo-compiler-project">This model uses</label>
                         <select
@@ -112,7 +76,7 @@ export function CompilerSettings() {
                             <option value="">(none named)</option>
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
-                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                        <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
                             Written to the model's settings file, so everyone who opens the model uses it. Commit it.
                         </div>
                     </div>
@@ -128,18 +92,22 @@ export function CompilerSettings() {
                             <option value="">(the model's)</option>
                             {(compiler?.values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
-                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                        <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
                             Overrides the model's choice for you only. Saved in {status.file}, not in the model.
                         </div>
                         {compiler?.layer && compiler.layer !== 'user settings' && compiler.layer !== 'project' && (
-                            <div style={{ fontSize: 11, color: '#B45309', marginTop: 4 }}>
+                            <div style={{ fontSize: 12, color: '#B45309', marginTop: 4 }}>
                                 {LAYER_LABEL[compiler.layer] ?? compiler.layer} decides the compiler for this run: {compiler.value}.
                             </div>
                         )}
                     </div>
-                    {note && <div role="status" style={{ fontSize: 11, color: '#334155' }}>{note}</div>}
-                </div>
-            )}
+                    {note && <div role="status" style={{ fontSize: 12, color: '#334155' }}>{note}</div>}
+        </>
+    );
+
+    return (
+        <div role="group" aria-label="Compiler settings" style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 440, color: '#082744' }}>
+            {fields}
         </div>
     );
 }

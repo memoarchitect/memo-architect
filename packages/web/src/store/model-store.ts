@@ -168,6 +168,7 @@ export type ActiveView =
     | { type: 'rules' }                // the rules the project is checked against, and the means to change them
     | { type: 'change' }               // projects and their impact (placeholder until A10)
     | { type: 'releases' }             // release records (placeholder until A11)
+    | { type: 'settings' }             // the choices about how Architect shows the model
     | { type: 'welcome' };
 
 /** A presentation patch the canvas can apply to its current selection. */

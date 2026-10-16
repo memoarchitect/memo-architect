@@ -41,16 +41,13 @@ export function ExplorerElementIdentity({
             }}
             title={`${identity} ${element.name}`}
         >
-            {/* Fixed-width monospace so ids line up into a readable column
-                instead of ragging the names across the tree. */}
+            {/* Monospace, and no reserved column: in a narrow explorer the name matters more than aligned ids. */}
             <span
                 style={{
                     color: COLOR.muted,
                     fontWeight: 500,
                     marginRight: '4px',
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                    display: 'inline-block',
-                    minWidth: '17ch',
                     flexShrink: 0,
                 }}
             >

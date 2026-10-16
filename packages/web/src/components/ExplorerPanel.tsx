@@ -1,7 +1,7 @@
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 import { kindParents } from '../analysis/kind-hierarchy';
-import { EXPLORER_MODES, isFlatMode, partitionsOf, sharedIds, type ExplorerPartition } from '../lib/explorer-modes';
+import { isFlatMode, partitionsOf, sharedIds, type ExplorerPartition } from '../lib/explorer-modes';
 import { SystemNavigator } from './SystemNavigator';
 import { GLOBAL_SYSTEM, groupBySystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
@@ -75,7 +75,16 @@ function CollapseAllIcon() {
 
 // ─── Tree Icons ──────────────────────────────────────────────────────────────
 
-function FolderIcon({ open, color = COLOR.muted }: { open: boolean; color?: string }) {
+function FolderIcon({ open, color = COLOR.muted, pkg = false }: { open: boolean; color?: string; pkg?: boolean }) {
+    // A SysML package is a yellow folder, the one colour a reader learns to look for.
+    if (pkg) {
+        return (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M1.5 3.5h4.8l1.2 1.5H14.5v8H1.5z" fill={COLOR.packageFolder} stroke={COLOR.packageFolderEdge} strokeWidth="1" strokeLinejoin="round" />
+                {open && <path d="M1.5 6.5h13v6.5H1.5z" fill="#FFFFFF" opacity="0.35" />}
+            </svg>
+        );
+    }
     if (open) {
         return (
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
@@ -681,6 +690,7 @@ const SharedIdsContext = createContext<ReadonlySet<string>>(new Set());
 function RecursiveTree({
     nodes,
     level,
+    compose = 0,
     expanded,
     toggleExpand,
     selectedElementId,
@@ -696,6 +706,8 @@ function RecursiveTree({
 }: {
     nodes: TreeNode[];
     level: number;
+    /** How many elements deep the rows are: a part composed under an element steps in, a folder does not. */
+    compose?: number;
     expanded: Set<string>;
     toggleExpand: (id: string, e?: React.MouseEvent) => void;
     selectedElementId: string | null;
@@ -720,7 +732,7 @@ function RecursiveTree({
                     return (
                         <div
                             key={node.id}
-                            style={{ marginLeft: node.isUsagesFolder ? `${16 + level * ELEMENT_INDENT}px` : level > 0 ? '16px' : '0' }}
+                            style={{ marginLeft: node.isUsagesFolder ? `${16 + compose * ELEMENT_INDENT}px` : level > 0 ? '16px' : '0' }}
                             draggable
                             onDragStart={e => onDragStart(e, node)}
                             onDragOver={e => e.preventDefault()}
@@ -735,7 +747,7 @@ function RecursiveTree({
                                 onContextMenu={e => onContextMenu(e, 'folder', node.id)}
                             >
                                 <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
-                                <FolderIcon open={isExpanded} color={node.isUsagesFolder ? USAGE_TINT : baseColor} />
+                                <FolderIcon open={isExpanded} color={node.isUsagesFolder ? USAGE_TINT : baseColor} pkg={node.id.startsWith('f:')} />
                                 <span
                                     className="font-medium flex-1 truncate"
                                     style={{
@@ -751,6 +763,7 @@ function RecursiveTree({
                                 <RecursiveTree
                                     nodes={node.children}
                                     level={level + 1}
+                                    compose={compose}
                                     expanded={expanded}
                                     toggleExpand={toggleExpand}
                                     selectedElementId={selectedElementId}
@@ -786,8 +799,8 @@ function RecursiveTree({
                             style={{
                                 borderRadius: '4px',
                                 margin: '0 4px',
-                                // A part it composes is a level down: a full step, so the tree reads as one without hovering.
-                                marginLeft: 16 + level * ELEMENT_INDENT + (node.isUsage ? 16 : 0) + (hasChildren ? 0 : 16) + 'px',
+                                // Folders already indent what they hold; only a part composed under an element steps in further.
+                                marginLeft: compose * ELEMENT_INDENT + (node.isUsage ? 16 : 0) + (hasChildren ? 0 : 16) + 'px',
                                 background: isChecked ? '#FFF3CD' : isSelected ? COLOR.accent + '18' : 'transparent',
                                 fontWeight: isSelected || isChecked ? 500 : 400,
                             }}
@@ -873,6 +886,7 @@ function RecursiveTree({
                             <RecursiveTree
                                 nodes={node.children}
                                 level={level + 1}
+                                compose={compose + 1}
                                 expanded={expanded}
                                 toggleExpand={toggleExpand}
                                 selectedElementId={selectedElementId}
@@ -1671,7 +1685,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
     const registryKinds = model?.registries?.kinds ?? [];
     const explorerMode = useModelStore(s => s.explorerMode);
-    const setExplorerMode = useModelStore(s => s.setExplorerMode);
     const workspace = useModelStore(s => s.workspace);
     const membership = model?.workspaceMembership;
     const shared = useMemo(() => sharedIds(membership), [membership]);
@@ -1717,7 +1730,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, []);
 
     const groupBy = useModelStore(s => s.explorerSplit);
-    const setGroupBy = useModelStore(s => s.setExplorerSplit);
 
     // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
@@ -1855,56 +1867,9 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const selectionCount = selectedElementIds.size;
 
-    // The attributes a person can split folders by: enum-valued attributes with between two and eight distinct values.
-    // Read from the elements, so a project's own enum attribute is offered the same as an ontology one.
-    const groupableAttributes = useMemo(() => {
-        const names = new Map<string, Set<string>>();
-        for (const element of Object.values(model?.elements ?? {})) {
-            for (const [name, value] of Object.entries(element.attributes ?? {})) {
-                if (typeof value === 'string' && /^\w+::\w+$/.test(value)) {
-                    names.set(name, (names.get(name) ?? new Set()).add(value));
-                }
-            }
-        }
-        // A few values make a split a reader can use; dozens make a list.
-        return [...names].filter(([, values]) => values.size > 1 && values.size <= 8).map(([name]) => name).sort();
-    }, [model]);
-
-    const modeBar = (
-        <div className="flex items-center gap-1 px-3 py-1.5 flex-shrink-0 flex-wrap" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }} role="tablist" aria-label="Explorer mode">
-            {EXPLORER_MODES.map(mode => (
-                <button
-                    key={mode.id}
-                    role="tab"
-                    aria-selected={explorerMode === mode.id}
-                    onClick={() => setExplorerMode(mode.id)}
-                    style={{
-                        padding: '2px 8px', borderRadius: '9999px', fontSize: FONT.xs,
-                        background: explorerMode === mode.id ? COLOR.accent : 'transparent',
-                        color: explorerMode === mode.id ? '#fff' : COLOR.secondary,
-                        border: `1px solid ${explorerMode === mode.id ? COLOR.accent : COLOR.border}`,
-                    }}
-                >{mode.label}</button>
-            ))}
-            {explorerMode !== 'navigator' && groupableAttributes.length > 0 && (
-                <label style={{ marginLeft: 'auto', color: COLOR.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    Split by
-                    <select
-                        data-testid="explorer-group-by" value={groupBy} onChange={e => setGroupBy(e.target.value)}
-                        style={{ fontSize: FONT.xs, padding: '1px 4px', maxWidth: 130, border: `1px solid ${COLOR.border}`, borderRadius: 6 }}
-                    >
-                        <option value="">nothing</option>
-                        {groupableAttributes.map(name => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                </label>
-            )}
-        </div>
-    );
-
     if (explorerMode === 'navigator') {
         return (
             <div className="flex-1 flex flex-col overflow-hidden">
-                {modeBar}
                 {model && <SystemNavigator model={model} workspace={workspace} onSelect={selectElementAndNavigate} />}
             </div>
         );
@@ -1912,7 +1877,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden">
-            {modeBar}
             {explorerMode === 'system' && membership?.missingSystem && (
                 <div className="px-3 py-2 flex-shrink-0" style={{ background: '#FFFBEB', color: '#92400E', fontSize: FONT.xs }}>
                     This model declares no System, so nothing can be grouped by system (rule CR-ONT-084). Declare a part def that specializes System.
@@ -2337,7 +2301,7 @@ const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
 /** Expansion key for the Uncategorized section; shared with the /diagrams page. */
 const FEATURE_VP_PREFIX = 'fvp:';
 /** Pixels a composed element sits to the right of the element that composes it. */
-const ELEMENT_INDENT = 28;
+const ELEMENT_INDENT = 16;
 export const UNCATEGORIZED_ID = '__uncategorized';
 
 /**
@@ -2729,7 +2693,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         }}
                     >
                         <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
-                        <FolderIcon open={isExpanded} color={COLOR.muted} />
+                        <FolderIcon open={isExpanded} color={COLOR.muted} pkg={node.id !== '__unpackaged'} />
                         <span className="flex-1 truncate">{node.name}</span>
                         <ExplorerCountBadge count={countIn(node)} color={COLOR.muted} />
                     </button>

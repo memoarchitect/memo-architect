@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useModelStore, type ActiveView } from '../store/model-store';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { WorkspaceManager } from './WorkspaceManager';
-import { DhfSettingsPanel } from '../views/DhfSettingsPanel';
 import { viewToPath } from '../view-routes';
 import {
     NAV_ENTRIES, NAV_SECTIONS, VIEW_OF_MODE, sectionOf,
@@ -24,7 +23,6 @@ export function ModeSwitcher() {
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [settingsOpen, setSettingsOpen] = useState(false);
 
     useEffect(() => {
         const toggle = () => setDrawerOpen(open => !open);
@@ -50,8 +48,7 @@ export function ModeSwitcher() {
     })();
     const isActiveEntry = (entry: NavEntry): boolean =>
         'mode' in entry.target ? entry.target.mode === activeNavMode
-            : 'view' in entry.target ? entry.target.view.type === activeView.type
-            : false;
+            : entry.target.view.type === activeView.type;
 
     // The catalog and viewpoint index pages own their address, and the store →
     // URL sync never pushes over them (isRouteOwnedPath). So every page the
@@ -66,8 +63,7 @@ export function ModeSwitcher() {
     function openEntry(entry: NavEntry) {
         setDrawerOpen(false);
         if ('mode' in entry.target) handleNavClick(entry.target.mode);
-        else if ('view' in entry.target) show(entry.target.view);
-        else setSettingsOpen(true);
+        else show(entry.target.view);
     }
 
     function handleNavClick(modeId: NavModeId) {
@@ -120,10 +116,7 @@ export function ModeSwitcher() {
         }
     }
 
-    // The settings panel outlives the drawer: opening it from the drawer
-    // closes the drawer, so it cannot be rendered inside it.
-    const settingsPanel = settingsOpen ? <DhfSettingsPanel onClose={() => setSettingsOpen(false)} /> : null;
-    if (!drawerOpen) return settingsPanel;
+    if (!drawerOpen) return null;
     return <>
         <div onClick={() => setDrawerOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(4, 18, 28, 0.35)' }} />
         <aside aria-label="Main navigation" style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 296, zIndex: 81, background: '#0B1E2D', borderRight: '1px solid rgba(45,212,168,0.28)', boxShadow: '12px 0 32px rgba(0,0,0,0.32)', padding: '18px 12px', overflowY: 'auto' }}>
@@ -166,6 +159,5 @@ export function ModeSwitcher() {
             <div className="flex items-center justify-between px-3 py-2" style={{ color: 'rgba(255,255,255,0.62)' }}><span>Working sets</span><WorkspaceManager /></div>
             <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-3" style={{ color: 'rgba(255,255,255,0.72)', textDecoration: 'none', fontSize: 15 }}><span style={{ width: 20, textAlign: 'center' }}>?</span>Help</a>
         </aside>
-        {settingsPanel}
     </>;
 }

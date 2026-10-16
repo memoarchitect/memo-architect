@@ -90,3 +90,20 @@ export function partitionsOf(el: MemoElement, options: ExplorerModeOptions): Exp
 
 /** Whether a mode lists definitions and usages as separate rows rather than folding one under the other. */
 export const isFlatMode = (mode: ExplorerMode): boolean => mode === 'definitionUsage';
+
+/**
+ * The attributes a person can split folders by: enum-valued attributes with between two and eight distinct
+ * values. Read from the elements, so a project's own enum attribute is offered the same as an ontology one.
+ */
+export function groupableAttributes(elements: readonly MemoElement[]): string[] {
+    const names = new Map<string, Set<string>>();
+    for (const element of elements) {
+        for (const [name, value] of Object.entries(element.attributes ?? {})) {
+            if (typeof value === 'string' && /^\w+::\w+$/.test(value)) {
+                names.set(name, (names.get(name) ?? new Set()).add(value));
+            }
+        }
+    }
+    // A few values make a split a reader can use; dozens make a list.
+    return [...names].filter(([, values]) => values.size > 1 && values.size <= 8).map(([name]) => name).sort();
+}

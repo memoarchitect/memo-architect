@@ -15,7 +15,8 @@ import { releaseRecords, releasesByItem } from '../lib/releases-view';
 
 const WORKING = '__working__';
 
-export function VersionSelector() {
+export function VersionSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+    const light = tone === 'light';
     const model = useModelStore(s => s.model);
     const validation = useModelStore(s => s.validation);
     const pinned = useModelStore(s => s.pinned);
@@ -37,7 +38,7 @@ export function VersionSelector() {
     return (
         <label
             title={pinned ? 'You are looking at a pinned version, read only. Choose Working to edit.' : 'Show the working model, a release, or an unreleased ref (read only).'}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.62)', fontSize: '12px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, color: light ? '#324E67' : 'rgba(255,255,255,0.62)', fontSize: light ? '14px' : '12px' }}
         >
             Version
             <select
@@ -46,8 +47,8 @@ export function VersionSelector() {
                 disabled={opening !== null}
                 onChange={event => choose(event.target.value)}
                 style={{
-                    background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.85)',
-                    border: '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: '3px 6px', fontSize: '12px', maxWidth: 220,
+                    background: light ? '#fff' : 'rgba(255,255,255,0.06)', color: light ? '#082744' : 'rgba(255,255,255,0.85)',
+                    border: light ? '1px solid #D8E2E9' : '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: light ? '5px 8px' : '3px 6px', fontSize: light ? '14px' : '12px', maxWidth: 220,
                 }}
             >
                 {pinned && <option value={current}>{pinned.label}{pinned.notARelease ? ' (not a release)' : ''}</option>}
