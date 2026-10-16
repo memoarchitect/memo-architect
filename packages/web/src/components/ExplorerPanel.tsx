@@ -1272,6 +1272,8 @@ export function computeExplorerGroupTree(
         !el.isDefinition
         || !ontologyKindNames.has(el.kind)
         || usedDefinitions.has(el.name)
+        // A usage names its type by the name the definition declares; `name` is the label once one is authored.
+        || (!!el.shortName && usedDefinitions.has(el.shortName))
         || usedDefinitions.has(el.id);
 
     const validElements = new Map<string, ExplorerElement>();
@@ -1350,7 +1352,8 @@ export function computeExplorerGroupTree(
     const definitionNodes = new Map<string, TreeNode>();
     for (const node of nodes.values()) {
         if (!node.element?.__isDef) continue;
-        for (const key of [node.element.name, node.element.id]) if (key) definitionNodes.set(key, node);
+        // A usage names its type by the name the definition DECLARES, which is not `name` once a label is authored.
+        for (const key of [node.element.name, node.element.id, node.element.shortName]) if (key) definitionNodes.set(key, node);
     }
     const canonical = (node: TreeNode | undefined): TreeNode | undefined => {
         if (!node || node.element?.__isDef || modes?.flat) return node;
