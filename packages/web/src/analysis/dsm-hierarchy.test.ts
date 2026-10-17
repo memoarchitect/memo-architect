@@ -5,8 +5,6 @@ import {
     defaultContainmentTypes,
     flattenAxis,
     layersInModel,
-    suggestDsmLayer,
-    suggestTraceLayers,
 } from './dsm-hierarchy';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 
@@ -247,24 +245,7 @@ describe('semantic axes', () => {
     });
 });
 
-describe('suggested defaults', () => {
-    it('opens the DSM on the layer whose elements depend on each other', () => {
-        // Only the logical layer has internal flow in this model.
-        expect(suggestDsmLayer(model)).toBe('logical');
-    });
-
-    it('opens traceability on the busiest crossing between two layers', () => {
-        expect(suggestTraceLayers(model)).toEqual({ rows: 'functional', columns: 'logical' });
-    });
-
-    it('falls back to a single layer when nothing crosses', () => {
-        const isolated: MemoModelDTO = {
-            ...model,
-            relationships: model.relationships.filter(rel => rel.type !== 'allocatedTo'),
-        };
-        expect(suggestTraceLayers(isolated)).toEqual({ rows: 'logical', columns: 'logical' });
-    });
-
+describe('layer summary', () => {
     it('summarises the layers a model populates, largest first', () => {
         const summary = layersInModel(model);
         expect(summary.map(entry => entry.layer)).toEqual(['logical', 'functional']);

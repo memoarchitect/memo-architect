@@ -25,7 +25,6 @@ import {
     collectNodeIds,
     layersInModel,
     relationshipTypesInModel,
-    suggestTraceLayers,
     type DsmAggregateCell,
     type DsmAxisEntry,
     type DsmOrdering,
@@ -224,8 +223,14 @@ export function TraceabilityMatrix() {
         setLinkTypes(current => current.every(type => allowed.has(type)) ? current : current.filter(type => allowed.has(type)));
     }, [legalLinkOptions]);
 
+    // Nothing is computed until the user has named an axis: with none, both axes
+    // are the whole model and the grid is |elements|^2 cells.
+    const axesChosen = Boolean(
+        rowScope.layer || rowScope.kind || rowElements.length
+        || columnScope.layer || columnScope.kind || columnElements.length);
+
     const result = useMemo(() => {
-        if (!model) return null;
+        if (!model || !axesChosen) return null;
         return computeHierarchicalDSM(model, {
             rows: { layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
             columns: { layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
@@ -235,31 +240,7 @@ export function TraceabilityMatrix() {
             // requirement are the same coverage fact.
             symmetric: true,
         });
-    }, [model, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
-
-    // Trace is a cross-layer question, so the matrix opens on whichever two
-    // layers this model actually links across the most — requirements against
-    // verification in one project, functions against components in another.
-    const [seeded, setSeeded] = useState(false);
-    useEffect(() => {
-        if (seeded || !model) return;
-        const suggestion = suggestTraceLayers(model);
-        if (!suggestion.rows) return;
-        setRowScope({ layer: suggestion.rows });
-        setColumnScope({ layer: suggestion.columns });
-        setSeeded(true);
-    }, [model, seeded]);
-
-    const [expandedSeeded, setExpandedSeeded] = useState(false);
-    useEffect(() => {
-        if (expandedSeeded || !seeded || !result) return;
-        const rows = result.rowRoots.filter(node => node.children.length > 0).map(node => node.id);
-        const columns = result.columnRoots.filter(node => node.children.length > 0).map(node => node.id);
-        if (rows.length === 0 && columns.length === 0) return;
-        setExpandedRows(new Set(rows));
-        setExpandedColumns(new Set(columns));
-        setExpandedSeeded(true);
-    }, [result, seeded, expandedSeeded]);
+    }, [model, axesChosen, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
 
     const setAxisExpansion = useCallback((axis: 'rows' | 'columns', next: Set<string>) => {
         if (axis === 'rows') setExpandedRows(next);
@@ -481,7 +462,7 @@ export function TraceabilityMatrix() {
         return { traced, total: leafRows.length };
     }, [result]);
 
-    if (!model || !result) {
+    if (!model) {
         return (
             <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
                 No model loaded
@@ -622,6 +603,11 @@ export function TraceabilityMatrix() {
 
             {/* ── Matrix ── */}
             <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, marginLeft: leftToolbar ? '250px' : 0, width: leftToolbar ? 'calc(100% - 250px)' : undefined }}>
+            {!result ? (
+                <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
+                    Choose what the rows and columns are to build a traceability matrix.
+                </div>
+            ) : (
             <HierarchicalMatrix
                 result={result}
                 onToggleRow={id => setExpandedRows(current => toggled(current, id))}
@@ -643,6 +629,7 @@ export function TraceabilityMatrix() {
                     </div>
                 }
             />
+            )}
             </div>
 
             {/* ── Link inspector / editor ── */}

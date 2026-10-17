@@ -30,7 +30,6 @@ import {
     defaultContainmentTypes,
     layersInModel,
     relationshipTypesInModel,
-    suggestDsmLayer,
     type DsmAggregateCell,
     type DsmAxisEntry,
     type DsmOrdering,
@@ -202,7 +201,9 @@ export function DSMView() {
     ].filter(Boolean).length;
 
     const result = useMemo(() => {
-        if (!model) return null;
+        // Nothing is computed until the user has named an axis: with none, both
+        // axes are the whole model and the grid is |elements|^2 cells.
+        if (!model || !axesChosen) return null;
         return computeHierarchicalDSM(model, {
             rows: { layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
             columns: { layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
@@ -211,21 +212,7 @@ export function DSMView() {
             groupByPackage,
             symmetric,
         });
-    }, [model, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
-
-    // Open on something worth looking at: a DSM's subject is one layer against
-    // itself, and the layer chosen is the one whose elements actually depend on
-    // each other. Both are model-derived — a project whose substance is in
-    // requirements opens on requirements, not on whatever a fixed list named.
-    const [seeded, setSeeded] = useState(false);
-    useEffect(() => {
-        if (seeded || !model) return;
-        const layer = suggestDsmLayer(model, effectiveContainment);
-        if (!layer) return;
-        setRowScope({ layer });
-        setColumnScope({ layer });
-        setSeeded(true);
-    }, [model, effectiveContainment, seeded]);
+    }, [model, axesChosen, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
 
     const toggleRow = useCallback((nodeId: string) => {
         setExpandedRows(current => toggled(current, nodeId));
@@ -324,7 +311,7 @@ export function DSMView() {
         };
     }, []);
 
-    if (!model || !result) {
+    if (!model) {
         return (
             <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
                 No model loaded
@@ -332,7 +319,6 @@ export function DSMView() {
         );
     }
 
-    const { stats } = result;
     const leftToolbar = toolbarPlacement === 'left';
     const axisGroupStyle: CSSProperties = leftToolbar
         ? {
@@ -445,7 +431,7 @@ export function DSMView() {
                     </ToolbarPopover>
 
                     <ToolbarPopover label={<Icon.download />} ariaLabel="Export DSM" title="Export the DSM" width={220} fullWidth={leftToolbar}>
-                        <button onClick={() => downloadDsmCsv(result)} style={exportOptionStyle}>
+                        <button onClick={() => result && downloadDsmCsv(result)} style={exportOptionStyle}>
                             CSV <span style={{ color: COLOR.faint }}>current visible matrix</span>
                         </button>
                         <button onClick={() => { void exportXlsx(); }} style={exportOptionStyle}>
@@ -475,6 +461,11 @@ export function DSMView() {
                 marginLeft: leftToolbar ? '250px' : 0,
                 width: leftToolbar ? 'calc(100% - 250px)' : undefined,
             }}>
+                {!result ? (
+                    <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
+                        Choose what the rows and columns are to build a Design Structure Matrix.
+                    </div>
+                ) : (
                 <HierarchicalMatrix
                     result={result}
                     onToggleRow={toggleRow}
@@ -497,17 +488,17 @@ export function DSMView() {
                             </span>
                             <span style={{ fontSize: '11px', color: COLOR.faint, marginTop: '2px' }}>
                                 {result.rows.length} {'×'} {result.columns.length} {'·'} {result.totalDependencies} dependencies
-                                {stats.internal > 0 && ` · ${stats.internal} internal`}
+                                {result.stats.internal > 0 && ` · ${result.stats.internal} internal`}
                             </span>
                             <div style={{
                                 display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '10px', color: COLOR.muted,
                                 borderTop: `1px solid ${COLOR.border}`, marginTop: '5px', paddingTop: '4px',
                             }}>
                                 {[
-                                    ['feedback', stats.feedback, 'Marks below the diagonal — candidates for rework loops'],
-                                    ['coupled', stats.couplings, 'Pairs that depend on each other in both directions'],
-                                    ['isolated', stats.isolated, 'Lines with no dependency either way'],
-                                    ['max degree', stats.maxDegree, 'Most dependencies touching one line'],
+                                    ['feedback', result.stats.feedback, 'Marks below the diagonal — candidates for rework loops'],
+                                    ['coupled', result.stats.couplings, 'Pairs that depend on each other in both directions'],
+                                    ['isolated', result.stats.isolated, 'Lines with no dependency either way'],
+                                    ['max degree', result.stats.maxDegree, 'Most dependencies touching one line'],
                                 ].map(([label, value, title]) => (
                                     <span key={label as string} title={title as string}>
                                         <strong style={{ color: COLOR.primary }}>{value}</strong> {label}
@@ -535,6 +526,7 @@ export function DSMView() {
                     </div>
                     }
                 />
+                )}
             </div>
 
             {/* ── Cell inspector ── */}
