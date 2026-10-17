@@ -11,7 +11,6 @@ import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
-import { kindToPrefix, prefixToFamily } from '../short-id';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 
 type FamilyInfo = { count: number; kinds: Set<string>; layer: string };
@@ -30,10 +29,10 @@ export function CatalogHomePage() {
         if (!model) return [];
         const map: Record<string, FamilyInfo> = {};
         for (const el of Object.values(model.elements)) {
-            // The family is the one the id carries: the server decides it, from the ontology kind, and the
-            // collection page filters on the same id. Recomputing it from `kind` here split one family into
-            // a card per project definition.
-            const family = el.shortId ? prefixToFamily(el.shortId) : prefixToFamily(kindToPrefix(el.kind));
+            // The family is decided when the model is compiled, from the ontology kind; the collection page
+            // filters on the same field.
+            const family = el.idFamily;
+            if (!family) continue;
             if (!map[family]) {
                 map[family] = { count: 0, kinds: new Set(), layer: el.layer };
             }

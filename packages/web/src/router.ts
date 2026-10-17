@@ -10,21 +10,12 @@
 //  /diagrams/:diagramType          → All diagrams of a type (e.g. /diagrams/BDD)
 //  /diagrams/:diagramType/:id      → Specific diagram
 //
-// The "family" is the first hyphen-segment of an element's shortId prefix.
-// e.g. shortId "SW-REQ-4291" → prefix "SW-REQ" → family "SW"
+// The "family" is the compiled model's `idFamily` for the element; nothing here derives it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { prefixToFamily, kindToPrefix } from './short-id';
-
-/** Build the family segment from a kind name. */
-export function kindToFamily(kind: string): string {
-    return prefixToFamily(kindToPrefix(kind));
-}
-
-/** Build the URL for an element detail page. */
-export function elementUrl(shortId: string): string {
-    const family = shortId.split('-')[0];
-    return `/catalog/${family}/${shortId}`;
+/** Build the URL for an element detail page, from the family and id the compiled model carries. */
+export function elementUrl(element: { id: string; shortId?: string; idFamily?: string }): string {
+    return `/catalog/${element.idFamily ?? '_'}/${element.shortId ?? element.id}`;
 }
 
 /** Build the URL for a kind-family collection page. */
