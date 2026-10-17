@@ -204,61 +204,6 @@ export function layersInModel(model: MemoModelDTO): LayerSummary[] {
 }
 
 /**
- * The layer a DSM should open on: the one with the most dependencies *inside*
- * it, since that is where a structure matrix has something to show.
- *
- * Derived from the model rather than a preferred-layer list, so a project whose
- * substance is in requirements or in hardware opens on that instead of on
- * whatever a hardcoded ordering happened to name first.
- */
-export function suggestDsmLayer(model: MemoModelDTO, containmentTypes?: readonly string[]): string | undefined {
-    const containment = new Set(containmentTypes ?? defaultContainmentTypes(model));
-    const internal = new Map<string, number>();
-    for (const rel of model.relationships) {
-        if (containment.has(rel.type)) continue;
-        const source = model.elements[rel.sourceId];
-        const target = model.elements[rel.targetId];
-        if (!source || !target || source.layer !== target.layer) continue;
-        internal.set(source.layer, (internal.get(source.layer) ?? 0) + 1);
-    }
-    const layers = layersInModel(model);
-    if (layers.length === 0) return undefined;
-    // Layers are already ordered by size, so ties fall to the larger one.
-    return [...layers].sort((a, b) =>
-        (internal.get(b.layer) ?? 0) - (internal.get(a.layer) ?? 0)
-        || b.elementCount - a.elementCount
-        || a.layer.localeCompare(b.layer))[0].layer;
-}
-
-/**
- * The layer pair a traceability matrix should open on: whichever two layers the
- * model links across the most. Trace is a cross-layer question by nature, so
- * the useful default is the busiest crossing rather than one layer twice.
- */
-export function suggestTraceLayers(
-    model: MemoModelDTO,
-    containmentTypes?: readonly string[],
-): { rows?: string; columns?: string } {
-    const containment = new Set(containmentTypes ?? defaultContainmentTypes(model));
-    const pairs = new Map<string, number>();
-    for (const rel of model.relationships) {
-        if (containment.has(rel.type)) continue;
-        const source = model.elements[rel.sourceId];
-        const target = model.elements[rel.targetId];
-        if (!source || !target || source.layer === target.layer) continue;
-        const key = `${source.layer}>${target.layer}`;
-        pairs.set(key, (pairs.get(key) ?? 0) + 1);
-    }
-    const best = [...pairs.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
-    if (!best) {
-        const layer = suggestDsmLayer(model, containmentTypes);
-        return { rows: layer, columns: layer };
-    }
-    const [rows, columns] = best[0].split('>');
-    return { rows, columns };
-}
-
-/**
  * Who contains whom, across the whole model.
  *
  * A declared containment relationship wins over the structural hints, because
