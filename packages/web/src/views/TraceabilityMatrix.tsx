@@ -40,64 +40,6 @@ import { Icon, IconToggle } from './DiagramToolbarControls';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
-// ─── Presets ─────────────────────────────────────────────────────────────────
-
-interface MatrixPreset {
-    id: string;
-    label: string;
-    description: string;
-    rowKinds: string[];
-    columnKinds: string[];
-    linkTypes: string[];
-}
-
-/**
- * Starting points, not modes. Each one fills the three pickers; changing a
- * picker afterwards simply leaves the preset behind.
- */
-const PRESETS: MatrixPreset[] = [
-    {
-        id: 'risk-control',
-        label: 'ISO 14971: Risk → Control',
-        description: 'Hazards and hazardous situations traced to risk controls',
-        rowKinds: ['Hazard', 'HazardousSituation'],
-        columnKinds: ['RiskControlMeasure', 'SafetyGoal'],
-        linkTypes: ['mitigates', 'tracesRisk', 'causes', 'leadsTo'],
-    },
-    {
-        id: 'req-test',
-        label: 'IEC 62304: Requirement → Test',
-        description: 'Software requirements traced to verification tests',
-        rowKinds: ['Requirement', 'SoftwareRequirement', 'SystemRequirement'],
-        columnKinds: ['Test', 'TestCase', 'VerificationCase', 'VerificationActivity'],
-        linkTypes: ['verifiedBy', 'satisfiedBy', 'validates'],
-    },
-    {
-        id: 'req-function',
-        label: 'Requirement → Function',
-        description: 'Requirements traced to the functions that satisfy them',
-        rowKinds: ['Requirement', 'SystemRequirement'],
-        columnKinds: ['Function', 'SystemFunction', 'ComponentFunction'],
-        linkTypes: ['satisfiedBy', 'derivesFrom'],
-    },
-    {
-        id: 'function-component',
-        label: 'Function → Component',
-        description: 'Functions allocated to logical and physical components',
-        rowKinds: ['Function', 'SystemFunction', 'ComponentFunction'],
-        columnKinds: ['LogicalComponent', 'SoftwareModule', 'MechanicalPart', 'Component'],
-        linkTypes: ['allocatedTo', 'realizes'],
-    },
-    {
-        id: 'everything',
-        label: 'Everything',
-        description: 'Every element against every element, every relationship',
-        rowKinds: [],
-        columnKinds: [],
-        linkTypes: [],
-    },
-];
-
 // ─── View ────────────────────────────────────────────────────────────────────
 
 interface CellFocus {
@@ -186,9 +128,27 @@ export function TraceabilityMatrix() {
     }, [saveName, saveViewpointId, rowKinds, columnKinds, linkTypes, createDiagram, viewpoints]);
 
 
+    // Nothing is computed until the user has named an axis: with none, both axes
+    // are the whole model and the grid is |elements|^2 cells.
+    const axesChosen = Boolean(
+        rowScope.layer || rowScope.kind || rowElements.length
+        || columnScope.layer || columnScope.kind || columnElements.length);
+
+    /** Every relationship type the model uses, before any axis narrows the list. */
+    const allLinkOptions = useMemo<TypeFilterOption[]>(() => {
+        if (!model) return [];
+        const counts = new Map<string, number>();
+        for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
+        return relationshipTypesInModel(model).map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
+    }, [model]);
+
     /** Only offer relationships that the ontology permits for a visible axis pair. */
     const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
         if (!model || !registries) return [];
+        // A cross product of the two axes. With none chosen both are the whole
+        // model, |elements|^2 `legalRelationshipTypes` calls on mount, so until
+        // the user narrows an axis the unfiltered list is the right answer.
+        if (!axesChosen) return allLinkOptions;
         const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, kinds: string[], picked: string[]) =>
             (!scope.layer || element.layer === scope.layer)
             && (kinds.length === 0 || kinds.includes(element.kind))
@@ -205,7 +165,7 @@ export function TraceabilityMatrix() {
         const counts = new Map<string, number>();
         for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
         return [...names].sort().map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
-    }, [model, registries, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements]);
+    }, [model, registries, axesChosen, allLinkOptions, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements]);
 
     // Narrowing the kinds must narrow the picked elements with them, or the
     // axis would keep showing something the kind filter no longer allows.
@@ -222,12 +182,6 @@ export function TraceabilityMatrix() {
         const allowed = new Set(legalLinkOptions.map(option => option.value));
         setLinkTypes(current => current.every(type => allowed.has(type)) ? current : current.filter(type => allowed.has(type)));
     }, [legalLinkOptions]);
-
-    // Nothing is computed until the user has named an axis: with none, both axes
-    // are the whole model and the grid is |elements|^2 cells.
-    const axesChosen = Boolean(
-        rowScope.layer || rowScope.kind || rowElements.length
-        || columnScope.layer || columnScope.kind || columnElements.length);
 
     const result = useMemo(() => {
         if (!model || !axesChosen) return null;
@@ -255,41 +209,6 @@ export function TraceabilityMatrix() {
         if (!result) return;
         setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots, depth)));
     }, [result, setAxisExpansion]);
-
-    /**
-     * A preset names kinds; the axis takes one. The first kind the model
-     * actually has wins, and the axis is set to that kind's own layer — so a
-     * preset can never assemble the mixed axis the pickers refuse to.
-     */
-    const scopeForKinds = useCallback((candidates: string[]): AxisScope | null => {
-        if (!model) return null;
-        for (const kind of candidates) {
-            const element = Object.values(model.elements).find(entry => entry.kind === kind);
-            if (element) return { layer: element.layer, kind };
-        }
-        return null;
-    }, [model]);
-
-    const applyPreset = useCallback((preset: MatrixPreset) => {
-        const types = new Set(model ? relationshipTypesInModel(model) : []);
-        const rows = scopeForKinds(preset.rowKinds);
-        const columns = scopeForKinds(preset.columnKinds);
-        if (preset.id === 'everything') {
-            // Empty kinds are meaningful here: use every element, rather than
-            // leaving the scopes from the previously selected preset behind.
-            setRowScope({});
-            setColumnScope({});
-        } else {
-            if (rows) setRowScope(rows);
-            if (columns) setColumnScope(columns);
-        }
-        setLinkTypes(preset.linkTypes.filter(type => types.has(type)));
-        // A preset redefines what the axes are about, so any hand-picked
-        // elements from the previous configuration no longer apply.
-        setRowElements([]);
-        setColumnElements([]);
-        setFocus(null);
-    }, [model, scopeForKinds]);
 
     // ── Editing ──────────────────────────────────────────────────────────────
 
@@ -511,13 +430,6 @@ export function TraceabilityMatrix() {
                     }}>
                         <ToolbarPopover label={<><Icon.filter /> Relations</>} ariaLabel="Filter trace relationships" title="Relationships counted as trace" width={leftToolbar ? 210 : 260} fullWidth={leftToolbar}>
                             <TypeFilterSelect label="Trace relationships" allLabel="Any relationship" options={legalLinkOptions} selected={linkTypes} onChange={setLinkTypes} title="Relationships counted as trace" />
-                        </ToolbarPopover>
-                        <ToolbarPopover label="Presets" ariaLabel="Traceability presets" title="Choose a traceability starting point" width={leftToolbar ? 210 : 270} fullWidth={leftToolbar}>
-                            {PRESETS.map(preset => (
-                                <button key={preset.id} onClick={() => applyPreset(preset)} title={preset.description} style={{
-                                    padding: '6px 7px', border: 'none', borderRadius: '5px', background: 'transparent', cursor: 'pointer', fontSize: FONT.xs, color: COLOR.primary, textAlign: 'left',
-                                }}>{preset.label}</button>
-                            ))}
                         </ToolbarPopover>
                         <ToolbarPopover label="Save as view" ariaLabel="Declare this matrix as a view" title="Declare this matrix as a view" width={leftToolbar ? 210 : 280} fullWidth={leftToolbar}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
