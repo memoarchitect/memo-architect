@@ -64,7 +64,7 @@ export function Breadcrumb() {
             const el = model?.elements[elementId];
             if (el) {
                 const shortId = el.shortId ?? el.id;
-                const family = shortId.split('-')[0];
+                const family = el.idFamily ?? '';
                 crumbs.push({
                     label: 'Catalog',
                     onClick: () => navigate('/catalog'),

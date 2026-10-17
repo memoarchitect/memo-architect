@@ -523,7 +523,7 @@ interface TreeNode {
  * best labelled with the one on its definition.
  */
 export type ExplorerElement = MemoElement & {
-    /** Authored providedId where the model carries one, else shortId/id. */
+    /** The compiled `displayId`, kept under this name for the rows that read it. */
     __displayId?: string;
     /** True for a definition, resolved once so rows need not re-derive it. */
     __isDef?: boolean;
@@ -1289,7 +1289,8 @@ export function computeExplorerGroupTree(
         const typeName = typeNameOf(el);
         const typeDef = projectDefs.get(typeName)
             ?? (typeName.includes('::') ? projectDefs.get(typeName.split('::').pop()!) : undefined);
-        const displayId = el.attributes?.providedId || typeDef?.attributes?.providedId || el.shortId || el.id;
+        // The id a row shows is decided when the model is compiled; nothing here chooses one.
+        const displayId = el.displayId ?? el.id;
         const displayName = (el.name && el.name !== el.id)
             ? el.name
             : (el.attributes?.name || typeDef?.attributes?.name || el.name);
@@ -1691,7 +1692,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         selectElement(id);
         setActiveView({ type: 'element-detail', elementId: id });
         const el = model?.elements?.[id];
-        if (el) navigate(elementUrl(el.shortId ?? el.id));
+        if (el) navigate(elementUrl(el));
     }, [selectElement, setActiveView, model, navigate]);
 
     // The model tab has two readings. The CATALOG groups by layer and kind,

@@ -25,10 +25,7 @@ export function ElementCollectionPage({ family }: Props) {
 
     const elements: MemoElement[] = useMemo(() => {
         if (!model) return [];
-        return Object.values(model.elements).filter(el => {
-            const sid = el.shortId ?? '';
-            return sid.startsWith(family + '-') || sid.startsWith(family + ' ');
-        });
+        return Object.values(model.elements).filter(el => el.idFamily === family);
     }, [model, family]);
 
     const filtered = useMemo(() => {
@@ -173,7 +170,7 @@ function PackageFolders({ nodes, open, navigate, depth = 0 }: {
                         {node.name} <span style={{ fontWeight: 400, color: COLOR.faint }}>{countIn(node)}</span>
                     </summary>
                     {node.items.map(el => (
-                        <ElementRow key={el.id} element={el} zebra={row++ % 2 === 1} onClick={() => navigate(elementUrl(el.shortId ?? el.id))} />
+                        <ElementRow key={el.id} element={el} zebra={row++ % 2 === 1} onClick={() => navigate(elementUrl(el))} />
                     ))}
                     <PackageFolders nodes={node.children} open={open} navigate={navigate} depth={depth + 1} />
                 </details>

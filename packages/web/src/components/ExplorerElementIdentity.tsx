@@ -13,7 +13,9 @@ export function ExplorerElementIdentity({
     fontWeight,
     tint,
 }: {
-    element: Pick<MemoElement, 'id' | 'name' | 'shortId'> & {
+    element: Pick<MemoElement, 'id' | 'name'> & {
+        /** The id the compiled model says to show; this component chooses nothing. */
+        displayId?: string;
         isDefinition?: boolean;
         /** Authored providedId, preferred over shortId where the model carries one. */
         __displayId?: string;
@@ -24,13 +26,10 @@ export function ExplorerElementIdentity({
     /** Overrides the label colour, so a usage row can be tinted as one. */
     tint?: string;
 }) {
-    // The builder assigns this deterministic, human-facing form to every
-    // element (for example STT-1). Never expose the internal SysML/UUID
-    // identifier as an explorer label.
-    // An authored providedId is the id the reader knows the element by and the
-    // one every other document cites; shortId is the builder's fallback for
-    // elements that carry none.
-    const identity = element.__displayId ?? element.shortId ?? 'ID-PENDING';
+    // The compiler decides the id a reader sees (an authored providedId, else the short id, with a
+    // usage reading as its definition's id and its own number). Never expose the internal
+    // SysML/UUID identifier as an explorer label.
+    const identity = element.__displayId ?? element.displayId ?? 'ID-PENDING';
     return (
         <span
             className="truncate flex-1"
