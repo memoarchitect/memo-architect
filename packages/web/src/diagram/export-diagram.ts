@@ -83,7 +83,19 @@ export async function captureSvgDataUrl(
     container: HTMLElement,
 ): Promise<{ dataUrl: string; width: number; height: number }> {
     const viewport = container.querySelector<HTMLElement>('.react-flow__viewport');
-    if (!viewport) throw new Error('No diagram canvas to export');
+    // JointJS owns an SVG paper instead of a React Flow viewport. Capture the
+    // paper at its current rendered extent; this keeps the public export
+    // command renderer-neutral while preserving the actual JointJS notation.
+    if (!viewport) {
+        const paper = container.querySelector<HTMLElement>('.joint-paper');
+        if (!paper) throw new Error('No diagram canvas to export');
+        const width = Math.max(1, Math.ceil(paper.clientWidth));
+        const height = Math.max(1, Math.ceil(paper.clientHeight));
+        const dataUrl = await toSvg(paper, {
+            width, height, backgroundColor: EXPORT_BACKGROUND, skipFonts: true,
+        });
+        return { dataUrl, width, height };
+    }
 
     const bounds = contentBounds(viewport);
     const width = Math.max(1, Math.ceil(bounds.width) + EXPORT_PADDING * 2);

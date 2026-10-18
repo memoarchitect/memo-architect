@@ -1,0 +1,6 @@
+name: vehicle-routing-pilot
+version: 1.0.0
+entrypoint: model/methodology/project.sysml
+include: [model]
+toolchain:
+  validator: syside

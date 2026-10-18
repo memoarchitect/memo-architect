@@ -218,6 +218,7 @@ interface EdgeContextMenuProps {
     edgeId: string;
     relType: string;
     onClose: () => void;
+    onShowProperties?: () => void;
     onChangeStyle: (style: EdgeLineStyle) => void;
     onChangeColor: (color: string) => void;
     onToggleLabel: () => void;
@@ -235,7 +236,7 @@ const EDGE_COLORS = [
 
 export function EdgeContextMenu({
     x, y, edgeId, relType, onClose,
-    onChangeStyle, onChangeColor, onToggleLabel, onDelete,
+    onChangeStyle, onChangeColor, onToggleLabel, onDelete, onShowProperties,
 }: EdgeContextMenuProps) {
     return (
         <Menu x={x} y={y} onClose={onClose}>
@@ -244,6 +245,7 @@ export function EdgeContextMenu({
                 <div style={{ fontSize: '9px', color: '#D1D5DB', fontFamily: 'monospace' }}>{edgeId}</div>
             </div>
 
+            {onShowProperties && <MenuItem label="Show Properties" icon="ℹ" onClick={() => { onClose(); onShowProperties(); }} />}
             {/* Line style */}
             <div className="px-3 py-1.5 flex items-center gap-2">
                 <span style={{ fontSize: '10px', color: '#9CA3AF', minWidth: 40 }}>Style</span>

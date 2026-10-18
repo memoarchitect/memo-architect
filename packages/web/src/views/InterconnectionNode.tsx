@@ -12,8 +12,10 @@
 // anchor to the correct face.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo, useRef, useState } from 'react';
-import { NodeResizer, Position, useReactFlow, useStore, useStoreApi, type NodeProps, type ResizeParamsWithDirection } from '@xyflow/react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { NodeResizeControl, ResizeControlVariant, Position, useReactFlow, useStore, type NodeProps } from '@xyflow/react';
+import { resizeIbdNodes, type IbdResizeHandler } from '../diagram/ibd-resize-integration';
+import type { ResizeDirection, ResizeMinimums } from '../diagram/ibd-resize';
 import { FONT, SHADOW } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
@@ -28,6 +30,8 @@ import {
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
 
 export interface InterconnectionNodeData extends Record<string, unknown> {
+    onIbdResize?: IbdResizeHandler;
+    resizeReadOnly?: boolean;
     label: string;
     kind: string;
     layer: string;
@@ -52,8 +56,8 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     /** Persist the port once its drag ends. */
     onPortCommit?: (portId: string) => void;
     onPortResize?: (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
-    onPortSelect?: (portId: string) => void;
-    /** Content-derived lower bound emitted by the IBD template. */
+    onPortSelect?: (portId: string, inspect?: boolean) => void;
+    /** Legacy template hints; resize now measures rendered content instead. */
     minWidth?: number;
     minHeight?: number;
     /** Per-diagram fill override from the layout companion. */
@@ -100,7 +104,7 @@ function portGlyph(direction: PortInfo['direction'], side: PortSide): string {
     }
 }
 
-const PORT_HIT_SIZE = 40;
+const PORT_HIT_SIZE = 24;
 
 const handlePinStyle = (size: number): React.CSSProperties => ({
     opacity: 0, width: size, height: size,
@@ -195,12 +199,12 @@ function beginWallDrag(
     window.addEventListener('pointerup', stop, { once: true });
 }
 
-function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onBeginDrag?: (event: React.PointerEvent, setDragging: (d: boolean) => void) => void; onCommit?: () => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string) => void; showText?: boolean }) {
+function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onBeginDrag?: (event: React.PointerEvent, setDragging: (d: boolean) => void) => void; onCommit?: () => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string, inspect?: boolean) => void; showText?: boolean }) {
     const renderer = useInterconnectionRenderer();
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
-    const selected = useModelStore(state => state.selectedElementId === port.id);
+    const selected = useModelStore(state => state.canvasPortSelection === port.id);
     const suppressSelectRef = useRef(false);
     const dimmed = useConnectorHoverActive() && !highlighted;
     const size = renderer.portSize(port);
@@ -238,33 +242,6 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', stop, { once: true });
     };
-    const beginResize = (axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') =>
-        (event: React.PointerEvent) => {
-            if (!onResize) return;
-            event.preventDefault();
-            event.stopPropagation();
-            const startX = event.clientX;
-            const startY = event.clientY;
-            const startSize = size;
-            suppressSelectRef.current = true;
-            const move = (next: PointerEvent) => {
-                const dx = (next.clientX - startX) / getZoom();
-                const dy = (next.clientY - startY) / getZoom();
-                const horizontal = axis.includes('e') ? dx : axis.includes('w') ? -dx : undefined;
-                const vertical = axis.includes('s') ? dy : axis.includes('n') ? -dy : undefined;
-                const delta = horizontal !== undefined && vertical !== undefined
-                    ? (horizontal + vertical) / 2
-                    : horizontal ?? vertical ?? 0;
-                onResize(Math.min(48, Math.max(10, startSize + delta)), axis);
-            };
-            const stop = () => {
-                window.removeEventListener('pointermove', move);
-                window.removeEventListener('pointerup', stop);
-                window.setTimeout(() => { suppressSelectRef.current = false; }, 0);
-            };
-            window.addEventListener('pointermove', move);
-            window.addEventListener('pointerup', stop, { once: true });
-        };
     // Label sits inside the owner, just ABOVE the port's centreline — the
     // connector enters the port horizontally at centre-y, so a vertically
     // centred label would be struck through by its own edge. A translucent
@@ -324,6 +301,7 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
     return (
         <div
             className="nodrag nopan"
+            data-ibd-port={port.id}
             style={{
                 position: 'absolute',
                 left: port.x,
@@ -339,10 +317,11 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
                 label stay at model scale \u2014 scaling them too made labels grow
                 relative to their node at low zoom and collide. */}
             <div
+                data-ibd-port-move
                 onPointerEnter={() => setConnectorHover({ endpointIds: [port.id] })}
                 onPointerLeave={() => setConnectorHover(null)}
                 onPointerDown={beginMove}
-                onClick={selectPort}
+                onClick={selectPort} onDoubleClick={event => { event.stopPropagation(); onSelect?.(port.id, true); }}
                 title={`${port.name}${port.direction ? ` (${port.direction})` : ''}${port.connectorType ? `\n${port.connectorType}` : ''}`}
                 style={{
                     position: 'absolute',
@@ -378,7 +357,7 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
             }}>
                 {renderer.portGlyph(port.direction, port.side, port)}
                 {showText && (
-                    <span onPointerDown={beginMove} onClick={selectPort} style={labelStyle}>
+                    <span data-ibd-caption onPointerDown={beginMove} onClick={selectPort} onDoubleClick={event => { event.stopPropagation(); onSelect?.(port.id, true); }} style={labelStyle}>
                         <span style={nameStyle}>{port.name.replace(/([a-z0-9])([A-Z])/g, '$1\u200B$2')}</span>
                         {port.connectorType && <span style={connectorStyle}>{port.connectorType}</span>}
                     </span>
@@ -401,31 +380,15 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
                         <BaseHandle key={`s${h.suffix}`} className={cls} type="source" id={`${port.id}${h.suffix}`} position={h.pos}
                             style={style} isConnectable={canConnect}
                             onPointerDownCapture={canConnect ? trackConnectionGesture : undefined}
-                            onClick={canConnect ? selectPort : undefined} />,
+                            onClick={selectPort} onDoubleClick={canConnect ? event => { event.stopPropagation(); onSelect?.(port.id, true); } : undefined} />,
                         <BaseHandle key={`t${h.suffix}`} className={cls} type="target" id={`${port.id}${h.suffix}`} position={h.pos}
                             style={style} isConnectable={canConnect}
                             onPointerDownCapture={canConnect ? trackConnectionGesture : undefined}
-                            onClick={canConnect ? selectPort : undefined} />,
+                            onClick={selectPort} onDoubleClick={canConnect ? event => { event.stopPropagation(); onSelect?.(port.id, true); } : undefined} />,
                     ];
                 })}
             </div>
-            {onResize && ([
-                ['n', { top: -5, left: 5, right: 5, height: 10, cursor: 'ns-resize' }],
-                ['e', { top: 5, right: -5, bottom: 5, width: 10, cursor: 'ew-resize' }],
-                ['s', { bottom: -5, left: 5, right: 5, height: 10, cursor: 'ns-resize' }],
-                ['w', { top: 5, left: -5, bottom: 5, width: 10, cursor: 'ew-resize' }],
-                ['nw', { top: -5, left: -5, width: 10, height: 10, cursor: 'nwse-resize' }],
-                ['ne', { top: -5, right: -5, width: 10, height: 10, cursor: 'nesw-resize' }],
-                ['se', { bottom: -5, right: -5, width: 10, height: 10, cursor: 'nwse-resize' }],
-                ['sw', { bottom: -5, left: -5, width: 10, height: 10, cursor: 'nesw-resize' }],
-            ] as const).map(([axis, position]) => (
-                <div
-                    key={axis}
-                    className={`ibd-port-resize-handle ibd-port-resize-handle--${axis}`}
-                    onPointerDown={beginResize(axis)}
-                    style={{ position: 'absolute', zIndex: 20, touchAction: 'none', ...position }}
-                />
-            ))}
+
         </div>
     );
 }
@@ -495,7 +458,8 @@ function DrillInButton({ label, onDrillIn, color, onColor }: {
         <button
             aria-label={`Drill into ${label}`}
             title={`Open ${label} as its own internal block diagram`}
-            className="nodrag"
+            className="nodrag nopan"
+            onMouseDown={event => event.stopPropagation()}
             onClick={event => { event.stopPropagation(); onDrillIn(); }}
             onDoubleClick={event => event.stopPropagation()}
             style={{
@@ -559,13 +523,30 @@ function CollapseButton({ label, isCollapsed, onToggle, color, onColor }: {
 }
 
 function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
-    const store = useStoreApi();
     const renderer = useInterconnectionRenderer();
-    const { getZoom } = useReactFlow();
+    const { getZoom, getNodes, setNodes } = useReactFlow();
+    const controlZoom = useStore(state => state.transform[2]);
+    const rootRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const cleanupResizeRef = useRef<(() => void) | null>(null);
+    const pointerResizeRef = useRef<{ move: (e: MouseEvent) => void; stop: () => void } | null>(null);
+    // Register before D3 installs its window capture listeners on pointer-down;
+    // those listeners stopImmediatePropagation. Keep acquisition unchanged.
+    useEffect(() => {
+        const move = (e: MouseEvent) => pointerResizeRef.current?.move(e);
+        const stop = () => pointerResizeRef.current?.stop();
+        window.addEventListener('mousemove', move, true);
+        window.addEventListener('mouseup', stop, true);
+        return () => {
+            cleanupResizeRef.current?.();
+            window.removeEventListener('mousemove', move, true);
+            window.removeEventListener('mouseup', stop, true);
+        };
+    }, []);
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView, minWidth, minHeight,
+        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -581,25 +562,81 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
         isFrame: !!isFrame, isContainer, hasChildren: !!hasChildren, hovered,
         color, bgColor, borderColor,
     });
-    const canResizeWithoutOverlap = (_event: unknown, next: ResizeParamsWithDirection): boolean => {
-        const current = store.getState().nodeLookup.get(id);
-        if (!current) return true;
-        const gap = 4;
-        return [...store.getState().nodeLookup.values()].every(other => {
-            if (other.id === id || other.parentId !== current.parentId || other.hidden) return true;
-            const width = other.measured.width ?? other.width ?? 0;
-            const otherHeight = other.measured.height ?? other.height ?? 0;
-            if (width <= 0 || otherHeight <= 0) return true;
-            const position = other.internals.positionAbsolute;
-            return next.x + next.width + gap <= position.x
-                || position.x + width + gap <= next.x
-                || next.y + next.height + gap <= position.y
-                || position.y + otherHeight + gap <= next.y;
+    // Keep React Flow's acquisition surface. Its proposed geometry is not used:
+    // its internal clamps lose original-pointer reversal and duplicate rebasing.
+    const beginIbdResize = (event: { sourceEvent: MouseEvent }) => {
+        if (d.resizeReadOnly) return;
+        cleanupResizeRef.current?.();
+        const source = event.sourceEvent;
+        const control = (source.target as Element).closest('.react-flow__resize-control');
+        if (!control || !headerRef.current) return;
+        const classes = control.classList;
+        const direction = `${classes.contains('top') ? 'n' : classes.contains('bottom') ? 's' : ''}${classes.contains('left') ? 'w' : classes.contains('right') ? 'e' : ''}` as ResizeDirection;
+        const start = getNodes();
+        const zoom = getZoom() || 1;
+        const header = headerRef.current;
+        const text = [...header.querySelectorAll('span')].filter(e => !e.querySelector('span'));
+        const canvas = document.createElement('canvas').getContext('2d')!;
+        const widths = text.map(e => {
+            const css = getComputedStyle(e);
+            canvas.font = `${css.fontWeight} ${css.fontSize} ${css.fontFamily}`;
+            // Name can wrap at words; the type identity is intentionally nowrap.
+            const value = css.textTransform === 'uppercase' ? (e.textContent ?? '').toUpperCase() : (e.textContent ?? '');
+            const words = css.whiteSpace === 'nowrap' ? [value] : value.split(/\s+/);
+            const spacing = parseFloat(css.letterSpacing) || 0;
+            return Math.max(0, ...words.map(word => canvas.measureText(word).width + Math.max(0, word.length - 1) * spacing));
         });
+        const controls = [...header.querySelectorAll('button')].reduce((sum, e) => sum + e.offsetWidth + 6, 0);
+        const measuredPorts = ports.map(p => {
+            const glyph = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-ibd-port]') ?? [])].find(e => e.dataset.ibdPort === p.id);
+            const caption = glyph?.querySelector<HTMLElement>('[data-ibd-caption]');
+            const size = glyph?.offsetWidth ?? renderer.portSize(p);
+            return { p, size, captionWidth: caption?.offsetWidth ?? 0, captionHeight: caption?.offsetHeight ?? 0 };
+        });
+        const minima: ResizeMinimums = {
+            title: { width: (isFrame ? widths.reduce((sum, width) => sum + width + 6, 0) : Math.max(0, ...widths)) + controls + 24, height: header.offsetHeight },
+            content: {
+                width: Math.max(0, ...measuredPorts.filter(({p}) => p.side === 'left' || p.side === 'right').map(m => m.captionWidth + m.size)),
+                height: Math.max(header.offsetHeight, ...measuredPorts.filter(({p}) => p.side === 'top' || p.side === 'bottom').map(m => m.captionHeight + m.size)),
+            },
+            // Normal-axis wall position moves with the owner. Only the measured
+            // envelope along the wall constrains shrinking (not the old ELK wall).
+            ports: measuredPorts.map(({p, size}) => {
+                const length = p.nestedCount ? (p.nestedCount - 1) * NESTED_PITCH + size + NESTED_PIN_INSET * 2 : size;
+                return p.side === 'top' || p.side === 'bottom'
+                    ? { x: p.x, y: 0, width: length + 8, height: size }
+                    : { x: 0, y: p.y, width: size, height: length + 8 };
+            }),
+        };
+        let latest = start;
+        const publish = (phase: 'start' | 'update' | 'commit' | 'cancel', next = latest) => {
+            if (d.onIbdResize) d.onIbdResize(phase, next);
+            else if (phase !== 'start') setNodes(next);
+        };
+        const move = (next: MouseEvent) => {
+            const result = resizeIbdNodes(start, id, direction,
+                { x: (next.clientX - source.clientX) / zoom, y: (next.clientY - source.clientY) / zoom }, minima);
+            if (result) { latest = result; publish('update'); }
+        };
+        const cleanup = () => {
+            pointerResizeRef.current = null;
+            window.removeEventListener('keydown', key);
+            window.removeEventListener('blur', cancel);
+            cleanupResizeRef.current = null;
+        };
+        const stop = () => { cleanup(); publish('commit'); };
+        const cancel = () => { cleanup(); publish('cancel', start); };
+        const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); cancel(); } };
+        cleanupResizeRef.current = cancel;
+        publish('start', start);
+        pointerResizeRef.current = { move, stop };
+        window.addEventListener('keydown', key);
+        window.addEventListener('blur', cancel, { once: true });
     };
 
     return (
         <div
+            ref={rootRef}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -621,31 +658,25 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 position: 'relative',
             }}
         >
-            {/* The IBD frame is also an authored block boundary. Let users grow
-                it around added parts just like any contained part; minWidth /
-                minHeight retain the layout-derived footprint so it cannot crop
-                its title bar, ports, or children. */}
-            <NodeResizer
-                nodeId={id}
-                isVisible={selected || hovered}
-                // A user can make a part as large as needed, but never
-                // smaller than its title, port gutters, and (for a
-                // container) its laid-out children.  This is the same
-                // containment invariant used by desktop diagram tools.
-                minWidth={minWidth ?? 180}
-                minHeight={minHeight ?? 100}
-                color="#2563EB"
-                // Above the ports: a wall carrying a run of ports would otherwise
-                // blanket its own border with 40px port hit targets, and the resize
-                // handles underneath could never be grabbed.
-                lineStyle={{ borderWidth: 1, zIndex: 20 }}
-                handleStyle={{ width: 10, height: 10, borderRadius: 2, zIndex: 21 }}
-                shouldResize={canResizeWithoutOverlap}
-            />
+            {selected && !d.resizeReadOnly && (['top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left', 'top-left'] as const).map(position => {
+                const corner = position.includes('-');
+                // Place discrete owner grips outside the port squares/ring, so
+                // even a corner port remains independently connectable.
+                const offset = Math.max(16 / controlZoom, ...ports.map(port => renderer.portSize(port) / 2 + 8 / controlZoom));
+                const left = position.includes('left') ? -offset : position.includes('right') ? `calc(100% + ${offset}px)` : '50%';
+                const top = position.includes('top') ? -offset : position.includes('bottom') ? `calc(100% + ${offset}px)` : '50%';
+                return <NodeResizeControl key={position} nodeId={id} position={position}
+                    variant={corner ? ResizeControlVariant.Handle : ResizeControlVariant.Line}
+                    minWidth={0} minHeight={0} color="#2563EB"
+                    style={{ left, top, width: corner ? 10 : 10 / controlZoom, height: corner ? 10 : 10 / controlZoom,
+                        transform: corner ? undefined : 'translate(-50%, -50%)', background: '#2563EB', borderWidth: 0,
+                        borderRadius: 2, zIndex: 21 }}
+                    shouldResize={() => false} onResizeStart={beginIbdResize} />;
+            })}
             {isFrame ? (
                 /* Modern IBD frame bar: clear context identity without the
                    dated clipped-corner tab or text-driven frame width. */
-                <div style={{
+                <div ref={headerRef} style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: 38,
                     display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 8,
                     padding: '0 10px',
@@ -663,7 +694,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 </div>
             ) : (
                 /* Part property header: `partName : Type` */
-                <div style={{
+                <div ref={headerRef} style={{
                     display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 6,
                     minHeight: 58,
                     padding: '7px 10px 6px',

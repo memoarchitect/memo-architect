@@ -1,5 +1,7 @@
-import { memo, type PointerEvent as ReactPointerEvent } from 'react';
-import { BaseEdge, EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react';
+import { attachedRoute, cubicRoutePath, arcRoutePath, polylinePath, type IbdRoutingType } from '../diagram/ibd-routing';
+import { ibdEdgeHitClip } from '../diagram/ibd-hit-targets';
+import { memo, useEffect, useRef, useId, type PointerEvent as ReactPointerEvent } from 'react';
+import { BaseEdge, EdgeLabelRenderer, useReactFlow, useStore, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
@@ -41,10 +43,10 @@ function roundedPath(points: Point[], radius = 7): string {
         const incoming = Math.hypot(cur.x - prev.x, cur.y - prev.y);
         const outgoing = Math.hypot(next.x - cur.x, next.y - cur.y);
         const r = Math.min(radius, incoming / 2, outgoing / 2);
-        const inX = cur.x - Math.sign(cur.x - prev.x) * r;
-        const inY = cur.y - Math.sign(cur.y - prev.y) * r;
-        const outX = cur.x + Math.sign(next.x - cur.x) * r;
-        const outY = cur.y + Math.sign(next.y - cur.y) * r;
+        const inX = cur.x - (cur.x - prev.x) / (incoming || 1) * r;
+        const inY = cur.y - (cur.y - prev.y) / (incoming || 1) * r;
+        const outX = cur.x + (next.x - cur.x) / (outgoing || 1) * r;
+        const outY = cur.y + (next.y - cur.y) / (outgoing || 1) * r;
         path += ` L ${inX},${inY} Q ${cur.x},${cur.y} ${outX},${outY}`;
     }
     const last = points[points.length - 1];
@@ -76,7 +78,11 @@ function labelAnchor(points: Point[]): Point {
 }
 
 function InterconnectionEdgeInner(props: EdgeProps) {
+    const cancelGesture = useRef<(() => void) | null>(null);
+    useEffect(() => () => cancelGesture.current?.(), []);
     const renderer = useInterconnectionRenderer();
+    const clipId = `ibd-hit-${useId().replaceAll(':', '')}`;
+    const hitClip = useStore(state => ibdEdgeHitClip(state.nodes, state.transform[2]));
     const { getZoom, screenToFlowPosition, getEdges } = useReactFlow();
     // Connectors that are not taking part are dimmed by ConnectorHoverStyles;
     // this edge only adds the ornament that marks the one that is.
@@ -91,10 +97,16 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     if (points.length < 2) return null;
     // The active profile draws the connector path — the default rounds the
     // orthogonal route; the IBD profile adds crossing bridges over other wires.
-    const displayPath = renderer.edgePath(points, {
+    const routingType = (props.data?.routingType as IbdRoutingType | undefined) ?? 'rounded';
+    const drawPoints = attachedRoute(points, routingType, props.data?.sourceSide as any, props.data?.targetSide as any, Boolean(props.data?.manualRoute));
+    const profilePath = renderer.edgePath(drawPoints, {
         edgeId: props.id,
         allEdges: getEdges().map(edge => ({ id: edge.id, points: edge.data?.points as Point[] | undefined })),
     });
+    const pathFor = (p: Point[]) => routingType === 'curved' ? cubicRoutePath(p)
+        : routingType === 'arc' ? arcRoutePath(p, Boolean(props.data?.manualRoute))
+        : routingType === 'rounded' ? roundedPath(p) : polylinePath(p);
+    const displayPath = routingType === 'rounded' ? profilePath : pathFor(drawPoints);
     const stroke = renderer.edgeStroke(props.style?.stroke as string | undefined);
     const baseWidth = Number(props.style?.strokeWidth ?? 2);
     const edgeStyle = highlighted
@@ -114,51 +126,82 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         return '';
     })();
     const hitTrim = Math.min(28 / Math.max(getZoom(), 0.1), routeLength(points) * 0.3);
-    const hitPoints = trimEndpoints(points, hitTrim);
+    const hitPoints = trimEndpoints(drawPoints, hitTrim);
+    const hitPath = pathFor(hitPoints);
     const onRouteChange = props.data?.onRouteChange as ((points: Point[]) => void) | undefined;
-    const onRouteChangeComplete = props.data?.onRouteChangeComplete as ((before: Point[], after: Point[]) => void) | undefined;
+    const onRouteChangeComplete = props.data?.onRouteChangeComplete as ((before: Point[], after: Point[], wasManual: boolean) => void) | undefined;
+    const onRouteStart = props.data?.onRouteStart as (() => void) | undefined;
+    const onRouteCancel = props.data?.onRouteCancel as (() => void) | undefined;
     const onSelect = props.data?.onSelect as ((event: React.MouseEvent<SVGPathElement>) => void) | undefined;
     const flowAnimation = Boolean(props.data?.flowAnimation);
     const draggableSegments: RouteSegment[] = points.length === 2
         ? [{ index: 1, a: points[0], b: points[1], straight: true }]
-        : points.slice(1).map((point, index) => ({ index: index + 1, a: points[index], b: point, straight: false }))
-            .filter(segment => segment.index >= 2 && segment.index <= points.length - 2);
+        : points.slice(1).map((point, index) => ({ index: index + 1, a: points[index], b: point, straight: false }));
+    const gesture = (event: ReactPointerEvent<SVGPathElement | HTMLDivElement>,
+        update: (e: PointerEvent) => Point[]) => {
+        cancelGesture.current?.();
+        const x = event.clientX, y = event.clientY, pointer = event.pointerId;
+        let moved = false, latest = points;
+        const cleanup = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            window.removeEventListener('pointercancel', cancel);
+            window.removeEventListener('keydown', key);
+            window.removeEventListener('blur', cancel);
+            cancelGesture.current = null;
+        };
+        const cancel = () => { cleanup(); if (moved) onRouteCancel?.(); };
+        const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); cancel(); } };
+        const move = (e: PointerEvent) => {
+            if (e.pointerId !== pointer) return;
+            if (!moved && Math.hypot(e.clientX - x, e.clientY - y) <= 3) return;
+            if (!moved) { onRouteStart?.(); moved = true; }
+            latest = update(e); onRouteChange?.(latest);
+        };
+        const up = (e: PointerEvent) => {
+            if (e.pointerId !== pointer) return;
+            cleanup(); if (moved) onRouteChangeComplete?.(points, latest, Boolean(props.data?.manualRoute));
+        };
+        cancelGesture.current = cancel;
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', cancel);
+        window.addEventListener('keydown', key);
+        window.addEventListener('blur', cancel);
+    };
     const beginRouteDrag = (event: ReactPointerEvent<SVGPathElement | HTMLDivElement>, segment: RouteSegment) => {
         if (!onRouteChange) return;
         event.preventDefault();
         event.stopPropagation();
         const before = points.map(point => ({ ...point }));
         const startX = event.clientX, startY = event.clientY;
-        let latest = before;
-        const move = (e: PointerEvent) => {
+        gesture(event, (e: PointerEvent) => {
+            let latest = before;
             const dx = (e.clientX - startX) / getZoom();
             const dy = (e.clientY - startY) / getZoom();
-            if (segment.straight) {
+            if (segment.straight || segment.index === 1 || segment.index === points.length - 1) {
                 if (Math.abs(dy) >= Math.abs(dx)) {
                     const laneY = segment.a.y + dy;
-                    latest = [segment.a, { x: segment.a.x, y: laneY }, { x: segment.b.x, y: laneY }, segment.b];
+                    latest = [...before.slice(0, segment.index), { x: segment.a.x, y: laneY }, { x: segment.b.x, y: laneY }, ...before.slice(segment.index)];
                 } else {
                     const laneX = (segment.a.x + segment.b.x) / 2 + dx;
-                    latest = [segment.a, { x: laneX, y: segment.a.y }, { x: laneX, y: segment.b.y }, segment.b];
+                    latest = [...before.slice(0, segment.index), { x: laneX, y: segment.a.y }, { x: laneX, y: segment.b.y }, ...before.slice(segment.index)];
                 }
             } else {
                 latest = points.map(point => ({ ...point }));
                 if (segment.a.y === segment.b.y) {
                     latest[segment.index - 1].y = segment.a.y + dy;
                     latest[segment.index].y = segment.b.y + dy;
-                } else {
+                } else if (segment.a.x === segment.b.x) {
                     latest[segment.index - 1].x = segment.a.x + dx;
                     latest[segment.index].x = segment.b.x + dx;
+                } else {
+                    latest[segment.index - 1] = { x: segment.a.x + dx, y: segment.a.y + dy };
+                    latest[segment.index] = { x: segment.b.x + dx, y: segment.b.y + dy };
                 }
             }
-            onRouteChange(latest);
-        };
-        const up = () => {
-            window.removeEventListener('pointermove', move);
-            onRouteChangeComplete?.(before, latest);
-        };
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', up, { once: true });
+            return latest;
+        });
     };
     const nearestDraggableSegment = (point: Point): RouteSegment | undefined => {
         const squaredDistance = (segment: RouteSegment) => {
@@ -185,27 +228,44 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     pointerEvents="none"
                 />
             )}
-            <BaseEdge id={props.id} path={displayPath} style={edgeStyle} markerEnd={props.markerEnd} />
+            <defs><clipPath id={clipId}><path d={hitClip} clipRule="evenodd" /></clipPath></defs>
+            <BaseEdge id={props.id} path={displayPath} interactionWidth={0} style={{ ...edgeStyle, pointerEvents: 'none' }} markerEnd={props.markerEnd} />
             {flowAnimation && (
                 <path
                     d={displayPath}
                     fill="none"
                     stroke={stroke}
                     strokeWidth={Math.max(2, Number(props.style?.strokeWidth ?? 2))}
-                    className="memo-ibd-flow"
+                    className="memo-ibd-flow" pointerEvents="none"
                 />
             )}
             {hitPoints.length >= 2 && (
                 <path
-                    d={roundedPath(hitPoints)}
+                    d={hitPath}
+                    clipPath={`url(#${clipId})`}
+                    data-ibd-connector-hit
                     fill="none"
                     stroke="transparent"
                     strokeWidth={18 / Math.max(getZoom(), 0.1)}
                     pointerEvents="stroke"
                     cursor="pointer"
                     onClick={event => onSelect?.(event)}
+                    onDoubleClick={event => {
+                        if (!props.data?.manualRoute) {
+                            event.stopPropagation();
+                            (props.data?.onInspect as (() => void) | undefined)?.();
+                            return;
+                        }
+                        if (!onRouteChange) return;
+                        event.preventDefault(); event.stopPropagation();
+                        const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+                        const segment = nearestDraggableSegment(point);
+                        if (!segment) return;
+                        const after = [...points.slice(0, segment.index), point, ...points.slice(segment.index)];
+                        onRouteStart?.(); onRouteChange(after); onRouteChangeComplete?.(points, after, true);
+                    }}
                     onPointerDown={event => {
-                        if (!props.selected || !onRouteChange || draggableSegments.length === 0) return;
+                        if (!onRouteChange || draggableSegments.length === 0) return;
                         const segment = nearestDraggableSegment(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
                         if (segment) beginRouteDrag(event, segment);
                     }}
@@ -213,7 +273,8 @@ function InterconnectionEdgeInner(props: EdgeProps) {
             )}
             {props.label && props.data?.showLabel !== false ? (
                 <EdgeLabelRenderer>
-                    <div style={{
+                    <div onDoubleClick={event => { event.stopPropagation();
+                        (props.data?.onInspect as (() => void) | undefined)?.(); }} style={{
                         position: 'absolute',
                         transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)${labelRotation}`,
                         fontSize: FONT.badge, fontWeight: highlighted ? 700 : 600,
@@ -221,12 +282,35 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                         background: 'rgba(255,255,255,0.96)',
                         border: `1px solid ${highlighted ? stroke : '#E2E8F0'}`,
                         opacity: labelDimmed ? 0.25 : 1,
-                        padding: '1px 4px', borderRadius: 4, pointerEvents: 'none',
+                        padding: '1px 4px', borderRadius: 4, pointerEvents: 'all',
                     }}>
                         {props.label}
                     </div>
                 </EdgeLabelRenderer>
             ) : null}
+            {props.selected && props.data?.manualRoute && onRouteChange ? points.slice(1, -1).map((point, offset) => (
+                <EdgeLabelRenderer key={`breakpoint-${offset}`}>
+                    <div className="nodrag nopan" role="button" aria-label={`Route breakpoint ${offset + 1}`}
+                        title="Drag breakpoint to move; double-click to remove"
+                        onDoubleClick={event => {
+                            event.preventDefault(); event.stopPropagation();
+                            const after = points.filter((_, index) => index !== offset + 1);
+                            onRouteStart?.(); onRouteChange(after); onRouteChangeComplete?.(points, after, true);
+                        }}
+                        onPointerDown={event => {
+                            event.preventDefault(); event.stopPropagation();
+                            const before = points.map(p => ({ ...p }));
+                            gesture(event, (e: PointerEvent) => {
+                                const after = before.map(p => ({ ...p }));
+                                after[offset + 1] = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+                                return after;
+                            });
+                        }}
+                        style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)`,
+                            width: 12, height: 12, borderRadius: '50%', background: '#fff', border: '2px solid #d97706',
+                            cursor: 'move', pointerEvents: 'all', touchAction: 'none', zIndex: 21 }} />
+                </EdgeLabelRenderer>
+            )) : null}
             {props.selected && onRouteChange ? draggableSegments.map(segment => {
                 const x = (segment.a.x + segment.b.x) / 2;
                 const y = (segment.a.y + segment.b.y) / 2;

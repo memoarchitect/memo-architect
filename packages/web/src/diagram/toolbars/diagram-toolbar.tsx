@@ -90,6 +90,7 @@ export interface DiagramToolbarContext {
 
     // ── Common: route / auto-layout ──────────────────────────────────────────
     tidyConnectors: () => void;
+    ibdRoutingControls?: ReactNode;
     autoLayoutEnabled: boolean;
     markManualLayout: () => void;
     mergeDiagramLayouts: (patch: Record<string, DiagramLayout>) => void;
@@ -595,6 +596,8 @@ export class InterconnectionToolbar extends BaseDiagramToolbar {
     override renderProfileControls(ctx: DiagramToolbarContext): ReactNode {
         return (
             <>
+                {ctx.ibdRoutingControls}
+
                 {ctx.supportsToolbarOperation('expandCollapse') && (
                     <>
                         <ToolbarSep hidden={ctx.actionFlowToolbarPlacement === 'left'} />

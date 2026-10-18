@@ -340,9 +340,7 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
         );
     }
 
-    // Fixed square: declaration-specific sizes must not change notation.
-    override portSize(): number { return INTERCONNECTION_PORT_SIZE; }
-    override get forcedPortSize(): number { return INTERCONNECTION_PORT_SIZE; }
+    // Size is a per-view presentation override; the default notation stays 32px.
 
     override portBoxBorderRadius(): number { return 2; }
 

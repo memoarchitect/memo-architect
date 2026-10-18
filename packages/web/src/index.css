@@ -193,34 +193,15 @@ body .react-flow {
     cursor: grabbing !important;
 }
 
-/* Resize affordances exist while a part is hovered, but only the boundary or
-   corner actually under the pointer is painted. React Flow supplies the native
-   ew/ns/diagonal cursors and resizing mechanics for these hit zones. */
+/* Other diagram controls retain their existing proximity presentation. */
 .memo-diagram-canvas .react-flow__resize-control {
     opacity: 0;
     transition: opacity 80ms ease;
 }
-
 .memo-diagram-canvas .react-flow__resize-control:hover,
-.memo-diagram-canvas .react-flow__resize-control:active {
-    opacity: 1;
-}
-
-/* Ports use the same proximity rule. Their visual size is a per-view override;
-   the SysML port itself and its connector semantics are unchanged. */
-.memo-diagram-canvas .ibd-port-resize-handle {
-    opacity: 0;
-    background: #FFFFFF;
-    border: 1.5px solid #2563EB;
-    border-radius: 2px;
-    box-sizing: border-box;
-    transition: opacity 80ms ease;
-}
-
-.memo-diagram-canvas .ibd-port-resize-handle:hover,
-.memo-diagram-canvas .ibd-port-resize-handle:active {
-    opacity: 1;
-}
+.memo-diagram-canvas .react-flow__resize-control:active { opacity: 1; }
+/* IBD owners render eight selected-only grips; port sizing is explicit. */
+.memo-diagram-canvas .react-flow__node-interconnectionNode .react-flow__resize-control { opacity: 1; }
 
 /* A connector endpoint is editable through React Flow's standard reconnect
    anchor. Keep the control invisible until the edge or endpoint is hovered,
