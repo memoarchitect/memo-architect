@@ -644,7 +644,7 @@ export interface InterconnectionOptions {
     /** Persist a port's position once its drag ends. */
     onPortCommit?: (ownerId: string, portId: string) => void;
     /** Bind a visible port glyph to the model element it represents. */
-    onPortSelect?: (portId: string) => void;
+    onPortSelect?: (portId: string, inspect?: boolean) => void;
     layoutProviderId?: string;
     /** Deliberate density control: bundle repeated rendered endpoint pairs,
      * show every connector, or suppress wiring while inspecting structure. */
@@ -1411,13 +1411,8 @@ export async function computeInterconnectionLayout(
                     ? (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => options.onPortResize!(partId, portId, size, axis)
                     : undefined,
                 onPortSelect: options?.onPortSelect
-                    ? (portId: string) => options.onPortSelect!(portId)
+                    ? (portId: string, inspect?: boolean) => options.onPortSelect!(portId, inspect)
                     : undefined,
-                // Preserve this model-derived footprint while the user resizes
-                // a node.  A container cannot be shrunk across one of its
-                // children, and a leaf cannot crop its port-label gutters.
-                minWidth: l.width,
-                minHeight: l.height,
             },
             style: { width: l.width, height: l.height },
         });

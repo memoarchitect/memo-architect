@@ -1,3 +1,4 @@
+import { LayoutSaveObservation } from '../diagram/layout-save-observation';
 // ─── WebSocket Client ─────────────────────────────────────────────────────────
 //
 // Connects to the CLI dev server WebSocket and dispatches messages
@@ -37,6 +38,8 @@ declare global {
     }
 }
 
+const layoutSaveObservation = new LayoutSaveObservation();
+export const getDiagramLayoutSaveObservation = (id: string) => layoutSaveObservation.read(id);
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempts = 0;
@@ -483,7 +486,11 @@ function handleMessage(msg: ExtendedServerMessage): void {
             store.setOntologyInstallStatus({ installing: false });
             break;
         case 'diagram:layout':
-            store.mergeDiagramLayouts(msg.payload.layouts);
+            store.mergeDiagramLayouts(Object.fromEntries(Object.entries(msg.payload.layouts)
+                .filter(([id, layout]) => layoutSaveObservation.accept(id, layout))));
+            break;
+        case 'diagram:layout:saved':
+            layoutSaveObservation.observed(msg.payload.diagramId, msg.payload.requestId, msg.payload.error);
             break;
         case 'import:result':
             store.setImportResult(msg.payload);
@@ -1160,7 +1167,8 @@ export function sendOntologyRemove(packageName: string): void {
 /** Save per-diagram positions/edge styles into the view's layout statements (the server writes them into the `view`). */
 export function sendDiagramLayoutUpdate(diagramId: string, layout: DiagramLayout): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'diagram:layout:update', payload: { diagramId, layout } }));
+        const requestId = layoutSaveObservation.sent(diagramId, layout);
+        ws.send(JSON.stringify({ type: 'diagram:layout:update', payload: { diagramId, layout, requestId } }));
     }
 }
 

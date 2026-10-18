@@ -1,0 +1,1558 @@
+format: memo.viewlayout/v2
+viewSource: model/catalog/views.sysml
+layouts:
+  vehicleRoutingPilot:
+    nodes:
+      memo_vehicle_routing::vehicle:
+        x: 353
+        y: 0
+        parent: null
+        ports: {}
+      memo_vehicle_routing::vehicle::powertrain:
+        x: 231.10000000000002
+        y: 52.16666666666666
+        parent: memo_vehicle_routing::vehicle
+        ports: {}
+      memo_vehicle_routing::vehicle::powertrain::fuelTank:
+        x: 0
+        y: 147.83333333333334
+        parent: memo_vehicle_routing::vehicle::powertrain
+        ports:
+          memo_vehicle_routing::vehicle::powertrain::fuelTank::fuelSupplyOut:
+            x: 204
+            y: 53.95406101672228
+            side: right
+      memo_vehicle_routing::vehicle::powertrain::engine:
+        x: 386.15
+        y: 48
+        parent: memo_vehicle_routing::vehicle::powertrain
+        ports:
+          memo_vehicle_routing::vehicle::powertrain::engine::fuelSupplyIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::powertrain::engine::drivePowerOut:
+            x: 313
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::powertrain::engine::fuelCommandIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::powertrain::engine::engineStatusOut:
+            x: 313
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::powertrain::transmission:
+        x: 384.6
+        y: 268
+        parent: memo_vehicle_routing::vehicle::powertrain
+        ports:
+          memo_vehicle_routing::vehicle::powertrain::transmission::drivePowerIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::powertrain::transmission::shaftTorqueOut:
+            x: 316
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::powertrain::transmission::gearCommandIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::powertrain::transmission::gearStatusOut:
+            x: 316
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::powertrain::driveshaft:
+        x: 14
+        y: 288
+        parent: memo_vehicle_routing::vehicle::powertrain
+        ports:
+          memo_vehicle_routing::vehicle::powertrain::driveshaft::shaftTorqueIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::powertrain::driveshaft::rearTorqueOut:
+            x: 301
+            y: 58
+            side: right
+        width: 317
+        height: 154
+      memo_vehicle_routing::vehicle::rearAxle:
+        x: 1232.7
+        y: 48
+        parent: memo_vehicle_routing::vehicle
+        ports: {}
+      memo_vehicle_routing::vehicle::rearAxle::differential:
+        x: 14
+        y: 104.66666666666666
+        parent: memo_vehicle_routing::vehicle::rearAxle
+        ports:
+          memo_vehicle_routing::vehicle::rearAxle::differential::rearTorqueIn:
+            x: -16
+            y: 65
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::differential::leftTorqueOut:
+            x: 310
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::rearAxle::differential::rightTorqueOut:
+            x: 310
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle:
+        x: 416.4
+        y: 96.33333333333333
+        parent: memo_vehicle_routing::vehicle::rearAxle
+        ports:
+          memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftTorqueIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftWheelTorqueOut:
+            x: 333
+            y: 58
+            side: right
+      memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle:
+        x: 409.79999999999995
+        y: 316.3333333333333
+        parent: memo_vehicle_routing::vehicle::rearAxle
+        ports:
+          memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightTorqueIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightWheelTorqueOut:
+            x: 346
+            y: 58
+            side: right
+      memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel:
+        x: 841.5999999999999
+        y: 48
+        parent: memo_vehicle_routing::vehicle::rearAxle
+        ports:
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::leftWheelTorqueIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftSenseOut:
+            x: 361
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftBrakeIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftRoadOut:
+            x: 361
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::rearAxle::rearRightWheel:
+        x: 841.5999999999999
+        y: 268
+        parent: memo_vehicle_routing::vehicle::rearAxle
+        ports:
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rightWheelTorqueIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightSenseOut:
+            x: 368
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightBrakeIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightRoadOut:
+            x: 368
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::frontAxle:
+        x: 1446.4499999999998
+        y: 696.3333333333333
+        parent: memo_vehicle_routing::vehicle
+        ports: {}
+      memo_vehicle_routing::vehicle::frontAxle::steeringRack:
+        x: 14
+        y: 48
+        parent: memo_vehicle_routing::vehicle::frontAxle
+        ports:
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerLeftOut:
+            x: 323
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerRightOut:
+            x: 323
+            y: 112
+            side: right
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerCommandIn:
+            x: -16
+            y: 65
+            side: left
+      memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel:
+        x: 410.54999999999995
+        y: 48
+        parent: memo_vehicle_routing::vehicle::frontAxle
+        ports:
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::steerLeftIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftSenseOut:
+            x: 368
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftBrakeIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftRoadOut:
+            x: 368
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::frontAxle::frontRightWheel:
+        x: 407
+        y: 268
+        parent: memo_vehicle_routing::vehicle::frontAxle
+        ports:
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::steerRightIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightSenseOut:
+            x: 375
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightBrakeIn:
+            x: -16
+            y: 112
+            side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightRoadOut:
+            x: 375
+            y: 112
+            side: right
+      memo_vehicle_routing::vehicle::electronics:
+        x: 14
+        y: 556.3333333333333
+        parent: memo_vehicle_routing::vehicle
+        ports: {}
+      memo_vehicle_routing::vehicle::electronics::battery:
+        x: 14
+        y: 128
+        parent: memo_vehicle_routing::vehicle::electronics
+        ports:
+          memo_vehicle_routing::vehicle::electronics::battery::batteryPowerOut:
+            x: 226
+            y: 58
+            side: right
+      memo_vehicle_routing::vehicle::electronics::powerDistribution:
+        x: 309.7
+        y: 88
+        parent: memo_vehicle_routing::vehicle::electronics
+        ports:
+          memo_vehicle_routing::vehicle::electronics::powerDistribution::batteryPowerIn:
+            x: -16
+            y: 85
+            side: left
+          memo_vehicle_routing::vehicle::electronics::powerDistribution::controllerPowerOut:
+            x: 373
+            y: 104
+            side: right
+          memo_vehicle_routing::vehicle::electronics::powerDistribution::brakePowerOut:
+            x: 373
+            y: 154.66666666666669
+            side: right
+          memo_vehicle_routing::vehicle::electronics::powerDistribution::sensorPowerOut:
+            x: 373
+            y: 58
+            side: right
+      memo_vehicle_routing::vehicle::electronics::wheelSensors:
+        x: 753.65
+        y: 48
+        parent: memo_vehicle_routing::vehicle::electronics
+        width: 396.29999999999995
+        height: 300.8
+        ports:
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::wheelStatusOut:
+            x: 380.29999999999995
+            y: 125
+            side: right
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::sensorPowerIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::frontLeftSenseIn:
+            x: -16
+            y: 102
+            side: left
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::frontRightSenseIn:
+            x: -16
+            y: 146
+            side: left
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::rearLeftSenseIn:
+            x: -16
+            y: 190.39999999999998
+            side: left
+          memo_vehicle_routing::vehicle::electronics::wheelSensors::rearRightSenseIn:
+            x: -16
+            y: 236.8
+            side: left
+      memo_vehicle_routing::vehicle::electronics::controller:
+        x: 752.9
+        y: 388
+        parent: memo_vehicle_routing::vehicle::electronics
+        width: 397.8
+        height: 342
+        ports:
+          memo_vehicle_routing::vehicle::electronics::controller::driverDemandIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::vehicle::electronics::controller::fuelCommandOut:
+            x: 381.8
+            y: 62
+            side: right
+          memo_vehicle_routing::vehicle::electronics::controller::gearCommandOut:
+            x: 381.8
+            y: 130
+            side: right
+          memo_vehicle_routing::vehicle::electronics::controller::steerCommandOut:
+            x: 381.8
+            y: 198
+            side: right
+          memo_vehicle_routing::vehicle::electronics::controller::brakeCoordinationOut:
+            x: 381.8
+            y: 266
+            side: right
+          memo_vehicle_routing::vehicle::electronics::controller::wheelStatusIn:
+            x: -16
+            y: 102
+            side: left
+          memo_vehicle_routing::vehicle::electronics::controller::brakeFeedbackIn:
+            x: -16
+            y: 190
+            side: left
+          memo_vehicle_routing::vehicle::electronics::controller::controllerPowerIn:
+            x: -16
+            y: 146
+            side: left
+          memo_vehicle_routing::vehicle::electronics::controller::engineStatusIn:
+            x: -16
+            y: 234
+            side: left
+          memo_vehicle_routing::vehicle::electronics::controller::gearStatusIn:
+            x: -16
+            y: 278
+            side: left
+      memo_vehicle_routing::vehicle::electronics::brakeController:
+        x: 312.5
+        y: 408
+        parent: memo_vehicle_routing::vehicle::electronics
+        width: 383.6
+        height: 300.8
+        ports:
+          memo_vehicle_routing::vehicle::electronics::brakeController::brakeDemandIn:
+            x: -16
+            y: 66.66666666666666
+            side: left
+          memo_vehicle_routing::vehicle::electronics::brakeController::brakeCoordinationIn:
+            x: -16
+            y: 221.33333333333334
+            side: left
+          memo_vehicle_routing::vehicle::electronics::brakeController::brakeFeedbackOut:
+            x: 367.6
+            y: 58
+            side: right
+          memo_vehicle_routing::vehicle::electronics::brakeController::brakePowerIn:
+            x: -16
+            y: 144
+            side: left
+          memo_vehicle_routing::vehicle::electronics::brakeController::frontLeftBrakeOut:
+            x: 367.6
+            y: 102
+            side: right
+          memo_vehicle_routing::vehicle::electronics::brakeController::frontRightBrakeOut:
+            x: 367.6
+            y: 146
+            side: right
+          memo_vehicle_routing::vehicle::electronics::brakeController::rearLeftBrakeOut:
+            x: 367.6
+            y: 190.39999999999998
+            side: right
+          memo_vehicle_routing::vehicle::electronics::brakeController::rearRightBrakeOut:
+            x: 367.6
+            y: 236.8
+            side: right
+      memo_vehicle_routing::driver:
+        x: 0
+        y: 571.1666666666666
+        parent: null
+        ports:
+          memo_vehicle_routing::driver::driverDemandOut:
+            x: 247
+            y: 58
+            side: right
+          memo_vehicle_routing::driver::brakeDemandOut:
+            x: 247
+            y: 112
+            side: right
+      memo_vehicle_routing::road:
+        x: 2928.8999999999996
+        y: 571.1666666666666
+        parent: null
+        width: 244.2
+        height: 260
+        ports:
+          memo_vehicle_routing::road::frontLeftRoadIn:
+            x: -16
+            y: 58
+            side: left
+          memo_vehicle_routing::road::frontRightRoadIn:
+            x: -16
+            y: 102
+            side: left
+          memo_vehicle_routing::road::rearLeftRoadIn:
+            x: -16
+            y: 148
+            side: left
+          memo_vehicle_routing::road::rearRightRoadIn:
+            x: -16
+            y: 196
+            side: left
+    edges:
+      memo_vehicle_routing::fuelSupply:
+        source: memo_vehicle_routing::vehicle::powertrain::fuelTank
+        target: memo_vehicle_routing::vehicle::powertrain::engine
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::fuelTank::fuelSupplyOut
+        targetPortId: memo_vehicle_routing::vehicle::powertrain::engine::fuelSupplyIn
+        manualLanding: true
+        sourceSide: right
+        sourceT: 0.5733939427600186
+        targetSide: left
+        targetT: 0.4567901234567901
+      memo_vehicle_routing::drivePower:
+        source: memo_vehicle_routing::vehicle::powertrain::engine
+        target: memo_vehicle_routing::vehicle::powertrain::transmission
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::engine::drivePowerOut
+        targetPortId: memo_vehicle_routing::vehicle::powertrain::transmission::drivePowerIn
+      memo_vehicle_routing::shaftTorque:
+        source: memo_vehicle_routing::vehicle::powertrain::transmission
+        target: memo_vehicle_routing::vehicle::powertrain::driveshaft
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::transmission::shaftTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::powertrain::driveshaft::shaftTorqueIn
+      memo_vehicle_routing::rearTorque:
+        source: memo_vehicle_routing::vehicle::powertrain::driveshaft
+        target: memo_vehicle_routing::vehicle::rearAxle::differential
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::driveshaft::rearTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::differential::rearTorqueIn
+      memo_vehicle_routing::leftTorque:
+        source: memo_vehicle_routing::vehicle::rearAxle::differential
+        target: memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::differential::leftTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftTorqueIn
+      memo_vehicle_routing::rightTorque:
+        source: memo_vehicle_routing::vehicle::rearAxle::differential
+        target: memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::differential::rightTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightTorqueIn
+      memo_vehicle_routing::leftWheelTorque:
+        source: memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle
+        target: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftWheelTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::leftWheelTorqueIn
+      memo_vehicle_routing::rightWheelTorque:
+        source: memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle
+        target: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightWheelTorqueOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rightWheelTorqueIn
+      memo_vehicle_routing::steerLeft:
+        source: memo_vehicle_routing::vehicle::frontAxle::steeringRack
+        target: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerLeftOut
+        targetPortId: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::steerLeftIn
+      memo_vehicle_routing::steerRight:
+        source: memo_vehicle_routing::vehicle::frontAxle::steeringRack
+        target: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerRightOut
+        targetPortId: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::steerRightIn
+      memo_vehicle_routing::driverDemand:
+        source: memo_vehicle_routing::driver
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::driver::driverDemandOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::driverDemandIn
+      memo_vehicle_routing::fuelCommand:
+        source: memo_vehicle_routing::vehicle::electronics::controller
+        target: memo_vehicle_routing::vehicle::powertrain::engine
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::controller::fuelCommandOut
+        targetPortId: memo_vehicle_routing::vehicle::powertrain::engine::fuelCommandIn
+      memo_vehicle_routing::gearCommand:
+        source: memo_vehicle_routing::vehicle::electronics::controller
+        target: memo_vehicle_routing::vehicle::powertrain::transmission
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::controller::gearCommandOut
+        targetPortId: memo_vehicle_routing::vehicle::powertrain::transmission::gearCommandIn
+      memo_vehicle_routing::steerCommand:
+        source: memo_vehicle_routing::vehicle::electronics::controller
+        target: memo_vehicle_routing::vehicle::frontAxle::steeringRack
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::controller::steerCommandOut
+        targetPortId: memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerCommandIn
+      memo_vehicle_routing::brakeDemand:
+        source: memo_vehicle_routing::driver
+        target: memo_vehicle_routing::vehicle::electronics::brakeController
+        sourcePortId: memo_vehicle_routing::driver::brakeDemandOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::brakeController::brakeDemandIn
+      memo_vehicle_routing::brakeCoordination:
+        source: memo_vehicle_routing::vehicle::electronics::controller
+        target: memo_vehicle_routing::vehicle::electronics::brakeController
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::controller::brakeCoordinationOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::brakeController::brakeCoordinationIn
+      memo_vehicle_routing::wheelStatus:
+        source: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::wheelStatusOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::wheelStatusIn
+      memo_vehicle_routing::brakeFeedback:
+        source: memo_vehicle_routing::vehicle::electronics::brakeController
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::brakeController::brakeFeedbackOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::brakeFeedbackIn
+      memo_vehicle_routing::batteryPower:
+        source: memo_vehicle_routing::vehicle::electronics::battery
+        target: memo_vehicle_routing::vehicle::electronics::powerDistribution
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::battery::batteryPowerOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::powerDistribution::batteryPowerIn
+      memo_vehicle_routing::controllerPower:
+        source: memo_vehicle_routing::vehicle::electronics::powerDistribution
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::powerDistribution::controllerPowerOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::controllerPowerIn
+      memo_vehicle_routing::brakePower:
+        source: memo_vehicle_routing::vehicle::electronics::powerDistribution
+        target: memo_vehicle_routing::vehicle::electronics::brakeController
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::powerDistribution::brakePowerOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::brakeController::brakePowerIn
+      memo_vehicle_routing::sensorPower:
+        source: memo_vehicle_routing::vehicle::electronics::powerDistribution
+        target: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::powerDistribution::sensorPowerOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::sensorPowerIn
+      memo_vehicle_routing::engineStatus:
+        source: memo_vehicle_routing::vehicle::powertrain::engine
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::engine::engineStatusOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::engineStatusIn
+      memo_vehicle_routing::gearStatus:
+        source: memo_vehicle_routing::vehicle::powertrain::transmission
+        target: memo_vehicle_routing::vehicle::electronics::controller
+        sourcePortId: memo_vehicle_routing::vehicle::powertrain::transmission::gearStatusOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::controller::gearStatusIn
+      memo_vehicle_routing::frontLeftSense:
+        source: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel
+        target: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftSenseOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::frontLeftSenseIn
+      memo_vehicle_routing::frontRightSense:
+        source: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel
+        target: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightSenseOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::frontRightSenseIn
+      memo_vehicle_routing::rearLeftSense:
+        source: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel
+        target: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftSenseOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::rearLeftSenseIn
+      memo_vehicle_routing::rearRightSense:
+        source: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel
+        target: memo_vehicle_routing::vehicle::electronics::wheelSensors
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightSenseOut
+        targetPortId: memo_vehicle_routing::vehicle::electronics::wheelSensors::rearRightSenseIn
+      memo_vehicle_routing::frontLeftBrake:
+        source: memo_vehicle_routing::vehicle::electronics::brakeController
+        target: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::brakeController::frontLeftBrakeOut
+        targetPortId: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftBrakeIn
+      memo_vehicle_routing::frontRightBrake:
+        source: memo_vehicle_routing::vehicle::electronics::brakeController
+        target: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::brakeController::frontRightBrakeOut
+        targetPortId: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightBrakeIn
+      memo_vehicle_routing::rearLeftBrake:
+        source: memo_vehicle_routing::vehicle::electronics::brakeController
+        target: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::brakeController::rearLeftBrakeOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftBrakeIn
+      memo_vehicle_routing::rearRightBrake:
+        source: memo_vehicle_routing::vehicle::electronics::brakeController
+        target: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel
+        sourcePortId: memo_vehicle_routing::vehicle::electronics::brakeController::rearRightBrakeOut
+        targetPortId: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightBrakeIn
+      memo_vehicle_routing::frontLeftRoad:
+        source: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel
+        target: memo_vehicle_routing::road
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftRoadOut
+        targetPortId: memo_vehicle_routing::road::frontLeftRoadIn
+      memo_vehicle_routing::frontRightRoad:
+        source: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel
+        target: memo_vehicle_routing::road
+        sourcePortId: memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightRoadOut
+        targetPortId: memo_vehicle_routing::road::frontRightRoadIn
+      memo_vehicle_routing::rearLeftRoad:
+        source: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel
+        target: memo_vehicle_routing::road
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftRoadOut
+        targetPortId: memo_vehicle_routing::road::rearLeftRoadIn
+      memo_vehicle_routing::rearRightRoad:
+        source: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel
+        target: memo_vehicle_routing::road
+        sourcePortId: memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightRoadOut
+        targetPortId: memo_vehicle_routing::road::rearRightRoadIn
+    annotations: {}
+    canvas:
+      renderer: memo.renderer.reactflow
+      jointjs:
+        nodes:
+          memo_vehicle_routing::vehicle:
+            x: 353
+            y: 0
+            width: 2485.8999999999996
+            height: 1290.3333333333333
+            ports: {}
+          memo_vehicle_routing::vehicle::powertrain:
+            x: 227
+            y: 50
+            width: 730.5
+            height: 442
+            ports: {}
+          memo_vehicle_routing::vehicle::rearAxle:
+            x: 1232.7
+            y: 48
+            width: 1239.1999999999998
+            height: 450.3333333333333
+            ports: {}
+          memo_vehicle_routing::vehicle::frontAxle:
+            x: 1446.4499999999998
+            y: 696.3333333333333
+            width: 811.7
+            height: 442
+            ports: {}
+          memo_vehicle_routing::vehicle::electronics:
+            x: 14
+            y: 556.3333333333333
+            width: 1164.7
+            height: 722
+            ports: {}
+          memo_vehicle_routing::vehicle::powertrain::fuelTank:
+            x: 62.14999999999998
+            y: 68
+            width: 220.3
+            height: 122
+            ports:
+              memo_vehicle_routing::vehicle::powertrain::fuelTank::fuelSupplyOut:
+                x: 204.3
+                y: 48
+                side: right
+          memo_vehicle_routing::vehicle::powertrain::engine:
+            x: 386.15
+            y: 48
+            width: 328.8
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::powertrain::engine::fuelSupplyIn:
+                x: -16
+                y: 68
+                side: left
+              memo_vehicle_routing::vehicle::powertrain::engine::drivePowerOut:
+                x: 296.8
+                y: 146
+                side: bottom
+              memo_vehicle_routing::vehicle::powertrain::engine::fuelCommandIn:
+                x: 0
+                y: 146
+                side: bottom
+              memo_vehicle_routing::vehicle::powertrain::engine::engineStatusOut:
+                x: 312.8
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::powertrain::transmission:
+            x: 384.6
+            y: 268
+            width: 331.9
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::powertrain::transmission::drivePowerIn:
+                x: 0
+                y: -16
+                side: top
+              memo_vehicle_routing::vehicle::powertrain::transmission::shaftTorqueOut:
+                x: 315.9
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::powertrain::transmission::gearCommandIn:
+                x: -16
+                y: 112
+                side: left
+              memo_vehicle_routing::vehicle::powertrain::transmission::gearStatusOut:
+                x: 315.9
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::powertrain::driveshaft:
+            x: 14
+            y: 288
+            width: 316.6
+            height: 122
+            ports:
+              memo_vehicle_routing::vehicle::powertrain::driveshaft::shaftTorqueIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::powertrain::driveshaft::rearTorqueOut:
+                x: 300.6
+                y: 58
+                side: right
+          memo_vehicle_routing::vehicle::rearAxle::differential:
+            x: 14
+            y: 104.66666666666666
+            width: 325.79999999999995
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::rearAxle::differential::rearTorqueIn:
+                x: -16
+                y: 65
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::differential::leftTorqueOut:
+                x: 309.79999999999995
+                y: 53.83333333333334
+                side: right
+              memo_vehicle_routing::vehicle::rearAxle::differential::rightTorqueOut:
+                x: 309.79999999999995
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle:
+            x: 416.39999999999986
+            y: 96.33333333333331
+            width: 348.59999999999997
+            height: 122
+            ports:
+              memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftTorqueIn:
+                x: -16
+                y: 62.166666666666686
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftWheelTorqueOut:
+                x: 332.59999999999997
+                y: 60.83333333333334
+                side: right
+          memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle:
+            x: 409.79999999999995
+            y: 316.3333333333333
+            width: 361.8
+            height: 122
+            ports:
+              memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightTorqueIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightWheelTorqueOut:
+                x: 345.8
+                y: 60.833333333333314
+                side: right
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel:
+            x: 841.6000000000001
+            y: 48
+            width: 376.5
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::leftWheelTorqueIn:
+                x: -16
+                y: 109.16666666666666
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftSenseOut:
+                x: 360.5
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftBrakeIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftRoadOut:
+                x: 344.5
+                y: 146
+                side: bottom
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel:
+            x: 841.6000000000001
+            y: 268
+            width: 383.6
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rightWheelTorqueIn:
+                x: -16
+                y: 109.16666666666663
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightSenseOut:
+                x: 367.6
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightBrakeIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightRoadOut:
+                x: 367.6
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack:
+            x: 14
+            y: 48
+            width: 339
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerLeftOut:
+                x: 323
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerRightOut:
+                x: 323
+                y: 112
+                side: right
+              memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerCommandIn:
+                x: -16
+                y: 65
+                side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel:
+            x: 410.5500000000002
+            y: 48
+            width: 383.6
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::steerLeftIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftSenseOut:
+                x: 367.6
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftBrakeIn:
+                x: -16
+                y: 112
+                side: left
+              memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftRoadOut:
+                x: 367.6
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel:
+            x: 407
+            y: 268
+            width: 390.7
+            height: 162
+            ports:
+              memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::steerRightIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightSenseOut:
+                x: 374.7
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightBrakeIn:
+                x: -16
+                y: 128
+                side: left
+              memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightRoadOut:
+                x: 374.7
+                y: 112
+                side: right
+          memo_vehicle_routing::vehicle::electronics::battery:
+            x: 14
+            y: 128
+            width: 241.7
+            height: 122
+            ports:
+              memo_vehicle_routing::vehicle::electronics::battery::batteryPowerOut:
+                x: 225.7
+                y: 51.5
+                side: right
+          memo_vehicle_routing::vehicle::electronics::powerDistribution:
+            x: 309.70000000000005
+            y: 88
+            width: 389.2
+            height: 202
+            ports:
+              memo_vehicle_routing::vehicle::electronics::powerDistribution::batteryPowerIn:
+                x: -16
+                y: 91.5
+                side: left
+              memo_vehicle_routing::vehicle::electronics::powerDistribution::controllerPowerOut:
+                x: 373.2
+                y: 104
+                side: right
+              memo_vehicle_routing::vehicle::electronics::powerDistribution::brakePowerOut:
+                x: 357.2
+                y: 186
+                side: bottom
+              memo_vehicle_routing::vehicle::electronics::powerDistribution::sensorPowerOut:
+                x: 373.2
+                y: 58
+                side: right
+          memo_vehicle_routing::vehicle::electronics::wheelSensors:
+            x: 753.6500000000001
+            y: 48
+            width: 396.29999999999995
+            height: 282
+            ports:
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::wheelStatusOut:
+                x: 364.29999999999995
+                y: 266
+                side: bottom
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::sensorPowerIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::frontLeftSenseIn:
+                x: -16
+                y: 98
+                side: left
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::frontRightSenseIn:
+                x: -16
+                y: 144
+                side: left
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::rearLeftSenseIn:
+                x: -16
+                y: 190.39999999999998
+                side: left
+              memo_vehicle_routing::vehicle::electronics::wheelSensors::rearRightSenseIn:
+                x: -16
+                y: 236.8
+                side: left
+          memo_vehicle_routing::vehicle::electronics::controller:
+            x: 752.9000000000001
+            y: 388
+            width: 397.8
+            height: 322
+            ports:
+              memo_vehicle_routing::vehicle::electronics::controller::driverDemandIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::vehicle::electronics::controller::fuelCommandOut:
+                x: 365.8
+                y: -16
+                side: top
+              memo_vehicle_routing::vehicle::electronics::controller::gearCommandOut:
+                x: 381.8
+                y: 130
+                side: right
+              memo_vehicle_routing::vehicle::electronics::controller::steerCommandOut:
+                x: 381.8
+                y: 198
+                side: right
+              memo_vehicle_routing::vehicle::electronics::controller::brakeCoordinationOut:
+                x: 381.8
+                y: 266
+                side: right
+              memo_vehicle_routing::vehicle::electronics::controller::wheelStatusIn:
+                x: 0
+                y: -16
+                side: top
+              memo_vehicle_routing::vehicle::electronics::controller::brakeFeedbackIn:
+                x: -16
+                y: 186.66666666666669
+                side: left
+              memo_vehicle_routing::vehicle::electronics::controller::controllerPowerIn:
+                x: -16
+                y: 141.33333333333334
+                side: left
+              memo_vehicle_routing::vehicle::electronics::controller::engineStatusIn:
+                x: -16
+                y: 232
+                side: left
+              memo_vehicle_routing::vehicle::electronics::controller::gearStatusIn:
+                x: -16
+                y: 277.3333333333333
+                side: left
+          memo_vehicle_routing::vehicle::electronics::brakeController:
+            x: 312.5
+            y: 408
+            width: 383.6
+            height: 282
+            ports:
+              memo_vehicle_routing::vehicle::electronics::brakeController::brakeDemandIn:
+                x: -16
+                y: 66.66666666666666
+                side: left
+              memo_vehicle_routing::vehicle::electronics::brakeController::brakeCoordinationIn:
+                x: -16
+                y: 221.33333333333334
+                side: left
+              memo_vehicle_routing::vehicle::electronics::brakeController::brakeFeedbackOut:
+                x: 367.6
+                y: 58
+                side: right
+              memo_vehicle_routing::vehicle::electronics::brakeController::brakePowerIn:
+                x: 0
+                y: -16
+                side: top
+              memo_vehicle_routing::vehicle::electronics::brakeController::frontLeftBrakeOut:
+                x: 367.6
+                y: 98
+                side: right
+              memo_vehicle_routing::vehicle::electronics::brakeController::frontRightBrakeOut:
+                x: 367.6
+                y: 128
+                side: right
+              memo_vehicle_routing::vehicle::electronics::brakeController::rearLeftBrakeOut:
+                x: 367.6
+                y: 190.39999999999998
+                side: right
+              memo_vehicle_routing::vehicle::electronics::brakeController::rearRightBrakeOut:
+                x: 367.6
+                y: 236.8
+                side: right
+          memo_vehicle_routing::driver:
+            x: 0
+            y: 571.1666666666666
+            width: 263
+            height: 162
+            ports:
+              memo_vehicle_routing::driver::driverDemandOut:
+                x: 247
+                y: 58
+                side: right
+              memo_vehicle_routing::driver::brakeDemandOut:
+                x: 247
+                y: 112
+                side: right
+          memo_vehicle_routing::road:
+            x: 2928.8999999999996
+            y: 571.1666666666666
+            width: 244.2
+            height: 242
+            ports:
+              memo_vehicle_routing::road::frontLeftRoadIn:
+                x: -16
+                y: 58
+                side: left
+              memo_vehicle_routing::road::frontRightRoadIn:
+                x: -16
+                y: 100
+                side: left
+              memo_vehicle_routing::road::rearLeftRoadIn:
+                x: 0
+                y: -16
+                side: top
+              memo_vehicle_routing::road::rearRightRoadIn:
+                x: -16
+                y: 196
+                side: left
+        edges:
+          memo_vehicle_routing::fuelSupply:
+            vertices:
+              - x: 962.6
+                y: 194.1
+              - x: 937.7
+                y: 194.1
+            manual: true
+          memo_vehicle_routing::drivePower:
+            vertices:
+              - x: 994.7
+                y: 295.5
+              - x: 994.7
+                y: 286.9
+            manual: true
+          memo_vehicle_routing::rearLeftBrake:
+            vertices:
+              - x: 1099.5
+                y: 500.1
+              - x: 1099.5
+                y: 580
+              - x: 2401.3
+                y: 580
+              - x: 2401.3
+                y: 500.1
+            manual: true
+      flowAnimation: false
+      x6:
+        nodes:
+          memo_vehicle_routing::vehicle:
+            x: 353
+            y: 0
+            width: 2485.8999999999996
+            height: 1290.3333333333333
+          memo_vehicle_routing::vehicle::powertrain:
+            x: 584.1
+            y: 52.16666666666666
+            width: 730.5
+            height: 442
+          memo_vehicle_routing::vehicle::powertrain::fuelTank:
+            x: 290
+            y: 320
+            width: 220.3
+            height: 122
+          memo_vehicle_routing::vehicle::powertrain::engine:
+            x: 950
+            y: 70
+            width: 328.8
+            height: 162
+          memo_vehicle_routing::vehicle::powertrain::transmission:
+            x: 1010
+            y: 340
+            width: 331.9
+            height: 162
+          memo_vehicle_routing::vehicle::powertrain::driveshaft:
+            x: 600
+            y: 330
+            width: 316.6
+            height: 122
+          memo_vehicle_routing::vehicle::rearAxle:
+            x: 1585.7
+            y: 48
+            width: 1239.1999999999998
+            height: 450.3333333333333
+          memo_vehicle_routing::vehicle::rearAxle::differential:
+            x: 1599.7
+            y: 152.66666666666666
+            width: 325.79999999999995
+            height: 162
+          memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle:
+            x: 2002.1
+            y: 144.33333333333331
+            width: 348.59999999999997
+            height: 122
+          memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle:
+            x: 1995.5
+            y: 364.3333333333333
+            width: 361.8
+            height: 122
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel:
+            x: 2427.3
+            y: 96
+            width: 376.5
+            height: 162
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel:
+            x: 2427.3
+            y: 316
+            width: 383.6
+            height: 162
+          memo_vehicle_routing::vehicle::frontAxle:
+            x: 1799.4499999999998
+            y: 696.3333333333333
+            width: 811.7
+            height: 442
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack:
+            x: 1813.4499999999998
+            y: 744.3333333333333
+            width: 339
+            height: 162
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel:
+            x: 2210
+            y: 744.3333333333333
+            width: 383.6
+            height: 162
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel:
+            x: 2206.45
+            y: 964.3333333333333
+            width: 390.7
+            height: 162
+          memo_vehicle_routing::vehicle::electronics:
+            x: 367
+            y: 556.3333333333333
+            width: 1164.7
+            height: 722
+          memo_vehicle_routing::vehicle::electronics::battery:
+            x: 381
+            y: 684.3333333333333
+            width: 241.7
+            height: 122
+          memo_vehicle_routing::vehicle::electronics::powerDistribution:
+            x: 700
+            y: 640
+            width: 389.2
+            height: 202
+          memo_vehicle_routing::vehicle::electronics::wheelSensors:
+            x: 1120.65
+            y: 604.3333333333333
+            width: 396.29999999999995
+            height: 282
+          memo_vehicle_routing::vehicle::electronics::controller:
+            x: 1119.9
+            y: 944.3333333333333
+            width: 397.8
+            height: 322
+          memo_vehicle_routing::vehicle::electronics::brakeController:
+            x: 679.5
+            y: 964.3333333333333
+            width: 383.6
+            height: 282
+          memo_vehicle_routing::driver:
+            x: 0
+            y: 571.1666666666666
+            width: 263
+            height: 162
+          memo_vehicle_routing::road:
+            x: 2970
+            y: 560
+            width: 244.2
+            height: 242
+        ports:
+          memo_vehicle_routing::vehicle: {}
+          memo_vehicle_routing::vehicle::powertrain: {}
+          memo_vehicle_routing::vehicle::powertrain::fuelTank:
+            memo_vehicle_routing::vehicle::powertrain::fuelTank::fuelSupplyOut:
+              x: 204.3
+              y: 83.38531494140625
+              side: right
+          memo_vehicle_routing::vehicle::powertrain::engine:
+            memo_vehicle_routing::vehicle::powertrain::engine::fuelSupplyIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::powertrain::engine::drivePowerOut:
+              x: 296.8
+              y: 146
+              side: bottom
+            memo_vehicle_routing::vehicle::powertrain::engine::fuelCommandIn:
+              x: 0
+              y: 146
+              side: bottom
+            memo_vehicle_routing::vehicle::powertrain::engine::engineStatusOut:
+              x: 296.8
+              y: 146
+              side: bottom
+          memo_vehicle_routing::vehicle::powertrain::transmission:
+            memo_vehicle_routing::vehicle::powertrain::transmission::drivePowerIn:
+              x: 0
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::powertrain::transmission::shaftTorqueOut:
+              x: -16
+              y: 111.74710083007812
+              side: left
+            memo_vehicle_routing::vehicle::powertrain::transmission::gearCommandIn:
+              x: 2.6600341796875
+              y: 146
+              side: bottom
+            memo_vehicle_routing::vehicle::powertrain::transmission::gearStatusOut:
+              x: 299.9
+              y: 146
+              side: bottom
+          memo_vehicle_routing::vehicle::powertrain::driveshaft:
+            memo_vehicle_routing::vehicle::powertrain::driveshaft::shaftTorqueIn:
+              x: 300.6
+              y: 58
+              side: right
+            memo_vehicle_routing::vehicle::powertrain::driveshaft::rearTorqueOut:
+              x: 300.6
+              y: 58
+              side: right
+          memo_vehicle_routing::vehicle::rearAxle: {}
+          memo_vehicle_routing::vehicle::rearAxle::differential:
+            memo_vehicle_routing::vehicle::rearAxle::differential::rearTorqueIn:
+              x: -16
+              y: 65
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::differential::leftTorqueOut:
+              x: 309.79999999999995
+              y: 58
+              side: right
+            memo_vehicle_routing::vehicle::rearAxle::differential::rightTorqueOut:
+              x: 309.79999999999995
+              y: 112
+              side: right
+          memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle:
+            memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftTorqueIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::leftHalfAxle::leftWheelTorqueOut:
+              x: 332.59999999999997
+              y: 58
+              side: right
+          memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle:
+            memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightTorqueIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rightHalfAxle::rightWheelTorqueOut:
+              x: 345.8
+              y: 58
+              side: right
+          memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel:
+            memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::leftWheelTorqueIn:
+              x: -16
+              y: 112
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftSenseOut:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftBrakeIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearLeftWheel::rearLeftRoadOut:
+              x: 360.5
+              y: 112
+              side: right
+          memo_vehicle_routing::vehicle::rearAxle::rearRightWheel:
+            memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rightWheelTorqueIn:
+              x: -16
+              y: 112
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightSenseOut:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightBrakeIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::rearAxle::rearRightWheel::rearRightRoadOut:
+              x: 367.6
+              y: 112
+              side: right
+          memo_vehicle_routing::vehicle::frontAxle: {}
+          memo_vehicle_routing::vehicle::frontAxle::steeringRack:
+            memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerLeftOut:
+              x: 323
+              y: 58
+              side: right
+            memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerRightOut:
+              x: 323
+              y: 112
+              side: right
+            memo_vehicle_routing::vehicle::frontAxle::steeringRack::steerCommandIn:
+              x: -16
+              y: 65
+              side: left
+          memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel:
+            memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::steerLeftIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftSenseOut:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftBrakeIn:
+              x: -16
+              y: 112
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontLeftWheel::frontLeftRoadOut:
+              x: 367.6
+              y: 112
+              side: right
+          memo_vehicle_routing::vehicle::frontAxle::frontRightWheel:
+            memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::steerRightIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightSenseOut:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightBrakeIn:
+              x: -16
+              y: 112
+              side: left
+            memo_vehicle_routing::vehicle::frontAxle::frontRightWheel::frontRightRoadOut:
+              x: 374.7
+              y: 112
+              side: right
+          memo_vehicle_routing::vehicle::electronics: {}
+          memo_vehicle_routing::vehicle::electronics::battery:
+            memo_vehicle_routing::vehicle::electronics::battery::batteryPowerOut:
+              x: 225.7
+              y: 58
+              side: right
+          memo_vehicle_routing::vehicle::electronics::powerDistribution:
+            memo_vehicle_routing::vehicle::electronics::powerDistribution::batteryPowerIn:
+              x: -16
+              y: 85
+              side: left
+            memo_vehicle_routing::vehicle::electronics::powerDistribution::controllerPowerOut:
+              x: 373.2
+              y: 104
+              side: right
+            memo_vehicle_routing::vehicle::electronics::powerDistribution::brakePowerOut:
+              x: 357.2
+              y: 186
+              side: bottom
+            memo_vehicle_routing::vehicle::electronics::powerDistribution::sensorPowerOut:
+              x: 373.2
+              y: 58
+              side: right
+          memo_vehicle_routing::vehicle::electronics::wheelSensors:
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::wheelStatusOut:
+              x: 364.29999999999995
+              y: 266
+              side: bottom
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::sensorPowerIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::frontLeftSenseIn:
+              x: 380.29999999999995
+              y: 98
+              side: right
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::frontRightSenseIn:
+              x: 380.29999999999995
+              y: 144
+              side: right
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::rearLeftSenseIn:
+              x: 380.29999999999995
+              y: 190.39999999999998
+              side: right
+            memo_vehicle_routing::vehicle::electronics::wheelSensors::rearRightSenseIn:
+              x: 380.29999999999995
+              y: 236.8
+              side: right
+          memo_vehicle_routing::vehicle::electronics::controller:
+            memo_vehicle_routing::vehicle::electronics::controller::driverDemandIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::vehicle::electronics::controller::fuelCommandOut:
+              x: 365.8
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::electronics::controller::gearCommandOut:
+              x: 365.8
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::electronics::controller::steerCommandOut:
+              x: 381.8
+              y: 198
+              side: right
+            memo_vehicle_routing::vehicle::electronics::controller::brakeCoordinationOut:
+              x: -16
+              y: 266
+              side: left
+            memo_vehicle_routing::vehicle::electronics::controller::wheelStatusIn:
+              x: 0
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::electronics::controller::brakeFeedbackIn:
+              x: -16
+              y: 186.66666666666669
+              side: left
+            memo_vehicle_routing::vehicle::electronics::controller::controllerPowerIn:
+              x: -16
+              y: 141.33333333333334
+              side: left
+            memo_vehicle_routing::vehicle::electronics::controller::engineStatusIn:
+              x: 0
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::electronics::controller::gearStatusIn:
+              x: 0
+              y: -16
+              side: top
+          memo_vehicle_routing::vehicle::electronics::brakeController:
+            memo_vehicle_routing::vehicle::electronics::brakeController::brakeDemandIn:
+              x: -16
+              y: 66.66666666666666
+              side: left
+            memo_vehicle_routing::vehicle::electronics::brakeController::brakeCoordinationIn:
+              x: 367.6
+              y: 221.33333333333334
+              side: right
+            memo_vehicle_routing::vehicle::electronics::brakeController::brakeFeedbackOut:
+              x: 367.6
+              y: 58
+              side: right
+            memo_vehicle_routing::vehicle::electronics::brakeController::brakePowerIn:
+              x: 0
+              y: -16
+              side: top
+            memo_vehicle_routing::vehicle::electronics::brakeController::frontLeftBrakeOut:
+              x: 367.6
+              y: 98
+              side: right
+            memo_vehicle_routing::vehicle::electronics::brakeController::frontRightBrakeOut:
+              x: 367.6
+              y: 144
+              side: right
+            memo_vehicle_routing::vehicle::electronics::brakeController::rearLeftBrakeOut:
+              x: 367.6
+              y: 190.39999999999998
+              side: right
+            memo_vehicle_routing::vehicle::electronics::brakeController::rearRightBrakeOut:
+              x: 367.6
+              y: 236.8
+              side: right
+          memo_vehicle_routing::driver:
+            memo_vehicle_routing::driver::driverDemandOut:
+              x: 247
+              y: 58
+              side: right
+            memo_vehicle_routing::driver::brakeDemandOut:
+              x: 247
+              y: 112
+              side: right
+          memo_vehicle_routing::road:
+            memo_vehicle_routing::road::frontLeftRoadIn:
+              x: -16
+              y: 58
+              side: left
+            memo_vehicle_routing::road::frontRightRoadIn:
+              x: -16
+              y: 100
+              side: left
+            memo_vehicle_routing::road::rearLeftRoadIn:
+              x: -16
+              y: 148
+              side: left
+            memo_vehicle_routing::road::rearRightRoadIn:
+              x: -16
+              y: 196
+              side: left
+        edges:
+          memo_vehicle_routing::fuelSupply: []
+          memo_vehicle_routing::drivePower: []
+          memo_vehicle_routing::shaftTorque: []
+          memo_vehicle_routing::rearTorque: []
+          memo_vehicle_routing::leftTorque: []
+          memo_vehicle_routing::rightTorque: []
+          memo_vehicle_routing::leftWheelTorque: []
+          memo_vehicle_routing::rightWheelTorque: []
+          memo_vehicle_routing::steerLeft: []
+          memo_vehicle_routing::steerRight: []
+          memo_vehicle_routing::driverDemand: []
+          memo_vehicle_routing::fuelCommand: []
+          memo_vehicle_routing::gearCommand: []
+          memo_vehicle_routing::steerCommand: []
+          memo_vehicle_routing::brakeDemand: []
+          memo_vehicle_routing::brakeCoordination: []
+          memo_vehicle_routing::wheelStatus: []
+          memo_vehicle_routing::brakeFeedback: []
+          memo_vehicle_routing::batteryPower: []
+          memo_vehicle_routing::controllerPower: []
+          memo_vehicle_routing::brakePower: []
+          memo_vehicle_routing::sensorPower: []
+          memo_vehicle_routing::engineStatus: []
+          memo_vehicle_routing::gearStatus: []
+          memo_vehicle_routing::frontLeftSense: []
+          memo_vehicle_routing::frontRightSense: []
+          memo_vehicle_routing::rearLeftSense: []
+          memo_vehicle_routing::rearRightSense: []
+          memo_vehicle_routing::frontLeftBrake: []
+          memo_vehicle_routing::frontRightBrake: []
+          memo_vehicle_routing::rearLeftBrake: []
+          memo_vehicle_routing::rearRightBrake: []
+          memo_vehicle_routing::frontLeftRoad: []
+          memo_vehicle_routing::frontRightRoad: []
+          memo_vehicle_routing::rearLeftRoad: []
+          memo_vehicle_routing::rearRightRoad: []
+      routingType: manhattan
+      routingMode: automatic
+      autoLayout: false
+      zoom: 0.49929037465260234
+      pan:
+        x: 77.64756256484867
+        y: 36.426368309744106
+      coordinateSpace: context-child-v1
+  vehicleReference:
+    nodes: {}
+    edges: {}
+    canvas:
+      renderer: memo.renderer.reactflow

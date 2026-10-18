@@ -1,0 +1,12 @@
+import { summarize } from './summarize.mjs';
+import { mkdirSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+const root=fileURLToPath(new URL('../../',import.meta.url));
+const output=resolve(root,'artifacts/ibd-baseline',new Date().toISOString().replaceAll(':','-'));
+mkdirSync(output,{recursive:true});
+console.log(`Baseline evidence: ${output}`);
+const child=spawn(resolve(root,'node_modules/.bin/playwright'),['test',...process.argv.slice(2)],{cwd:root,stdio:'inherit',env:{...process.env,MEMO_BASELINE_OUTPUT:output}});
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>child.kill(signal));
+child.on('exit',code=>{summarize(root,output);process.exitCode=code??1;});

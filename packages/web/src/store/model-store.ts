@@ -1,3 +1,4 @@
+import { retainRendererModel } from '../diagram/renderer-model';
 // ─── Model Store (Zustand) ────────────────────────────────────────────────────
 //
 // Central state for the web app. Receives model, validation, and completeness
@@ -302,6 +303,8 @@ export interface ModelState {
     /** How the Model explorer groups its rows (plan A6). */
     explorerMode: ExplorerMode;
     setExplorerMode: (mode: ExplorerMode) => void;
+    /** Transient canvas port selection; never serialized into a diagram layout. */
+    canvasPortSelection: string | null;
     selectedElementId: string | null;
     selectedRelationshipId: string | null;
     selectedElementIds: Set<string>;
@@ -627,6 +630,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     activeView: restoredActiveView,
     explorerTab: 'model' as ExplorerTab,
     explorerMode: 'layer' as ExplorerMode,
+    canvasPortSelection: null,
     selectedElementId: null,
     selectedRelationshipId: null,
     selectedElementIds: new Set<string>(),
@@ -961,6 +965,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             ruleClauses: clauses ?? [], ruleProjectFiles: projectFiles ?? [],
         }),
     setModel: (model) => set((s) => {
+        retainRendererModel(s.model, model);
         let activeView = s.activeView;
         let selectedDiagramId = s.selectedDiagramId;
         let selectedViewpointId = s.selectedViewpointId;

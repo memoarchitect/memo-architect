@@ -1,3 +1,4 @@
+import { rendererModel } from '../../renderer-model';
 // ─── MaxGraphCanvas ───────────────────────────────────────────────────────────
 //
 // Alternate diagram surface on maxGraph (@maxgraph/core), the maintained
@@ -153,7 +154,7 @@ function applySavedLayout(scene: NotationScene, saved?: DiagramLayout): Notation
 }
 
 export function MaxGraphCanvas() {
-    const model = useModelStore(s => s.model);
+    const model = useModelStore(s => rendererModel(s.model));
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -380,9 +381,8 @@ export function MaxGraphCanvas() {
             cancelFit = fitWhenSized(graph, container);
         }
 
-        // A selection changes as soon as a drag starts. Inspect only a genuine
-        // click so releasing a moved cell never opens the properties panel.
-        graph.addListener(InternalEvent.CLICK, (_sender: unknown, event: { getProperty(name: string): unknown }) => {
+        // Selection and dragging leave Properties alone; a double-click inspects.
+        graph.addListener(InternalEvent.DOUBLE_CLICK, (_sender: unknown, event: { getProperty(name: string): unknown }) => {
             const cell = event.getProperty('cell') as Cell | undefined;
             const id = cell?.getId();
             if (!id) return;
@@ -430,7 +430,7 @@ export function MaxGraphCanvas() {
         // Wheel zoom toward the cursor (draw.io convention: plain wheel zooms)
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
-            if (event.deltaY < 0) graph.zoomIn(); else graph.zoomOut();
+            if (event.deltaY !== 0) graph.zoom(event.deltaY < 0 ? 1.05 : 1 / 1.05);
         };
         container.addEventListener('wheel', onWheel, { passive: false });
 
@@ -495,11 +495,17 @@ export function MaxGraphCanvas() {
         && (Object.keys(currentLayout.nodes ?? {}).length > 0 || currentLayout.canvas?.autoLayout === false);
     const resetLayout = useCallback(() => {
         if (!selectedDiagramId) return;
-        const cleared: DiagramLayout = { nodes: {}, edges: {}, canvas: { autoLayout: true } };
+        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        // Reset only this renderer's visible geometry. Other native snapshots,
+        // hidden entries and opaque fields remain owned by their original writer.
+        const nodes = { ...previous.nodes };
+        const edges = { ...previous.edges };
+        for (const node of scene?.nodes ?? []) nodes[node.id] = { ...nodes[node.id], x: node.x, y: node.y, width: node.width, height: node.height };
+        const cleared: DiagramLayout = { ...previous, nodes, edges, canvas: { ...previous.canvas, autoLayout: true } };
         mergeDiagramLayouts({ [selectedDiagramId]: cleared });
         sendDiagramLayoutUpdate(selectedDiagramId, cleared);
         setRebuildNonce(nonce => nonce + 1);
-    }, [selectedDiagramId, mergeDiagramLayouts]);
+    }, [selectedDiagramId, mergeDiagramLayouts, scene]);
 
     const exportSvg = useCallback(() => {
         if (!scene) return;
@@ -529,7 +535,7 @@ export function MaxGraphCanvas() {
     };
 
     return (
-        <div className="relative flex-1 overflow-hidden" style={{ background: CANVAS_BG }}>
+        <div data-testid="maxgraph-canvas" className="relative flex-1 overflow-hidden" style={{ background: CANVAS_BG }}>
             <div ref={containerRef} className="absolute inset-0" style={{ cursor: 'default' }} />
             {viewKind === 'actionflow' && (
                 <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-lg p-1.5" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
