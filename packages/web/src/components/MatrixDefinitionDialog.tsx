@@ -12,8 +12,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useScopedModel } from '../store/scoped-model';
+import { useModelStore } from '../store/model-store';
 import { evaluateAxis, limitFor, type AxisEvaluation } from '../lib/axis-evaluation';
+import { scopeModel } from '../lib/workspace-scope';
 import { MATRIX_LIMITS, type MatrixScreen } from '../lib/matrix-views';
+import { MatrixSystemSelect } from './MatrixSystemSelect';
 import { TypeFilterSelect, type TypeFilterOption } from './TypeFilterSelect';
 import { ProgressBar, type ProgressState } from './ProgressBar';
 import { COLOR, FONT } from '../styles/tokens';
@@ -30,7 +33,8 @@ interface Props {
     packages: string[];
     busy: boolean;
     error: string | null;
-    onSubmit: (value: { name: string; package: string; newPackage: boolean; rowQuery: string; columnQuery: string }) => void;
+    /** The workspace the matrix opens in; the one chosen in the header is offered first. */
+    onSubmit: (value: { name: string; package: string; newPackage: boolean; rowQuery: string; columnQuery: string; system?: string }) => void;
     onClose: () => void;
 }
 
@@ -112,6 +116,9 @@ function FilterCard({ title, filter, onChange, kindOptions, evaluation, counting
 
 export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', initialPackage = '', packages, busy, error, onSubmit, onClose }: Props) {
     const model = useScopedModel();
+    const wholeModel = useModelStore(s => s.model);
+    const headerWorkspace = useModelStore(s => s.workspace);
+    const [system, setSystem] = useState<string | undefined>(headerWorkspace ?? undefined);
     const [name, setName] = useState(initialName);
     const [packageName, setPackageName] = useState(initialPackage || packages[0] || '');
     const [pickingPackage, setPickingPackage] = useState(mode === 'move' || packages.length === 0);
@@ -134,10 +141,11 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
     // The types the model has, most used first, from the model rather than a list kept here.
     const kindOptions = useMemo<TypeFilterOption[]>(() => {
         const counts = new Map<string, number>();
-        for (const element of Object.values(model?.elements ?? {})) counts.set(element.kind, (counts.get(element.kind) ?? 0) + 1);
+        const scoped = wholeModel ? scopeModel(wholeModel, system ?? null) : model;
+        for (const element of Object.values(scoped?.elements ?? {})) counts.set(element.kind, (counts.get(element.kind) ?? 0) + 1);
         return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
             .map(([kind, count]) => ({ value: kind, hint: count.toLocaleString() }));
-    }, [model?.elements]);
+    }, [wholeModel, model, system]);
 
     // Count as the filter is typed, after a short pause, so the number is there before Create is pressed.
     const rowQuery = queryOf(rows);
@@ -149,14 +157,14 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
             let current = true;
             setCounting(true);
             const timer = setTimeout(async () => {
-                const evaluation = await evaluateAxis({ query, elementIds: [] }, 0);
+                const evaluation = await evaluateAxis({ query, elementIds: [] }, 0, system);
                 if (!current) return;
                 set(evaluation);
                 setCounting(false);
             }, 350);
             return () => { current = false; clearTimeout(timer); };
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [query, filtering]);
+        }, [query, filtering, system]);
     };
     useCounted(rowQuery, setRowEvaluation, setRowCounting);
     useCounted(columnQuery, setColumnEvaluation, setColumnCounting);
@@ -181,7 +189,7 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
     const submit = () => {
         if (!valid || working) return;
         setProgress({ label: mode === 'create' ? 'Declaring the matrix' : 'Saving', step: 1, steps: 1 });
-        onSubmit({ name: name.trim(), package: packageName, newPackage: needsPackage && !packages.includes(packageName), rowQuery, columnQuery: isDsm ? '' : columnQuery });
+        onSubmit({ name: name.trim(), package: packageName, newPackage: needsPackage && !packages.includes(packageName), rowQuery, columnQuery: isDsm ? '' : columnQuery, system });
     };
     // The caller keeps the dialog open on an error; the bar must not outlive the attempt.
     useEffect(() => { if (!busy) setProgress(null); }, [busy, error]);
@@ -211,6 +219,8 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
                         <input ref={nameRef} value={name} onChange={event => setName(event.target.value)} aria-label="Name" style={field} />
                     </label>
                 )}
+
+                {filtering && <MatrixSystemSelect value={system} onChange={setSystem} />}
 
                 {needsPackage && (
                     <div style={{ display: 'grid', gap: '5px' }}>

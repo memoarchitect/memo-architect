@@ -22,6 +22,7 @@ import {
 } from './ExplorerPanel';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
 import { confirmViewDelete } from './confirm-destructive';
+import { useSystemOptions } from './MatrixSystemSelect';
 import { MatrixDefinitionDialog, type MatrixDialogMode } from './MatrixDefinitionDialog';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -53,6 +54,8 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const createPackage = useModelStore(s => s.createPackage);
+    const systemOptions = useSystemOptions();
+    const systemNameOf = (root: string) => systemOptions.find(option => option.root === root)?.name ?? root.split('::').pop() ?? root;
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [hovered, setHovered] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -94,9 +97,11 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
     const move = (definition: DiagramDTO) => openDialog('move', definition);
 
     /** The definition a new matrix starts with: only the filters typed in the dialog. */
-    const initialMatrix = (value: { rowQuery: string; columnQuery: string }): MatrixDefinitionDTO => {
-        if (screen === 'dsm') return value.rowQuery ? { axis: { query: value.rowQuery } } : {};
+    const initialMatrix = (value: { rowQuery: string; columnQuery: string; system?: string }): MatrixDefinitionDTO => {
+        const system = value.system ? { system: value.system } : {};
+        if (screen === 'dsm') return { ...system, ...(value.rowQuery ? { axis: { query: value.rowQuery } } : {}) };
         return {
+            ...system,
             ...(value.rowQuery ? { rowAxis: { query: value.rowQuery } } : {}),
             ...(value.columnQuery ? { columnAxis: { query: value.columnQuery } } : {}),
         };
@@ -111,7 +116,7 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         return result.qualifiedName ?? name;
     };
 
-    const submitDialog = async (value: { name: string; package: string; newPackage: boolean; rowQuery: string; columnQuery: string }) => {
+    const submitDialog = async (value: { name: string; package: string; newPackage: boolean; rowQuery: string; columnQuery: string; system?: string }) => {
         if (!dialog) return;
         setBusy(true);
         setDialogError(null);
@@ -180,6 +185,11 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                 }}
             >
                 <span className="flex-1 truncate">{definition.name}</span>
+                {definition.matrix?.system && (
+                    <span className="truncate" style={{ maxWidth: '90px', fontSize: '10px', color: COLOR.faint }} title={`System: ${systemNameOf(definition.matrix.system)}`}>
+                        {systemNameOf(definition.matrix.system)}
+                    </span>
+                )}
                 {showActions && (
                     <span style={{ display: 'flex' }} onClick={event => event.stopPropagation()}>
                         <button style={iconButton} disabled={busy} title="Rename" aria-label={`Rename ${definition.name}`} onClick={() => rename(definition)}>✎</button>
