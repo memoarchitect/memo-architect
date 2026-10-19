@@ -23,14 +23,27 @@ export function matrixScreenOf(diagram: Pick<DiagramDTO, 'viewDefinition'>): Mat
 }
 
 /**
- * The most cells a matrix will draw: rows times columns, counted in elements.
- * The grid draws every cell it is given, so this is a limit of the grid, not of
- * the model or of SysML. Past it the screen asks for a narrower axis.
+ * What each screen will draw, in one place. The screens, the create dialog and
+ * the refusal messages all read these, so a limit is changed here and nowhere
+ * else. They are limits of the grid this screen draws, not of SysML or the model.
  */
-export const MATRIX_CELL_CAP = 20_000;
+export interface MatrixLimits {
+    traceabilityMaxCells: number;
+    dsmMaxElements: number;
+    axisIdLimit: number;
+}
+
+export const MATRIX_LIMITS: MatrixLimits = {
+    /** A traceability matrix: rows times columns, counted in elements. */
+    traceabilityMaxCells: 20_000,
+    /** A DSM: elements on its one axis (rows equal columns). */
+    dsmMaxElements: 100,
+    /** The most elements one axis can hold and still be sent back by id. */
+    axisIdLimit: 5_000,
+};
 
 /** The most elements one axis can hold and still be sent back by id. */
-export const AXIS_ID_LIMIT = 5_000;
+export const AXIS_ID_LIMIT = MATRIX_LIMITS.axisIdLimit;
 
 /** An axis as it is edited: query text and hand-picked ids, either of them empty. */
 export interface AxisDraft {

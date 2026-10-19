@@ -37,7 +37,7 @@ import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
 import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
 import { AxisViewControls } from '../components/AxisViewControls';
 import { useMatrixDefinition } from '../lib/use-matrix-definition';
-import { MATRIX_VIEW_DEFINITIONS } from '../lib/matrix-views';
+import { ProgressBar } from '../components/ProgressBar';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
 import { elementFilterOptions } from '../components/element-options';
@@ -334,7 +334,7 @@ export function TraceabilityMatrix() {
 
     const tree = (
         <MatrixDefinitionTree
-            viewDefinition={MATRIX_VIEW_DEFINITIONS.traceability} noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
+            screen="traceability" noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
             selectedId={matrix.definitionId} onSelect={matrix.select}
         />
     );
@@ -450,7 +450,9 @@ export function TraceabilityMatrix() {
             <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, marginLeft: leftToolbar ? '250px' : 0, width: leftToolbar ? 'calc(100% - 250px)' : undefined }}>
             {!result ? (
                 <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: matrix.refusal ? '#B45309' : COLOR.faint, fontSize: FONT.sm }}>
-                    {matrix.rendering
+                    {matrix.rendering && matrix.progress
+                        ? <ProgressBar progress={matrix.progress} />
+                        : matrix.rendering
                         ? 'Evaluating the axes…'
                         : matrix.refusal
                             ?? (matrix.rowEvaluation?.error || matrix.columnEvaluation?.error)

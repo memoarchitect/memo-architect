@@ -48,8 +48,8 @@ import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
 import { MatrixGroupsEditor } from '../components/MatrixGroupsEditor';
 import { AxisViewControls } from '../components/AxisViewControls';
 import { useMatrixDefinition } from '../lib/use-matrix-definition';
+import { ProgressBar } from '../components/ProgressBar';
 import type { AxisEvaluation } from '../lib/axis-evaluation';
-import { MATRIX_VIEW_DEFINITIONS } from '../lib/matrix-views';
 import { elementFilterOptions, scopeKinds } from '../components/element-options';
 import { kindParents, type KindParents } from '../analysis/kind-hierarchy';
 import { relationshipColor } from '../constants';
@@ -295,7 +295,7 @@ export function DSMView() {
 
     const tree = (
         <MatrixDefinitionTree
-            viewDefinition={MATRIX_VIEW_DEFINITIONS.dsm} noun="design structure matrix" plural="design structure matrices" title="Design structure matrices"
+            screen="dsm" noun="design structure matrix" plural="design structure matrices" title="Design structure matrices"
             selectedId={matrix.definitionId} onSelect={matrix.select}
         />
     );
@@ -460,8 +460,10 @@ export function DSMView() {
             }}>
                 {!result ? (
                     <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: matrix.refusal ? '#B45309' : COLOR.faint, fontSize: FONT.sm }}>
-                        {matrix.rendering
-                            ? 'Evaluating the axis…'
+                        {matrix.rendering && matrix.progress
+                            ? <ProgressBar progress={matrix.progress} />
+                            : matrix.rendering
+                                ? 'Evaluating the axis…'
                             : matrix.refusal
                                 ?? matrix.rowEvaluation?.error
                                 ?? (snapshot ? 'The axis selects no elements. Edit the definition and Render.' : 'Define the axis, then Render.')}
