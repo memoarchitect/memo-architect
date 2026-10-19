@@ -6,7 +6,7 @@
 
 import type { AxisQueryResult } from '@memoarchitect/tools/browser';
 import { requestAxisQuery } from '../store/ws-client';
-import { AXIS_ID_LIMIT, MATRIX_CELL_CAP, type AxisDraft } from './matrix-views';
+import { AXIS_ID_LIMIT, MATRIX_LIMITS, type AxisDraft, type MatrixLimits, type MatrixScreen } from './matrix-views';
 
 export interface AxisEvaluation {
     /** The query text this was evaluated for, so a later edit is seen to make it stale. */
@@ -43,21 +43,30 @@ export async function evaluateAxis(axis: AxisDraft, previewLimit = 25): Promise<
 }
 
 /**
- * Why a pair of axes may not be drawn, or null when it may. The grid draws every
- * cell it is given, so the product is capped; a wider axis is refused, never
- * silently sliced.
+ * Why a pair of axes may not be drawn by this screen, or null when it may. The
+ * grid draws every cell it is given, so the size is limited (see MATRIX_LIMITS);
+ * a larger axis is refused with what to do, never silently sliced.
  */
-export function refusalFor(rows: AxisEvaluation, columns: AxisEvaluation, cap = MATRIX_CELL_CAP): string | null {
+export function limitFor(
+    screen: MatrixScreen, rows: AxisEvaluation, columns: AxisEvaluation, limits: MatrixLimits = MATRIX_LIMITS,
+): string | null {
     if (rows.error || columns.error) return null; // reported on the axis itself
+    if (screen === 'dsm') {
+        if (rows.count > limits.dsmMaxElements) {
+            return `A design structure matrix supports up to ${limits.dsmMaxElements.toLocaleString()} elements for now; `
+                + `this axis holds ${rows.count.toLocaleString()}. Narrow the query.`;
+        }
+        return null;
+    }
     for (const [name, axis] of [['rows', rows], ['columns', columns]] as const) {
         if (!axis.ids && axis.count > 0) {
             return `The ${name} axis holds ${axis.count.toLocaleString()} elements, more than the ${AXIS_ID_LIMIT.toLocaleString()} one axis can list. Narrow its query.`;
         }
     }
     const cells = rows.count * columns.count;
-    if (cells > cap) {
+    if (cells > limits.traceabilityMaxCells) {
         return `${rows.count.toLocaleString()} rows × ${columns.count.toLocaleString()} columns is ${cells.toLocaleString()} cells, `
-            + `more than the ${cap.toLocaleString()} this grid draws. Narrow an axis.`;
+            + `more than the ${limits.traceabilityMaxCells.toLocaleString()} this grid draws. Narrow an axis.`;
     }
     return null;
 }

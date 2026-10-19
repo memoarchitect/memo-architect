@@ -16,8 +16,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiagramDTO } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
-import { evaluateAxis, refusalFor, type AxisEvaluation } from './axis-evaluation';
+import { evaluateAxis, limitFor, type AxisEvaluation } from './axis-evaluation';
 import { resolveGroups } from './matrix-groups';
+import type { ProgressState } from '../components/ProgressBar';
 import type { DsmNamedGroup } from '../analysis/dsm-hierarchy';
 import { requestAxisQuery } from '../store/ws-client';
 import {
@@ -60,6 +61,7 @@ export function useMatrixDefinition(screen: MatrixScreen) {
     const [snapshot, setSnapshot] = useState<MatrixSnapshot | null>(null);
     const [refusal, setRefusal] = useState<string | null>(null);
     const [rendering, setRendering] = useState(false);
+    const [progress, setProgress] = useState<ProgressState | null>(null);
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState<Notice>(null);
     const token = useRef(0);
@@ -81,17 +83,23 @@ export function useMatrixDefinition(screen: MatrixScreen) {
         setRefusal(null);
         const rowAxis = screen === 'dsm' ? from.axis : from.rowAxis;
         const columnAxis = screen === 'dsm' ? from.axis : from.columnAxis;
+        const steps = 3;
+        setProgress({ label: screen === 'dsm' ? 'Evaluating the axis' : 'Evaluating the rows', step: 1, steps });
         const rows = await evaluateAxis(rowAxis);
+        if (screen !== 'dsm') setProgress({ label: 'Evaluating the columns', step: 2, steps });
         const columns = screen === 'dsm' ? rows : await evaluateAxis(columnAxis);
         if (mine !== token.current) return;
         setRowEvaluation(rows);
         setColumnEvaluation(columns);
-        setRendering(false);
-        if (rows.error || columns.error) return;
+        if (rows.error || columns.error) { setRendering(false); setProgress(null); return; }
         const elements = elementsRef.current ?? {};
         const present = (ids: string[] | undefined) => (ids ?? []).filter(id => elements[id]);
-        const why = refusalFor(rows, columns);
-        if (why) { setRefusal(why); return; }
+        const why = limitFor(screen, rows, columns);
+        if (why) { setRefusal(why); setRendering(false); setProgress(null); return; }
+        // Building the grid is synchronous: let the bar paint before it starts.
+        setProgress({ label: 'Building the matrix', step: 3, steps });
+        await new Promise(resolve => setTimeout(resolve, 30));
+        if (mine !== token.current) return;
         const rowIds = present(rows.ids);
         const columnIds = present(columns.ids);
         // The DSM-only options are evaluated with the axis, so a render is one coherent reading.
@@ -110,6 +118,8 @@ export function useMatrixDefinition(screen: MatrixScreen) {
             if (mine !== token.current) return;
             groups = resolveGroups(from.groups, rowIds, id => elements[id]?.package, relationshipsRef.current ?? [], matched);
         }
+        setRendering(false);
+        setProgress(null);
         setSnapshot({
             criticalIds, groups,
             rowIds, columnIds,
@@ -129,6 +139,7 @@ export function useMatrixDefinition(screen: MatrixScreen) {
         setColumnEvaluation(undefined);
         setNotice(null);
         setRendering(false);
+        setProgress(null);
         if (!openedId) { setDraft(EMPTY_DRAFT); setEditing(false); return; }
         const loaded = draftFrom(definition?.matrix);
         setDraft(loaded);
@@ -166,7 +177,7 @@ export function useMatrixDefinition(screen: MatrixScreen) {
     return {
         definition, definitionId, draft, setDraft, editing, setEditing, dirty, select,
         rowEvaluation, columnEvaluation, setRowEvaluation, setColumnEvaluation,
-        snapshot, refusal, rendering, render: () => render(draft),
+        snapshot, refusal, rendering, progress, render: () => render(draft),
         save, saving, notice, setNotice,
     };
 }

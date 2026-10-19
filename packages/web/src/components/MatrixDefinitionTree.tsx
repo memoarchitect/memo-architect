@@ -13,7 +13,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react';
-import type { DiagramDTO } from '@memoarchitect/tools/browser';
+import type { DiagramDTO, MatrixDefinitionDTO } from '@memoarchitect/tools/browser';
+import { MATRIX_VIEW_DEFINITIONS, type MatrixScreen } from '../lib/matrix-views';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import {
@@ -25,8 +26,8 @@ import { MatrixDefinitionDialog, type MatrixDialogMode } from './MatrixDefinitio
 import { COLOR, FONT } from '../styles/tokens';
 
 interface Props {
-    /** The `view def` this tree lists, e.g. MemoTraceabilityMatrixView. */
-    viewDefinition: string;
+    /** The screen this tree belongs to; it lists the views typed by that screen's `view def`. */
+    screen: MatrixScreen;
     /** What one entry is called in prompts: "traceability matrix". */
     noun: string;
     plural: string;
@@ -43,7 +44,8 @@ const iconButton: React.CSSProperties = {
     fontSize: FONT.xs, color: COLOR.muted, lineHeight: 1,
 };
 
-export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, selectedId, onSelect }: Props) {
+export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, onSelect }: Props) {
+    const viewDefinition = MATRIX_VIEW_DEFINITIONS[screen];
     const model = useScopedModel();
     const connected = useModelStore(s => s.connected);
     const createMatrixView = useModelStore(s => s.createMatrixView);
@@ -62,11 +64,11 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
     );
     // The tree holds only the packages that declare one of these definitions.
     const tree = useMemo(() => buildViewPackageTree(definitions), [definitions]);
-    // The dialog offers every package; the ones the project keeps views in come first.
-    const packageChoices = useMemo(() => {
-        const withViews = new Set((model?.diagrams ?? []).map(d => d.package).filter(Boolean));
-        return (model?.packages ?? []).map(pkg => ({ name: pkg.qualifiedName, holdsViews: withViews.has(pkg.qualifiedName) }));
-    }, [model?.packages, model?.diagrams]);
+    // The dialog offers the packages the project keeps views in, not the thousands that hold other things.
+    const packageChoices = useMemo(
+        () => [...new Set((model?.diagrams ?? []).map(d => d.package).filter((name): name is string => Boolean(name)))].sort(),
+        [model?.diagrams],
+    );
     const [dialog, setDialog] = useState<{ mode: MatrixDialogMode; definition?: DiagramDTO; packageName?: string } | null>(null);
     const [dialogError, setDialogError] = useState<string | null>(null);
 
@@ -91,6 +93,15 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
     const rename = (definition: DiagramDTO) => openDialog('rename', definition);
     const move = (definition: DiagramDTO) => openDialog('move', definition);
 
+    /** The definition a new matrix starts with: only the filters typed in the dialog. */
+    const initialMatrix = (value: { rowQuery: string; columnQuery: string }): MatrixDefinitionDTO => {
+        if (screen === 'dsm') return value.rowQuery ? { axis: { query: value.rowQuery } } : {};
+        return {
+            ...(value.rowQuery ? { rowAxis: { query: value.rowQuery } } : {}),
+            ...(value.columnQuery ? { columnAxis: { query: value.columnQuery } } : {}),
+        };
+    };
+
     /** Make the package first when the dialog asked for a new one; returns its qualified name. */
     const ensurePackage = async (name: string, isNew: boolean): Promise<string> => {
         if (!isNew) return name;
@@ -100,14 +111,14 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
         return result.qualifiedName ?? name;
     };
 
-    const submitDialog = async (value: { name: string; package: string; newPackage: boolean }) => {
+    const submitDialog = async (value: { name: string; package: string; newPackage: boolean; rowQuery: string; columnQuery: string }) => {
         if (!dialog) return;
         setBusy(true);
         setDialogError(null);
         try {
             if (dialog.mode === 'create') {
                 const packageName = await ensurePackage(value.package, value.newPackage);
-                const result = await createMatrixView({ name: value.name, viewDefinition, package: packageName, matrix: {} });
+                const result = await createMatrixView({ name: value.name, viewDefinition, package: packageName, matrix: initialMatrix(value) });
                 if (!result.success) throw new Error(result.error ?? 'The matrix could not be declared.');
                 setDialog(null);
                 if (result.elementId) onSelect(result.elementId, true);
@@ -261,7 +272,7 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
             {dialog && (
                 <MatrixDefinitionDialog
                     key={`${dialog.mode}:${dialog.definition?.elementId ?? ''}`}
-                    mode={dialog.mode} noun={noun}
+                    mode={dialog.mode} noun={noun} screen={screen}
                     initialName={dialog.mode === 'rename' ? dialog.definition?.name : ''}
                     initialPackage={dialog.mode === 'move' ? dialog.definition?.package : dialog.packageName ?? ''}
                     packages={packageChoices} busy={busy} error={dialogError}
