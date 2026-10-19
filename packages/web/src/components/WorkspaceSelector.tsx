@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
-import { workspaceOptions } from '../lib/workspace-scope';
+import { groupWorkspaces, workspaceOptions } from '../lib/workspace-scope';
 
 export function WorkspaceSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
     const light = tone === 'light';
@@ -15,11 +15,11 @@ export function WorkspaceSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }
     const workspace = useModelStore(s => s.workspace);
     const setWorkspace = useModelStore(s => s.setWorkspace);
     const options = useMemo(() => workspaceOptions(membership), [membership]);
+    const elements = useModelStore(s => s.model?.elements);
 
     if (options.length === 0) return null;
     const known = options.some(option => option.root === workspace);
-    const sos = options.filter(option => option.scope === 'sos');
-    const systems = options.filter(option => option.scope === 'system');
+    const groups = groupWorkspaces(options, root => elements?.[root]?.attributes?.origin);
     return (
         <label
             title="Show one system, or the system of systems. Saved for you only, in memo.user.yaml (ignored by git)."
@@ -36,16 +36,11 @@ export function WorkspaceSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }
                 }}
             >
                 <option value="">Whole model</option>
-                {sos.length > 0 && (
-                    <optgroup label="System of systems">
-                        {sos.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
+                {groups.map(group => (
+                    <optgroup key={group.label} label={group.label}>
+                        {group.options.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
                     </optgroup>
-                )}
-                {systems.length > 0 && (
-                    <optgroup label="Systems">
-                        {systems.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
-                    </optgroup>
-                )}
+                ))}
             </select>
         </label>
     );

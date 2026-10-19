@@ -120,8 +120,8 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
     const headerWorkspace = useModelStore(s => s.workspace);
     const [system, setSystem] = useState<string | undefined>(headerWorkspace ?? undefined);
     const [name, setName] = useState(initialName);
-    const [packageName, setPackageName] = useState(initialPackage || packages[0] || '');
-    const [pickingPackage, setPickingPackage] = useState(mode === 'move' || packages.length === 0);
+    const [packageName, setPackageName] = useState(initialPackage);
+    const [pickingPackage, setPickingPackage] = useState(mode === 'move');
     const [packageFilter, setPackageFilter] = useState('');
     const [rows, setRows] = useState<FilterState>(NO_FILTER);
     const [columns, setColumns] = useState<FilterState>(NO_FILTER);
@@ -183,13 +183,13 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
     }, [packages, typed]);
     const canCreatePackage = needsPackage && typed !== '' && !packages.includes(typed) && PACKAGE_PATH.test(typed);
 
-    const valid = (!needsName || name.trim() !== '') && (!needsPackage || packageName !== '') && !counting && !limitProblem && !queryError;
+    const valid = (!needsName || name.trim() !== '') && (mode !== 'move' || packageName !== '') && !counting && !limitProblem && !queryError;
     const working = busy || progress !== null;
 
     const submit = () => {
         if (!valid || working) return;
         setProgress({ label: mode === 'create' ? 'Declaring the matrix' : 'Saving', step: 1, steps: 1 });
-        onSubmit({ name: name.trim(), package: packageName, newPackage: needsPackage && !packages.includes(packageName), rowQuery, columnQuery: isDsm ? '' : columnQuery, system });
+        onSubmit({ name: name.trim(), package: packageName, newPackage: needsPackage && packageName !== '' && !packages.includes(packageName), rowQuery, columnQuery: isDsm ? '' : columnQuery, system });
     };
     // The caller keeps the dialog open on an error; the bar must not outlive the attempt.
     useEffect(() => { if (!busy) setProgress(null); }, [busy, error]);
@@ -228,10 +228,13 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
                             <span style={caption}>Package</span>
                             {mode === 'create' && <span style={{ fontSize: FONT.xs, color: COLOR.faint }}>optional</span>}
                             <span style={{ flex: 1 }} />
-                            {!pickingPackage && <button type="button" style={link} onClick={() => setPickingPackage(true)}>Change</button>}
+                            {!pickingPackage && <button type="button" style={link} onClick={() => setPickingPackage(true)}>{packageName ? 'Change' : 'Choose'}</button>}
+                            {pickingPackage && mode === 'create' && packageName && <button type="button" style={link} onClick={() => { setPackageName(''); setPickingPackage(false); }}>Clear</button>}
                         </div>
                         {!pickingPackage ? (
-                            <div title={packageName} style={{ ...field, background: COLOR.surfaceAlt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{packageName}</div>
+                            <div title={packageName} style={{ ...field, background: COLOR.surfaceAlt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: packageName ? COLOR.primary : COLOR.faint }}>
+                                {packageName || 'Not set: it is placed with the project\'s other views'}
+                            </div>
                         ) : (
                             <>
                                 <input value={packageFilter} onChange={event => setPackageFilter(event.target.value)} aria-label="Find a package" placeholder="Find a package, or type a new name" style={field} autoFocus={mode === 'move'} />

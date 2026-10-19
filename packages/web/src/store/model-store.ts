@@ -485,7 +485,7 @@ export interface ModelState {
      * declaration's qualified name is the answer, and it is returned once the
      * rebuilt model lists the view.
      */
-    createMatrixView: (request: { name: string; viewDefinition: string; package: string; matrix?: MatrixDefinitionDTO }) =>
+    createMatrixView: (request: { name: string; viewDefinition: string; package?: string; matrix?: MatrixDefinitionDTO }) =>
         Promise<{ success: boolean; elementId?: string; error?: string }>;
     /** Rewrite a matrix view's label or definition in its own declaration. */
     updateMatrixView: (elementId: string, change: { name?: string; matrix?: MatrixDefinitionDTO }) =>
@@ -1307,7 +1307,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         try {
             const result = await requestDiagramCreate({
                 name, diagramType: 'alloc', viewKind: 'grid', viewpointId: '__unassigned',
-                package: packageName, viewDefinition, matrix: matrix ?? {},
+                ...(packageName ? { package: packageName } : {}), viewDefinition, matrix: matrix ?? {},
             });
             if (!result.success) return { success: false, error: result.error ?? 'The matrix could not be declared.' };
             // The answer comes before the rebuilt model does; wait for the

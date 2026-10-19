@@ -29,6 +29,31 @@ export function workspaceOptions(membership: WorkspaceMembershipDTO | undefined)
     return [...membership.workspaces].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
 
+export interface WorkspaceGroup {
+    label: string;
+    options: WorkspaceOption[];
+}
+
+/**
+ * The workspaces grouped for a picker: systems of systems, then systems this
+ * organisation builds, systems built by others, and the ones whose origin is not
+ * stated. Origin is the `origin` attribute of the system's definition
+ * (`SystemOriginKind`), read from the model and never from a list kept here.
+ */
+export function groupWorkspaces(
+    options: readonly WorkspaceOption[],
+    originOf: (root: string) => string | undefined,
+): WorkspaceGroup[] {
+    const originName = (root: string) => originOf(root)?.split('::').pop();
+    const groups: WorkspaceGroup[] = [
+        { label: 'System of systems', options: options.filter(option => option.scope === 'sos') },
+        { label: 'Systems we build (internal)', options: options.filter(option => option.scope === 'system' && originName(option.root) === 'internal') },
+        { label: 'Systems built by others (external)', options: options.filter(option => option.scope === 'system' && originName(option.root) === 'external') },
+        { label: 'Origin not stated', options: options.filter(option => option.scope === 'system' && !['internal', 'external'].includes(originName(option.root) ?? '')) },
+    ];
+    return groups.filter(group => group.options.length > 0);
+}
+
 /** The set of element ids a workspace shows, or undefined when the whole model is shown. */
 export function idsInWorkspace(membership: WorkspaceMembershipDTO | undefined, workspace: string | null): Set<string> | undefined {
     if (!workspace || !membership) return undefined;
