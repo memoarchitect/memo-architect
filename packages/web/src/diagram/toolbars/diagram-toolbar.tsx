@@ -24,6 +24,7 @@
 // which one applies, so there is no registry to opt into, just a lookup.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from '../../components/AppDialogs';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Edge as RFEdge } from '@xyflow/react';
 import type { MemoModelDTO, DiagramLayout } from '@memoarchitect/tools/browser';
@@ -264,13 +265,14 @@ export class BaseDiagramToolbar {
                     <IconToggle
                         icon={<Icon.arrange />}
                         active={ctx.autoLayoutEnabled}
-                        onClick={() => {
+                        onClick={async () => {
                             if (ctx.autoLayoutEnabled) {
                                 ctx.markManualLayout();
                             } else {
-                                if (!window.confirm(
-                                    'Recalculate the layout? This replaces saved manual positions and hand-routed connectors for this diagram.',
-                                )) return;
+                                if (!await confirmDialog({
+                                    title: 'Recalculate the layout?', confirmLabel: 'Recalculate',
+                                    message: 'This replaces saved manual positions and hand-routed connectors for this diagram.',
+                                })) return;
                                 const previous = currentLayout(ctx.selectedDiagramId!);
                                 const layout: DiagramLayout = {
                                     nodes: {}, edges: {}, canvas: { ...previous?.canvas, autoLayout: true },

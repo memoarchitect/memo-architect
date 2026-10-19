@@ -3,6 +3,7 @@
 // Right-click context menus for nodes and edges on the diagram canvas.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from '../components/AppDialogs';
 import { useEffect, useRef, useState } from 'react';
 import { FONT } from '../styles/tokens';
 
@@ -198,10 +199,10 @@ export function NodeContextMenu({
 
             <MenuItem label="Remove from diagram" icon="↩️" onClick={() => { onClose(); onRemoveFromDiagram(); }} />
             <MenuItem label="Delete from model" icon="🗑️" danger onClick={() => {
-                if (window.confirm(`Delete ${nodeId} from the model? This cannot be undone.`)) {
-                    onClose();
-                    onDeleteFromModel();
-                }
+                // Close the menu first: the dialog is asked on top of the page, and the answer outlives the menu.
+                onClose();
+                void confirmDialog({ title: `Delete ${nodeId} from the model?`, danger: true, message: 'This cannot be undone.' })
+                    .then(confirmed => { if (confirmed) onDeleteFromModel(); });
             }} />
         </Menu>
     );

@@ -13,6 +13,8 @@
 // teaches people to dismiss dialogs without reading them.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from './AppDialogs';
+
 /**
  * Deleting an element takes its relationships with it.
  *
@@ -20,26 +22,34 @@
  * across every file that holds one — so this is never a one-file edit, and the
  * count is not visible from the button that starts it.
  */
-export const confirmElementDelete = (name: string): boolean =>
-    window.confirm(`Delete “${name}”?\n\n`
-        + 'All incoming and outgoing relationships will also be deleted. This cannot be undone.');
+export const confirmElementDelete = (name: string): Promise<boolean> =>
+    confirmDialog({
+        title: `Delete “${name}”?`, danger: true,
+        message: 'All incoming and outgoing relationships will also be deleted. This cannot be undone.',
+    });
 
 /**
- * Deleting a view takes its saved layout, and nothing else.
+ * Deleting a view takes its declaration, and nothing else.
  *
  * Worth saying explicitly: the elements a view shows are not deleted with it,
  * and a reader who is told only "this cannot be undone" has no way to know that.
  */
-export const confirmViewDelete = (name: string): boolean =>
-    window.confirm(`Delete the “${name}” view?\n\n`
-        + 'Its saved layout goes with it. The elements it shows are not deleted. This cannot be undone.');
+export const confirmViewDelete = (name: string): Promise<boolean> =>
+    confirmDialog({
+        title: `Delete the “${name}” view?`, danger: true,
+        message: 'Its declaration, and any saved layout in it, goes with it. The elements it shows are not deleted. This cannot be undone.',
+    });
 
 /** A canvas annotation's text lives in the diagram's layout, not in the model. */
-export const confirmAnnotationDelete = (): boolean =>
-    window.confirm('Delete this annotation?\n\n'
-        + "Its text is part of this diagram's saved layout, not the model. This cannot be undone.");
+export const confirmAnnotationDelete = (): Promise<boolean> =>
+    confirmDialog({
+        title: 'Delete this annotation?', danger: true,
+        message: "Its text is part of this diagram's saved layout, not the model. This cannot be undone.",
+    });
 
 /** A DHF document is a file on disk; removing it unlinks that file. */
-export const confirmDocumentDelete = (title: string): boolean =>
-    window.confirm(`Remove the document “${title}”?\n\n`
-        + 'Its markdown file is deleted from dhf/documents. This cannot be undone.');
+export const confirmDocumentDelete = (title: string): Promise<boolean> =>
+    confirmDialog({
+        title: `Remove the document “${title}”?`, danger: true, confirmLabel: 'Remove',
+        message: 'Its markdown file is deleted from dhf/documents. This cannot be undone.',
+    });

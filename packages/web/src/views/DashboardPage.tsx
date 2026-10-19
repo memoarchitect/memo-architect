@@ -11,6 +11,7 @@
 // Design: plans/memo-custom-dashboards.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from '../components/AppDialogs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DashboardScope } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
@@ -160,11 +161,11 @@ export function DashboardPage({ dashboardId, scope, widgets }: {
                     await moveDashboard(dashboardId, resolved.scope as DashboardScope, to);
                     if (scope) setActiveView(viewFor(dashboardId, to));
                 })}
-                onDelete={() => {
-                    const what = resolved.builtin
-                        ? `Reset “${resolved.title}” to the generated page? This deletes ${resolved.path}.`
-                        : `Delete “${resolved.title}”? This deletes ${resolved.path}.`;
-                    if (!window.confirm(what)) return;
+                onDelete={async () => {
+                    if (!await confirmDialog({
+                        title: resolved.builtin ? `Reset “${resolved.title}” to the generated page?` : `Delete “${resolved.title}”?`,
+                        message: `This deletes ${resolved.path}.`, danger: true, confirmLabel: resolved.builtin ? 'Reset' : 'Delete',
+                    })) return;
                     void run(async () => {
                         await deleteDashboard(dashboardId, resolved.scope as DashboardScope);
                         if (!resolved.builtin && !resolved.shadows) setActiveView({ type: 'dashboards' });

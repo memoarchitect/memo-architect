@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { alertDialog } from './AppDialogs';
 import { confirmElementDelete } from './confirm-destructive';
 import { FONT } from '../styles/tokens';
 
@@ -90,9 +91,9 @@ export function ExplorerTreeRow({
             {onDelete && <button type="button" role="menuitem" onClick={async () => {
                 setMenu(null);
                 const nameStr = typeof label === 'string' ? label : (title ?? 'this element');
-                if (!confirmElementDelete(nameStr)) return;
+                if (!await confirmElementDelete(nameStr)) return;
                 const result = await onDelete();
-                if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
+                if (!result.success) void alertDialog(result.error ?? 'The element could not be deleted.', 'Not deleted');
             }} style={{
                 width: '100%', border: 0, padding: '8px 12px', textAlign: 'left', cursor: 'pointer',
                 background: '#FFFFFF', color: '#DC2626', fontSize: 12, fontWeight: 600,

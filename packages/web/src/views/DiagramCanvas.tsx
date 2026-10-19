@@ -12,6 +12,7 @@
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from '../components/AppDialogs';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
@@ -176,9 +177,9 @@ function AnnotationNode({ data, selected }: NodeProps<FlowNode>) {
                     event.preventDefault();
                     event.stopPropagation();
                 }}
-                onClick={event => {
+                onClick={async event => {
                     event.stopPropagation();
-                    if (confirmAnnotationDelete()) data.onDelete?.();
+                    if (await confirmAnnotationDelete()) data.onDelete?.();
                 }}
                 style={{
                     position: 'absolute', top: 3, right: 5, border: 0, background: 'transparent',
@@ -2324,10 +2325,11 @@ function DiagramCanvasInner() {
         }
     }, [selectedDiagram?.name]);
 
-    const tidyConnectors = useCallback(() => {
-        if (edgesRef.current.some(edge => edge.data?.manualRoute) && !window.confirm(
-            'Re-route connectors? This replaces the hand-drawn bends on this diagram. Node positions will be kept.',
-        )) return;
+    const tidyConnectors = useCallback(async () => {
+        if (edgesRef.current.some(edge => edge.data?.manualRoute) && !await confirmDialog({
+            title: 'Re-route connectors?', confirmLabel: 'Re-route',
+            message: 'This replaces the hand-drawn bends on this diagram. Node positions will be kept.',
+        })) return;
         markManualLayout();
         setLayoutEditVersion(version => version + 1);
         const cleared = edgesRef.current.map(edge => {

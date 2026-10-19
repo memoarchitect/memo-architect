@@ -158,8 +158,8 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         });
     };
 
-    const remove = (definition: DiagramDTO) => {
-        if (!confirmViewDelete(definition.name)) return;
+    const remove = async (definition: DiagramDTO) => {
+        if (!await confirmViewDelete(definition.name)) return;
         void run(async () => {
             const result = await deleteModelElement(definition.elementId!);
             if (result.success && selectedId === definition.elementId) onSelect(null);

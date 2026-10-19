@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { alertDialog, askConfirm, askText } from '../components/AppDialogs';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import { MemoBrandMark } from '../components/MemoBrandMark';
@@ -178,16 +179,16 @@ export function AnalysisWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedNotebookId]);
 
-    function addFolder() {
-        const name = window.prompt('Folder name');
+    async function addFolder() {
+        const name = await askText('Folder name');
         if (!name?.trim()) return;
         const folder: Folder = { id: `folder-${crypto.randomUUID()}`, name: name.trim() };
         setLibrary(current => ({ ...current, folders: [...current.folders, folder] }));
         setSelectedFolder(folder.id);
     }
 
-    function addNotebook(template: StarterTemplate = 'custom', suggestedTitle = 'Model analysis', askForTitle = true) {
-        const enteredTitle = askForTitle ? window.prompt('Notebook title', suggestedTitle) : suggestedTitle;
+    async function addNotebook(template: StarterTemplate = 'custom', suggestedTitle = 'Model analysis', askForTitle = true) {
+        const enteredTitle = askForTitle ? await askText('Notebook title', suggestedTitle) : suggestedTitle;
         if (!enteredTitle?.trim()) return;
         const title = enteredTitle.trim();
         const duplicateCount = library.notebooks.filter(notebook => notebook.title === title).length;
