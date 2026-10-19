@@ -334,7 +334,7 @@ export function TraceabilityMatrix() {
 
     const tree = (
         <MatrixDefinitionTree
-            viewDefinition={MATRIX_VIEW_DEFINITIONS.traceability} noun="traceability matrix" title="Traceability matrices"
+            viewDefinition={MATRIX_VIEW_DEFINITIONS.traceability} noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
             selectedId={matrix.definitionId} onSelect={matrix.select}
         />
     );
@@ -346,7 +346,7 @@ export function TraceabilityMatrix() {
                 {tree}
                 <div className="flex-1 flex items-center justify-center px-8 text-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
                     {matrix.definitionId
-                        ? 'Opening the definition…'
+                        ? 'That definition is not in the model: it may have been moved, renamed or deleted. Select one in the tree.'
                         : 'Select a traceability matrix in the tree, or create one with New in a package.'}
                 </div>
             </div>

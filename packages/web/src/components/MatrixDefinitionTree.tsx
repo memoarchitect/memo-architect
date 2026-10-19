@@ -28,6 +28,7 @@ interface Props {
     viewDefinition: string;
     /** What one entry is called in prompts: "traceability matrix". */
     noun: string;
+    plural: string;
     title: string;
     selectedId?: string;
     /** `created` is true for a definition just made here, which opens in editing mode. */
@@ -41,7 +42,7 @@ const iconButton: React.CSSProperties = {
     fontSize: FONT.xs, color: COLOR.muted, lineHeight: 1,
 };
 
-export function MatrixDefinitionTree({ viewDefinition, noun, title, selectedId, onSelect }: Props) {
+export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, selectedId, onSelect }: Props) {
     const model = useScopedModel();
     const connected = useModelStore(s => s.connected);
     const createMatrixView = useModelStore(s => s.createMatrixView);
@@ -238,7 +239,7 @@ export function MatrixDefinitionTree({ viewDefinition, noun, title, selectedId, 
             <div style={{ overflow: 'auto', flex: 1, padding: '4px 0' }}>
                 {definitions.length === 0 && (
                     <div style={{ padding: '10px 12px', fontSize: FONT.xs, color: COLOR.faint }}>
-                        This model declares no {noun}s yet. Use New on a package.
+                        This model declares no {plural} yet. Use New on a package.
                     </div>
                 )}
                 {tree.map(node => renderPackage(node))}

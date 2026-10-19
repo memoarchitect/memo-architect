@@ -17,6 +17,9 @@ import type { DiagramDTO } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import { evaluateAxis, refusalFor, type AxisEvaluation } from './axis-evaluation';
+import { resolveGroups } from './matrix-groups';
+import type { DsmNamedGroup } from '../analysis/dsm-hierarchy';
+import { requestAxisQuery } from '../store/ws-client';
 import {
     draftFrom, draftToMatrix, EMPTY_DRAFT, MATRIX_VIEW_DEFINITIONS, stableMatrix,
     type MatrixDraft, type MatrixScreen,
@@ -28,6 +31,10 @@ export interface MatrixSnapshot {
     /** Picked ids that are no longer in the model, per axis. */
     missingRows: number;
     missingColumns: number;
+    /** DSM only: the critical elements, to mark on the axis and in the cell inspector. */
+    criticalIds: ReadonlySet<string>;
+    /** DSM only: the named groups, resolved to the elements they hold. */
+    groups: DsmNamedGroup[];
 }
 
 export type Notice = { kind: 'ok' | 'error'; message: string } | null;
@@ -59,6 +66,8 @@ export function useMatrixDefinition(screen: MatrixScreen) {
     const openAsCreated = useRef(false);
     const elementsRef = useRef(model?.elements);
     elementsRef.current = model?.elements;
+    const relationshipsRef = useRef(model?.relationships);
+    relationshipsRef.current = model?.relationships;
 
     const savedSignature = stableMatrix(definition?.matrix);
     const draftSignature = stableMatrix(draftToMatrix(draft, screen));
@@ -85,7 +94,24 @@ export function useMatrixDefinition(screen: MatrixScreen) {
         if (why) { setRefusal(why); return; }
         const rowIds = present(rows.ids);
         const columnIds = present(columns.ids);
+        // The DSM-only options are evaluated with the axis, so a render is one coherent reading.
+        let criticalIds = new Set<string>();
+        let groups: DsmNamedGroup[] = [];
+        if (screen === 'dsm') {
+            const critical = await evaluateAxis(from.criticalElements);
+            if (mine !== token.current) return;
+            if (critical.error) { setNotice({ kind: 'error', message: `Critical elements: ${critical.error}` }); }
+            criticalIds = new Set(critical.ids ?? []);
+            const matched = new Map<string, readonly string[]>();
+            for (const group of from.groups.filter(entry => entry.groupedBy === 'memoQuery' && entry.expression?.trim())) {
+                const found = await requestAxisQuery(group.expression!.trim(), { idLimit: 5000, previewLimit: 0 }).catch(() => undefined);
+                if (found?.ids) matched.set(group.expression!.trim(), found.ids);
+            }
+            if (mine !== token.current) return;
+            groups = resolveGroups(from.groups, rowIds, id => elements[id]?.package, relationshipsRef.current ?? [], matched);
+        }
         setSnapshot({
+            criticalIds, groups,
             rowIds, columnIds,
             missingRows: (rows.ids?.length ?? 0) - rowIds.length,
             missingColumns: (columns.ids?.length ?? 0) - columnIds.length,
