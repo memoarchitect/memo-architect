@@ -23,7 +23,6 @@ import {
     type MemoRelationship,
 } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
 import {
     computeHierarchicalDSM,
     collectNodeIds,
@@ -35,6 +34,7 @@ import {
 import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
 import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
 import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
+import { MatrixSystemSelect, useSystemOptions } from '../components/MatrixSystemSelect';
 import { AxisViewControls } from '../components/AxisViewControls';
 import { useMatrixDefinition } from '../lib/use-matrix-definition';
 import { ProgressBar } from '../components/ProgressBar';
@@ -60,7 +60,12 @@ type Status = { kind: 'ok' | 'error'; message: string } | null;
 const NO_IDS: string[] = [];
 
 export function TraceabilityMatrix() {
-    const model = useScopedModel();
+    // The definition this screen is open on, and the draft being edited. Nothing
+    // is selected, evaluated or drawn until a definition is chosen in the tree.
+    const systemOptions = useSystemOptions();
+    const matrix = useMatrixDefinition('traceability');
+    // The model as the matrix's own system shows it (or the workspace chosen in the header).
+    const model = matrix.model;
     const connected = useModelStore(s => s.connected);
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -68,9 +73,6 @@ export function TraceabilityMatrix() {
     const createRelationship = useModelStore(s => s.createRelationship);
     const deleteRelationship = useModelStore(s => s.deleteRelationship);
 
-    // The definition this screen is open on, and the draft being edited. Nothing
-    // is selected, evaluated or drawn until a definition is chosen in the tree.
-    const matrix = useMatrixDefinition('traceability');
     const { definition, draft, setDraft, snapshot } = matrix;
     const linkTypes = draft.linkTypes;
     const setLinkTypes = useCallback((next: string[]) => setDraft(current => ({ ...current, linkTypes: next })), [setDraft]);
@@ -358,12 +360,14 @@ export function TraceabilityMatrix() {
         {tree}
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
             <MatrixDefinitionBar
+                systemName={systemOptions.find(option => option.root === draft.system)?.name}
                 definition={definition} editing={matrix.editing} onEditingChange={matrix.setEditing} dirty={matrix.dirty}
                 connected={connected} rendering={matrix.rendering} saving={matrix.saving}
                 onRender={() => { void matrix.render(); }} onSave={() => { void matrix.save(); }} notice={matrix.notice}
             />
             {matrix.editing && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                    <MatrixSystemSelect value={draft.system} onChange={system => setDraft(current => ({ ...current, system }))} />
                     <MatrixAxisEditor
                         label="Rows" draft={draft.rowAxis} editable elementOptions={pickable}
                         onChange={rowAxis => setDraft(current => ({ ...current, rowAxis }))}

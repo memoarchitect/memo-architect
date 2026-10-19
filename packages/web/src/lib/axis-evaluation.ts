@@ -31,11 +31,12 @@ export function joinAxis(picked: readonly string[], matched: AxisQueryResult | u
     return { query: '', count: ids.length, ids, preview: matched.preview };
 }
 
-export async function evaluateAxis(axis: AxisDraft, previewLimit = 25): Promise<AxisEvaluation> {
+/** `workspace` runs the query in one system's (or the system of systems') workspace; none runs it over the whole model. */
+export async function evaluateAxis(axis: AxisDraft, previewLimit = 25, workspace?: string): Promise<AxisEvaluation> {
     const query = axis.query.trim();
     if (!query) return { ...joinAxis(axis.elementIds, undefined), query };
     try {
-        const matched = await requestAxisQuery(query, { idLimit: AXIS_ID_LIMIT, previewLimit });
+        const matched = await requestAxisQuery(query, { idLimit: AXIS_ID_LIMIT, previewLimit, ...(workspace ? { workspace } : {}) });
         return { ...joinAxis(axis.elementIds, matched), query };
     } catch (e) {
         return { query, count: 0, preview: [], error: e instanceof Error ? e.message : String(e) };

@@ -1026,7 +1026,7 @@ export function requestDiagramUpdate(
 
 /** Which elements a memo-query selects: the count, a preview, and the ids when they fit. */
 export function requestAxisQuery(
-    query: string, limits: { idLimit?: number; previewLimit?: number } = {},
+    query: string, limits: { idLimit?: number; previewLimit?: number; workspace?: string } = {},
 ): Promise<QueryResultMessage['payload'] & { requestId: string }> {
     return sendRelationshipRequest('query:run', { query, ...limits }, queryRequests);
 }

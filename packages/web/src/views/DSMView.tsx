@@ -23,7 +23,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { legalRelationshipTypes } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
 import {
     collectNodeIds,
     computeHierarchicalDSM,
@@ -45,6 +44,7 @@ import { Icon, IconToggle } from './DiagramToolbarControls';
 import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
 import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
 import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
+import { MatrixSystemSelect, useSystemOptions } from '../components/MatrixSystemSelect';
 import { MatrixGroupsEditor } from '../components/MatrixGroupsEditor';
 import { AxisViewControls } from '../components/AxisViewControls';
 import { useMatrixDefinition } from '../lib/use-matrix-definition';
@@ -63,7 +63,12 @@ function markColor(cell: DsmAggregateCell): string {
 const NO_IDS: string[] = [];
 
 export function DSMView() {
-    const model = useScopedModel();
+    // The definition this screen is open on, and the draft being edited. Nothing
+    // is selected, evaluated or drawn until a definition is chosen in the tree.
+    const systemOptions = useSystemOptions();
+    const matrix = useMatrixDefinition('dsm');
+    // The model as the matrix's own system shows it (or the workspace chosen in the header).
+    const model = matrix.model;
     const connected = useModelStore(s => s.connected);
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -74,9 +79,6 @@ export function DSMView() {
     // axis has to honour the same reading: `Requirement` means its subkinds too.
     const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
 
-    // The definition this screen is open on, and the draft being edited. Nothing
-    // is selected, evaluated or drawn until a definition is chosen in the tree.
-    const matrix = useMatrixDefinition('dsm');
     const { definition, draft, setDraft, snapshot } = matrix;
     const dependencyTypes = draft.dependencyTypes;
     const setDependencyTypes = useCallback((next: string[]) => setDraft(current => ({ ...current, dependencyTypes: next })), [setDraft]);
@@ -319,12 +321,14 @@ export function DSMView() {
         {tree}
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#F7F7F5', position: 'relative', minWidth: 0 }}>
             <MatrixDefinitionBar
+                systemName={systemOptions.find(option => option.root === draft.system)?.name}
                 definition={definition} editing={matrix.editing} onEditingChange={matrix.setEditing} dirty={matrix.dirty}
                 connected={connected} rendering={matrix.rendering} saving={matrix.saving}
                 onRender={() => { void matrix.render(); }} onSave={() => { void matrix.save(); }} notice={matrix.notice}
             />
             {matrix.editing && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                    <MatrixSystemSelect value={draft.system} onChange={system => setDraft(current => ({ ...current, system }))} />
                     <MatrixAxisEditor
                         label="Rows and columns" draft={draft.axis} editable elementOptions={pickable}
                         onChange={axis => setDraft(current => ({ ...current, axis }))}

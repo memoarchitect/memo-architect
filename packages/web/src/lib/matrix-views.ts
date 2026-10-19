@@ -82,6 +82,8 @@ export const stableMatrix = (matrix: MatrixDefinitionDTO | undefined): string =>
 
 /** Everything a matrix definition holds, in the shape a screen edits it. */
 export interface MatrixDraft {
+    /** The system (workspace root) the matrix is about; undefined shows the workspace chosen in the header. */
+    system: string | undefined;
     rowAxis: AxisDraft;
     columnAxis: AxisDraft;
     /** The one axis of a DSM, where rows equal columns. */
@@ -96,6 +98,7 @@ export interface MatrixDraft {
 }
 
 export const EMPTY_DRAFT: MatrixDraft = {
+    system: undefined,
     rowAxis: EMPTY_AXIS, columnAxis: EMPTY_AXIS, axis: EMPTY_AXIS,
     linkTypes: [], dependencyTypes: [], containmentTypes: [],
     symmetric: undefined, ordering: undefined, groups: [], criticalElements: EMPTY_AXIS,
@@ -103,6 +106,7 @@ export const EMPTY_DRAFT: MatrixDraft = {
 
 export function draftFrom(matrix: MatrixDefinitionDTO | undefined): MatrixDraft {
     return {
+        system: matrix?.system,
         rowAxis: axisFrom(matrix?.rowAxis),
         columnAxis: axisFrom(matrix?.columnAxis),
         axis: axisFrom(matrix?.axis),
@@ -125,10 +129,10 @@ export function draftToMatrix(draft: MatrixDraft, screen: MatrixScreen): MatrixD
     const list = (values: string[]) => (values.length > 0 ? values : undefined);
     const fields: MatrixDefinitionDTO = screen === 'traceability'
         ? {
-            rowAxis: axisToDto(draft.rowAxis), columnAxis: axisToDto(draft.columnAxis), linkTypes: list(draft.linkTypes),
+            system: draft.system, rowAxis: axisToDto(draft.rowAxis), columnAxis: axisToDto(draft.columnAxis), linkTypes: list(draft.linkTypes),
         }
         : {
-            axis: axisToDto(draft.axis), dependencyTypes: list(draft.dependencyTypes),
+            system: draft.system, axis: axisToDto(draft.axis), dependencyTypes: list(draft.dependencyTypes),
             containmentTypes: list(draft.containmentTypes), symmetric: draft.symmetric, ordering: draft.ordering,
             groups: draft.groups.length > 0 ? draft.groups : undefined, criticalElements: axisToDto(draft.criticalElements),
         };

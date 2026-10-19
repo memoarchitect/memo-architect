@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiagramDTO } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
-import { useScopedModel } from '../store/scoped-model';
+import { scopeModel } from './workspace-scope';
 import { evaluateAxis, limitFor, type AxisEvaluation } from './axis-evaluation';
 import { resolveGroups } from './matrix-groups';
 import type { ProgressState } from '../components/ProgressBar';
@@ -41,20 +41,25 @@ export interface MatrixSnapshot {
 export type Notice = { kind: 'ok' | 'error'; message: string } | null;
 
 export function useMatrixDefinition(screen: MatrixScreen) {
-    const model = useScopedModel();
+    const wholeModel = useModelStore(s => s.model);
+    const headerWorkspace = useModelStore(s => s.workspace);
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const updateMatrixView = useModelStore(s => s.updateMatrixView);
 
+    const [draft, setDraft] = useState<MatrixDraft>(EMPTY_DRAFT);
+    // The workspace the matrix reads: the system it is tied to, or the one chosen in the header.
+    const workspace = draft.system ?? headerWorkspace ?? null;
+    const model = useMemo(() => (wholeModel ? scopeModel(wholeModel, workspace) : null), [wholeModel, workspace]);
+
     const definitionId = activeView.type === screen ? activeView.definitionId : undefined;
     const definition: DiagramDTO | undefined = useMemo(
         () => (definitionId
-            ? model?.diagrams?.find(d => d.elementId === definitionId && d.viewDefinition === MATRIX_VIEW_DEFINITIONS[screen])
+            ? wholeModel?.diagrams?.find(d => d.elementId === definitionId && d.viewDefinition === MATRIX_VIEW_DEFINITIONS[screen])
             : undefined),
-        [model?.diagrams, definitionId, screen],
+        [wholeModel?.diagrams, definitionId, screen],
     );
 
-    const [draft, setDraft] = useState<MatrixDraft>(EMPTY_DRAFT);
     const [editing, setEditing] = useState(false);
     const [rowEvaluation, setRowEvaluation] = useState<AxisEvaluation | undefined>();
     const [columnEvaluation, setColumnEvaluation] = useState<AxisEvaluation | undefined>();
@@ -85,9 +90,9 @@ export function useMatrixDefinition(screen: MatrixScreen) {
         const columnAxis = screen === 'dsm' ? from.axis : from.columnAxis;
         const steps = 3;
         setProgress({ label: screen === 'dsm' ? 'Evaluating the axis' : 'Evaluating the rows', step: 1, steps });
-        const rows = await evaluateAxis(rowAxis);
+        const rows = await evaluateAxis(rowAxis, 25, from.system);
         if (screen !== 'dsm') setProgress({ label: 'Evaluating the columns', step: 2, steps });
-        const columns = screen === 'dsm' ? rows : await evaluateAxis(columnAxis);
+        const columns = screen === 'dsm' ? rows : await evaluateAxis(columnAxis, 25, from.system);
         if (mine !== token.current) return;
         setRowEvaluation(rows);
         setColumnEvaluation(columns);
@@ -106,13 +111,13 @@ export function useMatrixDefinition(screen: MatrixScreen) {
         let criticalIds = new Set<string>();
         let groups: DsmNamedGroup[] = [];
         if (screen === 'dsm') {
-            const critical = await evaluateAxis(from.criticalElements);
+            const critical = await evaluateAxis(from.criticalElements, 25, from.system);
             if (mine !== token.current) return;
             if (critical.error) { setNotice({ kind: 'error', message: `Critical elements: ${critical.error}` }); }
             criticalIds = new Set(critical.ids ?? []);
             const matched = new Map<string, readonly string[]>();
             for (const group of from.groups.filter(entry => entry.groupedBy === 'memoQuery' && entry.expression?.trim())) {
-                const found = await requestAxisQuery(group.expression!.trim(), { idLimit: 5000, previewLimit: 0 }).catch(() => undefined);
+                const found = await requestAxisQuery(group.expression!.trim(), { idLimit: 5000, previewLimit: 0, ...(from.system ? { workspace: from.system } : {}) }).catch(() => undefined);
                 if (found?.ids) matched.set(group.expression!.trim(), found.ids);
             }
             if (mine !== token.current) return;
@@ -175,7 +180,7 @@ export function useMatrixDefinition(screen: MatrixScreen) {
     }, [definition, draft, screen, updateMatrixView]);
 
     return {
-        definition, definitionId, draft, setDraft, editing, setEditing, dirty, select,
+        model, definition, definitionId, draft, setDraft, editing, setEditing, dirty, select,
         rowEvaluation, columnEvaluation, setRowEvaluation, setColumnEvaluation,
         snapshot, refusal, rendering, progress, render: () => render(draft),
         save, saving, notice, setNotice,

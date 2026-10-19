@@ -6,6 +6,8 @@ import type { Notice } from '../lib/use-matrix-definition';
 import { COLOR, FONT } from '../styles/tokens';
 
 interface Props {
+    /** The system or system of systems the matrix is tied to, by name. */
+    systemName?: string;
     definition: DiagramDTO;
     editing: boolean;
     onEditingChange: (editing: boolean) => void;
@@ -27,7 +29,7 @@ const button = (primary: boolean, enabled: boolean): React.CSSProperties => ({
 });
 
 export function MatrixDefinitionBar({
-    definition, editing, onEditingChange, dirty, connected, rendering, saving, onRender, onSave, notice,
+    systemName, definition, editing, onEditingChange, dirty, connected, rendering, saving, onRender, onSave, notice,
 }: Props) {
     return (
         <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
@@ -37,7 +39,7 @@ export function MatrixDefinitionBar({
                         {definition.name}{dirty && <span title="Unsaved changes" style={{ color: '#B45309' }}> •</span>}
                     </div>
                     <div style={{ fontSize: '11px', color: COLOR.faint }} title={definition.sourceFile}>
-                        in {definition.package ?? 'no package'}
+                        in {definition.package ?? 'no package'}{systemName && <> · system: <strong>{systemName}</strong></>}
                     </div>
                 </div>
                 <span style={{ flex: 1 }} />

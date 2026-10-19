@@ -1,0 +1,43 @@
+// Which system, or system of systems, a matrix is about. The choices are the
+// workspaces memo-tools found (`workspaceMembership`), never a list kept here.
+// A matrix tied to one runs its queries in that workspace and shows its model.
+
+import { useMemo } from 'react';
+import { useModelStore } from '../store/model-store';
+import { workspaceOptions } from '../lib/workspace-scope';
+import { COLOR, FONT } from '../styles/tokens';
+
+interface Props {
+    value: string | undefined;
+    onChange: (system: string | undefined) => void;
+    disabled?: boolean;
+    /** What "no system" means where this is shown. */
+    noneLabel?: string;
+}
+
+/** The workspaces on offer, or none when the model has no systems. */
+export function useSystemOptions() {
+    const membership = useModelStore(s => s.model?.workspaceMembership);
+    return useMemo(() => workspaceOptions(membership), [membership]);
+}
+
+export function MatrixSystemSelect({ value, onChange, disabled, noneLabel = 'Whole model' }: Props) {
+    const options = useSystemOptions();
+    if (options.length === 0) return null;
+    const sos = options.filter(option => option.scope === 'sos');
+    const systems = options.filter(option => option.scope === 'system');
+    return (
+        <label style={{ display: 'grid', gap: '4px' }}>
+            <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}>System</span>
+            <select
+                aria-label="System" value={options.some(option => option.root === value) ? value : ''} disabled={disabled}
+                onChange={event => onChange(event.target.value || undefined)}
+                style={{ padding: '7px 9px', border: `1px solid ${COLOR.border}`, borderRadius: '7px', fontSize: FONT.sm, color: COLOR.primary, background: COLOR.surface, width: '100%', boxSizing: 'border-box' }}
+            >
+                <option value="">{noneLabel}</option>
+                {sos.length > 0 && <optgroup label="System of systems">{sos.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}</optgroup>}
+                {systems.length > 0 && <optgroup label="Systems">{systems.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}</optgroup>}
+            </select>
+        </label>
+    );
+}
