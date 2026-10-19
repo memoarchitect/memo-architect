@@ -51,6 +51,8 @@ export interface HierarchicalMatrixProps {
     cornerHeader?: ReactNode;
     /** Extra content rendered under the grid, e.g. a legend. */
     footer?: ReactNode;
+    /** Elements to mark on both axes, e.g. a DSM's critical elements; a line is marked when it speaks for any of them. */
+    highlightIds?: ReadonlySet<string>;
 }
 
 const LABEL_WIDTH = 300;
@@ -80,8 +82,9 @@ function boundaryDepths(entries: DsmAxisEntry[]): (number | null)[] {
 
 export function HierarchicalMatrix({
     result, onToggleRow, onToggleColumn, onSelectElement, selectedElementId,
-    renderCell, onCellClick, onCellDoubleClick, cellSize = 26, showColumnNames = false, onHideRow, onHideColumn, cornerHeader, footer,
+    renderCell, onCellClick, onCellDoubleClick, cellSize = 26, showColumnNames = false, onHideRow, onHideColumn, cornerHeader, footer, highlightIds,
 }: HierarchicalMatrixProps) {
+    const marked = (entry: DsmAxisEntry) => Boolean(highlightIds && highlightIds.size > 0 && entry.node.members.some(member => highlightIds.has(member)));
     const [hover, setHover] = useState<{ row: number; column: number } | null>(null);
     const { rows, columns, matrix } = result;
 
@@ -168,8 +171,8 @@ export function HierarchicalMatrix({
                                         position: 'relative', cursor: 'pointer',
                                         borderLeft: columnBoundaries[index] === null ? undefined : boundary(columnBoundaries[index]!),
                                         borderRight: index === columns.length - 1 ? boundary(0) : undefined,
-                                        borderBottom: `1px solid ${COLOR.border}`,
-                                        background: isHovered ? '#EAF7F3' : 'transparent',
+                                        borderBottom: marked(entry) ? '3px solid #F59E0B' : `1px solid ${COLOR.border}`,
+                                        background: isHovered ? '#EAF7F3' : marked(entry) ? '#FEF3C7' : 'transparent',
                                     }}
                                 >
                                     {showColumnNames && (
@@ -194,7 +197,7 @@ export function HierarchicalMatrix({
                                         color: isHovered ? COLOR.primary : COLOR.faint,
                                         fontWeight: isHovered ? 700 : 400,
                                     }}>
-                                        <span>{entry.index}</span>
+                                        <span>{marked(entry) ? '★' : ''}{entry.index}</span>
                                     </div>
                                     {entry.node.isElement && onHideColumn && (
                                         <span style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)' }}>
@@ -226,6 +229,7 @@ export function HierarchicalMatrix({
                                     onHide={rowEntry.node.isElement && onHideRow ? () => onHideRow(rowEntry.node.id) : undefined}
                                     hovered={rowHovered}
                                     selected={isSelected}
+                                    critical={marked(rowEntry)}
                                     onToggle={() => onToggleRow(rowEntry.node.id)}
                                     onSelect={() => onSelectElement?.(rowEntry.node.id)}
                                 />
@@ -305,12 +309,13 @@ function VisibilityButton({ title, ariaLabel, onClick }: { title: string; ariaLa
 }
 
 /** The tree cell: indent guides, expander, name, aggregate size, index. */
-function RowLabel({ entry, height, fontSize, hovered, selected, onToggle, onSelect, onHide }: {
+function RowLabel({ entry, height, fontSize, hovered, selected, critical = false, onToggle, onSelect, onHide }: {
     entry: DsmAxisEntry;
     height: number;
     fontSize: number;
     hovered: boolean;
     selected: boolean;
+    critical?: boolean;
     onToggle: () => void;
     onSelect: () => void;
     onHide?: () => void;
@@ -321,7 +326,7 @@ function RowLabel({ entry, height, fontSize, hovered, selected, onToggle, onSele
         display: 'flex', alignItems: 'center', gap: '5px',
         paddingLeft: `${6 + indent}px`, paddingRight: '7px',
         position: 'sticky', left: 0, zIndex: 10,
-        background: selected ? '#E8F8F3' : hovered ? '#F1F7F5' : COLOR.surface,
+        background: selected ? '#E8F8F3' : critical ? '#FEF3C7' : hovered ? '#F1F7F5' : COLOR.surface,
         borderRight: `1px solid ${COLOR.border}`,
         borderBottom: `1px solid ${COLOR.borderLight}`,
         fontSize: `${fontSize}px`,
@@ -361,7 +366,7 @@ function RowLabel({ entry, height, fontSize, hovered, selected, onToggle, onSele
                 title={`${entry.node.name} (${entry.node.kind})`}
                 style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
-                {entry.node.name}
+                {critical && <span aria-label="critical" title="Critical element" style={{ color: '#B45309' }}>★ </span>}{entry.node.name}
             </span>
             {entry.expandable && !entry.expanded && entry.memberCount > 1 && (
                 <span style={{ fontSize: `${Math.max(10, fontSize - 3)}px`, color: COLOR.faint }} title={`${entry.memberCount} elements rolled up`}>

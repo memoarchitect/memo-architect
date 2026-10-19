@@ -116,6 +116,17 @@ export interface HierarchicalDsmOptions {
     ordering?: DsmOrdering;
     /** Count a dependency in both directions, making the matrix symmetric. */
     symmetric?: boolean;
+    /**
+     * Named groups: the roots a group names are wrapped under one grouping node
+     * carrying its name. A root belongs to the first group that names it.
+     */
+    groups?: DsmNamedGroup[];
+}
+
+export interface DsmNamedGroup {
+    name: string;
+    /** Ids of the elements the group holds. */
+    memberIds: ReadonlySet<string>;
 }
 
 export interface DsmStats {
@@ -275,6 +286,7 @@ function buildAxis(
     childrenOf: Map<string, string[]>,
     spec: DsmAxisSpec | undefined,
     groupByPackage: boolean,
+    groups: readonly DsmNamedGroup[] = [],
 ): AxisBuild {
     const kinds = new Set(spec?.kinds ?? []);
     const chosen = new Set(spec?.elementIds ?? []);
@@ -334,6 +346,7 @@ function buildAxis(
     let roots = rootIds.map(id => buildNode(id, 0));
 
     if (groupByPackage) roots = groupRootsByPackage(roots, model);
+    if (groups.length > 0) roots = groupRootsByName(roots, groups);
 
     const ownerOf = new Map<string, DsmNode>();
     const parentNodeOf = new Map<string, DsmNode>();
@@ -388,6 +401,30 @@ function groupRootsByPackage(roots: DsmNode[], model: MemoModelDTO): DsmNode[] {
     };
     top.forEach(node => settle(node, 0));
     return top;
+}
+
+/** Wrap the roots a named group holds under one grouping node; roots no group names stay where they are. */
+function groupRootsByName(roots: DsmNode[], groups: readonly DsmNamedGroup[]): DsmNode[] {
+    const nodes = groups.map(group => ({
+        group,
+        node: {
+            id: `group:${group.name}`, name: group.name, kind: 'Group', layer: '', isElement: false,
+            children: [] as DsmNode[], members: [] as string[], depth: 0,
+        } satisfies DsmNode,
+    }));
+    const top: DsmNode[] = [];
+    for (const root of roots) {
+        const home = nodes.find(({ group }) => root.members.some(member => group.memberIds.has(member)) || group.memberIds.has(root.id));
+        if (home) home.node.children.push(root); else top.push(root);
+    }
+    const settle = (node: DsmNode, depth: number): void => {
+        node.depth = depth;
+        node.children.forEach(child => settle(child, depth + 1));
+        if (!node.isElement) node.members = node.children.flatMap(child => child.members);
+    };
+    const grouped = nodes.map(({ node }) => node).filter(node => node.children.length > 0);
+    [...grouped, ...top].forEach(node => settle(node, 0));
+    return [...grouped, ...top];
 }
 
 // ─── Ordering ────────────────────────────────────────────────────────────────
@@ -525,8 +562,8 @@ export function computeHierarchicalDSM(
     const dependencies = model.relationships.filter(isDependency);
 
     const groupByPackage = options.groupByPackage ?? false;
-    const rowAxis = buildAxis(model, parentOf, childrenOf, options.rows, groupByPackage);
-    const columnAxis = buildAxis(model, parentOf, childrenOf, options.columns, groupByPackage);
+    const rowAxis = buildAxis(model, parentOf, childrenOf, options.rows, groupByPackage, options.groups);
+    const columnAxis = buildAxis(model, parentOf, childrenOf, options.columns, groupByPackage, options.groups);
 
     // Ordering asks "does A depend on B?" for two candidate siblings at any
     // level. Answering that by scanning relationships per pair is quadratic, so

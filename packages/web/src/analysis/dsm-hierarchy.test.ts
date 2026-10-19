@@ -262,3 +262,23 @@ describe('package grouping', () => {
         expect(dsm.rowRoots[0].children.map(node => node.id)).toEqual(['fnTop']);
     });
 });
+
+describe('named groups', () => {
+    it('wraps the roots a group names under a node carrying its name', () => {
+        const model = {
+            elements: Object.fromEntries(['a', 'b', 'c'].map(id => [id, element(id, 'Component', 'logical')])),
+            relationships: [rel('r1', 'flow', 'a', 'c')],
+            errors: [],
+        } as unknown as MemoModelDTO;
+        const dsm = computeHierarchicalDSM(model, {
+            rows: { elementIds: ['a', 'b', 'c'] }, columns: { elementIds: ['a', 'b', 'c'] },
+            groups: [{ name: 'Front', memberIds: new Set(['a', 'b']) }],
+        });
+        const group = dsm.rowRoots.find(node => node.name === 'Front')!;
+        const rest = dsm.rowRoots.filter(node => node !== group);
+        expect(group).toBeDefined();
+        expect(group.isElement).toBe(false);
+        expect(group.children.map(child => child.id).sort()).toEqual(['a', 'b']);
+        expect(rest.map(node => node.id)).toEqual(['c']);
+    });
+});

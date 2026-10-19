@@ -45,8 +45,10 @@ import { Icon, IconToggle } from './DiagramToolbarControls';
 import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
 import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
 import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
+import { MatrixGroupsEditor } from '../components/MatrixGroupsEditor';
 import { AxisViewControls } from '../components/AxisViewControls';
 import { useMatrixDefinition } from '../lib/use-matrix-definition';
+import type { AxisEvaluation } from '../lib/axis-evaluation';
 import { MATRIX_VIEW_DEFINITIONS } from '../lib/matrix-views';
 import { elementFilterOptions, scopeKinds } from '../components/element-options';
 import { kindParents, type KindParents } from '../analysis/kind-hierarchy';
@@ -83,6 +85,7 @@ export function DSMView() {
     const setContainmentTypes = useCallback((next: string[] | null) => setDraft(current => ({ ...current, containmentTypes: next ?? [] })), [setDraft]);
     const symmetric = draft.symmetric ?? false;
     const setSymmetric = useCallback((next: boolean) => setDraft(current => ({ ...current, symmetric: next })), [setDraft]);
+    const [criticalEvaluation, setCriticalEvaluation] = useState<AxisEvaluation | undefined>();
     // Elements hidden with the eye on the grid. A view of the last render, not part of the definition.
     const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
     useEffect(() => setHiddenIds(new Set()), [snapshot]);
@@ -186,6 +189,7 @@ export function DSMView() {
             containmentTypes: effectiveContainment,
             groupByPackage,
             symmetric,
+            groups: snapshot?.groups,
         });
     }, [model, snapshot, axisIds, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric, expandedRows, expandedColumns]);
 
@@ -237,6 +241,7 @@ export function DSMView() {
             containmentTypes: effectiveContainment,
             groupByPackage,
             symmetric,
+            groups: snapshot?.groups,
         });
         await downloadDsmXlsx(workbookResult);
     }, [model, result, rowElements, columnElements, dependencyTypes, effectiveContainment, groupByPackage, rowOrdering, columnOrdering, symmetric]);
@@ -290,7 +295,7 @@ export function DSMView() {
 
     const tree = (
         <MatrixDefinitionTree
-            viewDefinition={MATRIX_VIEW_DEFINITIONS.dsm} noun="design structure matrix" title="Design structure matrices"
+            viewDefinition={MATRIX_VIEW_DEFINITIONS.dsm} noun="design structure matrix" plural="design structure matrices" title="Design structure matrices"
             selectedId={matrix.definitionId} onSelect={matrix.select}
         />
     );
@@ -302,7 +307,7 @@ export function DSMView() {
                 {tree}
                 <div className="flex-1 flex items-center justify-center px-8 text-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
                     {matrix.definitionId
-                        ? 'Opening the definition…'
+                        ? 'That definition is not in the model: it may have been moved, renamed or deleted. Select one in the tree.'
                         : 'Select a design structure matrix in the tree, or create one with New in a package.'}
                 </div>
             </div>
@@ -319,13 +324,19 @@ export function DSMView() {
                 onRender={() => { void matrix.render(); }} onSave={() => { void matrix.save(); }} notice={matrix.notice}
             />
             {matrix.editing && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 520px)', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
                     <MatrixAxisEditor
                         label="Rows and columns" draft={draft.axis} editable elementOptions={pickable}
                         onChange={axis => setDraft(current => ({ ...current, axis }))}
                         evaluation={matrix.rowEvaluation} onEvaluated={evaluation => { matrix.setRowEvaluation(evaluation); matrix.setColumnEvaluation(evaluation); }}
                         missing={snapshot?.missingRows}
                     />
+                    <MatrixAxisEditor
+                        label="Critical elements" draft={draft.criticalElements} editable elementOptions={pickable}
+                        onChange={criticalElements => setDraft(current => ({ ...current, criticalElements }))}
+                        evaluation={criticalEvaluation} onEvaluated={setCriticalEvaluation}
+                    />
+                    <MatrixGroupsEditor groups={draft.groups} onChange={groups => setDraft(current => ({ ...current, groups }))} />
                 </div>
             )}
             {/* ── Toolbar ──
@@ -458,6 +469,7 @@ export function DSMView() {
                 ) : (
                 <HierarchicalMatrix
                     result={result}
+                    highlightIds={snapshot?.criticalIds}
                     onToggleRow={toggleRow}
                     onToggleColumn={toggleColumn}
                     onSelectElement={selectElement}
@@ -533,6 +545,15 @@ export function DSMView() {
                         </div>
                         <button onClick={() => setInspected(null)} style={{ color: COLOR.faint, background: 'none', border: 'none', cursor: 'pointer' }}>{'✕'}</button>
                     </div>
+                    {(['row', 'column'] as const).map(side => {
+                        const entry = inspected[side];
+                        const hits = entry.node.members.filter(member => snapshot?.criticalIds.has(member));
+                        return hits.length > 0 ? (
+                            <div key={side} style={{ color: '#B45309', fontWeight: 600, marginTop: '4px' }}>
+                                ★ {side === 'row' ? 'Row' : 'Column'} {hits.length === 1 && entry.node.isElement ? 'is a critical element' : `holds ${hits.length} critical element${hits.length === 1 ? '' : 's'}`}
+                            </div>
+                        ) : null;
+                    })}
                     <div style={{ color: COLOR.muted, margin: '6px 0' }}>
                         {inspected.cell.strength} dependenc{inspected.cell.strength === 1 ? 'y' : 'ies'}
                         {inspected.cell.aggregated && ' · rolled up from collapsed parts'}

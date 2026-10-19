@@ -35,6 +35,7 @@ import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
 import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
+import { viewToPath } from '../view-routes';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
@@ -2678,7 +2679,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     // A matrix view opens on its own screen, on exactly this definition.
                     const screen = matrixScreenOf(diag);
                     if (screen && diag.elementId) {
-                        setActiveView({ type: screen, definitionId: diag.elementId });
+                        const view = { type: screen, definitionId: diag.elementId } as const;
+                        setActiveView(view);
+                        navigate(viewToPath(view) ?? `/${screen}`);
                         return;
                     }
                     setActiveView({ type: 'diagram', diagramId: diag.id });
