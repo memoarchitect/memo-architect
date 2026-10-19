@@ -34,13 +34,14 @@ import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
 import { buildPackageForest } from '../lib/explorer-package-forest';
+import { matrixScreenOf } from '../lib/matrix-views';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
 // ─── SVG Chevron Icons ───────────────────────────────────────────────────────
 
-function ChevronIcon({ expanded, size = 14, color = COLOR.muted }: { expanded: boolean; size?: number; color?: string }) {
+export function ChevronIcon({ expanded, size = 14, color = COLOR.muted }: { expanded: boolean; size?: number; color?: string }) {
     return (
         <svg
             width={size} height={size}
@@ -75,7 +76,7 @@ function CollapseAllIcon() {
 
 // ─── Tree Icons ──────────────────────────────────────────────────────────────
 
-function FolderIcon({ open, color = COLOR.muted, pkg = false }: { open: boolean; color?: string; pkg?: boolean }) {
+export function FolderIcon({ open, color = COLOR.muted, pkg = false }: { open: boolean; color?: string; pkg?: boolean }) {
     // A SysML package is a yellow folder, the one colour a reader learns to look for.
     if (pkg) {
         return (
@@ -135,7 +136,7 @@ interface CtxMenuState {
  * have yet. Swallowing that warning would present a model with dangling
  * references as a clean rename.
  */
-async function reportPackageResult(pending: Promise<PackageMutationResult>): Promise<void> {
+export async function reportPackageResult(pending: Promise<PackageMutationResult>): Promise<void> {
     try {
         const result = await pending;
         if (!result.success) {
@@ -2406,7 +2407,7 @@ export function buildViewpointTree(viewpoints: ViewpointDTO[]): {
     return { rootViewpoints, viewpointChildren };
 }
 
-interface ViewPackageNode {
+export interface ViewPackageNode {
     id: string;
     name: string;
     children: ViewPackageNode[];
@@ -2415,8 +2416,23 @@ interface ViewPackageNode {
 type PackagedDiagram = DiagramDTO & { package?: string };
 
 /** Build Viewpoints navigation from SysML package ownership, never file paths. */
-export function buildViewPackageTree(diagrams: PackagedDiagram[]): ViewPackageNode[] {
+export function buildViewPackageTree(diagrams: PackagedDiagram[], packages: readonly string[] = []): ViewPackageNode[] {
     const root: ViewPackageNode[] = [];
+    // A package is a folder whether or not a view is in it yet, so a caller that
+    // wants somewhere to put the first one names the packages to show.
+    for (const name of packages) {
+        let level = root;
+        let path = '';
+        for (const segment of name.split('::').filter(Boolean)) {
+            path = path ? `${path}::${segment}` : segment;
+            let node = level.find(candidate => candidate.id === path);
+            if (!node) {
+                node = { id: path, name: segment, children: [], diagrams: [] };
+                level.push(node);
+            }
+            level = node.children;
+        }
+    }
     for (const diagram of diagrams) {
         let level = root;
         let path = '';
@@ -2646,18 +2662,31 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         });
     }, [uncategorizedViews, model?.elements]);
 
+    /** A matrix view is selected when its screen is open on it, not when it is the open diagram. */
+    const isMatrixSelected = (diag: DiagramDTO): boolean => {
+        const screen = matrixScreenOf(diag);
+        return Boolean(screen && diag.elementId && activeView.type === screen
+            && (activeView as { definitionId?: string }).definitionId === diag.elementId);
+    };
+
     const renderDiagramList = (diagrams: DiagramDTO[], vpId: string) => (
         diagrams.map(diag => (
             <DiagramRow
                 key={diag.id}
                 diag={diag}
-                isSelected={selectedDiagramId === diag.id}
                 onSelect={() => {
+                    // A matrix view opens on its own screen, on exactly this definition.
+                    const screen = matrixScreenOf(diag);
+                    if (screen && diag.elementId) {
+                        setActiveView({ type: screen, definitionId: diag.elementId });
+                        return;
+                    }
                     setActiveView({ type: 'diagram', diagramId: diag.id });
                     selectViewpoint(vpId === '__model' || vpId.startsWith(FEATURE_VP_PREFIX) ? null : vpId);
                     navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
-                onDelete={!diag.auto ? () => { if (confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
+                isSelected={matrixScreenOf(diag) ? isMatrixSelected(diag) : selectedDiagramId === diag.id}
+                onDelete={!diag.auto || (matrixScreenOf(diag) && diag.elementId) ? () => { if (confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
                 onMoveToPackage={diag.elementId ? () => moveViewToPackage(diag) : undefined}
             />
         ))

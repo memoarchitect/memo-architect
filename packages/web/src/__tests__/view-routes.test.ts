@@ -115,6 +115,14 @@ describe('viewToPath / pathToView round trip', () => {
         expect(pathToView('/table', '?viewpoint=vp1&diagram=d1')).toEqual(withParams);
     });
 
+    it('carries the selected matrix definition in the query', () => {
+        const view = { type: 'traceability', definitionId: 'pkg::sub::trace one' } as const;
+        const path = viewToPath(view)!;
+        expect(path).toBe('/traceability?definition=pkg%3A%3Asub%3A%3Atrace%20one');
+        expect(pathToView('/traceability', path.slice(path.indexOf('?')))).toEqual(view);
+        expect(pathToView('/dsm', '')).toEqual({ type: 'dsm' });
+    });
+
     it('tolerates a trailing slash', () => {
         expect(pathToView('/dsm/')).toEqual({ type: 'dsm' });
         expect(pathToView('/')).toEqual({ type: 'dashboard' });
