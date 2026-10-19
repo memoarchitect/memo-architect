@@ -864,7 +864,17 @@ export const useModelStore = create<ModelState>((set, get) => ({
     /** Delete one element and eagerly remove every local reference to it. */
     deleteModelElement: async (elementId) => {
         try {
-            const result = await requestElementDelete(elementId);
+            let result = await requestElementDelete(elementId);
+            // A write is refused when the file changed after the model on screen was built: the
+            // previous write is still being recompiled. Wait for the next model, then ask once more.
+            if (!result.success && /changed on disk/.test(result.error ?? '')) {
+                const revision = get().model?.revision;
+                await new Promise<void>(resolve => {
+                    const stop = useModelStore.subscribe(state => { if (state.model?.revision !== revision) { stop(); resolve(); } });
+                    setTimeout(() => { stop(); resolve(); }, 90_000);
+                });
+                result = await requestElementDelete(elementId);
+            }
             if (!result.success) {
                 return { success: false, error: result.error ?? 'The element could not be deleted.' };
             }
@@ -878,7 +888,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
                         elements,
                         relationships: s.model.relationships.filter(rel =>
                             rel.sourceId !== elementId && rel.targetId !== elementId),
-                        diagrams: (s.model.diagrams ?? []).map(diagram => ({
+                        // A deleted view is gone from the list at once, not when the rebuild lands.
+                        diagrams: (s.model.diagrams ?? []).filter(diagram => diagram.elementId !== elementId).map(diagram => ({
                             ...diagram,
                             elementIds: diagram.elementIds?.filter(id => id !== elementId),
                         })),
