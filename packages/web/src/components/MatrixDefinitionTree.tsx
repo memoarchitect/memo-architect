@@ -64,7 +64,14 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
         () => [...new Set((model?.diagrams ?? []).map(d => d.package).filter((name): name is string => Boolean(name)))],
         [model?.diagrams],
     );
-    const tree = useMemo(() => buildViewPackageTree(definitions, folders), [definitions, folders]);
+    // Folders that hold one of these definitions form the tree; the rest of the
+    // project's view packages wait in one collapsed section, still offering New.
+    const tree = useMemo(() => buildViewPackageTree(definitions), [definitions]);
+    const emptyFolders = useMemo(() => {
+        const used = new Set(definitions.map(d => d.package));
+        return folders.filter(name => !used.has(name)).sort();
+    }, [definitions, folders]);
+    const [showEmpty, setShowEmpty] = useState(false);
 
     const run = async (work: () => Promise<{ success: boolean; error?: string } | void>) => {
         setBusy(true);
@@ -239,10 +246,34 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
             <div style={{ overflow: 'auto', flex: 1, padding: '4px 0' }}>
                 {definitions.length === 0 && (
                     <div style={{ padding: '10px 12px', fontSize: FONT.xs, color: COLOR.faint }}>
-                        This model declares no {plural} yet. Use New on a package.
+                        This model declares no {plural} yet. Use New, or open Other packages.
                     </div>
                 )}
                 {tree.map(node => renderPackage(node))}
+                {emptyFolders.length > 0 && (
+                    <div style={{ marginTop: '6px' }}>
+                        <div
+                            onClick={() => setShowEmpty(open => !open)} className="flex items-center gap-1.5 px-2 py-1"
+                            style={{ cursor: 'pointer', color: COLOR.faint, fontSize: FONT.xs }}
+                        >
+                            <ChevronIcon expanded={showEmpty} size={12} color={COLOR.faint} />
+                            <span>Other packages ({emptyFolders.length})</span>
+                        </div>
+                        {showEmpty && emptyFolders.map(name => (
+                            <div
+                                key={name} className="flex items-center gap-1.5 px-2 py-1" title={name}
+                                style={{ marginLeft: '14px', fontSize: FONT.explorer.item, color: COLOR.muted }}
+                            >
+                                <FolderIcon open={false} color={COLOR.muted} pkg />
+                                <span className="flex-1 truncate">{name}</span>
+                                {connected && (
+                                    <button style={{ ...iconButton, fontWeight: 700, color: COLOR.accentDark }} disabled={busy} onClick={() => create(name)}
+                                        aria-label={`New ${noun} in ${name}`}>+ New</button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </aside>
     );
