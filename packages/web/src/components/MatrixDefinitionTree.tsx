@@ -122,7 +122,7 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         setDialogError(null);
         try {
             if (dialog.mode === 'create') {
-                const packageName = await ensurePackage(value.package, value.newPackage);
+                const packageName = value.package ? await ensurePackage(value.package, value.newPackage) : undefined;
                 const result = await createMatrixView({ name: value.name, viewDefinition, package: packageName, matrix: initialMatrix(value) });
                 if (!result.success) throw new Error(result.error ?? 'The matrix could not be declared.');
                 setDialog(null);
