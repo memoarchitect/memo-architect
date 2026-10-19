@@ -21,6 +21,7 @@ import {
 } from './ExplorerPanel';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
 import { confirmViewDelete } from './confirm-destructive';
+import { MatrixDefinitionDialog, type MatrixDialogMode } from './MatrixDefinitionDialog';
 import { COLOR, FONT } from '../styles/tokens';
 
 interface Props {
@@ -49,6 +50,7 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
     const updateMatrixView = useModelStore(s => s.updateMatrixView);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
+    const createPackage = useModelStore(s => s.createPackage);
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [hovered, setHovered] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -58,20 +60,15 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
         () => (model?.diagrams ?? []).filter(d => d.viewDefinition === viewDefinition && d.elementId),
         [model?.diagrams, viewDefinition],
     );
-    // The folders on offer: wherever this kind of definition already is, and
-    // wherever the project keeps its views, so the first one has a place to go.
-    const folders = useMemo(
-        () => [...new Set((model?.diagrams ?? []).map(d => d.package).filter((name): name is string => Boolean(name)))],
-        [model?.diagrams],
-    );
-    // Folders that hold one of these definitions form the tree; the rest of the
-    // project's view packages wait in one collapsed section, still offering New.
+    // The tree holds only the packages that declare one of these definitions.
     const tree = useMemo(() => buildViewPackageTree(definitions), [definitions]);
-    const emptyFolders = useMemo(() => {
-        const used = new Set(definitions.map(d => d.package));
-        return folders.filter(name => !used.has(name)).sort();
-    }, [definitions, folders]);
-    const [showEmpty, setShowEmpty] = useState(false);
+    // The dialog offers every package; the ones the project keeps views in come first.
+    const packageChoices = useMemo(() => {
+        const withViews = new Set((model?.diagrams ?? []).map(d => d.package).filter(Boolean));
+        return (model?.packages ?? []).map(pkg => ({ name: pkg.qualifiedName, holdsViews: withViews.has(pkg.qualifiedName) }));
+    }, [model?.packages, model?.diagrams]);
+    const [dialog, setDialog] = useState<{ mode: MatrixDialogMode; definition?: DiagramDTO; packageName?: string } | null>(null);
+    const [dialogError, setDialogError] = useState<string | null>(null);
 
     const run = async (work: () => Promise<{ success: boolean; error?: string } | void>) => {
         setBusy(true);
@@ -86,49 +83,59 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
         }
     };
 
-    const create = (packageName: string) => {
-        const name = window.prompt(`Name of the new ${noun} in ${packageName}`);
-        if (!name?.trim()) return;
-        void run(async () => {
-            const result = await createMatrixView({ name: name.trim(), viewDefinition, package: packageName, matrix: {} });
-            if (result.success && result.elementId) onSelect(result.elementId, true);
-            return result;
-        });
+    const openDialog = (mode: MatrixDialogMode, definition?: DiagramDTO, packageName?: string) => {
+        setDialogError(null);
+        setDialog({ mode, definition, packageName });
+    };
+    const create = (packageName?: string) => openDialog('create', undefined, packageName);
+    const rename = (definition: DiagramDTO) => openDialog('rename', definition);
+    const move = (definition: DiagramDTO) => openDialog('move', definition);
+
+    /** Make the package first when the dialog asked for a new one; returns its qualified name. */
+    const ensurePackage = async (name: string, isNew: boolean): Promise<string> => {
+        if (!isNew) return name;
+        const segments = name.split('::');
+        const result = await createPackage(segments[segments.length - 1], segments.length > 1 ? segments.slice(0, -1).join('::') : undefined);
+        if (!result.success) throw new Error(result.error ?? 'The package could not be created.');
+        return result.qualifiedName ?? name;
     };
 
-    const createAtRoot = () => {
-        const packageName = window.prompt(
-            `Create the ${noun} in which package? (qualified name, e.g. ${folders[0] ?? 'Views::Safety'})`, folders[0] ?? '');
-        if (packageName?.trim()) create(packageName.trim());
-    };
-
-    const rename = (definition: DiagramDTO) => {
-        const name = window.prompt(`Rename the ${noun}`, definition.name);
-        if (!name?.trim() || name.trim() === definition.name) return;
-        void run(() => updateMatrixView(definition.elementId!, { name: name.trim() }));
-    };
-
-    const move = (definition: DiagramDTO) => {
-        const target = window.prompt(
-            `Move “${definition.name}” into which package? (qualified name)`, definition.package ?? '');
-        if (target === null || !target.trim() || target.trim() === definition.package) return;
-        void run(async () => {
-            const wasSelected = selectedId === definition.elementId;
-            let moved = false;
-            await reportPackageResult(moveElementToPackage(definition.elementId!, target.trim()).then(result => {
-                moved = result.success;
-                return result;
-            }));
-            // Moving changes the qualified name, which is the id the screen is open on.
-            if (moved && wasSelected) onSelect(`${target.trim()}::${lastSegment(definition.elementId!)}`);
-        });
+    const submitDialog = async (value: { name: string; package: string; newPackage: boolean }) => {
+        if (!dialog) return;
+        setBusy(true);
+        setDialogError(null);
+        try {
+            if (dialog.mode === 'create') {
+                const packageName = await ensurePackage(value.package, value.newPackage);
+                const result = await createMatrixView({ name: value.name, viewDefinition, package: packageName, matrix: {} });
+                if (!result.success) throw new Error(result.error ?? 'The matrix could not be declared.');
+                setDialog(null);
+                if (result.elementId) onSelect(result.elementId, true);
+            } else if (dialog.mode === 'rename' && dialog.definition) {
+                const result = await updateMatrixView(dialog.definition.elementId!, { name: value.name });
+                if (!result.success) throw new Error(result.error ?? 'The rename was refused.');
+                setDialog(null);
+            } else if (dialog.mode === 'move' && dialog.definition) {
+                const definition = dialog.definition;
+                const packageName = await ensurePackage(value.package, value.newPackage);
+                const result = await moveElementToPackage(definition.elementId!, packageName);
+                if (!result.success) throw new Error(result.error ?? 'The move was refused.');
+                setDialog(null);
+                // Moving changes the qualified name, which is the id the screen is open on.
+                if (selectedId === definition.elementId) onSelect(`${packageName}::${lastSegment(definition.elementId!)}`);
+            }
+        } catch (e) {
+            setDialogError(e instanceof Error ? e.message : String(e));
+        } finally {
+            setBusy(false);
+        }
     };
 
     const duplicate = (definition: DiagramDTO) => {
         void run(async () => {
             const result = await createMatrixView({
                 name: `${definition.name} copy`, viewDefinition,
-                package: definition.package ?? folders[0] ?? '', matrix: definition.matrix ?? {},
+                package: definition.package ?? '', matrix: definition.matrix ?? {},
             });
             if (result.success && result.elementId) onSelect(result.elementId);
             return result;
@@ -230,7 +237,7 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
             <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.borderLight}` }}>
                 <span style={{ fontSize: FONT.sm, fontWeight: 700, color: COLOR.primary }}>{title}</span>
                 <button
-                    onClick={createAtRoot}
+                    onClick={() => create()}
                     disabled={!connected || busy}
                     title={connected ? `New ${noun}` : 'The dev server is unreachable, so nothing can be written to the model.'}
                     style={{
@@ -246,35 +253,21 @@ export function MatrixDefinitionTree({ viewDefinition, noun, plural, title, sele
             <div style={{ overflow: 'auto', flex: 1, padding: '4px 0' }}>
                 {definitions.length === 0 && (
                     <div style={{ padding: '10px 12px', fontSize: FONT.xs, color: COLOR.faint }}>
-                        This model declares no {plural} yet. Use New, or open Other packages.
+                        This model declares no {plural} yet. Use New to create one.
                     </div>
                 )}
                 {tree.map(node => renderPackage(node))}
-                {emptyFolders.length > 0 && (
-                    <div style={{ marginTop: '6px' }}>
-                        <div
-                            onClick={() => setShowEmpty(open => !open)} className="flex items-center gap-1.5 px-2 py-1"
-                            style={{ cursor: 'pointer', color: COLOR.faint, fontSize: FONT.xs }}
-                        >
-                            <ChevronIcon expanded={showEmpty} size={12} color={COLOR.faint} />
-                            <span>Other packages ({emptyFolders.length})</span>
-                        </div>
-                        {showEmpty && emptyFolders.map(name => (
-                            <div
-                                key={name} className="flex items-center gap-1.5 px-2 py-1" title={name}
-                                style={{ marginLeft: '14px', fontSize: FONT.explorer.item, color: COLOR.muted }}
-                            >
-                                <FolderIcon open={false} color={COLOR.muted} pkg />
-                                <span className="flex-1 truncate">{name}</span>
-                                {connected && (
-                                    <button style={{ ...iconButton, fontWeight: 700, color: COLOR.accentDark }} disabled={busy} onClick={() => create(name)}
-                                        aria-label={`New ${noun} in ${name}`}>+ New</button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
+            {dialog && (
+                <MatrixDefinitionDialog
+                    key={`${dialog.mode}:${dialog.definition?.elementId ?? ''}`}
+                    mode={dialog.mode} noun={noun}
+                    initialName={dialog.mode === 'rename' ? dialog.definition?.name : ''}
+                    initialPackage={dialog.mode === 'move' ? dialog.definition?.package : dialog.packageName ?? ''}
+                    packages={packageChoices} busy={busy} error={dialogError}
+                    onSubmit={value => { void submitDialog(value); }} onClose={() => setDialog(null)}
+                />
+            )}
         </aside>
     );
 }
