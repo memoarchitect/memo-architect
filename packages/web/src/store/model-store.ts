@@ -28,10 +28,10 @@ import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memo
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
     requestRelationshipCreate, requestRelationshipDelete, requestElementDelete, sendPackageMutation,
-    sendUserPreferencesSave,
+    sendUserPreferencesSave, requestDiagramCreate, requestDiagramUpdate,
 } from './ws-client';
 import type { OntologyPackageInfo, OntologySaveResult, OrphanedElement } from '../types/ontology';
-import type { ViewpointDTO, PinnedInfo } from '@memoarchitect/tools/browser';
+import type { ViewpointDTO, PinnedInfo, MatrixDefinitionDTO } from '@memoarchitect/tools/browser';
 
 const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
@@ -139,10 +139,10 @@ export type AppMode = 'dashboard' | 'catalog' | 'diagram' | 'ui-screens' | 'scen
 export type ActiveView =
     | { type: 'diagram'; diagramId: string }
     | { type: 'element-detail'; elementId: string }
-    | { type: 'dsm' }
+    | { type: 'dsm'; definitionId?: string }   // definitionId: the element id of a MemoDependencyMatrixView
     | { type: 'ontology' }
     | { type: 'ontology-detail'; packageName: string; layerId?: string }
-    | { type: 'traceability' }
+    | { type: 'traceability'; definitionId?: string }   // definitionId: the element id of a MemoTraceabilityMatrixView
     | { type: 'feature'; featureId: string }   // one feature: what it is, its analysis, the views it shows
     | { type: 'variability' }          // features, design options and what each release selects (A7)
     | { type: 'suspect-links' }       // links to imported records that moved or left their source (A9)
@@ -480,6 +480,16 @@ export interface ModelState {
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     addElementToDiagram: (diagramId: string, elementId: string) => void;
     deleteDiagram: (diagramId: string) => void;
+    /**
+     * Declare a traceability matrix or DSM in a package. Sends no id: the
+     * declaration's qualified name is the answer, and it is returned once the
+     * rebuilt model lists the view.
+     */
+    createMatrixView: (request: { name: string; viewDefinition: string; package: string; matrix?: MatrixDefinitionDTO }) =>
+        Promise<{ success: boolean; elementId?: string; error?: string }>;
+    /** Rewrite a matrix view's label or definition in its own declaration. */
+    updateMatrixView: (elementId: string, change: { name?: string; matrix?: MatrixDefinitionDTO }) =>
+        Promise<{ success: boolean; error?: string }>;
     applyDiagramParseResult: (diagramId: string, elementIds: string[], errors: string[]) => void;
 
     // ─── The Guide: the method's steps evaluated for a workspace ───
@@ -1282,7 +1292,42 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set((s) => ({ model: s.model ? { ...s.model, diagrams } : null }));
         sendDiagramUpdate({ id: diagramId, elementIds });
     },
+    createMatrixView: async ({ name, viewDefinition, package: packageName, matrix }) => {
+        try {
+            const result = await requestDiagramCreate({
+                name, diagramType: 'alloc', viewKind: 'grid', viewpointId: '__unassigned',
+                package: packageName, viewDefinition, matrix: matrix ?? {},
+            });
+            if (!result.success) return { success: false, error: result.error ?? 'The matrix could not be declared.' };
+            // The answer comes before the rebuilt model does; wait for the
+            // view to be listed so the caller can open it.
+            const elementId = result.qualifiedName;
+            const listed = () => get().model?.diagrams?.some(d => d.elementId === elementId) ?? false;
+            if (elementId && !listed()) {
+                await new Promise<void>(resolve => {
+                    const stop = useModelStore.subscribe(() => { if (listed()) { stop(); resolve(); } });
+                    setTimeout(() => { stop(); resolve(); }, 120_000);
+                });
+            }
+            return { success: true, elementId };
+        } catch (e) {
+            return { success: false, error: e instanceof Error ? e.message : String(e) };
+        }
+    },
+    updateMatrixView: async (elementId, change) => {
+        try {
+            const result = await requestDiagramUpdate({ id: elementId, ...change });
+            return result.success ? { success: true } : { success: false, error: result.error ?? 'The matrix could not be changed.' };
+        } catch (e) {
+            return { success: false, error: e instanceof Error ? e.message : String(e) };
+        }
+    },
     deleteDiagram: (diagramId) => {
+        // A declared view is removed by deleting its declaration; the server
+        // refuses `diagram:delete` for exactly that reason, and a view that
+        // is not declared has nothing to remove.
+        const declared = get().model?.diagrams?.find(d => d.id === diagramId)?.elementId;
+        if (declared) void get().deleteModelElement(declared);
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: (s.model.diagrams ?? []).filter(d => d.id !== diagramId) } : null,
             selectedDiagramId: s.selectedDiagramId === diagramId ? null : s.selectedDiagramId,
@@ -1290,7 +1335,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
                 ? { type: 'welcome' }
                 : s.activeView,
         }));
-        sendDiagramDelete(diagramId);
+        if (!declared) sendDiagramDelete(diagramId);
     },
     applyDiagramParseResult: (diagramId, elementIds, errors) => {
         const { model } = get();

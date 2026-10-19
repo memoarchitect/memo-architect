@@ -10,7 +10,7 @@
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
-import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage, ImpactResultMessage } from '@memoarchitect/tools/browser';
+import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage, ImpactResultMessage, DiagramResultMessage, QueryResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
     RelationshipDeleteRequest, RelationshipDeleteResultMessage,
@@ -130,6 +130,8 @@ const suspectReviewRequests = new Map<string, PendingRequest<SuspectReviewResult
 const releaseCreateRequests = new Map<string, PendingRequest<ReleaseCreateResultMessage['payload'] & { requestId: string }>>();
 const guideRequests = new Map<string, PendingRequest<GuideResultMessage['payload'] & { requestId: string }>>();
 const impactRequests = new Map<string, PendingRequest<ImpactResultMessage['payload'] & { requestId: string }>>();
+const diagramRequests = new Map<string, PendingRequest<DiagramResultMessage['payload'] & { requestId: string }>>();
+const queryRequests = new Map<string, PendingRequest<QueryResultMessage['payload'] & { requestId: string }>>();
 const deviceDhfRequests = new Map<string, PendingRequest<DeviceDhfResultMessage['payload'] & { requestId: string }>>();
 const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
 
@@ -169,7 +171,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests, impactRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests, impactRequests, diagramRequests, queryRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -202,7 +204,8 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate' | 'impact:compute',
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate' | 'impact:compute'
+        | 'diagram:create' | 'diagram:update' | 'query:run',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
 ): Promise<T> {
@@ -409,6 +412,12 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'release:create:result':
             settleRelationshipRequest(msg.payload as ReleaseCreateResultMessage['payload'] & { requestId: string }, releaseCreateRequests);
+            break;
+        case 'diagram:result':
+            settleRelationshipRequest(msg.payload as DiagramResultMessage['payload'] & { requestId: string }, diagramRequests);
+            break;
+        case 'query:result':
+            settleRelationshipRequest(msg.payload as QueryResultMessage['payload'] & { requestId: string }, queryRequests);
             break;
         case 'impact:result':
             settleRelationshipRequest(msg.payload as ImpactResultMessage['payload'] & { requestId: string }, impactRequests);
@@ -996,6 +1005,30 @@ export function sendDiagramCreate(payload: DiagramCreateMessage['payload']): voi
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'diagram:create', payload }));
     }
+}
+
+/**
+ * Declare a matrix view in a package and wait for the answer. Sends no id: the
+ * server names the declaration, and the model reports the element it made.
+ */
+export function requestDiagramCreate(
+    payload: Omit<DiagramCreateMessage['payload'], 'requestId' | 'id'>,
+): Promise<DiagramResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('diagram:create', payload as Record<string, unknown>, diagramRequests);
+}
+
+/** Change a matrix view's name or definition, in its own declaration, and wait for the answer. */
+export function requestDiagramUpdate(
+    payload: Omit<DiagramUpdateMessage['payload'], 'requestId'>,
+): Promise<DiagramResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('diagram:update', payload as Record<string, unknown>, diagramRequests);
+}
+
+/** Which elements a memo-query selects: the count, a preview, and the ids when they fit. */
+export function requestAxisQuery(
+    query: string, limits: { idLimit?: number; previewLimit?: number } = {},
+): Promise<QueryResultMessage['payload'] & { requestId: string }> {
+    return sendRelationshipRequest('query:run', { query, ...limits }, queryRequests);
 }
 
 /** Send a diagram update (elementIds, name, etc.) to the CLI server */

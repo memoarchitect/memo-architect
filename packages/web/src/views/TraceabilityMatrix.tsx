@@ -8,8 +8,12 @@
 // Authoring goes through the ontology, never through a list kept here: the
 // types offered for a pair are the ones `legalRelationshipTypes` says are legal
 // between those two kinds, so a link this view offers is a link the server
-// accepts. Presets only pre-fill the pickers — the user can go anywhere from
-// there, which is what makes this usable outside the regulated templates.
+// accepts.
+//
+// A matrix is a definition the model declares (a view typed by
+// MemoTraceabilityMatrixView), chosen in the tree on the left. The screen opens
+// on nothing; each axis is hand-picked elements or a memo-query, and nothing is
+// drawn until a definition is selected and rendered.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,18 +27,21 @@ import { useScopedModel } from '../store/scoped-model';
 import {
     computeHierarchicalDSM,
     collectNodeIds,
-    layersInModel,
     relationshipTypesInModel,
     type DsmAggregateCell,
     type DsmAxisEntry,
     type DsmOrdering,
 } from '../analysis/dsm-hierarchy';
-import { AxisControlGroup } from './DSMView';
+import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
+import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
+import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
+import { AxisViewControls } from '../components/AxisViewControls';
+import { useMatrixDefinition } from '../lib/use-matrix-definition';
+import { MATRIX_VIEW_DEFINITIONS } from '../lib/matrix-views';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
-import { elementFilterOptions, scopeKinds } from '../components/element-options';
+import { elementFilterOptions } from '../components/element-options';
 import { kindParents } from '../analysis/kind-hierarchy';
-import { AxisScopeSelect, type AxisScope } from '../components/AxisScopeSelect';
 import { ToolbarPopover } from '../components/ToolbarPopover';
 import { Icon, IconToggle } from './DiagramToolbarControls';
 import { relationshipColor } from '../constants';
@@ -50,6 +57,8 @@ interface CellFocus {
 
 type Status = { kind: 'ok' | 'error'; message: string } | null;
 
+const NO_IDS: string[] = [];
+
 export function TraceabilityMatrix() {
     const model = useScopedModel();
     const connected = useModelStore(s => s.connected);
@@ -59,15 +68,19 @@ export function TraceabilityMatrix() {
     const createRelationship = useModelStore(s => s.createRelationship);
     const deleteRelationship = useModelStore(s => s.deleteRelationship);
 
-    const [rowScope, setRowScope] = useState<AxisScope>({});
-    const [columnScope, setColumnScope] = useState<AxisScope>({});
-    const [rowElements, setRowElements] = useState<string[]>([]);
-    const [columnElements, setColumnElements] = useState<string[]>([]);
-    const [linkTypes, setLinkTypes] = useState<string[]>([]);
+    // The definition this screen is open on, and the draft being edited. Nothing
+    // is selected, evaluated or drawn until a definition is chosen in the tree.
+    const matrix = useMatrixDefinition('traceability');
+    const { definition, draft, setDraft, snapshot } = matrix;
+    const linkTypes = draft.linkTypes;
+    const setLinkTypes = useCallback((next: string[]) => setDraft(current => ({ ...current, linkTypes: next })), [setDraft]);
+    // The ids the last render evaluated each axis to. The grid reads these, never the draft.
+    const rowElements = snapshot?.rowIds ?? NO_IDS;
+    const columnElements = snapshot?.columnIds ?? NO_IDS;
     const [rowOrdering, setRowOrdering] = useState<DsmOrdering>('natural');
     const [columnOrdering, setColumnOrdering] = useState<DsmOrdering>('natural');
-    const [activeAxisFilter, setActiveAxisFilter] = useState<'rows' | 'columns' | null>(null);
     const [toolbarPlacement, setToolbarPlacement] = useState<'top' | 'left'>('top');
+    // Clicking cells to add or remove trace links; separate from editing the definition itself.
     const [editing, setEditing] = useState(false);
     const [cellSize, setCellSize] = useState(39);
     const [showColumnNames, setShowColumnNames] = useState(true);
@@ -75,64 +88,15 @@ export function TraceabilityMatrix() {
     const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
     const [focus, setFocus] = useState<CellFocus | null>(null);
     const [status, setStatus] = useState<Status>(null);
-    // Saving the matrix as a view: the name to declare it under, and the
-    // viewpoint to declare it in. The viewpoint is chosen, never guessed — a
-    // project names its own traceability viewpoint and Architect does not get
-    // to decide which of them means "relationships".
-    const [saveName, setSaveName] = useState('');
-    const [saveViewpointId, setSaveViewpointId] = useState('');
     const [linkQuery, setLinkQuery] = useState('');
     const [busy, setBusy] = useState(false);
 
     const registries = useMemo(() => getRegistries(model), [model]);
 
-    const layers = useMemo(() => (model ? layersInModel(model) : []), [model]);
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
-
-    const rowElementOptions = useMemo(() => elementFilterOptions(model, rowScope, parents), [model, rowScope, parents]);
-    const columnElementOptions = useMemo(() => elementFilterOptions(model, columnScope, parents), [model, columnScope, parents]);
-    const rowKinds = useMemo(() => scopeKinds(rowScope, model, parents), [rowScope, model, parents]);
-    const columnKinds = useMemo(() => scopeKinds(columnScope, model, parents), [columnScope, model, parents]);
-
-    const createDiagram = useModelStore(s => s.createDiagram);
-    const viewpoints = model?.viewpoints ?? [];
-
-    /**
-     * Declare the current matrix as a view.
-     *
-     * What is saved is the QUERY — the kinds on each axis and the relations
-     * drawn between them — not the cells that happen to be filled right now.
-     * The view then answers the same question against a model that has grown,
-     * which is the difference between a view and a screenshot.
-     */
-    const saveAsView = useCallback(() => {
-        const name = saveName.trim();
-        if (!name || !saveViewpointId) return;
-        const kinds = [...new Set([...rowKinds, ...columnKinds])];
-        if (kinds.length === 0) {
-            setStatus({ kind: 'error', message: 'Choose what the rows and columns are before saving the matrix as a view.' });
-            return;
-        }
-        createDiagram({
-            name,
-            diagramType: 'alloc',
-            viewKind: 'grid',
-            viewpointId: saveViewpointId,
-            elementKinds: kinds,
-            relationshipTypes: linkTypes,
-            activate: false,
-        });
-        setSaveName('');
-        setStatus({ kind: 'ok', message: `Declared "${name}" under ${viewpoints.find(vp => vp.id === saveViewpointId)?.label ?? saveViewpointId}.` });
-    }, [saveName, saveViewpointId, rowKinds, columnKinds, linkTypes, createDiagram, viewpoints]);
-
-
-    // Nothing is computed until the user has named an axis: with none, both axes
-    // are the whole model and the grid is |elements|^2 cells.
-    const axesChosen = Boolean(
-        rowScope.layer || rowScope.kind || rowElements.length
-        || columnScope.layer || columnScope.kind || columnElements.length);
+    // Hand-picking offers every element; the list is built only while a definition is being edited.
+    const pickable = useMemo(() => (matrix.editing ? elementFilterOptions(model, {}, parents) : []), [matrix.editing, model, parents]);
 
     /** Every relationship type the model uses, before any axis narrows the list. */
     const allLinkOptions = useMemo<TypeFilterOption[]>(() => {
@@ -144,57 +108,34 @@ export function TraceabilityMatrix() {
 
     /** Only offer relationships that the ontology permits for a visible axis pair. */
     const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
-        if (!model || !registries) return [];
-        // A cross product of the two axes. With none chosen both are the whole
-        // model, |elements|^2 `legalRelationshipTypes` calls on mount, so until
-        // the user narrows an axis the unfiltered list is the right answer.
-        if (!axesChosen) return allLinkOptions;
-        const matchesScope = (element: { id: string; layer: string; kind: string }, scope: AxisScope, kinds: string[], picked: string[]) =>
-            (!scope.layer || element.layer === scope.layer)
-            && (kinds.length === 0 || kinds.includes(element.kind))
-            && (picked.length === 0 || picked.includes(element.id));
-        const rowCandidates = Object.values(model.elements).filter(element => matchesScope(element, rowScope, rowKinds, rowElements));
-        const columnCandidates = Object.values(model.elements).filter(element => matchesScope(element, columnScope, columnKinds, columnElements));
+        if (!model || !registries || !snapshot) return allLinkOptions;
         const names = new Set<string>();
-        for (const row of rowCandidates) {
-            for (const column of columnCandidates) {
-                if (row.id === column.id) continue;
+        for (const rowId of snapshot.rowIds) {
+            const row = model.elements[rowId];
+            if (!row) continue;
+            for (const columnId of snapshot.columnIds) {
+                const column = model.elements[columnId];
+                if (!column || row.id === column.id) continue;
                 for (const option of legalRelationshipTypes(row, column, registries)) names.add(option.definition.name);
             }
         }
-        const counts = new Map<string, number>();
-        for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
-        return [...names].sort().map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
-    }, [model, registries, axesChosen, allLinkOptions, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements]);
-
-    // Narrowing the kinds must narrow the picked elements with them, or the
-    // axis would keep showing something the kind filter no longer allows.
-    useEffect(() => {
-        const allowed = new Set(rowElementOptions.map(option => option.value));
-        setRowElements(current => current.every(id => allowed.has(id)) ? current : current.filter(id => allowed.has(id)));
-    }, [rowElementOptions]);
-    useEffect(() => {
-        const allowed = new Set(columnElementOptions.map(option => option.value));
-        setColumnElements(current => current.every(id => allowed.has(id)) ? current : current.filter(id => allowed.has(id)));
-    }, [columnElementOptions]);
-
-    useEffect(() => {
-        const allowed = new Set(legalLinkOptions.map(option => option.value));
-        setLinkTypes(current => current.every(type => allowed.has(type)) ? current : current.filter(type => allowed.has(type)));
-    }, [legalLinkOptions]);
+        return allLinkOptions.filter(option => names.has(option.value));
+    }, [model, registries, snapshot, allLinkOptions]);
 
     const result = useMemo(() => {
-        if (!model || !axesChosen) return null;
+        // Nothing is computed until a definition has been rendered: an empty axis
+        // means "everything" to the engine, and everything squared is the model.
+        if (!model || !snapshot || snapshot.rowIds.length === 0 || snapshot.columnIds.length === 0) return null;
         return computeHierarchicalDSM(model, {
-            rows: { layer: rowScope.layer, kinds: rowKinds, elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
-            columns: { layer: columnScope.layer, kinds: columnKinds, elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
+            rows: { elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
+            columns: { elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
             dependencyTypes: linkTypes,
             // Trace is read as a link between two elements, not as a direction:
             // a requirement verified by a test and a test verifying a
             // requirement are the same coverage fact.
             symmetric: true,
         });
-    }, [model, axesChosen, rowScope, columnScope, rowKinds, columnKinds, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
+    }, [model, snapshot, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
 
     const setAxisExpansion = useCallback((axis: 'rows' | 'columns', next: Set<string>) => {
         if (axis === 'rows') setExpandedRows(next);
@@ -391,8 +332,50 @@ export function TraceabilityMatrix() {
 
     const leftToolbar = toolbarPlacement === 'left';
 
+    const tree = (
+        <MatrixDefinitionTree
+            viewDefinition={MATRIX_VIEW_DEFINITIONS.traceability} noun="traceability matrix" title="Traceability matrices"
+            selectedId={matrix.definitionId} onSelect={matrix.select}
+        />
+    );
+
+    // Nothing renders, and nothing is computed, until a definition is selected or created.
+    if (!definition) {
+        return (
+            <div className="flex-1 flex overflow-hidden" style={{ background: '#FAFAF8' }}>
+                {tree}
+                <div className="flex-1 flex items-center justify-center px-8 text-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
+                    {matrix.definitionId
+                        ? 'Opening the definition…'
+                        : 'Select a traceability matrix in the tree, or create one with New in a package.'}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative' }}>
+        <div className="flex-1 flex overflow-hidden" style={{ background: '#FAFAF8' }}>
+        {tree}
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
+            <MatrixDefinitionBar
+                definition={definition} editing={matrix.editing} onEditingChange={matrix.setEditing} dirty={matrix.dirty}
+                connected={connected} rendering={matrix.rendering} saving={matrix.saving}
+                onRender={() => { void matrix.render(); }} onSave={() => { void matrix.save(); }} notice={matrix.notice}
+            />
+            {matrix.editing && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                    <MatrixAxisEditor
+                        label="Rows" draft={draft.rowAxis} editable elementOptions={pickable}
+                        onChange={rowAxis => setDraft(current => ({ ...current, rowAxis }))}
+                        evaluation={matrix.rowEvaluation} onEvaluated={matrix.setRowEvaluation} missing={snapshot?.missingRows}
+                    />
+                    <MatrixAxisEditor
+                        label="Columns" draft={draft.columnAxis} editable elementOptions={pickable}
+                        onChange={columnAxis => setDraft(current => ({ ...current, columnAxis }))}
+                        evaluation={matrix.columnEvaluation} onEvaluated={matrix.setColumnEvaluation} missing={snapshot?.missingColumns}
+                    />
+                </div>
+            )}
             {/* ── Toolbar ── */}
             <div style={leftToolbar
                 ? { position: 'absolute', inset: '0 auto 0 0', width: '250px', zIndex: 30, overflow: 'auto', borderRight: `1px solid ${COLOR.border}`, background: COLOR.surface }
@@ -407,21 +390,13 @@ export function TraceabilityMatrix() {
                             title={leftToolbar ? 'Move toolbar to top' : 'Move toolbar to left'}
                         />
                     </span>
-                    <AxisControlGroup
-                        axis="rows" layers={layers} scope={rowScope} onScopeChange={setRowScope}
-                        elements={rowElements} onElementsChange={setRowElements} elementOptions={rowElementOptions}
-                        ordering={rowOrdering} onOrderingChange={setRowOrdering}
+                    <AxisViewControls
+                        axis="rows" ordering={rowOrdering} onOrderingChange={setRowOrdering}
                         onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
-                        leftDock={leftToolbar} filterOpen={activeAxisFilter === 'rows'}
-                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'rows' : null)} parentOf={new Map()} kindParents={parents}
                     />
-                    <AxisControlGroup
-                        axis="columns" layers={layers} scope={columnScope} onScopeChange={setColumnScope}
-                        elements={columnElements} onElementsChange={setColumnElements} elementOptions={columnElementOptions}
-                        ordering={columnOrdering} onOrderingChange={setColumnOrdering}
+                    <AxisViewControls
+                        axis="columns" ordering={columnOrdering} onOrderingChange={setColumnOrdering}
                         onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
-                        leftDock={leftToolbar} filterOpen={activeAxisFilter === 'columns'}
-                        onFilterOpenChange={open => setActiveAxisFilter(open ? 'columns' : null)} parentOf={new Map()} kindParents={parents}
                     />
                     <div style={{
                         display: 'grid', gridTemplateColumns: leftToolbar ? '1fr' : 'max-content max-content max-content', gridTemplateRows: 'auto auto',
@@ -430,48 +405,6 @@ export function TraceabilityMatrix() {
                     }}>
                         <ToolbarPopover label={<><Icon.filter /> Relations</>} ariaLabel="Filter trace relationships" title="Relationships counted as trace" width={leftToolbar ? 210 : 260} fullWidth={leftToolbar}>
                             <TypeFilterSelect label="Trace relationships" allLabel="Any relationship" options={legalLinkOptions} selected={linkTypes} onChange={setLinkTypes} title="Relationships counted as trace" />
-                        </ToolbarPopover>
-                        <ToolbarPopover label="Save as view" ariaLabel="Declare this matrix as a view" title="Declare this matrix as a view" width={leftToolbar ? 210 : 280} fullWidth={leftToolbar}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
-                                <span style={{ fontSize: FONT.xs, color: COLOR.faint }}>
-                                    Saves the query — the kinds on each axis and the relations between them — not the cells filled today.
-                                </span>
-                                <input
-                                    value={saveName}
-                                    onChange={event => setSaveName(event.target.value)}
-                                    placeholder="View name"
-                                    aria-label="View name"
-                                    style={{
-                                        padding: '4px 6px', border: `1px solid ${COLOR.border}`, borderRadius: '5px',
-                                        fontSize: FONT.xs, color: COLOR.primary,
-                                    }}
-                                />
-                                <select
-                                    value={saveViewpointId}
-                                    onChange={event => setSaveViewpointId(event.target.value)}
-                                    aria-label="Viewpoint to declare it in"
-                                    style={{
-                                        padding: '4px 6px', border: `1px solid ${COLOR.border}`, borderRadius: '5px',
-                                        fontSize: FONT.xs, color: COLOR.primary,
-                                    }}
-                                >
-                                    <option value="">Choose a viewpoint…</option>
-                                    {viewpoints.map(vp => (
-                                        <option key={vp.id} value={vp.id}>{vp.label}</option>
-                                    ))}
-                                </select>
-                                <button
-                                    onClick={saveAsView}
-                                    disabled={!connected || !saveName.trim() || !saveViewpointId}
-                                    title={connected ? undefined : 'The dev server is unreachable, so nothing can be written to the model.'}
-                                    style={{
-                                        padding: '5px 7px', borderRadius: '5px', border: 'none', fontSize: FONT.xs, fontWeight: 600,
-                                        background: (connected && saveName.trim() && saveViewpointId) ? COLOR.accent : COLOR.border,
-                                        color: (connected && saveName.trim() && saveViewpointId) ? '#fff' : COLOR.faint,
-                                        cursor: (connected && saveName.trim() && saveViewpointId) ? 'pointer' : 'not-allowed',
-                                    }}
-                                >Declare view</button>
-                            </div>
                         </ToolbarPopover>
                         <label
                         title={connected
@@ -516,8 +449,12 @@ export function TraceabilityMatrix() {
             {/* ── Matrix ── */}
             <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, marginLeft: leftToolbar ? '250px' : 0, width: leftToolbar ? 'calc(100% - 250px)' : undefined }}>
             {!result ? (
-                <div className="flex-1 flex items-center justify-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
-                    Choose what the rows and columns are to build a traceability matrix.
+                <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: matrix.refusal ? '#B45309' : COLOR.faint, fontSize: FONT.sm }}>
+                    {matrix.rendering
+                        ? 'Evaluating the axes…'
+                        : matrix.refusal
+                            ?? (matrix.rowEvaluation?.error || matrix.columnEvaluation?.error)
+                            ?? (snapshot ? 'An axis selects no elements. Edit the definition and Render.' : 'Define the rows and columns, then Render.')}
                 </div>
             ) : (
             <HierarchicalMatrix
@@ -660,6 +597,7 @@ export function TraceabilityMatrix() {
                     )}
                 </div>
             )}
+        </div>
         </div>
     );
 }

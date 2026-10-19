@@ -86,6 +86,13 @@ export function viewToPath(view: ActiveView): string | null {
         // gives way to, so loading '/' never changes the URL under the user.
         case 'welcome':
             return '/';
+        // The selected definition rides in the query, as on /table: the bare
+        // path stays valid and means "nothing selected".
+        case 'dsm':
+        case 'traceability':
+            return view.definitionId
+                ? `${STATIC_VIEW_PATHS[view.type]}?definition=${encodeURIComponent(view.definitionId)}`
+                : STATIC_VIEW_PATHS[view.type];
         case 'ontology-detail':
             return view.layerId
                 ? `/ontology/${encodeURIComponent(view.packageName)}/${encodeURIComponent(view.layerId)}`
@@ -125,6 +132,10 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
 
     const staticView = PATH_TO_STATIC_VIEW[path];
+    if (staticView === 'dsm' || staticView === 'traceability') {
+        const definitionId = new URLSearchParams(search).get('definition') ?? undefined;
+        return { type: staticView, ...(definitionId ? { definitionId } : {}) } as ActiveView;
+    }
     if (staticView) return { type: staticView } as ActiveView;
 
     if (path === '/table') {
