@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, HashRouter } from 'react-router-dom';
 import { App } from './App';
+import { AppDialogHost } from './components/AppDialogs';
 import './index.css';
 
 // Path routing needs a server that can answer every path with the same
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <Router>
             <App />
+            <AppDialogHost />
         </Router>
     </StrictMode>
 );

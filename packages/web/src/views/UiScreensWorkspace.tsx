@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { alertDialog, askConfirm, askText } from '../components/AppDialogs';
 import type { MemoElement } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { requestScreenCaptureUpload } from '../store/ws-client';
@@ -359,7 +360,7 @@ export function UiScreensWorkspace() {
      */
     const report = async (pending: Promise<{ success: boolean; error?: string }>) => {
         const result = await pending;
-        if (!result.success) window.alert(result.error ?? 'The package could not be written.');
+        if (!result.success) void alertDialog(result.error ?? 'The package could not be written.');
     };
 
     /**
@@ -371,12 +372,12 @@ export function UiScreensWorkspace() {
      */
     const groupInNewPackage = async (element: MemoElement) => {
         const parent = groupParentPath(model, element);
-        const name = window.prompt(parent
+        const name = await askText(parent
             ? `Name the group inside ${parent.split('::').pop()}`
             : 'Name the group');
         if (!name?.trim()) return;
         const created = await createPackage(name.trim(), parent);
-        if (!created.success) { window.alert(created.error ?? 'The package could not be created.'); return; }
+        if (!created.success) { void alertDialog(created.error ?? 'The package could not be created.'); return; }
         const qualifiedName = `${parent}::${name.trim()}`;
         await waitForPackage(qualifiedName);
         await report(moveElementToPackage(element.id, qualifiedName));
@@ -386,7 +387,7 @@ export function UiScreensWorkspace() {
     const moveIntoGroup = async (element: MemoElement) => {
         const parent = groupParentPath(model, element);
         const existing = siblingGroups(model, element);
-        const name = window.prompt(existing.length
+        const name = await askText(existing.length
             ? `Move into which group? (${existing.join(', ')})`
             : 'Move into which group?', element.attributes?.['elementPackage'] ?? existing[0] ?? '');
         if (!name?.trim()) return;

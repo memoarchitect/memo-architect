@@ -1,4 +1,5 @@
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 import { kindParents } from '../analysis/kind-hierarchy';
 import { isFlatMode, partitionsOf, sharedIds, type ExplorerPartition } from '../lib/explorer-modes';
@@ -141,12 +142,12 @@ export async function reportPackageResult(pending: Promise<PackageMutationResult
     try {
         const result = await pending;
         if (!result.success) {
-            window.alert(result.error ?? 'The containment change was refused.');
+            void alertDialog(result.error ?? 'The containment change was refused.');
             return;
         }
-        for (const warning of result.warnings ?? []) window.alert(warning.message);
+        for (const warning of result.warnings ?? []) void alertDialog(warning.message);
     } catch (e) {
-        window.alert(e instanceof Error ? e.message : String(e));
+        void alertDialog(e instanceof Error ? e.message : String(e));
     }
 }
 
@@ -256,8 +257,8 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             { label: 'View details', action: () => selectElement(el.id) },
             {
                 label: 'Move to package…',
-                action: () => {
-                    const target = window.prompt(
+                action: async () => {
+                    const target = await askText(
                         'Move to which package? (qualified name, e.g. Plant::Hydraulics)', el.package || '');
                     if (target !== null) void reportPackageResult(moveElementToPackage(el.id, target.trim()));
                 }
@@ -267,16 +268,16 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             // grouping without claiming the element decomposes into it.
             {
                 label: 'Group in new package…',
-                action: () => {
+                action: async () => {
                     const parent = groupParentPath(model, el);
-                    const name = window.prompt(parent
+                    const name = await askText(parent
                         ? `Name the group inside ${parent.split('::').pop()}`
                         : 'Name the group');
                     if (!name?.trim()) return;
                     const qualifiedName = `${parent}::${name.trim()}`;
                     void createPackage(name.trim(), parent).then(async created => {
                         if (!created.success) {
-                            window.alert(created.error ?? 'The package could not be created.');
+                            void alertDialog(created.error ?? 'The package could not be created.');
                             return;
                         }
                         await waitForPackage(qualifiedName);
@@ -286,10 +287,10 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             },
             ...(siblingGroups(model, el).length > 0 ? [{
                 label: 'Move into group…',
-                action: () => {
+                action: async () => {
                     const parent = groupParentPath(model, el);
                     const groups = siblingGroups(model, el);
-                    const name = window.prompt(`Move into which group? (${groups.join(', ')})`,
+                    const name = await askText(`Move into which group? (${groups.join(', ')})`,
                         el.attributes?.['elementPackage'] ?? groups[0] ?? '');
                     if (!name?.trim()) return;
                     void reportPackageResult(moveElementToPackage(el.id, `${parent}::${name.trim()}`));
@@ -299,10 +300,10 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             {
                 label: 'Delete element…',
                 danger: true,
-                action: () => {
+                action: async () => {
                     if (!confirmElementDelete(el.name)) return;
                     void deleteModelElement(el.id).then(result => {
-                        if (!result.success) window.alert(result.error ?? 'The element could not be deleted.');
+                        if (!result.success) void alertDialog(result.error ?? 'The element could not be deleted.');
                     });
                 },
             },
@@ -319,12 +320,12 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         actions = [
             {
                 label: 'Add Element here',
-                action: () => {
+                action: async () => {
                     const kind = kindsHere.length === 1
                         ? kindsHere[0]
-                        : window.prompt(`Which kind of element?${kindsHere.length ? ` (${kindsHere.join(', ')})` : ''}`, kindsHere[0] ?? '')?.trim();
+                        : (await askText(`Which kind of element?${kindsHere.length ? ` (${kindsHere.join(', ')})` : ''}`, kindsHere[0] ?? ''))?.trim();
                     if (!kind) return;
-                    const name = window.prompt('Enter element name:');
+                    const name = await askText('Enter element name:');
                     if (name) addElement(kind, name, packageName);
                 }
             },
@@ -334,23 +335,23 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
             }] : []),
             {
                 label: 'New Package…',
-                action: () => {
-                    const name = window.prompt('Enter package name:');
+                action: async () => {
+                    const name = await askText('Enter package name:');
                     if (name) void reportPackageResult(createPackage(name.trim(), packageName));
                 }
             },
             {
                 label: 'Rename Package…',
-                action: () => {
-                    const name = window.prompt('Enter new package name:', packageName.split('::').pop() ?? '');
+                action: async () => {
+                    const name = await askText('Enter new package name:', packageName.split('::').pop() ?? '');
                     if (name) void reportPackageResult(renamePackage(packageName, name.trim()));
                 }
             },
             {
                 label: 'Delete Package (keep contents)',
                 danger: true,
-                action: () => {
-                    if (window.confirm(
+                action: async () => {
+                    if (await askConfirm(
                         `Remove the package "${packageName}"?\n\n`
                         + 'Everything it declares moves into the enclosing package. Qualified names that '
                         + 'refer to it will need updating by hand.')) {
@@ -366,23 +367,23 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         actions = [
             {
                 label: 'New Package…',
-                action: () => {
-                    const name = window.prompt(`New package under ${packageName}`);
+                action: async () => {
+                    const name = await askText(`New package under ${packageName}`);
                     if (name?.trim()) void reportPackageResult(createPackage(name.trim(), packageName));
                 }
             },
             {
                 label: 'Rename Package…',
-                action: () => {
-                    const name = window.prompt('Enter new package name:', packageName.split('::').pop() ?? '');
+                action: async () => {
+                    const name = await askText('Enter new package name:', packageName.split('::').pop() ?? '');
                     if (name?.trim()) void reportPackageResult(renamePackage(packageName, name.trim()));
                 }
             },
             {
                 label: 'Delete Package (keep contents)',
                 danger: true,
-                action: () => {
-                    if (window.confirm(
+                action: async () => {
+                    if (await askConfirm(
                         `Remove the package "${packageName}"?\n\n`
                         + 'Everything it declares, the views included, moves into the enclosing package. '
                         + 'Qualified names that refer to it will need updating by hand.')) {
@@ -397,8 +398,8 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         actions = [
             {
                 label: 'Add Element',
-                action: () => {
-                    const name = window.prompt('Enter element name:');
+                action: async () => {
+                    const name = await askText('Enter element name:');
                     if (name) addElement(menu.kind!, name, inPackage);
                 }
             },
@@ -411,7 +412,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 .slice(0, 1)
                 .map(layer => ({
                     label: 'View type in Ontology',
-                    action: () => {
+                    action: async () => {
                         setSelectedOntologyKind(menu.kind!);
                         setExplorerTab('ontologies');
                         setActiveMode('ontology');
@@ -420,8 +421,8 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }))).slice(0, 1) : []),
             {
                 label: 'New Package…',
-                action: () => {
-                    const name = window.prompt('Enter package name:');
+                action: async () => {
+                    const name = await askText('Enter package name:');
                     if (name) void reportPackageResult(createPackage(name.trim(), inPackage || undefined));
                 }
             }
@@ -2486,9 +2487,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
      * view's own element rather than its authored id, which is why the DTO now
      * carries `elementId`.
      */
-    const moveViewToPackage = (diagram: DiagramDTO) => {
+    const moveViewToPackage = async (diagram: DiagramDTO) => {
         if (!diagram.elementId) return;
-        const target = window.prompt(
+        const target = await askText(
             `Move “${diagram.name}” into which package? (qualified name, e.g. Views::Safety)`,
             diagram.package ?? '');
         if (target === null) return;
@@ -2689,7 +2690,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     navigate(diagramUrl(diag.diagramType, diag.shortId ?? diag.id));
                 }}
                 isSelected={matrixScreenOf(diag) ? isMatrixSelected(diag) : selectedDiagramId === diag.id}
-                onDelete={!diag.auto || (matrixScreenOf(diag) && diag.elementId) ? () => { if (confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
+                onDelete={!diag.auto || (matrixScreenOf(diag) && diag.elementId) ? async () => { if (await confirmViewDelete(diag.name)) deleteDiagram(diag.id); } : undefined}
                 onMoveToPackage={diag.elementId ? () => moveViewToPackage(diag) : undefined}
             />
         ))
@@ -2860,9 +2861,9 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                                     style={{ borderRadius: '4px', margin: '2px 4px', color: COLOR.accent, fontSize: FONT.xs, background: 'transparent' }}
                                     onMouseEnter={e => e.currentTarget.style.background = COLOR.accent + '12'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         const parent = packageForViewpoint(vp.id);
-                                        const name = window.prompt(parent
+                                        const name = await askText(parent
                                             ? `New package under ${parent}`
                                             : 'New SysML package name');
                                         if (name?.trim()) void reportPackageResult(createPackage(name.trim(), parent));
@@ -3288,7 +3289,7 @@ function DhfExplorerContent() {
                                                     </span>
                                                 </button>
                                                 <button
-                                                    onClick={e => { e.stopPropagation(); if (confirmDocumentDelete(doc.title ?? doc.id)) removeDhfDocument(doc.id); }}
+                                                    onClick={async e => { e.stopPropagation(); if (await confirmDocumentDelete(doc.title ?? doc.id)) removeDhfDocument(doc.id); }}
                                                     title="Remove document"
                                                     style={{
                                                         background: 'none', border: 'none', cursor: 'pointer',
