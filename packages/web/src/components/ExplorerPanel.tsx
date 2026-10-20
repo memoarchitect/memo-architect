@@ -1542,20 +1542,35 @@ export function computeExplorerGroupTree(
         const layerTree = (kinds: Map<string, TreeNode[]>): TreeNode[] => {
             const roots = [...kinds.values()].flatMap(kindRoots => kindRoots);
             sortNodes(roots);
-            return buildPackageForest<TreeNode>(roots, {
+            const forest = (members: TreeNode[]) => buildPackageForest<TreeNode>(members, {
                 packageFolders: modes?.packageFolders,
                 packageOf: node => node.element?.package ?? node.element?.attributes?.['elementPackage'],
                 kindOf: node => node.element?.kind ?? '',
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
                 kindLabel: (kind, count) => kindFolderLabel(kind, count),
                 folder: (id, name, children) => ({ id, name, type: 'folder', children }),
-                // The attribute the person chose, or else a requirement's type: what a requirement is about is
-                // part of what it is, so it groups the same whatever package declares it or whether packages show.
-                attributeOf: node => {
-                    const raw = node.element?.attributes?.[modes?.groupBy || REQUIREMENT_TYPE_ATTRIBUTE];
-                    return raw ? raw.split('::').pop() : undefined;
-                },
+                // The attribute the person chose to split folders by.
+                attributeOf: modes?.groupBy
+                    ? node => {
+                        const raw = node.element?.attributes?.[modes.groupBy!];
+                        return raw ? raw.split('::').pop() : undefined;
+                    }
+                    : undefined,
             });
+            // A requirement's type (software, hardware, ...) is part of what it is, so a folder per type
+            // present comes first, above any package: requirements group by type whatever package declares
+            // them and whether packages show. What has no type is listed as before.
+            const typeOf = (node: TreeNode) => node.element?.attributes?.[REQUIREMENT_TYPE_ATTRIBUTE]?.split('::').pop();
+            const typed = roots.filter(node => typeOf(node));
+            if (typed.length === 0) return forest(roots);
+            const types = [...new Set(typed.map(node => typeOf(node)!))].sort();
+            return [
+                ...types.map(type => {
+                    const ofType = typed.filter(node => typeOf(node) === type);
+                    return { id: `rt:${type}`, name: `${type} ${ofType.length}`, type: 'folder' as const, children: forest(ofType) };
+                }),
+                ...forest(roots.filter(node => !typeOf(node))),
+            ];
         };
 
         const isArtifactCategory = (id: string) => ARTIFACT_CATEGORIES.includes(id as never);
