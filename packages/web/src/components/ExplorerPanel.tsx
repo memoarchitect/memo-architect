@@ -34,7 +34,7 @@ import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
-import { WorkspaceSelector } from './WorkspaceSelector';
+import { ExplorerSystemFilter, UNASSIGNED_SYSTEM } from './ExplorerSystemFilter';
 import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
 import { viewToPath } from '../view-routes';
@@ -1836,9 +1836,19 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
 
     // Build the tree from the ontology registry and its source namespaces.
+    const explorerSystems = useModelStore(s => s.explorerSystems);
+    const systemFiltered = Boolean(explorerDomain && SYSTEM_FILTER_DOMAINS.has(explorerDomain) && explorerSystems.length > 0);
+    const shownElements = useMemo(() => {
+        const all = Object.values(model?.elements ?? {});
+        if (!systemFiltered) return all;
+        const chosen = new Set(explorerSystems);
+        const unassigned = new Set(membership?.unassigned ?? []);
+        return all.filter(el => (membership?.membership[el.id] ?? []).some(root => chosen.has(root))
+            || (chosen.has(UNASSIGNED_SYSTEM) && unassigned.has(el.id)));
+    }, [model?.elements, membership, explorerSystems, systemFiltered]);
     const groupTree = useMemo(
         () => model ? computeExplorerGroupTree(
-            Object.values(model.elements),
+            shownElements,
             searchTerm,
             model.registries?.kinds ?? [],
             availableOntologies,
@@ -1854,7 +1864,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 systemsOf: el => partitionsOf(el, { mode: 'system', membership, workspace }) ?? [],
             },
         ) : [],
-        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],
+        [model, shownElements, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],
     );
 
     // The domain the person opened the model on (Architecture, Assurance, ...) is the only group shown, and it is
@@ -1999,6 +2009,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     This model declares no System, so nothing can be grouped by system (rule CR-ONT-084). Declare a part def that specializes System.
                 </div>
             )}
+            {explorerDomain && SYSTEM_FILTER_DOMAINS.has(explorerDomain) && <ExplorerSystemFilter />}
             <details className="px-3 py-1.5 flex-shrink-0" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }}>
                 <summary style={{ cursor: 'pointer', color: COLOR.secondary }}>Filter element types{kindFilter.size ? ` (${kindFilter.size})` : ''}</summary>
                 <div className="mt-1">
@@ -2066,8 +2077,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     <div className="flex items-center gap-2 px-3 py-1" style={{ fontSize: FONT.xs, color: COLOR.muted, flexWrap: 'wrap' }}>
                         <span>Showing {visibleGroups[0]?.group.label ?? explorerDomain} only</span>
                         <button type="button" onClick={() => setExplorerDomain(null)} style={{ background: 'none', border: 0, cursor: 'pointer', color: COLOR.accentDark, fontWeight: 600, fontSize: FONT.xs }}>Show all</button>
-                        {/* The same choice as Settings > Model > Workspace: one system, or the whole model. */}
-                        {SYSTEM_FILTER_DOMAINS.has(explorerDomain) && <span style={{ marginLeft: 'auto' }}><WorkspaceSelector tone="light" label="System" compact /></span>}
                     </div>
                 )}
                 {visibleGroups.map(({ group, subGroups }) => {

@@ -531,6 +531,9 @@ export interface ModelState {
     /** The one top-level domain the Model Explorer shows (architecture, assurance, ...); null shows them all. */
     explorerDomain: string | null;
     setExplorerDomain: (domain: string | null) => void;
+    /** The systems the Model Explorer is filtered to (workspace roots, or 'unassigned'); none means no filter. */
+    explorerSystems: string[];
+    setExplorerSystems: (systems: string[]) => void;
     features: string[];
     setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
@@ -702,6 +705,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     explorerSplit: '',
     explorerDomain: null,
     setExplorerDomain: (explorerDomain) => set({ explorerDomain }),
+    explorerSystems: [],
+    setExplorerSystems: (explorerSystems) => set({ explorerSystems }),
     packageFolders: true,
     setPackageFolders: (packageFolders) => {
         set({ packageFolders });
