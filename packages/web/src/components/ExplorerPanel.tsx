@@ -1549,12 +1549,12 @@ export function computeExplorerGroupTree(
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
                 kindLabel: (kind, count) => kindFolderLabel(kind, count),
                 folder: (id, name, children) => ({ id, name, type: 'folder', children }),
-                attributeOf: modes?.groupBy
-                    ? node => {
-                        const raw = node.element?.attributes?.[modes.groupBy!];
-                        return raw ? raw.split('::').pop() : undefined;
-                    }
-                    : undefined,
+                // The attribute the person chose, or else a requirement's type: what a requirement is about is
+                // part of what it is, so it groups the same whatever package declares it or whether packages show.
+                attributeOf: node => {
+                    const raw = node.element?.attributes?.[modes?.groupBy || REQUIREMENT_TYPE_ATTRIBUTE];
+                    return raw ? raw.split('::').pop() : undefined;
+                },
             });
         };
 
@@ -2423,6 +2423,9 @@ export interface ViewPackageNode {
 type PackagedDiagram = DiagramDTO & { package?: string };
 
 /** Build Viewpoints navigation from SysML package ownership, never file paths. */
+/** The attribute that says what a requirement is about (software, hardware, ...). */
+const REQUIREMENT_TYPE_ATTRIBUTE = 'requirementType';
+
 export function buildViewPackageTree(diagrams: PackagedDiagram[], packages: readonly string[] = []): ViewPackageNode[] {
     const root: ViewPackageNode[] = [];
     // A package is a folder whether or not a view is in it yet, so a caller that
