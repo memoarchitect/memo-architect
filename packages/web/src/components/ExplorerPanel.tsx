@@ -1504,11 +1504,29 @@ export function computeExplorerGroupTree(
         return taxonomy.placement.get(layer);
     };
     // The ontology files its core namespace under Assurance as controlled-artifact evidence. A definition a
-    // project writes on top of the generic MemoPart (a stakeholder, a set of external systems) is a thing in the
-    // architecture, not evidence, so it is listed there, as a definition.
+    // project writes on top of the generic MemoPart (a stakeholder, a set of external systems) is not evidence:
+    // it belongs to the architecture layer the project put it in. The package says which, by the layer its name
+    // carries (`affera_architecture_logical_external_systems` is logical, `..._operational_stakeholders_common`
+    // is operational); a definition in a package that names none, such as a shared library, takes the layer of
+    // the elements of the kind it defines.
+    const layerOfPackage = (el: MemoElement): string | undefined => {
+        for (const token of (el.package ?? '').split(/[:_]+/)) {
+            const group = normalizeLayerId(token);
+            if (group && taxonomy.groupDomain.get(group) === 'architecture') return group;
+        }
+        return undefined;
+    };
+    const layerOfKind = new Map<string, string>();
+    for (const element of elements) {
+        const group = layerOfPackage(element);
+        if (group && !layerOfKind.has(element.kind)) layerOfKind.set(element.kind, group);
+    }
     const placeOf = (el: MemoElement): { domain: string; group: string } | undefined => {
         const place = placeOfKind(el);
-        if (place?.group === 'evidence' && el.isDefinition) return { domain: 'architecture', group: 'definitions' };
+        if (place?.group === 'evidence' && el.isDefinition) {
+            const group = layerOfPackage(el) ?? layerOfKind.get(el.name);
+            if (group) return { domain: 'architecture', group };
+        }
         return place;
     };
     const layerOf = (el: MemoElement): string => placeOf(el)?.group ?? '';
