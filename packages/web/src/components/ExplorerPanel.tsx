@@ -3402,6 +3402,24 @@ function savedExplorerWidth(): number {
     }
 }
 
+/** The Explorer's switch between package folders and a list by type; the same one as in Settings. */
+function PackageFoldersToggle() {
+    const on = useModelStore(state => state.packageFolders);
+    const setPackageFolders = useModelStore(state => state.setPackageFolders);
+    return (
+        <button
+            onClick={() => setPackageFolders(!on)} aria-pressed={on}
+            title={on ? 'Packages are folders. Click to skip the package level.' : 'Package level skipped. Click to show packages as folders.'}
+            aria-label="Show packages as folders" className="rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+                width: 28, cursor: 'pointer', color: COLOR.secondary,
+                background: on ? `${COLOR.accent}22` : COLOR.surfaceAlt,
+                border: `1px solid ${on ? COLOR.accent : COLOR.border}`,
+            }}
+        ><FolderIcon open={false} pkg color={COLOR.secondary} /></button>
+    );
+}
+
 export function ExplorerPanel() {
     // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
     useModelStore(state => state.features);
@@ -3546,6 +3564,7 @@ export function ExplorerPanel() {
                                 className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                                 style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                             <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
+                        <PackageFoldersToggle />
                         </div>
                     </div>
                     <ModelExplorerContent searchTerm={searchTerm} />
@@ -3581,6 +3600,7 @@ export function ExplorerPanel() {
                             className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                             style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                         <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
+                        <PackageFoldersToggle />
                         </div>
                     </div>
                     <ModelExplorerContent searchTerm={searchTerm} />
