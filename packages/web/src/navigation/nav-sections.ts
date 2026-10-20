@@ -1,6 +1,6 @@
 // ─── The navigation: eight sections, every page in exactly one ───────────────
 //
-//   Guide · Model · Views · Assurance · Change · Releases · Documents · Settings
+//   Guide · Views · Model · Assurance · Change · Releases · Documents · Settings
 //
 // The product-family plan (A2) names these sections. Each page Architect has
 // belongs to exactly one, through `SECTION_OF_VIEW`, a Record over every
@@ -19,8 +19,8 @@ export type NavSectionId = 'guide' | 'model' | 'views' | 'assurance' | 'change' 
 
 export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: string }[] = [
     { id: 'guide', label: 'Guide', icon: '⌂' },
-    { id: 'model', label: 'Model', icon: '☰' },
     { id: 'views', label: 'Views', icon: '⊟' },
+    { id: 'model', label: 'Model', icon: '☰' },
     { id: 'assurance', label: 'Assurance', icon: '⚖' },
     { id: 'change', label: 'Change', icon: '↔' },
     { id: 'releases', label: 'Releases', icon: '⬢' },

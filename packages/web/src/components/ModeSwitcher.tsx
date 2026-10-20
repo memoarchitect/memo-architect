@@ -25,6 +25,7 @@ export function ModeSwitcher() {
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [openSections, setOpenSections] = useState<ReadonlySet<string>>(new Set());
 
     useEffect(() => {
         const toggle = () => setDrawerOpen(open => !open);
@@ -130,16 +131,27 @@ export function ModeSwitcher() {
                 {NAV_SECTIONS.map(section => {
                     const entries = NAV_ENTRIES.filter(entry => entry.section === section.id
                         && (!entry.feature || isFeatureEnabled(entry.feature)));
+                    if (entries.length === 0) return null;
                     const current = activeSection === section.id;
+                    // The sections are menus: closed until opened, except the one the current page is in.
+                    const open = openSections.has(section.id) || current;
                     return (
-                        <div key={section.id} style={{ marginBottom: 6 }}>
-                            <div
-                                className="flex items-center gap-3 px-3 py-2"
-                                style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: current ? '#2DD4A8' : 'rgba(255,255,255,0.45)' }}
+                        <div key={section.id} style={{ marginBottom: 2 }}>
+                            <button
+                                type="button" aria-expanded={open}
+                                onClick={() => setOpenSections(previous => {
+                                    const next = new Set(previous);
+                                    if (next.has(section.id) && !current) next.delete(section.id); else next.add(section.id);
+                                    return next;
+                                })}
+                                className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left"
+                                style={{ border: 'none', cursor: 'pointer', background: open ? 'rgba(45,212,168,0.07)' : 'transparent', fontSize: 15, color: current ? '#2DD4A8' : 'rgba(255,255,255,0.82)' }}
                             >
-                                <span style={{ width: 20, textAlign: 'center' }}>{section.icon}</span>{section.label}
-                            </div>
-                            {entries.map(entry => {
+                                <span style={{ width: 20, textAlign: 'center' }}>{section.icon}</span>
+                                {section.label}
+                                <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.7 }}>{open ? '▾' : '▸'}</span>
+                            </button>
+                            {open && entries.map(entry => {
                                 const active = isActiveEntry(entry);
                                 return (
                                     <button
