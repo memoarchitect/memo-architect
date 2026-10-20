@@ -99,6 +99,8 @@ function ExplorerSection() {
     const setMode = useModelStore(s => s.setExplorerMode);
     const split = useModelStore(s => s.explorerSplit);
     const setSplit = useModelStore(s => s.setExplorerSplit);
+    const packageFolders = useModelStore(s => s.packageFolders);
+    const setPackageFolders = useModelStore(s => s.setPackageFolders);
     const attributes = useMemo(() => groupableAttributes(Object.values(model?.elements ?? {})), [model]);
     const select: React.CSSProperties = { background: '#fff', color: COLOR.primary, border: `1px solid ${COLOR.border}`, borderRadius: 6, padding: '5px 8px', fontSize: FONT.md };
     return (
@@ -107,6 +109,15 @@ function ExplorerSection() {
                 <select aria-label="Group the Model Explorer" value={mode} onChange={e => setMode(e.target.value as typeof mode)} style={select}>
                     {EXPLORER_MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                 </select>
+            </Row>
+            <Row title="Show packages as folders" hint="On, each SysML package is a folder in the tree. Off, the package level is skipped and elements are listed by type. Saved for you only.">
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: FONT.md, color: COLOR.primary }}>
+                    <input
+                        type="checkbox" role="switch" aria-label="Show packages as folders" checked={packageFolders}
+                        onChange={event => setPackageFolders(event.target.checked)} style={{ accentColor: COLOR.accent, width: 16, height: 16 }}
+                    />
+                    {packageFolders ? 'On' : 'Off'}
+                </label>
             </Row>
             <Row title="Split folders by" hint="Split each folder by an attribute with a few values. Saved for you only.">
                 <select aria-label="Split folders by" data-testid="explorer-group-by" value={split} onChange={e => setSplit(e.target.value)} style={select}>
