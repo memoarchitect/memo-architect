@@ -25,6 +25,8 @@ export interface ForestNode {
 }
 
 export interface ForestOptions<N extends ForestNode> {
+    /** False skips the package folders: the roots are listed by kind alone. Undefined or true keeps them. */
+    packageFolders?: boolean;
     /** The qualified name of the package that declares the element. */
     packageOf: (node: N) => string | undefined;
     kindOf: (node: N) => string;
@@ -41,6 +43,15 @@ export interface ForestOptions<N extends ForestNode> {
 }
 
 export function buildPackageForest<N extends ForestNode>(roots: readonly N[], options: ForestOptions<N>): N[] {
+    // Without package folders the roots are listed as one level: by kind when there are several, as they are when one.
+    if (options.packageFolders === false) {
+        const kinds = [...new Set(roots.map(options.kindOf))];
+        if (kinds.length <= 1) return [...roots];
+        return kinds.sort((a, b) => options.kindRank(a) - options.kindRank(b) || a.localeCompare(b)).map(kind => {
+            const ofKind = roots.filter(node => options.kindOf(node) === kind);
+            return options.folder(`kf:|${kind}`, options.kindLabel(kind, ofKind.length), [...ofKind]);
+        });
+    }
     interface Branch { id: string; name: string; direct: N[]; children: Branch[] }
     const top: N[] = [];
     const forest: Branch[] = [];

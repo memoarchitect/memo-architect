@@ -523,8 +523,11 @@ export interface ModelState {
      */
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
-    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string; features?: string[] }) => void;
+    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string; features?: string[]; packageFolders?: boolean }) => void;
     /** The experimental features this person switched on in Settings. */
+    /** Package folders in the Model Explorer: on by default; off lists elements by kind alone. */
+    packageFolders: boolean;
+    setPackageFolders: (on: boolean) => void;
     features: string[];
     setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
@@ -585,8 +588,9 @@ export interface ModelState {
 const restoredActiveView = restoreActiveView();
 
 /** The choices one person keeps for this model, as they are saved. */
-function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string; features: string[] }) {
+function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean }) {
     return {
+        ...(state.packageFolders ? {} : { packageFolders: false }),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: state.workspace } : {}),
@@ -693,12 +697,18 @@ export const useModelStore = create<ModelState>((set, get) => ({
     role: null,
     workspace: null,
     explorerSplit: '',
+    packageFolders: true,
+    setPackageFolders: (packageFolders) => {
+        set({ packageFolders });
+        sendUserPreferencesSave(preferencesOf(get()));
+    },
     features: [],
     applyUserPreferences: (preferences) => {
         setUserFeatures(preferences.features ?? []);
         set({
             role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
             features: preferences.features ?? [],
+            packageFolders: preferences.packageFolders !== false,
         });
     },
     setFeatureEnabled: (id, enabled) => {

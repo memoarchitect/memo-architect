@@ -1190,6 +1190,8 @@ export function computeExplorerGroupTree(
         flat?: boolean;
         /** An attribute the person chose to split folders by (its enum literal is the folder name). */
         groupBy?: string;
+        /** False lists elements by kind with no package folders in between. */
+        packageFolders?: boolean;
     },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
@@ -1541,6 +1543,7 @@ export function computeExplorerGroupTree(
             const roots = [...kinds.values()].flatMap(kindRoots => kindRoots);
             sortNodes(roots);
             return buildPackageForest<TreeNode>(roots, {
+                packageFolders: modes?.packageFolders,
                 packageOf: node => node.element?.package ?? node.element?.attributes?.['elementPackage'],
                 kindOf: node => node.element?.kind ?? '',
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
@@ -1732,6 +1735,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, []);
 
     const groupBy = useModelStore(s => s.explorerSplit);
+    const packageFolders = useModelStore(s => s.packageFolders);
 
     // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
@@ -1748,9 +1752,10 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 partition: el => partitionsOf(el, { mode: explorerMode, membership, workspace }),
                 flat: isFlatMode(explorerMode),
                 groupBy: groupBy || undefined,
+                packageFolders,
             },
         ) : [],
-        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy],
+        [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],
     );
 
     // The explorer opens fully collapsed.
