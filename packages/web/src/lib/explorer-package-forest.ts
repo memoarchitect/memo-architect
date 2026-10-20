@@ -43,15 +43,6 @@ export interface ForestOptions<N extends ForestNode> {
 }
 
 export function buildPackageForest<N extends ForestNode>(roots: readonly N[], options: ForestOptions<N>): N[] {
-    // Without package folders the roots are listed as one level: by kind when there are several, as they are when one.
-    if (options.packageFolders === false) {
-        const kinds = [...new Set(roots.map(options.kindOf))];
-        if (kinds.length <= 1) return [...roots];
-        return kinds.sort((a, b) => options.kindRank(a) - options.kindRank(b) || a.localeCompare(b)).map(kind => {
-            const ofKind = roots.filter(node => options.kindOf(node) === kind);
-            return options.folder(`kf:|${kind}`, options.kindLabel(kind, ofKind.length), [...ofKind]);
-        });
-    }
     interface Branch { id: string; name: string; direct: N[]; children: Branch[] }
     const top: N[] = [];
     const forest: Branch[] = [];
@@ -83,6 +74,17 @@ export function buildPackageForest<N extends ForestNode>(roots: readonly N[], op
             ...without,
         ];
     };
+
+    // Without package folders the roots are one level: by kind when there are several. The attribute a person
+    // split by still applies, across every package, so a requirement type groups the same wherever it is declared.
+    if (options.packageFolders === false) {
+        const kinds = [...new Set(roots.map(options.kindOf))];
+        if (kinds.length <= 1) return splitByAttribute([...roots], '');
+        return kinds.sort((a, b) => options.kindRank(a) - options.kindRank(b) || a.localeCompare(b)).map(kind => {
+            const ofKind = roots.filter(node => options.kindOf(node) === kind);
+            return options.folder(`kf:|${kind}`, options.kindLabel(kind, ofKind.length), splitByAttribute(ofKind, `|${kind}`));
+        });
+    }
 
     const render = (branch: Branch): N => {
         const kinds = [...new Set(branch.direct.map(options.kindOf))];
