@@ -452,7 +452,7 @@ export function App() {
 
     // ─── Unified Workbench Layout ────────────────────────────────────────────
     return (
-        <div className="flex flex-col h-screen" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
+        <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
             {/* Sync URL → store on load / navigation */}
             <UrlNavigationSync />
 
