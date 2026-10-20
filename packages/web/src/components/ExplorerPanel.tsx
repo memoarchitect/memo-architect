@@ -34,6 +34,7 @@ import { buildOwnershipTest } from '../views/templates/composition-tree';
 import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
+import { WorkspaceSelector } from './WorkspaceSelector';
 import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
 import { viewToPath } from '../view-routes';
@@ -1784,6 +1785,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const groupBy = useModelStore(s => s.explorerSplit);
     const packageFolders = useModelStore(s => s.packageFolders);
+    const explorerDomain = useModelStore(s => s.explorerDomain);
+    const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
 
     // Build the tree from the ontology registry and its source namespaces.
     const groupTree = useMemo(
@@ -1806,6 +1809,17 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         ) : [],
         [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],
     );
+
+    // The domain the person opened the model on (Architecture, Assurance, ...) is the only group shown, and it is
+    // open; the rest of the tree is one click away.
+    const visibleGroups = useMemo(
+        () => (explorerDomain ? groupTree.filter(entry => entry.group.id === `domain:${explorerDomain}`) : groupTree),
+        [groupTree, explorerDomain],
+    );
+    useEffect(() => {
+        if (!explorerDomain) return;
+        setExpanded(current => new Set(current).add(`g:domain:${explorerDomain}`));
+    }, [explorerDomain, groupTree.length]);
 
     // The explorer opens fully collapsed.
     //
@@ -1985,7 +1999,15 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             )}
             <SharedIdsContext.Provider value={shared}>
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-                {groupTree.map(({ group, subGroups }) => {
+                {explorerDomain && (
+                    <div className="flex items-center gap-2 px-3 py-1" style={{ fontSize: FONT.xs, color: COLOR.muted, flexWrap: 'wrap' }}>
+                        <span>Showing {visibleGroups[0]?.group.label ?? explorerDomain} only</span>
+                        <button type="button" onClick={() => setExplorerDomain(null)} style={{ background: 'none', border: 0, cursor: 'pointer', color: COLOR.accentDark, fontWeight: 600, fontSize: FONT.xs }}>Show all</button>
+                        {/* The same choice as Settings > Model > Workspace: one system, or the whole model. */}
+                        {SYSTEM_FILTER_DOMAINS.has(explorerDomain) && <span style={{ marginLeft: 'auto' }}><WorkspaceSelector tone="light" label="System" compact /></span>}
+                    </div>
+                )}
+                {visibleGroups.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
                     const isExpanded = expanded.has(groupKey);
                     const isUndefinedGroup = group.id === 'undefined';
@@ -2478,6 +2500,9 @@ type PackagedDiagram = DiagramDTO & { package?: string };
  * (requirements, risk, verification, evidence) answers to a system; architecture does not.
  */
 const SYSTEM_FIRST_DOMAINS: ReadonlySet<string> = new Set(['assurance']);
+
+/** Domains opened from the navigation that offer a filter by system: what is built, and what it is checked against. */
+const SYSTEM_FILTER_DOMAINS: ReadonlySet<string> = new Set(['architecture', 'assurance']);
 
 /** The attribute that says what a requirement is about (software, hardware, ...). */
 const REQUIREMENT_TYPE_ATTRIBUTE = 'requirementType';

@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { useModelStore } from '../store/model-store';
 import { groupWorkspaces, workspaceOptions } from '../lib/workspace-scope';
 
-export function WorkspaceSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+export function WorkspaceSelector({ tone = 'dark', label = 'Workspace', compact = false }: { tone?: 'dark' | 'light'; label?: string; compact?: boolean }) {
     const light = tone === 'light';
     const membership = useModelStore(s => s.model?.workspaceMembership);
     const workspace = useModelStore(s => s.workspace);
@@ -25,14 +25,15 @@ export function WorkspaceSelector({ tone = 'dark' }: { tone?: 'dark' | 'light' }
             title="Show one system, or the system of systems. Saved for you only, in memo.user.yaml (ignored by git)."
             style={{ display: 'flex', alignItems: 'center', gap: 8, color: light ? '#324E67' : 'rgba(255,255,255,0.62)', fontSize: light ? '14px' : '12px' }}
         >
-            Workspace
+            {label}
             <select
-                aria-label="Workspace"
+                aria-label={label}
                 value={known ? workspace ?? '' : ''}
                 onChange={event => setWorkspace(event.target.value || null)}
                 style={{
                     background: light ? '#fff' : 'rgba(255,255,255,0.06)', color: light ? '#082744' : 'rgba(255,255,255,0.85)',
-                    border: light ? '1px solid #D8E2E9' : '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: light ? '5px 8px' : '3px 6px', fontSize: light ? '14px' : '12px',
+                    border: light ? '1px solid #D8E2E9' : '1px solid rgba(255,255,255,0.14)', borderRadius: 6, padding: light ? '5px 8px' : '3px 6px', fontSize: light && !compact ? '14px' : '12px',
+                    ...(compact ? { minWidth: 0, maxWidth: 170 } : {}),
                 }}
             >
                 <option value="">Whole model</option>

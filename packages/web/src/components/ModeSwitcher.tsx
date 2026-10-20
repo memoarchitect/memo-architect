@@ -49,8 +49,11 @@ export function ModeSwitcher() {
             .find(id => VIEW_OF_MODE[id] === activeView.type && activeView.type !== 'welcome');
         return mode ?? '';
     })();
+    const explorerDomain = useModelStore(s => s.explorerDomain);
+    const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
     const isActiveEntry = (entry: NavEntry): boolean =>
-        'mode' in entry.target ? entry.target.mode === activeNavMode
+        'mode' in entry.target
+            ? entry.target.mode === activeNavMode && (entry.target.domain ?? null) === (entry.target.mode === 'catalog' ? explorerDomain : null)
             : entry.target.view.type === activeView.type;
 
     // The catalog and viewpoint index pages own their address, and the store →
@@ -65,8 +68,14 @@ export function ModeSwitcher() {
 
     function openEntry(entry: NavEntry) {
         setDrawerOpen(false);
-        if ('mode' in entry.target) handleNavClick(entry.target.mode);
-        else show(entry.target.view);
+        if ('mode' in entry.target) {
+            const domain = entry.target.domain ?? null;
+            setExplorerDomain(domain);
+            // Moving between domains while the explorer is open only changes what it shows.
+            if (domain && activeNavMode === 'catalog') {
+                if (sidebarCollapsed) toggleSidebar();
+            } else handleNavClick(entry.target.mode);
+        } else show(entry.target.view);
     }
 
     function handleNavClick(modeId: NavModeId) {

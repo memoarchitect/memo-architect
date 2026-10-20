@@ -31,7 +31,7 @@ const opens = (entry: (typeof NAV_ENTRIES)[number]): string | undefined =>
 describe('the navigation', () => {
     it('has the seven sections, in order', () => {
         expect(NAV_SECTIONS.map(section => section.label))
-            .toEqual(['Guide', 'Views', 'Model', 'Analysis', 'Methodology', 'Documents', 'Settings']);
+            .toEqual(['Home', 'Views', 'Model', 'Analysis', 'Methodology', 'Documents', 'Settings']);
     });
 
     it('puts every page in exactly one section', () => {
@@ -43,7 +43,8 @@ describe('the navigation', () => {
         // and Analysis menus.
         const ids = new Set(NAV_ENTRIES.map(entry => entry.id));
         for (const id of [
-            'dashboard', 'catalog', 'diagram', 'ui-screens', 'dhf', 'scenario', 'rules', 'ai',
+            // The Model Explorer is opened by its domains: one entry each.
+            'dashboard', 'domain-architecture', 'domain-assurance', 'domain-methodology', 'diagram', 'ui-screens', 'dhf', 'scenario', 'rules', 'ai',
             'ontology', 'import', 'traceability', 'statistics', 'compliance-wizard', 'model-diff',
             'review-dashboard', 'dashboards', 'guide', 'analysis', 'dsm', 'settings',
         ]) expect(ids, id).toContain(id);
