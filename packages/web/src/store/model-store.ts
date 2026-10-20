@@ -528,6 +528,9 @@ export interface ModelState {
     /** Package folders in the Model Explorer: on by default; off lists elements by kind alone. */
     packageFolders: boolean;
     setPackageFolders: (on: boolean) => void;
+    /** The one top-level domain the Model Explorer shows (architecture, assurance, ...); null shows them all. */
+    explorerDomain: string | null;
+    setExplorerDomain: (domain: string | null) => void;
     features: string[];
     setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
@@ -697,6 +700,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     role: null,
     workspace: null,
     explorerSplit: '',
+    explorerDomain: null,
+    setExplorerDomain: (explorerDomain) => set({ explorerDomain }),
     packageFolders: true,
     setPackageFolders: (packageFolders) => {
         set({ packageFolders });

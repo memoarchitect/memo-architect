@@ -1,6 +1,6 @@
 // ─── The navigation: seven sections, every page in exactly one ───────────────
 //
-//   Guide · Views · Model · Analysis · Methodology · Documents · Settings
+//   Home · Views · Model · Analysis · Methodology · Documents · Settings
 //
 // The product-family plan (A2) names these sections. Each page Architect has
 // belongs to exactly one, through `SECTION_OF_VIEW`, a Record over every
@@ -18,7 +18,9 @@ import type { FeatureId } from '../config/feature-flags';
 export type NavSectionId = 'guide' | 'model' | 'views' | 'analysis' | 'methodology' | 'documents' | 'settings';
 
 export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: string }[] = [
-    { id: 'guide', label: 'Guide', icon: '⌂' },
+    // The section that holds the Dashboard. It was named for the Guide page, which is an experimental feature
+    // (Settings > Features) and only appears in this section when switched on.
+    { id: 'guide', label: 'Home', icon: '⌂' },
     { id: 'views', label: 'Views', icon: '⊟' },
     { id: 'model', label: 'Model', icon: '☰' },
     { id: 'analysis', label: 'Analysis', icon: '◫' },
@@ -96,7 +98,7 @@ export function sectionOf(view: ActiveView, activeMode: string): NavSectionId {
 }
 
 export type NavTarget =
-    | { mode: NavModeId }
+    | { mode: NavModeId; /** A top-level domain of the Model Explorer to open on; absent opens the whole tree. */ domain?: string }
     | { view: ActiveView };
 
 export interface NavEntry {
@@ -115,7 +117,11 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', section: 'guide', target: { view: { type: 'dashboards' } }, feature: 'custom-dashboards' },
     { id: 'guide', label: 'Guide', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } }, feature: 'guide' },
 
-    { id: 'catalog', label: 'Model Explorer', icon: '☰', section: 'model', target: { mode: 'catalog' } },
+    // The model is opened by its domains, the top-level groups of the Model Explorer: each entry opens the
+    // explorer on that one domain (and the explorer offers the whole tree again).
+    { id: 'domain-architecture', label: 'Architecture', icon: '◈', section: 'model', target: { mode: 'catalog', domain: 'architecture' } },
+    { id: 'domain-assurance', label: 'Assurance', icon: '⚖', section: 'model', target: { mode: 'catalog', domain: 'assurance' } },
+    { id: 'domain-methodology', label: 'Methodology', icon: '☑', section: 'model', target: { mode: 'catalog', domain: 'methodology' } },
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'model', target: { mode: 'scenario' } },
     { id: 'variability', label: 'Variability', icon: '⑂', section: 'model', target: { view: { type: 'variability' } } },
     { id: 'ai', label: 'AI Tools', icon: '✦', section: 'model', target: { mode: 'ai' }, feature: 'ai-tools' },
