@@ -1,6 +1,6 @@
-// ─── The navigation: eight sections, every page in exactly one ───────────────
+// ─── The navigation: seven sections, every page in exactly one ───────────────
 //
-//   Guide · Views · Model · Assurance · Change · Releases · Documents · Settings
+//   Guide · Views · Model · Analysis · Methodology · Documents · Settings
 //
 // The product-family plan (A2) names these sections. Each page Architect has
 // belongs to exactly one, through `SECTION_OF_VIEW`, a Record over every
@@ -9,21 +9,20 @@
 // same feature flag that gates the page itself in App.tsx, so the drawer never
 // offers a page that would render the dashboard instead.
 //
-// Change and Releases are placeholders until their milestones land.
+// Change and release records are about the model as it moves, so they are listed in Model.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ActiveView } from '../store/model-store';
 import type { FeatureId } from '../config/feature-flags';
 
-export type NavSectionId = 'guide' | 'model' | 'views' | 'assurance' | 'change' | 'releases' | 'documents' | 'settings';
+export type NavSectionId = 'guide' | 'model' | 'views' | 'analysis' | 'methodology' | 'documents' | 'settings';
 
 export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: string }[] = [
     { id: 'guide', label: 'Guide', icon: '⌂' },
     { id: 'views', label: 'Views', icon: '⊟' },
     { id: 'model', label: 'Model', icon: '☰' },
-    { id: 'assurance', label: 'Assurance', icon: '⚖' },
-    { id: 'change', label: 'Change', icon: '↔' },
-    { id: 'releases', label: 'Releases', icon: '⬢' },
+    { id: 'analysis', label: 'Analysis', icon: '◫' },
+    { id: 'methodology', label: 'Methodology', icon: '☑' },
     { id: 'documents', label: 'Documents', icon: '⊞' },
     { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
@@ -45,17 +44,18 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     diagram: 'views',
     tabular: 'views',
     'ui-screens': 'views',
-    rules: 'assurance',
-    analysis: 'assurance',
-    dsm: 'assurance',
-    traceability: 'assurance',
-    'suspect-links': 'assurance',
-    statistics: 'assurance',
-    'compliance-wizard': 'assurance',
-    'review-dashboard': 'assurance',
-    change: 'change',
-    'model-diff': 'change',
-    releases: 'releases',
+    rules: 'methodology',
+    analysis: 'analysis',
+    dsm: 'analysis',
+    traceability: 'analysis',
+    'suspect-links': 'analysis',
+    statistics: 'analysis',
+    'compliance-wizard': 'analysis',
+    'review-dashboard': 'analysis',
+    // Change and releases are about the model as it moves, so they sit with it.
+    change: 'model',
+    'model-diff': 'model',
+    releases: 'model',
     'dhf-dashboard': 'documents',
     'dhf-document': 'documents',
     'dhf-dashboard-legacy': 'documents',
@@ -80,7 +80,7 @@ export const SECTION_OF_MODE: Record<NavModeId, NavSectionId> = {
     ai: 'model',
     diagram: 'views',
     'ui-screens': 'views',
-    rules: 'assurance',
+    rules: 'methodology',
     dhf: 'documents',
 };
 
@@ -123,19 +123,19 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'diagram', label: 'Viewpoints', icon: '⊟', section: 'views', target: { mode: 'diagram' } },
     { id: 'ui-screens', label: 'UI Screens', icon: '▣', section: 'views', target: { mode: 'ui-screens' } },
 
-    { id: 'rules', label: 'Rules', icon: '⚖', section: 'assurance', target: { mode: 'rules' } },
-    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', section: 'assurance', target: { view: { type: 'traceability' } }, feature: 'analysis' },
-    { id: 'suspect-links', label: 'Suspect Links', icon: '⚑', section: 'assurance', target: { view: { type: 'suspect-links' } } },
-    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'assurance', target: { view: { type: 'dsm' } }, feature: 'analysis' },
-    { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'assurance', target: { view: { type: 'analysis' } }, feature: 'analysis' },
-    { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'assurance', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },
-    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', section: 'assurance', target: { view: { type: 'compliance-wizard' } }, feature: 'model-tools' },
-    { id: 'statistics', label: 'Statistics', icon: '⊠', section: 'assurance', target: { view: { type: 'statistics' } }, feature: 'model-tools' },
+    { id: 'rules', label: 'Rules', icon: '⚖', section: 'methodology', target: { mode: 'rules' } },
+    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', section: 'analysis', target: { view: { type: 'traceability' } }, feature: 'analysis' },
+    { id: 'suspect-links', label: 'Suspect Links', icon: '⚑', section: 'analysis', target: { view: { type: 'suspect-links' } } },
+    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'analysis', target: { view: { type: 'dsm' } }, feature: 'analysis' },
+    { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'analysis', target: { view: { type: 'analysis' } }, feature: 'analysis' },
+    { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'analysis', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },
+    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', section: 'analysis', target: { view: { type: 'compliance-wizard' } }, feature: 'model-tools' },
+    { id: 'statistics', label: 'Statistics', icon: '⊠', section: 'analysis', target: { view: { type: 'statistics' } }, feature: 'model-tools' },
 
-    { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'change', target: { view: { type: 'change' } } },
-    { id: 'model-diff', label: 'Model Diff', icon: '⇄', section: 'change', target: { view: { type: 'model-diff' } }, feature: 'model-tools' },
+    { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'model', target: { view: { type: 'change' } } },
+    { id: 'model-diff', label: 'Model Diff', icon: '⇄', section: 'model', target: { view: { type: 'model-diff' } }, feature: 'model-tools' },
 
-    { id: 'releases', label: 'Release Records', icon: '⬢', section: 'releases', target: { view: { type: 'releases' } } },
+    { id: 'releases', label: 'Release Records', icon: '⬢', section: 'model', target: { view: { type: 'releases' } } },
 
     { id: 'dhf', label: 'Documents', icon: '⊞', section: 'documents', target: { mode: 'dhf' } },
 

@@ -29,9 +29,9 @@ const opens = (entry: (typeof NAV_ENTRIES)[number]): string | undefined =>
         : undefined;
 
 describe('the navigation', () => {
-    it('has the eight sections, in order', () => {
+    it('has the seven sections, in order', () => {
         expect(NAV_SECTIONS.map(section => section.label))
-            .toEqual(['Guide', 'Views', 'Model', 'Assurance', 'Change', 'Releases', 'Documents', 'Settings']);
+            .toEqual(['Guide', 'Views', 'Model', 'Analysis', 'Methodology', 'Documents', 'Settings']);
     });
 
     it('puts every page in exactly one section', () => {
