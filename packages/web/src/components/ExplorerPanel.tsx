@@ -762,6 +762,7 @@ function RecursiveTree({
                                 >
                                     {node.name}
                                 </span>
+                                <ExplorerCountBadge count={countExplorerRows(node.children)} color={COLOR.muted} />
                             </div>
                             {isExpanded && (
                                 <RecursiveTree
@@ -1593,12 +1594,20 @@ export function computeExplorerGroupTree(
             const typed = roots.filter(node => typeOf(node));
             if (typed.length === 0) return forest(roots);
             const types = [...new Set(typed.map(node => typeOf(node)!))].sort();
+            const typeLabel = (type: string) => (type.length <= 3 ? type.toUpperCase() : type.charAt(0).toUpperCase() + type.slice(1));
+            // What has no type (the user needs) is listed by its own kind, not by whichever package holds it.
+            const untyped = roots.filter(node => !typeOf(node));
+            const untypedKinds = [...new Set(untyped.map(node => node.element?.kind ?? ''))]
+                .sort((a, b) => (kindOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (kindOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b));
             return [
-                ...types.map(type => {
-                    const ofType = typed.filter(node => typeOf(node) === type);
-                    return { id: `rt:${type}`, name: `${type} ${ofType.length}`, type: 'folder' as const, children: forest(ofType) };
-                }),
-                ...forest(roots.filter(node => !typeOf(node))),
+                ...types.map(type => ({
+                    id: `rt:${type}`, name: typeLabel(type), type: 'folder' as const,
+                    children: forest(typed.filter(node => typeOf(node) === type)),
+                })),
+                ...untypedKinds.map(kind => ({
+                    id: `uk:${kind}`, name: kindFolderLabel(kind, 0), type: 'folder' as const,
+                    children: forest(untyped.filter(node => node.element?.kind === kind)),
+                })),
             ];
         };
 
