@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { FEATURE_FLAGS, featureFlagStatus, isFeatureEnabled } from '../config/feature-flags';
+import { FEATURE_FLAGS, featureFlagStatus, isFeatureEnabled, setUserFeatures } from '../config/feature-flags';
 
 // ─── Feature flags ──────────────────────────────────────────────────────────
 //
@@ -103,5 +103,20 @@ describe('AI tools stay behind the gate', () => {
         expect(NAV_ENTRIES.find(entry => entry.id === 'ai')?.feature).toBe('ai-tools');
         const nav = readFileSync(resolve(webSrc, 'components/ModeSwitcher.tsx'), 'utf8');
         expect(nav).toContain('isFeatureEnabled(entry.feature)');
+    });
+});
+
+describe('features a person switches on in Settings', () => {
+    afterEach(() => setUserFeatures([]));
+    it('turn on only the experimental feature named, with no CLI grant', () => {
+        expect(isFeatureEnabled('guide')).toBe(false);
+        setUserFeatures(['guide']);
+        expect(isFeatureEnabled('guide')).toBe(true);
+        expect(isFeatureEnabled('custom-dashboards')).toBe(false);
+    });
+    it('never turn a stable feature off or an unknown id on', () => {
+        setUserFeatures(['nonsense']);
+        expect(isFeatureEnabled('analysis')).toBe(true);
+        expect(isFeatureEnabled('nonsense' as never)).toBe(false);
     });
 });

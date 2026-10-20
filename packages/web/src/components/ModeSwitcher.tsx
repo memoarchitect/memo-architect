@@ -14,6 +14,8 @@ const DOCS_URL = '/help/';
 // ─── Main ModeSwitcher ───────────────────────────────────────────────────────
 
 export function ModeSwitcher() {
+    // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
+    useModelStore(state => state.features);
     const activeMode = useModelStore(s => s.activeMode);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const activeView = useModelStore(s => s.activeView);

@@ -307,6 +307,8 @@ function WelcomeCanvas() {
 }
 
 export function App() {
+    // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
+    useModelStore(state => state.features);
     const connected = useModelStore(s => s.connected);
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
