@@ -131,10 +131,17 @@ export function ModeSwitcher() {
     if (!drawerOpen) return null;
     return <>
         <div onClick={() => setDrawerOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(4, 18, 28, 0.35)' }} />
-        <aside aria-label="Main navigation" style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 296, zIndex: 81, background: '#0B1E2D', borderRight: '1px solid rgba(45,212,168,0.28)', boxShadow: '12px 0 32px rgba(0,0,0,0.32)', padding: '18px 12px', overflowY: 'auto' }}>
+        <aside aria-label="Main navigation" style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 296, zIndex: 81, background: '#0B1E2D', borderRight: '1px solid rgba(45,212,168,0.28)', boxShadow: '12px 0 32px rgba(0,0,0,0.32)', padding: '18px 12px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.22) transparent' }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 18 }}>
                 <button onClick={() => { setDrawerOpen(false); handleNavClick('dashboard'); }} style={{ color: '#2DD4A8', fontWeight: 700, fontSize: 18, letterSpacing: '0.04em', border: 'none', background: 'none', cursor: 'pointer' }}>MEMO Architect</button>
-                <button aria-label="Close navigation" onClick={() => setDrawerOpen(false)} style={{ width: 36, height: 36, color: '#2DD4A8', fontSize: 24, border: 'none', background: 'transparent', cursor: 'pointer' }}>×</button>
+                <button
+                    aria-label="Hide navigation" title="Hide navigation" onClick={() => setDrawerOpen(false)}
+                    style={{ width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2DD4A8" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                        <path d="M4 7h16M4 12h16M4 17h16" />
+                    </svg>
+                </button>
             </div>
             <nav style={{ borderTop: '1px solid rgba(255,255,255,0.09)', paddingTop: 8 }}>
                 {NAV_SECTIONS.map(section => {
@@ -142,6 +149,20 @@ export function ModeSwitcher() {
                         && (!entry.feature || isFeatureEnabled(entry.feature)));
                     if (entries.length === 0) return null;
                     const current = activeSection === section.id;
+                    // A section with one page is that page: no menu to open for a single item.
+                    if (entries.length === 1) {
+                        const only = entries[0];
+                        const active = isActiveEntry(only);
+                        return (
+                            <button
+                                key={section.id} type="button" onClick={() => openEntry(only)} aria-current={active ? 'page' : undefined}
+                                className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left"
+                                style={{ border: 'none', cursor: 'pointer', marginBottom: 2, fontSize: 15, background: active ? 'rgba(45,212,168,0.15)' : 'transparent', color: active ? '#2DD4A8' : 'rgba(255,255,255,0.82)' }}
+                            >
+                                <span style={{ width: 20, textAlign: 'center' }}>{only.icon}</span>{only.label}
+                            </button>
+                        );
+                    }
                     // The sections are menus: closed until opened, except the one the current page is in.
                     const open = openSections.has(section.id) || current;
                     return (
