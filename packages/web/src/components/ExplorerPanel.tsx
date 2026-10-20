@@ -1494,7 +1494,7 @@ export function computeExplorerGroupTree(
     // An element none of the three place is left undeclared, and shown as
     // such. Inventing a home for it is what produced a `behavior` layer.
     const taxonomy = explorerTaxonomy(availableOntologies);
-    const placeOf = (el: MemoElement): { domain: string; group: string } | undefined => {
+    const placeOfKind = (el: MemoElement): { domain: string; group: string } | undefined => {
         const byKind = taxonomy.byKind.get(el.kind);
         if (byKind) return byKind;
         const layer = normalizeLayerId(el.layer ?? '');
@@ -1502,6 +1502,14 @@ export function computeExplorerGroupTree(
         const asGroup = taxonomy.groupDomain.get(layer);
         if (asGroup) return { domain: asGroup, group: layer };
         return taxonomy.placement.get(layer);
+    };
+    // The ontology files its core namespace under Assurance as controlled-artifact evidence. A definition a
+    // project writes on top of the generic MemoPart (a stakeholder, a set of external systems) is a thing in the
+    // architecture, not evidence, so it is listed there, as a definition.
+    const placeOf = (el: MemoElement): { domain: string; group: string } | undefined => {
+        const place = placeOfKind(el);
+        if (place?.group === 'evidence' && el.isDefinition) return { domain: 'architecture', group: 'definitions' };
+        return place;
     };
     const layerOf = (el: MemoElement): string => placeOf(el)?.group ?? '';
     const domainOf = (el: MemoElement): string => placeOf(el)?.domain ?? '';
@@ -1785,6 +1793,27 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const groupBy = useModelStore(s => s.explorerSplit);
     const packageFolders = useModelStore(s => s.packageFolders);
+    // The types worth filtering by: the ontology's element kinds the model has elements of. Enumerations,
+    // attribute and metadata definitions are vocabulary, not elements, and a type with none is no filter.
+    const [kindSearch, setKindSearch] = useState('');
+    const kindCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const element of Object.values(model?.elements ?? {})) counts.set(element.kind, (counts.get(element.kind) ?? 0) + 1);
+        return counts;
+    }, [model?.elements]);
+    const ontologyKinds = useMemo(() => explorerTaxonomy(availableOntologies).byKind, [availableOntologies]);
+    const filterableKinds = useMemo(
+        () => registryKinds
+            .filter(kind => !kind.isAbstract && !/^(enum|attribute|metadata) def$/.test(kind.construct ?? '')
+                // the ontology's own element kinds; a project's definitions are not a type to filter by
+                && ontologyKinds.has(kind.name) && kindCounts.has(kind.name))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        [registryKinds, kindCounts, ontologyKinds],
+    );
+    const shownKinds = useMemo(() => {
+        const words = kindSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        return filterableKinds.filter(kind => words.every(word => `${kind.label ?? ''} ${kind.name}`.toLowerCase().includes(word)));
+    }, [filterableKinds, kindSearch]);
     const explorerDomain = useModelStore(s => s.explorerDomain);
     const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
 
@@ -1954,18 +1983,34 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             )}
             <details className="px-3 py-1.5 flex-shrink-0" style={{ borderBottom: `1px solid ${COLOR.border}`, fontSize: FONT.xs }}>
                 <summary style={{ cursor: 'pointer', color: COLOR.secondary }}>Filter element types{kindFilter.size ? ` (${kindFilter.size})` : ''}</summary>
-                <div className="mt-1 max-h-32 overflow-y-auto">
-                    <button onClick={() => setKindFilter(new Set())} style={{ color: COLOR.accent, fontSize: FONT.xs }}>Show all</button>
-                    {registryKinds.filter(kind => !kind.isAbstract).sort((a, b) => a.name.localeCompare(b.name)).map(kind => (
-                        <label key={kind.name} className="flex items-center gap-1 py-0.5">
-                            <input type="checkbox" checked={!kindFilter.size || kindFilter.has(kind.name)} onChange={() => setKindFilter(current => {
-                                const next = current.size ? new Set(current) : new Set(registryKinds.filter(def => !def.isAbstract).map(def => def.name));
-                                if (next.has(kind.name)) next.delete(kind.name); else next.add(kind.name);
-                                return next;
-                            })} />
-                            {kind.label || kind.name}
-                        </label>
-                    ))}
+                <div className="mt-1">
+                    <input
+                        type="text" value={kindSearch} onChange={event => setKindSearch(event.target.value)} aria-label="Find an element type"
+                        placeholder="Find a type…" className="w-full px-2 py-1 rounded mb-1"
+                        style={{ border: `1px solid ${COLOR.border}`, fontSize: FONT.xs }}
+                    />
+                    <div className="flex gap-3 mb-1">
+                        <button onClick={() => setKindFilter(new Set())} style={{ color: COLOR.accent, fontSize: FONT.xs }}>Show all</button>
+                        {shownKinds.length > 0 && (
+                            <button onClick={() => setKindFilter(new Set(shownKinds.map(kind => kind.name)))} style={{ color: COLOR.accent, fontSize: FONT.xs }}>
+                                Only these {shownKinds.length}
+                            </button>
+                        )}
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                        {shownKinds.map(kind => (
+                            <label key={kind.name} className="flex items-center gap-1 py-0.5">
+                                <input type="checkbox" checked={!kindFilter.size || kindFilter.has(kind.name)} onChange={() => setKindFilter(current => {
+                                    const next = current.size ? new Set(current) : new Set(filterableKinds.map(def => def.name));
+                                    if (next.has(kind.name)) next.delete(kind.name); else next.add(kind.name);
+                                    return next;
+                                })} />
+                                <span className="flex-1 truncate">{kind.label || kind.name}</span>
+                                <span style={{ color: COLOR.faint }}>{kindCounts.get(kind.name)}</span>
+                            </label>
+                        ))}
+                        {shownKinds.length === 0 && <div style={{ color: COLOR.faint }}>No element type matches.</div>}
+                    </div>
                 </div>
             </details>
             {/* ── Multi-select toolbar ── */}
@@ -2785,6 +2830,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         ))
     );
 
+    const packageFolders = useModelStore(state => state.packageFolders);
     const renderGroupedDiagramList = (diagrams: DiagramDTO[], vpId: string) => {
         const packageTree = buildViewPackageTree(diagrams);
         // A package is a folder, not a caption. It was rendered as a bare label
@@ -2827,7 +2873,8 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 </div>
             );
         };
-        if (diagrams.some(diagram => (diagram as PackagedDiagram).package)) return packageTree.map(node => renderPackage(node));
+        // With package folders off the package level is skipped: the views are listed under the viewpoint.
+        if (packageFolders && diagrams.some(diagram => (diagram as PackagedDiagram).package)) return packageTree.map(node => renderPackage(node));
         const groupOf = (diagram: DiagramDTO) => (diagram as DiagramDTO & { group?: string }).group;
         if (!diagrams.some(diagram => groupOf(diagram))) return renderDiagramList(diagrams, vpId);
         const groups = new Map<string, DiagramDTO[]>();
@@ -3664,10 +3711,13 @@ export function ExplorerPanel() {
             ) : (activeMode === 'diagram' || viewpointDiagram) ? (
                 <>
                     <div className="px-3 py-2" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
-                        <input type="text" placeholder="Search viewpoints and views..." value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg focus:outline-none"
-                            style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                        <div className="flex gap-1">
+                            <input type="text" placeholder="Search viewpoints and views..." value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
+                                style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
+                            <PackageFoldersToggle />
+                        </div>
                     </div>
                     <ViewExplorerContent searchTerm={searchTerm} />
                 </>
