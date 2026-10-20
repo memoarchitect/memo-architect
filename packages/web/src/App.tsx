@@ -336,7 +336,14 @@ export function App() {
     // or tool views that are self-contained (DSM has its own filter toolbar).
     // The AI workspace is self-contained too: it owns its own tool switcher, and
     // the model tree was only ever there because the entry point lived in it.
-    const showExplorer = activeView.type !== 'dsm'
+    // Pages that are whole pages of their own, with no tree to browse beside them: the explorer a
+    // previous page left open (Viewpoints, say) would sit next to Settings and mean nothing there.
+    const standalonePages: ReadonlySet<string> = new Set([
+        'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
+        'statistics', 'compliance-wizard', 'review-dashboard', 'import',
+    ]);
+    const showExplorer = !standalonePages.has(activeView.type)
+        && activeView.type !== 'dsm'
         && activeView.type !== 'traceability'
         && activeView.type !== 'dashboard'
         && activeView.type !== 'dashboards'
