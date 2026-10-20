@@ -4,6 +4,10 @@
 // app decides on its own whether a feature is on: components ask
 // `isFeatureEnabled(id)` and the answer comes from here.
 //
+// A person switches an experimental feature on in Settings (Features); that is
+// saved with their other choices and is the normal way to get one. The CLI grant
+// below remains for a developer who wants every one at once.
+//
 // Grants arrive from the CLI. `memo-architect --experimental` (and
 // `memo-architect dev --experimental`, `build --experimental`) makes the server
 // splice `window.__MEMO_FLAGS__` into index.html before the bundle runs, so the
@@ -108,6 +112,22 @@ export function isFeatureEnabled(id: FeatureId): boolean {
     // An unregistered id is a typo, not a hidden feature — fail closed.
     if (!flag) return false;
     if (flag.stage === 'stable') return true;
+    return grants().experimental === true || userFeatures.has(id);
+}
+
+/**
+ * The experimental features this person switched on in Settings. The store
+ * keeps the saved list (memo.user.yaml) and passes it here when it changes, so
+ * this module stays free of the store. Components that call `isFeatureEnabled`
+ * also subscribe to the store's `features`, which is what re-renders them.
+ */
+let userFeatures: ReadonlySet<string> = new Set();
+export function setUserFeatures(ids: readonly string[]): void {
+    userFeatures = new Set(ids);
+}
+
+/** True when the CLI granted every experimental feature, so Settings cannot switch them off. */
+export function experimentalGrantedByCli(): boolean {
     return grants().experimental === true;
 }
 

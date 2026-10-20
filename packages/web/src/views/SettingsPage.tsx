@@ -13,16 +13,18 @@ import { RoleSelector } from '../components/RoleSelector';
 import { VersionSelector } from '../components/VersionSelector';
 import { WorkspaceSelector } from '../components/WorkspaceSelector';
 import { EXPLORER_MODES, groupableAttributes } from '../lib/explorer-modes';
+import { experimentalGrantedByCli, FEATURE_FLAGS, isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
 
 const DhfSettingsPanel = lazy(() => import('./DhfSettingsPanel').then(m => ({ default: m.DhfSettingsPanel })));
 const LlmSettings = lazy(() => import('./LlmSettings').then(m => ({ default: m.LlmSettings })));
 
-type SectionId = 'model' | 'explorer' | 'compiler' | 'documents' | 'assistant';
+type SectionId = 'model' | 'explorer' | 'features' | 'compiler' | 'documents' | 'assistant';
 
 const SECTIONS: { id: SectionId; label: string }[] = [
     { id: 'model', label: 'Model' },
     { id: 'explorer', label: 'Explorer' },
+    { id: 'features', label: 'Features' },
     { id: 'compiler', label: 'Compiler' },
     { id: 'documents', label: 'Documents' },
     { id: 'assistant', label: 'AI assistant' },
@@ -50,6 +52,43 @@ function ModelSection() {
             <Row title="Role" hint="Show the viewpoints written for one stakeholder. Saved for you only.">
                 <RoleSelector tone="light" />
             </Row>
+        </>
+    );
+}
+
+/**
+ * The experimental features, each a switch. They are off until a person turns one on, and that
+ * choice is saved for them only (memo.user.yaml). Which features exist and what each is comes from
+ * the registry in config/feature-flags.ts, not from a list here.
+ */
+function FeaturesSection() {
+    const features = useModelStore(s => s.features);
+    const setFeatureEnabled = useModelStore(s => s.setFeatureEnabled);
+    const grantedByCli = experimentalGrantedByCli();
+    const experimental = FEATURE_FLAGS.filter(flag => flag.stage === 'experimental');
+    return (
+        <>
+            <div style={{ fontSize: FONT.sm, color: COLOR.muted, padding: '8px 0' }}>
+                Features that are not part of the regulated workflow stay off until you switch them on. Saved for you only, in memo.user.yaml.
+                {grantedByCli && ' Architect was started with --experimental, so all of them are on.'}
+            </div>
+            {experimental.map(flag => {
+                const on = isFeatureEnabled(flag.id);
+                return (
+                    <Row key={flag.id} title={flag.label} hint={flag.description}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: FONT.md, color: COLOR.primary }}>
+                            <input
+                                type="checkbox" role="switch" aria-label={flag.label} checked={on}
+                                disabled={grantedByCli} onChange={event => setFeatureEnabled(flag.id, event.target.checked)}
+                                style={{ accentColor: COLOR.accent, width: 16, height: 16 }}
+                            />
+                            {on ? 'On' : 'Off'}
+                        </label>
+                    </Row>
+                );
+            })}
+            {/* Re-reads the saved list, so the switches follow a change made elsewhere. */}
+            <span hidden>{features.length}</span>
         </>
     );
 }
@@ -103,6 +142,7 @@ export function SettingsPage() {
                 <h1 style={{ fontSize: 20, fontWeight: 700, color: COLOR.primary, margin: '0 0 4px' }}>{SECTIONS.find(s => s.id === section)!.label}</h1>
                 {section === 'model' && <ModelSection />}
                 {section === 'explorer' && <ExplorerSection />}
+                {section === 'features' && <FeaturesSection />}
                 {section === 'compiler' && <Row title="SysML compiler" hint="The model names one; your own setting overrides it for you."><CompilerSettings /></Row>}
                 {section === 'documents' && <Row title="Design history documents" hint="Model identity, branding, layout and numbering for generated documents."><button style={button} onClick={() => setPanel('documents')}>Open document settings</button></Row>}
                 {section === 'assistant' && <Row title="AI assistant" hint="The provider and key the assistant uses."><button style={button} onClick={() => setPanel('assistant')}>Open assistant settings</button></Row>}

@@ -3398,6 +3398,8 @@ function savedExplorerWidth(): number {
 }
 
 export function ExplorerPanel() {
+    // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
+    useModelStore(state => state.features);
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const explorerTab = useModelStore(s => s.explorerTab);

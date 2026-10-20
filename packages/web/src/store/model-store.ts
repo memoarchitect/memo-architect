@@ -24,6 +24,7 @@ import type {
     RelationshipDiagnostic,
     RelationshipDirection,
 } from '@memoarchitect/tools/browser';
+import { setUserFeatures } from '../config/feature-flags';
 import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
@@ -522,7 +523,10 @@ export interface ModelState {
      */
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
-    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string }) => void;
+    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string; features?: string[] }) => void;
+    /** The experimental features this person switched on in Settings. */
+    features: string[];
+    setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
     explorerSplit: string;
     setExplorerSplit: (attribute: string) => void;
@@ -581,8 +585,9 @@ export interface ModelState {
 const restoredActiveView = restoreActiveView();
 
 /** The choices one person keeps for this model, as they are saved. */
-function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string }) {
+function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string; features: string[] }) {
     return {
+        ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: state.workspace } : {}),
         ...(state.explorerSplit ? { explorerSplit: state.explorerSplit } : {}),
@@ -688,9 +693,20 @@ export const useModelStore = create<ModelState>((set, get) => ({
     role: null,
     workspace: null,
     explorerSplit: '',
-    applyUserPreferences: (preferences) => set({
-        role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
-    }),
+    features: [],
+    applyUserPreferences: (preferences) => {
+        setUserFeatures(preferences.features ?? []);
+        set({
+            role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
+            features: preferences.features ?? [],
+        });
+    },
+    setFeatureEnabled: (id, enabled) => {
+        const features = enabled ? [...new Set([...get().features, id])] : get().features.filter(entry => entry !== id);
+        setUserFeatures(features);
+        set({ features });
+        sendUserPreferencesSave(preferencesOf(get()));
+    },
     // A save replaces the person's choices, so every one is sent with the others.
     setRole: (role) => {
         set({ role });

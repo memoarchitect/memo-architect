@@ -517,6 +517,8 @@ export const DASHBOARD_WIDGETS: Record<string, () => ReactNode> = {
 // ─── Home dashboard ──────────────────────────────────────────────────────────
 
 export function Dashboard() {
+    // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
+    useModelStore(state => state.features);
     return <DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_WIDGETS} />;
 }
 
