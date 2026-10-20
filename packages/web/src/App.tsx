@@ -501,6 +501,7 @@ export function App() {
                     && activeView.type !== 'analysis'
                     && !isCatalogRoute
                     && activeMode !== 'dhf'
+                    && activeView.type !== 'dhf-dashboard' && activeView.type !== 'dhf-document'
                     && activeMode !== 'ontology' && (
                     selectedElementIds.size >= 2
                         ? <BulkEditPanel />

@@ -1192,6 +1192,8 @@ export function computeExplorerGroupTree(
         groupBy?: string;
         /** False lists elements by kind with no package folders in between. */
         packageFolders?: boolean;
+        /** The systems that hold an element (and Unassigned for none); the domains listed in SYSTEM_FIRST_DOMAINS group by it. */
+        systemsOf?: (el: MemoElement) => ExplorerPartition[];
     },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
@@ -1589,6 +1591,35 @@ export function computeExplorerGroupTree(
             }));
     };
 
+    /**
+     * A domain listed system first: one group per system that holds any of it (an element two systems share
+     * is under each), then the categories that system's items fall into, then what the categories hold.
+     */
+    const bySystem = (domainRoots: TreeNode[], systemsOf: (el: MemoElement) => ExplorerPartition[]): ExplorerSubGroup[] => {
+        const held = new Map<string, { system: ExplorerPartition; roots: TreeNode[] }>();
+        for (const root of domainRoots) {
+            const owners = systemsOf(root.element!);
+            for (const system of owners.length > 0 ? owners : [{ id: 'unassigned', label: 'Unassigned', color: '#F59E0B', rank: 1000 }]) {
+                const entry = held.get(system.id) ?? { system, roots: [] };
+                entry.roots.push(root);
+                held.set(system.id, entry);
+            }
+        }
+        return [...held.values()]
+            .sort((a, b) => a.system.rank - b.system.rank || a.system.label.localeCompare(b.system.label))
+            .map(({ system, roots: ofSystem }) => {
+                const categories = toSubGroups(ofSystem, system.color);
+                const kinds = new Map<string, TreeNode[]>();
+                for (const category of categories) for (const [kind, nodes] of category.kinds) kinds.set(kind, [...(kinds.get(kind) ?? []), ...nodes]);
+                return {
+                    id: `sys:${system.id}`, label: system.label, color: system.color, kinds,
+                    tree: categories.map(category => ({
+                        id: `cat:${system.id}|${category.id}`, name: category.label, type: 'folder' as const, children: category.tree,
+                    })),
+                };
+            });
+    };
+
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
     // A mode may list a root under groups of its own before the ontology's domains see it.
@@ -1635,7 +1666,9 @@ export function computeExplorerGroupTree(
                 color,
                 kinds: [...new Set(domainRoots.map(root => root.element!.kind))],
             },
-            subGroups: toSubGroups(domainRoots, color),
+            subGroups: SYSTEM_FIRST_DOMAINS.has(domain) && modes?.systemsOf
+                ? bySystem(domainRoots, modes.systemsOf)
+                : toSubGroups(domainRoots, color),
         });
     }
 
@@ -1768,6 +1801,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 flat: isFlatMode(explorerMode),
                 groupBy: groupBy || undefined,
                 packageFolders,
+                systemsOf: el => partitionsOf(el, { mode: 'system', membership, workspace }) ?? [],
             },
         ) : [],
         [model, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],
@@ -2438,6 +2472,13 @@ export interface ViewPackageNode {
 type PackagedDiagram = DiagramDTO & { package?: string };
 
 /** Build Viewpoints navigation from SysML package ownership, never file paths. */
+/**
+ * Domains whose items are the evidence a system is built and checked to, so they are listed under the
+ * system they belong to first and by category second. Everything the Assurance domain holds
+ * (requirements, risk, verification, evidence) answers to a system; architecture does not.
+ */
+const SYSTEM_FIRST_DOMAINS: ReadonlySet<string> = new Set(['assurance']);
+
 /** The attribute that says what a requirement is about (software, hardware, ...). */
 const REQUIREMENT_TYPE_ATTRIBUTE = 'requirementType';
 
@@ -3453,7 +3494,11 @@ export function ExplorerPanel() {
     const viewpointDiagram = activeView.type === 'diagram'
         && model?.diagrams?.find(diagram => diagram.id === activeView.diagramId)?.viewpointId
         && model.diagrams.find(diagram => diagram.id === activeView.diagramId)?.viewpointId !== '__model';
-    const explorerLabel = viewpointDiagram || activeMode === 'diagram' ? 'Viewpoints' : 'Model Explorer';
+    // The explorer follows the page that is open, not only the mode the store last held: a document
+    // opened by its address, or from another section, has no mode set, and showed the model tree.
+    const documentsOpen = activeMode === 'dhf' || activeView.type === 'dhf-dashboard' || activeView.type === 'dhf-document'
+        || activeView.type === 'dhf-dashboard-legacy';
+    const explorerLabel = viewpointDiagram || activeMode === 'diagram' ? 'Viewpoints' : documentsOpen ? 'Documents' : 'Model Explorer';
     // `preferredWidth` is what the user asked for and what we persist; `sidebarWidth`
     // is what fits on screen today. Keeping them apart means shrinking the window
     // (or a transient zero-width one) narrows the panel without losing the preference.
@@ -3589,7 +3634,7 @@ export function ExplorerPanel() {
                 </>
             ) : activeMode === 'dashboard' ? (
                 <DashboardSidebar />
-            ) : activeMode === 'dhf' ? (
+            ) : documentsOpen ? (
                 <DhfExplorerContent />
             ) : (activeMode === 'diagram' || viewpointDiagram) ? (
                 <>
