@@ -69,7 +69,7 @@ export function buildPackageForest<N extends ForestNode>(roots: readonly N[], op
         const without = members.filter(node => options.attributeOf!(node) === undefined);
         return [
             ...values.sort((a, b) => a.localeCompare(b)).map(value => options.folder(
-                `af:${scope}|${value}`, `${value} ${members.filter(node => options.attributeOf!(node) === value).length}`,
+                `af:${scope}|${value}`, value,
                 members.filter(node => options.attributeOf!(node) === value))),
             ...without,
         ];
