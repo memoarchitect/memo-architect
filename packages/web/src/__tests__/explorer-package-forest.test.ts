@@ -55,7 +55,8 @@ describe('a layer as the packages that hold it', () => {
 });
 
 describe('with package folders off', () => {
-    const flat = (roots: N[]) => buildPackageForest(roots, {
+    const flat = (roots: N[], attributeOf?: (n: N) => string | undefined) => buildPackageForest(roots, {
+        attributeOf,
         packageFolders: false, packageOf: n => n.pkg, kindOf: n => n.kind ?? '', kindRank: () => 0, kindLabel: (k, c) => `${k} ${c}`,
         folder: (id, name, children) => ({ id, name, type: 'folder', children }),
     });
@@ -66,5 +67,11 @@ describe('with package folders off', () => {
     });
     it('lists a single kind without a folder', () => {
         expect(shape(flat([el('a', 'x'), el('b', 'y')]))).toEqual(['a', 'b']);
+    });
+    it('still splits by the attribute a person chose, across every package', () => {
+        const type = (n: N) => ({ a: 'software', b: 'hardware', c: 'software' } as Record<string, string>)[n.name];
+        expect(shape(flat([el('a', 'p1'), el('b', 'p2'), el('c', 'p3')], type))).toEqual([
+            { 'af:|hardware': ['b'] }, { 'af:|software': ['a', 'c'] },
+        ]);
     });
 });

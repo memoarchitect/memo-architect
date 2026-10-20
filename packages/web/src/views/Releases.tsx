@@ -8,6 +8,7 @@
 // feature is offered in are read from the regulated devices: a device covers releases, and a release selects features.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { inferVerification } from '../lib/release-verification';
 import { useMemo, useState } from 'react';
 import { defaultReleaseFile, indexKinds, kindConformsTo, type ModelDiffSummary } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
@@ -184,17 +185,27 @@ function CreateRelease({ rows, features, onDone }: { rows: ReleaseRecordRow[]; f
     const kinds = useMemo(() => indexKinds(model.registries?.kinds ?? []), [model]);
     const items = useMemo(() => Object.values(model.elements).filter(e => e.isDefinition && !kindConformsTo(e.kind, 'ReleaseRecord', kinds))
         .sort((a, b) => a.name.localeCompare(b.name)), [model, kinds]);
-    const cases = useMemo(() => Object.values(model.elements).filter(e => kindConformsTo(e.kind, 'VerificationCase', kinds)), [model, kinds]);
     const statuses = model.enumerations?.find(e => e.name === 'ElementStatusKind')?.literals ?? STATUS_FALLBACK;
     const [form, setForm] = useState({ name: '', label: '', itemId: '', partNumber: '', revision: '', softwareVersion: '', codeTag: '', status: 'draft', modelCommit: '' });
     const [picked, setPicked] = useState<{ contains: string[]; implements: string[]; features: string[]; verifiedBy: string[] }>({ contains: [], implements: [], features: [], verifiedBy: [] });
+    // What verifies the release is inferred from the item's requirements, not picked from every case.
+    const inferred = useMemo(
+        () => (form.itemId
+            ? inferVerification(model, form.itemId, kind => kindConformsTo(kind, 'Requirement', kinds), kind => kindConformsTo(kind, 'VerificationCase', kinds))
+            : null),
+        [model, kinds, form.itemId]);
+    const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
+    const [showCases, setShowCases] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const itemFile = model.elements[form.itemId]?.file;
     const file = defaultReleaseFile({ recordFiles: rows.map(r => model.elements[r.id]?.file ?? ''), itemFile });
     const toggle = (key: keyof typeof picked, id: string) =>
         setPicked(p => ({ ...p, [key]: p[key].includes(id) ? p[key].filter(x => x !== id) : [...p[key], id] }));
-    const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm(f => ({ ...f, [key]: event.target.value }));
+    const set = (key: keyof typeof form) => (event: { target: { value: string } }) => {
+        setForm(f => ({ ...f, [key]: event.target.value }));
+        if (key === 'itemId') setExcluded(new Set());
+    };
     const input = { fontSize: FONT.sm, padding: '3px 6px', border: `1px solid ${COLOR.border}`, borderRadius: 6, width: 220 };
     const field = (name: string, control: JSX.Element) => <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: FONT.sm, margin: '4px 0' }}><span style={{ width: 130, color: COLOR.muted }}>{name}</span>{control}</label>;
     const checks = (title: string, key: keyof typeof picked, options: { id: string; label: string }[]) => options.length === 0 ? null : (
@@ -212,7 +223,8 @@ function CreateRelease({ rows, features, onDone }: { rows: ReleaseRecordRow[]; f
             const result = await requestReleaseCreate({
                 name: form.name.trim(), label: form.label.trim() || undefined, itemId: form.itemId, partNumber: form.partNumber.trim(), revision: form.revision.trim(),
                 softwareVersion: form.softwareVersion.trim() || undefined, codeTag: form.codeTag.trim() || undefined, status: form.status,
-                modelCommit: form.modelCommit.trim() || undefined, ...picked, file,
+                modelCommit: form.modelCommit.trim() || undefined, ...picked,
+                verifiedBy: (inferred?.caseIds ?? []).filter(id => !excluded.has(id)), file,
             });
             if (result.success) onDone();
             else setMessage(result.error ?? 'The release could not be written.');
@@ -237,7 +249,37 @@ function CreateRelease({ rows, features, onDone }: { rows: ReleaseRecordRow[]; f
             {checks('Features it selects', 'features', features)}
             {checks('Releases it contains', 'contains', rows.map(r => ({ id: r.id, label: r.label })))}
             {checks('Interface releases it implements', 'implements', rows.map(r => ({ id: r.id, label: r.label })))}
-            {checks('Verified by', 'verifiedBy', cases.map(c => ({ id: c.id, label: c.name })))}
+            {inferred && (
+                <div data-testid="release-verified-by" style={{ margin: '8px 0', padding: '8px 10px', borderRadius: 6, background: COLOR.surfaceAlt, fontSize: FONT.sm }}>
+                    <div style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600 }}>Verified by</div>
+                    {!inferred.known ? (
+                        <div style={{ color: COLOR.muted }}>Cannot be inferred: this item is not a system or system of systems whose requirements the model knows.</div>
+                    ) : (
+                        <>
+                            <div>
+                                <strong>{inferred.caseIds.length - excluded.size}</strong> verification case{inferred.caseIds.length - excluded.size === 1 ? '' : 's'}, from the {inferred.requirementCount.toLocaleString()} requirement{inferred.requirementCount === 1 ? '' : 's'} this item carries.
+                                {inferred.uncoveredRequirementIds.length > 0 && (
+                                    <span style={{ color: '#B45309' }}> {inferred.uncoveredRequirementIds.length.toLocaleString()} requirement{inferred.uncoveredRequirementIds.length === 1 ? ' has' : 's have'} no verification case.</span>
+                                )}
+                            </div>
+                            {inferred.caseIds.length > 0 && (
+                                <button type="button" onClick={() => setShowCases(open => !open)} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', color: COLOR.accentDark, fontSize: FONT.xs, fontWeight: 600 }}>
+                                    {showCases ? 'Hide the cases' : 'Show the cases, to leave one out'}
+                                </button>
+                            )}
+                            {showCases && (
+                                <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none', maxHeight: 160, overflow: 'auto' }}>
+                                    {inferred.caseIds.map(id => (
+                                        <li key={id}><label style={{ fontSize: FONT.xs }}>
+                                            <input type="checkbox" checked={!excluded.has(id)} onChange={() => setExcluded(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; })} /> {model.elements[id]?.name ?? id}
+                                        </label></li>
+                                    ))}
+                                </ul>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
             <div style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '8px 0' }}>Written to {file}: never into a system folder, which is checked out at the commit this record pins.</div>
             <button style={{ fontSize: FONT.sm, padding: '4px 14px', borderRadius: 6, border: 'none', background: COLOR.primary, color: '#fff', cursor: 'pointer' }}
                 data-testid="release-submit" disabled={busy || !form.itemId || !form.name || !form.partNumber || !form.revision} onClick={submit}>
