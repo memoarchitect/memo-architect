@@ -1,6 +1,7 @@
 import { attachedRoute, cubicRoutePath, arcRoutePath, polylinePath, type IbdRoutingType } from '../diagram/ibd-routing';
+import { crossoverGaps } from '../diagram/ibd-crossovers';
 import { ibdEdgeHitClip } from '../diagram/ibd-hit-targets';
-import { memo, useEffect, useRef, useId, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useMemo, useEffect, useRef, useId, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow, useStore, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
@@ -83,7 +84,17 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     const renderer = useInterconnectionRenderer();
     const clipId = `ibd-hit-${useId().replaceAll(':', '')}`;
     const hitClip = useStore(state => ibdEdgeHitClip(state.nodes, state.transform[2]));
-    const { getZoom, screenToFlowPosition, getEdges } = useReactFlow();
+    const allEdges = useStore(state => state.edges);
+    const gaps = useMemo(() => crossoverGaps(allEdges.map(edge => ({
+        id: edge.id, points: (edge.data?.points as Point[] | undefined) ?? [],
+        type: edge.data?.routingType as IbdRoutingType | undefined, manual: Boolean(edge.data?.manualRoute),
+        sourceSide: edge.data?.sourceSide as any, targetSide: edge.data?.targetSide as any,
+        sourceKey: JSON.stringify([edge.source, edge.data?.sourcePortId ?? null]),
+        targetKey: JSON.stringify([edge.target, edge.data?.targetPortId ?? null]),
+    }))), [allEdges]);
+    const maskId = `ibd-crossovers-${useId().replaceAll(':', '')}`;
+    const controlZoom = useStore(state => Math.max(0.1, state.transform[2]));
+    const { getZoom, screenToFlowPosition } = useReactFlow();
     // Connectors that are not taking part are dimmed by ConnectorHoverStyles;
     // this edge only adds the ornament that marks the one that is.
     const highlighted = useConnectorHighlighted(props.id, [
@@ -95,18 +106,17 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     const labelDimmed = useConnectorHoverActive() && !highlighted;
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
-    // The active profile draws the connector path — the default rounds the
-    // orthogonal route; the IBD profile adds crossing bridges over other wires.
-    const routingType = (props.data?.routingType as IbdRoutingType | undefined) ?? 'rounded';
+    const routingType = (props.data?.routingType as IbdRoutingType | undefined) ?? 'orthogonal';
     const drawPoints = attachedRoute(points, routingType, props.data?.sourceSide as any, props.data?.targetSide as any, Boolean(props.data?.manualRoute));
-    const profilePath = renderer.edgePath(drawPoints, {
-        edgeId: props.id,
-        allEdges: getEdges().map(edge => ({ id: edge.id, points: edge.data?.points as Point[] | undefined })),
-    });
     const pathFor = (p: Point[]) => routingType === 'curved' ? cubicRoutePath(p)
         : routingType === 'arc' ? arcRoutePath(p, Boolean(props.data?.manualRoute))
         : routingType === 'rounded' ? roundedPath(p) : polylinePath(p);
-    const displayPath = routingType === 'rounded' ? profilePath : pathFor(drawPoints);
+    const displayPath = pathFor(drawPoints);
+    const crossings = gaps.get(props.id) ?? [];
+    const minX = Math.min(...drawPoints.map(p => p.x)) - 128;
+    const minY = Math.min(...drawPoints.map(p => p.y)) - 128;
+    const maskWidth = Math.max(...drawPoints.map(p => p.x)) - minX + 128;
+    const maskHeight = Math.max(...drawPoints.map(p => p.y)) - minY + 128;
     const stroke = renderer.edgeStroke(props.style?.stroke as string | undefined);
     const baseWidth = Number(props.style?.strokeWidth ?? 2);
     const edgeStyle = highlighted
@@ -215,8 +225,29 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         return draggableSegments.reduce<RouteSegment | undefined>((closest, segment) =>
             !closest || squaredDistance(segment) < squaredDistance(closest) ? segment : closest, undefined);
     };
+    const onLineDoubleClick = (event: ReactMouseEvent<SVGPathElement | HTMLDivElement>) => {
+        if (!props.data?.manualRoute) {
+            event.stopPropagation();
+            (props.data?.onInspect as (() => void) | undefined)?.();
+            return;
+        }
+        if (!onRouteChange) return;
+        event.preventDefault(); event.stopPropagation();
+        const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        const segment = nearestDraggableSegment(point);
+        if (!segment) return;
+        const after = [...points.slice(0, segment.index), point, ...points.slice(segment.index)];
+        onRouteStart?.(); onRouteChange(after); onRouteChangeComplete?.(points, after, true);
+    };
     return (
         <>
+            {crossings.length > 0 && <defs><mask id={maskId} maskUnits="userSpaceOnUse"
+                x={minX} y={minY} width={maskWidth} height={maskHeight}>
+                <rect x={minX} y={minY} width={maskWidth} height={maskHeight} fill="white" />
+                {crossings.map((point, index) => <circle key={index} data-ibd-crossover-gap
+                    cx={point.x} cy={point.y} r={5.5} fill="black" />)}
+            </mask></defs>}
+            <g mask={crossings.length ? `url(#${maskId})` : undefined}>
             {highlighted && (
                 <path
                     d={displayPath}
@@ -239,6 +270,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     className="memo-ibd-flow" pointerEvents="none"
                 />
             )}
+            </g>
             {hitPoints.length >= 2 && (
                 <path
                     d={hitPath}
@@ -250,20 +282,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     pointerEvents="stroke"
                     cursor="pointer"
                     onClick={event => onSelect?.(event)}
-                    onDoubleClick={event => {
-                        if (!props.data?.manualRoute) {
-                            event.stopPropagation();
-                            (props.data?.onInspect as (() => void) | undefined)?.();
-                            return;
-                        }
-                        if (!onRouteChange) return;
-                        event.preventDefault(); event.stopPropagation();
-                        const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-                        const segment = nearestDraggableSegment(point);
-                        if (!segment) return;
-                        const after = [...points.slice(0, segment.index), point, ...points.slice(segment.index)];
-                        onRouteStart?.(); onRouteChange(after); onRouteChangeComplete?.(points, after, true);
-                    }}
+                    onDoubleClick={onLineDoubleClick}
                     onPointerDown={event => {
                         if (!onRouteChange || draggableSegments.length === 0) return;
                         const segment = nearestDraggableSegment(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
@@ -307,7 +326,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                             });
                         }}
                         style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)`,
-                            width: 12, height: 12, borderRadius: '50%', background: '#fff', border: '2px solid #d97706',
+                            width: 12 / controlZoom, height: 12 / controlZoom, boxSizing: 'border-box', borderRadius: '50%', background: '#fff', border: `${2 / controlZoom}px solid #d97706`,
                             cursor: 'move', pointerEvents: 'all', touchAction: 'none', zIndex: 21 }} />
                 </EdgeLabelRenderer>
             )) : null}
@@ -319,11 +338,12 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                         <div
                             className="nodrag nopan"
                             title="Drag connector segment"
+                            onDoubleClick={onLineDoubleClick}
                             onPointerDown={event => beginRouteDrag(event, segment)}
                             style={{
                                 position: 'absolute', transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
-                                width: 12, height: 12, borderRadius: 3, background: '#FFFFFF',
-                                border: '2px solid #2563EB', boxShadow: '0 1px 4px rgba(15,23,42,0.22)',
+                                width: 12 / controlZoom, height: 12 / controlZoom, boxSizing: 'border-box', borderRadius: 3 / controlZoom, background: '#FFFFFF',
+                                border: `${2 / controlZoom}px solid #2563EB`, boxShadow: '0 1px 4px rgba(15,23,42,0.22)',
                                 cursor: segment.a.y === segment.b.y ? 'ns-resize' : 'ew-resize',
                                 pointerEvents: 'all', touchAction: 'none', zIndex: 20,
                             }}

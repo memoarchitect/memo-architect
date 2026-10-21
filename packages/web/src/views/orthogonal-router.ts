@@ -51,6 +51,8 @@ export interface OrthogonalRouteRequest {
     target: RoutePoint;
     sourceNodeId: string;
     targetNodeId: string;
+    sourceAncestorIds?: string[];
+    targetAncestorIds?: string[];
     sourceSide?: 'left' | 'right' | 'top' | 'bottom';
     targetSide?: 'left' | 'right' | 'top' | 'bottom';
 }
@@ -185,8 +187,6 @@ const BEND_PENALTY = 90;
  */
 const DETOUR_WEIGHT = 0.75;
 
-/** Ceiling on states expanded while planning one connector. */
-const MAX_ROUTE_EXPANSIONS = 20_000;
 /**
  * Lattice budget per axis. 128x128 is 16k nodes, and A* visits a small fraction
  * of them; the typed-array core is cheap enough that the budget is set by how
@@ -226,7 +226,10 @@ function forEachCell(
     for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) visit(cellKey(cx, cy));
 }
 
-interface Track { ax: number; ay: number; bx: number; by: number; owner: number; seen: number }
+interface Track { ax: number; ay: number; bx: number; by: number; owner: number; seen: number; endpoints?: RoutePoint[] }
+const coincides = (a: RoutePoint,b: RoutePoint) => Math.abs(a.x-b.x)<1e-6 && Math.abs(a.y-b.y)<1e-6;
+const sharedJunction = (p: RoutePoint,r: OrthogonalRouteRequest,t: Track) =>
+    [r.source,r.target].some(end=>coincides(end,p)) && t.endpoints?.some(end=>coincides(end,p));
 
 /**
  * The segments already on the board. Queried in bulk — once per connector, to
@@ -236,8 +239,8 @@ class TrackIndex {
     private readonly buckets = new Map<number, Track[]>();
     private query = 0;
 
-    add(ax: number, ay: number, bx: number, by: number, owner: number): void {
-        const track: Track = { ax, ay, bx, by, owner, seen: 0 };
+    add(ax: number, ay: number, bx: number, by: number, owner: number, endpoints?: RoutePoint[]): void {
+        const track: Track = { ax, ay, bx, by, owner, seen: 0, endpoints };
         forEachCell(Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), key => {
             const bucket = this.buckets.get(key);
             if (bucket) bucket.push(track);
@@ -355,12 +358,15 @@ function axisCoords(
     focusHi: number,
 ): Float64Array {
     const unique = (values: number[]) => {
-        const sorted = [...values].sort((a, b) => a - b);
+        // Required endpoint axes are exact authored coordinates. Nearby walls
+        // may coalesce, but must never absorb one of those axes.
+        const anchors = [...new Set(required)];
+        const sorted = values.filter(v => !anchors.some(a => Math.abs(a-v) <= 0.5)).sort((a, b) => a - b);
         const out: number[] = [];
         for (const v of sorted) {
             if (out.length === 0 || Math.abs(v - out[out.length - 1]) > 0.5) out.push(v);
         }
-        return out;
+        return [...out, ...anchors].sort((a,b) => a-b);
     };
     /**
      * Over budget, keep what is NEAREST the connector and drop the far side.
@@ -409,8 +415,8 @@ function floorIndex(coords: Float64Array, value: number): number {
 
 /** Index of an exact coordinate match, or -1. */
 function exactIndex(coords: Float64Array, value: number): number {
-    const i = floorIndex(coords, value + 0.25);
-    return i >= 0 && Math.abs(coords[i] - value) <= 0.25 ? i : -1;
+    const i = floorIndex(coords, value + 1e-7);
+    return i >= 0 && Math.abs(coords[i] - value) < 1e-6 ? i : -1;
 }
 
 // ─── Tidy router ─────────────────────────────────────────────────────────────
@@ -424,6 +430,8 @@ export interface RouteCosts {
 }
 
 export interface TidyRouteOptions {
+    /** Authored/unaffected routes reserve tracks and are never rewritten. */
+    fixedRoutes?: ReadonlyMap<string, RoutePoint[]>;
     /**
      * Milliseconds the rip-up-and-reroute phase may spend. The first pass always
      * completes; only the improvement phase is bounded, so a board too large to
@@ -473,7 +481,7 @@ const resolveCosts = (costs: RouteCosts | undefined): ResolvedCosts => ({
 });
 
 /** Plan all routes together so later edges avoid occupied tracks and crossings. */
-export function routeOrthogonalEdges(
+function routeOrderedEdges(
     requests: OrthogonalRouteRequest[],
     obstacles: RouteObstacle[],
     channelGap = 18,
@@ -496,15 +504,21 @@ export function routeOrthogonalEdges(
     const routes: RoutePoint[][] = new Array(requests.length);
     let claimed = new TrackIndex();
     const scratch = new RouterScratch();
+    const terminals = requests.flatMap(request => [request.source,request.target]);
 
     const claim = (owner: number, route: RoutePoint[]) => {
         for (let i = 1; i < route.length; i++) {
-            claimed.add(route[i - 1].x, route[i - 1].y, route[i].x, route[i].y, owner);
+            claimed.add(route[i - 1].x, route[i - 1].y, route[i].x, route[i].y, owner, [route[0], route[route.length-1]]);
         }
     };
 
     for (const { request, index } of order) {
-        const route = planOne(request, obstacles, claimed, index, channelGap, clearance, scratch, costs, lattice);
+        const fixed = options.fixedRoutes?.get(request.id);
+        if (fixed) { routes[index] = fixed; claim(index, fixed); }
+    }
+    for (const { request, index } of order) {
+        if (options.fixedRoutes?.has(request.id)) continue;
+        const route = planOne(request, obstacles, claimed, index, channelGap, clearance, scratch, costs, lattice, terminals);
         routes[index] = route;
         claim(index, route);
     }
@@ -517,12 +531,12 @@ export function routeOrthogonalEdges(
     // on it.
     const rounds = options.refineRounds ?? 4;
     const fraction = options.refineFraction ?? 1;
-    const budget = options.refineBudgetMs ?? 150;
+    const budget = options.refineBudgetMs ?? Infinity;
     const startedAt = performance.now();
     for (let round = 0; round < rounds; round++) {
         if (performance.now() - startedAt > budget) break;
         const cost = routes.map((route, owner) => ({ owner, crossings: countConflicts(route, claimed, owner) }));
-        const worst = cost.filter(c => c.crossings > 0).sort((a, b) => b.crossings - a.crossings);
+        const worst = cost.filter(c => c.crossings > 0 && !options.fixedRoutes?.has(requests[c.owner].id)).sort((a, b) => b.crossings - a.crossings);
         if (worst.length === 0) break;
         const attempts = Math.max(1, Math.min(worst.length, Math.ceil(requests.length * fraction)));
         let improved = false;
@@ -534,11 +548,15 @@ export function routeOrthogonalEdges(
             // else". Rebuilding per attempt was O(all segments) each time and
             // made the phase quadratic in connector count for no gain.
             const candidate = planOne(
-                requests[owner], obstacles, claimed, owner, channelGap, clearance, scratch, costs, lattice,
+                requests[owner], obstacles, claimed, owner, channelGap, clearance, scratch, costs, lattice, terminals,
             );
-            if (countConflicts(candidate, claimed, owner) < worst[i].crossings) {
+            if (countConflicts(candidate, claimed, owner) < countConflicts(routes[owner], claimed, owner)) {
                 routes[owner] = candidate;
                 improved = true;
+                // Accepted routes become reservations immediately. Comparing
+                // several candidates against stale tracks can create conflicts
+                // between routes that each looked better in isolation.
+                claimed = indexOf(routes);
             }
         }
         if (!improved) break;
@@ -552,6 +570,27 @@ export function routeOrthogonalEdges(
     return result;
 }
 
+/** A bounded second greedy seed avoids locking a whole diagram into the
+ * first ordering's local minimum. Large boards retain the single-seed budget. */
+export function routeOrthogonalEdges(
+    requests: OrthogonalRouteRequest[], obstacles: RouteObstacle[], channelGap = 18,
+    priority: 'long-first' | 'short-first' = 'long-first', options: TidyRouteOptions = {},
+): Map<string, RoutePoint[]> {
+    const primary = routeOrderedEdges(requests, obstacles, channelGap, priority, options);
+    if (requests.length < 2 || requests.length > 64) return primary;
+    const alternative = routeOrderedEdges(requests, obstacles, channelGap,
+        priority === 'long-first' ? 'short-first' : 'long-first', options);
+    const score = (routes: Map<string, RoutePoint[]>) => {
+        const values = requests.map(r => routes.get(r.id)!); const index = indexOf(values);
+        const conflicts = values.reduce((sum, route, owner) => sum + countConflicts(route,index,owner), 0);
+        const geometry = values.reduce((sum, route) => sum + route.slice(1).reduce((length,p,i) =>
+            length + Math.abs(p.x-route[i].x) + Math.abs(p.y-route[i].y), 0) + Math.max(0,route.length-2)*BEND_PENALTY, 0);
+        return { conflicts, geometry };
+    };
+    const a = score(primary), b = score(alternative);
+    return b.conflicts < a.conflicts || b.conflicts === a.conflicts && b.geometry < a.geometry ? alternative : primary;
+}
+
 /**
  * A fresh index over every route. `TrackIndex` has no removal — a route spans
  * several buckets and unpicking it from each is more code and more cost than
@@ -561,16 +600,33 @@ function indexOf(routes: RoutePoint[][]): TrackIndex {
     const index = new TrackIndex();
     for (let owner = 0; owner < routes.length; owner++) {
         for (let k = 1; k < routes[owner].length; k++) {
-            index.add(routes[owner][k - 1].x, routes[owner][k - 1].y, routes[owner][k].x, routes[owner][k].y, owner);
+            index.add(routes[owner][k - 1].x, routes[owner][k - 1].y, routes[owner][k].x, routes[owner][k].y, owner, [routes[owner][0], routes[owner].at(-1)!]);
         }
     }
     return index;
 }
 
 function countConflicts(route: RoutePoint[], index: TrackIndex, owner: number): number {
-    let total = 0;
-    for (let i = 1; i < route.length; i++) total += index.conflicts(route[i - 1], route[i], owner);
-    return total;
+    const crossings = new Set<string>(); let overlap = 0;
+    for (let i = 1; i < route.length; i++) {
+        const a=route[i-1],b=route[i];
+        for (const t of index.near(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.max(a.x,b.x),Math.max(a.y,b.y),owner)) {
+            const c={x:t.ax,y:t.ay},d={x:t.bx,y:t.by};
+            if (sameSegment(a,b,c,d)) {
+                overlap += a.y===b.y ? Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))
+                    : Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y));
+                continue;
+            }
+            if ((a.y===b.y)===(c.y===d.y)) continue;
+            const h=a.y===b.y ? [a,b] : [c,d],v=a.y===b.y ? [c,d] : [a,b];
+            const point={x:v[0].x,y:h[0].y};
+            if (point.x<Math.min(h[0].x,h[1].x)||point.x>Math.max(h[0].x,h[1].x)
+                ||point.y<Math.min(v[0].y,v[1].y)||point.y>Math.max(v[0].y,v[1].y)) continue;
+            if ([route[0],route[route.length-1]].some(end=>coincides(end,point))&&t.endpoints?.some(end=>coincides(end,point))) continue;
+            crossings.add(`${t.owner}:${point.x.toFixed(6)},${point.y.toFixed(6)}`);
+        }
+    }
+    return crossings.size + overlap * 20;
 }
 
 /**
@@ -618,44 +674,77 @@ function planOne(
     scratch: RouterScratch,
     costs: ResolvedCosts,
     lattice: ResolvedLattice,
+    terminals: RoutePoint[],
 ): RoutePoint[] {
     const anchorSource = request.source, anchorTarget = request.target;
     const reach = Math.abs(anchorSource.x - anchorTarget.x) + Math.abs(anchorSource.y - anchorTarget.y);
-    const stub = Math.min(PORT_STUB, reach / 3);
-    const stubbedSource = Boolean(request.sourceSide) && stub > 0.5;
-    const stubbedTarget = Boolean(request.targetSide) && stub > 0.5;
-    const s = stubbedSource ? stepOffSide(anchorSource, request.sourceSide, stub) : anchorSource;
-    const t = stubbedTarget ? stepOffSide(anchorTarget, request.targetSide, stub) : anchorTarget;
+    const ancestorIds = new Set([...(request.sourceAncestorIds ?? []), ...(request.targetAncestorIds ?? [])]);
+    // Legacy callers without containment metadata may infer actual containment,
+    // never a proximity halo that can silently remove a neighbouring part.
+    const contains = (o: RouteObstacle, p: RoutePoint) => p.x > o.x && p.x < o.x + o.width
+        && p.y > o.y && p.y < o.y + o.height;
+    const ignored = (o: RouteObstacle) => ancestorIds.has(o.id)
+        || (o.id !== request.sourceNodeId && o.id !== request.targetNodeId
+            && request.sourceAncestorIds === undefined && request.targetAncestorIds === undefined
+            && (contains(o, anchorSource) || contains(o, anchorTarget)));
+    const stubLength = (p: RoutePoint, side: OrthogonalRouteRequest['sourceSide']) => {
+        let length = Math.min(PORT_STUB, reach / 3);
+        // Fixed terminal runs must fit together before the searchable route
+        // starts. Otherwise two facing ports can force an unavoidable overlap
+        // outside the lattice, regardless of its crossing/overlap penalties.
+        for (const terminal of terminals) {
+            const dx=terminal.x-p.x,dy=terminal.y-p.y;
+            const distance=side==='right'&&Math.abs(dy)<1e-6&&dx>1e-6?dx
+                :side==='left'&&Math.abs(dy)<1e-6&&dx<-1e-6?-dx
+                :side==='bottom'&&Math.abs(dx)<1e-6&&dy>1e-6?dy
+                :side==='top'&&Math.abs(dx)<1e-6&&dy<-1e-6?-dy:Infinity;
+            length=Math.min(length,distance/3);
+        }
+        for (const o of obstacles) {
+            if (ignored(o)) continue;
+            const distance = side === 'right' && p.y > o.y && p.y < o.y+o.height && o.x >= p.x ? o.x-p.x
+                : side === 'left' && p.y > o.y && p.y < o.y+o.height && o.x+o.width <= p.x ? p.x-o.x-o.width
+                : side === 'bottom' && p.x > o.x && p.x < o.x+o.width && o.y >= p.y ? o.y-p.y
+                : side === 'top' && p.x > o.x && p.x < o.x+o.width && o.y+o.height <= p.y ? p.y-o.y-o.height : Infinity;
+            length = Math.min(length, distance/2);
+        }
+        return length;
+    };
+    const sourceStub = stubLength(anchorSource, request.sourceSide), targetStub = stubLength(anchorTarget, request.targetSide);
+    const stubbedSource = Boolean(request.sourceSide) && sourceStub > 0.01;
+    const stubbedTarget = Boolean(request.targetSide) && targetStub > 0.01;
+    const s = stubbedSource ? stepOffSide(anchorSource, request.sourceSide, sourceStub) : anchorSource;
+    const t = stubbedTarget ? stepOffSide(anchorTarget, request.targetSide, targetStub) : anchorTarget;
 
-    // A box that encloses an endpoint cannot be avoided — the connector starts
-    // inside it. Treating an ancestor container as an obstacle leaves the search
-    // with no route out at all, and the fallback then cuts through everything.
-    // The margin is generous enough to cover a port that STRADDLES the box's wall
-    // (its anchor sits a half-port outside), so a board never blocks a connector
-    // that leaves from its own boundary port.
-    const enclosureMargin = clearance + PORT_STUB;
-    const encloses = (o: RouteObstacle, p: RoutePoint) =>
-        p.x > o.x - enclosureMargin && p.x < o.x + o.width + enclosureMargin
-        && p.y > o.y - enclosureMargin && p.y < o.y + o.height + enclosureMargin;
     // Only boxes near this connector can shape it, so the lattice grows with the
     // obstruction this connector actually negotiates rather than with the size of
     // the diagram.
-    const detourMargin = Math.max(240, reach * 0.35);
     const minX = Math.min(anchorSource.x, anchorTarget.x), maxX = Math.max(anchorSource.x, anchorTarget.x);
     const minY = Math.min(anchorSource.y, anchorTarget.y), maxY = Math.max(anchorSource.y, anchorTarget.y);
     const relevant: RouteObstacle[] = [];
     for (const o of obstacles) {
-        if (o.id === request.sourceNodeId || o.id === request.targetNodeId) continue;
-        if (o.x + o.width < minX - detourMargin || o.x > maxX + detourMargin) continue;
-        if (o.y + o.height < minY - detourMargin || o.y > maxY + detourMargin) continue;
-        if (encloses(o, anchorSource) || encloses(o, anchorTarget)) continue;
+        if (ignored(o)) continue;
+        if (o.id === request.sourceNodeId && !request.sourceSide || o.id === request.targetNodeId && !request.targetSide) continue;
         relevant.push(o);
     }
 
+    const padding = (o: RouteObstacle) => {
+        const distance = (p: RoutePoint) => Math.max(o.x-p.x, p.x-o.x-o.width, o.y-p.y, p.y-o.y-o.height, 0);
+        return Math.max(0, Math.min(clearance-1, distance(s)-0.01, distance(t)-0.01));
+    };
     const wallXs: number[] = [], wallYs: number[] = [];
     for (const o of relevant) {
-        wallXs.push(o.x - clearance, o.x + o.width + clearance);
-        wallYs.push(o.y - clearance, o.y + o.height + clearance);
+        const pad = padding(o) + 1;
+        wallXs.push(o.x - pad, o.x + o.width + pad);
+        wallYs.push(o.y - pad, o.y + o.height + pad);
+    }
+    // Claimed tracks are geometric constraints too. Their ends provide routes
+    // around an existing run; a lattice built only around this request's ends
+    // cannot escape a crossing in an otherwise empty diagram.
+    const trackReach = Math.max(240, reach * 0.35);
+    for (const track of claimed.near(minX-trackReach,minY-trackReach,maxX+trackReach,maxY+trackReach,owner)) {
+        wallXs.push(track.ax-channelGap,track.ax+channelGap,track.bx-channelGap,track.bx+channelGap);
+        wallYs.push(track.ay-channelGap,track.ay+channelGap,track.by-channelGap,track.by+channelGap);
     }
     // Lanes just outside the endpoints keep a connector from being forced onto
     // the endpoint's own coordinate when that track is already taken.
@@ -684,8 +773,8 @@ function planOne(
     // ── Obstacles: mark blocked nodes and impassable steps ──
     // A per-obstacle sweep over the index ranges it covers, rather than a
     // segment/rect test per lattice step.
-    const pad = clearance - 1;
     for (const o of relevant) {
+        const pad = padding(o);
         const x0 = o.x - pad, x1 = o.x + o.width + pad;
         const y0 = o.y - pad, y1 = o.y + o.height + pad;
         // nodes strictly inside
@@ -729,13 +818,14 @@ function planOne(
         if (vertical) {
             const cx = track.ax;
             const lo = Math.min(track.ay, track.by), hi = Math.max(track.ay, track.by);
-            // crosses horizontal steps that straddle cx, on rows strictly inside
-            const step = floorIndex(xs, cx);
-            const rowFrom = Math.max(0, floorIndex(ys, lo) + 1);
-            let rowTo = floorIndex(ys, hi);
-            while (rowTo >= 0 && rowTo < ny && ys[rowTo] >= hi) rowTo--;
-            if (step >= 0 && step < hStride && xs[step] < cx && xs[step + 1] > cx) {
-                for (let j = rowFrom; j <= rowTo; j++) hCost[j * hStride + step] += costs.crossing;
+            const rowFrom = Math.max(0, exactIndex(ys, lo) >= 0 ? exactIndex(ys, lo) : floorIndex(ys, lo)+1);
+            const rowTo = Math.min(ny-1, floorIndex(ys, hi));
+            const at = exactIndex(xs, cx), steps = at >= 0 ? [at-1, at] : [floorIndex(xs,cx)];
+            for (const step of steps) if (step >= 0 && step < hStride) {
+                for (let j = rowFrom; j <= rowTo; j++) {
+                    if (sharedJunction({x:cx,y:ys[j]}, request, track)) continue;
+                    hCost[j*hStride+step] += costs.crossing * (at >= 0 ? 0.5 : 1);
+                }
             }
             // runs along vertical steps in the same column
             const col = exactIndex(xs, cx);
@@ -747,12 +837,14 @@ function planOne(
         } else {
             const cy = track.ay;
             const lo = Math.min(track.ax, track.bx), hi = Math.max(track.ax, track.bx);
-            const step = floorIndex(ys, cy);
-            const colFrom = Math.max(0, floorIndex(xs, lo) + 1);
-            let colTo = floorIndex(xs, hi);
-            while (colTo >= 0 && colTo < nx && xs[colTo] >= hi) colTo--;
-            if (step >= 0 && step < vStride && ys[step] < cy && ys[step + 1] > cy) {
-                for (let i = colFrom; i <= colTo; i++) vCost[i * vStride + step] += costs.crossing;
+            const colFrom = Math.max(0, exactIndex(xs,lo) >= 0 ? exactIndex(xs,lo) : floorIndex(xs,lo)+1);
+            const colTo = Math.min(nx-1, floorIndex(xs,hi));
+            const at = exactIndex(ys,cy), steps = at >= 0 ? [at-1,at] : [floorIndex(ys,cy)];
+            for (const step of steps) if (step >= 0 && step < vStride) {
+                for (let i = colFrom; i <= colTo; i++) {
+                    if (sharedJunction({x:xs[i],y:cy}, request, track)) continue;
+                    vCost[i*vStride+step] += costs.crossing * (at >= 0 ? 0.5 : 1);
+                }
             }
             const row = exactIndex(ys, cy);
             if (row >= 0) {
@@ -803,12 +895,12 @@ function planOne(
         const state = heap.pop();
         const node = (state / 3) | 0;
         if (node === goalNode) { foundState = state; break; }
-        if (++expansions > MAX_ROUTE_EXPANSIONS) break;
         const dir = state - node * 3;
         const gHere = g[state];
         // A stale heap entry: a cheaper path to this state was found after this
         // one was pushed. Lazy deletion is cheaper than a decrease-key.
         if (gHere + heuristic(node % nx, (node / nx) | 0) < heap.poppedF - 0.001) continue;
+        if (++expansions > nx * ny * 3) break;
         const i = node % nx, j = (node / nx) | 0;
         for (let move = 0; move < 4; move++) {
             const di = move === 0 ? -1 : move === 1 ? 1 : 0;

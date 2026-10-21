@@ -1,7 +1,8 @@
 import { IBD_ROUTING_TYPES, type IbdRoutingMode, type IbdRoutingType } from '../ibd-routing';
 
-export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onShortenPorts }: {
+export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onShortenPorts, onPlaceAllPorts }: {
     onShortenPorts?: () => void;
+    onPlaceAllPorts?: () => void;
     type: IbdRoutingType; mode: IbdRoutingMode;
     onTypeChange: (type: IbdRoutingType) => void;
     onModeChange: (mode: IbdRoutingMode) => void;
@@ -16,8 +17,11 @@ export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onS
             <option value="automatic">Automatic</option><option value="manual">Manual</option>
         </select></label>
         {onShortenPorts && <button type="button" disabled={mode !== 'automatic'} onClick={onShortenPorts}
-            title="Shorten routes by moving unsaved ordinary ports along their current walls; saved positions stay fixed"
+            title="Shorten routes by moving unsaved ordinary ports around their owner perimeters; saved positions stay fixed"
             className="rounded border px-2 py-1 disabled:opacity-40">Shorten automatic port routes</button>}
-        {mode === 'manual' && <span title="Select a connector. Double-click its line to add a breakpoint; drag a breakpoint to move it; double-click a breakpoint to remove it.">Breakpoints: double-click to add/remove</span>}
+        {onPlaceAllPorts && <button type="button" disabled={mode !== 'automatic'} onClick={onPlaceAllPorts}
+            title="Explicitly replace saved ordinary port positions and wall choices; part geometry stays fixed"
+            className="rounded border px-2 py-1 disabled:opacity-40">Automatically place all ports</button>}
+        {mode === 'manual'  && <span title="Select a connector. Double-click its line to add a breakpoint; drag a breakpoint to move it; double-click a breakpoint to remove it.">Breakpoints: double-click to add/remove</span>}
     </div>;
 }

@@ -643,6 +643,7 @@ export interface InterconnectionOptions {
     onPortResize?: (ownerId: string, portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
     /** Persist a port's position once its drag ends. */
     onPortCommit?: (ownerId: string, portId: string) => void;
+    onPortCancel?: (ownerId: string, portId: string) => void;
     /** Bind a visible port glyph to the model element it represents. */
     onPortSelect?: (portId: string, inspect?: boolean) => void;
     layoutProviderId?: string;
@@ -1407,6 +1408,9 @@ export async function computeInterconnectionLayout(
                 onPortCommit: options?.onPortCommit
                     ? (portId: string) => options.onPortCommit!(partId, portId)
                     : undefined,
+                onPortCancel: options?.onPortCancel
+                    ? (portId: string) => options.onPortCancel!(partId, portId)
+                    : undefined,
                 onPortResize: options?.onPortResize
                     ? (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => options.onPortResize!(partId, portId, size, axis)
                     : undefined,
@@ -1471,6 +1475,11 @@ export async function computeInterconnectionLayout(
         )[0]?.id;
     };
 
+    const routeAncestors = (id: string) => {
+        const result: string[] = []; let parent = nodes.find(n => n.id === id)?.parentId;
+        while (parent && !result.includes(parent)) { result.push(parent); parent = nodes.find(n => n.id === parent)?.parentId; }
+        return result;
+    };
     type EdgeDraft = { edge: Edge; route: OrthogonalRouteRequest };
     const edgeDrafts: EdgeDraft[] = connectors.flatMap((rel, i) => {
         const source = portEls.has(rel.sourceId) ? portOwner.get(rel.sourceId)! : rel.sourceId;
@@ -1579,6 +1588,8 @@ export async function computeInterconnectionLayout(
                 target: targetPoint,
                 sourceNodeId: source,
                 targetNodeId: target,
+                sourceAncestorIds: routeAncestors(source),
+                targetAncestorIds: routeAncestors(target),
                 sourceSide,
                 targetSide,
             },

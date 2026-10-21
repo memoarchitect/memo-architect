@@ -1,5 +1,8 @@
+import { affectedMovementRoutes } from '../diagram/ibd-movement-routing';
+import { placementRouteConflicts } from '../diagram/ibd-placement-score';
+import { legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
 import { rendererModel } from '../diagram/renderer-model';
-import { shortenAutomaticPortRoutes } from '../diagram/ibd-port-placement';
+import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
 import { restoreIbdGeometry, type IbdResizeHandler } from '../diagram/ibd-resize-integration';
@@ -68,7 +71,7 @@ import {
 
 import {
     PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide,
-    INTERCONNECTION_PORT_SIZE, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
+    INTERCONNECTION_PORT_SIZE, PORT_LABEL_OFFSET, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
     type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
 import { commonDisplayLevels, findFloatingActions, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
@@ -239,13 +242,51 @@ const OPPOSITE_SIDE: Record<PortSide, PortSide> = {
 };
 
 /** Re-route explicit orthogonal edges after saved/user node positions overlay. */
+/** One owner for rendered edge persistence, including automatic movement
+ * geometry. Opaque fields remain alongside the geometry this client owns. */
+function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][string]) {
+    const { points: _points, manualRoute: _manual, routingType: _type, labelPoint: _label,
+        manualLanding: _landing, sourceSide: _ss, targetSide: _ts, sourceT: _st, targetT: _tt, sourceOffset: oldSourceOffset, targetOffset: oldTargetOffset,
+        ...opaque } = (previous ?? {}) as Record<string, unknown>;
+    const points = edge.data?.points as Array<{x:number;y:number}> | undefined;
+    if (!points?.length) return opaque;
+    return { ...opaque, points: points.map(point => ({ ...point })),
+        manualRoute: Boolean(edge.data?.manualRoute), routingType: edge.data?.routingType,
+        ...(edge.data?.labelPoint ? { labelPoint: edge.data.labelPoint } : {}),
+        source: edge.source, target: edge.target,
+        sourceSide: edge.data?.sourceSide as DiagramEdgeSide | undefined,
+        targetSide: edge.data?.targetSide as DiagramEdgeSide | undefined,
+        ...(edge.data?.sourceOffset ? { sourceOffset: {
+            ...(oldSourceOffset && typeof oldSourceOffset === 'object' ? oldSourceOffset : {}),
+            ...(edge.data.sourceOffset as object),
+        } } : {}),
+        ...(edge.data?.targetOffset ? { targetOffset: {
+            ...(oldTargetOffset && typeof oldTargetOffset === 'object' ? oldTargetOffset : {}),
+            ...(edge.data.targetOffset as object),
+        } } : {}),
+        sourcePortId: edge.data?.sourcePortId as string | undefined,
+        targetPortId: edge.data?.targetPortId as string | undefined,
+        ...(edge.data?.manualRoute && edge.data?.manualLanding ? { manualLanding: true,
+            sourceSide: edge.data.sourceSide as DiagramEdgeSide, targetSide: edge.data.targetSide as DiagramEdgeSide,
+            sourceT: edge.data.sourceT as number, targetT: edge.data.targetT as number,
+        } : {}),
+    };
+}
+
+interface MovementRouting {
+    before: MovementGeometry;
+    replaceManual?: (edgeIds: string[]) => boolean;
+}
+
 function reroutePositionedEdges(
     nodes: FlowNode[],
     edges: FlowEdge[],
     quality: RouteQuality = 'direct',
     forcedPortSize?: number,
-    routingType: IbdRoutingType = 'rounded',
+    routingType: IbdRoutingType = 'orthogonal',
     endpointsOnly = false,
+    movement?: MovementRouting,
+    fixedEdgeIds?: Set<string>,
 ): FlowEdge[] {
     const byId = new Map(nodes.map(n => [n.id, n]));
     const absolute = new Map<string, { x: number; y: number }>();
@@ -262,6 +303,11 @@ function reroutePositionedEdges(
         width: Number(node.width ?? node.style?.width ?? 0),
         height: Number(node.height ?? node.style?.height ?? 0),
     });
+    const ancestorsOf = (id: string) => {
+        const result: string[] = []; let parent = byId.get(id)?.parentId;
+        while (parent && !result.includes(parent)) { result.push(parent); parent = byId.get(parent)?.parentId; }
+        return result;
+    };
     const requests = edges.flatMap(edge => {
         // Must agree with the interconnection template's own anchoring: a
         // connector meets a port at the face it arrives on, and a port that
@@ -326,6 +372,8 @@ function reroutePositionedEdges(
             target: { x: t.x + targetOffset.x, y: t.y + targetOffset.y },
             sourceNodeId: edge.source,
             targetNodeId: edge.target,
+            sourceAncestorIds: ancestorsOf(edge.source),
+            targetAncestorIds: ancestorsOf(edge.target),
             sourceSide,
             targetSide,
         }];
@@ -337,6 +385,9 @@ function reroutePositionedEdges(
             const request = byRequest.get(edge.id);
             const points = edge.data?.points as Array<{ x: number; y: number }> | undefined;
             if (!request || !points?.length) return edge;
+            const first = points[0], last = points[points.length-1];
+            if (first.x === request.source.x && first.y === request.source.y
+                && last.x === request.target.x && last.y === request.target.y) return edge;
             const { labelPoint: _stale, ...data } = edge.data ?? {};
             return { ...edge, data: { ...data, points: reconnectRoute(points, request.source, request.target) } };
         });
@@ -355,13 +406,27 @@ function reroutePositionedEdges(
         .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }))
         .filter(o => o.width > 0 && o.height > 0);
     const requestById = new Map(requests.map(request => [request.id, request]));
-    const manualRouted = new Set(edges.filter(edge => edge.data?.manualRoute).map(edge => edge.id));
-    const automaticRequests = requests.filter(request => !manualRouted.has(request.id));
-    const routes = (routingType === 'straight' || routingType === 'arc')
+    const affected = movement ? affectedMovementRoutes(requests, nodes, movement.before) : undefined;
+    const replacingManual = Boolean(movement?.replaceManual);
+    const manualAffected = edges.filter(edge => affected?.has(edge.id) && edge.data?.manualRoute).map(edge => edge.id);
+    if (manualAffected.length && movement?.replaceManual && !movement.replaceManual(manualAffected)) return edges;
+    const fixedRoutes = new Map<string, Array<{x:number;y:number}>>();
+    for (const edge of edges) {
+        const request = requestById.get(edge.id);
+        const points = edge.data?.points as Array<{x:number;y:number}> | undefined;
+        if (!request || !points?.length) continue;
+        if (fixedEdgeIds?.has(edge.id) || affected && !affected.has(edge.id)) fixedRoutes.set(edge.id, points);
+        else if (edge.data?.manualRoute && !replacingManual)
+            fixedRoutes.set(edge.id, reconnectRoute(points, request.source, request.target));
+    }
+    const automaticRequests = requests.filter(request => !fixedRoutes.has(request.id));
+    const routes = movement || routingType === 'manhattan' || routingType === 'orthogonal' && quality === 'tidy'
+        ? routeOrthogonalEdges(requests, obstacles, 18, 'long-first', {
+            ...(quality === 'tidy' ? {} : { refineRounds: 0 }), fixedRoutes,
+        })
+        : routingType === 'straight' || routingType === 'arc'
         ? new Map(automaticRequests.map(request => [request.id, [request.source, request.target]]))
         : routingType === 'elbow' ? new Map(automaticRequests.map(r => [r.id, elbowRoute(r.source, r.target, r.sourceSide, r.targetSide)]))
-        : routingType === 'manhattan'
-        ? routeOrthogonalEdges(automaticRequests, obstacles)
         : routeDirectOrthogonalEdges(automaticRequests);
     // A label anchor is a point on the route it belongs to. Once the route has
     // been replanned the old anchor describes a line that no longer exists, and
@@ -372,12 +437,25 @@ function reroutePositionedEdges(
     const withRoute = (edge: FlowEdge, points: Array<{ x: number; y: number }>): FlowEdge => {
         const { labelPoint: _stale, ...data } = edge.data ?? {};
         const request = requestById.get(edge.id);
-        return { ...edge, data: { ...data, points, routingType, sourceSide: request?.sourceSide, targetSide: request?.targetSide } };
+        const automaticMovement = movement && (!edge.data?.manualRoute || replacingManual);
+        const automaticRoute = automaticMovement || !edge.data?.manualRoute;
+        const sourceOrigin = absOf(edge.source), targetOrigin = absOf(edge.target);
+        return { ...edge, data: { ...data, points,
+            routingType: automaticMovement ? 'manhattan' : movement ? edge.data?.routingType ?? routingType : routingType,
+            ...(automaticRoute ? { manualRoute: false, manualLanding: undefined, sourceT: undefined, targetT: undefined,
+                sourceOffset: { ...(edge.data?.sourceOffset as object),
+                    x: request!.source.x-sourceOrigin.x, y: request!.source.y-sourceOrigin.y,
+                    ...(request?.sourceSide ? { side: request.sourceSide } : {}), },
+                targetOffset: { ...(edge.data?.targetOffset as object),
+                    x: request!.target.x-targetOrigin.x, y: request!.target.y-targetOrigin.y,
+                    ...(request?.targetSide ? { side: request.targetSide } : {}), },
+            } : {}),
+            sourceSide: request?.sourceSide, targetSide: request?.targetSide } };
     };
     const routed = edges.map(edge => {
         const request = requestById.get(edge.id);
-        if (!request) return edge;
-        if (edge.data?.manualRoute) {
+        if (!request || fixedEdgeIds?.has(edge.id) || affected && !affected.has(edge.id)) return edge;
+        if (edge.data?.manualRoute && !replacingManual) {
             const points = (edge.data.points as Array<{ x: number; y: number }> | undefined) ?? [];
             if (points.length >= 2) return withRoute(edge, reconnectRoute(points, request.source, request.target));
         }
@@ -403,7 +481,7 @@ function reroutePositionedEdges(
         }),
         obstacles,
     );
-    return routed.map(edge => labelled.has(edge.id)
+    return routed.map(edge => affected && !affected.has(edge.id) || fixedEdgeIds?.has(edge.id) ? edge : labelled.has(edge.id)
         ? { ...edge, data: { ...edge.data, labelPoint: labelled.get(edge.id) } }
         : edge);
 }
@@ -427,8 +505,8 @@ function snapPortsToWall(nodes: FlowNode[], forced?: number): FlowNode[] {
         if (!ports?.length) return node;
         // Local coordinates: the owning part's edges ARE 0 and w/h in this space,
         // so those constants are the parent edge the square has to straddle.
-        const w = Number(node.width ?? node.measured?.width ?? (node.style as { width?: number })?.width ?? 0);
-        const h = Number(node.height ?? node.measured?.height ?? (node.style as { height?: number })?.height ?? 0);
+        const w = Number(node.width ?? (node.style as { width?: number })?.width ?? node.measured?.width ?? 0);
+        const h = Number(node.height ?? (node.style as { height?: number })?.height ?? node.measured?.height ?? 0);
         if (!w || !h) return node;
         const snapped = ports.map(port => {
             if (port.nested) return port;      // derived from its parent PORT instead
@@ -850,7 +928,7 @@ function DiagramCanvasInner() {
     type RouteSnapshot = { geometry: MovementGeometry; routing: { type: IbdRoutingType; mode: IbdRoutingMode } };
     const routeGestureRef = useRef<RouteSnapshot | null>(null);
     const routeCancelledRenderRef = useRef(false);
-    const portGestureRef = useRef<{ ownerId: string; portId: string; geometry: MovementGeometry; autoLayout: boolean; walls: Record<string, PortSide> | undefined } | null>(null);
+    const portGestureRef = useRef<{ ownerId: string; portId: string; diagramId: string; geometry: MovementGeometry; autoLayout: boolean; walls: Record<string, PortSide> | undefined; nextWalls?: Record<string, PortSide> } | null>(null);
     const suppressInspectUntilRef = useRef(0);
     // While a geometry frame is pending, `nodesRef` holds changes that have been
     // applied but not yet rendered — a resize in progress, for instance. Syncing
@@ -864,21 +942,23 @@ function DiagramCanvasInner() {
     }, [nodes]);
     useEffect(() => { edgesRef.current = edges; }, [edges]);
 
-    const flushGeometryUpdate = useCallback(() => {
+    const flushGeometryUpdate = useCallback((movementBefore?: MovementGeometry) => {
         if (geometryFrameRef.current !== null) cancelAnimationFrame(geometryFrameRef.current);
         geometryFrameRef.current = null;
         const forced = activeRendererRef.current.forcedPortSize;
-        const stableNodes = repositionNestedPins(snapPortsToWall(alignFacingPorts(
-            resolveWallPortOverlaps(nodesRef.current, forced), edgesRef.current, forced), forced));
+        // Live edits never reflow unrelated ports or grow a part. Movement/resize
+        // already own their geometry; an explicit port move chooses a legal slot.
+        const stableNodes = repositionNestedPins(snapPortsToWall(nodesRef.current, forced));
         nodesRef.current = stableNodes;
         const shouldReroute = geometryNeedsRerouteRef.current;
         geometryNeedsRerouteRef.current = false;
         const resizeEndpoints = geometryResizeEndpointsRef.current;
         geometryResizeEndpointsRef.current = false;
         if (shouldReroute || resizeEndpoints) {
+            const before = movementBefore ?? portGestureRef.current?.geometry ?? nodeDragStartRef.current?.geometry;
             const routedEdges = reroutePositionedEdges(stableNodes, edgesRef.current,
-                shouldReroute ? activeRendererRef.current.routeQuality : 'direct',
-                forced, routingRef.current.type, !shouldReroute);
+                before ? 'direct' : shouldReroute ? activeRendererRef.current.routeQuality : 'direct',
+                forced, routingRef.current.type, !shouldReroute, before ? { before } : undefined);
             edgesRef.current = routedEdges;
             setEdges(routedEdges);
         }
@@ -889,7 +969,7 @@ function DiagramCanvasInner() {
         nodesRef.current = nextNodes;
         geometryNeedsRerouteRef.current ||= reroute;
         if (geometryFrameRef.current !== null) return;
-        geometryFrameRef.current = requestAnimationFrame(flushGeometryUpdate);
+        geometryFrameRef.current = requestAnimationFrame(() => flushGeometryUpdate());
     }, [flushGeometryUpdate]);
     const [isLayouting, setIsLayouting] = useState(false);
     const [layoutEditVersion, setLayoutEditVersion] = useState(0);
@@ -1219,36 +1299,68 @@ function DiagramCanvasInner() {
     }, [selectedDiagramId, mergeDiagramLayouts]);
 
     const ibdResizeStartRef = useRef<FlowNode[] | null>(null);
+    const ibdResizeGeometryRef = useRef<MovementGeometry | null>(null);
+    const ibdResizeAutomaticRef = useRef(false);
     const handleIbdResize = useCallback<IbdResizeHandler>((phase, proposal) => {
-        if (phase === 'start') { ibdResizeStartRef.current = nodesRef.current; return; }
-        const before = ibdResizeStartRef.current;
-        if (!before) return;
-        suppressInspectUntilRef.current = Date.now() + 250;
-        const raw = proposal as FlowNode[];
-        const forced = activeRendererRef.current.forcedPortSize;
-        const next = phase === 'commit' ? repositionNestedPins(snapPortsToWall(
-            alignFacingPorts(resolveWallPortOverlaps(raw, forced), edgesRef.current, forced), forced)) : raw;
-        if (phase === 'update') { geometryResizeEndpointsRef.current = true; scheduleGeometryUpdate(next, false); return; }
-        ibdResizeStartRef.current = null;
-        const changed = new Set(next.filter(n => {
-            const old = before.find(b => b.id === n.id);
-            return old && (old.position.x !== n.position.x || old.position.y !== n.position.y
-                || old.width !== n.width || old.height !== n.height
-                || JSON.stringify(old.data.ports) !== JSON.stringify(n.data.ports));
-        }).map(n => n.id));
-        if (phase === 'cancel') {
-            scheduleGeometryUpdate(restoreIbdGeometry(nodesRef.current, before, new Set(before.map(n => n.id))));
+        if (readOnly || !selectedDiagramId) return;
+        if (phase === 'start') {
+            ibdResizeStartRef.current = nodesRef.current;
+            ibdResizeGeometryRef.current = captureMovementGeometry(nodesRef.current, edgesRef.current);
+            ibdResizeAutomaticRef.current = useModelStore.getState().diagramLayouts[selectedDiagramId]?.canvas?.autoLayout !== false;
             return;
         }
-        if (!changed.size) return;
-        const apply = (snapshot: FlowNode[]) => {
-            markManualLayout();
-            scheduleGeometryUpdate(restoreIbdGeometry(nodesRef.current, snapshot, changed));
+        const before = ibdResizeGeometryRef.current;
+        if (!ibdResizeStartRef.current || !before) return;
+        suppressInspectUntilRef.current = Date.now() + 250;
+        const raw = proposal as FlowNode[];
+        if (phase === 'update') {
+            geometryResizeEndpointsRef.current = true; scheduleGeometryUpdate(raw, false); return;
+        }
+        if (geometryFrameRef.current !== null) cancelAnimationFrame(geometryFrameRef.current);
+        geometryFrameRef.current = null;
+        geometryNeedsRerouteRef.current = false; geometryResizeEndpointsRef.current = false;
+        ibdResizeStartRef.current = null; ibdResizeGeometryRef.current = null;
+        const restore = (snapshot: MovementGeometry, changed: ReturnType<typeof movementGeometryChanges>) => {
+            const restored = restoreMovementGeometry(nodesRef.current, edgesRef.current, snapshot, changed);
+            nodesRef.current = restored.nodes; edgesRef.current = restored.edges;
+            for (const node of restored.nodes) if (changed.nodes.has(node.id)) positionCacheRef.current.set(node.id, {...node.position});
+            setNodes(restored.nodes); setEdges(restored.edges);
+        };
+        if (phase === 'cancel') {
+            restore(before, movementGeometryChanges(before, captureMovementGeometry(nodesRef.current, edgesRef.current)));
+            return;
+        }
+        // The resize solver owns size/containment. No global reflow may expand
+        // an owner, align a saved port, or alter the stationary-child contract.
+        const next = repositionNestedPins(snapPortsToWall(raw, activeRendererRef.current.forcedPortSize));
+        let cancelled = false;
+        const routed = reroutePositionedEdges(next, edgesRef.current, 'tidy',
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
+                before, replaceManual: ids => {
+                    const accepted = window.confirm(`Resize this part? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`);
+                    cancelled = !accepted;
+                    return accepted;
+                },
+            });
+        if (cancelled) {
+            restore(before, movementGeometryChanges(before, captureMovementGeometry(nodesRef.current, edgesRef.current)));
+            return;
+        }
+        const after = captureMovementGeometry(next, routed), changed = movementGeometryChanges(before, after);
+        if (!changed.nodes.size) {
+            restore(before, movementGeometryChanges(before, captureMovementGeometry(nodesRef.current, edgesRef.current)));
+            return;
+        }
+        const previousAutomatic = ibdResizeAutomaticRef.current;
+        const apply = (snapshot: MovementGeometry, automatic: boolean) => {
+            restore(snapshot, changed);
+            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? {nodes:{},edges:{}};
+            mergeDiagramLayouts({[selectedDiagramId]:{...previous,canvas:{...previous.canvas,autoLayout:automatic}}});
             setLayoutEditVersion(version => version + 1);
         };
-        apply(next);
-        pushUndo({ do: () => apply(next), undo: () => apply(before) });
-    }, [markManualLayout, scheduleGeometryUpdate, pushUndo]);
+        apply(after, false);
+        pushUndo({do:()=>apply(after,false),undo:()=>apply(before,previousAutomatic)});
+    }, [readOnly, selectedDiagramId, scheduleGeometryUpdate, setNodes, setEdges, mergeDiagramLayouts, pushUndo]);
 
     // Manual geometry is the user's document state, not an explicit export
     // operation. Persist it after interaction settles so there is no separate
@@ -1272,8 +1384,10 @@ function DiagramCanvasInner() {
                     // a different frame and the node jumps. Recording the frame is
                     // what lets the loader rebase instead of guess.
                     parent: node.parentId ?? null,
-                    ...(node.width ? { width: node.width } : {}),
-                    ...(node.height ? { height: node.height } : {}),
+                    ...(Number(node.width ?? node.style?.width ?? node.measured?.width) > 0
+                        ? { width: Number(node.width ?? node.style?.width ?? node.measured?.width) } : {}),
+                    ...(Number(node.height ?? node.style?.height ?? node.measured?.height) > 0
+                        ? { height: Number(node.height ?? node.style?.height ?? node.measured?.height) } : {}),
                     ports: { ...previous.nodes[node.id]?.ports, ...Object.fromEntries(
                         (((node.data as { ports?: PortInfo[] }).ports) ?? [])
                             .map(port => [port.id, {
@@ -1288,33 +1402,8 @@ function DiagramCanvasInner() {
                             }]),
                     ) },
                 }])),
-                edges: Object.fromEntries(edges.map(edge => [edge.id, {
-                    ...(() => {
-                        const { points: _oldPoints, manualLanding: _oldLanding, sourceSide: _oldSS, targetSide: _oldTS, sourceT: _oldST, targetT: _oldTT, ...rest } = previous.edges?.[edge.id] ?? {};
-                        return rest;
-                    })(),
-                    ...(edge.data?.manualRoute && (edge.data?.points as Array<{ x: number; y: number }> | undefined)?.length
-                        ? {
-                            points: edge.data?.points as Array<{ x: number; y: number }>,
-                            source: edge.source,
-                            target: edge.target,
-                            sourcePortId: edge.data?.sourcePortId as string | undefined,
-                            targetPortId: edge.data?.targetPortId as string | undefined,
-                            // Saved beside the points, not instead of them: the
-                            // points draw the route now, the landing rebuilds it
-                            // after the box has moved.
-                            ...(edge.data?.manualLanding
-                                ? {
-                                    manualLanding: true,
-                                    sourceSide: edge.data?.sourceSide as DiagramEdgeSide,
-                                    sourceT: edge.data?.sourceT as number,
-                                    targetSide: edge.data?.targetSide as DiagramEdgeSide,
-                                    targetT: edge.data?.targetT as number,
-                                }
-                                : {}),
-                        }
-                        : {}),
-                }])),
+                edges: Object.fromEntries(edges.map(edge => [edge.id,
+                    captureEdgeLayout(edge, previous.edges?.[edge.id])])),
                 annotations: Object.fromEntries(nodes.filter(node => node.type === 'annotationNode').map(node => [node.id, {
                     kind: node.data.kind as AnnotationKind,
                     text: String(node.data.text ?? ''),
@@ -2231,26 +2320,41 @@ function DiagramCanvasInner() {
 
     const moveInterconnectionPort = useCallback((ownerId: string, portId: string, y: number, side?: PortSide) => {
         if (readOnly || !selectedDiagramId) return;
+        const owner = nodesRef.current.find(node => node.id === ownerId);
+        const target = ((owner?.data.ports ?? []) as PortInfo[]).find(port => port.id === portId);
+        if (!owner || !target) return;
+        if (!target.nested && activeRendererRef.current.multiWallPortDrag) {
+            const requestedSide = side ?? target.side;
+            const size = renderedPortSize(target, activeRendererRef.current.forcedPortSize);
+            const width = Number(owner.width ?? owner.style?.width), height = Number(owner.height ?? owner.style?.height);
+            const proposed = { ...target, side: requestedSide,
+                x: requestedSide === 'left' ? -size/2 : requestedSide === 'right' ? width-size/2 : y,
+                y: requestedSide === 'top' ? -size/2 : requestedSide === 'bottom' ? height-size/2 : y };
+            const elements = [...document.querySelectorAll<HTMLElement>('.react-flow__node')];
+            const ownerElement = elements.find(el => el.dataset.id === ownerId);
+            const portElement = ownerElement && [...ownerElement.querySelectorAll<HTMLElement>('[data-ibd-port]')].find(el => el.dataset.ibdPort === portId);
+            const ancestors = new Set<string>();let parent = owner.parentId;
+            while(parent && !ancestors.has(parent)){ancestors.add(parent);parent=nodesRef.current.find(n=>n.id===parent)?.parentId;}
+            const bounds = ownerElement && portElement ? measuredPortBounds(ownerElement, portElement, size,
+                activeRendererRef.current.portLabelPlacement(proposed, { labelOffset: size + PORT_LABEL_OFFSET }), ancestors, getViewport().zoom) : undefined;
+            const slot = legalPortSlot({ ...target, wallSpan: portWallSpan(target) },
+                ((owner.data.ports ?? []) as PortInfo[]).map(port => ({ ...port, wallSpan: portWallSpan(port) })),
+                requestedSide, y, width, height, bounds);
+            if (!slot) return;
+            side = slot.side;
+            y = side === 'left' || side === 'right' ? slot.y : slot.x;
+            if (target.side === side && target.x === slot.x && target.y === slot.y) return;
+        }
         if (!portGestureRef.current) {
             const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
-            portGestureRef.current = { ownerId, portId, geometry: captureMovementGeometry(nodesRef.current, edgesRef.current),
+            portGestureRef.current = { ownerId, portId, diagramId: selectedDiagramId, geometry: captureMovementGeometry(nodesRef.current, edgesRef.current),
                 autoLayout: layout?.canvas?.autoLayout !== false, walls: structuredClone(layout?.canvas?.portWalls) };
         }
         suppressInspectUntilRef.current = Date.now() + 250;
-        markManualLayout();
-        setLayoutEditVersion(version => version + 1);
-        // A declared port wall is a layout CONSTRAINT: writing it re-runs the
-        // template layout (and re-fits the view). For the multi-wall drag that
-        // would fire every frame — a jarring zoom and a snap-back to the
-        // template's slot on release. There the port keeps the exact spot it was
-        // dragged to (held on the node below) instead; only the base vertical
-        // nudge records a wall change.
-        if (side && selectedDiagramId && !activeRendererRef.current.multiWallPortDrag) {
-            const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
-            mergeDiagramLayouts({ [selectedDiagramId]: {
-                ...previous,
-                canvas: { ...previous.canvas, autoLayout: false, portWalls: { ...previous.canvas?.portWalls, [portId]: side } },
-            } });
+        // A preview is local geometry. Placement and wall constraints belong to
+        // the one completed transaction, so cancellation never writes settings.
+        if (side && !activeRendererRef.current.multiWallPortDrag) {
+            portGestureRef.current.nextWalls = { ...portGestureRef.current.walls, [portId]: side };
         }
         const next = nodesRef.current.map(node => {
             if (node.id !== ownerId) return node;
@@ -2293,7 +2397,7 @@ function DiagramCanvasInner() {
             };
         });
         scheduleGeometryUpdate(next);
-    }, [readOnly, scheduleGeometryUpdate, markManualLayout, selectedDiagramId, mergeDiagramLayouts]);
+    }, [readOnly, scheduleGeometryUpdate, selectedDiagramId, getViewport]);
 
     /**
      * Write a dragged port back to the diagram's layout companion. Dragging keeps
@@ -2304,10 +2408,25 @@ function DiagramCanvasInner() {
     const commitInterconnectionPort = useCallback((ownerId: string, portId: string) => {
         const start = portGestureRef.current;
         if (!selectedDiagramId || readOnly || !start || start.ownerId !== ownerId || start.portId !== portId) return;
-        flushGeometryUpdate();
+        flushGeometryUpdate(start.geometry);
+        let accepted = true;
+        const finalized = reroutePositionedEdges(nodesRef.current, edgesRef.current, 'tidy',
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
+                before: start.geometry,
+                replaceManual: ids => accepted = window.confirm(`Move this port? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`),
+            });
+        if (!accepted) {
+            portGestureRef.current = null;
+            const changed = movementGeometryChanges(start.geometry, captureMovementGeometry(nodesRef.current, edgesRef.current));
+            const restored = restoreMovementGeometry(nodesRef.current, edgesRef.current, start.geometry, changed);
+            nodesRef.current = restored.nodes; edgesRef.current = restored.edges;
+            setNodes(restored.nodes); setEdges(restored.edges);
+            return;
+        }
+        edgesRef.current = finalized; setEdges(finalized);
         const after = captureMovementGeometry(nodesRef.current, edgesRef.current);
         const changed = movementGeometryChanges(start.geometry, after);
-        const afterWalls = structuredClone(useModelStore.getState().diagramLayouts[selectedDiagramId]?.canvas?.portWalls);
+        const afterWalls = structuredClone(start.nextWalls ?? start.walls);
         portGestureRef.current = null;
         const apply = (snapshot: MovementGeometry, autoLayout: boolean, walls: Record<string, PortSide> | undefined) => {
             if (geometryFrameRef.current !== null) cancelAnimationFrame(geometryFrameRef.current);
@@ -2348,6 +2467,23 @@ function DiagramCanvasInner() {
         apply(after, false, afterWalls);
         pushUndo({ do: () => apply(after, false, afterWalls), undo: () => apply(start.geometry, start.autoLayout, start.walls) });
     }, [selectedDiagramId, readOnly, flushGeometryUpdate, setNodes, setEdges, mergeDiagramLayouts, pushUndo]);
+
+    const cancelInterconnectionPort = useCallback((ownerId: string, portId: string) => {
+        const start = portGestureRef.current;
+        if (!start || start.ownerId !== ownerId || start.portId !== portId) return;
+        portGestureRef.current = null;
+        if (geometryFrameRef.current !== null) cancelAnimationFrame(geometryFrameRef.current);
+        geometryFrameRef.current = null;
+        geometryNeedsRerouteRef.current = false;
+        geometryResizeEndpointsRef.current = false;
+        // A departing view discards its preview; it must not restore into a new scene.
+        if (useModelStore.getState().selectedDiagramId !== start.diagramId) return;
+        const changed = movementGeometryChanges(start.geometry, captureMovementGeometry(nodesRef.current, edgesRef.current));
+        const restored = restoreMovementGeometry(nodesRef.current, edgesRef.current, start.geometry, changed);
+        nodesRef.current = restored.nodes; edgesRef.current = restored.edges;
+        setNodes(restored.nodes); setEdges(restored.edges);
+        suppressInspectUntilRef.current = Date.now() + 250;
+    }, [setNodes, setEdges]);
 
     const resizeInterconnectionPort = useCallback((ownerId: string, portId: string, size: number, _axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => {
         if (readOnly || !Number.isFinite(size) || size < 10 || size > 48) return;
@@ -2390,8 +2526,14 @@ function DiagramCanvasInner() {
             { nodes: new Set<string>(), edges: new Set(snapshot.geometry.edges.map(e => e.id)) });
         edgesRef.current = restored.edges;
         setEdges(restored.edges);
+        if (!persist) return;
         const previous = useModelStore.getState().diagramLayouts[selectedDiagramId];
-        const layout = withIbdRouting(previous, snapshot.routing);
+        const settings = withIbdRouting(previous, snapshot.routing);
+        const layout: DiagramLayout = { ...settings, edges: { ...settings.edges,
+            ...Object.fromEntries(restored.edges.filter(edge => persist !== 'settings'
+                || typeof (settings.edges[edge.id] as Record<string,unknown> | undefined)?.manualRoute === 'boolean')
+                .map(edge => [edge.id, captureEdgeLayout(edge, settings.edges[edge.id])])),
+        } };
         if (persist === 'settings') routeCancelledRenderRef.current = true;
         mergeDiagramLayouts({ [selectedDiagramId]: layout });
         if (persist === 'settings') sendDiagramLayoutUpdate(selectedDiagramId, layout);
@@ -2503,17 +2645,22 @@ function DiagramCanvasInner() {
         pushUndo({ do: () => applyRouteSnapshot(after), undo: () => applyRouteSnapshot(before) });
     }, [readOnly, captureRouteSnapshot, applyRouteSnapshot, pushUndo]);
 
-    const shortenPortRoutes = useCallback(() => {
+    const shortenPortRoutes = useCallback((includeSaved = false) => {
         if (readOnly || !selectedDiagramId || routingRef.current.mode !== 'automatic') return;
         const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
+        if (includeSaved && !window.confirm('Automatically place all ordinary ports? This replaces their saved positions and wall choices. Part positions and sizes stay fixed. Undo restores the previous placement.')) return;
         const before = captureMovementGeometry(nodesRef.current, edgesRef.current);
-        const evaluate = (nodes: FlowNode[]) => {
-            const edges = reroutePositionedEdges(nodes, edgesRef.current, activeRendererRef.current.routeQuality,
-                activeRendererRef.current.forcedPortSize, routingRef.current.type);
-            let length = 0;
+        const evaluate = (nodes: FlowNode[], cheap = false, quick = false) => {
+            const edges = reroutePositionedEdges(nodes, edgesRef.current, cheap || quick ? 'direct' : activeRendererRef.current.routeQuality,
+                activeRendererRef.current.forcedPortSize, cheap ? 'orthogonal' : routingRef.current.type);
+            let length = 0, bends = 0;
             for (const edge of edges) {
                 const points = attachedRoute((edge.data?.points ?? []) as Array<{ x: number; y: number }>,
                     routingRef.current.type, edge.data?.sourceSide as PortSide, edge.data?.targetSide as PortSide);
+                for (let i = 1; i < points.length - 1; i++) {
+                    const a = points[i-1], b = points[i], c = points[i+1];
+                    if (Math.abs((b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x)) > 1e-6) bends++;
+                }
                 const type = routingRef.current.type;
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', type === 'curved' ? cubicRoutePath(points) : type === 'arc' ? arcRoutePath(points, false)
@@ -2521,11 +2668,70 @@ function DiagramCanvasInner() {
                         allEdges: edges.map(e => ({ id: e.id, points: e.data?.points as any })) }) : polylinePath(points));
                 length += path.getTotalLength();
             }
-            return { edges, length };
+            return { edges, length, bends, ...(includeSaved ? placementRouteConflicts(nodes, edges) : {}) };
         };
-        const result = shortenAutomaticPortRoutes(nodesRef.current, edgesRef.current, layout, evaluate);
+        const peerEnvelopes = new Map<string, PortConstraintRect[]>();
+        const placementOptions = {
+            allWalls: true, includeSaved, orderWalls: includeSaved,
+            legal: (owner: FlowNode, port: PortInfo, side: PortSide, along: number, candidateNodes: FlowNode[]) => {
+                const size = renderedPortSize(port, activeRendererRef.current.forcedPortSize);
+                const elements = [...document.querySelectorAll<HTMLElement>('.react-flow__node')];
+                const element = elements.find(el => el.dataset.id === owner.id);
+                const glyph = element && [...element.querySelectorAll<HTMLElement>('[data-ibd-port]')].find(el => el.dataset.ibdPort === port.id);
+                const ancestors = new Set<string>(); let parent = owner.parentId;
+                while (parent && !ancestors.has(parent)) { ancestors.add(parent); parent = nodesRef.current.find(n => n.id === parent)?.parentId; }
+                const proposed = { ...port, side };
+                const bounds = element && glyph ? measuredPortBounds(element, glyph, size,
+                    activeRendererRef.current.portLabelPlacement(proposed, { labelOffset: size + PORT_LABEL_OFFSET }), ancestors, getViewport().zoom, peer => {
+                        const id = peer.dataset.ibdPort;
+                        const candidateOwner = candidateNodes.find(n => (n.data.ports as PortInfo[] | undefined)?.some(p => p.id === id));
+                        const candidate = (candidateOwner?.data.ports as PortInfo[] | undefined)?.find(p => p.id === id);
+                        const peerOwner = peer.closest<HTMLElement>('.react-flow__node');
+                        if (!candidate || !candidateOwner || !peerOwner) return undefined;
+                        const peerSize = renderedPortSize(candidate,activeRendererRef.current.forcedPortSize);
+                        const key = JSON.stringify([id,candidate.side,peerSize]);
+                        let envelopes = peerEnvelopes.get(key);
+                        if (!envelopes) {
+                            envelopes = measurePortEnvelopes(peerOwner,peer,peerSize,
+                                activeRendererRef.current.portLabelPlacement(candidate,{labelOffset:peerSize+PORT_LABEL_OFFSET}),getViewport().zoom);
+                            peerEnvelopes.set(key,envelopes);
+                        }
+                        const a = element.getBoundingClientRect(), b = peerOwner.getBoundingClientRect(), zoom = getViewport().zoom;
+                        return envelopes.map(rect => ({...rect,x:rect.x+candidate.x+(b.x-a.x)/zoom,y:rect.y+candidate.y+(b.y-a.y)/zoom}));
+                    }) : undefined;
+                return legalPortSlot({ ...port, wallSpan: portWallSpan(port) }, owner.data.ports as PortInfo[], side, along,
+                    Number(owner.width ?? owner.style?.width), Number(owner.height ?? owner.style?.height), bounds);
+            },
+        };
+        let result = shortenAutomaticPortRoutes(nodesRef.current, edgesRef.current, layout,
+            nodes => evaluate(nodes, includeSaved), includeSaved ? 4096 : 128, placementOptions);
         if (result.nodes === nodesRef.current) return;
-        const after = captureMovementGeometry(result.nodes, result.edges);
+        let routed = includeSaved ? evaluate(result.nodes) : undefined;
+        if (routed) {
+            const seed = result, seedRoutes = routed;
+            const original = evaluate(nodesRef.current);
+            const conflicts = placementRouteConflicts(result.nodes, routed.edges).byEdge;
+            const refined = shortenAutomaticPortRoutes(result.nodes, routed.edges, layout,
+                nodes => evaluate(nodes, false, true), 32, { ...placementOptions,
+                    priority: (owner, port) => edgesRef.current.reduce((sum, edge) => sum + (
+                        edge.source === owner.id && edge.data?.sourcePortId === port.id
+                        || edge.target === owner.id && edge.data?.targetPortId === port.id
+                            ? conflicts[edge.id] ?? 0 : 0), 0),
+                });
+            const refinedRoutes = evaluate(refined.nodes);
+            const ordered = shortenAutomaticPortRoutes(refined.nodes, refinedRoutes.edges, layout,
+                nodes => evaluate(nodes), 16, { ...placementOptions, orderOnly: true });
+            const orderedRoutes = evaluate(ordered.nodes);
+            let best = original;
+            let bestNodes = nodesRef.current;
+            if (improvesPlacement(seedRoutes, best, original)) { best = seedRoutes; bestNodes = seed.nodes; }
+            if (improvesPlacement(refinedRoutes, best, original)) { best = refinedRoutes; bestNodes = refined.nodes; }
+            if (improvesPlacement(orderedRoutes, best, original)) { best = orderedRoutes; bestNodes = ordered.nodes; }
+            if (bestNodes === nodesRef.current) return;
+            result = { ...result, nodes: bestNodes, edges: best.edges };
+            routed = best;
+        }
+        const after = captureMovementGeometry(result.nodes, routed?.edges ?? result.edges);
         const changed = movementGeometryChanges(before, after);
         const previousAuto = layout?.canvas?.autoLayout !== false;
         const apply = (snapshot: MovementGeometry, autoLayout: boolean) => {
@@ -2552,7 +2758,7 @@ function DiagramCanvasInner() {
         };
         apply(after, false);
         pushUndo({ do: () => apply(after, false), undo: () => apply(before, previousAuto) });
-    }, [readOnly, selectedDiagramId, setNodes, setEdges, pushUndo, mergeDiagramLayouts]);
+    }, [readOnly, selectedDiagramId, setNodes, setEdges, pushUndo, mergeDiagramLayouts, getViewport]);
 
     // ─── Layout computation ────────────────────────────────────────────────────
 
@@ -2615,8 +2821,11 @@ function DiagramCanvasInner() {
             const forcedSize = activeRendererRef.current.forcedPortSize;
             // Collision + growth first (they only move ports ALONG a wall and may
             // resize the part), then snap across the wall against the FINAL size.
-            const placed = resolveWallPortOverlaps(
-                [...positionedModel, ...annotationNodes(savedLayout)], forcedSize);
+            const hasSavedGeometry = Object.keys(savedLayout?.nodes ?? {}).length > 0;
+            const initialNodes = [...positionedModel, ...annotationNodes(savedLayout)];
+            // Loading authored geometry never owns permission to move ports or
+            // grow their owners. Explicit placement is a separate transaction.
+            const placed = hasSavedGeometry ? initialNodes : resolveWallPortOverlaps(initialNodes, forcedSize);
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
@@ -2627,6 +2836,11 @@ function DiagramCanvasInner() {
                     && savedEdge.targetPortId === edge.data?.targetPortId
                 );
                 const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
+                const savedRouting = savedEdge as (typeof savedEdge & {
+                    manualRoute?: boolean; routingType?: string; labelPoint?: {x:number;y:number}; sourceOffset?: object; targetOffset?: object;
+                }) | undefined;
+                const ownsPoints = Boolean(savedPoints?.length && (
+                    typeof savedRouting?.manualRoute === 'boolean' || routingRef.current.mode === 'manual'));
                 return {
                     ...edge,
                     // React Flow's endpoint handles are safe only for one exact
@@ -2636,9 +2850,15 @@ function DiagramCanvasInner() {
                     reconnectable: Boolean(semanticRelationship?.sourceRange),
                     data: {
                         ...edge.data,
-                        routingType: routingRef.current.type,
-                        manualRoute: routingRef.current.mode === 'manual',
-                        ...(routingRef.current.mode === 'manual' && savedPoints?.length ? { points: savedPoints, manualRoute: true } : {}),
+                        routingType: ownsPoints ? savedRouting?.routingType ?? routingRef.current.type : routingRef.current.type,
+                        manualRoute: ownsPoints ? savedRouting?.manualRoute ?? true : routingRef.current.mode === 'manual',
+                        ...(ownsPoints ? { points: savedPoints,
+                            ...(savedEdge?.sourceSide ? {sourceSide:savedEdge.sourceSide} : {}),
+                            ...(savedEdge?.targetSide ? {targetSide:savedEdge.targetSide} : {}),
+                            ...(savedRouting?.sourceOffset ? {sourceOffset:savedRouting.sourceOffset} : {}),
+                            ...(savedRouting?.targetOffset ? {targetOffset:savedRouting.targetOffset} : {}),
+                            ...(savedRouting?.labelPoint ? { labelPoint: savedRouting.labelPoint } : { labelPoint: undefined }),
+                        } : {}),
                         // The landing comes back with the route. Without it the
                         // points alone are restored, and the first time the box
                         // moves the connector goes back to the template's
@@ -2674,7 +2894,7 @@ function DiagramCanvasInner() {
                 };
             });
             const positioned = repositionNestedPins(
-                snapPortsToWall(alignFacingPorts(placed, preparedEdges as FlowEdge[], forcedSize), forcedSize));
+                snapPortsToWall(hasSavedGeometry ? placed : alignFacingPorts(placed, preparedEdges as FlowEdge[], forcedSize), forcedSize));
             // IBD templates already carry their own interaction callbacks and
             // deliberately bypass generic diagramNode wiring. Resize still owns
             // a canvas transaction, rather than falling back to component state.
@@ -2682,7 +2902,12 @@ function DiagramCanvasInner() {
                 ? { ...node, data: { ...node.data, onIbdResize: readOnly ? undefined : handleIbdResize, resizeReadOnly: readOnly } }
                 : node);
             setNodes(interactive ? applyInteractiveData(wired) : wired);
-            setEdges(reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality, activeRendererRef.current.forcedPortSize, routingRef.current.type));
+            const fixedEdgeIds = new Set(preparedEdges.filter(edge => {
+                const saved = savedLayout?.edges?.[edge.id] as {manualRoute?:boolean;points?:unknown} | undefined;
+                return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
+            }).map(edge => edge.id));
+            setEdges(reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
+                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds));
             setIsLayouting(false);
             setLayoutVersion(v => v + 1);
         };
@@ -2749,6 +2974,7 @@ function DiagramCanvasInner() {
                     legendColorOf: (element: MemoElement) => activeLegend?.colorFor(element),
                     onPortMove: readOnly ? undefined : moveInterconnectionPort,
                     onPortCommit: readOnly ? undefined : commitInterconnectionPort,
+                    onPortCancel: readOnly ? undefined : cancelInterconnectionPort,
                     onPortResize: readOnly ? undefined : resizeInterconnectionPort,
                     onPortSelect: readOnly ? undefined : (portId, inspect) => {
                         useModelStore.setState({ canvasPortSelection: portId });
@@ -2819,7 +3045,7 @@ function DiagramCanvasInner() {
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
-        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, commitInterconnectionPort, resizeInterconnectionPort, beginEdgeRouteMove, cancelEdgeRouteMove, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
+        buildNodesFromSidecar, applyInteractiveData, annotationNodes, moveInterconnectionPort, commitInterconnectionPort, cancelInterconnectionPort, resizeInterconnectionPort, beginEdgeRouteMove, cancelEdgeRouteMove, moveEdgeRoute, commitEdgeRouteMove, inspectElement, inspectRelationship, getViewport]);
 
     // Frame a diagram when it opens — once, the way the reference does with
     // React Flow's `fitView` prop.
@@ -3308,8 +3534,8 @@ function DiagramCanvasInner() {
         // contain a child. An overlapping drop reverts to where the drag began.
         if (activeRendererRef.current.preventPartOverlap && start) {
             const sizeOf = (n: FlowNode) => ({
-                w: Number(n.width ?? n.measured?.width ?? (n.style as { width?: number })?.width ?? 0),
-                h: Number(n.height ?? n.measured?.height ?? (n.style as { height?: number })?.height ?? 0),
+                w: Number(n.width ?? (n.style as { width?: number })?.width ?? n.measured?.width ?? 0),
+                h: Number(n.height ?? (n.style as { height?: number })?.height ?? n.measured?.height ?? 0),
             });
             const self = sizeOf(node);
             const gap = 4;
@@ -3327,7 +3553,19 @@ function DiagramCanvasInner() {
             }
         }
         // Finish any queued live node/port/endpoint work before freezing the drop.
-        flushGeometryUpdate();
+        flushGeometryUpdate(start.geometry);
+        let accepted = true;
+        const finalized = reroutePositionedEdges(nodesRef.current, edgesRef.current, 'tidy',
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
+                before: start.geometry,
+                replaceManual: ids => accepted = window.confirm(`Move this part? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`),
+            });
+        if (!accepted) {
+            restoreMovementSnapshot(start.geometry, movementGeometryChanges(start.geometry,
+                captureMovementGeometry(nodesRef.current, edgesRef.current)));
+            return;
+        }
+        edgesRef.current = finalized; setEdges(finalized);
         const before = start.geometry;
         const after = captureMovementGeometry(nodesRef.current, edgesRef.current);
         const changed = movementGeometryChanges(before, after);
@@ -3362,6 +3600,18 @@ function DiagramCanvasInner() {
         const isAnnotationChange = (change: NodeChange<FlowNode>) =>
             'id' in change && nodesRef.current.find(node => node.id === change.id)?.type === 'annotationNode';
         if (nodeDragCancelledRef.current) changes = changes.filter(change => change.type !== 'position');
+        const meaningfulGeometry = changes.some(change => {
+            if (change.type === 'dimensions') return change.resizing || change.setAttributes;
+            if (change.type !== 'position' || !change.position) return false;
+            const node = nodesRef.current.find(node => node.id === change.id);
+            return node && (node.position.x !== change.position.x || node.position.y !== change.position.y);
+        });
+        if (!meaningfulGeometry) {
+            const next = applyNodeChanges(changes, nodesRef.current);
+            nodesRef.current = next;
+            setNodes(next);
+            return;
+        }
         const resizing = changes.some(change => change.type === 'dimensions' && change.resizing);
         const resizeCommitted = changes.some(change => change.type === 'dimensions' && change.setAttributes);
         if (resizing || resizeCommitted) {
@@ -3750,7 +4000,8 @@ function DiagramCanvasInner() {
         exportMenuOpen, setExportMenuOpen, exportBusy, exportError, setExportError, downloadDiagram,
         tidyConnectors, autoLayoutEnabled, markManualLayout, mergeDiagramLayouts, setRelayoutNonce,
         ibdRoutingControls: jointJsActive ? <span>JointJS uses native routing and segment tools. Shared routing types, resize and Undo are unavailable.</span> : <IbdRoutingControls type={routing.type} mode={routePreviewMode ?? routing.mode}
-            onShortenPorts={readOnly ? undefined : shortenPortRoutes}
+            onShortenPorts={readOnly ? undefined : () => shortenPortRoutes(false)}
+            onPlaceAllPorts={readOnly ? undefined : () => shortenPortRoutes(true)}
             onTypeChange={type => changeIbdRouting({ type })} onModeChange={mode => changeIbdRouting({ mode })} />,
         swimlanesOn, setSwimlanesOn, actionFlowHasStages,
         actionFlowLaneGrouping, setActionFlowLaneGrouping,

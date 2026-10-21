@@ -55,6 +55,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     onPortMove?: (portId: string, y: number, side?: PortSide) => void;
     /** Persist the port once its drag ends. */
     onPortCommit?: (portId: string) => void;
+    onPortCancel?: (portId: string) => void;
     onPortResize?: (portId: string, size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void;
     onPortSelect?: (portId: string, inspect?: boolean) => void;
     /** Legacy template hints; resize now measures rendered content instead. */
@@ -144,13 +145,15 @@ function beginWallDrag(
     options: {
         alongStart: number;
         size: number;
+        startCenter?: { x: number; y: number };
         multiWall: boolean;
         getZoom: () => number;
         onMove: (along: number, side?: PortSide) => void;
         onDragging?: (dragging: boolean) => void;
         onCommit?: () => void;
+        onCancel?: () => void;
     },
-): void {
+): () => void {
     const { alongStart, size, multiWall, getZoom, onMove, onDragging, onCommit } = options;
     event.preventDefault();
     event.stopPropagation();
@@ -158,14 +161,19 @@ function beginWallDrag(
     const rect = multiWall && nodeEl ? nodeEl.getBoundingClientRect() : null;
     const startClientY = event.clientY;
     let last: PointerEvent | undefined;
+    let active = false, finished = false;
     const move = (next: PointerEvent) => {
         last = next;
         if (Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) <= 2) return;
+        active = true;
         onDragging?.(true);
         if (rect) {
             const zoom = getZoom() || 1;
             const nw = rect.width / zoom, nh = rect.height / zoom;
-            const mx = (next.clientX - rect.left) / zoom, my = (next.clientY - rect.top) / zoom;
+            // Keep the grabbed caption's offset: starting a drag outside the square
+            // must not teleport the port onto a different wall.
+            const mx = options.startCenter ? options.startCenter.x + (next.clientX - event.clientX) / zoom : (next.clientX - rect.left) / zoom;
+            const my = options.startCenter ? options.startCenter.y + (next.clientY - event.clientY) / zoom : (next.clientY - rect.top) / zoom;
             const dL = Math.abs(mx), dR = Math.abs(mx - nw), dT = Math.abs(my), dB = Math.abs(my - nh);
             let side: PortSide = 'left', minD = dL;
             if (dR < minD) { minD = dR; side = 'right'; }
@@ -179,8 +187,20 @@ function beginWallDrag(
         }
         onMove(alongStart + (next.clientY - startClientY) / getZoom());
     };
+    const cleanup = () => {
+        finished = true;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', stop);
+        window.removeEventListener('pointercancel', cancel);
+        window.removeEventListener('keydown', key);
+        window.removeEventListener('blur', cancel);
+        window.setTimeout(() => { onDragging?.(false); }, 0);
+    };
+    const cancel = () => { if (finished) return; cleanup(); if (active) options.onCancel?.(); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); cancel(); } };
     const stop = () => {
-        if (!rect && last) {
+        if (finished) return;
+        if (!rect && last && active) {
             const dx = last.clientX - event.clientX, dy = last.clientY - event.clientY;
             if (Math.hypot(dx, dy) > 18) {
                 const side: PortSide = Math.abs(dx) > Math.abs(dy)
@@ -188,24 +208,26 @@ function beginWallDrag(
                 onMove(alongStart + dy / getZoom(), side);
             }
         }
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', stop);
-        if (last) onCommit?.();
-        // The browser dispatches click after pointerup. Keep the guard for that
-        // click, then restore ordinary click-to-inspect behaviour.
-        window.setTimeout(() => { onDragging?.(false); }, 0);
+        cleanup();
+        if (active) onCommit?.();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', stop, { once: true });
+    window.addEventListener('pointercancel', cancel);
+    window.addEventListener('keydown', key);
+    window.addEventListener('blur', cancel);
+    return cancel;
 }
 
-function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onBeginDrag?: (event: React.PointerEvent, setDragging: (d: boolean) => void) => void; onCommit?: () => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string, inspect?: boolean) => void; showText?: boolean }) {
+function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize, onSelect, showText = true }: { port: PortInfo; onMove?: (y: number, side?: PortSide) => void; onBeginDrag?: (event: React.PointerEvent, setDragging: (d: boolean) => void) => void | (() => void); onCommit?: () => void; onCancel?: () => void; onResize?: (size: number, axis: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw') => void; onSelect?: (portId: string, inspect?: boolean) => void; showText?: boolean }) {
     const renderer = useInterconnectionRenderer();
     const { getZoom } = useReactFlow();
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
     const selected = useModelStore(state => state.canvasPortSelection === port.id);
     const suppressSelectRef = useRef(false);
+    const cancelPortDrag = useRef<(() => void) | null>(null);
+    useEffect(() => () => cancelPortDrag.current?.(), []);
     const dimmed = useConnectorHoverActive() && !highlighted;
     const size = renderer.portSize(port);
     const labelOffset = size + PORT_LABEL_OFFSET;
@@ -215,11 +237,11 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onResize, onSelect,
     // that is the part's wall (handled here); a nested pin is contained by its
     // parent port, and its owner supplies that behaviour through onBeginDrag.
     const beginMove = onBeginDrag
-        ? (event: React.PointerEvent) => onBeginDrag(event, setDragging)
-        : onMove ? (event: React.PointerEvent) => beginWallDrag(event, {
-            alongStart: port.y, size, multiWall: renderer.multiWallPortDrag, getZoom, onMove,
-            onDragging: setDragging, onCommit,
-        }) : undefined;
+        ? (event: React.PointerEvent) => { cancelPortDrag.current?.(); cancelPortDrag.current = onBeginDrag(event, setDragging) ?? null; }
+        : onMove ? (event: React.PointerEvent) => { cancelPortDrag.current?.(); cancelPortDrag.current = beginWallDrag(event, {
+            alongStart: port.y, size, startCenter: { x: port.x + size / 2, y: port.y + size / 2 }, multiWall: renderer.multiWallPortDrag, getZoom, onMove,
+            onDragging: setDragging, onCommit, onCancel,
+        }); } : undefined;
     const selectPort = (event: React.MouseEvent) => {
         event.stopPropagation();
         if (suppressSelectRef.current) return;
@@ -543,10 +565,12 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
             window.removeEventListener('mouseup', stop, true);
         };
     }, []);
+    const cancelHousingDrag = useRef<(() => void) | null>(null);
+    useEffect(() => () => cancelHousingDrag.current?.(), []);
     const d = data as unknown as InterconnectionNodeData;
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
-        onPortMove, onPortCommit, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView,
+        onPortMove, onPortCommit, onPortCancel, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView,
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
@@ -676,7 +700,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
             {isFrame ? (
                 /* Modern IBD frame bar: clear context identity without the
                    dated clipped-corner tab or text-driven frame width. */
-                <div ref={headerRef} style={{
+                <div ref={headerRef} data-ibd-header style={{
                     position: 'absolute', top: 0, left: 0, right: 0, height: 38,
                     display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 8,
                     padding: '0 10px',
@@ -694,7 +718,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 </div>
             ) : (
                 /* Part property header: `partName : Type` */
-                <div ref={headerRef} style={{
+                <div ref={headerRef} data-ibd-header style={{
                     display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 6,
                     minHeight: 58,
                     padding: '7px 10px 6px',
@@ -731,14 +755,15 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 <div
                     key={`${p.id}__group`}
                     style={{ display: 'contents' }}
-                    onPointerDown={onPortMove ? event => beginWallDrag(event, {
+                    onPointerDown={onPortMove ? event => { cancelHousingDrag.current?.(); cancelHousingDrag.current = beginWallDrag(event, {
                         alongStart: p.side === 'left' || p.side === 'right' ? p.y : p.x,
                         size: p.size ?? INTERCONNECTION_PORT_SIZE,
                         multiWall: renderer.multiWallPortDrag,
                         getZoom,
                         onMove: (along, side) => onPortMove(p.id, Math.max(8, along), side),
                         onCommit: onPortCommit ? () => onPortCommit(p.id) : undefined,
-                    }) : undefined}
+                        onCancel: onPortCancel ? () => onPortCancel(p.id) : undefined,
+                    }); } : undefined}
                 >
                     {renderer.nestedPortHousing(p, { showText: showPortText })}
                 </div>
@@ -781,14 +806,25 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                             const onOuter = outward ? beyondCentre : !beyondCentre;
                             onPortMove(p.id, along, onOuter ? parent.side : OPPOSITE_SIDE[parent.side]);
                         };
-                        const stop = () => {
+                        let finished = false;
+                        const cleanup = () => {
+                            finished = true;
                             window.removeEventListener('pointermove', move);
                             window.removeEventListener('pointerup', stop);
-                            onPortCommit?.(p.id);
+                            window.removeEventListener('pointercancel', cancel);
+                            window.removeEventListener('keydown', key);
+                            window.removeEventListener('blur', cancel);
                             window.setTimeout(() => setDragging(false), 0);
                         };
+                        const cancel = () => { if (finished) return; cleanup(); onPortCancel?.(p.id); };
+                        const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); cancel(); } };
+                        const stop = () => { if (finished) return; cleanup(); onPortCommit?.(p.id); };
                         window.addEventListener('pointermove', move);
                         window.addEventListener('pointerup', stop, { once: true });
+                        window.addEventListener('pointercancel', cancel);
+                        window.addEventListener('keydown', key);
+                        window.addEventListener('blur', cancel);
+                        return cancel;
                     } : undefined}
                     onMove={onPortMove ? (y, side) => {
                         // The multi-wall drag already clamps the along-wall value to
@@ -800,6 +836,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         onPortMove(p.id, Math.min(Math.max(y, min), max), side);
                     } : undefined}
                     onCommit={onPortCommit ? () => onPortCommit(p.id) : undefined}
+                    onCancel={onPortCancel ? () => onPortCancel(p.id) : undefined}
                     onResize={onPortResize ? (size, axis) => onPortResize(p.id, size, axis) : undefined}
                     onSelect={onPortSelect}
                     showText={showPortText}

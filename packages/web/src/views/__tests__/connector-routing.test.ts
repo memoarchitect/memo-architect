@@ -134,3 +134,75 @@ describe('tidy connector routing', () => {
         expect(large / small).toBeLessThan(7);
     });
 });
+
+// Independent interior oracle: touching a wall is legal; cutting through a body is not.
+const bodyHits = (route: RoutePoint[], boxes: RouteObstacle[]) => route.slice(1).flatMap((b,i)=> {
+    const a=route[i];return boxes.filter(r=>a.y===b.y
+        ? a.y>r.y+.01&&a.y<r.y+r.height-.01&&Math.min(Math.max(a.x,b.x),r.x+r.width)-Math.max(Math.min(a.x,b.x),r.x)>.01
+        : a.x>r.x+.01&&a.x<r.x+r.width-.01&&Math.min(Math.max(a.y,b.y),r.y+r.height)-Math.max(Math.min(a.y,b.y),r.y)>.01);
+});
+it('avoids a sibling close to an endpoint instead of treating proximity as containment',()=>{
+    const sibling={id:'sibling',x:130,y:25,width:70,height:110};
+    const request:OrthogonalRouteRequest={id:'link',sourceNodeId:'a',targetNodeId:'b',source:{x:116,y:75},target:{x:400,y:200},sourceSide:'right',targetSide:'left'};
+    const route=routeOrthogonalEdges([request],[sibling],18,'long-first',{refineBudgetMs:Infinity}).get('link')!;
+    expect(bodyHits(route,[sibling])).toEqual([]);expect(isOrthogonal(route)).toBe(true);
+});
+it('does not re-enter an endpoint owner after leaving its top wall',()=>{
+    const owner={id:'a',x:0,y:0,width:200,height:160};
+    const request:OrthogonalRouteRequest={id:'link',sourceNodeId:'a',targetNodeId:'b',source:{x:60,y:-16},target:{x:400,y:300},sourceSide:'top',targetSide:'top'};
+    const route=routeOrthogonalEdges([request],[owner],18,'long-first',{refineBudgetMs:Infinity}).get('link')!;
+    expect(bodyHits(route,[owner])).toEqual([]);
+});
+
+it('uses explicit ancestry while avoiding unrelated children inside the same container',()=>{
+    const parent={id:'assembly',x:-100,y:-100,width:800,height:600},peer={id:'peer',x:180,y:0,width:100,height:200};
+    const request:OrthogonalRouteRequest={id:'link',sourceNodeId:'a',targetNodeId:'b',source:{x:116,y:75},target:{x:400,y:200},sourceSide:'right',targetSide:'left',sourceAncestorIds:['assembly'],targetAncestorIds:[]};
+    const first=routeOrthogonalEdges([request],[parent,peer]).get('link')!;
+    expect(bodyHits(first,[peer])).toEqual([]);
+    expect(routeOrthogonalEdges([request],[parent,peer]).get('link')).toEqual(first);
+});
+it('charges crossings at lattice vertices and keeps ordinary shared endpoints as junctions',()=>{
+    const requests:OrthogonalRouteRequest[]=[
+        {id:'h',sourceNodeId:'a',targetNodeId:'b',source:{x:0,y:50},target:{x:200,y:50},sourceSide:'right',targetSide:'left'},
+        {id:'v',sourceNodeId:'c',targetNodeId:'d',source:{x:100,y:0},target:{x:100,y:100},sourceSide:'bottom',targetSide:'top'},
+    ];
+    const routes=routeOrthogonalEdges(requests,[]);
+    const h=routes.get('h')!,v=routes.get('v')!;
+    const contacts:RoutePoint[]=[];
+    for(let i=1;i<h.length;i++)for(let j=1;j<v.length;j++){
+        const a=h[i-1],b=h[i],c=v[j-1],d=v[j];if((a.y===b.y)===(c.y===d.y))continue;
+        const hs=a.y===b.y?[a,b]:[c,d],vs=a.y===b.y?[c,d]:[a,b],p={x:vs[0].x,y:hs[0].y};
+        if(p.x>=Math.min(hs[0].x,hs[1].x)&&p.x<=Math.max(hs[0].x,hs[1].x)&&p.y>=Math.min(vs[0].y,vs[1].y)&&p.y<=Math.max(vs[0].y,vs[1].y))contacts.push(p);
+    }
+    expect(contacts).toEqual([]);
+    const fork=routeOrthogonalEdges([requests[0],{...requests[1],sourceNodeId:'a',source:{x:0,y:50},sourceSide:'right',target:{x:200,y:150}}],[]);
+    expect(fork.get('v')![0]).toEqual(fork.get('h')![0]);
+});
+it('retains distinct fractional endpoint axes instead of falling back through a blocker',()=>{
+    const obstacle={id:'blocker',x:180,y:0,width:80,height:100};
+    const request:OrthogonalRouteRequest={id:'link',sourceNodeId:'a',targetNodeId:'b',source:{x:0,y:50},target:{x:400,y:50.4},sourceSide:'right',targetSide:'left'};
+    const route=routeOrthogonalEdges([request],[obstacle]).get('link')!;
+    expect(route[0]).toEqual(request.source);expect(route.at(-1)).toEqual(request.target);
+    expect(isOrthogonal(route)).toBe(true);expect(bodyHits(route,[obstacle])).toEqual([]);
+});
+it('reserves unaffected authored tracks without compacting or rewriting their points',()=>{
+ const fixed=[{x:0,y:50},{x:50,y:50},{x:200,y:50}];
+ const requests:OrthogonalRouteRequest[]=[{id:'authored',sourceNodeId:'a',targetNodeId:'b',source:fixed[0],target:fixed[2],sourceSide:'right',targetSide:'left'},
+  {id:'moving',sourceNodeId:'c',targetNodeId:'d',source:{x:100,y:0},target:{x:100,y:100},sourceSide:'bottom',targetSide:'top'}];
+ const input=structuredClone(fixed),routes=routeOrthogonalEdges(requests,[],18,'long-first',{fixedRoutes:new Map([['authored',fixed]])});
+ expect(routes.get('authored')).toEqual(input);expect(fixed).toEqual(input);
+ expect(bodyHits(routes.get('moving')!,[{id:'wire',x:0,y:49.99,width:200,height:.02}])).toEqual([]);
+});
+
+it('separates unrelated facing terminal stubs in a narrow corridor',()=>{
+ const requests:OrthogonalRouteRequest[]=[{id:'a',sourceNodeId:'s1',targetNodeId:'t1',source:{x:100,y:100},target:{x:122,y:300},sourceSide:'right',targetSide:'left'},
+ {id:'b',sourceNodeId:'s2',targetNodeId:'t2',source:{x:-200,y:400},target:{x:126,y:100},sourceSide:'right',targetSide:'left'}];
+ const obstacles=[{id:'s1',x:0,y:60,width:84,height:80},{id:'t1',x:138,y:260,width:84,height:80},
+ {id:'s2',x:-300,y:360,width:84,height:80},{id:'t2',x:142,y:60,width:84,height:80}];
+ const routes=routeOrthogonalEdges(requests,obstacles);let overlap=0;
+ const a=routes.get('a')!,b=routes.get('b')!;
+ for(let i=1;i<a.length;i++)for(let j=1;j<b.length;j++)for(const [axis,cross]of[['x','y'],['y','x']]as const)
+  if(a[i-1][cross]===a[i][cross]&&a[i][cross]===b[j-1][cross]&&b[j-1][cross]===b[j][cross])
+   overlap+=Math.max(0,Math.min(Math.max(a[i-1][axis],a[i][axis]),Math.max(b[j-1][axis],b[j][axis]))-Math.max(Math.min(a[i-1][axis],a[i][axis]),Math.min(b[j-1][axis],b[j][axis])));
+ expect(overlap).toBe(0);for(const route of routes.values())expect(bodyHits(route,obstacles)).toEqual([]);
+});
