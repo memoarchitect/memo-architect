@@ -366,12 +366,14 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
         if (port.side === 'right' && port.x < 1800)
             return { right: o + 6, bottom: '50%', marginBottom: 2, textAlign: 'right', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
         if (port.side === 'left')
-            return { right: port.nested ? o + 20 : o, bottom: '50%', marginBottom: 2, textAlign: 'right', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
+            return port.nested
+                ? { right: o + 20, bottom: '50%', marginBottom: 2, textAlign: 'right', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' }
+                : { left: o + 6, bottom: '50%', marginBottom: 2, textAlign: 'left', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
         if (port.side === 'right')
             return { left: port.nested ? o + 20 : o, bottom: '50%', marginBottom: 2, textAlign: 'left', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
         if (port.side === 'top')
-            return { bottom: port.nested ? o + 20 : o, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'vertical-rl', whiteSpace: 'nowrap', width: 'auto' };
-        return { top: port.nested ? o + 20 : o, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'vertical-rl', whiteSpace: 'nowrap', width: 'auto' };
+            return { bottom: port.nested ? o + 20 : o, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
+        return { ...(port.nested ? { top: o + 20 } : { bottom: o }), left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
     }
 
     override renderImplicitPorts(): boolean { return false; }
@@ -403,59 +405,8 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
     // ports, not by a per-flow-kind colour wash.
     override edgeStroke(): string { return '#334155'; }
 
-    /** Crossing-bridge orthogonal path: forces axis-aligned segments, arcs over
-     *  perpendicular wires it crosses, and rounds its own corners. */
-    override edgePath(rawPoints: Point[], ctx: EdgePathContext): string {
-        const t = 7;
-        if (!rawPoints || rawPoints.length < 2) return '';
-        // 1. Force every segment orthogonal by inserting an elbow midpoint.
-        const pts: Point[] = [rawPoints[0]];
-        for (let i = 1; i < rawPoints.length; i++) {
-            const p0 = pts[pts.length - 1], p1 = rawPoints[i];
-            if (Math.abs(p0.x - p1.x) > 1 && Math.abs(p0.y - p1.y) > 1) {
-                const mx = (p0.x + p1.x) / 2;
-                pts.push({ x: mx, y: p0.y }, { x: mx, y: p1.y });
-            }
-            pts.push(p1);
-        }
-        // 2. Collect vertical segments of OTHER edges, to bridge where crossed.
-        const vSegs: Array<{ x: number; yMin: number; yMax: number }> = [];
-        for (const ed of ctx.allEdges) {
-            if (ed.id === ctx.edgeId || !ed.points || ed.points.length < 2) continue;
-            for (let j = 1; j < ed.points.length; j++) {
-                const a = ed.points[j - 1], b = ed.points[j];
-                if (Math.abs(a.x - b.x) < 0.5) vSegs.push({ x: (a.x + b.x) / 2, yMin: Math.min(a.y, b.y), yMax: Math.max(a.y, b.y) });
-            }
-        }
-        let s = `M ${pts[0].x},${pts[0].y}`;
-        const R = 5.5;
-        for (let i = 1; i < pts.length; i++) {
-            const prev = pts[i - 1], cur = pts[i], isLast = i === pts.length - 1;
-            const isH = Math.abs(prev.y - cur.y) < 0.5;
-            if (isH && vSegs.length) {
-                const y = (prev.y + cur.y) / 2, xMin = Math.min(prev.x, cur.x), xMax = Math.max(prev.x, cur.x), fwd = cur.x > prev.x;
-                let cxs = vSegs.filter(v => v.x > xMin + 10 && v.x < xMax - 10 && y > v.yMin + 2 && y < v.yMax - 2).map(v => v.x);
-                cxs.sort((a, b) => (fwd ? a - b : b - a));
-                cxs = cxs.filter((cx, idx) => idx === 0 || Math.abs(cx - cxs[idx - 1]) > 12);
-                for (const cx of cxs) {
-                    const stX = fwd ? cx - R : cx + R, enX = fwd ? cx + R : cx - R;
-                    s += ` L ${stX},${y} A ${R} ${R} 0 0 0 ${enX} ${y}`;
-                }
-            }
-            if (!isLast) {
-                const next = pts[i + 1];
-                const back = Math.hypot(cur.x - prev.x, cur.y - prev.y), fwd = Math.hypot(next.x - cur.x, next.y - cur.y);
-                const j = Math.min(t, back / 2, fwd / 2);
-                const inX = cur.x - Math.sign(cur.x - prev.x) * j, inY = cur.y - Math.sign(cur.y - prev.y) * j;
-                const outX = cur.x + Math.sign(next.x - cur.x) * j, outY = cur.y + Math.sign(next.y - cur.y) * j;
-                s += ` L ${inX},${inY} Q ${cur.x},${cur.y} ${outX},${outY}`;
-            } else {
-                s += ` L ${cur.x},${cur.y}`;
-            }
-        }
-        return s;
-    }
-
+    // Crossovers are drawn from complete displayed geometry by the edge view.
+    // The renderer supplies only each connector's own path.
     override get routeQuality(): RouteQuality { return 'tidy'; }
 
     override get dragChildrenWithParent(): boolean { return true; }

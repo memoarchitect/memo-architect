@@ -50,4 +50,17 @@ describe('React Flow IBD resize integration geometry',()=>{
         expect(resizeIbdNodes(start,'a','e',{x:30,y:0},minima)![0].width).toBe(200);
         expect(resizeIbdNodes(start,'a','e',{x:-30,y:0},minima)![0].width).toBe(170);
     });
+    it('retains fractional authored bounds when DOM measurements are rounded',()=>{
+        const initial={...node('a',50.125,50.25),width:undefined,height:undefined,
+            style:{width:200.25,height:100.75},measured:{width:200,height:101},
+            data:{ports:[{id:'r',x:184.25,y:58,side:'right'}]}};
+        const after=resizeIbdNodes([initial],'a','e',{x:1.125,y:0},minima)!;
+        expect(after[0].width).toBe(201.375);
+        expect(after[0].height).toBe(100.75);
+        expect(after[0].data.ports[0].x).toBe(185.375);
+        const restored=restoreIbdGeometry(after,[initial],new Set(['a']));
+        expect(restored[0].width).toBe(200.25);
+        expect(restored[0].data.ports[0].x).toBe(184.25);
+    });
+
 });

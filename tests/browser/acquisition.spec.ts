@@ -60,8 +60,8 @@ test('port selection Properties explicit size acknowledged persistence undo redo
  count=sent.length;await page.getByRole('button',{name:'Redo last diagram edit',exact:true}).click();await expect.poll(size).toBe(beforeSize-2);await waitSave(count);
  await page.getByRole('button',{name:'Port Properties',exact:true}).click();expect((await uiState(page)).element).toBe(id);expect((await uiState(page)).collapsed).toBe(false);
  await page.mouse.dblclick((await hit(page,square)).x,(await hit(page,square)).y);expect((await uiState(page)).element).toBe(id);
- const caption=port.locator('[data-ibd-caption]'),movePoint=await hit(page,caption);count=sent.length;const pos=await port.getAttribute('style');
- await page.mouse.move(movePoint.x,movePoint.y);await page.mouse.down();await page.mouse.move(movePoint.x,movePoint.y+8,{steps:6});await page.mouse.up();await expect(port).not.toHaveAttribute('style',pos!);await waitSave(count);
+ const caption=port.locator('[data-ibd-caption]'),movePoint=await hit(page,caption);count=sent.length;const pos=await port.getAttribute('style');const ownerBeforePort=await engine.evaluate(e=>({width:(e as HTMLElement).style.width,height:(e as HTMLElement).style.height}));
+ await page.mouse.move(movePoint.x,movePoint.y);await page.mouse.down();await page.mouse.move(movePoint.x,movePoint.y+8,{steps:6});await page.mouse.up();await expect(port).not.toHaveAttribute('style',pos!);await waitSave(count);expect(await engine.evaluate(e=>({width:(e as HTMLElement).style.width,height:(e as HTMLElement).style.height})),'port dragging cannot expand its owner').toEqual(ownerBeforePort);
  await engine.click({position:{x:45,y:15}});await expect(engine).toHaveClass(/selected/);
  const geometry=()=>engine.evaluate(e=>({width:(e as HTMLElement).style.width,height:(e as HTMLElement).style.height,transform:(e as HTMLElement).style.transform}));
  const beforeResize=await geometry(),grip=engine.locator('.react-flow__resize-control.bottom.right.handle'),g=await hit(page,grip);count=sent.length;

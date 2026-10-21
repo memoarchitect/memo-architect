@@ -10,8 +10,8 @@ export type RoutingLayout = DiagramLayout;
 export function ibdRouting(layout?: DiagramLayout): { type: IbdRoutingType; mode: IbdRoutingMode } {
     const canvas = layout?.canvas;
     return {
-        type: canvas?.routingType ?? 'rounded',
-        mode: canvas?.routingMode ?? (Object.values(layout?.edges ?? {}).some(edge => edge.points?.length)
+        type: canvas?.routingType ?? 'orthogonal',
+        mode: canvas?.routingMode ?? (Object.values(layout?.edges ?? {}).some(edge => edge.points?.length && (edge as typeof edge & {manualRoute?:boolean}).manualRoute !== false)
             ? 'manual' : 'automatic'),
     };
 }
@@ -85,8 +85,14 @@ export function attachedRoute(points: RoutePoint[], type: IbdRoutingType,
         x: p.x + (side === 'right' ? 12 : side === 'left' ? -12 : 0),
         y: p.y + (side === 'bottom' ? 12 : side === 'top' ? -12 : 0),
     });
-    const attached = [points[0], step(points[0], sourceSide),
-        ...points.slice(1, -1), step(points[points.length - 1], targetSide), points[points.length - 1]];
+    const outward = (anchor:RoutePoint,neighbor:RoutePoint,side?:RouteSide) => !manual && (
+        side==='right' ? Math.abs(anchor.y-neighbor.y)<1e-6 && neighbor.x>anchor.x
+        :side==='left' ? Math.abs(anchor.y-neighbor.y)<1e-6 && neighbor.x<anchor.x
+        :side==='bottom' ? Math.abs(anchor.x-neighbor.x)<1e-6 && neighbor.y>anchor.y
+        :side==='top' ? Math.abs(anchor.x-neighbor.x)<1e-6 && neighbor.y<anchor.y : false);
+    const last=points.length-1;
+    const attached = [points[0], ...(outward(points[0],points[1],sourceSide)?[]:[step(points[0],sourceSide)]),
+        ...points.slice(1, -1), ...(outward(points[last],points[last-1],targetSide)?[]:[step(points[last],targetSide)]), points[last]];
     return smoothManual ? attached : orthogonalizeRoute(attached);
 }
 
