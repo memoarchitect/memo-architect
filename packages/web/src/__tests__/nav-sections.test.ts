@@ -21,6 +21,8 @@ function declaredViewTypes(): string[] {
 const REACHED_FROM_A_PAGE = new Set([
     'diagram', 'element-detail', 'ontology-detail', 'dhf-document', 'custom-dashboard',
     'tabular', 'ask', 'sysml-generator', 'dhf-dashboard-legacy', 'welcome', 'feature',
+    // Opened from Settings > Model.
+    'rules',
 ]);
 
 const opens = (entry: (typeof NAV_ENTRIES)[number]): string | undefined =>
@@ -29,9 +31,9 @@ const opens = (entry: (typeof NAV_ENTRIES)[number]): string | undefined =>
         : undefined;
 
 describe('the navigation', () => {
-    it('has the six sections, in order', () => {
+    it('has the five sections, in order', () => {
         expect(NAV_SECTIONS.map(section => section.label))
-            .toEqual(['Home', 'Views', 'Model', 'Advanced', 'Methodology', 'Settings']);
+            .toEqual(['Home', 'Views', 'Model', 'Advanced', 'Settings']);
     });
 
     it('puts every page in exactly one section', () => {
@@ -44,7 +46,7 @@ describe('the navigation', () => {
         const ids = new Set(NAV_ENTRIES.map(entry => entry.id));
         for (const id of [
             // The Model Explorer is opened by its domains: one entry each.
-            'dashboard', 'domain-architecture', 'domain-assurance', 'domain-methodology', 'diagram', 'ui-screens', 'dhf', 'scenario', 'rules', 'ai',
+            'dashboard', 'domain-architecture', 'domain-assurance', 'diagram', 'ui-screens', 'dhf', 'scenario', 'ai',
             'ontology', 'import', 'traceability', 'statistics', 'compliance-wizard', 'model-diff',
             'review-dashboard', 'dashboards', 'guide', 'analysis', 'dsm', 'settings',
         ]) expect(ids, id).toContain(id);

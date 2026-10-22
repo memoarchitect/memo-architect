@@ -1,6 +1,6 @@
 // ─── The navigation: seven sections, every page in exactly one ───────────────
 //
-//   Home · Views · Model · Advanced · Methodology · Settings
+//   Home · Views · Model · Advanced · Settings
 //
 // The product-family plan (A2) names these sections. Each page Architect has
 // belongs to exactly one, through `SECTION_OF_VIEW`, a Record over every
@@ -10,12 +10,13 @@
 // offers a page that would render the dashboard instead.
 //
 // Advanced holds the specialist pages: analysis tools, variability, change and release records, working sets.
+// Rules and Methodology are opened from Settings > Model, so the drawer does not list them.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ActiveView } from '../store/model-store';
 import type { FeatureId } from '../config/feature-flags';
 
-export type NavSectionId = 'guide' | 'model' | 'views' | 'advanced' | 'methodology' | 'settings';
+export type NavSectionId = 'guide' | 'model' | 'views' | 'advanced' | 'settings';
 
 export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: string }[] = [
     // The section that holds the Dashboard. It was named for the Guide page, which is an experimental feature
@@ -24,7 +25,6 @@ export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: str
     { id: 'views', label: 'Views', icon: '⊟' },
     { id: 'model', label: 'Model', icon: '☰' },
     { id: 'advanced', label: 'Advanced', icon: '◫' },
-    { id: 'methodology', label: 'Methodology', icon: '☑' },
     { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 
@@ -45,7 +45,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     diagram: 'views',
     tabular: 'views',
     'ui-screens': 'views',
-    rules: 'methodology',
+    rules: 'settings',
     analysis: 'advanced',
     dsm: 'advanced',
     traceability: 'model',
@@ -80,7 +80,7 @@ export const SECTION_OF_MODE: Record<NavModeId, NavSectionId> = {
     ai: 'model',
     diagram: 'views',
     'ui-screens': 'views',
-    rules: 'methodology',
+    rules: 'settings',
     dhf: 'model',
 };
 
@@ -126,9 +126,6 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'views', target: { mode: 'scenario' } },
     { id: 'ui-screens', label: 'UI Screens', icon: '▣', section: 'views', target: { mode: 'ui-screens' } },
 
-    { id: 'rules', label: 'Rules', icon: '⚖', section: 'methodology', target: { mode: 'rules' } },
-
-    { id: 'domain-methodology', label: 'Methodology', icon: '☑', section: 'advanced', target: { mode: 'catalog', domain: 'methodology' } },
     { id: 'variability', label: 'Variability', icon: '⑂', section: 'advanced', target: { view: { type: 'variability' } } },
     { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'advanced', target: { view: { type: 'change' } } },
     { id: 'releases', label: 'Release Records', icon: '⬢', section: 'advanced', target: { view: { type: 'releases' } } },
@@ -158,8 +155,6 @@ export const VIEW_OF_MODE: Record<NavModeId, ActiveView['type']> = {
 
 /** The section an entry opens. */
 export function sectionOfEntry(entry: NavEntry): NavSectionId {
-    // The Methodology domain is the one catalog entry that is not in Model.
-    if ('mode' in entry.target && entry.target.mode === 'catalog' && entry.target.domain === 'methodology') return 'advanced';
     if ('mode' in entry.target) return SECTION_OF_MODE[entry.target.mode];
     if ('view' in entry.target) return SECTION_OF_VIEW[entry.target.view.type];
     return 'settings';
