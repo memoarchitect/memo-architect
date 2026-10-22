@@ -457,6 +457,7 @@ export function App() {
         <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#F7F7F5', color: '#1a1a1a' }}>
             {/* Sync URL → store on load / navigation */}
             <UrlNavigationSync />
+            <ScopeUrlSync />
 
             {/* Toolbar */}
             <WorkbenchToolbar />
@@ -489,6 +490,7 @@ export function App() {
                         {staticViewPaths().map(path => (
                             <Route key={path} path={path} element={<UnifiedCanvas />} />
                         ))}
+                        <Route path="/settings/:section" element={<UnifiedCanvas />} />
                         <Route path="/ontology/:packageName" element={<UnifiedCanvas />} />
                         <Route path="/ontology/:packageName/:layerId" element={<UnifiedCanvas />} />
                         <Route path="/dhf/:docId" element={<UnifiedCanvas />} />
@@ -605,6 +607,68 @@ function DiagramPermalinkRoute() {
  * when the user navigates via the sidebar (store → URL push).
  * Also handles deep-link on initial load.
  */
+/**
+ * What the pages are showing, in the address: `?domain=architecture` for the explorer's domain and
+ * `?workspace=<system>` for the chosen workspace. A pasted link opens the same slice of the model, and
+ * Back and Forward move between slices. The paths themselves stay as they are, so /catalog is still
+ * /catalog with the domain beside it.
+ *
+ * The URL is authoritative on first load and on Back/Forward; the store is authoritative while the
+ * person clicks, and writes the address with `replace` so a choice is not a history step of its own.
+ * A saved workspace preference is never cleared by a link that does not name one.
+ */
+function ScopeUrlSync() {
+    const domain = useModelStore(s => s.explorerDomain);
+    const setDomain = useModelStore(s => s.setExplorerDomain);
+    const workspace = useModelStore(s => s.workspace);
+    const setWorkspace = useModelStore(s => s.setWorkspace);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const navigationType = useNavigationType();
+    const first = useRef(true);
+    const lastKey = useRef(location.key);
+    /** What the address named on the previous run, to tell a link that names a slice from one that just drops it. */
+    const lastUrl = useRef<{ domain: string | null; workspace: string | null }>({ domain: null, workspace: null });
+
+    useEffect(() => {
+        // The address as the browser has it now: the router's `location` can still be the previous page for a
+        // render after a push, and replacing that would undo the push.
+        const here = window.location;
+        // On the first run the router's location is the link that was opened; the window's address may already
+        // have been rewritten by the view sync, which does not carry query parameters it does not own.
+        const params = new URLSearchParams(first.current ? location.search : here.search);
+        const urlDomain = params.get('domain');
+        const urlWorkspace = params.get('workspace');
+        // The navigation type keeps its last value (POP, after a page load) until the next navigation, so
+        // Back and Forward lead only when the location itself has just changed.
+        const moved = location.key !== lastKey.current;
+        lastKey.current = location.key;
+        const fromHistory = first.current || (moved && navigationType === 'POP');
+        first.current = false;
+        // The address leads on first load, on Back/Forward, and when a link names a slice it did not name before
+        // (an in-app link to /catalog?domain=assurance). A link that merely leaves the slice out does not clear it.
+        const domainLed = fromHistory || (urlDomain !== null && urlDomain !== lastUrl.current.domain);
+        const workspaceLed = urlWorkspace !== null && (fromHistory || urlWorkspace !== lastUrl.current.workspace);
+        lastUrl.current = { domain: urlDomain, workspace: urlWorkspace };
+        if (domainLed && urlDomain !== domain) { setDomain(urlDomain); return; }
+        if (workspaceLed && urlWorkspace !== workspace) { setWorkspace(urlWorkspace); return; }
+
+        let changed = false;
+        for (const [name, value] of [['domain', domain], ['workspace', workspace]] as const) {
+            if ((params.get(name) ?? null) === (value ?? null)) continue;
+            if (value) params.set(name, value); else params.delete(name);
+            changed = true;
+        }
+        if (changed) {
+            const query = params.toString();
+            navigate({ pathname: here.pathname, search: query ? `?${query}` : '', hash: here.hash }, { replace: true });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, location.search, domain, workspace]);
+
+    return null;
+}
+
 function UrlNavigationSync() {
     const activeView = useModelStore(s => s.activeView);
     const model = useModelStore(s => s.model);
@@ -756,6 +820,18 @@ function UrlNavigationSync() {
         if (isPermalinkPath(location.pathname) && adoptedPermalink.current !== location.pathname) {
             if (!url || url.split('?')[0] !== location.pathname) return;
             adoptedPermalink.current = location.pathname;
+        }
+
+        // Parameters a page keeps in its own address (?focus=, ?domain=) are not this sync's to drop when it rewrites
+        // the same path. The ones it does own are written from the view, so they are not carried.
+        if (url && url.split('?')[0] === location.pathname) {
+            const written = new URLSearchParams(url.split('?')[1] ?? '');
+            const owned = new Set(['element', 'definition', 'viewpoint', 'diagram', 'scope']);
+            for (const [name, value] of new URLSearchParams(location.search)) {
+                if (!owned.has(name) && !written.has(name)) written.set(name, value);
+            }
+            const query = written.toString();
+            url = query ? `${url.split('?')[0]}?${query}` : url.split('?')[0];
         }
 
         if (url && location.pathname + location.search !== url) {

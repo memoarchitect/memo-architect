@@ -77,6 +77,13 @@ describe('viewToPath / pathToView round trip', () => {
         expect(viewToPath({ type: 'welcome' })).toBe('/');
     });
 
+    it('round-trips a settings tab', () => {
+        expect(viewToPath({ type: 'settings' })).toBe('/settings');
+        expect(viewToPath({ type: 'settings', section: 'rules' })).toBe('/settings/rules');
+        expect(pathToView('/settings/rules')).toEqual({ type: 'settings', section: 'rules' });
+        expect(pathToView('/settings')).toEqual({ type: 'settings' });
+    });
+
     it('round-trips an ontology package', () => {
         const view: ActiveView = { type: 'ontology-detail', packageName: '@memoarchitect/ontology' };
         const path = viewToPath(view)!;

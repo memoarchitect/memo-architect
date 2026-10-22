@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { requestGuide } from '../store/ws-client';
 import { groupSteps, nextStep, stepsForRole, words, type GuideStepStatus } from '../lib/guide-view';
@@ -30,6 +31,7 @@ export function Guide() {
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const navigate = useNavigate();
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const [allRoles, setAllRoles] = useState(false);
     const [problem, setProblem] = useState<string | null>(null);
@@ -55,6 +57,8 @@ export function Guide() {
         setActiveMode('diagram');
         setExplorerTab('views');
         setActiveView({ type: 'welcome' });
+        // The viewpoints index has its own address; opening a step lands on it.
+        navigate('/diagrams');
     };
 
     const chip = (state: GuideStepStatus['state']) => (

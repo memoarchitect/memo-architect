@@ -1,6 +1,7 @@
 import { useScopedModel } from '../store/scoped-model';
 import { groupUseCases } from '../lib/use-case-groups';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
 import { sendElementUpdate } from '../store/ws-client';
 import { DIAGRAM_TYPE_META, LAYER_COLORS, resolveActionFlowDiagramType } from '../constants';
@@ -106,6 +107,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
     const [linkSearch, setLinkSearch] = useState('');
     // A branch of the use-case tree to look at alone: the use case and everything it includes.
     const [focusKey, setFocusKey] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const scenarioTree = useMemo(() => {
         // The listing reads the workspace the person chose; the editors below keep the whole model.
@@ -255,6 +257,32 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
         inspectElement(id);
         setActiveView({ type: 'element-detail', elementId: id });
     };
+
+    // The branch being looked at is in the address (?focus=USE-3), so it can be linked to.
+    const focusRestored = useRef(false);
+    // Read once, at first render: the view sync may rewrite the address before the model has loaded.
+    const linkedFocus = useRef(searchParams.get('focus'));
+    useEffect(() => {
+        if (focusRestored.current || scenarioTree.length === 0) return;
+        focusRestored.current = true;
+        const wanted = linkedFocus.current;
+        const row = wanted ? scenarioTree.find(candidate => (candidate.useCase.shortId ?? candidate.useCase.id) === wanted) : undefined;
+        if (row) setFocusKey(`${row.group.id}:${row.useCase.id}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scenarioTree]);
+    useEffect(() => {
+        if (!focusRestored.current) return;
+        const row = focusKey ? scenarioTree.find(candidate => `${candidate.group.id}:${candidate.useCase.id}` === focusKey) : undefined;
+        const value = row ? (row.useCase.shortId ?? row.useCase.id) : null;
+        // The address as the browser has it: the router's copy can still hold a link the view sync has since rewritten.
+        if ((new URLSearchParams(window.location.search).get('focus') ?? null) === value) return;
+        setSearchParams(previous => {
+            const next = new URLSearchParams(previous);
+            if (value) next.set('focus', value); else next.delete('focus');
+            return next;
+        }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focusKey]);
 
     const ScenarioWorkflowBranch = ({ workflow, scenarios }: { workflow: MemoElement; scenarios: ScenarioDetails[] }) => {
         const workflowKey = `workflow:${workflow.id}`;

@@ -93,6 +93,9 @@ export function viewToPath(view: ActiveView): string | null {
             return view.definitionId
                 ? `${STATIC_VIEW_PATHS[view.type]}?definition=${encodeURIComponent(view.definitionId)}`
                 : STATIC_VIEW_PATHS[view.type];
+        // The tab rides in the path, so each settings page can be linked to.
+        case 'settings':
+            return view.section ? `/settings/${encodeURIComponent(view.section)}` : '/settings';
         case 'ontology-detail':
             return view.layerId
                 ? `/ontology/${encodeURIComponent(view.packageName)}/${encodeURIComponent(view.layerId)}`
@@ -152,6 +155,11 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     // /dhf/:docId — but /dhf and /dhf/legacy are static and matched above.
     if (segments[0] === 'dhf' && segments.length === 2) {
         return { type: 'dhf-document', docId: decodeURIComponent(segments[1]) };
+    }
+
+    // /settings/:section
+    if (segments[0] === 'settings' && segments.length === 2) {
+        return { type: 'settings', section: decodeURIComponent(segments[1]) };
     }
 
     // /features/:featureId
