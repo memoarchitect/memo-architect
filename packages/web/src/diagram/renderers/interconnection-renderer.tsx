@@ -216,6 +216,10 @@ export class BaseInterconnectionRenderer {
 
     /** Absolute-positioning style for a port's caption, keyed on its wall. */
     portLabelPlacement(port: PortInfo, { labelOffset }: PortLabelContext): CSSProperties {
+        // Keep ordinary top captions beside the normal connector approach;
+        // centering text above the glyph puts it directly on that terminal run.
+        if (port.side === 'top' && !port.nested && !port.nestedCount)
+            return { bottom: labelOffset, left: labelOffset, textAlign: 'left' };
         return port.side === 'left' ? { left: labelOffset, bottom: '50%', marginBottom: 2 }
             : port.side === 'right' ? { right: labelOffset, bottom: '50%', marginBottom: 2, textAlign: 'right' }
             : { bottom: labelOffset, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' };
@@ -372,7 +376,9 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
         if (port.side === 'right')
             return { left: port.nested ? o + 20 : o, bottom: '50%', marginBottom: 2, textAlign: 'left', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
         if (port.side === 'top')
-            return { bottom: port.nested ? o + 20 : o, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
+            return port.nested || port.nestedCount
+                ? { bottom: port.nested ? o + 20 : o, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' }
+                : { bottom: o, left: o, textAlign: 'left', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
         return { ...(port.nested ? { top: o + 20 } : { bottom: o }), left: '50%', transform: 'translateX(-50%)', textAlign: 'center', writingMode: 'horizontal-tb', whiteSpace: 'nowrap', width: 'auto' };
     }
 

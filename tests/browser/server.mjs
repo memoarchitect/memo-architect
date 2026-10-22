@@ -105,8 +105,16 @@ if (process.env.MEMO_SESSION8_NORMAL === '1') {
  writeFileSync(source,text);
  rmSync(seed);
 }
+// Replay an actual retained declared-view document into a fresh fixture before
+// startup. No runtime geometry setters or generated acceptance coordinates.
+let session9FrozenSource;
+if (process.env.MEMO_SESSION9_FROZEN_SOURCE) {
+ session9FrozenSource=realpathSync(resolve(root,process.env.MEMO_SESSION9_FROZEN_SOURCE));
+ if(!session9FrozenSource.startsWith(resolve(root,'artifacts/ibd-baseline')+'/'))throw new Error('Frozen source must be retained pilot evidence');
+ writeFileSync(resolve(fixture,'model/catalog/views.sysml'),readFileSync(session9FrozenSource));
+}
 symlinkSync(resolve(root,'node_modules'),resolve(fixture,'node_modules'));
-writeFileSync(resolve(output,'runtime.json'),JSON.stringify({root,fixture,node:process.version,seed:'tests/browser/fixtures/vehicle-layout.yaml',session2Seed:process.env.MEMO_SESSION2_FIXTURE==='1',session4Seed:process.env.MEMO_SESSION4_FIXTURE==='1',tools:realpathSync(resolve(root,'node_modules/@memoarchitect/tools')),ontology:realpathSync(resolve(root,'node_modules/@memoarchitect/ontology')),session8:{small:process.env.MEMO_SESSION8_SMALL==='1',normal:process.env.MEMO_SESSION8_NORMAL==='1',deep:process.env.MEMO_SESSION8_DEEP==='1'},port:process.env.MEMO_PILOT_PORT??'32117',hmr:process.env.MEMO_PILOT_HMR_PORT??'23217'},null,2));
+writeFileSync(resolve(output,'runtime.json'),JSON.stringify({root,fixture,session9FrozenSource,node:process.version,seed:'tests/browser/fixtures/vehicle-layout.yaml',session2Seed:process.env.MEMO_SESSION2_FIXTURE==='1',session4Seed:process.env.MEMO_SESSION4_FIXTURE==='1',tools:realpathSync(resolve(root,'node_modules/@memoarchitect/tools')),ontology:realpathSync(resolve(root,'node_modules/@memoarchitect/ontology')),session8:{small:process.env.MEMO_SESSION8_SMALL==='1',normal:process.env.MEMO_SESSION8_NORMAL==='1',deep:process.env.MEMO_SESSION8_DEEP==='1'},port:process.env.MEMO_PILOT_PORT??'32117',hmr:process.env.MEMO_PILOT_HMR_PORT??'23217'},null,2));
 const child = spawn(process.execPath,[resolve(root,'lib/bin/memo-architect.js'),'dev','--port',process.env.MEMO_PILOT_PORT??'32117','--no-open','--keep-alive','--experimental','--toolchain.compiler=syside'],{cwd:fixture,stdio:['ignore','pipe','pipe'],env:{...process.env,MEMO_PILOT_HMR_PORT:process.env.MEMO_PILOT_HMR_PORT??'23217'}});
 for(const stream of [child.stdout,child.stderr]) stream.on('data',data=>{appendFileSync(resolve(output,'server.log'),data);process.stdout.write(data);});
 for(const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>child.kill(signal));
