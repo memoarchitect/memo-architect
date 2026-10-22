@@ -313,6 +313,8 @@ export function App() {
     const model = useModelStore(s => s.model);
     const activeView = useModelStore(s => s.activeView);
     const selectedElementIds = useModelStore(s => s.selectedElementIds);
+    const selectedElementId = useModelStore(s => s.selectedElementId);
+    const selectedRelationshipId = useModelStore(s => s.selectedRelationshipId);
     const { pathname } = useLocation();
     // Diagram routes still use the workbench's right-hand properties browser.
     // Only catalog pages are self-contained full-page routes.
@@ -509,7 +511,9 @@ export function App() {
                     && !isCatalogRoute
                     && activeMode !== 'dhf'
                     && activeView.type !== 'dhf-dashboard' && activeView.type !== 'dhf-document'
-                    && activeMode !== 'ontology' && (
+                    && activeMode !== 'ontology'
+                    // Nothing selected, nothing to show; an open diagram is the exception, as it has properties of its own.
+                    && (selectedElementId || selectedRelationshipId || selectedElementIds.size > 0 || activeView.type === 'diagram') && (
                     selectedElementIds.size >= 2
                         ? <BulkEditPanel />
                         : <UnifiedPropertiesPanel />
