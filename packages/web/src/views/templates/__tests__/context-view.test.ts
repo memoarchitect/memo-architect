@@ -56,6 +56,20 @@ describe('system context view template', () => {
         }
     });
 
+    it('bends each spoke along the axes when asked, leaving it straight by default', () => {
+        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
+        const a = element('a', 'User', 'Operator');
+        const relationships = [{ id: 'r1', type: 'connect', sourceId: 'a', targetId: 'ims' }];
+        const bent = computeContextViewLayout(model({ system, a }, relationships), 'IMS Context', { edgeStyle: 'elbow' });
+        const edge = bent.edges[0];
+        expect(edge.data?.routing).toBe('elbow');
+        const points = edge.data?.points as { x: number; y: number }[];
+        expect(points).toHaveLength(4);
+        // Every segment runs along one axis.
+        for (let i = 1; i < points.length; i++) expect(points[i].x === points[i - 1].x || points[i].y === points[i - 1].y).toBe(true);
+        expect(computeContextViewLayout(model({ system, a }, relationships), 'IMS Context').edges[0].data?.points).toHaveLength(2);
+    });
+
     it('draws one black-box system inside a system boundary and participants outside it', () => {
         const system = element('pump', 'OperationalEntity', 'Infusion Pump', { contextRole: 'systemOfInterest' });
         const clinician = element('clinician', 'User', 'Clinician');

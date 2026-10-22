@@ -23,6 +23,7 @@ import {
     type LayoutResult, type RoutePoint,
 } from '../layout';
 import { isPortElement } from './interconnection-view';
+import type { UseCaseEdgeStyle } from './use-case-view';
 
 // Native keywords, because the MEMO relations that used to be here are gone:
 // `InteractsWith` and `ConnectsPhysically` are both native `connect` now, and
@@ -65,6 +66,8 @@ const contextLabel = (relationship: MemoRelationship): string =>
 
 export interface ContextViewOptions {
     viewpointFilter?: (element: MemoElement) => boolean;
+    /** How a spoke is drawn: one straight segment (the default), or bent to run along the axes. */
+    edgeStyle?: UseCaseEdgeStyle;
     /** Relationship kinds selected by the authored view. */
     relationshipTypes?: string[];
 }
@@ -345,6 +348,20 @@ export function computeContextViewLayout(
         systemRect,
     );
 
+    // A bent spoke leaves its box along the axis of the side it uses and meets the other box the same way,
+    // with the bend halfway between: one Z or a straight run when the two are level.
+    const spokePoints = (draft: typeof drafts[number]): RoutePoint[] => {
+        const straight = routes.get(draft.rel.id) ?? [draft.source, draft.target];
+        if ((options.edgeStyle ?? 'straight') === 'straight') return straight;
+        const from = straight[0], to = straight[straight.length - 1];
+        if (draft.sourceSide === 'left' || draft.sourceSide === 'right') {
+            const middle = (from.x + to.x) / 2;
+            return [from, { x: middle, y: from.y }, { x: middle, y: to.y }, to];
+        }
+        const middle = (from.y + to.y) / 2;
+        return [from, { x: from.x, y: middle }, { x: to.x, y: middle }, to];
+    };
+
     const edges: Edge[] = drafts.map(draft => {
         const anchorOffset = (id: string, side: Side, point: RoutePoint) => {
             const rect = id === system.id ? systemRect : placed.get(id)!;
@@ -355,8 +372,8 @@ export function computeContextViewLayout(
             label: labels.get(draft.rel.id),
             style: { stroke: '#0F766E', strokeWidth: 1.5 },
             data: {
-                routing: 'straight',
-                points: routes.get(draft.rel.id) ?? [draft.source, draft.target],
+                routing: options.edgeStyle ?? 'straight',
+                points: spokePoints(draft),
                 labelPoint: labelPoints.get(draft.rel.id),
                 sourceSide: draft.sourceSide, targetSide: draft.targetSide,
                 sourceOffset: anchorOffset(draft.rel.sourceId, draft.sourceSide, draft.source),

@@ -15,7 +15,7 @@ import { createElement } from 'react';
 import { act } from 'react-dom/test-utils';
 import {
     BaseDiagramToolbar, ActionFlowToolbar, InterconnectionToolbar,
-    StateTransitionToolbar, UseCaseToolbar, GeneralToolbar,
+    StateTransitionToolbar, UseCaseToolbar, ContextToolbar, GeneralToolbar,
     resolveDiagramToolbar, type DiagramToolbarContext,
 } from '../diagram-toolbar';
 
@@ -101,7 +101,7 @@ describe('resolveDiagramToolbar', () => {
     });
 
     it('falls back to the base toolbar for profiles with no bespoke controls', () => {
-        for (const profile of ['sequence', 'context', 'standard'] as const) {
+        for (const profile of ['sequence', 'standard'] as const) {
             const toolbar = resolveDiagramToolbar(profile);
             expect(toolbar.constructor).toBe(BaseDiagramToolbar);
         }
@@ -112,6 +112,7 @@ describe('resolveDiagramToolbar', () => {
         expect(new InterconnectionToolbar().profile).toBe('interconnection');
         expect(new StateTransitionToolbar().profile).toBe('statetransition');
         expect(new UseCaseToolbar().profile).toBe('usecase');
+        expect(new ContextToolbar().profile).toBe('context');
         expect(new GeneralToolbar().profile).toBe('general');
         expect(new BaseDiagramToolbar().profile).toBe('standard');
     });
@@ -152,6 +153,28 @@ describe('toolbar smoke render — every profile renders without throwing', () =
     it('use case toolbar renders the level/routing controls', () => {
         const el = renderToolbar(createElement('div', null, new UseCaseToolbar().render(makeContext({ viewKind: 'general' }))));
         expect(el.textContent).toContain('Auto arrange');
+    });
+
+    it('use case and context toolbars offer connector routing as a tile that steps through the ways; others do not', () => {
+        for (const toolbar of [new UseCaseToolbar(), new ContextToolbar()]) {
+            let style: string = 'straight';
+            const ctx = makeContext({ viewKind: 'general', useCaseEdgeStyle: style as never, setUseCaseEdgeStyle: ((next: string) => { style = next; }) as never });
+            const el = renderToolbar(createElement('div', null, toolbar.renderCommon(ctx)));
+            const tile = el.querySelector('button[title^="Connector routing"]') as HTMLButtonElement;
+            expect(tile.title).toBe('Connector routing: Straight. Click for Orthogonal.');
+            act(() => { tile.click(); });
+            expect(style).toBe('elbow');
+        }
+        const other = renderToolbar(createElement('div', null, new BaseDiagramToolbar().renderCommon(makeContext({ viewKind: 'general' }))));
+        expect(other.querySelector('button[title^="Connector routing"]')).toBeNull();
+    });
+
+    it('groups the dock under captions: Layout first, Export last', () => {
+        const toolbar = new UseCaseToolbar();
+        const el = renderToolbar(createElement('div', null, toolbar.render(makeContext({ viewKind: 'general' }))));
+        const captions = [...el.querySelectorAll('.memo-diagram-tools__caption')].map(node => node.textContent);
+        expect(captions[0]).toBe('Layout');
+        expect(captions[captions.length - 1]).toBe('Export');
     });
 
     it('general toolbar renders the mode switcher', () => {

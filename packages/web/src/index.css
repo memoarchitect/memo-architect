@@ -327,34 +327,30 @@ body .react-flow {
     display: none;
 }
 
-/* Only the two actions that can replace hand-arranged geometry are separated
-   from ordinary view controls. The divider is a thin full-width grid row, not
-   an empty icon cell. */
-.memo-diagram-tools--left > .memo-diagram-tools__layout-divider {
+/* The dock reads in groups. Each caption is a thin full-width row over its tiles, in the order the dock lists
+   them: Layout, Display, Source, Export. */
+.memo-diagram-tools--left > .memo-diagram-tools__caption {
     grid-column: 1 / -1;
-    width: 100%;
-    height: 1px;
-    margin: 2px 0;
-    background: #E2E1DB;
+    margin: 4px 0 -2px;
+    padding-top: 6px;
+    border-top: 1px solid #E2E1DB;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8CA0B1;
 }
 
-.memo-diagram-tools--left > .memo-diagram-tools__layout-reset-divider {
-    order: -1;
+.memo-diagram-tools--left > .memo-diagram-tools__caption:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
-.memo-diagram-tools--left .memo-diagram-tools__layout-reset > button {
-    order: -2;
-}
-
-/* Export and source-editor controls are document actions, not diagram-display
-   tools. Keep them together in a single footer group. */
-.memo-diagram-tools--left > .memo-diagram-tools__document-actions-divider {
-    order: 1;
-}
-
-.memo-diagram-tools--left > .memo-diagram-tools__document-action,
-.memo-diagram-tools--left #memo-diagram-editor-controls button {
-    order: 2;
+/* The source editor mounts into its slot after the caption; with nothing mounted yet the caption would stand over
+   nothing, so it waits for the first control. */
+.memo-diagram-tools--left > .memo-diagram-tools__caption--source:has(+ #memo-diagram-editor-controls:empty) {
+    display: none;
 }
 
 .memo-diagram-tools--left > button > span:not([aria-hidden]),

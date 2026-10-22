@@ -68,7 +68,7 @@ import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseE
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
 import { resolveDiagramProfile } from '../diagram/diagram-profile';
-import { resolveDiagramToolbar, type DiagramToolbarContext } from '../diagram/toolbars/diagram-toolbar';
+import { hasToolbarContent, resolveDiagramToolbar, type DiagramToolbarContext } from '../diagram/toolbars/diagram-toolbar';
 import {
     hasContextChildCoordinates, rebaseForFrameChange, rebaseLegacyContextChildPosition, withContextChildCoordinates,
 } from '../diagram/layout-coordinate-migration';
@@ -1479,7 +1479,9 @@ function DiagramCanvasInner() {
         setGeneralMode(resolveGeneralMode(
             selectedDiagram?.properties, (generalTree?.childrenMap.size ?? 0) > 0));
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
-        setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
+        // A use case diagram starts as its view hints. A context diagram starts straight: a star routed along the
+        // axes draws its spokes over one another (see the context template), so bending them is the person's choice.
+        setUseCaseEdgeStyle(diagramProfile === 'context' ? 'straight' : useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');
@@ -2500,6 +2502,7 @@ function DiagramCanvasInner() {
                 },
                 context: {
                     systemName: selectedDiagram?.name,
+                    edgeStyle: useCaseEdgeStyle,
                     viewpointFilter,
                     relationshipTypes: selectedDiagram?.relationshipTypes,
                 },
@@ -3599,16 +3602,28 @@ function DiagramCanvasInner() {
                     <div
                         className="memo-diagram-tools memo-diagram-tools--left m-3 grid content-start items-stretch justify-items-stretch rounded-lg text-xs"
                         style={{
-                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: 'min-content', gridAutoFlow: 'row dense',
+                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: 'min-content', gridAutoFlow: 'row',
                             background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                         }}
                     >
+                        {/* The dock reads in groups, each under its caption: Layout (arranging the picture), Display
+                            (what this kind of diagram shows), Source (editing the SysML), Export (taking it out). */}
                         {activeToolbar.renderCommon(toolbarCtx)}
-                        {activeToolbar.renderProfileControls(toolbarCtx)}
+                        {(() => {
+                            const display = activeToolbar.renderProfileControls(toolbarCtx);
+                            const trailing = activeToolbar.renderTrailingProfileControls(toolbarCtx);
+                            return (hasToolbarContent(display) || hasToolbarContent(trailing)) && (
+                                <>
+                                    <div className="memo-diagram-tools__caption">Display</div>
+                                    {display}
+                                    {trailing}
+                                </>
+                            );
+                        })()}
 
                         {selectedDiagramId && (
                             <>
-                                {viewKind !== 'actionflow' && actionFlowToolbarPlacement !== 'left' && <span style={{ color: '#E5E5E0' }}>|</span>}
+                                <div className="memo-diagram-tools__caption memo-diagram-tools__caption--source">Source</div>
                                 {/* The source editor mounts its compact controls
                                     here so every diagram action stays in the
                                     dedicated tools dock. */}
@@ -3620,7 +3635,7 @@ function DiagramCanvasInner() {
                             </>
                         )}
 
-                        {activeToolbar.renderTrailingProfileControls(toolbarCtx)}
+                        {activeToolbar.renderExport(toolbarCtx)}
                     </div>
                 ))}
                 </aside>}
