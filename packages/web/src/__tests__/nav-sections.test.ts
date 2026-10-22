@@ -29,9 +29,9 @@ const opens = (entry: (typeof NAV_ENTRIES)[number]): string | undefined =>
         : undefined;
 
 describe('the navigation', () => {
-    it('has the seven sections, in order', () => {
+    it('has the six sections, in order', () => {
         expect(NAV_SECTIONS.map(section => section.label))
-            .toEqual(['Home', 'Views', 'Model', 'Analysis', 'Methodology', 'Documents', 'Settings']);
+            .toEqual(['Home', 'Views', 'Model', 'Advanced', 'Methodology', 'Settings']);
     });
 
     it('puts every page in exactly one section', () => {
@@ -63,8 +63,8 @@ describe('the navigation', () => {
         }
     });
 
-    it('keeps a use-case diagram in Model and the empty catalog in Model', () => {
-        expect(sectionOf({ type: 'diagram', diagramId: 'x' }, 'scenario')).toBe('model');
+    it('keeps a use-case diagram in Views and the empty catalog in Model', () => {
+        expect(sectionOf({ type: 'diagram', diagramId: 'x' }, 'scenario')).toBe('views');
         expect(sectionOf({ type: 'diagram', diagramId: 'x' }, 'diagram')).toBe('views');
         expect(sectionOf({ type: 'welcome' }, 'catalog')).toBe('model');
         expect(sectionOf({ type: 'welcome' }, 'diagram')).toBe('views');
