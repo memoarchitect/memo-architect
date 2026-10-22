@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { getRegistries, useModelStore } from '../store/model-store';
 import { createRule, previewRule } from '../store/ws-client';
 import { COLOR, FONT } from '../styles/tokens';
-import { RulePolicyEditor } from './RulePolicyEditor';
+import { RulePolicyEditor, type PolicyPreset } from './RulePolicyEditor';
 import {
-    CONDITION_LABEL, DOMAIN_LABEL, EMPTY_FORM, OBLIGATIONS, OBLIGATION_LABEL, domainCounts, formGaps, ruleRows, searchClauses,
+    CONDITION_LABEL, DOMAIN_LABEL, EMPTY_FORM, groupRuleRows, ruleTitle, OBLIGATIONS, OBLIGATION_LABEL, domainCounts, formGaps, ruleRows, searchClauses,
     severityForObligation, suggestTypeName, toPayload, traceStatement,
     type ConditionKind, type DomainFilter, type EditorRule, type ObligationFilter, type RuleFormState, type RuleObligation,
 } from './rules-editor-model';
@@ -38,11 +38,17 @@ export function RulesEditor() {
     const [filter, setFilter] = useState<DomainFilter>('all');
     const [search, setSearch] = useState('');
     const [obligation, setObligation] = useState<ObligationFilter>('any');
-    const [tailoring, setTailoring] = useState('');
+    const [tailoring, setTailoring] = useState<PolicyPreset | null>(null);
+    const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+    const ask = (selector: PolicyPreset['selector'], value: string, disposition: PolicyPreset['disposition']) =>
+        setTailoring(previous => ({ key: (previous?.key ?? 0) + 1, selector, value, disposition }));
     const [creating, setCreating] = useState(false);
 
     const counts = useMemo(() => domainCounts(rules), [rules]);
     const rows = useMemo(() => ruleRows(rules, clauses, filter, search, obligation), [rules, clauses, filter, search, obligation]);
+    const groups = useMemo(() => groupRuleRows(rows), [rows]);
+    // A narrowed list is opened up: what was asked for should not hide behind a closed group.
+    const narrowed = filter !== 'all' || obligation !== 'any' || search.trim() !== '';
 
     if (rules.length === 0) return null;
 
@@ -85,36 +91,69 @@ export function RulesEditor() {
                 onChange={event => setSearch(event.target.value)}
                 style={{ width: 'calc(100% - 24px)', margin: '0 12px 6px', fontSize: FONT.xs }} />
 
-            <ul aria-label="Rule list" style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 260, overflowY: 'auto' }}>
-                {rows.map(row => (
-                    <li key={row.type} style={{ padding: '4px 12px', borderTop: `1px solid ${COLOR.borderLight}`, fontSize: FONT.xs }}>
-                        <div className="flex items-center gap-2">
-                            <span style={{ fontWeight: 600, color: COLOR.primary }}>{row.id}</span>
-                            <span style={{ color: COLOR.secondary }}>{row.type}</span>
-                            {row.domain !== 'unstated' && row.domain !== 'modelling' && (
-                                <span data-testid="domain" style={{ color: row.domain === 'medicalDevice' ? '#7E22CE' : '#1D4ED8' }}>
-                                    {DOMAIN_LABEL[row.domain]}
-                                </span>
-                            )}
-                            {row.obligation !== 'unstated' && (
-                                <span data-testid="obligation" style={{ color: COLOR.secondary }}>{OBLIGATION_LABEL[row.obligation]}</span>
-                            )}
-                            <span style={{ color: COLOR.muted }}>{row.severity}</span>
-                            {row.state !== 'on' && <span style={{ color: '#B45309' }}>{row.state}</span>}
-                            <button style={{ marginLeft: 'auto', fontSize: 11 }} aria-label={`Tailor ${row.id}`}
-                                onClick={() => setTailoring(row.type)}>
-                                Tailor
-                            </button>
-                        </div>
-                        {row.clauses.map(clause => (
-                            <div key={clause.qualifiedName} data-testid="trace" style={{ color: COLOR.muted, paddingLeft: 8 }}>
-                                EnforcesClause → {clause.label}
+            <div aria-label="Rule list">
+                {groups.map(group => {
+                    const key = group.layer ?? 'other';
+                    const expanded = narrowed || open.has(key);
+                    return (
+                        <div key={key} style={{ borderTop: `1px solid ${COLOR.borderLight}` }}>
+                            <div className="flex items-center gap-3" style={{ padding: '10px 12px' }}>
+                                <button aria-expanded={expanded} aria-label={`${group.label} rules`} disabled={narrowed}
+                                    onClick={() => setOpen(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next; })}
+                                    className="flex items-center gap-3"
+                                    style={{ background: 'none', border: 0, cursor: narrowed ? 'default' : 'pointer', padding: 0, textAlign: 'left', flex: 1, minWidth: 0 }}>
+                                    <span style={{ color: COLOR.muted, width: 16 }}>{expanded ? '▾' : '▸'}</span>
+                                    <span style={{ fontSize: FONT.md, fontWeight: 600, color: COLOR.primary }}>{group.label}</span>
+                                    <span style={{ fontSize: FONT.xs, color: COLOR.muted }}>
+                                        {group.rows.length} rule{group.rows.length === 1 ? '' : 's'}
+                                        {group.state === 'mixed' && ` · ${group.rows.filter(row => row.state === 'off' || row.state === 'replaced').length} off`}
+                                    </span>
+                                </button>
+                                {group.layer && (
+                                    <RuleSwitch label={`${group.label} on`} state={group.state}
+                                        onChange={on => ask('category', group.layer!, on ? 'enabled' : 'disabled')} />
+                                )}
                             </div>
-                        ))}
-                    </li>
-                ))}
-                {rows.length === 0 && <li style={{ padding: '4px 12px', color: COLOR.muted, fontSize: FONT.xs }}>No rule matches.</li>}
-            </ul>
+                            {expanded && (
+                                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                    {group.rows.map(row => (
+                                        <li key={row.type} style={{ padding: '8px 12px 8px 40px', borderTop: `1px solid ${COLOR.borderLight}`, fontSize: FONT.sm }}>
+                                            <div className="flex items-center gap-3">
+                                                <div style={{ minWidth: 0, flex: 1 }}>
+                                                    <div className="flex items-center flex-wrap gap-x-2">
+                                                        <span style={{ fontWeight: 500, color: COLOR.primary, fontSize: FONT.md }} title={row.type}>{ruleTitle(row.type)}</span>
+                                                        <span style={{ color: COLOR.faint, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 }}>{row.id}</span>
+                                                        {row.domain !== 'unstated' && row.domain !== 'modelling' && (
+                                                            <span data-testid="domain" style={{ color: row.domain === 'medicalDevice' ? '#7E22CE' : '#1D4ED8' }}>
+                                                                {DOMAIN_LABEL[row.domain]}
+                                                            </span>
+                                                        )}
+                                                        {row.obligation !== 'unstated' && (
+                                                            <span data-testid="obligation" style={{ color: COLOR.secondary }}>{OBLIGATION_LABEL[row.obligation]}</span>
+                                                        )}
+                                                        <span style={{ color: COLOR.muted }}>{row.severity}</span>
+                                                        {row.state !== 'on' && <span style={{ color: '#B45309' }}>{row.state}</span>}
+                                                    </div>
+                                                    {row.clauses.map(clause => (
+                                                        <div key={clause.qualifiedName} data-testid="trace" style={{ color: COLOR.muted }}>
+                                                            EnforcesClause → {clause.label}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button aria-label={`Edit ${row.id}`} title="Edit this rule" onClick={() => ask('rule', row.type, 'disabled')}
+                                                    style={{ background: 'none', border: 0, cursor: 'pointer', color: COLOR.muted, fontSize: 16, padding: '4px 6px' }}>✎</button>
+                                                <RuleSwitch label={`${row.id} on`} state={row.state === 'off' || row.state === 'replaced' ? 'off' : 'on'}
+                                                    locked={row.invariant} onChange={on => ask('rule', row.type, on ? 'enabled' : 'disabled')} />
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    );
+                })}
+                {rows.length === 0 && <div style={{ padding: '8px 12px', color: COLOR.muted, fontSize: FONT.xs }}>No rule matches.</div>}
+            </div>
 
             <div className="px-3 py-2">
                 <button aria-expanded={creating} onClick={() => setCreating(open => !open)}>
@@ -126,7 +165,21 @@ export function RulesEditor() {
                 <NewRuleForm kindNames={kindNames} relationNames={relationNames} projectFiles={projectFiles} clauses={clauses} />
             )}
 
-            <RulePolicyEditor ruleType={tailoring} />
+            {tailoring && (
+                <div role="dialog" aria-label="Edit rules" onClick={() => setTailoring(null)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(8,39,68,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div onClick={event => event.stopPropagation()}
+                        style={{ background: COLOR.surface, borderRadius: 12, width: 'min(560px, 92vw)', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+                        <div className="flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: `1px solid ${COLOR.border}` }}>
+                            <span style={{ fontSize: FONT.lg, fontWeight: 600, color: COLOR.primary }}>
+                                {tailoring.disposition === 'enabled' ? 'Turn on' : 'Edit'} {tailoring.selector === 'rule' ? 'rule' : 'rules'}
+                            </span>
+                            <button aria-label="Close" onClick={() => setTailoring(null)} style={{ background: 'none', border: 0, cursor: 'pointer', fontSize: 20, color: COLOR.muted }}>×</button>
+                        </div>
+                        <RulePolicyEditor preset={tailoring} />
+                    </div>
+                </div>
+            )}
         </section>
     );
 }
@@ -324,5 +377,23 @@ function NewRuleForm(props: {
             )}
             {message && <div className="px-3 pb-2" role="status" style={{ fontSize: 11, color: '#B45309' }}>{message}</div>}
         </div>
+    );
+}
+
+
+/** On, off, or (for a group) some of each. A locked switch is a rule that cannot be turned off. */
+function RuleSwitch({ label, state, locked, onChange }: { label: string; state: 'on' | 'mixed' | 'off'; locked?: boolean; onChange: (on: boolean) => void }) {
+    const on = state === 'on';
+    return (
+        <button type="button" role="switch" aria-label={label} aria-checked={state === 'mixed' ? 'mixed' : on} disabled={locked}
+            title={locked ? 'An invariant: it cannot be turned off' : undefined}
+            onClick={() => onChange(state === 'off')}
+            style={{
+                width: 38, height: 22, borderRadius: 11, border: 0, padding: 2, flexShrink: 0, cursor: locked ? 'default' : 'pointer', opacity: locked ? 0.55 : 1,
+                background: state === 'off' ? COLOR.border : COLOR.accent,
+                display: 'flex', justifyContent: state === 'off' ? 'flex-start' : state === 'on' ? 'flex-end' : 'center',
+            }}>
+            <span style={{ width: 18, height: 18, borderRadius: 9, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.25)' }} />
+        </button>
     );
 }

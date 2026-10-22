@@ -65,12 +65,36 @@ function type(element: HTMLElement, value: string): void {
     });
 }
 
+/** Groups start closed; open the one that holds the fixture's rules. */
+const openGroup = (label = 'Other rules') => act(() => { byLabel<HTMLButtonElement>(`${label} rules`).click(); });
+
 describe('the rule list', () => {
+    it('groups rules by layer, closed until opened, with a switch for the group and one per rule', () => {
+        expect(text()).toContain('Other rules');
+        expect(text()).not.toContain('CR-MED-001');
+        openGroup();
+        expect(text()).toContain('CR-MED-001');
+        expect(byLabel('CR-MED-001 on').getAttribute('aria-checked')).toBe('true');
+        // An invariant cannot be turned off.
+        expect((byLabel('CR-ONT-001 on') as HTMLButtonElement).disabled).toBe(true);
+    });
+    it('opens the editor on the rule from its edit icon, and on the rule to turn it off from its switch', () => {
+        openGroup();
+        act(() => { byLabel<HTMLButtonElement>('Edit CR-MED-001').click(); });
+        expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+        expect((byLabel('Rule') as HTMLSelectElement).value).toBe('HazardMitigationRule');
+        act(() => { byLabel<HTMLButtonElement>('Close').click(); });
+        expect(container.querySelector('[role="dialog"]')).toBeNull();
+        act(() => { byLabel<HTMLButtonElement>('CR-MED-001 on').click(); });
+        expect((byLabel('Disposition') as HTMLSelectElement).value).toBe('disabled');
+    });
     it('shows each rule with the clause it enforces', () => {
+        openGroup();
         expect(text()).toContain('CR-MED-001');
         expect(text()).toContain('EnforcesClause → ISO 14971:2019 §7');
     });
     it('shows a rule\'s obligation, and a rule with no clause is not called a gap', () => {
+        openGroup();
         const rows = [...container.querySelectorAll('li')];
         const traced = rows.find(row => row.textContent?.includes('CR-MED-001'))!;
         expect(traced.querySelector('[data-testid="obligation"]')?.textContent).toBe('Required');
