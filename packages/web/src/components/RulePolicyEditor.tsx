@@ -21,7 +21,15 @@ import { COLOR, FONT } from '../styles/tokens';
  * Section 10.4: this governs a rule's IDENTITY and DISPOSITION. It is not
  * evidence that the model was validated.
  */
-export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {}) {
+export interface PolicyPreset {
+    /** Bumped for each request, so asking for the same target twice still applies. */
+    key: number;
+    selector: 'rule' | 'category';
+    value: string;
+    disposition: 'enabled' | 'disabled';
+}
+
+export function RulePolicyEditor({ ruleType: chosen, preset }: { ruleType?: string; preset?: PolicyPreset } = {}) {
     const rules = useModelStore(state => state.effectiveRules);
     const diagnostics = useModelStore(state => state.ruleDiagnostics);
     const methodology = useModelStore(state => state.methodology);
@@ -42,6 +50,13 @@ export function RulePolicyEditor({ ruleType: chosen }: { ruleType?: string } = {
     // The rule list above can pick the rule to tailor.
     useEffect(() => { if (chosen) { setRuleType(chosen); setSelector('rule'); } }, [chosen]);
     const [disposition, setDisposition] = useState<'enabled' | 'disabled' | 'replaced'>('disabled');
+    useEffect(() => {
+        if (!preset) return;
+        setSelector(preset.selector);
+        if (preset.selector === 'rule') setRuleType(preset.value); else setCategory(preset.value);
+        setDisposition(preset.disposition);
+        setMessage('');
+    }, [preset?.key]);
     const [severity, setSeverity] = useState('');
     const [replacement, setReplacement] = useState('');
     const [rationale, setRationale] = useState('');

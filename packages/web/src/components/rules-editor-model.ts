@@ -8,7 +8,7 @@
 // (plans/memo-rules-domain-trace-and-editor.md)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { ClauseFact, ConditionSpec, RuleFormPayload } from '@memoarchitect/tools/browser';
+import { layersWithRules, type ClauseFact, type ConditionSpec, type RuleFormPayload } from '@memoarchitect/tools/browser';
 
 export type RuleDomain = 'modelling' | 'medicalDevice' | 'organisation';
 export type DomainFilter = 'all' | RuleDomain;
@@ -46,6 +46,8 @@ export interface EditorRule {
     domain?: RuleDomain;
     obligation?: RuleObligation;
     enforces?: readonly string[];
+    /** The package of the rule's subject kind: the layer it belongs to. */
+    subjectPackage?: string;
 }
 
 export type RuleState = 'on' | 'off' | 'replaced' | 'severity changed';
@@ -64,6 +66,7 @@ export interface RuleRow {
     state: RuleState;
     invariant: boolean;
     obligation: RuleObligation | 'unstated';
+    subjectPackage?: string;
     /** The rule's `EnforcesClause` traces. Zero is allowed: a rule need not trace to a standard. */
     clauses: { qualifiedName: string; label: string }[];
 }
@@ -90,6 +93,7 @@ export function ruleRows(
             state: ruleState(rule),
             invariant: rule.tailoring === 'invariant',
             obligation: rule.obligation ?? 'unstated',
+            subjectPackage: rule.subjectPackage,
             clauses: (rule.enforces ?? []).map(qualifiedName => ({ qualifiedName, label: clauseLabel(clauses, qualifiedName) })),
         }))
         .filter(row => !needle
@@ -205,4 +209,50 @@ export function toPayload(form: RuleFormState): Omit<RuleFormPayload, 'requestId
 /** The statement a chosen clause is written as, so the form shows the trace and not only the clause. */
 export function traceStatement(typeName: string, clauseQualifiedName: string): string {
     return `#EnforcesClause dependency from ${typeName.trim() || '<rule>'} to ${clauseQualifiedName};`;
+}
+
+
+// ─── Grouping ────────────────────────────────────────────────────────────────
+
+/** `ResidualRiskEvaluatedRule` read as "Residual risk evaluated". */
+export function ruleTitle(type: string): string {
+    const words = type.replace(/Rule$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+    return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase().replace(/\b(iso|iec|soup|sw|hw|api|ui)\b/g, m => m.toUpperCase());
+}
+
+/** `memo_assurance_safety_risk` read as "Assurance safety risk". */
+export function layerLabel(layer: string): string {
+    const words = layer.replace(/^memo_/, '').replace(/_/g, ' ').trim();
+    return words ? words.charAt(0).toUpperCase() + words.slice(1) : layer;
+}
+
+export interface RuleGroup {
+    /** The layer namespace a policy can target, or undefined for rules that name none. */
+    layer?: string;
+    label: string;
+    rows: RuleRow[];
+    /** How many are on: all, some or none. */
+    state: 'on' | 'mixed' | 'off';
+}
+
+/** The rows, grouped by the layer of each rule's subject, in the order the layers sort. */
+export function groupRuleRows(rows: readonly RuleRow[]): RuleGroup[] {
+    const layers = layersWithRules(rows.map(row => ({ subjectPackage: row.subjectPackage })));
+    const layerOf = (row: RuleRow) => layers.find(layer => row.subjectPackage === layer || row.subjectPackage?.startsWith(`${layer}_`));
+    const byLayer = new Map<string | undefined, RuleRow[]>();
+    for (const row of rows) {
+        const layer = layerOf(row);
+        byLayer.set(layer, [...(byLayer.get(layer) ?? []), row]);
+    }
+    return [...byLayer]
+        .sort(([a], [b]) => (a === undefined ? 1 : b === undefined ? -1 : a.localeCompare(b)))
+        .map(([layer, members]) => {
+            const enabled = members.filter(row => row.state !== 'off' && row.state !== 'replaced').length;
+            return {
+                layer,
+                label: layer ? layerLabel(layer) : 'Other rules',
+                rows: members,
+                state: enabled === members.length ? 'on' : enabled === 0 ? 'off' : 'mixed',
+            };
+        });
 }
