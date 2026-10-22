@@ -21,7 +21,8 @@ export type DiagramToolbarOperation =
     | 'interconnectionPorts'
     | 'interconnectionConnections'
     | 'generalMode'
-    | 'useCaseOptions';
+    | 'useCaseOptions'
+    | 'edgeRouting';
 
 const COMMON: readonly DiagramToolbarOperation[] = [
     'grid', 'route', 'export', 'autoLayout',
@@ -34,7 +35,7 @@ const CONTEXTUAL: Partial<Record<ViewKind, readonly DiagramToolbarOperation[]>> 
     ],
     interconnection: ['expandCollapse', 'interconnectionPorts', 'interconnectionConnections'],
     statetransition: ['expandCollapse'],
-    general: ['expandCollapse', 'generalMode', 'useCaseOptions'],
+    general: ['expandCollapse', 'generalMode', 'useCaseOptions', 'edgeRouting'],
 };
 
 /** Returns the complete, explicit set of operations for a diagram view. */

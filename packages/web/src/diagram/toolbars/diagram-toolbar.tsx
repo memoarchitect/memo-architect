@@ -25,7 +25,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { confirmDialog } from '../../components/AppDialogs';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import { Fragment, isValidElement, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import type { Edge as RFEdge } from '@xyflow/react';
 import type { MemoModelDTO, DiagramLayout } from '@memoarchitect/tools/browser';
 import type { DiagramExportFormat } from '../export-diagram';
@@ -45,6 +45,17 @@ type AnnotationKind = 'note' | 'text' | 'constraint';
 /** Read the current layout companion for a diagram, defaulting to empty. */
 function currentLayout(diagramId: string): DiagramLayout {
     return useModelStore.getState().diagramLayouts[diagramId] ?? { nodes: {}, edges: {} };
+}
+
+/**
+ * Whether a piece of toolbar content draws anything: a null, a false, or a fragment of those does not. A group
+ * is captioned only when it has something under the caption.
+ */
+export function hasToolbarContent(node: ReactNode): boolean {
+    if (node === null || node === undefined || typeof node === 'boolean' || node === '') return false;
+    if (Array.isArray(node)) return node.some(hasToolbarContent);
+    if (isValidElement(node) && node.type === Fragment) return hasToolbarContent((node.props as { children?: ReactNode }).children);
+    return true;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -258,7 +269,7 @@ export class BaseDiagramToolbar {
                         icon={<Icon.tidy />}
                         active={false}
                         onClick={ctx.tidyConnectors}
-                        title="Layout: re-route connectors. Warns before replacing hand-drawn bends."
+                        title="Re-route connectors: redraw every connector around the boxes, keeping the boxes where they are. Asks before replacing bends you drew by hand."
                     />
                 )}
                 {ctx.selectedDiagramId && ctx.supportsToolbarOperation('autoLayout') && (
@@ -284,22 +295,61 @@ export class BaseDiagramToolbar {
                         }}
                         title={ctx.autoLayoutEnabled
                             ? 'Auto layout is on. Drag an item to preserve a manual layout.'
-                            : 'Layout: recalculate. Replaces saved manual positions after confirmation.'}
+                            : 'Auto layout: rearrange the boxes too. Replaces saved manual positions after confirmation.'}
                     />
                 )}
             </>
         );
     }
 
-    /** Grid/snap toggle, download menu, and re-route/auto-layout — every
-     *  profile gets exactly this, unchanged. */
+    /** A caption over a group of tiles, spanning the dock's two columns. */
+    protected renderCaption(title: string): ReactNode {
+        return <div className="memo-diagram-tools__caption">{title}</div>;
+    }
+
+    /** Whether this profile draws its connectors in a way the person can change (use case and context do). */
+    protected get routesEdges(): boolean { return false; }
+
+    /** How connectors are drawn, as one tile that steps through the ways: the icon is the way in use. */
+    protected renderEdgeRouting(ctx: DiagramToolbarContext): ReactNode {
+        if (!this.routesEdges || !ctx.supportsToolbarOperation('edgeRouting')) return null;
+        const order: UseCaseEdgeStyle[] = ['straight', 'elbow', 'rounded', 'curved', 'arc'];
+        const names: Record<UseCaseEdgeStyle, string> = { straight: 'Straight', elbow: 'Orthogonal', rounded: 'Rounded', curved: 'Curved', arc: 'Arc' };
+        const icons: Record<UseCaseEdgeStyle, ReactNode> = {
+            straight: <Icon.routeStraight />, elbow: <Icon.routeOrthogonal />, rounded: <Icon.routeRounded />,
+            curved: <Icon.routeCurved />, arc: <Icon.routeArc />,
+        };
+        const current = ctx.useCaseEdgeStyle;
+        const next = order[(order.indexOf(current) + 1) % order.length];
+        return (
+            <IconToggle
+                icon={icons[current]}
+                active={current !== 'straight'}
+                onClick={() => ctx.setUseCaseEdgeStyle(next)}
+                title={`Connector routing: ${names[current]}. Click for ${names[next]}.`}
+            />
+        );
+    }
+
+    /** Layout: how the picture is arranged. Grid and snapping, auto layout, re-route, and connector routing. */
     renderCommon(ctx: DiagramToolbarContext): ReactNode {
         return (
             <>
+                {this.renderCaption('Layout')}
                 {this.renderGridToggle(ctx)}
-                {this.renderExportMenu(ctx)}
-                <div className="memo-diagram-tools__layout-divider memo-diagram-tools__document-actions-divider" aria-hidden="true" />
                 {this.renderRouteAndAutoLayout(ctx)}
+                {this.renderEdgeRouting(ctx)}
+            </>
+        );
+    }
+
+    /** Export: taking the diagram out as an image. Last in the dock, after the source controls. */
+    renderExport(ctx: DiagramToolbarContext): ReactNode {
+        if (!ctx.supportsToolbarOperation('export')) return null;
+        return (
+            <>
+                {this.renderCaption('Export')}
+                {this.renderExportMenu(ctx)}
             </>
         );
     }
@@ -331,6 +381,7 @@ export class BaseDiagramToolbar {
                 {this.renderCommon(ctx)}
                 {this.renderProfileControls(ctx)}
                 {this.renderTrailingProfileControls(ctx)}
+                {this.renderExport(ctx)}
             </>
         );
     }
@@ -363,26 +414,21 @@ export class ActionFlowToolbar extends BaseDiagramToolbar {
                         title="Group this flow by its modeled stages"
                     />
                 )}
-                {ctx.supportsToolbarOperation('flowHierarchy') && ctx.swimlanesOn && ctx.actionFlowLaneGrouping === 'allocation' && ctx.actionFlowDisplayLevels.length > 0 && (
-                    <div style={{ position: 'relative' }}>
+                {ctx.supportsToolbarOperation('flowHierarchy') && ctx.swimlanesOn && ctx.actionFlowLaneGrouping === 'allocation' && ctx.actionFlowDisplayLevels.length > 0 && (() => {
+                    // One tile that steps through the levels, the tile saying which one is showing.
+                    const levels = ['all', ...ctx.actionFlowDisplayLevels] as Array<ActionFlowDisplayLevel>;
+                    const current = ctx.actionFlowDisplayLevel;
+                    const next = levels[(levels.indexOf(current) + 1) % levels.length];
+                    const name = (level: ActionFlowDisplayLevel) => level === 'all' ? 'all levels' : `level ${level}`;
+                    return (
                         <IconToggle
-                            icon={<Icon.library />}
-                            active={ctx.actionFlowLevelsOpen}
-                            onClick={() => ctx.setActionFlowLevelsOpen(open => !open)}
-                            title={`Responsibility hierarchy level: ${ctx.actionFlowDisplayLevel === 'all' ? 'all levels' : `level ${ctx.actionFlowDisplayLevel}`}`}
+                            icon={<Icon.level text={current === 'all' ? 'All' : `L${current}`} />}
+                            active={current !== 'all'}
+                            onClick={() => ctx.setActionFlowDisplayLevel(next)}
+                            title={`Responsibility hierarchy: ${name(current)}. Click for ${name(next)}.`}
                         />
-                        {ctx.actionFlowLevelsOpen && (
-                            <div className="absolute z-30 rounded-lg p-1" style={{ top: 'calc(100% + 5px)', left: 0, width: 112, background: '#FFFFFF', border: '1px solid #D1D5DB', boxShadow: '0 4px 14px rgba(0,0,0,0.12)' }}>
-                                {(['all', ...ctx.actionFlowDisplayLevels] as Array<ActionFlowDisplayLevel>).map(level => {
-                                    const selected = ctx.actionFlowDisplayLevel === level;
-                                    return <button key={String(level)} type="button" className="w-full rounded px-2 py-1 text-left text-xs font-semibold" style={{ background: selected ? '#E8FBF5' : 'transparent', color: selected ? '#0F766E' : '#475569' }} onClick={() => { ctx.setActionFlowDisplayLevel(level); ctx.setActionFlowLevelsOpen(false); }}>
-                                        {level === 'all' ? 'All levels' : `Level ${level}`}
-                                    </button>;
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
+                    );
+                })()}
 
                 <ToolbarSep hidden={ctx.actionFlowToolbarPlacement === 'left'} />
 
@@ -555,7 +601,6 @@ export class InterconnectionToolbar extends BaseDiagramToolbar {
                                 title="Collapse all parts" ariaLabel="Collapse all"
                             />
                         </div>
-                        <div className="memo-diagram-tools__layout-divider memo-diagram-tools__layout-reset-divider" aria-hidden="true" />
                         {ctx.supportsToolbarOperation('interconnectionPorts') && ctx.supportsToolbarOperation('interconnectionConnections') && ctx.actionFlowToolbarPlacement === 'left' ? (
                             <>
                                 <IconToggle
@@ -687,40 +732,28 @@ export class StateTransitionToolbar extends BaseDiagramToolbar {
  *  hide-related-use-cases actor picker (KK-7). */
 export class UseCaseToolbar extends BaseDiagramToolbar {
     override get profile(): DiagramProfile { return 'usecase'; }
+    protected override get routesEdges(): boolean { return true; }
 
     override renderProfileControls(ctx: DiagramToolbarContext): ReactNode {
         if (!ctx.supportsToolbarOperation('useCaseOptions')) return null;
         return (
             <>
                 <span style={{ color: '#E5E5E0' }}>|</span>
-                <label className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#475569' }}>
-                    Level
-                    <select
-                        aria-label="Use case hierarchy level"
-                        value={ctx.useCaseDisplayLevel}
-                        onChange={event => ctx.setUseCaseDisplayLevel(event.target.value === 'all' ? 'all' : Number(event.target.value))}
-                        className="px-1.5 py-0.5 text-xs font-medium rounded"
-                        style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}
-                    >
-                        <option value="all">All levels</option>
-                        {Array.from({ length: ctx.useCaseDepth + 1 }, (_, level) => (
-                            <option key={level} value={level}>L{level}</option>
-                        ))}
-                    </select>
-                </label>
-                <label className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#475569' }}>
-                    Routing
-                    <select aria-label="Use case connector routing" value={ctx.useCaseEdgeStyle}
-                        onChange={event => ctx.setUseCaseEdgeStyle(event.target.value as UseCaseEdgeStyle)}
-                        className="px-1.5 py-0.5 text-xs font-medium rounded"
-                        style={{ color: '#374151', background: '#FFFFFF', border: '1px solid #D1D5DB' }}>
-                        <option value="straight">Straight</option>
-                        <option value="elbow">Elbow</option>
-                        <option value="rounded">Rounded</option>
-                        <option value="curved">Curved</option>
-                        <option value="arc">Arc</option>
-                    </select>
-                </label>
+                {(() => {
+                    // One tile that steps through the levels, the tile saying which one is showing.
+                    const levels: Array<'all' | number> = ['all', ...Array.from({ length: ctx.useCaseDepth + 1 }, (_, level) => level)];
+                    const current = ctx.useCaseDisplayLevel;
+                    const next = levels[(levels.indexOf(current) + 1) % levels.length];
+                    const name = (level: 'all' | number) => level === 'all' ? 'all levels' : `level ${level}`;
+                    return (
+                        <IconToggle
+                            icon={<Icon.level text={current === 'all' ? 'All' : `L${current}`} />}
+                            active={current !== 'all'}
+                            onClick={() => ctx.setUseCaseDisplayLevel(next)}
+                            title={`Use case hierarchy: ${name(current)}. Click for ${name(next)}.`}
+                        />
+                    );
+                })()}
                 <button onClick={ctx.autoArrangeUseCase}
                     className="px-2 py-0.5 text-xs font-semibold rounded"
                     style={{ color: '#047857', background: '#ECFDF5', border: '1px solid #A7F3D0' }}
@@ -822,12 +855,19 @@ export const baseDiagramToolbar = new BaseDiagramToolbar();
 const actionFlowToolbar = new ActionFlowToolbar();
 const interconnectionToolbar = new InterconnectionToolbar();
 const stateTransitionToolbar = new StateTransitionToolbar();
+/** The context diagram: its spokes can be drawn straight or bent, from the Layout group. */
+export class ContextToolbar extends BaseDiagramToolbar {
+    override get profile(): DiagramProfile { return 'context'; }
+    protected override get routesEdges(): boolean { return true; }
+}
+
 const useCaseToolbar = new UseCaseToolbar();
+const contextToolbar = new ContextToolbar();
 const generalToolbar = new GeneralToolbar();
 
 /**
  * Resolve a diagram's toolbar from its DiagramProfile (see ../diagram-profile.ts).
- * Sequence, context, and standard have no bespoke controls today, so they get
+ * Sequence and standard have no bespoke controls today, so they get
  * the base toolbar directly rather than an empty subclass.
  */
 export function resolveDiagramToolbar(profile: DiagramProfile): DiagramToolbar {
@@ -836,6 +876,7 @@ export function resolveDiagramToolbar(profile: DiagramProfile): DiagramToolbar {
         case 'interconnection': return interconnectionToolbar;
         case 'statetransition': return stateTransitionToolbar;
         case 'usecase': return useCaseToolbar;
+        case 'context': return contextToolbar;
         case 'general': return generalToolbar;
         default: return baseDiagramToolbar;
     }

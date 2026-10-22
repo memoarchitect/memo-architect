@@ -55,6 +55,19 @@ export const Icon = {
     arrange: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="5" rx="1" /><rect x="15" y="4" width="5" height="5" rx="1" /><rect x="4" y="15" width="5" height="5" rx="1" /><rect x="15" y="15" width="5" height="5" rx="1" /><path d="m10.5 7 3 0M12 10.5v3" /></>),
     download: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 4v11" /><path d="M7.5 10.5 12 15l4.5-4.5" /><path d="M4 16v3h16v-3" /></>),
     save: ({ size = 16 }: IconProps) => svg(size, <><path d="M5 3h12l3 3v15H5z" /><path d="M8 3v6h8V3M8 20v-7h8v7" /></>),
+    /** A level in a hierarchy, written in the tile itself ("All", "L1"): a cycling tile has to show where it is. */
+    level: ({ size = 16, text }: IconProps & { text: string }) => svg(size, <>
+        <rect x="2.5" y="4.5" width="19" height="15" rx="3.5" />
+        <text x="12" y="15.2" textAnchor="middle" fontSize={text.length > 2 ? 8 : 10} fontWeight={700} fill="currentColor" stroke="none" fontFamily="inherit">{text}</text>
+    </>),
+    // Connector routing, one glyph per way of drawing a line between two boxes.
+    routeStraight: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.4 16.8 17.6 7.2" /></>),
+    routeOrthogonal: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H12V6h5.4" /></>),
+    routeRounded: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H9a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3h2.4" /></>),
+    routeCurved: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18C13 18 11 6 17.4 6" /></>),
+    routeArc: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6 16.6C6 9 11 6 17.6 5.4" /></>),
+    /** Save as you type: a disk with the arrow of something that repeats. */
+    autosave: ({ size = 16 }: IconProps) => svg(size, <><path d="M5 3h10l3 3v6" /><path d="M8 3v5h6V3" /><path d="M5 3v18h6" /><path d="M21 15a5 5 0 1 0-1.5 3.5" /><path d="M21 12.5V16h-3.5" /></>),
     clock: ({ size = 16 }: IconProps) => svg(size, <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></>),
 };
 

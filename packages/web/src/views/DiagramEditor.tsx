@@ -543,7 +543,7 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                 <button type="button" aria-label={`Auto-save ${autoSave ? 'on' : 'off'}`} aria-pressed={autoSave} onClick={() => setAutoSave(value => !value)} title={`Auto-save ${autoSave ? 'on' : 'off'}. Click to turn it ${autoSave ? 'off' : 'on'}.`}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', padding: 0, borderRadius: 5, border: `1px solid ${autoSave ? '#A7F3D0' : COLOR.border}`,
                         cursor: 'pointer', background: autoSave ? '#ECFDF5' : '#FFFFFF', color: autoSave ? '#047857' : COLOR.secondary }}>
-                    <Icon.clock />
+                    <Icon.autosave />
                 </button>
             )}
             {isTextEditable && (
