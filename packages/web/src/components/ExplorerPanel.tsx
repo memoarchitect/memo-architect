@@ -38,7 +38,7 @@ import { ExplorerSystemFilter, UNASSIGNED_SYSTEM } from './ExplorerSystemFilter'
 import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
 import { viewToPath } from '../view-routes';
-import { useScopedModel, useScopedValidation } from '../store/scoped-model';
+import { useWorkspaceModel, useScopedValidation } from '../store/scoped-model';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1176,6 +1176,24 @@ export function explorerRowCounts(
     return { byDomain, byGroup };
 }
 
+/** The ids of the elements the explorer lists under one domain (`architecture`, `assurance`, ...). */
+export function explorerDomainIds(
+    groupTree: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[], domain: string,
+): Set<string> {
+    const ids = new Set<string>();
+    const walk = (nodes: TreeNode[]) => {
+        for (const node of nodes) {
+            if (node.type === 'element') ids.add(node.id);
+            walk(node.children);
+        }
+    };
+    for (const { group, subGroups } of groupTree) {
+        if (group.id !== `domain:${domain}`) continue;
+        for (const sub of subGroups) for (const nodes of sub.kinds.values()) walk(nodes);
+    }
+    return ids;
+}
+
 export function computeExplorerGroupTree(
     elements: MemoElement[],
     searchTerm: string,
@@ -1757,7 +1775,8 @@ export function computeExplorerGroupTree(
 
 function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     const navigate = useNavigate();
-    const model = useScopedModel();
+    // The explorer reads the workspace's model, not the domain's: it is what chooses the domain, and lists them all.
+    const model = useWorkspaceModel();
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectElement = useModelStore(s => s.selectElement);
     const setActiveView = useModelStore(s => s.setActiveView);
