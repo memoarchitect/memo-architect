@@ -326,7 +326,7 @@ function CoverageWidget() {
                     layer="logical" label="Architecture"
                     count={stats.architectureCount}
                     color={LAYER_COLORS['logical'] || '#7B68EE'}
-                    onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }}
+                    onClick={() => { setExplorerTab('views'); navigate('/viewpoints'); }}
                 />
                 <CoverageTile
                     layer="verification" label="Verification"
@@ -431,7 +431,7 @@ function NextStepsWidget() {
                         all. The layer-coverage cards above always got
                         this right; these did not. */}
                     <QuickActionButton icon="🗂️" label="Browse Model" onClick={() => { setExplorerTab('model'); navigate('/catalog'); }} />
-                    <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }} />
+                    <QuickActionButton icon="📊" label="Open Viewpoints" onClick={() => { setExplorerTab('views'); navigate('/viewpoints'); }} />
                     <QuickActionButton icon="↔️" label="Traceability Matrix" onClick={() => setActiveView({ type: 'traceability' })} />
                     <QuickActionButton icon="📋" label="First Review Dashboard" onClick={() => setActiveView({ type: 'review-dashboard' })} />
                     <QuickActionButton icon="✅" label="Check Completeness" onClick={() => toggleGapBar()} />
@@ -493,7 +493,7 @@ function DiagramsWidget() {
                     {stats.diagramCount} model view{stats.diagramCount !== 1 ? 's' : ''} in this project
                 </div>
                 <button
-                    onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }}
+                    onClick={() => { setExplorerTab('views'); navigate('/viewpoints'); }}
                     style={{
                         fontSize: '12px', color: '#4A90D9', background: 'none', border: 'none',
                         cursor: 'pointer', fontWeight: 600,

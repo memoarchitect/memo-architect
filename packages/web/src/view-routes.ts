@@ -34,8 +34,8 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     'model-diff': '/diff',
     'compliance-wizard': '/compliance',
     statistics: '/statistics',
-    'dhf-dashboard': '/dhf',
-    'dhf-dashboard-legacy': '/dhf/legacy',
+    'dhf-dashboard': '/documents',
+    'dhf-dashboard-legacy': '/documents/legacy',
     ai: '/ai',
     ask: '/ask',
     'sysml-generator': '/generate',
@@ -46,7 +46,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     'ui-screens': '/ui-screens',
     rules: '/rules',
     dashboards: '/dashboards',
-    change: '/change',
+    change: '/projects',
     releases: '/releases',
     settings: '/settings',
 };
@@ -103,7 +103,7 @@ export function viewToPath(view: ActiveView): string | null {
         case 'feature':
             return `/features/${encodeURIComponent(view.featureId)}`;
         case 'dhf-document':
-            return `/dhf/${encodeURIComponent(view.docId)}`;
+            return `/documents/${encodeURIComponent(view.docId)}`;
         // The scope is only spelled out when it pins a shadowed copy; a bare
         // /dashboards/:id resolves user-then-shared like the list does.
         case 'custom-dashboard':
@@ -152,8 +152,8 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
 
     const segments = path.split('/').filter(Boolean);
 
-    // /dhf/:docId — but /dhf and /dhf/legacy are static and matched above.
-    if (segments[0] === 'dhf' && segments.length === 2) {
+    // /documents/:docId — but /documents and /documents/legacy are static and matched above.
+    if (segments[0] === 'documents' && segments.length === 2) {
         return { type: 'dhf-document', docId: decodeURIComponent(segments[1]) };
     }
 
@@ -201,7 +201,7 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
 export function isPermalinkPath(pathname: string): boolean {
     const segments = pathname.split('/').filter(Boolean);
     if (segments[0] === 'catalog' && segments.length === 3) return true;   // /catalog/:family/:shortId
-    if (segments[0] === 'diagrams' && segments.length === 3) return true;  // /diagrams/:type/:id
+    if (segments[0] === 'viewpoints' && segments.length === 3) return true;  // /viewpoints/:type/:id
     return false;
 }
 
@@ -223,7 +223,7 @@ export function isPermalinkPath(pathname: string): boolean {
 export function isRouteOwnedPath(pathname: string): boolean {
     const segments = pathname.split('/').filter(Boolean);
     if (segments[0] === 'catalog' && segments.length <= 2) return true;   // /catalog, /catalog/:family
-    if (segments[0] === 'diagrams' && segments.length === 1) return true; // /diagrams
+    if (segments[0] === 'viewpoints' && segments.length === 1) return true; // /viewpoints
     return false;
 }
 

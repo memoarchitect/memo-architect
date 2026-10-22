@@ -481,8 +481,8 @@ export function App() {
                         <Route path="/catalog/:family" element={<FamilyRoute />} />
                         <Route path="/catalog/:family/:shortId" element={<ElementPermalinkRoute />} />
                         {/* Diagram routes */}
-                        <Route path="/diagrams" element={<DiagramHomePage />} />
-                        <Route path="/diagrams/:diagramType/:diagramId" element={<DiagramPermalinkRoute />} />
+                        <Route path="/viewpoints" element={<DiagramHomePage />} />
+                        <Route path="/viewpoints/:diagramType/:diagramId" element={<DiagramPermalinkRoute />} />
                         {/* Every remaining view is addressable too, so any
                             destination can be bookmarked and reloaded into.
                             Paths come from view-routes.ts, the single table
@@ -493,7 +493,7 @@ export function App() {
                         <Route path="/settings/:section" element={<UnifiedCanvas />} />
                         <Route path="/ontology/:packageName" element={<UnifiedCanvas />} />
                         <Route path="/ontology/:packageName/:layerId" element={<UnifiedCanvas />} />
-                        <Route path="/dhf/:docId" element={<UnifiedCanvas />} />
+                        <Route path="/documents/:docId" element={<UnifiedCanvas />} />
                         <Route path="/dashboards/:dashboardId" element={<UnifiedCanvas />} />
                         {/* Default: existing state-driven canvas */}
                         <Route path="*" element={<UnifiedCanvas />} />
@@ -576,7 +576,7 @@ function ElementPermalinkRoute() {
     );
 }
 
-/** Renders /diagrams/:diagramType/:diagramId */
+/** Renders /viewpoints/:diagramType/:diagramId */
 function DiagramPermalinkRoute() {
     const { diagramId = '' } = useParams<{ diagramType: string; diagramId: string }>();
     const model = useModelStore(s => s.model);
@@ -706,9 +706,9 @@ function UrlNavigationSync() {
         const view = pathToView(location.pathname, location.search);
         // The Viewpoints index is route-owned, so it has no `ActiveView` to
         // restore. It must still restore the accompanying workbench state:
-        // otherwise a browser refresh can leave /diagrams with the persisted
+        // otherwise a browser refresh can leave /viewpoints with the persisted
         // explorer collapsed and no visible way to browse its views.
-        if (location.pathname === '/diagrams') {
+        if (location.pathname === '/viewpoints') {
             setActiveMode('diagram');
             useModelStore.getState().setExplorerTab('views');
             if (useModelStore.getState().sidebarCollapsed) {
@@ -759,7 +759,7 @@ function UrlNavigationSync() {
         if (suppressPush.current) { suppressPush.current = false; return; }
 
         // 'welcome' is the app's neutral state, used by route-driven pages such
-        // as /catalog and /diagrams that have no view of their own. Pushing '/'
+        // as /catalog and /viewpoints that have no view of their own. Pushing '/'
         // for it would drag those pages back to the root.
         if (activeView.type === 'welcome' && location.pathname !== '/') return;
 
@@ -775,7 +775,7 @@ function UrlNavigationSync() {
         // to whatever diagram URL it was about to push regardless of which
         // diagram that element was actually selected on, so switching from
         // sampleActionFlowView to sampleInterconnectionView produced
-        // /diagrams/ibd/INT-1?element=RCV-1 — an action id, on the IBD's URL.
+        // /viewpoints/ibd/INT-1?element=RCV-1 — an action id, on the IBD's URL.
         const diagramChanged = activeView.type === 'diagram'
             && previousDiagramId.current !== null
             && previousDiagramId.current !== activeView.diagramId;
@@ -791,7 +791,7 @@ function UrlNavigationSync() {
             const diagram = model.diagrams?.find(d => d.id === activeView.diagramId);
             // Diagram permalinks need the type slug, which only the model knows.
             if (diagram) {
-                url = `/diagrams/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.shortId ?? diagram.id)}`;
+                url = `/viewpoints/${slug(diagram.diagramType)}/${encodeURIComponent(diagram.shortId ?? diagram.id)}`;
             }
         } else {
             url = viewToPath(activeView);

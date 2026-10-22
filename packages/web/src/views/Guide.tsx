@@ -58,7 +58,7 @@ export function Guide() {
         setExplorerTab('views');
         setActiveView({ type: 'welcome' });
         // The viewpoints index has its own address; opening a step lands on it.
-        navigate('/diagrams');
+        navigate('/viewpoints');
     };
 
     const chip = (state: GuideStepStatus['state']) => (

@@ -102,14 +102,14 @@ describe('viewToPath / pathToView round trip', () => {
 
     it('round-trips a DHF document', () => {
         const view: ActiveView = { type: 'dhf-document', docId: 'doc-42' };
-        expect(viewToPath(view)).toBe('/dhf/doc-42');
-        expect(pathToView('/dhf/doc-42')).toEqual(view);
+        expect(viewToPath(view)).toBe('/documents/doc-42');
+        expect(pathToView('/documents/doc-42')).toEqual(view);
     });
 
-    it('keeps /dhf and /dhf/legacy distinct from a document', () => {
-        expect(pathToView('/dhf')).toEqual({ type: 'dhf-dashboard' });
-        expect(pathToView('/dhf/legacy')).toEqual({ type: 'dhf-dashboard-legacy' });
-        expect(pathToView('/dhf/legacy')).not.toEqual({ type: 'dhf-document', docId: 'legacy' });
+    it('keeps /documents and /documents/legacy distinct from a document', () => {
+        expect(pathToView('/documents')).toEqual({ type: 'dhf-dashboard' });
+        expect(pathToView('/documents/legacy')).toEqual({ type: 'dhf-dashboard-legacy' });
+        expect(pathToView('/documents/legacy')).not.toEqual({ type: 'dhf-document', docId: 'legacy' });
     });
 
     it('round-trips the tabular view with and without parameters', () => {
@@ -168,11 +168,11 @@ describe('isRouteOwnedPath', () => {
     it('claims the index pages that have no view of their own', () => {
         expect(pathToView('/catalog')).toBeNull();
         expect(pathToView('/catalog/PHY')).toBeNull();
-        expect(pathToView('/diagrams')).toBeNull();
+        expect(pathToView('/viewpoints')).toBeNull();
 
         expect(isRouteOwnedPath('/catalog')).toBe(true);
         expect(isRouteOwnedPath('/catalog/PHY')).toBe(true);
-        expect(isRouteOwnedPath('/diagrams')).toBe(true);
+        expect(isRouteOwnedPath('/viewpoints')).toBe(true);
     });
 
     // A permalink DOES get a view once its identifier resolves, so the sync
@@ -180,9 +180,9 @@ describe('isRouteOwnedPath', () => {
     // overlap, or a resolved permalink would never write its address back.
     it('does not claim permalinks, which resolve to a view instead', () => {
         expect(isRouteOwnedPath('/catalog/PHY/PORT-ENC-01')).toBe(false);
-        expect(isRouteOwnedPath('/diagrams/ibd/INT-1')).toBe(false);
+        expect(isRouteOwnedPath('/viewpoints/ibd/INT-1')).toBe(false);
         expect(isPermalinkPath('/catalog/PHY/PORT-ENC-01')).toBe(true);
-        expect(isPermalinkPath('/diagrams/ibd/INT-1')).toBe(true);
+        expect(isPermalinkPath('/viewpoints/ibd/INT-1')).toBe(true);
     });
 
     it('leaves ordinary view paths to the store', () => {
