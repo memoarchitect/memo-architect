@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { lazy, Suspense, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { CompilerSettings } from '../components/CompilerSettings';
 import { RoleSelector } from '../components/RoleSelector';
@@ -41,6 +42,11 @@ function Row({ title, hint, children }: { title: string; hint?: string; children
 }
 
 function ModelSection() {
+    const navigate = useNavigate();
+    const setActiveMode = useModelStore(s => s.setActiveMode);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
+    const button: React.CSSProperties = { padding: '6px 14px', border: `1px solid ${COLOR.border}`, borderRadius: 6, background: '#fff', color: COLOR.primary, fontSize: FONT.md, cursor: 'pointer' };
     return (
         <>
             <Row title="Version" hint="Show the working model, a release, or an unreleased ref (read only).">
@@ -51,6 +57,12 @@ function ModelSection() {
             </Row>
             <Row title="Role" hint="Show the viewpoints written for one stakeholder. Saved for you only.">
                 <RoleSelector tone="light" />
+            </Row>
+            <Row title="Rules" hint="The rules the model is checked against, and how each is graded.">
+                <button style={button} onClick={() => { setActiveMode('rules'); setActiveView({ type: 'rules' }); navigate('/rules'); }}>Open rules</button>
+            </Row>
+            <Row title="Methodology" hint="The methodology the project follows: its workflow, roles and controls.">
+                <button style={button} onClick={() => { setExplorerDomain('methodology'); setActiveMode('catalog'); setActiveView({ type: 'welcome' }); navigate('/catalog'); }}>Open methodology</button>
             </Row>
         </>
     );
