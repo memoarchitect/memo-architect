@@ -32,9 +32,9 @@ export function Breadcrumb() {
             case 'scenario-editor': return { label: 'Use Cases', icon: '▶', onClick: () => { setActiveMode('scenario'); setActiveView({ type: 'scenario-editor' }); navigate('/use-cases'); } };
             case 'dhf-dashboard':
             case 'dhf-dashboard-legacy':
-            case 'dhf-document': return { label: 'Documents', icon: '⊞', onClick: () => { setActiveMode('dhf'); setActiveView({ type: 'dhf-dashboard' }); navigate('/dhf'); } };
+            case 'dhf-document': return { label: 'Documents', icon: '⊞', onClick: () => { setActiveMode('dhf'); setActiveView({ type: 'dhf-dashboard' }); navigate('/documents'); } };
             case 'welcome':
-                if (activeMode === 'diagram') return { label: 'Viewpoints', icon: '⊟', onClick: () => navigate('/diagrams') };
+                if (activeMode === 'diagram') return { label: 'Viewpoints', icon: '⊟', onClick: () => navigate('/viewpoints') };
                 if (activeMode === 'catalog') return { label: 'Model Explorer', icon: '☰', onClick: () => navigate('/catalog') };
                 return undefined;
             default: return undefined;

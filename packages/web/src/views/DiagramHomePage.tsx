@@ -1,6 +1,6 @@
 // ─── Diagram Home Page ────────────────────────────────────────────────────────
 //
-// Renders at /diagrams — the index of every model view, grouped by
+// Renders at /viewpoints — the index of every model view, grouped by
 // viewpoint. Clicking Viewpoints used to leave the main pane on the generic app
 // splash, with the diagram list only reachable in the side explorer; this gives
 // the mode a real landing page, and each card is a permalink.

@@ -2502,7 +2502,7 @@ function NewDiagramModal({ viewpointId, onClose }: { viewpointId: string; onClos
  */
 const SYNTHETIC_VIEWPOINT_IDS = new Set(['__unassigned', '__model']);
 
-/** Expansion key for the Uncategorized section; shared with the /diagrams page. */
+/** Expansion key for the Uncategorized section; shared with the /viewpoints page. */
 const FEATURE_VP_PREFIX = 'fvp:';
 /** Pixels a composed element sits to the right of the element that composes it. */
 const ELEMENT_INDENT = 16;
@@ -2988,7 +2988,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
             <button
                 type="button"
                 data-testid="viewpoint-dashboard-row"
-                // Navigate, as the view rows do: /diagrams is owned by its own
+                // Navigate, as the view rows do: /viewpoints is owned by its own
                 // route, so a store change alone leaves that page on screen.
                 onClick={() => {
                     selectViewpoint(vp.id);

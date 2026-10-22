@@ -6,9 +6,9 @@
 //  /catalog                        → All element families summary
 //  /catalog/:family                → All elements in a kind-family (e.g. /catalog/SW)
 //  /catalog/:family/:shortId       → Element detail (e.g. /catalog/SW/SW-REQ-4291)
-//  /diagrams                       → All diagrams
-//  /diagrams/:diagramType          → All diagrams of a type (e.g. /diagrams/BDD)
-//  /diagrams/:diagramType/:id      → Specific diagram
+//  /viewpoints                     → The viewpoints and their views (the menu's Viewpoints)
+//  /viewpoints/:diagramType        → All views of a type (e.g. /viewpoints/bdd)
+//  /viewpoints/:diagramType/:id    → Specific view
 //
 // The "family" is the compiled model's `idFamily` for the element; nothing here derives it.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,11 +26,11 @@ export function familyUrl(family: string): string {
 /** Build the URL for a diagram detail page. */
 export function diagramUrl(diagramType: string, diagramId: string): string {
     const typeSlug = diagramType.toLowerCase().replace(/\s+/g, '-');
-    return `/diagrams/${typeSlug}/${encodeURIComponent(diagramId)}`;
+    return `/viewpoints/${typeSlug}/${encodeURIComponent(diagramId)}`;
 }
 
 /** Build the URL for a diagram-type collection page. */
 export function diagramTypeUrl(diagramType: string): string {
     const typeSlug = diagramType.toLowerCase().replace(/\s+/g, '-');
-    return `/diagrams/${typeSlug}`;
+    return `/viewpoints/${typeSlug}`;
 }

@@ -55,7 +55,7 @@ Each viewpoint has its own page: its stakeholders and concerns, its views drawn 
 ## Quick links
 
 - [Browse the model](/catalog)
-- [All diagrams](/diagrams)
+- [All views](/viewpoints)
 - [Traceability matrix](/traceability)
 - [Design review](/review)
 - [Statistics](/statistics)

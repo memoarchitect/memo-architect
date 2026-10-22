@@ -112,7 +112,7 @@ export function ModeSwitcher() {
                 // Show the viewpoint explorer so the user can pick a model view.
                 setExplorerTab('views');
                 setActiveView({ type: 'welcome' });
-                navigate('/diagrams');
+                navigate('/viewpoints');
                 break;
             case 'ui-screens':
                 setActiveView({ type: 'ui-screens' });
