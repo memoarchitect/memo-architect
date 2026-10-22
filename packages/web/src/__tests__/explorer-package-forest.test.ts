@@ -75,3 +75,27 @@ describe('with package folders off', () => {
         ]);
     });
 });
+
+describe('the folders an import came from', () => {
+    const imported = (name: string, folder?: string): N => ({ ...el(name, 'ims_requirements_software'), folder } as N);
+    const forest = (roots: N[], packageFolders?: boolean) => buildPackageForest(roots, {
+        packageFolders, packageOf: n => n.pkg, kindOf: () => 'Requirement', kindRank: () => 0, kindLabel: (k, c) => `${k} ${c}`,
+        folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+        folderPathOf: n => (n as N & { folder?: string }).folder?.split('|').map(part => part.trim()),
+    });
+
+    it('nests an item inside the package by the folder path it states, and leaves the ones that state none', () => {
+        expect(shape(forest([
+            imported('a', 'MS SW | CIU | Notifications'), imported('b', 'MS SW | CIU | Notifications'), imported('c', 'MS SW | Capture'), imported('d'),
+        ]))).toEqual([{ 'f:ims_requirements_software': ['d', {
+            'sf:ims_requirements_software|MS SW': [
+                { 'sf:ims_requirements_software|MS SW|Capture': ['c'] },
+                { 'sf:ims_requirements_software|MS SW|CIU': [{ 'sf:ims_requirements_software|MS SW|CIU|Notifications': ['a', 'b'] }] },
+            ],
+        }] }]);
+    });
+
+    it('is the package folders\' business: without them the roots are listed flat', () => {
+        expect(shape(forest([imported('a', 'X | Y'), imported('b')], false))).toEqual(['a', 'b']);
+    });
+});

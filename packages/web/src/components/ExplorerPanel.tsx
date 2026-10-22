@@ -751,7 +751,7 @@ function RecursiveTree({
                                 onContextMenu={e => onContextMenu(e, 'folder', node.id)}
                             >
                                 <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
-                                <FolderIcon open={isExpanded} color={node.isUsagesFolder ? USAGE_TINT : baseColor} pkg={node.id.startsWith('f:')} />
+                                <FolderIcon open={isExpanded} color={node.isUsagesFolder ? USAGE_TINT : baseColor} pkg={node.id.startsWith('f:') || node.id.startsWith('sf:')} />
                                 <span
                                     className="font-medium flex-1 truncate"
                                     style={{
@@ -1597,6 +1597,11 @@ export function computeExplorerGroupTree(
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
                 kindLabel: (kind, count) => kindFolderLabel(kind, count),
                 folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+                // An imported item says the folder it came from; that hierarchy shows as folders inside its package.
+                folderPathOf: node => {
+                    const raw = node.element?.attributes?.[SOURCE_FOLDER_ATTRIBUTE];
+                    return raw ? raw.split('|').map((part: string) => part.trim()).filter(Boolean) : undefined;
+                },
                 // The attribute the person chose to split folders by.
                 attributeOf: modes?.groupBy
                     ? node => {
@@ -2632,6 +2637,8 @@ const SYSTEM_FILTER_DOMAINS: ReadonlySet<string> = new Set(['architecture', 'ass
 
 /** The attribute that says what a requirement is about (software, hardware, ...). */
 const REQUIREMENT_TYPE_ATTRIBUTE = 'requirementType';
+/** Where an imported element was in its source: a path of folder names joined by `|`, outermost first. */
+const SOURCE_FOLDER_ATTRIBUTE = 'sourceFolder';
 
 export function buildViewPackageTree(diagrams: PackagedDiagram[], packages: readonly string[] = []): ViewPackageNode[] {
     const root: ViewPackageNode[] = [];
