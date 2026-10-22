@@ -15,7 +15,7 @@ import {
     type DhfDoc,
     type PackageMutationResult,
 } from '../store/model-store';
-import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, resolveActionFlowDiagramType } from '../constants';
+import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, viewNaming, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
 import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
@@ -2405,14 +2405,14 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 // ─── View Explorer ───────────────────────────────────────────────────────────
 
 function DiagramTypeBadge({ diagram }: { diagram: DiagramDTO }) {
-    const viewMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
-    if (viewMeta) {
+    const viewMeta = viewNaming(diagram);
+    if (viewMeta && !['afd', 'ofd', 'ffd'].includes(diagram.diagramType.toLowerCase())) {
         return (
             <span className="px-1.5 py-0.5 rounded font-semibold"
                 style={{ background: viewMeta.color + '20', color: viewMeta.color, fontSize: FONT.badge }}
                 title={viewMeta.fullName}
             >
-                {viewMeta.label}
+                {viewMeta.code}
             </span>
         );
     }

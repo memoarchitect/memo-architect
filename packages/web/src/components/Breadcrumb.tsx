@@ -1,6 +1,6 @@
 import { useModelStore, getDiagram } from '../store/model-store';
 import type { ViewKind } from '@memoarchitect/tools/browser';
-import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
+import { viewNaming } from '../constants';
 import { useNavigate } from 'react-router-dom';
 
 export function Breadcrumb() {
@@ -51,10 +51,8 @@ export function Breadcrumb() {
                     : model?.viewpoints?.find(v => v.id === diagram.viewpointId)?.label || diagram.viewpointId;
                 const vp = model?.viewpoints?.find(v => v.id === diagram.viewpointId);
                 crumbs.push({ label: vp ? `${vp.id} · ${vpLabel}` : vpLabel });
-                // Spec view kind label wins over the legacy diagramType code
-                const kindMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
-                const typeMeta = DIAGRAM_TYPE_META[diagram.diagramType];
-                const code = kindMeta?.label ?? typeMeta?.code ?? diagram.diagramType;
+                // The diagram type the author drew, else the view kind
+                const code = viewNaming(diagram)?.code ?? diagram.diagramType;
                 crumbs.push({ label: `${diagram.shortId ?? diagram.id} · ${code}: ${diagram.name}` });
             }
             break;
