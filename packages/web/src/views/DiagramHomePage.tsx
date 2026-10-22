@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import type { DiagramDTO, ViewKind } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
-import { DIAGRAM_TYPE_META, VIEW_KIND_META } from '../constants';
+import { viewNaming } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { diagramUrl } from '../router';
 import { UNCATEGORIZED_ID, buildViewPackageTree, buildViewpointTree, sortViewpointsByOntologyLayer, stripSharedLabelPrefix } from '../components/ExplorerPanel';
@@ -216,10 +216,8 @@ function CardsByPackage({ diagrams, onOpen }: { diagrams: DiagramDTO[]; onOpen: 
 }
 
 function DiagramCard({ diagram, onClick }: { diagram: DiagramDTO; onClick: () => void }) {
-    const viewMeta = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
-    const diagramMeta = DIAGRAM_TYPE_META[diagram.diagramType];
-    const meta = viewMeta ?? diagramMeta;
-    const badgeCode = viewMeta?.label ?? diagramMeta?.code;
+    const meta = viewNaming(diagram);
+    const badgeCode = meta?.code;
     const color = meta?.color ?? '#6B7280';
     const elementCount = diagram.elementIds?.length ?? 0;
 

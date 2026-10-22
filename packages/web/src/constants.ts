@@ -135,6 +135,19 @@ export const DIAGRAM_TYPE_META: Record<string, DiagramTypeMeta> = {
     'threat-model': { code: 'THREAT', label: 'THREAT', fullName: 'Threat Model Diagram', color: '#C0392B', viewKind: 'general' },
 };
 
+/**
+ * How a view is named on a badge and a card: its own diagram type when it states one that is a kind of its view
+ * kind (a context diagram is a general view), else the view kind. The SysML view kind is the broad family
+ * (and the id prefix); the diagram type is what the author drew, so it is the more useful name.
+ */
+export function viewNaming(diagram: { viewKind?: string; diagramType: string }): { code: string; fullName: string; color: string } | undefined {
+    const kind = diagram.viewKind ? VIEW_KIND_META[diagram.viewKind as ViewKind] : undefined;
+    const type = DIAGRAM_TYPE_META[diagram.diagramType];
+    if (type && (!kind || type.viewKind === diagram.viewKind)) return { code: type.code, fullName: type.fullName, color: type.color };
+    if (kind) return { code: kind.label, fullName: kind.fullName, color: kind.color };
+    return undefined;
+}
+
 export type ActionFlowDiagramType = 'afd' | 'ofd' | 'ffd';
 
 /** One canonical resolver used by both the explorer badge and canvas header. */
