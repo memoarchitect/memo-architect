@@ -1353,6 +1353,9 @@ export function saveViewDisplay(diagramId: string, patch: {
     flowAnimation?: boolean;
     showPortText?: boolean;
     showConnectionText?: boolean;
+    /** A view hint, written whole: `edge=orthogonal`, say, beside whatever else the hint says. */
+    styleHint?: string;
+    layoutHint?: string;
 }): Promise<unknown> {
     const literal: Record<string, string> = { all: 'everything', none: 'hidden' };
     const display: Record<string, string> = {};
@@ -1360,6 +1363,9 @@ export function saveViewDisplay(diagramId: string, patch: {
     if (patch.connectionDisplay) display.connectionDisplay = `ConnectionDisplayKind::${patch.connectionDisplay === 'all' ? 'everything' : patch.connectionDisplay === 'none' ? 'hidden' : patch.connectionDisplay}`;
     for (const key of ['flowAnimation', 'showPortText', 'showConnectionText'] as const) {
         if (patch[key] !== undefined) display[key] = String(patch[key]);
+    }
+    for (const key of ['styleHint', 'layoutHint'] as const) {
+        if (patch[key] !== undefined) display[key] = `"${patch[key]!.replace(/[\\"]/g, '\\$&')}"`;
     }
     // Only the statements that change are written; the server edits the view's own declaration.
     if (ws && ws.readyState === WebSocket.OPEN) {

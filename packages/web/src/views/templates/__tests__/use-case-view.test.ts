@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeUseCaseViewLayout, isUseCase, isUseCaseActor, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions } from '../use-case-view';
+import { computeUseCaseViewLayout, edgeHintValue, isUseCase, isUseCaseActor, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, withViewHint } from '../use-case-view';
 
 const el = (id: string, kind: string, name = id) => ({ id, kind, name, construct: kind === 'UseCase' ? ('use case' as const) : ('part' as const), layer: 'operational', file: 'test.sysml', attributes: {} });
 const model = (elements: Record<string, any>, relationships: any[] = []) => ({ elements, relationships, errors: [] }) as any;
@@ -136,5 +136,24 @@ describe('use-case view template', () => {
             { id: 'i1', type: 'includes', sourceId: 'root', targetId: 'child' },
             { id: 'i2', type: 'includes', sourceId: 'child', targetId: 'grandchild' },
         ]))).toBe(2);
+    });
+});
+
+describe('a view hint with one setting changed', () => {
+    it('sets edge= beside whatever else the hint says, and reads back as the same style', () => {
+        expect(withViewHint('', 'edge', 'orthogonal')).toBe('edge=orthogonal');
+        expect(withViewHint('density=tight', 'edge', 'curved')).toBe('density=tight;edge=curved');
+        expect(withViewHint('edge=straight;density=tight', 'edge', 'arc')).toBe('edge=arc;density=tight');
+        expect(withViewHint('routing=rounded', 'edge', 'curved')).toBe('edge=curved');
+        for (const style of ['straight', 'elbow', 'rounded', 'curved', 'arc'] as const) {
+            expect(useCaseViewOptions({ styleHint: withViewHint('density=tight', 'edge', edgeHintValue(style)) }).edgeStyle).toBe(style);
+        }
+    });
+
+    it('sets level= in the use case spelling, keeping a spelling the hint already uses', () => {
+        expect(withViewHint('', 'level', '2')).toBe('usecase:level=2');
+        expect(withViewHint('usecase:level=1', 'level', 'all')).toBe('usecase:level=all');
+        expect(withViewHint('level=1', 'level', '3')).toBe('level=3');
+        expect(useCaseViewOptions({ layoutHint: withViewHint('context:compass', 'level', '2') }).level).toBe(2);
     });
 });

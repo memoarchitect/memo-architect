@@ -30,7 +30,7 @@ import type { Edge as RFEdge } from '@xyflow/react';
 import type { MemoModelDTO, DiagramLayout } from '@memoarchitect/tools/browser';
 import type { DiagramExportFormat } from '../export-diagram';
 import type { ActionFlowDisplayLevel, ActionFlowLaneGrouping, ActionFlowNesting } from '../../views/templates/actionflow-view';
-import type { UseCaseEdgeStyle } from '../../views/templates/use-case-view';
+import { edgeHintValue, withViewHint, type UseCaseEdgeStyle } from '../../views/templates/use-case-view';
 import type { PortDisplay } from '../../views/templates/interconnection-view';
 import type { GeneralViewMode } from '../../views/templates/general-view';
 import type { DiagramToolbarOperation } from '../../views/diagram-toolbar-capabilities';
@@ -154,6 +154,9 @@ export interface DiagramToolbarContext {
     setUseCaseDisplayLevel: Dispatch<SetStateAction<number | 'all'>>;
     useCaseDepth: number;
     useCaseEdgeStyle: UseCaseEdgeStyle;
+    /** The view's own `styleHint` and `layoutHint`, which a change of routing or level is written beside. */
+    viewStyleHint?: string;
+    viewLayoutHint?: string;
     setUseCaseEdgeStyle: Dispatch<SetStateAction<UseCaseEdgeStyle>>;
     autoArrangeUseCase: () => void;
     useCaseActors: Array<{ id: string; name: string }>;
@@ -325,7 +328,13 @@ export class BaseDiagramToolbar {
             <IconToggle
                 icon={icons[current]}
                 active={current !== 'straight'}
-                onClick={() => ctx.setUseCaseEdgeStyle(next)}
+                onClick={() => {
+                    ctx.setUseCaseEdgeStyle(next);
+                    // The choice belongs to the view, so it is written into the view's own hint and is there after a reload.
+                    if (ctx.selectedDiagramId) {
+                        void saveViewDisplay(ctx.selectedDiagramId, { styleHint: withViewHint(ctx.viewStyleHint, 'edge', edgeHintValue(next)) }).catch(() => undefined);
+                    }
+                }}
                 title={`Connector routing: ${names[current]}. Click for ${names[next]}.`}
             />
         );
@@ -749,7 +758,12 @@ export class UseCaseToolbar extends BaseDiagramToolbar {
                         <IconToggle
                             icon={<Icon.level text={current === 'all' ? 'All' : `L${current}`} />}
                             active={current !== 'all'}
-                            onClick={() => ctx.setUseCaseDisplayLevel(next)}
+                            onClick={() => {
+                                ctx.setUseCaseDisplayLevel(next);
+                                if (ctx.selectedDiagramId) {
+                                    void saveViewDisplay(ctx.selectedDiagramId, { layoutHint: withViewHint(ctx.viewLayoutHint, 'level', String(next)) }).catch(() => undefined);
+                                }
+                            }}
                             title={`Use case hierarchy: ${name(current)}. Click for ${name(next)}.`}
                         />
                     );

@@ -57,6 +57,27 @@ export function useCaseActorOptions(model: MemoModelDTO): UseCaseActorOption[] {
         .map(actor => ({ id: actor.id, name: actor.name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * A view hint with one setting changed: `edge=` (how connectors are drawn) or `level=` (how deep the hierarchy
+ * shows) set to a new value, the rest of the hint left as the author wrote it. Hints are `;`-separated, and a
+ * setting the hint does not yet have is added at the end.
+ */
+export function withViewHint(hint: string | undefined, name: 'edge' | 'level', value: string): string {
+    const parts = (hint ?? '').split(';').map(part => part.trim()).filter(Boolean);
+    const own = new RegExp(`^(?:usecase:)?${name === 'edge' ? '(?:edge|routing)' : 'level'}\\s*=`, 'i');
+    const prefix = name === 'level' ? 'usecase:' : '';
+    const index = parts.findIndex(part => own.test(part));
+    // A setting the hint already has keeps its spelling; a new one is written the way a use case view reads it.
+    const written = `${index >= 0 ? (/^usecase:/i.test(parts[index]) ? 'usecase:' : '') : prefix}${name}=${value}`;
+    if (index >= 0) parts[index] = written; else parts.push(written);
+    return parts.join(';');
+}
+
+/** The spelling a hint uses for a way of drawing connectors: the one people write, orthogonal, for the elbow. */
+export function edgeHintValue(style: UseCaseEdgeStyle): string {
+    return style === 'elbow' ? 'orthogonal' : style;
+}
+
 /** Read UCD presentation configuration from model-owned view hints, never UI state. */
 export function useCaseViewOptions(properties?: Record<string, string>): Pick<UseCaseViewOptions, 'level' | 'edgeStyle'> {
     const hint = `${properties?.layoutHint ?? ''};${properties?.styleHint ?? ''}`;

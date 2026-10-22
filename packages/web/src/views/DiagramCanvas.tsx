@@ -64,6 +64,7 @@ import {
 } from './templates/interconnection-view';
 import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
+import { bendConnector, type Wall } from './templates/connector-bend';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
@@ -356,6 +357,14 @@ function reroutePositionedEdges(
                 points[points.length - 1] = request.target;
                 return withRoute(edge, points);
             }
+        }
+        // A context spoke is a hub-and-spoke line, not an IBD connector: the planner above would route it around the
+        // hub's walls and hook it back on itself. It keeps its own shape, bent (or not) by the walls it uses, with
+        // its ends following the boxes.
+        if (edge.type === 'useCaseEdge' && edge.data?.sourceSide && edge.data?.targetSide) {
+            return withRoute(edge, bendConnector(
+                request.source, request.target, request.sourceSide as Wall | undefined, request.targetSide as Wall | undefined,
+                edge.data.routing as UseCaseEdgeStyle | undefined));
         }
         const points = routes.get(edge.id);
         return points ? withRoute(edge, points) : edge;
@@ -1479,9 +1488,8 @@ function DiagramCanvasInner() {
         setGeneralMode(resolveGeneralMode(
             selectedDiagram?.properties, (generalTree?.childrenMap.size ?? 0) > 0));
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
-        // A use case diagram starts as its view hints. A context diagram starts straight: a star routed along the
-        // axes draws its spokes over one another (see the context template), so bending them is the person's choice.
-        setUseCaseEdgeStyle(diagramProfile === 'context' ? 'straight' : useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
+        // The view's own hint sets how connectors start, and a choice made in the toolbar is written back to it.
+        setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
         setActionFlowLaneGrouping('allocation');
@@ -3518,6 +3526,7 @@ function DiagramCanvasInner() {
         setCollapsedStateNodes, compositeStateIds, statePath, setFocusedStateId,
         useCaseDisplayLevel, setUseCaseDisplayLevel, useCaseDepth,
         useCaseEdgeStyle, setUseCaseEdgeStyle, autoArrangeUseCase,
+        viewStyleHint: selectedDiagram?.properties?.styleHint, viewLayoutHint: selectedDiagram?.properties?.layoutHint,
         useCaseActors, hiddenUseCaseActorIds, setHiddenUseCaseActorIds,
         allowedGeneralModes, generalMode, setGeneralMode,
         clearPositionCache: () => positionCacheRef.current.clear(),
