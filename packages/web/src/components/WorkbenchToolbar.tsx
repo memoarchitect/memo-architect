@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { PinnedBanner } from './PinnedBanner';
 
@@ -7,6 +7,9 @@ export function WorkbenchToolbar() {
     const setActiveView = useModelStore(s => s.setActiveView);
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const navigate = useNavigate();
+    const { pathname } = useLocation();
+    const explorerDomain = useModelStore(s => s.explorerDomain);
+    const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
     const metadata = model?.metadata;
 
     function goHome() {
@@ -74,6 +77,14 @@ export function WorkbenchToolbar() {
                 <img src="/logo.png" alt="MEMO" style={{ height: 40, opacity: 0.9 }} />
             </a>
         </div>
+        {/* Every page lists the model as the explorer's domain shows it, so say so, and how to undo it. The catalog has the domain chips. */}
+        {explorerDomain && !pathname.startsWith('/catalog') && (
+            <div role="status" className="flex items-center gap-2 px-4 py-1" style={{ background: '#E6F7F2', borderBottom: '1px solid #BFE9DD', fontSize: 12, color: '#0B3B2E' }}>
+                <span>Showing the {explorerDomain} domain only.</span>
+                <button type="button" onClick={() => setExplorerDomain(null)}
+                    style={{ background: 'none', border: 0, cursor: 'pointer', fontWeight: 600, color: '#0E7490', fontSize: 12 }}>Show all</button>
+            </div>
+        )}
         <PinnedBanner />
         </>
     );
