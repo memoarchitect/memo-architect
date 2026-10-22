@@ -21,6 +21,7 @@ export function ModeSwitcher() {
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const setSelectedElement = useModelStore(s => s.inspectElement);
     const sidebarCollapsed = useModelStore(s => s.sidebarCollapsed);
     const toggleSidebar = useModelStore(s => s.toggleSidebar);
     const navigate = useNavigate();
@@ -71,9 +72,14 @@ export function ModeSwitcher() {
         if ('mode' in entry.target) {
             const domain = entry.target.domain ?? null;
             setExplorerDomain(domain);
+            // Opening a section or domain leaves the element that was selected before it.
+            setSelectedElement(null);
             // Moving between domains while the explorer is open only changes what it shows.
             if (domain && activeNavMode === 'catalog') {
                 if (sidebarCollapsed) toggleSidebar();
+                // The element that was open belongs to the domain chosen before; show the one chosen now.
+                setActiveView({ type: 'welcome' });
+                navigate('/catalog');
             } else handleNavClick(entry.target.mode);
         } else show(entry.target.view);
     }
