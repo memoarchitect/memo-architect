@@ -33,7 +33,8 @@ export function groupUseCases(
     }
     const emitted = new Set<string>();
     const walk = (id: string, depth: number, into: UseCaseEntry[], path: Set<string>) => {
-        if (path.has(id)) return;
+        // A case is listed once: where it is first reached, under the case that includes it.
+        if (path.has(id) || emitted.has(id)) return;
         emitted.add(id);
         into.push({ id, depth });
         for (const child of [...(children.get(id) ?? [])].sort((a, b) => nameOf(a).localeCompare(nameOf(b)))) {
@@ -73,9 +74,10 @@ export function groupUseCases(
     for (const [root, roots] of [...bySystem].sort(([a], [b]) => (scopeOf.get(a)!.name).localeCompare(scopeOf.get(b)!.name))) {
         groups.push({ id: `system:${root}`, label: scopeOf.get(root)!.name, entries: rooted(roots) });
     }
-    // Anything still unlisted (included only by a case outside the list, or nothing holds it) is not hidden.
-    const leftover = useCaseIds.filter(id => !emitted.has(id) && !orphans.includes(id));
-    const unassigned = rooted([...orphans, ...leftover]);
+    // What nothing holds comes first, with the cases it includes nested under it. Anything still unlisted
+    // after that (included only by a case outside the list) is not hidden; it is listed last, once.
+    const unassigned = rooted(orphans);
+    unassigned.push(...rooted(useCaseIds.filter(id => !emitted.has(id))));
     if (unassigned.length > 0) groups.push({ id: 'unassigned', label: 'Unassigned', entries: unassigned });
     return groups;
 }
