@@ -70,6 +70,27 @@ describe('system context view template', () => {
         expect(computeContextViewLayout(model({ system, a }, relationships), 'IMS Context').edges[0].data?.points).toHaveLength(2);
     });
 
+    it('never doubles back when it bends a spoke: each segment turns a right angle or goes straight on', () => {
+        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
+        const people = ['p1', 'p2', 'p3', 'p4'].map(id => element(id, 'AfferaEpPhysicianActor', id));
+        const equipment = ['e1', 'e2', 'e3', 'e4', 'e5'].map(id => element(id, 'OperationalEntity', id));
+        const elements = Object.fromEntries([system, ...people, ...equipment].map(e => [e.id, e]));
+        const relationships = [...people.map((p, i) => ({ id: `a${i}`, type: 'connect', sourceId: p.id, targetId: 'ims' })),
+            ...equipment.map((e, i) => ({ id: `b${i}`, type: 'flow', sourceId: 'ims', targetId: e.id }))];
+        for (const edgeStyle of ['elbow', 'rounded'] as const) {
+            const layout = computeContextViewLayout(model(elements, relationships), 'IMS Context', { edgeStyle });
+            for (const edge of layout.edges) {
+                const points = edge.data?.points as { x: number; y: number }[];
+                for (let i = 2; i < points.length; i++) {
+                    const before = { x: points[i - 1].x - points[i - 2].x, y: points[i - 1].y - points[i - 2].y };
+                    const after = { x: points[i].x - points[i - 1].x, y: points[i].y - points[i - 1].y };
+                    // A reversal would be a segment running back along the one before it.
+                    expect(before.x * after.x + before.y * after.y, `${edge.id} reverses`).toBeGreaterThanOrEqual(0);
+                }
+            }
+        }
+    });
+
     it('draws one black-box system inside a system boundary and participants outside it', () => {
         const system = element('pump', 'OperationalEntity', 'Infusion Pump', { contextRole: 'systemOfInterest' });
         const clinician = element('clinician', 'User', 'Clinician');
