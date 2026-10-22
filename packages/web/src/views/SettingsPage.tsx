@@ -13,6 +13,7 @@ import { RoleSelector } from '../components/RoleSelector';
 import { VersionSelector } from '../components/VersionSelector';
 import { WorkspaceSelector } from '../components/WorkspaceSelector';
 import { RulesEditor } from '../components/RulesEditor';
+import { sendOntologySelection } from '../store/ws-client';
 import { EXPLORER_MODES, groupableAttributes } from '../lib/explorer-modes';
 import { experimentalGrantedByCli, FEATURE_FLAGS, isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
@@ -95,28 +96,58 @@ function RulesSection() {
     );
 }
 
-/** What the project's methodology chain selects, read from the resolved model. */
+/** The packages every project builds on; they cannot be turned off. */
+const FOUNDATION_PACKAGES = ['@memoarchitect/ontology'];
+
+const TYPE_LABEL: Record<string, string> = { ontology: 'Ontology', profile: 'Profile', extension: 'Extension', methodology: 'Methodology' };
+
+/**
+ * Which MEMO extensions and layers the model uses. Each installed package is a switch; a package's
+ * layers are listed under it. Turning one off is saved the way the Ontology tab saves it, after
+ * the same check for elements whose kinds the package defines.
+ */
 function MethodologySection() {
+    const available = useModelStore(s => s.availableOntologies);
+    const selected = useModelStore(s => s.selectedOntologies);
+    const toggle = useModelStore(s => s.toggleOntologySelection);
+    const check = useModelStore(s => s.saveOntologySelection);
     const methodology = useModelStore(s => s.methodology);
     const effective = methodology?.effective;
-    if (!effective) {
-        return <Group><Row title="No methodology" hint={methodology?.errors?.[0] ?? 'This project does not select a methodology.'} /></Group>;
+    const chosen = effective?.chain[effective.chain.length - 1];
+
+    function change(name: string, on: boolean) {
+        toggle(name);
+        const next = new Set(selected);
+        if (on) next.add(name); else next.delete(name);
+        if (!on) {
+            // `check` reads the store after the toggle; keep the elements that depend on this package.
+            const orphanedElements = (check().orphanedElements ?? []).filter(element => element.fromOntology === name);
+            if (orphanedElements.length > 0 && !window.confirm(
+                `${orphanedElements.length} element(s) use kinds that ${name} defines. They stay in the model but lose their kind. Turn it off?`,
+            )) { toggle(name); return; }
+        }
+        sendOntologySelection([...next]);
     }
-    const names = effective.chain.map(m => m.displayName ?? m.usageName);
-    const selected = effective.chain[effective.chain.length - 1];
-    const list = (items: string[]) => items.length ? `${items.length}: ${items.join(', ')}` : 'None';
+
+    if (available.length === 0) {
+        return <Group><Row title="No packages found" hint="Architect has not loaded the project's ontology packages." /></Group>;
+    }
     return (
         <Group>
-            <Row title="Selected methodology" hint={selected?.version ? `Version ${selected.version}` : undefined}>
-                <span style={{ fontSize: FONT.md, color: COLOR.primary, fontWeight: 500 }}>{names[names.length - 1]}</span>
-            </Row>
-            {names.length > 1 && <Row title="Builds on" hint={`Base first: ${names.slice(0, -1).join(' → ')}`} />}
-            <Row title="Scope" hint="How the methodology narrows the model."><span style={{ fontSize: FONT.md, color: COLOR.primary }}>{effective.scopeMode}</span></Row>
-            <Row title="Standards" hint={list(effective.includedStandards)} />
-            <Row title="Artifact kinds" hint={list(effective.includedArtifactKinds)} />
-            <Row title="Viewpoints" hint={list(effective.includedViewpoints)} />
-            <Row title="Rule policies" hint={effective.policyChain.length ? `${effective.policyChain.length} applied, base first and the project last.` : 'None'} />
-            {effective.diagnostics.length > 0 && <Row title="Diagnostics" hint={effective.diagnostics.map(d => d.message ?? String(d)).join(' · ')} />}
+            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
+                The MEMO extensions and layers this model uses. Each layer is a group of element kinds, such as requirements, risk or architecture.
+                {chosen ? ` Methodology: ${chosen.displayName ?? chosen.usageName}${chosen.version ? ` ${chosen.version}` : ''}.` : ''}
+            </p>
+            {available.map(pkg => {
+                const foundation = FOUNDATION_PACKAGES.includes(pkg.name);
+                const layers = pkg.layers.map(layer => `${layer.label} (${layer.kindCount})`).join(', ');
+                return (
+                    <Row key={pkg.name} title={`${pkg.name} ${pkg.version}`}
+                        hint={[TYPE_LABEL[pkg.type] ?? pkg.type, pkg.extends ? `extends ${pkg.extends}` : '', pkg.description, layers ? `Layers: ${layers}` : ''].filter(Boolean).join(' · ')}>
+                        <Switch label={pkg.name} checked={selected.has(pkg.name)} disabled={foundation} onChange={on => change(pkg.name, on)} />
+                    </Row>
+                );
+            })}
         </Group>
     );
 }
