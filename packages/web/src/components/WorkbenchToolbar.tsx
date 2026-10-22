@@ -51,13 +51,6 @@ export function WorkbenchToolbar() {
 
             <div className="flex-1" />
 
-            <button
-                onClick={() => { setActiveView({ type: 'settings' }); navigate('/settings'); }}
-                title="Settings"
-                aria-label="Settings"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.75)', fontSize: 20, padding: '4px 8px' }}
-            >⚙</button>
-
             {(metadata?.modelName || metadata?.gitUser) && (
                 <span
                     title="Current model and Git revision"
@@ -77,13 +70,9 @@ export function WorkbenchToolbar() {
                 </span>
             )}
 
-            <img
-                src="/logo.png"
-                alt="MEMO"
-                style={{ height: 40, opacity: 0.9, cursor: 'pointer' }}
-                onClick={goHome}
-                title="Go to home"
-            />
+            <a href="https://memoarchitect.com" target="_blank" rel="noopener noreferrer" title="memoarchitect.com" style={{ display: 'flex' }}>
+                <img src="/logo.png" alt="MEMO" style={{ height: 40, opacity: 0.9 }} />
+            </a>
         </div>
         <PinnedBanner />
         </>
