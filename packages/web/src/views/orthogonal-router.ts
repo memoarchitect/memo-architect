@@ -485,8 +485,9 @@ function routeOrderedEdges(
     requests: OrthogonalRouteRequest[],
     obstacles: RouteObstacle[],
     channelGap = 18,
-    priority: 'long-first' | 'short-first' = 'long-first',
+    priority: 'long-first' | 'short-first' | 'horizontal-first' = 'long-first',
     options: TidyRouteOptions = {},
+    polish = false,
 ): Map<string, RoutePoint[]> {
     const clearance = Math.max(12, channelGap * 0.75);
     const costs = resolveCosts(options.costs);
@@ -499,7 +500,9 @@ function routeOrderedEdges(
     // around the outside.
     const order = requests
         .map((request, index) => ({ request, index }))
-        .sort((a, b) => (priority === 'long-first' ? 1 : -1) * (span(b.request) - span(a.request)));
+         .sort((a,b) => priority === 'horizontal-first'
+            ? Math.abs(b.request.source.x-b.request.target.x)-Math.abs(a.request.source.x-a.request.target.x)
+            : (priority === 'long-first' ? 1 : -1) * (span(b.request) - span(a.request)));
 
     const routes: RoutePoint[][] = new Array(requests.length);
     let claimed = new TrackIndex();
@@ -547,9 +550,19 @@ function routeOrderedEdges(
             // connector being re-planned, so the shared index IS "everyone
             // else". Rebuilding per attempt was O(all segments) each time and
             // made the phase quadratic in connector count for no gain.
-            const candidate = planOne(
+            let candidate = planOne(
                 requests[owner], obstacles, claimed, owner, channelGap, clearance, scratch, costs, lattice, terminals,
             );
+            // A bounded alternative objective finds detours the default A*
+            // weights decline; accept by actual conflicts, not the search cost.
+            if (polish && countConflicts(candidate, claimed, owner) > 0) {
+                for (const multiplier of [3, 9]) {
+                    if (performance.now()-startedAt>budget) break;
+                    const alternative = planOne(requests[owner], obstacles, claimed, owner, channelGap, clearance,
+                        scratch, {...costs, crossing: costs.crossing * multiplier}, lattice, terminals);
+                    if (countConflicts(alternative, claimed, owner) < countConflicts(candidate, claimed, owner)) candidate = alternative;
+                }
+            }
             if (countConflicts(candidate, claimed, owner) < countConflicts(routes[owner], claimed, owner)) {
                 routes[owner] = candidate;
                 improved = true;
@@ -563,6 +576,33 @@ function routeOrderedEdges(
         // The index still holds the routes this round replaced; rebuild it once
         // here rather than once per attempt.
         claimed = indexOf(routes);
+    }
+
+    // Single-edge reroutes can be trapped by two mutually reserved corridors.
+    // Reconsider at most eight pairs, reserving all other (including fixed) paths.
+    if (polish && rounds > 0) {
+        const total = (values: RoutePoint[][]) => {
+            const index=indexOf(values);
+            return values.reduce((sum,route,owner)=>sum+countConflicts(route,index,owner),0);
+        };
+        let best=total(routes);
+        const worst=routes.map((route,owner)=>({owner,cost:countConflicts(route,claimed,owner)}))
+            .filter(v=>v.cost>0&&!options.fixedRoutes?.has(requests[v.owner].id)).sort((a,b)=>b.cost-a.cost);
+        for (let i=0;i<Math.min(4,worst.length);i++) {
+            const a=worst[i].owner;
+            const peers=worst.filter(p=>p.owner!==a && countConflicts(routes[a],indexOf(routes.map((r,j)=>j===p.owner?r:[])),a)>0);
+            for (const peer of peers.slice(0,2)) {
+                if (performance.now()-startedAt>budget) break;
+                const b=peer.owner;
+                let reservations=indexOf(routes.map((route,j)=>j===a||j===b?[]:route));
+                const candidateA=planOne(requests[a],obstacles,reservations,a,channelGap,clearance,scratch,costs,lattice,terminals);
+                const candidates=routes.map((route,j)=>j===a?candidateA:j===b?[]:route);
+                reservations=indexOf(candidates);
+                candidates[b]=planOne(requests[b],obstacles,reservations,b,channelGap,clearance,scratch,costs,lattice,terminals);
+                const score=total(candidates);
+                if(score<best){routes[a]=candidateA;routes[b]=candidates[b];best=score;claimed=indexOf(routes);}
+            }
+        }
     }
 
     const result = new Map<string, RoutePoint[]>();
@@ -588,7 +628,15 @@ export function routeOrthogonalEdges(
         return { conflicts, geometry };
     };
     const a = score(primary), b = score(alternative);
-    return b.conflicts < a.conflicts || b.conflicts === a.conflicts && b.geometry < a.geometry ? alternative : primary;
+    let best=b.conflicts < a.conflicts || b.conflicts === a.conflicts && b.geometry < a.geometry ? alternative : primary;
+    // One complementary span seed for full small-board routing only. Preview
+    // and large boards retain their existing work ceilings and original seeds.
+    if ((options.refineRounds ?? 4) > 0) {
+        const polished=routeOrderedEdges(requests,obstacles,channelGap,'horizontal-first',options,true);
+        const candidate=score(polished),previous=score(best);
+        if(candidate.conflicts<previous.conflicts || candidate.conflicts===previous.conflicts && candidate.geometry<previous.geometry) best=polished;
+    }
+    return best;
 }
 
 /**

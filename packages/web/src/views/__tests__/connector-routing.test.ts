@@ -206,3 +206,16 @@ it('separates unrelated facing terminal stubs in a narrow corridor',()=>{
    overlap+=Math.max(0,Math.min(Math.max(a[i-1][axis],a[i][axis]),Math.max(b[j-1][axis],b[j][axis]))-Math.max(Math.min(a[i-1][axis],a[i][axis]),Math.min(b[j-1][axis],b[j][axis])));
  expect(overlap).toBe(0);for(const route of routes.values())expect(bodyHits(route,obstacles)).toEqual([]);
 });
+
+
+it('escapes the span-order local minimum on a regular multi-terminal grid', async()=>{
+ const {routeMetrics}=await import('./session8-metrics');
+ const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,position:{x:(i%4)*300,y:Math.floor(i/4)*210},width:150,height:110}));
+ const obstacles=nodes.map(n=>({id:n.id,x:n.position.x,y:n.position.y,width:n.width,height:n.height}));
+ const requests:OrthogonalRouteRequest[]=Array.from({length:14},(_,i)=>{const a=(i*3+3)%12,b=(i*7+3)%12;return{id:'e'+i,sourceNodeId:'n'+a,targetNodeId:'n'+b,
+  source:{x:nodes[a].position.x+166,y:nodes[a].position.y+55},target:{x:nodes[b].position.x-16,y:nodes[b].position.y+55},sourceSide:'right' as const,targetSide:'left' as const}}).filter(r=>r.sourceNodeId!==r.targetNodeId);
+ const before=structuredClone({requests,obstacles});const routes=routeOrthogonalEdges(requests,obstacles);
+ const metrics=routeMetrics(nodes,requests.map(r=>({id:r.id,source:r.sourceNodeId,target:r.targetNodeId,points:routes.get(r.id)!})));
+ expect(metrics.crossings).toBeLessThanOrEqual(7);expect(metrics.collinearOverlap).toBeLessThanOrEqual(182);expect(metrics.partIntersections).toBe(0);
+ expect({requests,obstacles}).toEqual(before);expect(routeOrthogonalEdges(requests,obstacles)).toEqual(routes);
+});

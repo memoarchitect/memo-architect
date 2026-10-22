@@ -9,7 +9,7 @@ const out=resolve(process.env.MEMO_BASELINE_OUTPUT!);
 test('freeze readability geometry and matched fit and 100 percent views',async({page})=>{
  const consoleMessages:any[]=[];page.on('console',message=>{consoleMessages.push({type:message.type(),text:message.text()});writeFileSync(resolve(out,'browser-console.json'),JSON.stringify(consoleMessages,null,2))});
  await page.goto('/');await expect(page.getByRole('button',{name:'Skip tour'})).toBeVisible();
- const sources=[];for(const file of ['views/DiagramCanvas.tsx','views/InterconnectionNode.tsx','views/InterconnectionEdge.tsx']){const r=await page.request.get('/src/'+file);expect(r.ok()).toBe(true);sources.push({file,servedSha256:createHash('sha256').update(await r.text()).digest('hex'),localSha256:createHash('sha256').update(readFileSync('packages/web/src/'+file)).digest('hex')})}
+ const sources=[];for(const file of ['views/DiagramCanvas.tsx','views/InterconnectionNode.tsx','views/InterconnectionEdge.tsx','views/orthogonal-router.ts','diagram/renderers/interconnection-renderer.tsx']){const r=await page.request.get('/src/'+file);expect(r.ok()).toBe(true);sources.push({file,servedSha256:createHash('sha256').update(await r.text()).digest('hex'),localSha256:createHash('sha256').update(readFileSync('packages/web/src/'+file)).digest('hex')})}
  await page.goto('/pilot-baseline/undo-diagnostic/index.html');await page.getByRole('button',{name:'Open IBD diagnostic'}).click();await expect(page.locator('.react-flow__node').first()).toBeVisible();
  if(process.env.MEMO_SESSION8_MANHATTAN==='1'){
   const before=await page.evaluate(()=>(window as any).undoDiagnosticState().nodes);
@@ -30,6 +30,31 @@ test('freeze readability geometry and matched fit and 100 percent views',async({
   await page.reload();await page.getByRole('button',{name:'Open IBD diagnostic'}).click();await expect(page.locator('.react-flow__node').first()).toBeVisible();await expect.poll(async()=>(await current()).nodes).toEqual(placed.nodes);expect(await paths()).toEqual(placedPaths);
   writeFileSync(resolve(out,'session8-all-port-placement.json'),JSON.stringify({initial,placed,initialPaths,placedPaths},null,2));
  }
+ if(process.env.MEMO_SESSION9_REROUTE==='1') {
+  // The mounted websocket precedes this point; observe acknowledgements through
+  // its existing application save observer and verify the actual source on disk.
+  const runtime=JSON.parse(readFileSync(resolve(out,'runtime.json'),'utf8'));
+  const disk=()=>readFileSync(resolve(runtime.fixture,'model/catalog/views.sysml'),'utf8');
+  const current=()=>page.evaluate(()=>{const s=(window as any).undoDiagnosticState();for(const n of s.nodes){const e=[...document.querySelectorAll<HTMLElement>('.react-flow__node')].find(e=>e.dataset.id===n.id)!;n.width=parseFloat(e.style.width);n.height=parseFloat(e.style.height);}return s});
+  const paths=()=>page.locator('path.react-flow__edge-path').evaluateAll(es=>es.map(e=>e.getAttribute('d')));
+  const ack=async()=>{await expect.poll(async()=>page.evaluate(async()=>{
+   const {getDiagramLayoutSaveObservation}=await import('/src/store/ws-client.ts');
+   return getDiagramLayoutSaveObservation('vehicleRoutingPilot')?.status;
+  }),{timeout:30000}).toBe('saved');};
+  const initial=await current(),initialPaths=await paths(),initialDisk=disk();
+  await page.getByLabel('IBD routing type').selectOption('orthogonal');await ack();
+  await page.getByLabel('IBD routing type').selectOption('manhattan');await ack();
+  const routed=await current(),routedPaths=await paths();expect(routed.nodes).toEqual(initial.nodes);expect(routed.undo).toBe(initial.undo+2);
+  const source=parseLayoutSource(disk()).layouts.vehicleRoutingPilot;
+  for(const edge of routed.edges)expect(source.edges[edge.id].points).toEqual(edge.data.points);
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo last diagram edit',exact:true}).click();await ack()}
+  expect((await current()).nodes).toEqual(initial.nodes);expect(await paths()).toEqual(initialPaths);
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Redo last diagram edit',exact:true}).click();await ack()}
+  expect((await current()).nodes).toEqual(routed.nodes);expect(await paths()).toEqual(routedPaths);
+  await page.reload();await page.getByRole('button',{name:'Open IBD diagnostic'}).click();await expect(page.locator('.react-flow__node').first()).toBeVisible();
+  await expect.poll(async()=>(await current()).nodes).toEqual(routed.nodes);expect(await paths()).toEqual(routedPaths);
+  writeFileSync(resolve(out,'session9-frozen-reroute.json'),JSON.stringify({initial,routed,initialPaths,routedPaths,initialDisk,finalDisk:disk()},null,2));
+ }
  const captionEvidence=await page.locator('[data-ibd-caption]').evaluateAll(labels=>{
   const boxes=labels.map(el=>{const range=document.createRange();range.selectNodeContents(el);const r=range.getBoundingClientRect();return {port:el.closest('[data-ibd-port]')?.getAttribute('data-ibd-port'),x:r.x,y:r.y,width:r.width,height:r.height}});
   const overlaps=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];const width=Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x),height=Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y);if(width>.5&&height>.5)overlaps.push({a:a.port,b:b.port,width,height});}return{boxes,overlaps};
@@ -40,6 +65,20 @@ test('freeze readability geometry and matched fit and 100 percent views',async({
  for(const n of state.nodes){expect(Number.isFinite(n.width)&&n.width>0).toBe(true);expect(Number.isFinite(n.height)&&n.height>0).toBe(true)}
  const routes=state.edges.map((e:any)=>({...e,points:attachedRoute(e.data.points,e.data.routingType??state.routing.type,e.data.sourceSide,e.data.targetSide,e.data.manualRoute)}));
  const metrics=routeMetrics(state.nodes,routes);
+ const terminalCaptionEvidence=await page.locator('[data-ibd-caption]').evaluateAll((labels,rs:any[])=>{
+  const hits:any[]=[];
+  for(const label of labels){const port=label.closest('[data-ibd-port]')?.getAttribute('data-ibd-port');const range=document.createRange();range.selectNodeContents(label);const rect=range.getBoundingClientRect();
+   for(const route of rs){const source=route.sourcePortId===port,target=route.targetPortId===port;if(!source&&!target)continue;
+    const edge=[...document.querySelectorAll<HTMLElement>('.react-flow__edge')].find(e=>e.dataset.id===route.id),matrix=(edge?.querySelector('path.react-flow__edge-path') as SVGPathElement)?.getScreenCTM();if(!matrix)continue;
+    const ends=source?route.points.slice(0,2):route.points.slice(-2);if(ends.length!==2)continue;const [a,b]=ends.map((p:any)=>new DOMPoint(p.x,p.y).matrixTransform(matrix));
+    const hit=Math.abs(a.y-b.y)<.01?a.y>rect.top+.5&&a.y<rect.bottom-.5&&Math.min(Math.max(a.x,b.x),rect.right)>Math.max(Math.min(a.x,b.x),rect.left)+.5
+      :Math.abs(a.x-b.x)<.01&&a.x>rect.left+.5&&a.x<rect.right-.5&&Math.min(Math.max(a.y,b.y),rect.bottom)>Math.max(Math.min(a.y,b.y),rect.top)+.5;
+    if(hit)hits.push({port,edge:route.id,caption:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},segment:[{x:a.x,y:a.y},{x:b.x,y:b.y}]});
+   }
+  }return hits;
+ },routes.map((e:any)=>({id:e.id,sourcePortId:e.data.sourcePortId,targetPortId:e.data.targetPortId,points:e.points})));
+ writeFileSync(resolve(out,'caption-terminal-evidence.json'),JSON.stringify(terminalCaptionEvidence,null,2));
+ if(process.env.MEMO_SESSION9_CAPTION_QA==='1')expect(terminalCaptionEvidence,'captions clear their own terminal connector runs').toEqual([]);
  const crossovers=await page.locator('[data-ibd-crossover-gap]').evaluateAll(es=>es.map(e=>({x:e.getAttribute('cx'),y:e.getAttribute('cy'),mask:e.parentElement?.id})));
  writeFileSync(resolve(out,'crossover-evidence.json'),JSON.stringify(crossovers,null,2));
  if(metrics.crossings>0)expect(crossovers.length,'non-junction crossings have drawing-only gaps').toBeGreaterThan(0);
