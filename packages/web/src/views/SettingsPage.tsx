@@ -7,12 +7,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { CompilerSettings } from '../components/CompilerSettings';
 import { RoleSelector } from '../components/RoleSelector';
 import { VersionSelector } from '../components/VersionSelector';
 import { WorkspaceSelector } from '../components/WorkspaceSelector';
+import { RulesEditor } from '../components/RulesEditor';
 import { EXPLORER_MODES, groupableAttributes } from '../lib/explorer-modes';
 import { experimentalGrantedByCli, FEATURE_FLAGS, isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
@@ -20,51 +20,104 @@ import { COLOR, FONT } from '../styles/tokens';
 const DhfSettingsPanel = lazy(() => import('./DhfSettingsPanel').then(m => ({ default: m.DhfSettingsPanel })));
 const LlmSettings = lazy(() => import('./LlmSettings').then(m => ({ default: m.LlmSettings })));
 
-type SectionId = 'model' | 'explorer' | 'features' | 'compiler' | 'documents' | 'assistant';
+type SectionId = 'model' | 'rules' | 'methodology' | 'explorer' | 'features' | 'compiler' | 'documents' | 'assistant';
 
-const SECTIONS: { id: SectionId; label: string }[] = [
-    { id: 'model', label: 'Model' },
-    { id: 'explorer', label: 'Explorer' },
-    { id: 'features', label: 'Features' },
-    { id: 'compiler', label: 'Compiler' },
-    { id: 'documents', label: 'Documents' },
-    { id: 'assistant', label: 'AI assistant' },
+const SECTIONS: { id: SectionId; label: string; icon: string }[] = [
+    { id: 'model', label: 'Model', icon: '☰' },
+    { id: 'rules', label: 'Rules', icon: '⚖' },
+    { id: 'methodology', label: 'Methodology', icon: '☑' },
+    { id: 'explorer', label: 'Explorer', icon: '▤' },
+    { id: 'features', label: 'Features', icon: '✦' },
+    { id: 'compiler', label: 'Compiler', icon: '⚙' },
+    { id: 'documents', label: 'Documents', icon: '⊞' },
+    { id: 'assistant', label: 'AI assistant', icon: '◉' },
 ];
 
-function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+/** A heading over a group of rows. */
+function Group({ title, children }: { title?: string; children: React.ReactNode }) {
     return (
-        <div style={{ padding: '14px 0', borderBottom: `1px solid ${COLOR.borderLight}` }}>
-            <div style={{ fontSize: FONT.md, fontWeight: 600, color: COLOR.primary, marginBottom: 2 }}>{title}</div>
-            {hint && <div style={{ fontSize: FONT.sm, color: COLOR.muted, marginBottom: 8 }}>{hint}</div>}
+        <section style={{ marginBottom: 32 }}>
+            {title && <h2 style={{ fontSize: 18, fontWeight: 600, color: COLOR.primary, margin: '0 0 8px' }}>{title}</h2>}
             {children}
+        </section>
+    );
+}
+
+/** One setting: its name and what it does on the left, its control on the right. */
+function Row({ title, hint, children }: { title: string; hint?: string; children?: React.ReactNode }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, padding: '16px 0', borderBottom: `1px solid ${COLOR.borderLight}` }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: FONT.lg, fontWeight: 500, color: COLOR.primary }}>{title}</div>
+                {hint && <div style={{ fontSize: FONT.md, color: COLOR.muted, marginTop: 2, lineHeight: 1.45 }}>{hint}</div>}
+            </div>
+            {children && <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{children}</div>}
         </div>
     );
 }
 
-function ModelSection() {
-    const navigate = useNavigate();
-    const setActiveMode = useModelStore(s => s.setActiveMode);
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
-    const button: React.CSSProperties = { padding: '6px 14px', border: `1px solid ${COLOR.border}`, borderRadius: 6, background: '#fff', color: COLOR.primary, fontSize: FONT.md, cursor: 'pointer' };
+function Switch({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: (on: boolean) => void }) {
     return (
-        <>
-            <Row title="Version" hint="Show the working model, a release, or an unreleased ref (read only).">
-                <VersionSelector tone="light" />
+        <button
+            type="button" role="switch" aria-label={label} aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
+            style={{
+                width: 44, height: 26, borderRadius: 13, border: 0, padding: 3, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.55 : 1,
+                background: checked ? COLOR.accent : COLOR.border, display: 'flex', justifyContent: checked ? 'flex-end' : 'flex-start', transition: 'background 120ms',
+            }}
+        >
+            <span style={{ width: 20, height: 20, borderRadius: 10, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.25)' }} />
+        </button>
+    );
+}
+
+const selectStyle: React.CSSProperties = { background: '#fff', color: COLOR.primary, border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: '8px 12px', fontSize: FONT.md, minWidth: 200 };
+const buttonStyle: React.CSSProperties = { padding: '8px 16px', border: `1px solid ${COLOR.border}`, borderRadius: 8, background: '#fff', color: COLOR.primary, fontSize: FONT.md, cursor: 'pointer' };
+
+function ModelSection() {
+    return (
+        <Group>
+            <Row title="Version" hint="Show the working model, a release, or an unreleased ref (read only)."><VersionSelector tone="light" /></Row>
+            <Row title="Workspace" hint="Show one system or the whole model. Saved for you only, in memo.user.yaml."><WorkspaceSelector tone="light" /></Row>
+            <Row title="Role" hint="Show the viewpoints written for one stakeholder. Saved for you only."><RoleSelector tone="light" /></Row>
+        </Group>
+    );
+}
+
+/** The rules the project is checked against, with the means to tailor them: the editor itself, not a link to it. */
+function RulesSection() {
+    return (
+        <Group>
+            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 16px', lineHeight: 1.45 }}>
+                What this project is checked against, and the clause each rule enforces. You may switch off, downgrade or replace any rule; the record of who decided and why is kept.
+            </p>
+            <div style={{ border: `1px solid ${COLOR.border}`, borderRadius: 10, overflow: 'hidden' }}><RulesEditor /></div>
+        </Group>
+    );
+}
+
+/** What the project's methodology chain selects, read from the resolved model. */
+function MethodologySection() {
+    const methodology = useModelStore(s => s.methodology);
+    const effective = methodology?.effective;
+    if (!effective) {
+        return <Group><Row title="No methodology" hint={methodology?.errors?.[0] ?? 'This project does not select a methodology.'} /></Group>;
+    }
+    const names = effective.chain.map(m => m.displayName ?? m.usageName);
+    const selected = effective.chain[effective.chain.length - 1];
+    const list = (items: string[]) => items.length ? `${items.length}: ${items.join(', ')}` : 'None';
+    return (
+        <Group>
+            <Row title="Selected methodology" hint={selected?.version ? `Version ${selected.version}` : undefined}>
+                <span style={{ fontSize: FONT.md, color: COLOR.primary, fontWeight: 500 }}>{names[names.length - 1]}</span>
             </Row>
-            <Row title="Workspace" hint="Show one system or the whole model. Saved for you only, in memo.user.yaml.">
-                <WorkspaceSelector tone="light" />
-            </Row>
-            <Row title="Role" hint="Show the viewpoints written for one stakeholder. Saved for you only.">
-                <RoleSelector tone="light" />
-            </Row>
-            <Row title="Rules" hint="The rules the model is checked against, and how each is graded.">
-                <button style={button} onClick={() => { setActiveMode('rules'); setActiveView({ type: 'rules' }); navigate('/rules'); }}>Open rules</button>
-            </Row>
-            <Row title="Methodology" hint="The methodology the project follows: its workflow, roles and controls.">
-                <button style={button} onClick={() => { setExplorerDomain('methodology'); setActiveMode('catalog'); setActiveView({ type: 'welcome' }); navigate('/catalog'); }}>Open methodology</button>
-            </Row>
-        </>
+            {names.length > 1 && <Row title="Builds on" hint={`Base first: ${names.slice(0, -1).join(' → ')}`} />}
+            <Row title="Scope" hint="How the methodology narrows the model."><span style={{ fontSize: FONT.md, color: COLOR.primary }}>{effective.scopeMode}</span></Row>
+            <Row title="Standards" hint={list(effective.includedStandards)} />
+            <Row title="Artifact kinds" hint={list(effective.includedArtifactKinds)} />
+            <Row title="Viewpoints" hint={list(effective.includedViewpoints)} />
+            <Row title="Rule policies" hint={effective.policyChain.length ? `${effective.policyChain.length} applied, base first and the project last.` : 'None'} />
+            {effective.diagnostics.length > 0 && <Row title="Diagnostics" hint={effective.diagnostics.map(d => d.message ?? String(d)).join(' · ')} />}
+        </Group>
     );
 }
 
@@ -79,29 +132,19 @@ function FeaturesSection() {
     const grantedByCli = experimentalGrantedByCli();
     const experimental = FEATURE_FLAGS.filter(flag => flag.stage === 'experimental');
     return (
-        <>
-            <div style={{ fontSize: FONT.sm, color: COLOR.muted, padding: '8px 0' }}>
+        <Group>
+            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
                 Features that are not part of the regulated workflow stay off until you switch them on. Saved for you only, in memo.user.yaml.
                 {grantedByCli && ' Architect was started with --experimental, so all of them are on.'}
-            </div>
-            {experimental.map(flag => {
-                const on = isFeatureEnabled(flag.id);
-                return (
-                    <Row key={flag.id} title={flag.label} hint={flag.description}>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: FONT.md, color: COLOR.primary }}>
-                            <input
-                                type="checkbox" role="switch" aria-label={flag.label} checked={on}
-                                disabled={grantedByCli} onChange={event => setFeatureEnabled(flag.id, event.target.checked)}
-                                style={{ accentColor: COLOR.accent, width: 16, height: 16 }}
-                            />
-                            {on ? 'On' : 'Off'}
-                        </label>
-                    </Row>
-                );
-            })}
+            </p>
+            {experimental.map(flag => (
+                <Row key={flag.id} title={flag.label} hint={flag.description}>
+                    <Switch label={flag.label} checked={isFeatureEnabled(flag.id)} disabled={grantedByCli} onChange={on => setFeatureEnabled(flag.id, on)} />
+                </Row>
+            ))}
             {/* Re-reads the saved list, so the switches follow a change made elsewhere. */}
             <span hidden>{features.length}</span>
-        </>
+        </Group>
     );
 }
 
@@ -114,61 +157,57 @@ function ExplorerSection() {
     const packageFolders = useModelStore(s => s.packageFolders);
     const setPackageFolders = useModelStore(s => s.setPackageFolders);
     const attributes = useMemo(() => groupableAttributes(Object.values(model?.elements ?? {})), [model]);
-    const select: React.CSSProperties = { background: '#fff', color: COLOR.primary, border: `1px solid ${COLOR.border}`, borderRadius: 6, padding: '5px 8px', fontSize: FONT.md };
     return (
-        <>
+        <Group>
             <Row title="Group the Model Explorer" hint="How the top level of the tree is organised. The tree below it follows the model's packages.">
-                <select aria-label="Group the Model Explorer" value={mode} onChange={e => setMode(e.target.value as typeof mode)} style={select}>
+                <select aria-label="Group the Model Explorer" value={mode} onChange={e => setMode(e.target.value as typeof mode)} style={selectStyle}>
                     {EXPLORER_MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                 </select>
             </Row>
             <Row title="Show packages as folders" hint="On, each SysML package is a folder in the tree. Off, the package level is skipped and elements are listed by type. Saved for you only.">
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: FONT.md, color: COLOR.primary }}>
-                    <input
-                        type="checkbox" role="switch" aria-label="Show packages as folders" checked={packageFolders}
-                        onChange={event => setPackageFolders(event.target.checked)} style={{ accentColor: COLOR.accent, width: 16, height: 16 }}
-                    />
-                    {packageFolders ? 'On' : 'Off'}
-                </label>
+                <Switch label="Show packages as folders" checked={packageFolders} onChange={setPackageFolders} />
             </Row>
             <Row title="Split folders by" hint="Split each folder by an attribute with a few values. Saved for you only.">
-                <select aria-label="Split folders by" data-testid="explorer-group-by" value={split} onChange={e => setSplit(e.target.value)} style={select}>
+                <select aria-label="Split folders by" data-testid="explorer-group-by" value={split} onChange={e => setSplit(e.target.value)} style={selectStyle}>
                     <option value="">nothing</option>
                     {attributes.map(name => <option key={name} value={name}>{name}</option>)}
                 </select>
             </Row>
-        </>
+        </Group>
     );
 }
 
 export function SettingsPage() {
     const [section, setSection] = useState<SectionId>('model');
     const [panel, setPanel] = useState<'documents' | 'assistant' | null>(null);
-    const button: React.CSSProperties = { padding: '6px 14px', border: `1px solid ${COLOR.border}`, borderRadius: 6, background: '#fff', color: COLOR.primary, fontSize: FONT.md, cursor: 'pointer' };
     return (
         <div className="flex-1 flex overflow-hidden" style={{ background: '#fff' }}>
-            <nav aria-label="Settings sections" style={{ width: 200, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, padding: '20px 8px', background: COLOR.surfaceAlt }}>
-                <div style={{ padding: '0 12px 12px', fontSize: FONT.lg, fontWeight: 700, color: COLOR.primary }}>Settings</div>
+            <nav aria-label="Settings sections" style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, padding: '20px 12px', background: COLOR.surfaceAlt, overflowY: 'auto' }}>
+                <div style={{ padding: '0 12px 12px', fontSize: FONT.md, color: COLOR.muted }}>Settings</div>
                 {SECTIONS.map(s => (
                     <button
                         key={s.id}
                         onClick={() => setSection(s.id)}
                         aria-current={section === s.id ? 'page' : undefined}
                         style={{
-                            display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', border: 0, borderRadius: 6, cursor: 'pointer',
-                            fontSize: FONT.md, color: COLOR.primary, background: section === s.id ? '#fff' : 'transparent', fontWeight: section === s.id ? 600 : 400,
+                            display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '9px 12px', marginBottom: 2, border: 0, borderRadius: 8, cursor: 'pointer',
+                            fontSize: FONT.lg, color: COLOR.primary, background: section === s.id ? COLOR.borderLight : 'transparent', fontWeight: section === s.id ? 600 : 400,
                         }}
-                    >{s.label}</button>
+                    ><span style={{ width: 20, textAlign: 'center', color: COLOR.muted }}>{s.icon}</span>{s.label}</button>
                 ))}
             </nav>
-            <main style={{ flex: 1, overflowY: 'auto', padding: '20px 32px', maxWidth: 760 }}>
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: COLOR.primary, margin: '0 0 4px' }}>{SECTIONS.find(s => s.id === section)!.label}</h1>
-                {section === 'model' && <ModelSection />}
-                {section === 'explorer' && <ExplorerSection />}
-                {section === 'features' && <FeaturesSection />}
-                {section === 'compiler' && <Row title="SysML compiler" hint="The model names one; your own setting overrides it for you."><CompilerSettings /></Row>}
-                {section === 'documents' && <Row title="Design history documents" hint="Model identity, branding, layout and numbering for generated documents."><button style={button} onClick={() => setPanel('documents')}>Open document settings</button></Row>}
-                {section === 'assistant' && <Row title="AI assistant" hint="The provider and key the assistant uses."><button style={button} onClick={() => setPanel('assistant')}>Open assistant settings</button></Row>}
+            <main style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+                <div style={{ maxWidth: 820 }}>
+                    <h1 style={{ fontSize: 24, fontWeight: 600, color: COLOR.primary, margin: '0 0 24px' }}>{SECTIONS.find(s => s.id === section)!.label}</h1>
+                    {section === 'model' && <ModelSection />}
+                    {section === 'rules' && <RulesSection />}
+                    {section === 'methodology' && <MethodologySection />}
+                    {section === 'explorer' && <ExplorerSection />}
+                    {section === 'features' && <FeaturesSection />}
+                    {section === 'compiler' && <Group><Row title="SysML compiler" hint="The model names one; your own setting overrides it for you."><CompilerSettings /></Row></Group>}
+                    {section === 'documents' && <Group><Row title="Design history documents" hint="Model identity, branding, layout and numbering for generated documents."><button style={buttonStyle} onClick={() => setPanel('documents')}>Document settings</button></Row></Group>}
+                    {section === 'assistant' && <Group><Row title="AI assistant" hint="The provider and key the assistant uses."><button style={buttonStyle} onClick={() => setPanel('assistant')}>Assistant settings</button></Row></Group>}
+                </div>
             </main>
             <Suspense fallback={null}>
                 {panel === 'documents' && <DhfSettingsPanel onClose={() => setPanel(null)} />}
