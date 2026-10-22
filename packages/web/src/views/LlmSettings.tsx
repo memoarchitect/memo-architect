@@ -13,7 +13,7 @@ import type { LlmSettingsStatus, LlmSettingsOrigin } from '@memoarchitect/tools/
 import { useModelStore } from '../store/model-store';
 import { sendLlmSettingsSave } from '../store/ws-client';
 
-const ORIGIN_LABEL: Record<LlmSettingsOrigin, string> = {
+export const ORIGIN_LABEL: Record<LlmSettingsOrigin, string> = {
     'env': 'an environment variable',
     'env-file': 'the model .env file',
     'project-settings': 'the model settings',
@@ -21,12 +21,13 @@ const ORIGIN_LABEL: Record<LlmSettingsOrigin, string> = {
     'default': 'the default',
 };
 
-const MODEL_PLACEHOLDER: Record<string, string> = {
+export const MODEL_PLACEHOLDER: Record<string, string> = {
     anthropic: 'claude-opus-5',
     openai: 'gpt-4o',
 };
 
-export function LlmSettings({ onClose }: { onClose: () => void }) {
+/** The provider, model and key form: what is typed, and saving or removing it. Shared by the chat panel and Settings. */
+export function useLlmSettingsForm() {
     const settings = useModelStore(s => s.llmSettings);
     const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
 
@@ -78,6 +79,12 @@ export function LlmSettings({ onClose }: { onClose: () => void }) {
             setSaving(false);
         }
     }, [provider, registerLlmRequest]);
+
+    return { settings, provider, setProvider, model, setModel, apiKey, setApiKey, saving, note, save, clearKey };
+}
+
+export function LlmSettings({ onClose }: { onClose: () => void }) {
+    const { settings, provider, setProvider, model, setModel, apiKey, setApiKey, saving, note, save, clearKey } = useLlmSettingsForm();
 
     const labelStyle: React.CSSProperties = {
         fontSize: '11px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px',
