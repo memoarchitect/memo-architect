@@ -32,19 +32,31 @@ function toolchainOptionsFrom(options: Record<string, unknown>): Record<string, 
     );
 }
 
+/** Every bundled example, with the command that runs it. */
+function printExamples(): void {
+    console.log('Available examples:\n');
+    for (const id of listArchitectExamples()) console.log(`  memo-architect --example ${id}`);
+    console.log('\nAn example opens in the workbench; `memo-architect init <name>` creates a new project.');
+}
+
 program
     .name('memo-architect')
     .description('MEMO Architect — interactive and distributable model workbench')
     .version('0.6.6')
     .option('--example <name>', 'Open a bundled example project (e.g. gpca, standard-sysml-diagrams). A local checkout is opened in place; an installed package is opened read-only in a disposable copy')
+    .option('--list', 'List the bundled examples and how to run each')
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
     .option('-p, --port <port>', 'Server port', '3000')
     .option('--no-open', 'Do not open a browser')
     .option('--keep-alive', 'Keep running after the last browser disconnects')
     .option('--experimental', EXPERIMENTAL_FLAG_DESCRIPTION)
     .action(async (options: {
-        example?: string; port: string; open: boolean; readOnly?: boolean; experimental?: boolean; keepAlive?: boolean;
+        example?: string; list?: boolean; port: string; open: boolean; readOnly?: boolean; experimental?: boolean; keepAlive?: boolean;
     }) => {
+        if (options.list) {
+            printExamples();
+            return;
+        }
         if (options.example) {
             await architectExampleCommand({
                 name: options.example,
@@ -152,12 +164,8 @@ configCommand
 
 program
     .command('examples')
-    .description('List bundled example IDs accepted by --example')
-    .action(() => {
-        console.log('Available examples:');
-        for (const id of listArchitectExamples()) console.log(`  ${id}`);
-        console.log('\nOpen one with: memo-architect --example <id>');
-    });
+    .description('List the bundled examples (same as --list)')
+    .action(printExamples);
 
 program
     .command('build')

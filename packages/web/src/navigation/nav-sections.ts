@@ -1,6 +1,6 @@
 // ─── The navigation: seven sections, every page in exactly one ───────────────
 //
-//   Home · Views · Model · Analysis · Methodology · Documents · Settings
+//   Home · Views · Model · Advanced · Methodology · Settings
 //
 // The product-family plan (A2) names these sections. Each page Architect has
 // belongs to exactly one, through `SECTION_OF_VIEW`, a Record over every
@@ -9,13 +9,13 @@
 // same feature flag that gates the page itself in App.tsx, so the drawer never
 // offers a page that would render the dashboard instead.
 //
-// Change and release records are about the model as it moves, so they are listed in Model.
+// Advanced holds the specialist pages: analysis tools, variability, change and release records, working sets.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ActiveView } from '../store/model-store';
 import type { FeatureId } from '../config/feature-flags';
 
-export type NavSectionId = 'guide' | 'model' | 'views' | 'analysis' | 'methodology' | 'documents' | 'settings';
+export type NavSectionId = 'guide' | 'model' | 'views' | 'advanced' | 'methodology' | 'settings';
 
 export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: string }[] = [
     // The section that holds the Dashboard. It was named for the Guide page, which is an experimental feature
@@ -23,9 +23,8 @@ export const NAV_SECTIONS: readonly { id: NavSectionId; label: string; icon: str
     { id: 'guide', label: 'Home', icon: '⌂' },
     { id: 'views', label: 'Views', icon: '⊟' },
     { id: 'model', label: 'Model', icon: '☰' },
-    { id: 'analysis', label: 'Analysis', icon: '◫' },
+    { id: 'advanced', label: 'Advanced', icon: '◫' },
     { id: 'methodology', label: 'Methodology', icon: '☑' },
-    { id: 'documents', label: 'Documents', icon: '⊞' },
     { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 
@@ -37,9 +36,9 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     guide: 'guide',
     welcome: 'guide',
     'element-detail': 'model',
-    variability: 'model',
+    variability: 'advanced',
     feature: 'views',
-    'scenario-editor': 'model',
+    'scenario-editor': 'views',
     ai: 'model',
     ask: 'model',
     'sysml-generator': 'model',
@@ -47,20 +46,19 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     tabular: 'views',
     'ui-screens': 'views',
     rules: 'methodology',
-    analysis: 'analysis',
-    dsm: 'analysis',
-    traceability: 'analysis',
-    'suspect-links': 'analysis',
-    statistics: 'analysis',
-    'compliance-wizard': 'analysis',
-    'review-dashboard': 'analysis',
-    // Change and releases are about the model as it moves, so they sit with it.
-    change: 'model',
+    analysis: 'advanced',
+    dsm: 'advanced',
+    traceability: 'model',
+    'suspect-links': 'advanced',
+    statistics: 'advanced',
+    'compliance-wizard': 'advanced',
+    'review-dashboard': 'advanced',
+    change: 'advanced',
     'model-diff': 'model',
-    releases: 'model',
-    'dhf-dashboard': 'documents',
-    'dhf-document': 'documents',
-    'dhf-dashboard-legacy': 'documents',
+    releases: 'advanced',
+    'dhf-dashboard': 'model',
+    'dhf-document': 'model',
+    'dhf-dashboard-legacy': 'model',
     import: 'settings',
     ontology: 'settings',
     'ontology-detail': 'settings',
@@ -78,21 +76,19 @@ export type NavModeId = 'dashboard' | 'catalog' | 'diagram' | 'ui-screens' | 'dh
 export const SECTION_OF_MODE: Record<NavModeId, NavSectionId> = {
     dashboard: 'guide',
     catalog: 'model',
-    scenario: 'model',
+    scenario: 'views',
     ai: 'model',
     diagram: 'views',
     'ui-screens': 'views',
     rules: 'methodology',
-    dhf: 'documents',
+    dhf: 'model',
 };
 
 /**
- * The section the current page is in. A diagram opened from Use Cases stays in
- * Model, and the empty canvas behind the catalog or the viewpoints belongs to
- * whichever of those is open.
+ * The section the current page is in. The empty canvas behind the catalog or
+ * the viewpoints belongs to whichever of those is open.
  */
 export function sectionOf(view: ActiveView, activeMode: string): NavSectionId {
-    if (view.type === 'diagram' && activeMode === 'scenario') return 'model';
     if (view.type === 'welcome' && activeMode in SECTION_OF_MODE) return SECTION_OF_MODE[activeMode as NavModeId];
     return SECTION_OF_VIEW[view.type];
 }
@@ -121,29 +117,27 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     // explorer on that one domain (and the explorer offers the whole tree again).
     { id: 'domain-architecture', label: 'Architecture', icon: '◈', section: 'model', target: { mode: 'catalog', domain: 'architecture' } },
     { id: 'domain-assurance', label: 'Assurance', icon: '⚖', section: 'model', target: { mode: 'catalog', domain: 'assurance' } },
-    { id: 'domain-methodology', label: 'Methodology', icon: '☑', section: 'model', target: { mode: 'catalog', domain: 'methodology' } },
-    { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'model', target: { mode: 'scenario' } },
-    { id: 'variability', label: 'Variability', icon: '⑂', section: 'model', target: { view: { type: 'variability' } } },
+    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', section: 'model', target: { view: { type: 'traceability' } }, feature: 'analysis' },
+    { id: 'dhf', label: 'Documents', icon: '⊞', section: 'model', target: { mode: 'dhf' } },
+    { id: 'model-diff', label: 'Model Diff', icon: '⇄', section: 'model', target: { view: { type: 'model-diff' } }, feature: 'model-tools' },
     { id: 'ai', label: 'AI Tools', icon: '✦', section: 'model', target: { mode: 'ai' }, feature: 'ai-tools' },
 
     { id: 'diagram', label: 'Viewpoints', icon: '⊟', section: 'views', target: { mode: 'diagram' } },
+    { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'views', target: { mode: 'scenario' } },
     { id: 'ui-screens', label: 'UI Screens', icon: '▣', section: 'views', target: { mode: 'ui-screens' } },
 
     { id: 'rules', label: 'Rules', icon: '⚖', section: 'methodology', target: { mode: 'rules' } },
-    { id: 'traceability', label: 'Traceability Matrix', icon: '☷', section: 'analysis', target: { view: { type: 'traceability' } }, feature: 'analysis' },
-    { id: 'suspect-links', label: 'Suspect Links', icon: '⚑', section: 'analysis', target: { view: { type: 'suspect-links' } } },
-    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'analysis', target: { view: { type: 'dsm' } }, feature: 'analysis' },
-    { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'analysis', target: { view: { type: 'analysis' } }, feature: 'analysis' },
-    { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'analysis', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },
-    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', section: 'analysis', target: { view: { type: 'compliance-wizard' } }, feature: 'model-tools' },
-    { id: 'statistics', label: 'Statistics', icon: '⊠', section: 'analysis', target: { view: { type: 'statistics' } }, feature: 'model-tools' },
 
-    { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'model', target: { view: { type: 'change' } } },
-    { id: 'model-diff', label: 'Model Diff', icon: '⇄', section: 'model', target: { view: { type: 'model-diff' } }, feature: 'model-tools' },
-
-    { id: 'releases', label: 'Release Records', icon: '⬢', section: 'model', target: { view: { type: 'releases' } } },
-
-    { id: 'dhf', label: 'Documents', icon: '⊞', section: 'documents', target: { mode: 'dhf' } },
+    { id: 'domain-methodology', label: 'Methodology', icon: '☑', section: 'advanced', target: { mode: 'catalog', domain: 'methodology' } },
+    { id: 'variability', label: 'Variability', icon: '⑂', section: 'advanced', target: { view: { type: 'variability' } } },
+    { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'advanced', target: { view: { type: 'change' } } },
+    { id: 'releases', label: 'Release Records', icon: '⬢', section: 'advanced', target: { view: { type: 'releases' } } },
+    { id: 'suspect-links', label: 'Suspect Links', icon: '⚑', section: 'advanced', target: { view: { type: 'suspect-links' } } },
+    { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'advanced', target: { view: { type: 'dsm' } }, feature: 'analysis' },
+    { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'advanced', target: { view: { type: 'analysis' } }, feature: 'analysis' },
+    { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'advanced', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },
+    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', section: 'advanced', target: { view: { type: 'compliance-wizard' } }, feature: 'model-tools' },
+    { id: 'statistics', label: 'Statistics', icon: '⊠', section: 'advanced', target: { view: { type: 'statistics' } }, feature: 'model-tools' },
 
     { id: 'settings', label: 'Settings', icon: '⚙', section: 'settings', target: { view: { type: 'settings' } } },
     { id: 'import', label: 'Import Model', icon: '↓', section: 'settings', target: { view: { type: 'import' } }, feature: 'import' },
@@ -164,6 +158,8 @@ export const VIEW_OF_MODE: Record<NavModeId, ActiveView['type']> = {
 
 /** The section an entry opens. */
 export function sectionOfEntry(entry: NavEntry): NavSectionId {
+    // The Methodology domain is the one catalog entry that is not in Model.
+    if ('mode' in entry.target && entry.target.mode === 'catalog' && entry.target.domain === 'methodology') return 'advanced';
     if ('mode' in entry.target) return SECTION_OF_MODE[entry.target.mode];
     if ('view' in entry.target) return SECTION_OF_VIEW[entry.target.view.type];
     return 'settings';
