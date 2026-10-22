@@ -348,18 +348,37 @@ export function computeContextViewLayout(
         systemRect,
     );
 
-    // A bent spoke leaves its box along the axis of the side it uses and meets the other box the same way,
-    // with the bend halfway between: one Z or a straight run when the two are level.
+    // A bent spoke leaves its box straight out of the wall it uses and arrives straight into the other wall, so it
+    // is a Z (both ends on facing walls of one orientation) or an L (one horizontal, one vertical). Where the walls
+    // face away from each other, a bend would have to double back on itself; that spoke stays one straight segment.
     const spokePoints = (draft: typeof drafts[number]): RoutePoint[] => {
         const straight = routes.get(draft.rel.id) ?? [draft.source, draft.target];
         if ((options.edgeStyle ?? 'straight') === 'straight') return straight;
         const from = straight[0], to = straight[straight.length - 1];
-        if (draft.sourceSide === 'left' || draft.sourceSide === 'right') {
+        const horizontal = (side: Side) => side === 'left' || side === 'right';
+        // The way a path moves when it leaves the source wall, and when it comes into the target wall.
+        const leave = (side: Side) => ({ left: [-1, 0], right: [1, 0], top: [0, -1], bottom: [0, 1] })[side];
+        const arrive = (side: Side) => ({ left: [1, 0], right: [-1, 0], top: [0, 1], bottom: [0, -1] })[side];
+        const [lx, ly] = leave(draft.sourceSide);
+        const [ax, ay] = arrive(draft.targetSide);
+        const dx = to.x - from.x, dy = to.y - from.y;
+        if (horizontal(draft.sourceSide) && horizontal(draft.targetSide)) {
+            if (dx * lx <= 0 || dx * ax <= 0) return straight;
             const middle = (from.x + to.x) / 2;
             return [from, { x: middle, y: from.y }, { x: middle, y: to.y }, to];
         }
-        const middle = (from.y + to.y) / 2;
-        return [from, { x: from.x, y: middle }, { x: to.x, y: middle }, to];
+        if (!horizontal(draft.sourceSide) && !horizontal(draft.targetSide)) {
+            if (dy * ly <= 0 || dy * ay <= 0) return straight;
+            const middle = (from.y + to.y) / 2;
+            return [from, { x: from.x, y: middle }, { x: to.x, y: middle }, to];
+        }
+        if (horizontal(draft.sourceSide)) {
+            // Out sideways, then into the target's top or bottom.
+            if (dx * lx <= 0 || dy * ay <= 0) return straight;
+            return [from, { x: to.x, y: from.y }, to];
+        }
+        if (dy * ly <= 0 || dx * ax <= 0) return straight;
+        return [from, { x: from.x, y: to.y }, to];
     };
 
     const edges: Edge[] = drafts.map(draft => {
