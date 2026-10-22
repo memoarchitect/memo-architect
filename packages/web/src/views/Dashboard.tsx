@@ -10,6 +10,7 @@ import type { MemoModelDTO, DashboardScope } from '@memoarchitect/tools/browser'
 import { DashboardPage } from './DashboardPage';
 import { HOME_DASHBOARD_ID, viewpointDashboardId } from '../dashboard/dashboards';
 import { computeExplorerGroupTree, explorerRowCounts } from '../components/ExplorerPanel';
+import { useOpenDomain } from '../lib/open-domain';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
 //
@@ -303,6 +304,8 @@ function CoverageWidget() {
     const { stats } = useDashboardData();
     const setActiveView = useModelStore(s => s.setActiveView);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
+    const openDomain = useOpenDomain();
+    const navigate = useNavigate();
     if (!stats) return null;
     return (
         <div className="memo-widget" style={{ marginBottom: '24px' }}>
@@ -311,19 +314,19 @@ function CoverageWidget() {
                     layer="requirements" label="Requirements"
                     count={stats.requirementsCount}
                     color={LAYER_COLORS['requirements'] || '#4A90D9'}
-                    onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
+                    onClick={() => openDomain('assurance')}
                 />
                 <CoverageTile
                     layer="risk" label="Risk"
                     count={stats.riskCount}
                     color={LAYER_COLORS['risk'] || '#E74C3C'}
-                    onClick={() => { setExplorerTab('model'); setActiveView({ type: 'welcome' }); }}
+                    onClick={() => openDomain('assurance')}
                 />
                 <CoverageTile
                     layer="logical" label="Architecture"
                     count={stats.architectureCount}
                     color={LAYER_COLORS['logical'] || '#7B68EE'}
-                    onClick={() => { setExplorerTab('views'); setActiveView({ type: 'welcome' }); }}
+                    onClick={() => { setExplorerTab('views'); navigate('/diagrams'); }}
                 />
                 <CoverageTile
                     layer="verification" label="Verification"

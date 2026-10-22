@@ -6,7 +6,7 @@
 // (this person's `memo.user.yaml`, or the model's own settings file for the compiler).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useModelStore, type DhfSettings } from '../store/model-store';
 import { CompilerSettings } from '../components/CompilerSettings';
 import { RoleSelector } from '../components/RoleSelector';
@@ -305,7 +305,12 @@ function ExplorerSection() {
 }
 
 export function SettingsPage() {
-    const [section, setSection] = useState<SectionId>('model');
+    // The tab is part of the view, so it is in the address: /settings/rules.
+    const view = useModelStore(s => s.activeView);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const requested = view.type === 'settings' ? view.section : undefined;
+    const section: SectionId = SECTIONS.some(candidate => candidate.id === requested) ? requested as SectionId : 'model';
+    const setSection = (id: SectionId) => setActiveView({ type: 'settings', section: id });
     return (
         <div className="flex-1 flex overflow-hidden" style={{ background: '#fff' }}>
             <nav aria-label="Settings sections" style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, padding: '20px 12px', background: COLOR.surfaceAlt, overflowY: 'auto' }}>

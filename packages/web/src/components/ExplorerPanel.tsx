@@ -39,6 +39,7 @@ import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
 import { viewToPath } from '../view-routes';
 import { useWorkspaceModel, useScopedValidation } from '../store/scoped-model';
+import { useOpenDomain } from '../lib/open-domain';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -1867,14 +1868,8 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, [filterableKinds, kindSearch]);
     const explorerDomain = useModelStore(s => s.explorerDomain);
     const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
-    const inspectElement = useModelStore(s => s.inspectElement);
     /** Choosing a domain starts afresh: the element that was open belongs to what was chosen before. */
-    const chooseDomain = (domain: string | null) => {
-        setExplorerDomain(domain);
-        inspectElement(null);
-        setActiveView({ type: 'welcome' });
-        navigate('/catalog');
-    };
+    const chooseDomain = useOpenDomain();
 
     // Build the tree from the ontology registry and its source namespaces.
     const explorerSystems = useModelStore(s => s.explorerSystems);
