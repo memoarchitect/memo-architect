@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react';
+import { escapeHtml, renderMarkdownBody } from '../dhf/document-renderer';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
@@ -29,7 +30,60 @@ import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser
 const DENSITY = 'page' as const;
 
 // ─── Scenario kinds ───────────────────────────────────────────────────────────
-const SCENARIO_KINDS = new Set(['Scenario', 'UseCase', 'UserActivity']);
+// A use case states a goal in prose; its ordered steps belong to a workflow, so it is described, not drawn as a flow.
+const SCENARIO_KINDS = new Set(['Scenario', 'UserActivity']);
+
+const MARKDOWN_CSS = `
+.el-md{font-size:14px;line-height:1.6;color:#324E67}
+.el-md h1,.el-md h2,.el-md h3{color:#082744;font-weight:600;margin:14px 0 6px}
+.el-md h1{font-size:18px}.el-md h2{font-size:16px}.el-md h3{font-size:14px}
+.el-md p{margin:0 0 10px}
+.el-md ul{list-style:disc;padding-left:22px;margin:0 0 10px}.el-md ol{list-style:decimal;padding-left:22px;margin:0 0 10px}
+.el-md code{background:#EEF4F7;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.el-md pre{background:#EEF4F7;padding:10px 12px;border-radius:8px;overflow:auto}
+.el-md a{color:#0E7490;text-decoration:underline}
+.el-md table{border-collapse:collapse}.el-md th,.el-md td{border:1px solid #D8E2E9;padding:4px 8px}
+`;
+
+/**
+ * Prose rendered as markdown, with an Edit control that opens the markdown source. Raw HTML lines are
+ * shown as text: a model's prose is not trusted markup.
+ */
+function MarkdownDescription({ value, writable, onSave }: { value: string; writable: boolean; onSave: (next: string) => void }) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(value);
+    const html = useMemo(
+        () => renderMarkdownBody(value.split(/\r?\n/).map(line => line.trim().startsWith('<') ? escapeHtml(line) : line).join('\n')),
+        [value],
+    );
+    if (editing) {
+        return (
+            <div>
+                <textarea aria-label="Description (markdown)" value={draft} onChange={e => setDraft(e.target.value)} autoFocus
+                    style={{ width: '100%', minHeight: 160, padding: 10, border: `1px solid ${COLOR.border}`, borderRadius: 8, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13 }} />
+                <div className="flex gap-2" style={{ marginTop: 8 }}>
+                    <button onClick={() => { onSave(draft); setEditing(false); }}
+                        style={{ padding: '6px 14px', borderRadius: 8, border: 0, background: COLOR.primary, color: '#fff', fontSize: FONT.sm, cursor: 'pointer' }}>Save</button>
+                    <button onClick={() => setEditing(false)}
+                        style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${COLOR.border}`, background: '#fff', color: COLOR.primary, fontSize: FONT.sm, cursor: 'pointer' }}>Cancel</button>
+                    <span style={{ alignSelf: 'center', color: COLOR.muted, fontSize: FONT.xs }}>Markdown: headings, lists, code, links and tables.</span>
+                </div>
+            </div>
+        );
+    }
+    return (
+        <div>
+            <style>{MARKDOWN_CSS}</style>
+            {value.trim()
+                ? <div className="el-md" dangerouslySetInnerHTML={{ __html: html }} />
+                : <div style={{ color: COLOR.faint, fontSize: FONT.md }}>{writable ? 'No description yet.' : 'No description.'}</div>}
+            {writable && (
+                <button aria-label="Edit description" onClick={() => { setDraft(value); setEditing(true); }}
+                    style={{ marginTop: 8, padding: '4px 12px', borderRadius: 8, border: `1px solid ${COLOR.border}`, background: '#fff', color: COLOR.primary, fontSize: FONT.sm, cursor: 'pointer' }}>✎ Edit</button>
+            )}
+        </div>
+    );
+}
 
 interface ScenarioStep { index: number; text: string; }
 
@@ -299,23 +353,14 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                             layerColor={layerColor}
                             onSave={next => saveField('doc', next)}
                         />
-                    ) : writable ? (
-                        // Prose is native `doc`. `attributes.description` is the
-                        // pre-migration spelling and is read, never written back:
-                        // the MEMO bases no longer declare the attribute, so
-                        // saving one would not compile.
-                        <EditableValue
-                            value={element.doc || element.attributes.description || ''}
-                            onSave={next => saveField('doc', next)}
-                            density={DENSITY}
-                            multiline
-                            placeholder="Click to add a description…"
-                        />
                     ) : (
-                        <ReadOnlyValue
+                        // Prose is native `doc`. `attributes.description` is the pre-migration spelling
+                        // and is read, never written back: the MEMO bases no longer declare the attribute,
+                        // so saving one would not compile.
+                        <MarkdownDescription
                             value={element.doc || element.attributes.description || ''}
-                            editability={{ kind: 'derived', reason: `This ${declaration?.origin ?? 'library'} declaration is read-only.` }}
-                            density={DENSITY}
+                            writable={writable}
+                            onSave={next => saveField('doc', next)}
                         />
                     )}
                 </ProfileSection>

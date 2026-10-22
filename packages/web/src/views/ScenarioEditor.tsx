@@ -104,6 +104,8 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
     const [newStepText, setNewStepText] = useState('');
     const [linkingStepIndex, setLinkingStepIndex] = useState<number | null>(null);
     const [linkSearch, setLinkSearch] = useState('');
+    // A branch of the use-case tree to look at alone: the use case and everything it includes.
+    const [focusKey, setFocusKey] = useState('');
 
     const scenarioTree = useMemo(() => {
         // The listing reads the workspace the person chose; the editors below keep the whole model.
@@ -346,9 +348,40 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                         className="w-full px-3 py-2 rounded-lg focus:outline-none"
                         style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }}
                     />
+                    {scenarioTree.some(row => row.depth > 0) && (
+                        <select aria-label="Show use cases" value={focusKey} onChange={e => setFocusKey(e.target.value)}
+                            className="w-full mt-2 px-2 py-1.5 rounded-lg"
+                            style={{ background: COLOR.surface, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }}>
+                            <option value="">All use cases</option>
+                            {scenarioTree.map((row, index) => scenarioTree[index + 1] && scenarioTree[index + 1].depth > row.depth && !scenarioTree[index + 1].firstInGroup
+                                ? <option key={`${row.group.id}:${row.useCase.id}`} value={`${row.group.id}:${row.useCase.id}`}>
+                                    {'\u00A0\u00A0'.repeat(row.depth)}Only {row.useCase.name}
+                                </option>
+                                : null)}
+                        </select>
+                    )}
                 </div>
                 <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-                    {scenarioTree.map(({ useCase, workflows, depth, group, firstInGroup }) => {
+                    {(() => {
+                        // A use case nests under the one that includes it, so collapsing a parent hides every case
+                        // beneath it. A search shows its matches wherever they sit.
+                        const ancestors: { depth: number; expanded: boolean }[] = [];
+                        // A focused branch is the chosen use case and the rows nested beneath it, shown from its own level.
+                        const start = focusKey ? scenarioTree.findIndex(row => `${row.group.id}:${row.useCase.id}` === focusKey) : -1;
+                        const shown = start < 0 ? scenarioTree : (() => {
+                            const rows = [scenarioTree[start]];
+                            for (let i = start + 1; i < scenarioTree.length && scenarioTree[i].depth > scenarioTree[start].depth && !scenarioTree[i].firstInGroup; i++) rows.push(scenarioTree[i]);
+                            return rows.map((row, index) => ({ ...row, depth: row.depth - scenarioTree[start].depth, firstInGroup: index === 0 && row.firstInGroup }));
+                        })();
+                        return shown.map(row => {
+                            if (row.firstInGroup) ancestors.length = 0;
+                            while (ancestors.length > 0 && ancestors[ancestors.length - 1].depth >= row.depth) ancestors.pop();
+                            const hidden = !searchTerm && ancestors.some(ancestor => !ancestor.expanded);
+                            // The root of a focused branch is open: the branch is what was asked for.
+                            ancestors.push({ depth: row.depth, expanded: (start >= 0 && row.depth === 0) || expandedGroups.has(`use-case:${row.group.id}:${row.useCase.id}`) });
+                            return { ...row, hidden };
+                        });
+                    })().filter(row => !row.hidden).map(({ useCase, workflows, depth, group, firstInGroup }) => {
                         // A system use case a procedure does not include may be listed under each
                         // system that holds it, so its expand key carries the group too.
                         const useCaseKey = `use-case:${group.id}:${useCase.id}`;

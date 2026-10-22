@@ -133,6 +133,28 @@ describe('use case groups', () => {
         expect(groups[0].entries.map(e => e.id)).toEqual(['ucProcedure', 'ucMap', 'ucRecord', 'ucStandalone']);
     });
 
+    it('lists a nested catalog once each when nothing holds it, as one tree', () => {
+        // A master that includes groups that include indications, in a model whose use cases belong to no workspace.
+        const catalog = ['master', 'groupA', 'groupB', 'a1', 'a2', 'b1'];
+        const tree = [
+            { sourceId: 'master', targetId: 'groupA' }, { sourceId: 'master', targetId: 'groupB' },
+            { sourceId: 'groupA', targetId: 'a1' }, { sourceId: 'groupA', targetId: 'a2' }, { sourceId: 'groupB', targetId: 'b1' },
+        ];
+        const [group, ...rest] = groupUseCases(catalog, tree, { ...membership, membership: {} }, id => id);
+        expect(rest).toEqual([]);
+        expect(group.entries).toEqual([
+            { id: 'master', depth: 0 }, { id: 'groupA', depth: 1 }, { id: 'a1', depth: 2 }, { id: 'a2', depth: 2 },
+            { id: 'groupB', depth: 1 }, { id: 'b1', depth: 2 },
+        ]);
+    });
+
+    it('lists a case included by two parents once', () => {
+        const [group] = groupUseCases(['p', 'q', 'shared'], [
+            { sourceId: 'p', targetId: 'shared' }, { sourceId: 'q', targetId: 'shared' },
+        ], { ...membership, membership: {} }, id => id);
+        expect(group.entries.map(entry => entry.id)).toEqual(['p', 'shared', 'q']);
+    });
+
     it('never hides a use case nothing holds', () => {
         const groups = groupUseCases([...ids, 'ucLost'], includes, membership, id => id);
         expect(groups.at(-1)).toMatchObject({ label: 'Unassigned', entries: [{ id: 'ucLost', depth: 0 }] });

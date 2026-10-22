@@ -2082,12 +2082,30 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
             )}
             <SharedIdsContext.Provider value={shared}>
             <div className="flex-1 overflow-y-auto py-1" style={{ fontSize: FONT.explorer.item }}>
-                {explorerDomain && (
-                    <div className="flex items-center gap-2 px-3 py-1" style={{ fontSize: FONT.xs, color: COLOR.muted, flexWrap: 'wrap' }}>
-                        <span>Showing {visibleGroups[0]?.group.label ?? explorerDomain} only</span>
-                        <button type="button" onClick={() => setExplorerDomain(null)} style={{ background: 'none', border: 0, cursor: 'pointer', color: COLOR.accentDark, fontWeight: 600, fontSize: FONT.xs }}>Show all</button>
-                    </div>
-                )}
+                {(() => {
+                    // The model's domains, always offered: opening on one is not a one-way door, and All brings the rest back.
+                    const domains = groupTree.filter(entry => entry.group.id.startsWith('domain:'));
+                    if (domains.length < 2) return null;
+                    const choices: { id: string | null; label: string }[] = [
+                        { id: null, label: 'All' },
+                        ...domains.map(entry => ({ id: entry.group.id.replace(/^domain:/, ''), label: entry.group.label })),
+                    ];
+                    return (
+                        <div role="group" aria-label="Show domain" className="flex flex-wrap gap-1 px-3 py-1.5">
+                            {choices.map(choice => {
+                                const active = (explorerDomain ?? null) === choice.id;
+                                return (
+                                    <button key={choice.label} type="button" aria-pressed={active} onClick={() => setExplorerDomain(choice.id)}
+                                        style={{
+                                            fontSize: FONT.xs, padding: '2px 10px', borderRadius: 10, cursor: 'pointer',
+                                            border: `1px solid ${active ? COLOR.primary : COLOR.border}`,
+                                            background: active ? COLOR.primary : COLOR.surface, color: active ? COLOR.surface : COLOR.secondary,
+                                        }}>{choice.label}</button>
+                                );
+                            })}
+                        </div>
+                    );
+                })()}
                 {visibleGroups.map(({ group, subGroups }) => {
                     const groupKey = `g:${group.id}`;
                     const isExpanded = expanded.has(groupKey);
