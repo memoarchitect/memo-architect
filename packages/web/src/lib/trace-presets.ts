@@ -43,16 +43,22 @@ export const requirementsOfType = (type: 'system' | 'software' | 'hardware'): Ax
 
 export const typesOf = (...kinds: string[]): AxisSelection => ({ kinds, query: '' });
 
-/** Risk items: what a mitigating requirement links to (the hazard, or the failure mode of an FMEA row). */
-const RISK = ['Hazard', 'FailureMode'];
+/**
+ * Risk, as a software trace means it: the hazards of the hazard analysis. A failure mode is a row of the hardware
+ * design FMEA, so it belongs to a hardware trace; leaving it out of a software one is what keeps hardware risks from
+ * showing under software requirements, although Matrix links some software requirements to FMEA rows.
+ */
+const RISK = ['Hazard'];
+/** Risk, as a hardware trace means it: the hazards, and the failure modes of the hardware design FMEA. */
+const HARDWARE_RISK = ['Hazard', 'FailureMode'];
 
 export const DEFAULT_TRACE_PRESETS = new TracePresetRegistry([
     { id: 'need-system', label: 'User need → System requirement', rows: typesOf('Need'), columns: requirementsOfType('system') },
     { id: 'need-software', label: 'User need → Software requirement', rows: typesOf('Need'), columns: requirementsOfType('software') },
     { id: 'need-hardware', label: 'User need → Hardware requirement', rows: typesOf('Need'), columns: requirementsOfType('hardware') },
     { id: 'risk-software', label: 'Risk → Software requirement', rows: typesOf(...RISK), columns: requirementsOfType('software') },
-    { id: 'risk-hardware', label: 'Risk → Hardware requirement', rows: typesOf(...RISK), columns: requirementsOfType('hardware') },
+    { id: 'risk-hardware', label: 'Risk → Hardware requirement', rows: typesOf(...HARDWARE_RISK), columns: requirementsOfType('hardware') },
     { id: 'software-need-risk', label: 'Software requirement → User need and Risk', rows: requirementsOfType('software'), columns: typesOf('Need', ...RISK) },
-    { id: 'hardware-need-risk', label: 'Hardware requirement → User need and Risk', rows: requirementsOfType('hardware'), columns: typesOf('Need', ...RISK) },
+    { id: 'hardware-need-risk', label: 'Hardware requirement → User need and Risk', rows: requirementsOfType('hardware'), columns: typesOf('Need', ...HARDWARE_RISK) },
     { id: 'requirement-test', label: 'Requirement → Test case', rows: typesOf('Requirement'), columns: typesOf('VerificationCase') },
 ]);

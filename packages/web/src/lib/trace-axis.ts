@@ -135,7 +135,8 @@ export interface TraceDisplay {
     columnFilter: LineFilter;
 }
 
-const STORAGE_KEY = 'memo-architect.traceability-display.v1';
+// v2: v1 saved the screen's own default (the matrix) on every visit, so it read as a choice the person never made.
+const STORAGE_KEY = 'memo-architect.traceability-display.v2';
 
 const lineFilter = (value: unknown): LineFilter => (value === 'linked' || value === 'empty' ? value : 'all');
 

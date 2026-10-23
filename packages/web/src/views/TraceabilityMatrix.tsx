@@ -28,7 +28,8 @@ import { TraceBuilderBar } from '../components/TraceBuilderBar';
 import { TraceDisplayBar } from '../components/TraceDisplayBar';
 import { TraceList } from '../components/TraceList';
 import { TraceLinkInspector } from '../components/TraceLinkInspector';
-import { SaveMatrixDialog, saveButtonStyle } from '../components/SaveMatrixDialog';
+import { SaveMatrixDialog } from '../components/SaveMatrixDialog';
+import { ActionButton, ControlIcon } from '../components/TraceControls';
 import { explorerTaxonomy } from '../components/ExplorerPanel';
 import { OntologyKindCatalog } from '../lib/ontology-kinds';
 import { DEFAULT_TRACE_PRESETS, type TracePreset } from '../lib/trace-presets';
@@ -188,29 +189,27 @@ export function TraceabilityMatrix() {
     const status = saved.status ?? editor.status;
     const { definition } = saved;
 
-    const actions = (
+    // What can be done to the draft: keep it in the model. Offered wherever the matrix is, not only inside the options.
+    const saveActions = (
         <>
             {definition && (
-                <button
-                    type="button" onClick={() => { void saved.save(); }} disabled={!saved.savable || !saved.unsaved || saved.saving}
+                <ActionButton
+                    variant="primary" icon={ControlIcon.save} onClick={() => { void saved.save(); }}
+                    disabled={!saved.savable || !saved.unsaved || saved.saving}
                     title={saved.unsaved ? `Write these rows, columns and relations to “${definition.name}”` : 'Nothing has changed since it was saved'}
-                    style={saveButtonStyle(saved.savable && saved.unsaved && !saved.saving, true)}
                 >
                     {saved.saving ? 'Saving…' : 'Save'}
-                </button>
+                </ActionButton>
             )}
-            <button
-                type="button" onClick={() => { saved.clearSaveError(); setSaveDialog(true); }} disabled={!saved.savable || saved.saving}
+            <ActionButton
+                variant={definition ? 'secondary' : 'primary'} icon={ControlIcon.save}
+                onClick={() => { saved.clearSaveError(); setSaveDialog(true); }} disabled={!saved.savable || saved.saving}
                 title={editor.connected
                     ? 'Keep this selection as a matrix in the model; it is listed in the panel on the left'
                     : 'The dev server is unreachable, so nothing can be written to the model.'}
-                style={saveButtonStyle(saved.savable && !saved.saving, !definition)}
             >
-                {definition ? 'Save as…' : 'Save'}
-            </button>
-            {matrix.committed && (
-                <button type="button" onClick={() => setBuilderOpen(false)} style={saveButtonStyle(true, false)} title="Hide these options">Done</button>
-            )}
+                {definition ? 'Save as…' : 'Save matrix'}
+            </ActionButton>
         </>
     );
 
@@ -236,7 +235,10 @@ export function TraceabilityMatrix() {
                                 kindOptions={kindOptions} linkOptions={linkOptions}
                                 linkTypes={draft.linkTypes} onLinkTypes={draft.setLinkTypes}
                                 canBuild={canBuild} stale={stale} built={Boolean(matrix.result)} building={building}
-                                onBuild={build} actions={actions}
+                                onBuild={build}
+                                actions={matrix.committed
+                                    ? <ActionButton icon={ControlIcon.close} onClick={() => setBuilderOpen(false)} title="Hide these options">Done</ActionButton>
+                                    : saveActions}
                             />
                         )}
                         {matrix.committed && (
@@ -247,13 +249,14 @@ export function TraceabilityMatrix() {
                                 cellSize={cellSize} onCellSize={setCellSize}
                                 editing={editing} onEditing={next => { setEditing(next); editor.inspect(null); }} connected={editor.connected}
                                 divided={builderOpen}
+                                trailing={saveActions}
                                 leading={definition && (
                                     <>
                                         <span style={{ fontSize: FONT.xs, color: COLOR.muted }} title={definition.elementId}>
                                             <strong style={{ color: COLOR.primary, fontSize: FONT.sm }}>{definition.name}</strong>{saved.unsaved ? ' · unsaved changes' : ''}
                                         </span>
                                         {!builderOpen && (
-                                            <button type="button" onClick={() => setBuilderOpen(true)} style={saveButtonStyle(editor.connected, false)} title="Change the rows, columns and relations">Edit view</button>
+                                            <ActionButton icon={ControlIcon.edit} onClick={() => setBuilderOpen(true)} disabled={!editor.connected} title="Change the rows, columns and relations">Edit view</ActionButton>
                                         )}
                                     </>
                                 )}

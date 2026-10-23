@@ -15,7 +15,7 @@ export const fieldStyle: React.CSSProperties = {
     color: COLOR.primary, background: COLOR.surface, minWidth: 0, boxSizing: 'border-box', width: '100%',
 };
 export const captionStyle: React.CSSProperties = { fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary };
-export const linkStyle: React.CSSProperties = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: FONT.xs, color: COLOR.accentDark, fontWeight: 600 };
+export const linkStyle: React.CSSProperties = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: FONT.xs, color: COLOR.accentDark, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: '2px' };
 
 
 export interface FilterState { kinds: string[]; contains: string; advanced: boolean; raw: string }
