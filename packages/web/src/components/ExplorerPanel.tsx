@@ -37,6 +37,7 @@ import { featureViewpoints } from '../lib/feature-viewpoints';
 import { ExplorerSystemFilter, UNASSIGNED_SYSTEM } from './ExplorerSystemFilter';
 import { buildPackageForest } from '../lib/explorer-package-forest';
 import { matrixScreenOf } from '../lib/matrix-views';
+import { OntologyKindCatalog } from '../lib/ontology-kinds';
 import { viewToPath } from '../view-routes';
 import { useWorkspaceModel, useScopedValidation } from '../store/scoped-model';
 import { useOpenDomain } from '../lib/open-domain';
@@ -1853,15 +1854,11 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
         for (const element of Object.values(model?.elements ?? {})) counts.set(element.kind, (counts.get(element.kind) ?? 0) + 1);
         return counts;
     }, [model?.elements]);
-    const ontologyKinds = useMemo(() => explorerTaxonomy(availableOntologies).byKind, [availableOntologies]);
-    const filterableKinds = useMemo(
-        () => registryKinds
-            .filter(kind => !kind.isAbstract && !/^(enum|attribute|metadata) def$/.test(kind.construct ?? '')
-                // the ontology's own element kinds; a project's definitions are not a type to filter by
-                && ontologyKinds.has(kind.name) && kindCounts.has(kind.name))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        [registryKinds, kindCounts, ontologyKinds],
-    );
+    // The ontology's own element types the model holds: the catalog every type picker asks.
+    const filterableKinds = useMemo(() => {
+        const taxonomy = explorerTaxonomy(availableOntologies).byKind;
+        return OntologyKindCatalog.of(model, name => taxonomy.has(name)).elementKinds({ withSubtypes: false });
+    }, [model, availableOntologies]);
     const shownKinds = useMemo(() => {
         const words = kindSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
         return filterableKinds.filter(kind => words.every(word => `${kind.label ?? ''} ${kind.name}`.toLowerCase().includes(word)));

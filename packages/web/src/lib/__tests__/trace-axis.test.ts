@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { HierarchicalDsmResult } from '../../analysis/dsm-hierarchy';
 import {
-    EMPTY_AXIS, TRACE_MAX_CELLS, builtMatrix, keepMatrix, loadSelection, matrixKey, saveSelection, selectAxis, traceLimit,
-    traceLinks, withLinks, axisFromQuery, axisToQuery, matrixFromSelection,
+    EMPTY_AXIS, TRACE_MAX_CELLS, applyLineFilter, axisFromQuery, axisToQuery, builtMatrix, keepMatrix, loadDisplay,
+    matrixFromSelection, matrixKey, saveDisplay, selectAxis, traceLimit, traceLinks,
 } from '../trace-axis';
 import { visibleRange } from '../../components/HierarchicalMatrix';
 
@@ -13,36 +13,34 @@ const element = (id: string, kind: string, name: string, extra: Record<string, u
 const model = {
     elements: {
         r1: element('r1', 'Requirement', 'Display location'),
-        r2: element('r2', 'Requirement', 'Alert operator', { shortId: 'REQ-2' }),
+        r2: element('r2', 'Requirement', 'Alert operator'),
         s1: element('s1', 'SecurityRequirement', 'Encrypt storage'),
-        t1: element('t1', 'TestCase', 'Location test', { package: 'ims_verification' }),
+        t1: element('t1', 'TestCase', 'Location test'),
+        a1: element('a1', 'AfferaHexaFlowSystem', 'HexaFlow'),
     },
     relationships: [],
 } as unknown as MemoModelDTO;
 
+const types = (...kinds: string[]) => ({ kinds, query: '' });
+
 describe('selectAxis', () => {
     it('selects nothing until a type is chosen', () => {
         expect(selectAxis(model, EMPTY_AXIS)).toEqual([]);
-        expect(selectAxis(null, { kinds: ['Requirement'], text: '' })).toEqual([]);
+        expect(selectAxis(null, types('Requirement'))).toEqual([]);
     });
 
     it('selects a type, ordered by type then name', () => {
-        expect(selectAxis(model, { kinds: ['Requirement', 'TestCase'], text: '' })).toEqual(['r2', 'r1', 't1']);
+        expect(selectAxis(model, types('Requirement', 'TestCase'))).toEqual(['r2', 'r1', 't1']);
     });
 
     it('includes the specializations of a chosen type when the hierarchy is known', () => {
         const parents = new Map([['SecurityRequirement', 'Requirement']]);
-        expect(selectAxis(model, { kinds: ['Requirement'], text: '' }, parents)).toEqual(['r2', 'r1', 's1']);
-        expect(selectAxis(model, { kinds: ['Requirement'], text: '' })).toEqual(['r2', 'r1']);
+        expect(selectAxis(model, types('Requirement'), parents)).toEqual(['r2', 'r1', 's1']);
+        expect(selectAxis(model, types('Requirement'))).toEqual(['r2', 'r1']);
     });
 
-    it('narrows by every word, over name, id, short id and package', () => {
-        const all = { kinds: ['Requirement', 'TestCase'], text: '' };
-        expect(selectAxis(model, { ...all, text: 'location' })).toEqual(['r1', 't1']);
-        expect(selectAxis(model, { ...all, text: 'location display' })).toEqual(['r1']);
-        expect(selectAxis(model, { ...all, text: 'req-2' })).toEqual(['r2']);
-        expect(selectAxis(model, { ...all, text: 'ims_verification' })).toEqual(['t1']);
-        expect(selectAxis(model, { ...all, text: 'nothing like this' })).toEqual([]);
+    it('leaves an axis written as a query to the server', () => {
+        expect(selectAxis(model, { kinds: ['Requirement'], query: 'kind: Requirement', advanced: true })).toEqual([]);
     });
 });
 
@@ -55,7 +53,7 @@ describe('traceLimit', () => {
     });
 });
 
-describe('the remembered selection', () => {
+describe('the remembered display choices', () => {
     const store = () => {
         const data = new Map<string, string>();
         return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) };
@@ -63,20 +61,13 @@ describe('the remembered selection', () => {
 
     it('round-trips and survives bad data', () => {
         const storage = store();
-        expect(loadSelection(storage)).toBeNull();
-        const selection = {
-            rows: { kinds: ['Requirement'], text: 'loc' }, columns: { kinds: ['TestCase'], text: '' }, linkTypes: ['verifiedBy'],
-            view: 'list' as const, hideEmptyRows: true, hideEmptyColumns: false,
-        };
-        saveSelection(selection, storage);
-        expect(loadSelection(storage)).toEqual(selection);
-        storage.setItem('memo-architect.traceability-selection.v1', '{not json');
-        expect(loadSelection(storage)).toBeNull();
-        storage.setItem('memo-architect.traceability-selection.v1', JSON.stringify({ rows: { kinds: [1, 'A'] } }));
-        expect(loadSelection(storage)).toEqual({
-            rows: { kinds: ['A'], text: '' }, columns: { kinds: [], text: '' }, linkTypes: [],
-            view: 'matrix', hideEmptyRows: false, hideEmptyColumns: false,
-        });
+        expect(loadDisplay(storage)).toEqual({ view: 'matrix', rowFilter: 'all', columnFilter: 'all' });
+        saveDisplay({ view: 'list', rowFilter: 'empty', columnFilter: 'linked' }, storage);
+        expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'empty', columnFilter: 'linked' });
+        storage.setItem('memo-architect.traceability-display.v1', '{not json');
+        expect(loadDisplay(storage)).toEqual({ view: 'matrix', rowFilter: 'all', columnFilter: 'all' });
+        storage.setItem('memo-architect.traceability-display.v1', JSON.stringify({ view: 'x', rowFilter: 'bogus' }));
+        expect(loadDisplay(storage)).toEqual({ view: 'matrix', rowFilter: 'all', columnFilter: 'all' });
     });
 });
 
@@ -108,7 +99,6 @@ describe('the kept matrices', () => {
 
 describe('visibleRange', () => {
     it('is the lines in view plus a margin, clamped to the grid', () => {
-        // 1000 lines of 30px under a 44px header; a 600px window scrolled 3000px down.
         const [first, last] = visibleRange(3000, 600, 44, 30, 1000, 6);
         expect(first).toBe(Math.floor((3000 - 44) / 30) - 6);
         expect(last).toBe(Math.ceil((3000 + 600 - 44) / 30) + 6);
@@ -148,39 +138,43 @@ describe('traceLinks', () => {
         expect(links.byColumn.get('s2')).toEqual(['n1']);
     });
 
-    it('leaves out the empty ones, so they can be hidden', () => {
-        const links = traceLinks(linked, rows, columns, []);
-        expect(links.byRow.has('n3')).toBe(false);
-        expect(withLinks(rows, links.byRow)).toEqual(['n1', 'n2']);
-        expect(withLinks(columns, links.byColumn)).toEqual(['s1', 's2']);
-    });
-
     it('counts only the chosen relations', () => {
         const links = traceLinks(linked, rows, columns, ['verifiedBy']);
         expect(links.byRow.get('n2')).toEqual(['s1']);
         expect(links.byRow.has('n1')).toBe(false);
     });
+
+    it('filters lines to all, those with links, or the gaps', () => {
+        const links = traceLinks(linked, rows, columns, []);
+        expect(applyLineFilter(rows, links.byRow, 'all')).toEqual(['n1', 'n2', 'n3']);
+        expect(applyLineFilter(rows, links.byRow, 'linked')).toEqual(['n1', 'n2']);
+        expect(applyLineFilter(rows, links.byRow, 'empty')).toEqual(['n3']);
+        expect(applyLineFilter(columns, links.byColumn, 'empty')).toEqual(['s3']);
+    });
 });
 
 describe('a selection saved as a view', () => {
-    it('is saved as the query the explorer and server read, and read back as the same selection', () => {
-        const axis = { kinds: ['Need', 'Requirement'], text: 'safety' };
-        expect(axisToQuery(axis)).toBe('kind: [Need, Requirement]\nwhere: name contains "safety"');
-        expect(axisFromQuery(axisToQuery(axis))).toEqual(axis);
-        expect(axisFromQuery('kind: Risk')).toEqual({ kinds: ['Risk'], text: '' });
-        expect(axisFromQuery('')).toEqual({ kinds: [], text: '' });
+    it('is saved as the query the explorer and server read, and read back as the same types', () => {
+        const axis = types('Need', 'Requirement');
+        expect(axisToQuery(axis)).toBe('kind: [Need, Requirement]');
+        expect(axisFromQuery(axisToQuery(axis))).toEqual({ kinds: ['Need', 'Requirement'], query: 'kind: [Need, Requirement]' });
+        expect(axisFromQuery('kind: Risk')).toMatchObject({ kinds: ['Risk'] });
+        expect(axisFromQuery('kind: Risk').advanced).toBeUndefined();
     });
 
-    it('does not pretend to edit a query it did not make', () => {
-        expect(axisFromQuery('kind: Need\nwhere: layer == "risk"')).toBeNull();
-        expect(axisFromQuery('kind: A\nkind: B')).toBeNull();
-        expect(axisFromQuery('traverse: outgoing derivesFrom')).toBeNull();
+    it('keeps a query it did not make as a query to edit, exactly as written', () => {
+        const query = 'kind: Requirement\nwhere: requirementType == "RequirementTypeKind::software"';
+        expect(axisFromQuery(query)).toEqual({ kinds: [], query, advanced: true });
+        expect(axisToQuery(axisFromQuery(query))).toBe(query);
+        // a name condition (an older view) is a query too
+        expect(axisFromQuery('kind: A\nwhere: name contains "x"').advanced).toBe(true);
+        // nothing saved for an axis opens as an empty type picker
+        expect(axisFromQuery(undefined)).toEqual({ kinds: [], query: '' });
     });
 
     it('writes only what is stated', () => {
-        const none = { kinds: [], text: '' };
-        expect(matrixFromSelection({ rows: none, columns: none, linkTypes: [] })).toEqual({});
-        expect(matrixFromSelection({ rows: { kinds: ['Need'], text: '' }, columns: { kinds: ['Requirement'], text: '' }, linkTypes: ['derivesFrom'] }, 'sys::S')).toEqual({
+        expect(matrixFromSelection({ rows: EMPTY_AXIS, columns: EMPTY_AXIS, linkTypes: [] })).toEqual({});
+        expect(matrixFromSelection({ rows: types('Need'), columns: types('Requirement'), linkTypes: ['derivesFrom'] }, 'sys::S')).toEqual({
             system: 'sys::S', rowAxis: { query: 'kind: Need' }, columnAxis: { query: 'kind: Requirement' }, linkTypes: ['derivesFrom'],
         });
     });

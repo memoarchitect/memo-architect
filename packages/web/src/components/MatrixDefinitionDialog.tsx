@@ -16,6 +16,7 @@ import { useModelStore } from '../store/model-store';
 import { evaluateAxis, limitFor, type AxisEvaluation } from '../lib/axis-evaluation';
 import { scopeModel } from '../lib/workspace-scope';
 import { MATRIX_LIMITS, queryFromFilter, type MatrixScreen } from '../lib/matrix-views';
+import { AxisFilterCard, NO_FILTER, queryOf, captionStyle, fieldStyle, linkStyle, type FilterState } from './AxisFilterCard';
 import { MatrixSystemSelect } from './MatrixSystemSelect';
 import { TypeFilterSelect, type TypeFilterOption } from './TypeFilterSelect';
 import { ProgressBar, type ProgressState } from './ProgressBar';
@@ -40,72 +41,11 @@ interface Props {
 
 const PACKAGE_PATH = /^[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*$/;
 
-const field: React.CSSProperties = {
-    padding: '7px 9px', border: `1px solid ${COLOR.border}`, borderRadius: '7px', fontSize: FONT.sm,
-    color: COLOR.primary, background: COLOR.surface, minWidth: 0, boxSizing: 'border-box', width: '100%',
-};
-const caption: React.CSSProperties = { fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary };
-const link: React.CSSProperties = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: FONT.xs, color: COLOR.accentDark, fontWeight: 600 };
-
 export { queryFromFilter };
 
-interface FilterState { kinds: string[]; contains: string; advanced: boolean; raw: string }
-const NO_FILTER: FilterState = { kinds: [], contains: '', advanced: false, raw: '' };
-const queryOf = (filter: FilterState) => (filter.advanced ? filter.raw.trim() : queryFromFilter(filter.kinds, filter.contains));
-
-/** One axis: what to list, counted live. */
-function FilterCard({ title, filter, onChange, kindOptions, evaluation, counting }: {
-    title: string; filter: FilterState; onChange: (next: FilterState) => void;
-    kindOptions: TypeFilterOption[]; evaluation?: AxisEvaluation; counting: boolean;
-}) {
-    const query = queryOf(filter);
-    return (
-        <section aria-label={title} style={{ display: 'grid', gap: '7px', padding: '10px 12px', border: `1px solid ${COLOR.border}`, borderRadius: '9px', background: '#FAFBFC', alignContent: 'start' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                <span style={{ ...caption, fontSize: FONT.sm, color: COLOR.primary, flex: 1 }}>{title}</span>
-                <button type="button" style={link} onClick={() => onChange(filter.advanced
-                    ? { ...filter, advanced: false }
-                    : { ...filter, advanced: true, raw: queryFromFilter(filter.kinds, filter.contains) })}>
-                    {filter.advanced ? 'Use the fields' : 'Edit as query'}
-                </button>
-            </div>
-            {filter.advanced ? (
-                <textarea
-                    value={filter.raw} onChange={event => onChange({ ...filter, raw: event.target.value })} aria-label={`${title} query`}
-                    rows={4} spellCheck={false} placeholder={'kind: Requirement\nwhere: name contains "safety"'}
-                    style={{ ...field, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: FONT.xs, resize: 'vertical' }}
-                />
-            ) : (
-                <>
-                    <div style={{ display: 'grid', gap: '3px' }}>
-                        <span style={caption}>Element types</span>
-                        <TypeFilterSelect
-                            label="" allLabel="Choose types…" options={kindOptions} selected={filter.kinds}
-                            onChange={kinds => onChange({ ...filter, kinds })} width={210} describedAs={`${title} element types`}
-                            placeholder="Find a type…"
-                        />
-                    </div>
-                    <label style={{ display: 'grid', gap: '3px' }}>
-                        <span style={caption}>Name contains</span>
-                        <input value={filter.contains} onChange={event => onChange({ ...filter, contains: event.target.value })} aria-label={`${title} name contains`} placeholder="any text" style={field} />
-                    </label>
-                </>
-            )}
-            <div role="status" style={{ fontSize: FONT.xs, minHeight: '16px', color: evaluation?.error ? '#B91C1C' : COLOR.muted, fontWeight: 600 }}>
-                {!query
-                    ? <span style={{ fontWeight: 400, color: COLOR.faint }}>No filter: decided after it is created.</span>
-                    : counting
-                        ? 'Counting…'
-                        : evaluation?.error
-                            ? evaluation.error
-                            : evaluation
-                                ? <span style={{ color: '#0F766E' }}>{evaluation.count.toLocaleString()} element{evaluation.count === 1 ? '' : 's'}</span>
-                                : null}
-            </div>
-        </section>
-    );
-}
-
+const field = fieldStyle;
+const caption = captionStyle;
+const link = linkStyle;
 export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', initialPackage = '', packages, busy, error, onSubmit, onClose }: Props) {
     const model = useScopedModel();
     const wholeModel = useModelStore(s => s.model);
@@ -258,8 +198,8 @@ export function MatrixDefinitionDialog({ mode, screen, noun, initialName = '', i
                 {filtering && (
                     <div style={{ display: 'grid', gap: '8px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: isDsm ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                            <FilterCard title={isDsm ? 'Elements' : 'Rows'} filter={rows} onChange={setRows} kindOptions={kindOptions} evaluation={rowEvaluation} counting={rowCounting} />
-                            {!isDsm && <FilterCard title="Columns" filter={columns} onChange={setColumns} kindOptions={kindOptions} evaluation={columnEvaluation} counting={columnCounting} />}
+                            <AxisFilterCard title={isDsm ? 'Elements' : 'Rows'} filter={rows} onChange={setRows} kindOptions={kindOptions} evaluation={rowEvaluation} counting={rowCounting} />
+                            {!isDsm && <AxisFilterCard title="Columns" filter={columns} onChange={setColumns} kindOptions={kindOptions} evaluation={columnEvaluation} counting={columnCounting} />}
                         </div>
                         <span style={{ fontSize: FONT.xs, color: limitProblem ? '#B91C1C' : COLOR.faint }} role={limitProblem ? 'alert' : undefined}>
                             {limitProblem ?? (isDsm
