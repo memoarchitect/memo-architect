@@ -10,6 +10,7 @@
 //     resolved to a real list when `resolveToc` is set, used on export)
 //   - ```memo-query```             → live query against the model
 //   - ```memo-script```            → placeholder (executed by the CLI on export)
+//   - {{interfaces:A | B}}         → the interfaces between two parts (qualified ids), read from the model
 //   - {{diagram:ref [height=px]}}   → live, read-only diagram embed (preview)
 //   - {{widget:name}}              → live dashboard widget (preview)
 //   - {{model.name|elements|relationships|views|viewpoints}} → live value, inline
@@ -23,7 +24,7 @@
 // output survives. Styling lives in document-theme.ts, not here.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO } from '@memoarchitect/tools/browser';
+import { interfacesBetween, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { DhfSettings, DhfDoc } from '../store/model-store';
 
 export interface RenderOptions {
@@ -109,6 +110,33 @@ ${!hasAuthors ? '<p style="font-size:11px;color:#dc2626">⚠ No authors set — 
 ${!hasApprovers ? '<p style="font-size:11px;color:#dc2626">⚠ No approvers set — open Document Properties to add approvers.</p>' : ''}`;
 }
 
+/** The two parts an `{{interfaces:A | B}}` directive names, split on `|`. Ids are qualified (`pkg::owner::name`). */
+export function parseInterfacesPair(body: string): [string, string] | null {
+    const parts = body.split('|').map(s => s.trim());
+    return parts.length === 2 && parts[0] && parts[1] ? [parts[0], parts[1]] : null;
+}
+
+/** The interfaces between two parts as an HTML table, or a note saying why there is none. */
+function renderInterfacesTable(body: string, model: MemoModelDTO | null): string {
+    const pair = parseInterfacesPair(body);
+    if (!pair) return '<span class="directive-error">⚠ {{interfaces:…}} — write two part ids separated by |</span>';
+    if (!model) return '<span class="directive-placeholder">…</span>';
+    const [a, b] = pair;
+    const missing = [a, b].filter(id => !model.elements[id]);
+    if (missing.length > 0) return `<em>[${missing.map(escapeHtml).join(', ')} not found]</em>`;
+    const label = (id: string) => escapeHtml(model.elements[id]?.name ?? id);
+    const found = interfacesBetween(model, a, b);
+    if (found.length === 0) return `<p><em>No interfaces between ${label(a)} and ${label(b)}.</em></p>`;
+    // An interface's ends are positional and the model names no system of interest, so no direction is claimed:
+    // each row shows the port on each part, and the order they were declared in is the order of `from`/`to`.
+    const portOn = (f: (typeof found)[number], owner: string) => (f.from.ownerId === owner ? f.from : f.to).portId;
+    const attributes = (f: (typeof found)[number]) => Object.entries(f.attributes).map(([k, v]) => `${k} = ${v}`).join(', ');
+    const rows = found.map(f => `<tr><td>${escapeHtml(f.name)}</td><td>${escapeHtml(f.kind ?? '—')}</td>`
+        + `<td>${label(portOn(f, a))}</td><td>${label(portOn(f, b))}</td><td>${escapeHtml(attributes(f) || '—')}</td></tr>`).join('');
+    return `<table><thead><tr><th>Interface</th><th>Kind</th><th>Port on ${label(a)}</th><th>Port on ${label(b)}</th><th>Attributes</th></tr></thead>`
+        + `<tbody>${rows}</tbody></table>`;
+}
+
 function generateToc(md: string): string {
     const items: string[] = [];
     const headingRe = /^(#{2,4})\s+(.+)$/gm;
@@ -177,6 +205,9 @@ function resolveDirectives(
         if (!attr || attr === 'name') return escapeHtml(el.name);
         return escapeHtml(String((el as unknown as Record<string, unknown>)[attr] ?? el.name));
     });
+
+    // {{interfaces:A | B}} — every interface between two parts, read from the model each time it renders
+    content = content.replace(/\{\{interfaces:([^}]+)\}\}/g, (_m, body: string) => renderInterfacesTable(body, model));
 
     // {{diagram:ref [height=px]}} — live embed marker in preview, reference note on export
     content = content.replace(/\{\{diagram:([^}]+)\}\}/g, (_m, body: string) => {

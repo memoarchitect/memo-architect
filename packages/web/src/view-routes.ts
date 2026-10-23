@@ -28,6 +28,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     dsm: '/dsm',
     ontology: '/ontology',
     traceability: '/traceability',
+    interfaces: '/interfaces',
     'suspect-links': '/suspect-links',
     variability: '/variability',
     'scenario-editor': '/use-cases',
@@ -93,6 +94,14 @@ export function viewToPath(view: ActiveView): string | null {
             return view.definitionId
                 ? `${STATIC_VIEW_PATHS[view.type]}?definition=${encodeURIComponent(view.definitionId)}`
                 : STATIC_VIEW_PATHS[view.type];
+        // The two parts ride in the query, so a pair can be linked to.
+        case 'interfaces': {
+            const params = new URLSearchParams();
+            if (view.a) params.set('a', view.a);
+            if (view.b) params.set('b', view.b);
+            const query = params.toString();
+            return query ? `/interfaces?${query}` : '/interfaces';
+        }
         // The tab rides in the path, so each settings page can be linked to.
         case 'settings':
             return view.section ? `/settings/${encodeURIComponent(view.section)}` : '/settings';
@@ -138,6 +147,12 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     if (staticView === 'dsm' || staticView === 'traceability') {
         const definitionId = new URLSearchParams(search).get('definition') ?? undefined;
         return { type: staticView, ...(definitionId ? { definitionId } : {}) } as ActiveView;
+    }
+    if (staticView === 'interfaces') {
+        const params = new URLSearchParams(search);
+        const a = params.get('a') ?? undefined;
+        const b = params.get('b') ?? undefined;
+        return { type: 'interfaces', ...(a ? { a } : {}), ...(b ? { b } : {}) };
     }
     if (staticView) return { type: staticView } as ActiveView;
 

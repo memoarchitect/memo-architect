@@ -43,6 +43,7 @@ const GuidePage = lazy(() => import('./views/Guide').then(m => ({ default: m.Gui
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
+const InterfacesPage = lazy(() => import('./views/InterfacesPage').then(m => ({ default: m.InterfacesPage })));
 const UiScreensWorkspace = lazy(() => import('./views/UiScreensWorkspace').then(m => ({ default: m.UiScreensWorkspace })));
 const RulesWorkspace = lazy(() => import('./views/RulesWorkspace').then(m => ({ default: m.RulesWorkspace })));
 const FeaturePage = lazy(() => import('./views/FeaturePage').then(m => ({ default: m.FeaturePage })));
@@ -131,6 +132,8 @@ function UnifiedCanvas() {
                 return isFeatureEnabled('analysis') ? <AnalysisWorkspace /> : <Dashboard />;
             case 'ui-screens':
                 return <UiScreensWorkspace />;
+            case 'interfaces':
+                return <InterfacesPage />;
             case 'rules':
                 return <RulesWorkspace />;
             case 'variability':

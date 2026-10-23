@@ -144,6 +144,7 @@ export type ActiveView =
     | { type: 'ontology' }
     | { type: 'ontology-detail'; packageName: string; layerId?: string }
     | { type: 'traceability'; definitionId?: string }   // definitionId: the element id of a MemoTraceabilityMatrixView
+    | { type: 'interfaces'; a?: string; b?: string }   // the interfaces between two parts (qualified ids), savable as a markdown page
     | { type: 'feature'; featureId: string }   // one feature: what it is, its analysis, the views it shows
     | { type: 'variability' }          // features, design options and what each release selects (A7)
     | { type: 'suspect-links' }       // links to imported records that moved or left their source (A9)
