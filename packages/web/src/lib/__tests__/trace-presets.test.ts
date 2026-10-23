@@ -45,15 +45,15 @@ describe('the default quick traces', () => {
     });
 
     it('can trace several kinds at once', () => {
-        expect(DEFAULT_TRACE_PRESETS.find('hardware-need-risk')!.columns.kinds).toEqual(expect.arrayContaining(['Need', 'Hazard', 'FailureMode']));
+        expect(DEFAULT_TRACE_PRESETS.find('hardware-need-risk')!.columns.kinds).toEqual(expect.arrayContaining(['Need', 'Risk', 'FailureMode']));
     });
 
     it('keeps the hardware FMEA\'s failure modes out of a software trace, and in a hardware one', () => {
         const kindsOf = (id: string) => [...DEFAULT_TRACE_PRESETS.find(id)!.rows.kinds, ...DEFAULT_TRACE_PRESETS.find(id)!.columns.kinds];
         for (const id of ['risk-software', 'software-need-risk']) {
-            expect(kindsOf(id)).toContain('Hazard');
+            expect(kindsOf(id)).toContain('Risk');
             expect(kindsOf(id)).not.toContain('FailureMode');
         }
-        for (const id of ['risk-hardware', 'hardware-need-risk']) expect(kindsOf(id)).toEqual(expect.arrayContaining(['Hazard', 'FailureMode']));
+        for (const id of ['risk-hardware', 'hardware-need-risk']) expect(kindsOf(id)).toEqual(expect.arrayContaining(['Risk', 'FailureMode']));
     });
 });
