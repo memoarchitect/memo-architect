@@ -9,7 +9,7 @@ import type { AxisSelection } from '../lib/trace-axis';
 import { axisToQuery } from '../lib/trace-axis';
 import type { TraceAxisIds } from '../lib/use-trace-axis';
 
-const toFilter = (axis: AxisSelection): FilterState => ({ kinds: axis.kinds, contains: '', advanced: Boolean(axis.advanced), raw: axis.query });
+const toFilter = (axis: AxisSelection): FilterState => ({ kinds: axis.kinds, contains: axis.contains ?? '', advanced: Boolean(axis.advanced), raw: axis.query });
 
 export function TraceAxisField({ title, axis, onChange, kindOptions, selection }: {
     title: string;
@@ -19,19 +19,18 @@ export function TraceAxisField({ title, axis, onChange, kindOptions, selection }
     selection: TraceAxisIds;
 }) {
     return (
-        <div style={{ width: '300px', maxWidth: '100%' }}>
+        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
             <AxisFilterCard
                 title={title}
                 filter={toFilter(axis)}
                 kindOptions={kindOptions}
-                showName={false}
-                emptyHint="Choose element types, or write a query."
+                emptyHint="Choose element types, or part of a name."
                 counting={selection.counting}
                 evaluation={{ query: axisToQuery(axis), count: selection.ids.length, preview: [], error: selection.error }}
                 onChange={filter => onChange(filter.advanced
                     // switching to a query starts from the one the types stand for; switching back keeps the types
-                    ? { kinds: filter.kinds, query: filter.raw, advanced: true }
-                    : { kinds: filter.kinds, query: axis.query, advanced: false })}
+                    ? { kinds: filter.kinds, contains: filter.contains, query: filter.raw, advanced: true }
+                    : { kinds: filter.kinds, contains: filter.contains, query: axis.query, advanced: false })}
             />
         </div>
     );

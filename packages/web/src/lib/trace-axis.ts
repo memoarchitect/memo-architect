@@ -12,6 +12,8 @@ import { defaultContainmentTypes, type HierarchicalDsmResult } from '../analysis
 export interface AxisSelection {
     /** Element types on the axis; each stands for the type and everything that specializes it. */
     kinds: string[];
+    /** Part of a name, narrowing the types (or standing alone); empty for none. */
+    contains?: string;
     /** A memo-query, used instead of the types when `advanced` is on. */
     query: string;
     /** The axis is written as a query rather than picked as types. */
@@ -28,7 +30,8 @@ export const TRACE_MAX_CELLS = 1_000_000;
  * evaluated by the server (see `useTraceAxis`), so it selects nothing here.
  */
 export function selectAxis(model: MemoModelDTO | null, axis: AxisSelection, parents?: KindParents): string[] {
-    if (!model || axis.advanced || axis.kinds.length === 0) return [];
+    const text = (axis.contains ?? '').trim().toLowerCase();
+    if (!model || axis.advanced || (axis.kinds.length === 0 && !text)) return [];
     const universe = new Set<string>();
     for (const element of Object.values(model.elements)) universe.add(element.kind);
     const kinds = new Set<string>();
@@ -36,7 +39,7 @@ export function selectAxis(model: MemoModelDTO | null, axis: AxisSelection, pare
         for (const under of parents ? kindsUnder(kind, parents, universe) : [kind]) kinds.add(under);
     }
     return Object.values(model.elements)
-        .filter(element => kinds.has(element.kind))
+        .filter(element => (axis.kinds.length === 0 || kinds.has(element.kind)) && (!text || element.name.toLowerCase().includes(text)))
         .sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name))
         .map(element => element.id);
 }
@@ -53,16 +56,16 @@ export function traceLimit(rows: number, columns: number): string | null {
 // ─── Saved as a view ──────────────────────────────────────────────────────────
 
 /** The memo-query an axis is saved as: the query as written, or the one the types stand for. */
-export const axisToQuery = (axis: AxisSelection): string => (axis.advanced ? axis.query.trim() : queryFromFilter(axis.kinds, ''));
+export const axisToQuery = (axis: AxisSelection): string => (axis.advanced ? axis.query.trim() : queryFromFilter(axis.kinds, axis.contains ?? ''));
 
 /**
- * The axis a saved query stands for: types when it is only `kind:`, otherwise the query itself, which
- * opens as a query to edit. (A name condition from an older view is kept as the query it is.)
+ * The axis a saved query stands for: types and a name when it is only `kind:` and `where: name contains`,
+ * otherwise the query itself, which opens as a query to edit.
  */
 export function axisFromQuery(query: string | undefined): AxisSelection {
     const text = (query ?? '').trim();
     const filter = filterFromQuery(text);
-    if (filter && !filter.contains) return { kinds: filter.kinds, query: text };
+    if (filter) return { kinds: filter.kinds, query: text, ...(filter.contains ? { contains: filter.contains } : {}) };
     return { kinds: [], query: text, advanced: true };
 }
 
