@@ -16,7 +16,7 @@
 //     of the model is visible without any line running the height of the page.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { DsmAggregateCell, DsmAxisEntry, HierarchicalDsmResult } from '../analysis/dsm-hierarchy';
 import { LAYER_COLORS } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
@@ -58,8 +58,6 @@ export interface HierarchicalMatrixProps {
 const LABEL_WIDTH = 300;
 /** Longest column name drawn in the header before it is elided. */
 const MAX_HEADER_NAME = 24;
-/** Above this many cells the browser, not the analysis, becomes the bottleneck. */
-const CELL_BUDGET = 90_000;
 
 /** Rule weight for a boundary that opens a subsystem at `depth`. */
 function boundary(depth: number): string {
@@ -80,6 +78,18 @@ function boundaryDepths(entries: DsmAxisEntry[]): (number | null)[] {
     });
 }
 
+/** Rows and columns drawn beyond the visible edge, so a fast scroll never shows blank grid. */
+const OVERSCAN = 6;
+
+/** The slice of a line of `count` entries, each `size` px, that a viewport shows (plus overscan). Exported for tests. */
+export function visibleRange(offset: number, extent: number, lead: number, size: number, count: number, overscan = OVERSCAN): [number, number] {
+    const first = Math.floor((offset - lead) / size) - overscan;
+    const last = Math.ceil((offset + extent - lead) / size) + overscan;
+    return [Math.max(0, Math.min(first, count)), Math.max(0, Math.min(last, count))];
+}
+
+interface Viewport { top: number; left: number; width: number; height: number }
+
 export function HierarchicalMatrix({
     result, onToggleRow, onToggleColumn, onSelectElement, selectedElementId,
     renderCell, onCellClick, onCellDoubleClick, cellSize = 26, showColumnNames = false, onHideRow, onHideColumn, cornerHeader, footer, highlightIds,
@@ -88,6 +98,37 @@ export function HierarchicalMatrix({
     const [hover, setHover] = useState<{ row: number; column: number } | null>(null);
     const { rows, columns, matrix } = result;
 
+    // Only the lines in view are drawn. A matrix is thousands of cells, and drawing all of them (and
+    // redrawing them on every hover) is what made the screen freeze; the cost now follows the window, not the grid.
+    const scroller = useRef<HTMLDivElement>(null);
+    const [viewport, setViewport] = useState<Viewport>({ top: 0, left: 0, width: 1400, height: 900 });
+    const frame = useRef(0);
+    const measure = useCallback(() => {
+        const el = scroller.current;
+        if (!el) return;
+        setViewport(current => (
+            current.top === el.scrollTop && current.left === el.scrollLeft
+            && current.width === el.clientWidth && current.height === el.clientHeight
+                ? current
+                : { top: el.scrollTop, left: el.scrollLeft, width: el.clientWidth, height: el.clientHeight }));
+    }, []);
+    const onScroll = useCallback(() => {
+        if (frame.current) return;
+        frame.current = requestAnimationFrame(() => { frame.current = 0; measure(); });
+    }, [measure]);
+    useLayoutEffect(() => {
+        measure();
+        const el = scroller.current;
+        if (!el || typeof ResizeObserver === 'undefined') return undefined;
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => { observer.disconnect(); if (frame.current) cancelAnimationFrame(frame.current); };
+    }, [measure, rows.length, columns.length]);
+
+    const rowOfColumn = useMemo(() => {
+        const byId = new Map(rows.map((entry, index) => [entry.node.id, index]));
+        return columns.map(entry => byId.get(entry.node.id) ?? -1);
+    }, [rows, columns]);
     const rowBoundaries = useMemo(() => boundaryDepths(rows), [rows]);
     const columnBoundaries = useMemo(() => boundaryDepths(columns), [columns]);
     const matrixFontSize = Math.max(10, Math.round(cellSize * 0.34));
@@ -101,7 +142,10 @@ export function HierarchicalMatrix({
     // length — the full one is in the header's tooltip and row label opposite.
     const headerName = (name: string) =>
         name.length > MAX_HEADER_NAME ? `${name.slice(0, MAX_HEADER_NAME - 1)}…` : name;
-    const longestHeader = Math.min(MAX_HEADER_NAME, Math.max(0, ...columns.map(entry => entry.node.name.length)));
+    const longestHeader = useMemo(
+        () => Math.min(MAX_HEADER_NAME, columns.reduce((longest, entry) => Math.max(longest, entry.node.name.length), 0)),
+        [columns],
+    );
     const headerHeight = Math.max(cornerHeader ? 76 : 0, showColumnNames
         // The vertical label font grows with zoom. Reserve two extra glyphs
         // for the expand/collapse marker so it never spills into a neighbour.
@@ -124,167 +168,158 @@ export function HierarchicalMatrix({
         );
     }
 
-    const overBudget = rows.length * columns.length > CELL_BUDGET;
+    const totalWidth = LABEL_WIDTH + columns.length * cellSize;
+    const totalHeight = headerHeight + rows.length * cellSize;
+    const [rowFirst, rowLast] = visibleRange(viewport.top, viewport.height, headerHeight, cellSize, rows.length);
+    const [columnFirst, columnLast] = visibleRange(viewport.left, viewport.width, LABEL_WIDTH, cellSize, columns.length);
+    const visibleColumns = columns.slice(columnFirst, columnLast);
+    const visibleRows = rows.slice(rowFirst, rowLast);
 
     return (
-        <div style={{ padding: '14px', overflow: 'auto', flex: 1 }}>
-            {overBudget && (
-                <div style={{
-                    marginBottom: '10px', padding: '8px 10px', borderRadius: '6px',
-                    background: '#FEF3C7', border: '1px solid #FCD34D',
-                    fontSize: FONT.xs, color: '#92400E',
-                }}>
-                    {rows.length.toLocaleString()} × {columns.length.toLocaleString()} is past what stays
-                    responsive to draw. Collapse a few subsystems, or narrow the row and column types.
-                </div>
-            )}
-
-            {!overBudget && (
-                <div style={{ display: 'inline-block', minWidth: '100%' }}>
-                    {/* ── Column headers ── */}
-                    <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 20, background: COLOR.surface }}>
-                        <div style={{
-                            width: LABEL_WIDTH, flexShrink: 0, height: headerHeight,
-                            display: 'flex', alignItems: cornerHeader ? 'stretch' : 'flex-end', justifyContent: 'flex-end', gap: '5px',
-                            padding: cornerHeader ? '8px 12px' : '0 8px 3px 0',
-                            fontSize: '10px', color: COLOR.faint,
-                            background: cornerHeader ? COLOR.surfaceAlt : undefined,
-                            borderRight: cornerHeader ? `1px solid ${COLOR.border}` : undefined,
-                            borderBottom: `1px solid ${COLOR.border}`,
-                        }}>
-                            {cornerHeader ?? <span>{rows.length} rows {'×'} {columns.length} cols</span>}
-                        </div>
-                        {columns.map((entry, index) => {
-                            const isHovered = hover?.column === index;
-                            return (
-                                <div
-                                    key={entry.node.id}
-                                    onClick={() => entry.expandable ? onToggleColumn(entry.node.id) : onSelectElement?.(entry.node.id)}
-                                    onMouseEnter={() => setHover({
-                                        row: rows.findIndex(row => row.node.id === entry.node.id),
-                                        column: index,
-                                    })}
-                                    onMouseLeave={() => setHover(null)}
-                                    title={`${entry.index}. ${entry.node.name} (${entry.node.kind})${entry.expandable ? ' — click to expand' : ''}`}
-                                    style={{
-                                        width: cellSize, flexShrink: 0, height: headerHeight,
-                                        position: 'relative', cursor: 'pointer',
-                                        borderLeft: columnBoundaries[index] === null ? undefined : boundary(columnBoundaries[index]!),
-                                        borderRight: index === columns.length - 1 ? boundary(0) : undefined,
-                                        borderBottom: marked(entry) ? '3px solid #F59E0B' : `1px solid ${COLOR.border}`,
-                                        background: isHovered ? '#EAF7F3' : marked(entry) ? '#FEF3C7' : 'transparent',
-                                    }}
-                                >
-                                    {showColumnNames && (
-                                        <div style={{
-                                            position: 'absolute', top: '42px', bottom: '4px', left: 0, right: 0,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                                            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-                                            overflow: 'hidden', fontSize: `${labelFontSize}px`, lineHeight: 1,
-                                            color: isHovered ? COLOR.primary : COLOR.muted,
-                                            // Header typography is independent of whether this
-                                            // particular node happens to have children. That keeps
-                                            // cross-layer trace columns visually consistent with DSM.
-                                            fontWeight: 600,
-                                        }}>
-                                            {entry.expandable ? (entry.expanded ? '− ' : '+ ') : ''}{headerName(entry.node.name)}
-                                        </div>
-                                    )}
-                                    <div style={{
-                                        position: 'absolute', top: '3px', width: '100%', left: 0,
-                                        display: 'block',
-                                        textAlign: 'center', fontSize: `${Math.max(10, matrixFontSize - 2)}px`,
-                                        color: isHovered ? COLOR.primary : COLOR.faint,
-                                        fontWeight: isHovered ? 700 : 400,
-                                    }}>
-                                        <span>{marked(entry) ? '★' : ''}{entry.index}</span>
-                                    </div>
-                                    {entry.node.isElement && onHideColumn && (
-                                        <span style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)' }}>
-                                            <VisibilityButton title={`Hide ${entry.node.name} column`} ariaLabel={`Hide ${entry.node.name} column`} onClick={() => onHideColumn(entry.node.id)} />
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
+        <div ref={scroller} onScroll={onScroll} style={{ padding: '14px', overflow: 'auto', flex: 1, minHeight: 0 }}>
+            <div style={{ position: 'relative', width: totalWidth, height: totalHeight }}>
+                {/* ── Column headers ── */}
+                <div style={{ position: 'sticky', top: 0, zIndex: 20, height: headerHeight, width: totalWidth, background: COLOR.surface }}>
+                    <div style={{
+                        position: 'sticky', left: 0, zIndex: 25, boxSizing: 'border-box',
+                        width: LABEL_WIDTH, height: headerHeight,
+                        display: 'flex', alignItems: cornerHeader ? 'stretch' : 'flex-end', justifyContent: 'flex-end', gap: '5px',
+                        padding: cornerHeader ? '8px 12px' : '0 8px 3px 0',
+                        fontSize: '10px', color: COLOR.faint,
+                        background: cornerHeader ? COLOR.surfaceAlt : COLOR.surface,
+                        borderRight: cornerHeader ? `1px solid ${COLOR.border}` : undefined,
+                        borderBottom: `1px solid ${COLOR.border}`,
+                    }}>
+                        {cornerHeader ?? <span>{rows.length} rows {'×'} {columns.length} cols</span>}
                     </div>
-
-                    {/* ── Rows ── */}
-                    {rows.map((rowEntry, row) => {
-                        const rowHovered = hover?.row === row;
-                        const isSelected = selectedElementId === rowEntry.node.id;
+                    {visibleColumns.map((entry, offset) => {
+                        const index = columnFirst + offset;
+                        const isHovered = hover?.column === index;
                         return (
                             <div
-                                key={rowEntry.node.id}
+                                key={entry.node.id}
+                                onClick={() => entry.expandable ? onToggleColumn(entry.node.id) : onSelectElement?.(entry.node.id)}
+                                onMouseEnter={() => setHover({ row: rowOfColumn[index], column: index })}
+                                onMouseLeave={() => setHover(null)}
+                                title={`${entry.index}. ${entry.node.name} (${entry.node.kind})${entry.expandable ? ' — click to expand' : ''}`}
                                 style={{
-                                    display: 'flex',
-                                    borderTop: rowBoundaries[row] === null ? undefined : boundary(rowBoundaries[row]!),
-                                    borderBottom: row === rows.length - 1 ? boundary(0) : undefined,
+                                    position: 'absolute', top: 0, left: LABEL_WIDTH + index * cellSize, boxSizing: 'border-box',
+                                    width: cellSize, height: headerHeight, cursor: 'pointer',
+                                    borderLeft: columnBoundaries[index] === null ? undefined : boundary(columnBoundaries[index]!),
+                                    borderRight: index === columns.length - 1 ? boundary(0) : undefined,
+                                    borderBottom: marked(entry) ? '3px solid #F59E0B' : `1px solid ${COLOR.border}`,
+                                    background: isHovered ? '#EAF7F3' : marked(entry) ? '#FEF3C7' : COLOR.surface,
                                 }}
                             >
-                                <RowLabel
-                                    entry={rowEntry}
-                                    height={cellSize}
-                                    fontSize={labelFontSize}
-                                    onHide={rowEntry.node.isElement && onHideRow ? () => onHideRow(rowEntry.node.id) : undefined}
-                                    hovered={rowHovered}
-                                    selected={isSelected}
-                                    critical={marked(rowEntry)}
-                                    onToggle={() => onToggleRow(rowEntry.node.id)}
-                                    onSelect={() => onSelectElement?.(rowEntry.node.id)}
-                                />
-                                {columns.map((columnEntry, column) => {
-                                    const cell = matrix[row][column];
-                                    const style = renderCell
-                                        ? renderCell(cell, rowEntry, columnEntry)
-                                        : defaultCellStyle(cell);
-                                    const highlighted = hover?.row === row || hover?.column === column;
-                                    const sameBlock = rootOf(rowEntry) === rootOf(columnEntry);
-                                    // The identity diagonal is always shaded to orient the
-                                    // eye. It shows a number only when a real dependency
-                                    // resolves within that displayed subsystem.
-                                    const identity = rowEntry.node.id === columnEntry.node.id;
-                                    const background = style.background
-                                        ?? (identity ? '#E3E8EE'
-                                            : highlighted ? '#F1F7F5'
-                                                : sameBlock ? '#FAFBFC' : COLOR.surface);
-                                    const text = style.text;
-                                    const clickable = Boolean(cell) || style.actionable;
-
-                                    return (
-                                        <div
-                                            key={columnEntry.node.id}
-                                            onMouseEnter={() => setHover({ row, column })}
-                                            onMouseLeave={() => setHover(null)}
-                                            onClick={clickable ? () => onCellClick?.(rowEntry, columnEntry, cell) : undefined}
-                                            onDoubleClick={clickable ? () => onCellDoubleClick?.(rowEntry, columnEntry, cell) : undefined}
-                                            title={style.title ?? cellTitle(cell, rowEntry, columnEntry)}
-                                            style={{
-                                                width: cellSize, height: cellSize, flexShrink: 0,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: `${matrixFontSize}px`, fontWeight: 600,
-                                                color: style.color ?? (identity ? COLOR.faint : COLOR.secondary),
-                                                background,
-                                                borderRight: column === columns.length - 1
-                                                    ? boundary(0)
-                                                    : `1px solid ${COLOR.borderLight}`,
-                                                borderBottom: `1px solid ${COLOR.borderLight}`,
-                                                borderLeft: columnBoundaries[column] === null ? undefined : boundary(columnBoundaries[column]!),
-                                                cursor: clickable ? 'pointer' : 'default',
-                                                outline: hover?.row === row && hover?.column === column
-                                                    ? `2px solid ${COLOR.accent}` : undefined,
-                                                outlineOffset: '-2px',
-                                            }}
-                                        >
-                                            {text}
-                                        </div>
-                                    );
-                                })}
+                                {showColumnNames && (
+                                    <div style={{
+                                        position: 'absolute', top: '42px', bottom: '4px', left: 0, right: 0,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                                        writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+                                        overflow: 'hidden', fontSize: `${labelFontSize}px`, lineHeight: 1,
+                                        color: isHovered ? COLOR.primary : COLOR.muted,
+                                        fontWeight: 600,
+                                    }}>
+                                        {entry.expandable ? (entry.expanded ? '− ' : '+ ') : ''}{headerName(entry.node.name)}
+                                    </div>
+                                )}
+                                <div style={{
+                                    position: 'absolute', top: '3px', width: '100%', left: 0,
+                                    display: 'block',
+                                    textAlign: 'center', fontSize: `${Math.max(10, matrixFontSize - 2)}px`,
+                                    color: isHovered ? COLOR.primary : COLOR.faint,
+                                    fontWeight: isHovered ? 700 : 400,
+                                }}>
+                                    <span>{marked(entry) ? '★' : ''}{entry.index}</span>
+                                </div>
+                                {entry.node.isElement && onHideColumn && (
+                                    <span style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)' }}>
+                                        <VisibilityButton title={`Hide ${entry.node.name} column`} ariaLabel={`Hide ${entry.node.name} column`} onClick={() => onHideColumn(entry.node.id)} />
+                                    </span>
+                                )}
                             </div>
                         );
                     })}
                 </div>
-            )}
+
+                {/* ── Rows ── */}
+                {visibleRows.map((rowEntry, offset) => {
+                    const row = rowFirst + offset;
+                    const rowHovered = hover?.row === row;
+                    const isSelected = selectedElementId === rowEntry.node.id;
+                    return (
+                        <div
+                            key={rowEntry.node.id}
+                            style={{
+                                position: 'absolute', left: 0, top: headerHeight + row * cellSize, width: totalWidth, height: cellSize,
+                                boxSizing: 'border-box',
+                                borderTop: rowBoundaries[row] === null ? undefined : boundary(rowBoundaries[row]!),
+                                borderBottom: row === rows.length - 1 ? boundary(0) : undefined,
+                            }}
+                        >
+                            <RowLabel
+                                entry={rowEntry}
+                                height={cellSize}
+                                fontSize={labelFontSize}
+                                onHide={rowEntry.node.isElement && onHideRow ? () => onHideRow(rowEntry.node.id) : undefined}
+                                hovered={rowHovered}
+                                selected={isSelected}
+                                critical={marked(rowEntry)}
+                                onToggle={() => onToggleRow(rowEntry.node.id)}
+                                onSelect={() => onSelectElement?.(rowEntry.node.id)}
+                            />
+                            {visibleColumns.map((columnEntry, columnOffset) => {
+                                const column = columnFirst + columnOffset;
+                                const cell = matrix[row][column];
+                                const style = renderCell
+                                    ? renderCell(cell, rowEntry, columnEntry)
+                                    : defaultCellStyle(cell);
+                                const highlighted = hover?.row === row || hover?.column === column;
+                                const sameBlock = rootOf(rowEntry) === rootOf(columnEntry);
+                                // The identity diagonal is always shaded to orient the
+                                // eye. It shows a number only when a real dependency
+                                // resolves within that displayed subsystem.
+                                const identity = rowEntry.node.id === columnEntry.node.id;
+                                const background = style.background
+                                    ?? (identity ? '#E3E8EE'
+                                        : highlighted ? '#F1F7F5'
+                                            : sameBlock ? '#FAFBFC' : COLOR.surface);
+                                const clickable = Boolean(cell) || style.actionable;
+
+                                return (
+                                    <div
+                                        key={columnEntry.node.id}
+                                        onMouseEnter={() => setHover({ row, column })}
+                                        onMouseLeave={() => setHover(null)}
+                                        onClick={clickable ? () => onCellClick?.(rowEntry, columnEntry, cell) : undefined}
+                                        onDoubleClick={clickable ? () => onCellDoubleClick?.(rowEntry, columnEntry, cell) : undefined}
+                                        title={style.title ?? cellTitle(cell, rowEntry, columnEntry)}
+                                        style={{
+                                            position: 'absolute', top: 0, left: LABEL_WIDTH + column * cellSize, boxSizing: 'border-box',
+                                            width: cellSize, height: cellSize,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: `${matrixFontSize}px`, fontWeight: 600,
+                                            color: style.color ?? (identity ? COLOR.faint : COLOR.secondary),
+                                            background,
+                                            borderRight: column === columns.length - 1
+                                                ? boundary(0)
+                                                : `1px solid ${COLOR.borderLight}`,
+                                            borderBottom: `1px solid ${COLOR.borderLight}`,
+                                            borderLeft: columnBoundaries[column] === null ? undefined : boundary(columnBoundaries[column]!),
+                                            cursor: clickable ? 'pointer' : 'default',
+                                            outline: hover?.row === row && hover?.column === column
+                                                ? `2px solid ${COLOR.accent}` : undefined,
+                                            outlineOffset: '-2px',
+                                        }}
+                                    >
+                                        {style.text}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
+            </div>
             {footer}
         </div>
     );

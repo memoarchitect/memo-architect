@@ -15,7 +15,7 @@ import { useScopedModel } from '../store/scoped-model';
 import { useModelStore } from '../store/model-store';
 import { evaluateAxis, limitFor, type AxisEvaluation } from '../lib/axis-evaluation';
 import { scopeModel } from '../lib/workspace-scope';
-import { MATRIX_LIMITS, type MatrixScreen } from '../lib/matrix-views';
+import { MATRIX_LIMITS, queryFromFilter, type MatrixScreen } from '../lib/matrix-views';
 import { MatrixSystemSelect } from './MatrixSystemSelect';
 import { TypeFilterSelect, type TypeFilterOption } from './TypeFilterSelect';
 import { ProgressBar, type ProgressState } from './ProgressBar';
@@ -47,15 +47,7 @@ const field: React.CSSProperties = {
 const caption: React.CSSProperties = { fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary };
 const link: React.CSSProperties = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: FONT.xs, color: COLOR.accentDark, fontWeight: 600 };
 
-/** What the two builder fields stand for, as the memo-query the executor reads. */
-export function queryFromFilter(kinds: readonly string[], contains: string): string {
-    const lines: string[] = [];
-    if (kinds.length === 1) lines.push(`kind: ${kinds[0]}`);
-    else if (kinds.length > 1) lines.push(`kind: [${kinds.join(', ')}]`);
-    const text = contains.trim().replaceAll('"', '');
-    if (text) lines.push(`where: name contains "${text}"`);
-    return lines.join('\n');
-}
+export { queryFromFilter };
 
 interface FilterState { kinds: string[]; contains: string; advanced: boolean; raw: string }
 const NO_FILTER: FilterState = { kinds: [], contains: '', advanced: false, raw: '' };

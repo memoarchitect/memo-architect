@@ -1,22 +1,30 @@
 // ─── Traceability Matrix ─────────────────────────────────────────────────────
 //
-// The sibling of the DSM, and deliberately a separate feature: the DSM is for
-// *reading* the dependency structure, this is for *establishing* trace. Same
-// hierarchical grid, but every cell is editable — click an empty one to link
-// the two elements, click a linked one to see and remove what joins them.
+// Pick the rows, pick the columns, get the matrix. Each axis is one or more
+// element types and an optional name filter; Relations narrows which links
+// count. Nothing else stands between the choice and the grid.
 //
-// Authoring goes through the ontology, never through a list kept here: the
-// types offered for a pair are the ones `legalRelationshipTypes` says are legal
-// between those two kinds, so a link this view offers is a link the server
-// accepts.
+// Two options shape what is shown: rows or columns with no links can be hidden,
+// and the grid can be switched to a plain list (an item, and the items it links
+// to), the layout of a traceability report.
 //
-// A matrix is a definition the model declares (a view typed by
-// MemoTraceabilityMatrixView), chosen in the tree on the left. The screen opens
-// on nothing; each axis is hand-picked elements or a memo-query, and nothing is
-// drawn until a definition is selected and rendered.
+// Choosing is instant (it reads the model already in the browser), building
+// shows its progress, the grid draws only what is in view so it never freezes,
+// and a built matrix is kept so returning to the screen does not compute it
+// again. The last selection is remembered across reloads.
+//
+// A selection can be saved as a view: it is declared in the model, listed in the
+// explorer, and opening it from there brings the same rows, columns and relations
+// back. (The list/hide-empty options are display choices, remembered on this
+// machine, not part of the saved view.)
+//
+// Authoring is unchanged: with "Edit trace" on, click a cell to inspect or
+// remove the links behind it, or add one. The types offered for a pair are the
+// ones `legalRelationshipTypes` says are legal, so a link this view offers is a
+// link the server accepts.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     legalRelationshipTypes,
     type LegalRelationshipOption,
@@ -25,25 +33,24 @@ import {
 import { getRegistries, useModelStore } from '../store/model-store';
 import {
     computeHierarchicalDSM,
-    collectNodeIds,
     relationshipTypesInModel,
     type DsmAggregateCell,
     type DsmAxisEntry,
-    type DsmOrdering,
+    type HierarchicalDsmResult,
 } from '../analysis/dsm-hierarchy';
-import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
-import { MatrixDefinitionBar } from '../components/MatrixDefinitionBar';
-import { MatrixAxisEditor } from '../components/MatrixAxisEditor';
-import { MatrixSystemSelect, useSystemOptions } from '../components/MatrixSystemSelect';
-import { AxisViewControls } from '../components/AxisViewControls';
-import { useMatrixDefinition } from '../lib/use-matrix-definition';
-import { ProgressBar } from '../components/ProgressBar';
+import { ProgressBar, type ProgressState } from '../components/ProgressBar';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
-import { elementFilterOptions } from '../components/element-options';
 import { kindParents } from '../analysis/kind-hierarchy';
-import { ToolbarPopover } from '../components/ToolbarPopover';
-import { Icon, IconToggle } from './DiagramToolbarControls';
+import { scopeModel } from '../lib/workspace-scope';
+import { evaluateAxis } from '../lib/axis-evaluation';
+import { MATRIX_VIEW_DEFINITIONS, axisFrom, stableMatrix } from '../lib/matrix-views';
+import {
+    EMPTY_AXIS, axisFromQuery, matrixFromSelection, builtMatrix, keepMatrix, loadSelection, matrixKey, saveSelection, selectAxis, traceLimit, traceLinks, withLinks,
+    type AxisSelection, type TraceLinks, type TraceView,
+} from '../lib/trace-axis';
+import type { MemoElement } from '@memoarchitect/tools/browser';
+import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -57,103 +64,282 @@ interface CellFocus {
 
 type Status = { kind: 'ok' | 'error'; message: string } | null;
 
+/** The request a built matrix answers: the elements on each axis and the relations that count. */
+interface Committed { rowIds: string[]; columnIds: string[]; linkTypes: string[] }
+
+/** Let the browser paint the progress bar before a block of synchronous work starts. */
+const paint = () => new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
 const NO_IDS: string[] = [];
 
 export function TraceabilityMatrix() {
-    // The definition this screen is open on, and the draft being edited. Nothing
-    // is selected, evaluated or drawn until a definition is chosen in the tree.
-    const systemOptions = useSystemOptions();
-    const matrix = useMatrixDefinition('traceability');
-    // The model as the matrix's own system shows it (or the workspace chosen in the header).
-    const model = matrix.model;
+    const wholeModel = useModelStore(s => s.model);
+    const workspace = useModelStore(s => s.workspace);
+    // The model as the workspace chosen in the header shows it.
+    const model = useMemo(() => (wholeModel ? scopeModel(wholeModel, workspace ?? null) : null), [wholeModel, workspace]);
     const connected = useModelStore(s => s.connected);
     const selectElement = useModelStore(s => s.selectElement);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const createRelationship = useModelStore(s => s.createRelationship);
     const deleteRelationship = useModelStore(s => s.deleteRelationship);
+    const activeView = useModelStore(s => s.activeView);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const createMatrixView = useModelStore(s => s.createMatrixView);
+    const updateMatrixView = useModelStore(s => s.updateMatrixView);
+    const createPackage = useModelStore(s => s.createPackage);
+    const availableOntologies = useModelStore(s => s.availableOntologies);
+    const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
+    const registries = useMemo(() => getRegistries(model), [model]);
 
-    const { definition, draft, setDraft, snapshot } = matrix;
-    const linkTypes = draft.linkTypes;
-    const setLinkTypes = useCallback((next: string[]) => setDraft(current => ({ ...current, linkTypes: next })), [setDraft]);
-    // The ids the last render evaluated each axis to. The grid reads these, never the draft.
-    const rowElements = snapshot?.rowIds ?? NO_IDS;
-    const columnElements = snapshot?.columnIds ?? NO_IDS;
-    const [rowOrdering, setRowOrdering] = useState<DsmOrdering>('natural');
-    const [columnOrdering, setColumnOrdering] = useState<DsmOrdering>('natural');
-    const [toolbarPlacement, setToolbarPlacement] = useState<'top' | 'left'>('top');
-    // Clicking cells to add or remove trace links; separate from editing the definition itself.
-    const [editing, setEditing] = useState(false);
-    const [cellSize, setCellSize] = useState(39);
-    const [showColumnNames, setShowColumnNames] = useState(true);
+    // The selection: restored from the last visit, applied by Build.
+    const restored = useRef(loadSelection());
+    const [rowAxis, setRowAxis] = useState<AxisSelection>(restored.current?.rows ?? EMPTY_AXIS);
+    const [columnAxis, setColumnAxis] = useState<AxisSelection>(restored.current?.columns ?? EMPTY_AXIS);
+    const [linkTypes, setLinkTypes] = useState<string[]>(restored.current?.linkTypes ?? []);
+    const [view, setView] = useState<TraceView>(restored.current?.view ?? 'matrix');
+    const [hideEmptyRows, setHideEmptyRows] = useState(restored.current?.hideEmptyRows ?? false);
+    const [hideEmptyColumns, setHideEmptyColumns] = useState(restored.current?.hideEmptyColumns ?? false);
+    const [committed, setCommitted] = useState<Committed | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
+
+    const [result, setResult] = useState<HierarchicalDsmResult | null>(null);
+    const [progress, setProgress] = useState<ProgressState | null>(null);
+    const [refusal, setRefusal] = useState<string | null>(null);
+
+    // Clicking cells to add or remove trace links; separate from choosing the axes.
+    const [editing, setEditing] = useState(false);
+    const [cellSize, setCellSize] = useState(30);
     const [focus, setFocus] = useState<CellFocus | null>(null);
     const [status, setStatus] = useState<Status>(null);
     const [linkQuery, setLinkQuery] = useState('');
     const [busy, setBusy] = useState(false);
 
-    const registries = useMemo(() => getRegistries(model), [model]);
+    // The saved view this screen is open on, when it was opened from the explorer or just saved.
+    const definitionId = activeView.type === 'traceability' ? activeView.definitionId : undefined;
+    const definition = useMemo(
+        () => (definitionId
+            ? wholeModel?.diagrams?.find(d => d.elementId === definitionId && d.viewDefinition === MATRIX_VIEW_DEFINITIONS.traceability)
+            : undefined),
+        [wholeModel?.diagrams, definitionId],
+    );
+    const packageChoices = useMemo(
+        () => [...new Set((wholeModel?.diagrams ?? []).map(d => d.package).filter((name): name is string => Boolean(name)))].sort(),
+        [wholeModel?.diagrams],
+    );
+    const [saveDialog, setSaveDialog] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    /** Set when the open view was saved with a query this screen cannot show as fields. */
+    const [customNote, setCustomNote] = useState<string | null>(null);
+    const pendingBuild = useRef(false);
 
-    const availableOntologies = useModelStore(s => s.availableOntologies);
-    const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
-    // Hand-picking offers every element; the list is built only while a definition is being edited.
-    const pickable = useMemo(() => (matrix.editing ? elementFilterOptions(model, {}, parents) : []), [matrix.editing, model, parents]);
+    // ── Choosing ─────────────────────────────────────────────────────────────
 
-    /** Every relationship type the model uses, before any axis narrows the list. */
-    const allLinkOptions = useMemo<TypeFilterOption[]>(() => {
+    const kindOptions = useMemo<TypeFilterOption[]>(() => {
+        if (!model) return [];
+        const counts = new Map<string, number>();
+        for (const element of Object.values(model.elements)) counts.set(element.kind, (counts.get(element.kind) ?? 0) + 1);
+        return [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([value, count]) => ({ value, hint: String(count) }));
+    }, [model]);
+
+    const linkOptions = useMemo<TypeFilterOption[]>(() => {
         if (!model) return [];
         const counts = new Map<string, number>();
         for (const relation of model.relationships) counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
         return relationshipTypesInModel(model).map(value => ({ value, hint: String(counts.get(value) ?? 0), color: relationshipColor(value) }));
     }, [model]);
 
-    /** Only offer relationships that the ontology permits for a visible axis pair. */
-    const legalLinkOptions = useMemo<TypeFilterOption[]>(() => {
-        if (!model || !registries || !snapshot) return allLinkOptions;
-        const names = new Set<string>();
-        for (const rowId of snapshot.rowIds) {
-            const row = model.elements[rowId];
-            if (!row) continue;
-            for (const columnId of snapshot.columnIds) {
-                const column = model.elements[columnId];
-                if (!column || row.id === column.id) continue;
-                for (const option of legalRelationshipTypes(row, column, registries)) names.add(option.definition.name);
-            }
+    // Counted live as the choice is made: the selection is a filter over the model already held.
+    const rowIds = useMemo(() => selectAxis(model, rowAxis, parents), [model, rowAxis, parents]);
+    const columnIds = useMemo(() => selectAxis(model, columnAxis, parents), [model, columnAxis, parents]);
+    const limit = traceLimit(rowIds.length, columnIds.length);
+    const canBuild = rowIds.length > 0 && columnIds.length > 0 && !limit;
+    const stale = useMemo(() => !committed
+        || committed.rowIds.join(',') !== rowIds.join(',')
+        || committed.columnIds.join(',') !== columnIds.join(',')
+        || [...committed.linkTypes].sort().join(',') !== [...linkTypes].sort().join(','),
+    [committed, rowIds, columnIds, linkTypes]);
+
+    // The selection and the view options are remembered as they change, so a reload comes back to them.
+    useEffect(() => {
+        saveSelection({ rows: rowAxis, columns: columnAxis, linkTypes, view, hideEmptyRows, hideEmptyColumns });
+    }, [rowAxis, columnAxis, linkTypes, view, hideEmptyRows, hideEmptyColumns]);
+
+    const build = useCallback(() => {
+        if (!canBuild) return;
+        setExpandedRows(new Set());
+        setExpandedColumns(new Set());
+        setFocus(null);
+        setCommitted({ rowIds, columnIds, linkTypes });
+    }, [canBuild, rowAxis, columnAxis, linkTypes, rowIds, columnIds]);
+
+    // Coming back with a remembered selection builds it, once the model is there.
+    const autoBuilt = useRef(false);
+    useEffect(() => {
+        if (autoBuilt.current || !model || kindOptions.length === 0) return;
+        autoBuilt.current = true;
+        if (restored.current && canBuild) build();
+    }, [model, kindOptions, canBuild, build]);
+
+    // Opening a saved view puts its rows, columns and relations in the pickers and builds it. A view saved
+    // with a hand-written query or picked elements cannot be shown as fields, so its axes are evaluated.
+    const openedId = definition?.elementId;
+    useEffect(() => {
+        if (!definition) { setCustomNote(null); return undefined; }
+        const matrix = definition.matrix ?? {};
+        const rows = axisFromQuery(matrix.rowAxis?.query);
+        const columns = axisFromQuery(matrix.columnAxis?.query);
+        const picked = (matrix.rowAxis?.elementIds?.length ?? 0) + (matrix.columnAxis?.elementIds?.length ?? 0) > 0;
+        setLinkTypes(matrix.linkTypes ?? []);
+        setStatus(null);
+        if (rows && columns && !picked) {
+            setCustomNote(null);
+            setRowAxis(rows);
+            setColumnAxis(columns);
+            pendingBuild.current = true;
+            return undefined;
         }
-        return allLinkOptions.filter(option => names.has(option.value));
-    }, [model, registries, snapshot, allLinkOptions]);
+        let cancelled = false;
+        void (async () => {
+            setProgress({ label: 'Evaluating the saved view', step: 1, steps: 2 });
+            const [rowResult, columnResult] = await Promise.all([
+                evaluateAxis(axisFrom(matrix.rowAxis), 0, matrix.system),
+                evaluateAxis(axisFrom(matrix.columnAxis), 0, matrix.system),
+            ]);
+            if (cancelled) return;
+            setProgress(null);
+            const error = rowResult.error ?? columnResult.error;
+            if (error || !rowResult.ids || !columnResult.ids) {
+                setRefusal(error ?? 'The saved view holds too many elements to show. Narrow it.');
+                return;
+            }
+            setRowAxis(EMPTY_AXIS);
+            setColumnAxis(EMPTY_AXIS);
+            setCustomNote('This view was saved with a hand-written query or picked elements, so it is shown but not edited as fields.');
+            setExpandedRows(new Set());
+            setExpandedColumns(new Set());
+            setCommitted({ rowIds: rowResult.ids, columnIds: columnResult.ids, linkTypes: matrix.linkTypes ?? [] });
+        })();
+        return () => { cancelled = true; };
+    }, [openedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const result = useMemo(() => {
-        // Nothing is computed until a definition has been rendered: an empty axis
-        // means "everything" to the engine, and everything squared is the model.
-        if (!model || !snapshot || snapshot.rowIds.length === 0 || snapshot.columnIds.length === 0) return null;
-        return computeHierarchicalDSM(model, {
-            rows: { elementIds: rowElements, expanded: expandedRows, ordering: rowOrdering },
-            columns: { elementIds: columnElements, expanded: expandedColumns, ordering: columnOrdering },
-            dependencyTypes: linkTypes,
-            // Trace is read as a link between two elements, not as a direction:
-            // a requirement verified by a test and a test verifying a
-            // requirement are the same coverage fact.
-            symmetric: true,
-        });
-    }, [model, snapshot, rowElements, columnElements, linkTypes, rowOrdering, columnOrdering, expandedRows, expandedColumns]);
+    useEffect(() => {
+        if (!pendingBuild.current || !canBuild) return;
+        pendingBuild.current = false;
+        build();
+    }, [canBuild, build, rowIds, columnIds]);
 
-    const setAxisExpansion = useCallback((axis: 'rows' | 'columns', next: Set<string>) => {
-        if (axis === 'rows') setExpandedRows(next);
-        else setExpandedColumns(next);
-    }, []);
-    const expandAxis = useCallback((axis: 'rows' | 'columns') => {
-        if (!result) return;
-        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots)));
-    }, [result, setAxisExpansion]);
-    const collapseAxis = useCallback((axis: 'rows' | 'columns') => setAxisExpansion(axis, new Set()), [setAxisExpansion]);
-    const expandAxisToDepth = useCallback((axis: 'rows' | 'columns', depth: number) => {
-        if (!result) return;
-        setAxisExpansion(axis, new Set(collectNodeIds(axis === 'rows' ? result.rowRoots : result.columnRoots, depth)));
-    }, [result, setAxisExpansion]);
+    // ── Saving ───────────────────────────────────────────────────────────────
+
+    const system = workspace ?? undefined;
+    const currentMatrix = useMemo(
+        () => matrixFromSelection({ rows: rowAxis, columns: columnAxis, linkTypes }, system),
+        [rowAxis, columnAxis, linkTypes, system],
+    );
+    const savable = connected && rowAxis.kinds.length > 0 && columnAxis.kinds.length > 0;
+    const unsaved = Boolean(definition) && !customNote && stableMatrix(definition?.matrix) !== stableMatrix(currentMatrix);
+
+    const saveChanges = useCallback(async () => {
+        if (!definition?.elementId) return;
+        setSaving(true);
+        const outcome = await updateMatrixView(definition.elementId, { matrix: currentMatrix });
+        setSaving(false);
+        setStatus(outcome.success
+            ? { kind: 'ok', message: `Saved to “${definition.name}”.` }
+            : { kind: 'error', message: outcome.error ?? 'The view could not be saved.' });
+    }, [definition, updateMatrixView, currentMatrix]);
+
+    const saveAsNew = useCallback(async (value: { name: string; package: string }) => {
+        setSaving(true);
+        setSaveError(null);
+        try {
+            let packageName = value.package || undefined;
+            if (packageName && !packageChoices.includes(packageName)) {
+                const segments = packageName.split('::');
+                const made = await createPackage(segments[segments.length - 1], segments.length > 1 ? segments.slice(0, -1).join('::') : undefined);
+                if (!made.success) throw new Error(made.error ?? 'The package could not be created.');
+                packageName = made.qualifiedName ?? packageName;
+            }
+            const outcome = await createMatrixView({
+                name: value.name, viewDefinition: MATRIX_VIEW_DEFINITIONS.traceability, package: packageName, matrix: currentMatrix,
+            });
+            if (!outcome.success) throw new Error(outcome.error ?? 'The view could not be saved.');
+            setSaveDialog(false);
+            setStatus({ kind: 'ok', message: `Saved as “${value.name}”. It is listed in the explorer.` });
+            // Open the new view, so the explorer marks it and the next Save updates it.
+            if (outcome.elementId) setActiveView({ type: 'traceability', definitionId: outcome.elementId });
+        } catch (error) {
+            setSaveError(error instanceof Error ? error.message : String(error));
+        } finally {
+            setSaving(false);
+        }
+    }, [packageChoices, createPackage, createMatrixView, currentMatrix, setActiveView]);
+
+    // ── What is linked, and what is shown ────────────────────────────────────
+
+    const links = useMemo<TraceLinks | null>(
+        () => (model && committed ? traceLinks(model, committed.rowIds, committed.columnIds, committed.linkTypes) : null),
+        [model, committed],
+    );
+    const emptyRows = committed && links ? committed.rowIds.length - links.byRow.size : 0;
+    const emptyColumns = committed && links ? committed.columnIds.length - links.byColumn.size : 0;
+    /** What is on screen: the built axes, less the lines with no links when asked. */
+    const shown = useMemo<Committed | null>(() => (committed && links ? {
+        rowIds: hideEmptyRows ? withLinks(committed.rowIds, links.byRow) : committed.rowIds,
+        columnIds: hideEmptyColumns ? withLinks(committed.columnIds, links.byColumn) : committed.columnIds,
+        linkTypes: committed.linkTypes,
+    } : null), [committed, links, hideEmptyRows, hideEmptyColumns]);
+
+    // ── Building ─────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+        if (view !== 'matrix' || !model || !shown) return undefined;
+        // An empty axis would mean "everything" to the engine: say there is nothing instead.
+        if (shown.rowIds.length === 0 || shown.columnIds.length === 0) {
+            setResult(null); setProgress(null);
+            setRefusal('No links between these rows and columns. Show the empty lines, or change the selection.');
+            return undefined;
+        }
+        const key = matrixKey({ ...shown, expandedRows, expandedColumns });
+        const kept = builtMatrix(model, key);
+        if (kept) { setResult(kept); setProgress(null); setRefusal(null); return undefined; }
+        const why = traceLimit(shown.rowIds.length, shown.columnIds.length);
+        if (why) { setRefusal(why); setResult(null); return undefined; }
+
+        let cancelled = false;
+        void (async () => {
+            setRefusal(null);
+            setProgress({
+                label: `Selected ${shown.rowIds.length.toLocaleString()} rows × ${shown.columnIds.length.toLocaleString()} columns`,
+                step: 1, steps: 2,
+            });
+            await paint();
+            if (cancelled) return;
+            setProgress({ label: 'Building the matrix', step: 2, steps: 2 });
+            await paint();
+            if (cancelled) return;
+            const built = computeHierarchicalDSM(model, {
+                rows: { elementIds: shown.rowIds, expanded: expandedRows, ordering: 'natural' },
+                columns: { elementIds: shown.columnIds, expanded: expandedColumns, ordering: 'natural' },
+                dependencyTypes: shown.linkTypes,
+                // Trace is read as a link between two elements, not as a direction:
+                // a requirement verified by a test and a test verifying a
+                // requirement are the same coverage fact.
+                symmetric: true,
+            });
+            keepMatrix(model, key, built);
+            if (cancelled) return;
+            setResult(built);
+            setProgress(null);
+        })();
+        return () => { cancelled = true; };
+    }, [view, model, shown, expandedRows, expandedColumns]);
 
     // ── Editing ──────────────────────────────────────────────────────────────
+
+    const activeTypes = committed?.linkTypes ?? NO_IDS;
 
     /** The relationship objects behind a focused cell, in model order. */
     const focusedRelationships = useMemo<MemoRelationship[]>(() => {
@@ -165,7 +351,7 @@ export function TraceabilityMatrix() {
         const columnId = focus.column.node.id;
         const leafPair = focus.row.node.children.length === 0 && focus.column.node.children.length === 0;
         if (leafPair) {
-            const types = new Set(linkTypes);
+            const types = new Set(activeTypes);
             return model.relationships.filter(rel =>
                 (types.size === 0 || types.has(rel.type))
                 && ((rel.sourceId === rowId && rel.targetId === columnId)
@@ -175,7 +361,7 @@ export function TraceabilityMatrix() {
         // relationship ids the roll-up gave it.
         const ids = new Set(focus.cell?.relationshipIds ?? []);
         return model.relationships.filter(rel => ids.has(rel.id));
-    }, [model, focus, linkTypes]);
+    }, [model, focus, activeTypes]);
 
     /**
      * Link types legal between the focused pair. Only leaf-to-leaf cells can be
@@ -198,12 +384,12 @@ export function TraceabilityMatrix() {
      */
     const traceTypes = useMemo(() => {
         const names = new Set<string>();
-        for (const type of linkTypes) {
+        for (const type of activeTypes) {
             names.add(type);
             names.add(type.charAt(0).toUpperCase() + type.slice(1));
         }
         return names;
-    }, [linkTypes]);
+    }, [activeTypes]);
 
     const rankedOptions = useMemo(() => {
         const needle = linkQuery.trim().toLowerCase();
@@ -251,7 +437,7 @@ export function TraceabilityMatrix() {
             : { kind: 'error', message: outcome.error ?? 'The trace could not be removed.' });
     }, [deleteRelationship]);
 
-    const toggleTrace = useCallback(async (row: DsmAxisEntry, column: DsmAxisEntry, cell: DsmAggregateCell | null) => {
+    const toggleTrace = useCallback(async (row: DsmAxisEntry, column: DsmAxisEntry) => {
         if (!editing || !connected || !model || !registries
             || !row.node.isElement || !column.node.isElement
             || row.node.children.length > 0 || column.node.children.length > 0
@@ -260,8 +446,8 @@ export function TraceabilityMatrix() {
         // A direct toggle is safe only when the active relation filter names
         // one concrete relationship. Otherwise the inspector lets the user
         // choose instead of inventing a type.
-        if (linkTypes.length !== 1) return;
-        const type = linkTypes[0];
+        if (activeTypes.length !== 1) return;
+        const type = activeTypes[0];
         const existing = model.relationships.find(rel => rel.type === type
             && ((rel.sourceId === row.node.id && rel.targetId === column.node.id)
                 || (rel.sourceId === column.node.id && rel.targetId === row.node.id)));
@@ -283,7 +469,7 @@ export function TraceabilityMatrix() {
             return;
         }
         await addLink(option);
-    }, [editing, connected, model, registries, linkTypes, addLink, removeLink]);
+    }, [editing, connected, model, registries, activeTypes, addLink, removeLink]);
 
     // ── Rendering ────────────────────────────────────────────────────────────
 
@@ -292,8 +478,6 @@ export function TraceabilityMatrix() {
         // avoids presenting an internal roll-up count as a trace link.
         if (cell?.diagonal) return {};
         if (cell) {
-            // Trace is a coverage fact rather than a relationship taxonomy:
-            // use DSM's green dependency palette consistently for every mark.
             const color = '#65A30D';
             const intensity = Math.min(0.14 + cell.strength * 0.13, 0.55);
             return {
@@ -316,12 +500,14 @@ export function TraceabilityMatrix() {
 
     const coverage = useMemo(() => {
         if (!result) return { traced: 0, total: 0 };
-        const leafRows = result.rows.filter(entry => entry.node.children.length === 0);
-        const traced = leafRows.filter((entry) => {
-            const index = result.rows.indexOf(entry);
-            return result.matrix[index].some(cell => cell && !cell.diagonal);
-        }).length;
-        return { traced, total: leafRows.length };
+        let traced = 0;
+        let total = 0;
+        result.rows.forEach((entry, index) => {
+            if (entry.node.children.length > 0) return;
+            total++;
+            if (result.matrix[index].some(cell => cell && !cell.diagonal)) traced++;
+        });
+        return { traced, total };
     }, [result]);
 
     if (!model) {
@@ -332,92 +518,56 @@ export function TraceabilityMatrix() {
         );
     }
 
-    const leftToolbar = toolbarPlacement === 'left';
-
-    const tree = (
-        <MatrixDefinitionTree
-            screen="traceability" noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
-            selectedId={matrix.definitionId} onSelect={matrix.select}
-        />
-    );
-
-    // Nothing renders, and nothing is computed, until a definition is selected or created.
-    if (!definition) {
-        return (
-            <div className="flex-1 flex overflow-hidden" style={{ background: '#FAFAF8' }}>
-                {tree}
-                <div className="flex-1 flex items-center justify-center px-8 text-center" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
-                    {matrix.definitionId
-                        ? 'That definition is not in the model: it may have been moved, renamed or deleted. Select one in the tree.'
-                        : 'Select a traceability matrix in the tree, or create one with New in a package.'}
-                </div>
-            </div>
-        );
-    }
+    const building = progress !== null;
+    const message = refusal
+        ?? limit
+        ?? (rowIds.length === 0 || columnIds.length === 0
+            ? 'Choose the element types for the rows and the columns, then Build matrix.'
+            : null);
 
     return (
-        <div className="flex-1 flex overflow-hidden" style={{ background: '#FAFAF8' }}>
-        {tree}
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
-            <MatrixDefinitionBar
-                systemName={systemOptions.find(option => option.root === draft.system)?.name}
-                definition={definition} editing={matrix.editing} onEditingChange={matrix.setEditing} dirty={matrix.dirty}
-                connected={connected} rendering={matrix.rendering} saving={matrix.saving}
-                onRender={() => { void matrix.render(); }} onSave={() => { void matrix.save(); }} notice={matrix.notice}
-            />
-            {matrix.editing && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
-                    <MatrixSystemSelect value={draft.system} onChange={system => setDraft(current => ({ ...current, system }))} />
-                    <MatrixAxisEditor
-                        label="Rows" draft={draft.rowAxis} editable elementOptions={pickable}
-                        onChange={rowAxis => setDraft(current => ({ ...current, rowAxis }))}
-                        evaluation={matrix.rowEvaluation} onEvaluated={matrix.setRowEvaluation} missing={snapshot?.missingRows}
+            {/* ── Choose rows and columns ── */}
+            <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                <div className="flex items-end gap-4 px-4 py-3" style={{ flexWrap: 'wrap' }}>
+                    <AxisPicker
+                        label="Rows" axis={rowAxis} onChange={setRowAxis} options={kindOptions} count={rowIds.length}
+                        onSubmit={build}
                     />
-                    <MatrixAxisEditor
-                        label="Columns" draft={draft.columnAxis} editable elementOptions={pickable}
-                        onChange={columnAxis => setDraft(current => ({ ...current, columnAxis }))}
-                        evaluation={matrix.columnEvaluation} onEvaluated={matrix.setColumnEvaluation} missing={snapshot?.missingColumns}
+                    <AxisPicker
+                        label="Columns" axis={columnAxis} onChange={setColumnAxis} options={kindOptions} count={columnIds.length}
+                        onSubmit={build}
                     />
-                </div>
-            )}
-            {/* ── Toolbar ── */}
-            <div style={leftToolbar
-                ? { position: 'absolute', inset: '0 auto 0 0', width: '250px', zIndex: 30, overflow: 'auto', borderRight: `1px solid ${COLOR.border}`, background: COLOR.surface }
-                : { borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface, position: 'relative' }}>
-                <div className="flex items-center gap-3 px-4 py-2" style={leftToolbar
-                    ? { flexDirection: 'column', alignItems: 'stretch', position: 'relative', paddingTop: '54px' }
-                    : { flexWrap: 'wrap', position: 'relative', paddingRight: '52px' }}>
-                    <span style={{ position: 'absolute', top: '9px', right: '12px' }}>
-                        <IconToggle
-                            icon={leftToolbar ? <Icon.arrowUp /> : <Icon.panelCollapse />}
-                            onClick={() => setToolbarPlacement(current => current === 'top' ? 'left' : 'top')}
-                            title={leftToolbar ? 'Move toolbar to top' : 'Move toolbar to left'}
+                    <div style={{ display: 'grid', gap: '3px' }}>
+                        <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>Relations</span>
+                        <TypeFilterSelect
+                            label="" describedAs="Relations" allLabel="Any relationship" options={linkOptions} selected={linkTypes}
+                            onChange={setLinkTypes} title="Relationships counted as trace" width={170}
                         />
-                    </span>
-                    <AxisViewControls
-                        axis="rows" ordering={rowOrdering} onOrderingChange={setRowOrdering}
-                        onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
-                    />
-                    <AxisViewControls
-                        axis="columns" ordering={columnOrdering} onOrderingChange={setColumnOrdering}
-                        onExpandAll={expandAxis} onCollapseAll={collapseAxis} onExpandToDepth={expandAxisToDepth}
-                    />
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: leftToolbar ? '1fr' : 'max-content max-content max-content', gridTemplateRows: 'auto auto',
-                        alignItems: 'center', columnGap: '10px', rowGap: '5px', padding: '6px 8px',
-                        border: `1px solid ${COLOR.border}`, borderRadius: '9px', background: '#FAFBFC',
-                    }}>
-                        <ToolbarPopover label={<><Icon.filter /> Relations</>} ariaLabel="Filter trace relationships" title="Relationships counted as trace" width={leftToolbar ? 210 : 260} fullWidth={leftToolbar}>
-                            <TypeFilterSelect label="Trace relationships" allLabel="Any relationship" options={legalLinkOptions} selected={linkTypes} onChange={setLinkTypes} title="Relationships counted as trace" />
-                        </ToolbarPopover>
-                        <label
+                    </div>
+                    <button
+                        type="button" onClick={build} disabled={!canBuild || building}
+                        style={{
+                            padding: '7px 16px', borderRadius: '6px', fontSize: FONT.sm, fontWeight: 600,
+                            border: `1px solid ${canBuild ? COLOR.accent : COLOR.border}`,
+                            background: canBuild && stale ? COLOR.accent : COLOR.surface,
+                            color: canBuild && stale ? '#fff' : COLOR.muted,
+                            cursor: canBuild && !building ? 'pointer' : 'not-allowed',
+                        }}
+                    >
+                        {building ? 'Building…' : result && !stale ? 'Rebuild' : 'Build matrix'}
+                    </button>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted }} title="Cell size">
+                        Zoom
+                        <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
+                    </label>
+                    <label
                         title={connected
                             ? 'Click cells to add or remove trace links. Only leaf-to-leaf cells can be edited.'
                             : 'The dev server is unreachable, so nothing can be written to the model.'}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs,
-                            width: leftToolbar ? '100%' : undefined, boxSizing: 'border-box',
-                            padding: '3px 9px', borderRadius: '5px',
+                            padding: '4px 9px', borderRadius: '5px',
                             border: `1px solid ${editing ? COLOR.accent : COLOR.border}`,
                             background: editing ? '#E8F8F3' : COLOR.surface,
                             color: connected ? COLOR.primary : COLOR.faint,
@@ -431,13 +581,60 @@ export function TraceabilityMatrix() {
                         />
                         Edit trace
                     </label>
-                        <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted, justifyContent: leftToolbar ? 'center' : undefined }} title="Cell size">
-                            Zoom
-                            <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
-                        </label>
-                    </div>
                 </div>
-
+                {/* ── How it is shown ── */}
+                <div className="flex items-center gap-4 px-4 pb-3" style={{ flexWrap: 'wrap' }}>
+                    <div role="group" aria-label="View" style={{ display: 'inline-flex', border: `1px solid ${COLOR.border}`, borderRadius: '6px', overflow: 'hidden' }}>
+                        {(['matrix', 'list'] as const).map(option => (
+                            <button
+                                key={option} type="button" onClick={() => setView(option)} aria-pressed={view === option}
+                                title={option === 'matrix' ? 'Rows against columns' : 'Each row with the items it links to'}
+                                style={{
+                                    padding: '4px 14px', fontSize: FONT.xs, fontWeight: 600, border: 'none', cursor: 'pointer',
+                                    background: view === option ? COLOR.accent : COLOR.surface,
+                                    color: view === option ? '#fff' : COLOR.muted,
+                                }}
+                            >
+                                {option === 'matrix' ? 'Matrix' : 'List'}
+                            </button>
+                        ))}
+                    </div>
+                    <EmptyToggle label="Hide empty rows" count={emptyRows} checked={hideEmptyRows} onChange={setHideEmptyRows} disabled={!committed} />
+                    <EmptyToggle
+                        label="Hide empty columns" count={emptyColumns} checked={hideEmptyColumns} onChange={setHideEmptyColumns}
+                        disabled={!committed || view === 'list'}
+                    />
+                    <span style={{ flex: 1 }} />
+                    {definition && (
+                        <span style={{ fontSize: FONT.xs, color: COLOR.muted }} title={definition.elementId}>
+                            Saved view <strong style={{ color: COLOR.primary }}>{definition.name}</strong>{unsaved ? ' · unsaved changes' : ''}
+                        </span>
+                    )}
+                    {definition && (
+                        <button
+                            type="button" onClick={() => { void saveChanges(); }} disabled={!savable || !unsaved || saving}
+                            title={unsaved ? `Write these rows, columns and relations to “${definition.name}”` : 'Nothing has changed since it was saved'}
+                            style={saveButton(savable && unsaved && !saving, true)}
+                        >
+                            {saving ? 'Saving…' : 'Save'}
+                        </button>
+                    )}
+                    <button
+                        type="button" onClick={() => { setSaveError(null); setSaveDialog(true); }} disabled={!savable || saving}
+                        title={connected
+                            ? 'Keep this selection as a view in the model; it is listed in the explorer'
+                            : 'The dev server is unreachable, so nothing can be written to the model.'}
+                        style={saveButton(savable && !saving, !definition)}
+                    >
+                        {definition ? 'Save as…' : 'Save view…'}
+                    </button>
+                </div>
+                {customNote && (
+                    <div style={{ padding: '5px 16px', fontSize: '11px', color: '#92400E', background: '#FFFBEB', borderTop: `1px solid ${COLOR.borderLight}` }}>{customNote}</div>
+                )}
+                {building && (
+                    <div style={{ padding: '0 16px 10px' }}><ProgressBar progress={progress} /></div>
+                )}
                 {status && (
                     <div style={{
                         padding: '5px 16px', fontSize: '11px',
@@ -451,16 +648,20 @@ export function TraceabilityMatrix() {
             </div>
 
             {/* ── Matrix ── */}
-            <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, marginLeft: leftToolbar ? '250px' : 0, width: leftToolbar ? 'calc(100% - 250px)' : undefined }}>
-            {!result ? (
-                <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: matrix.refusal ? '#B45309' : COLOR.faint, fontSize: FONT.sm }}>
-                    {matrix.rendering && matrix.progress
-                        ? <ProgressBar progress={matrix.progress} />
-                        : matrix.rendering
-                        ? 'Evaluating the axes…'
-                        : matrix.refusal
-                            ?? (matrix.rowEvaluation?.error || matrix.columnEvaluation?.error)
-                            ?? (snapshot ? 'An axis selects no elements. Edit the definition and Render.' : 'Define the rows and columns, then Render.')}
+            <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, opacity: view === 'matrix' && building && result ? 0.5 : 1 }}>
+            {view === 'list' ? (
+                model && shown && links ? (
+                    <TraceList
+                        model={model} rowIds={shown.rowIds} links={links} onSelect={selectElement} selectedId={selectedElementId}
+                    />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: COLOR.faint, fontSize: FONT.sm }}>
+                        {message}
+                    </div>
+                )
+            ) : !result ? (
+                <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: refusal ? '#B45309' : COLOR.faint, fontSize: FONT.sm }}>
+                    {building ? 'Building…' : message}
                 </div>
             ) : (
             <HierarchicalMatrix
@@ -471,14 +672,14 @@ export function TraceabilityMatrix() {
                 selectedElementId={selectedElementId}
                 renderCell={renderCell}
                 onCellClick={(row, column, cell) => { setFocus({ row, column, cell }); setLinkQuery(''); }}
-                onCellDoubleClick={(row, column, cell) => { void toggleTrace(row, column, cell); }}
+                onCellDoubleClick={(row, column) => { void toggleTrace(row, column); }}
                 cellSize={cellSize}
-                showColumnNames={showColumnNames}
+                showColumnNames
                 cornerHeader={
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
                         <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>Traceability Matrix</span>
                         <span style={{ fontSize: '11px', color: COLOR.faint, marginTop: '2px' }}>
-                            {result.totalDependencies} link{result.totalDependencies === 1 ? '' : 's'} shown
+                            {result.rows.length.toLocaleString()} × {result.columns.length.toLocaleString()} · {result.totalDependencies} link{result.totalDependencies === 1 ? '' : 's'}
                             {coverage.total > 0 && ` · ${coverage.traced}/${coverage.total} rows traced (${Math.round(coverage.traced / coverage.total * 100)}%)`}
                         </span>
                     </div>
@@ -603,7 +804,169 @@ export function TraceabilityMatrix() {
                     )}
                 </div>
             )}
+            {saveDialog && (
+                <SaveViewDialog
+                    packages={packageChoices} busy={saving} error={saveError}
+                    initialName={definition ? `${definition.name} copy` : ''}
+                    onSubmit={value => { void saveAsNew(value); }} onClose={() => setSaveDialog(false)}
+                />
+            )}
         </div>
+    );
+}
+
+const saveButton = (enabled: boolean, primary: boolean): React.CSSProperties => ({
+    padding: '5px 14px', borderRadius: '6px', fontSize: FONT.xs, fontWeight: 600,
+    border: `1px solid ${enabled && primary ? COLOR.accent : COLOR.border}`,
+    background: enabled && primary ? COLOR.accent : COLOR.surface,
+    color: enabled && primary ? '#fff' : COLOR.muted,
+    cursor: enabled ? 'pointer' : 'not-allowed',
+});
+
+/** Name, and optionally the package, for a view being saved. */
+function SaveViewDialog({ packages, busy, error, initialName, onSubmit, onClose }: {
+    packages: string[]; busy: boolean; error: string | null; initialName: string;
+    onSubmit: (value: { name: string; package: string }) => void; onClose: () => void;
+}) {
+    const [name, setName] = useState(initialName);
+    const [packageName, setPackageName] = useState('');
+    const trimmed = name.trim();
+    const validPackage = packageName === '' || /^[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*$/.test(packageName);
+    const field: React.CSSProperties = {
+        padding: '7px 9px', border: `1px solid ${COLOR.border}`, borderRadius: '7px', fontSize: FONT.sm,
+        color: COLOR.primary, width: '100%', boxSizing: 'border-box',
+    };
+    return (
+        <div role="dialog" aria-modal="true" aria-label="Save view" style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,23,42,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onKeyDown={event => { if (event.key === 'Escape') onClose(); }}>
+            <form
+                onSubmit={event => { event.preventDefault(); if (trimmed && validPackage && !busy) onSubmit({ name: trimmed, package: packageName }); }}
+                style={{ width: '380px', maxWidth: '92vw', display: 'grid', gap: '12px', padding: '18px', borderRadius: '10px', background: COLOR.surface, boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }}
+            >
+                <div style={{ fontSize: FONT.md, fontWeight: 700, color: COLOR.primary }}>Save view</div>
+                <label style={{ display: 'grid', gap: '4px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}>
+                    Name
+                    <input autoFocus value={name} onChange={event => setName(event.target.value)} placeholder="Needs to requirements" style={field} />
+                </label>
+                <label style={{ display: 'grid', gap: '4px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}>
+                    Package <span style={{ fontWeight: 400, color: COLOR.faint }}>optional, where the view is declared</span>
+                    <input value={packageName} onChange={event => setPackageName(event.target.value)} list="trace-save-packages" placeholder="views::traceability" style={field} />
+                    <datalist id="trace-save-packages">{packages.map(name => <option key={name} value={name} />)}</datalist>
+                    {!validPackage && <span style={{ color: '#B91C1C', fontWeight: 400 }}>Use letters, digits and underscores, with :: between packages.</span>}
+                </label>
+                {error && <div role="alert" style={{ fontSize: FONT.xs, color: '#B91C1C' }}>{error}</div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button type="button" onClick={onClose} disabled={busy} style={saveButton(!busy, false)}>Cancel</button>
+                    <button type="submit" disabled={!trimmed || !validPackage || busy} style={saveButton(Boolean(trimmed) && validPackage && !busy, true)}>
+                        {busy ? 'Saving…' : 'Save'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
+/** One axis: its element types, an optional name filter, and how many elements that selects. */
+function AxisPicker({ label, axis, onChange, options, count, onSubmit }: {
+    label: string;
+    axis: AxisSelection;
+    onChange: (next: AxisSelection) => void;
+    options: TypeFilterOption[];
+    count: number;
+    onSubmit: () => void;
+}) {
+    return (
+        <div style={{ display: 'grid', gap: '3px' }}>
+            <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>
+                {label} <span style={{ fontWeight: 400, color: COLOR.faint }}>· {count.toLocaleString()} element{count === 1 ? '' : 's'}</span>
+            </span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+                <TypeFilterSelect
+                    label="" describedAs={`${label} types`} allLabel="Choose types" options={options} selected={axis.kinds}
+                    onChange={kinds => onChange({ ...axis, kinds })} width={190} title={`Element types for the ${label.toLowerCase()}`}
+                />
+                <input
+                    value={axis.text} onChange={event => onChange({ ...axis, text: event.target.value })}
+                    onKeyDown={event => { if (event.key === 'Enter') onSubmit(); }}
+                    placeholder="Name contains…" aria-label={`${label} name filter`}
+                    style={{
+                        width: '150px', padding: '5px 8px', border: `1px solid ${COLOR.border}`, borderRadius: '6px',
+                        fontSize: FONT.xs, outline: 'none', color: COLOR.primary,
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
+
+/** A checkbox that says how many lines it would hide. */
+function EmptyToggle({ label, count, checked, onChange, disabled }: {
+    label: string; count: number; checked: boolean; onChange: (next: boolean) => void; disabled: boolean;
+}) {
+    return (
+        <label style={{
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: FONT.xs, fontWeight: 600,
+            color: disabled ? COLOR.faint : COLOR.primary, cursor: disabled ? 'not-allowed' : 'pointer',
+        }}>
+            <input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} style={{ accentColor: COLOR.accent }} />
+            {label}
+            {!disabled && <span style={{ fontWeight: 400, color: COLOR.faint }}>· {count.toLocaleString()} empty</span>}
+        </label>
+    );
+}
+
+/** An element as a report names it: its id and its title. */
+function itemLabel(element: MemoElement | undefined, id: string): string {
+    if (!element) return id;
+    return element.shortId && !element.name.startsWith(element.shortId) ? `${element.shortId} ${element.name}` : element.name;
+}
+
+/**
+ * The traceability report's layout: an Item, and the items it links to, one per line. Every row is laid out
+ * only when it scrolls into view, so a long list stays light.
+ */
+function TraceList({ model, rowIds, links, onSelect, selectedId }: {
+    model: MemoModelDTO;
+    rowIds: readonly string[];
+    links: TraceLinks;
+    onSelect: (id: string) => void;
+    selectedId: string | null;
+}) {
+    const cell = { padding: '7px 12px', fontSize: FONT.xs, lineHeight: 1.5 } as const;
+    return (
+        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '14px' }}>
+            <div style={{ minWidth: 640, border: `1px solid ${COLOR.border}`, borderRadius: '6px', background: COLOR.surface }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 2fr) 3fr', position: 'sticky', top: 0, zIndex: 5, background: COLOR.surfaceAlt, borderBottom: `1px solid ${COLOR.border}`, fontWeight: 600, color: COLOR.primary }}>
+                    <div style={cell}>Item</div>
+                    <div style={cell}>Links</div>
+                </div>
+                {rowIds.map(id => {
+                    const linked = links.byRow.get(id) ?? [];
+                    return (
+                        <div
+                            key={id}
+                            style={{
+                                display: 'grid', gridTemplateColumns: 'minmax(260px, 2fr) 3fr', borderBottom: `1px solid ${COLOR.borderLight}`,
+                                contentVisibility: 'auto', containIntrinsicSize: `auto ${24 + Math.max(1, linked.length) * 20}px`,
+                                background: selectedId === id ? '#E8F8F3' : undefined,
+                            }}
+                        >
+                            <div style={{ ...cell, fontWeight: 600, color: COLOR.primary, cursor: 'pointer' }} onClick={() => onSelect(id)}>
+                                {itemLabel(model.elements[id], id)}
+                            </div>
+                            <div style={{ ...cell, color: COLOR.secondary }}>
+                                {linked.length === 0
+                                    ? <span style={{ color: COLOR.faint, fontStyle: 'italic' }}>No links</span>
+                                    : linked.map(other => (
+                                        <div key={other} onClick={() => onSelect(other)} style={{ cursor: 'pointer' }}>
+                                            {itemLabel(model.elements[other], other)}
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }

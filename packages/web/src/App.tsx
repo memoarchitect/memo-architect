@@ -346,7 +346,6 @@ export function App() {
     ]);
     const showExplorer = !standalonePages.has(activeView.type)
         && activeView.type !== 'dsm'
-        && activeView.type !== 'traceability'
         && activeView.type !== 'dashboard'
         && activeView.type !== 'dashboards'
         && activeView.type !== 'ai'
