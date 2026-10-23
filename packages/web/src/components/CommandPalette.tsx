@@ -55,6 +55,7 @@ export function CommandPalette() {
         result.push(
             { id: 'tool:dsm', label: 'DSM', sublabel: 'Design Structure Matrix', kind: 'tool', action: () => setActiveView({ type: 'dsm' }) },
             { id: 'tool:traceability', label: 'Traceability Matrix', sublabel: 'N\u00d7N trace matrix with presets', kind: 'tool', action: () => setActiveView({ type: 'traceability' }) },
+            { id: 'tool:interfaces', label: 'Interfaces', sublabel: 'The interfaces between two parts, savable as a page', kind: 'tool', action: () => setActiveView({ type: 'interfaces' }) },
             { id: 'tool:ontology', label: 'Ontology', sublabel: 'Ontology Viewer', kind: 'tool', action: () => setActiveView({ type: 'ontology' }) },
         );
 
