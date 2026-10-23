@@ -122,6 +122,14 @@ describe('viewToPath / pathToView round trip', () => {
         expect(pathToView('/table', '?viewpoint=vp1&diagram=d1')).toEqual(withParams);
     });
 
+    it('carries the two parts of an interfaces page in the query', () => {
+        const view = { type: 'interfaces', a: 'pkg::lidar', b: 'pkg::nav node' } as const;
+        const path = viewToPath(view)!;
+        expect(path).toBe('/interfaces?a=pkg%3A%3Alidar&b=pkg%3A%3Anav+node');
+        expect(pathToView('/interfaces', path.slice(path.indexOf('?')))).toEqual(view);
+        expect(pathToView('/interfaces')).toEqual({ type: 'interfaces' });
+    });
+
     it('carries the selected matrix definition in the query', () => {
         const view = { type: 'traceability', definitionId: 'pkg::sub::trace one' } as const;
         const path = viewToPath(view)!;

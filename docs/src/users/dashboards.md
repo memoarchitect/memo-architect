@@ -95,6 +95,14 @@ The home page's sections are widgets you can place anywhere:
 | `{{widget:viewpoint-dashboards}}` | a link to every viewpoint's dashboard |
 | `{{widget:diagrams}}` | number of model views |
 
+An interfaces page is a dashboard whose body is one directive, `{{interfaces:A | B}}`,
+where A and B are the qualified ids of two parts. It draws a table of every interface
+between them, read from the model each time the page opens, so it never goes stale.
+**Views > Interfaces** writes one: choose two parts and select **Save**. The table shows
+the port on each part and each interface's attributes; it states no direction, because an
+interface's ends are declared in order and the model has no system of interest to read
+a direction against.
+
 Prose can carry live values too — `{{model.name}}`, `{{model.elements}}`,
 `{{model.relationships}}`, `{{model.views}}` and `{{model.viewpoints}}` — and a
 link to an Architect page, such as `[Traceability](/traceability)`, opens it in

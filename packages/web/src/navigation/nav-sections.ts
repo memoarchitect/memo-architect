@@ -38,6 +38,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     'element-detail': 'model',
     variability: 'advanced',
     feature: 'views',
+    interfaces: 'views',
     'scenario-editor': 'views',
     ai: 'model',
     ask: 'model',
@@ -125,6 +126,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'diagram', label: 'Viewpoints', icon: '⊟', section: 'views', target: { mode: 'diagram' } },
     { id: 'scenario', label: 'Use Cases', icon: '▶', section: 'views', target: { mode: 'scenario' } },
     { id: 'ui-screens', label: 'UI Screens', icon: '▣', section: 'views', target: { mode: 'ui-screens' } },
+    { id: 'interfaces', label: 'Interfaces', icon: '⇌', section: 'views', target: { view: { type: 'interfaces' } } },
 
     { id: 'variability', label: 'Variability', icon: '⑂', section: 'advanced', target: { view: { type: 'variability' } } },
     { id: 'change', label: 'Projects and Impact', icon: '↔', section: 'advanced', target: { view: { type: 'change' } } },
