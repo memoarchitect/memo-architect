@@ -27,6 +27,7 @@ export function Breadcrumb() {
             case 'element-detail': return { label: 'Model Explorer', icon: '☰', onClick: () => { setActiveMode('catalog'); setActiveView({ type: 'welcome' }); navigate('/catalog'); } };
             case 'dsm': return { label: 'DSM Analysis', icon: '▦', onClick: () => { setActiveView({ type: 'dsm' }); navigate('/dsm'); } };
             case 'traceability': return { label: 'Traceability Matrix', icon: '☷', onClick: () => { setActiveView({ type: 'traceability' }); navigate('/traceability'); } };
+            case 'interfaces': return { label: 'Interfaces', icon: '⇌', onClick: () => { setActiveView({ type: 'interfaces' }); navigate('/interfaces'); } };
             case 'ontology':
             case 'ontology-detail': return { label: 'Ontology Explorer', icon: '◉', onClick: () => { setActiveView({ type: 'ontology' }); navigate('/ontology'); } };
             case 'scenario-editor': return { label: 'Use Cases', icon: '▶', onClick: () => { setActiveMode('scenario'); setActiveView({ type: 'scenario-editor' }); navigate('/use-cases'); } };
@@ -79,6 +80,7 @@ export function Breadcrumb() {
         }
         case 'dsm':
         case 'traceability':
+        case 'interfaces':
         case 'ontology':
         case 'ontology-detail':
             break;
