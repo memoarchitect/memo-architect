@@ -138,3 +138,40 @@ export function draftToMatrix(draft: MatrixDraft, screen: MatrixScreen): MatrixD
         };
     return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) as MatrixDefinitionDTO;
 }
+
+// ─── The filter a simple axis stands for ─────────────────────────────────────
+
+/** What the two builder fields (element types, part of a name) stand for, as the memo-query the executor reads. */
+export function queryFromFilter(kinds: readonly string[], contains: string): string {
+    const lines: string[] = [];
+    if (kinds.length === 1) lines.push(`kind: ${kinds[0]}`);
+    else if (kinds.length > 1) lines.push(`kind: [${kinds.join(', ')}]`);
+    const text = contains.trim().replaceAll('"', '');
+    if (text) lines.push(`where: name contains "${text}"`);
+    return lines.join('\n');
+}
+
+/**
+ * The two builder fields a query was made from, or null when the query says more than they can (a hand-written
+ * query, other conditions): such an axis is evaluated, not edited as fields.
+ */
+export function filterFromQuery(query: string): { kinds: string[]; contains: string } | null {
+    const kinds: string[] = [];
+    let contains = '';
+    let sawKind = false;
+    let sawWhere = false;
+    for (const raw of query.split('\n')) {
+        const line = raw.trim();
+        if (!line) continue;
+        const kind = /^kind:\s*(?:\[([^\]]*)\]|([^\s,\[\]]+))$/.exec(line);
+        if (kind && !sawKind) {
+            sawKind = true;
+            kinds.push(...(kind[1] !== undefined ? kind[1].split(',').map(k => k.trim()).filter(Boolean) : [kind[2]]));
+            continue;
+        }
+        const where = /^where:\s*name contains "([^"]*)"$/.exec(line);
+        if (where && !sawWhere) { sawWhere = true; contains = where[1]; continue; }
+        return null;
+    }
+    return { kinds, contains };
+}

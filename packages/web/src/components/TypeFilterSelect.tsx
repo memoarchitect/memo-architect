@@ -205,7 +205,7 @@ export function TypeFilterSelect({
 
     return (
         <div ref={containerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontSize: FONT.xs, color: COLOR.muted, whiteSpace: 'nowrap' }}>{label}</span>
+            {label && <span style={{ fontSize: FONT.xs, color: COLOR.muted, whiteSpace: 'nowrap' }}>{label}</span>}
             <button
                 type="button"
                 aria-haspopup="listbox"
