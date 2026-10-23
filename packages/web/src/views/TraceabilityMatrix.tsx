@@ -14,7 +14,7 @@
 // again. The last selection is remembered across reloads.
 //
 // A selection can be saved as a view: it is declared in the model, listed in the
-// explorer, and opening it from there brings the same rows, columns and relations
+// Traceability matrices panel on the left, and opening it from there brings the same rows, columns and relations
 // back. (The list/hide-empty options are display choices, remembered on this
 // machine, not part of the saved view.)
 //
@@ -39,6 +39,7 @@ import {
     type HierarchicalDsmResult,
 } from '../analysis/dsm-hierarchy';
 import { ProgressBar, type ProgressState } from '../components/ProgressBar';
+import { MatrixDefinitionTree } from '../components/MatrixDefinitionTree';
 import { HierarchicalMatrix, type MatrixCellStyle } from '../components/HierarchicalMatrix';
 import { TypeFilterSelect, type TypeFilterOption } from '../components/TypeFilterSelect';
 import { kindParents } from '../analysis/kind-hierarchy';
@@ -267,7 +268,7 @@ export function TraceabilityMatrix() {
             });
             if (!outcome.success) throw new Error(outcome.error ?? 'The view could not be saved.');
             setSaveDialog(false);
-            setStatus({ kind: 'ok', message: `Saved as “${value.name}”. It is listed in the explorer.` });
+            setStatus({ kind: 'ok', message: `Saved as “${value.name}”. It is listed under Traceability matrices.` });
             // Open the new view, so the explorer marks it and the next Save updates it.
             if (outcome.elementId) setActiveView({ type: 'traceability', definitionId: outcome.elementId });
         } catch (error) {
@@ -526,6 +527,13 @@ export function TraceabilityMatrix() {
             : null);
 
     return (
+        <div className="flex-1 flex overflow-hidden" style={{ background: '#FAFAF8' }}>
+        {/* The saved traceability matrices, by package. Selecting one opens it here. */}
+        <MatrixDefinitionTree
+            screen="traceability" noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
+            selectedId={definitionId}
+            onSelect={id => setActiveView(id ? { type: 'traceability', definitionId: id } : { type: 'traceability' })}
+        />
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
             {/* ── Choose rows and columns ── */}
             <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
@@ -622,7 +630,7 @@ export function TraceabilityMatrix() {
                     <button
                         type="button" onClick={() => { setSaveError(null); setSaveDialog(true); }} disabled={!savable || saving}
                         title={connected
-                            ? 'Keep this selection as a view in the model; it is listed in the explorer'
+                            ? 'Keep this selection as a view in the model; it is listed under Traceability matrices'
                             : 'The dev server is unreachable, so nothing can be written to the model.'}
                         style={saveButton(savable && !saving, !definition)}
                     >
@@ -811,6 +819,7 @@ export function TraceabilityMatrix() {
                     onSubmit={value => { void saveAsNew(value); }} onClose={() => setSaveDialog(false)}
                 />
             )}
+        </div>
         </div>
     );
 }
