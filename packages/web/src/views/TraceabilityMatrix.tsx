@@ -89,6 +89,8 @@ export function TraceabilityMatrix() {
     // Building, and keeping.
     const matrix = useTraceMatrix({ model, view, rowFilter, columnFilter });
     const [builderOpen, setBuilderOpen] = useState(false);
+    /** The quick trace in use, until the rows and columns are picked by hand. */
+    const [activePresetId, setActivePresetId] = useState<string | null>(null);
     const [saveDialog, setSaveDialog] = useState(false);
     const buildWhenCounted = useRef(false);
 
@@ -108,7 +110,7 @@ export function TraceabilityMatrix() {
         report: matrix.report,
     });
     const openedId = saved.definition?.elementId;
-    useEffect(() => { if (openedId) setBuilderOpen(false); }, [openedId]);
+    useEffect(() => { if (openedId) { setBuilderOpen(false); setActivePresetId(null); } }, [openedId]);
 
     const editor = useTraceLinkEditing({ model, activeTypes: matrix.committed?.linkTypes ?? NO_IDS, editing });
 
@@ -123,6 +125,7 @@ export function TraceabilityMatrix() {
         draft.clear();
         matrix.clear();
         editor.inspect(null);
+        setActivePresetId(null);
         setBuilderOpen(true);
     }, [saved.startNew, draft.clear, matrix.clear, editor.inspect]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -132,6 +135,7 @@ export function TraceabilityMatrix() {
         setRowFilter('all');
         setColumnFilter('all');
         matrix.clear();
+        setActivePresetId(preset.id);
         buildWhenCounted.current = true;
     }, [draft.replace, matrix.clear]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -218,12 +222,13 @@ export function TraceabilityMatrix() {
                 onSelect={id => setActiveView(id ? { type: 'traceability', definitionId: id } : { type: 'traceability' })}
                 onNew={startNew}
             />
-            <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
+            <div className="flex-1 flex flex-col" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0, overflowY: 'auto' }}>
                 {(builderOpen || matrix.committed || building || status || saved.customNote) && (
-                    <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                    <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface, flexShrink: 0 }}>
                         {builderOpen && (
                             <TraceBuilderBar
                                 presets={DEFAULT_TRACE_PRESETS.all()} onPreset={applyPreset}
+                                activePresetId={activePresetId} onCustomize={() => setActivePresetId(null)}
                                 system={draft.system} onSystem={draft.setSystem}
                                 rowAxis={draft.rowAxis} columnAxis={draft.columnAxis}
                                 onRowAxis={draft.setRowAxis} onColumnAxis={draft.setColumnAxis}
@@ -271,7 +276,8 @@ export function TraceabilityMatrix() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, opacity: view === 'matrix' && building && matrix.result ? 0.5 : 1 }}>
+                {/* At least most of the window, so the table or matrix is never squeezed to nothing by the options above it. */}
+                <div style={{ display: 'flex', flex: '1 0 65vh', minHeight: 0, minWidth: 0, opacity: view === 'matrix' && building && matrix.result ? 0.5 : 1 }}>
                     {view === 'list' ? (
                         matrix.shown && matrix.links ? (
                             <TraceList model={model} rowIds={matrix.shown.rowIds} links={matrix.links} onSelect={selectElement} selectedId={selectedElementId} />

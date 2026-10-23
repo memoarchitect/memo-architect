@@ -142,9 +142,10 @@ const lineFilter = (value: unknown): LineFilter => (value === 'linked' || value 
 export function loadDisplay(storage: Pick<Storage, 'getItem'> | undefined = safeStorage()): TraceDisplay {
     try {
         const value = JSON.parse(storage?.getItem(STORAGE_KEY) ?? '{}') as Partial<TraceDisplay>;
-        return { view: value.view === 'list' ? 'list' : 'matrix', rowFilter: lineFilter(value.rowFilter), columnFilter: lineFilter(value.columnFilter) };
+        // The table (a row and the items it links to) is the way in; the matrix is a choice.
+        return { view: value.view === 'matrix' ? 'matrix' : 'list', rowFilter: lineFilter(value.rowFilter), columnFilter: lineFilter(value.columnFilter) };
     } catch {
-        return { view: 'matrix', rowFilter: 'all', columnFilter: 'all' };
+        return { view: 'list', rowFilter: 'all', columnFilter: 'all' };
     }
 }
 
