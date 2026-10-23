@@ -20,3 +20,10 @@ describe('elementLabel', () => {
         expect(elementLabel(undefined, 'ghost_1')).toBe('ghost_1');
     });
 });
+
+describe('a failure mode imported from Matrix', () => {
+    it('is read by its Matrix RISK reference', () => {
+        const fm = { displayId: 'FM-3', shortId: 'x', name: 'Loss of signal', attributes: { sourceReference: 'Matrix RISK-897 | Risks | DFMEA' } };
+        expect(elementLabel(fm, '?')).toBe('RISK-897 Loss of signal');
+    });
+});

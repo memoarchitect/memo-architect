@@ -44,13 +44,14 @@ export const requirementsOfType = (type: 'system' | 'software' | 'hardware'): Ax
 export const typesOf = (...kinds: string[]): AxisSelection => ({ kinds, query: '' });
 
 /**
- * Risk, as a software trace means it: the hazards of the hazard analysis. A failure mode is a row of the hardware
- * design FMEA, so it belongs to a hardware trace; leaving it out of a software one is what keeps hardware risks from
- * showing under software requirements, although Matrix links some software requirements to FMEA rows.
+ * Risk is the Matrix RISK item (`RISK-738`), not the hazard it falls under: several risks share one hazard, and the
+ * Matrix trace report links each risk to its own controls. A failure mode is a row of the hardware design FMEA that
+ * Matrix also keeps as a RISK, so it belongs to a hardware trace; leaving it out of a software one is what keeps
+ * hardware risks from showing under software requirements.
  */
-const RISK = ['Hazard'];
-/** Risk, as a hardware trace means it: the hazards, and the failure modes of the hardware design FMEA. */
-const HARDWARE_RISK = ['Hazard', 'FailureMode'];
+const RISK = ['Risk'];
+/** Risk, as a hardware trace means it: the risks, and the failure modes of the hardware design FMEA. */
+const HARDWARE_RISK = ['Risk', 'FailureMode'];
 
 export const DEFAULT_TRACE_PRESETS = new TracePresetRegistry([
     { id: 'need-system', label: 'User need → System requirement', rows: typesOf('Need'), columns: requirementsOfType('system') },
