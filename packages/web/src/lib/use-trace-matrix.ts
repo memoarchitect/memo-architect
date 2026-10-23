@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { computeHierarchicalDSM, type HierarchicalDsmResult } from '../analysis/dsm-hierarchy';
 import type { ProgressState } from '../components/ProgressBar';
+import { elementLabel } from './trace-labels';
 import { applyLineFilter, builtMatrix, keepMatrix, matrixKey, traceLimit, traceLinks, type LineFilter, type TraceLinks, type TraceView } from './trace-axis';
 
 /** The request a built matrix answers. */
@@ -124,6 +125,7 @@ export function useTraceMatrix({ model, view, rowFilter, columnFilter }: TraceMa
                 // Trace is read as a link between two elements, not as a direction: a requirement verified by
                 // a test and a test verifying a requirement are the same coverage fact.
                 symmetric: true,
+                nodeLabel: element => elementLabel(element, element.id),
             });
             keepMatrix(model, key, built);
             if (cancelled) return;

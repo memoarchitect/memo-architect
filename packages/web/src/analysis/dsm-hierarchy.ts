@@ -116,6 +116,8 @@ export interface HierarchicalDsmOptions {
     ordering?: DsmOrdering;
     /** Count a dependency in both directions, making the matrix symmetric. */
     symmetric?: boolean;
+    /** How an element is named on an axis; its name when not given. */
+    nodeLabel?: (element: MemoElement) => string;
     /**
      * Named groups: the roots a group names are wrapped under one grouping node
      * carrying its name. A root belongs to the first group that names it.
@@ -287,6 +289,7 @@ function buildAxis(
     spec: DsmAxisSpec | undefined,
     groupByPackage: boolean,
     groups: readonly DsmNamedGroup[] = [],
+    nodeLabel?: (element: MemoElement) => string,
 ): AxisBuild {
     const kinds = new Set(spec?.kinds ?? []);
     const chosen = new Set(spec?.elementIds ?? []);
@@ -324,7 +327,7 @@ function buildAxis(
         const element = model.elements[id];
         const node: DsmNode = {
             id,
-            name: element?.name ?? id,
+            name: element ? (nodeLabel?.(element) ?? element.name) : id,
             kind: element?.kind ?? 'Unknown',
             layer: element?.layer ?? '',
             isElement: true,
@@ -562,8 +565,8 @@ export function computeHierarchicalDSM(
     const dependencies = model.relationships.filter(isDependency);
 
     const groupByPackage = options.groupByPackage ?? false;
-    const rowAxis = buildAxis(model, parentOf, childrenOf, options.rows, groupByPackage, options.groups);
-    const columnAxis = buildAxis(model, parentOf, childrenOf, options.columns, groupByPackage, options.groups);
+    const rowAxis = buildAxis(model, parentOf, childrenOf, options.rows, groupByPackage, options.groups, options.nodeLabel);
+    const columnAxis = buildAxis(model, parentOf, childrenOf, options.columns, groupByPackage, options.groups, options.nodeLabel);
 
     // Ordering asks "does A depend on B?" for two candidate siblings at any
     // level. Answering that by scanning relationships per pair is quadratic, so
