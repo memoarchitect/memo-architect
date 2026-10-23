@@ -61,7 +61,7 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                     {presets.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
                 </select>
             </label>
-            <MatrixSystemSelect value={props.system} onChange={props.onSystem} />
+            <div style={{ width: '230px', maxWidth: '100%' }}><MatrixSystemSelect value={props.system} onChange={props.onSystem} /></div>
             {active ? (
                 <div style={{ display: 'grid', gap: '3px', alignSelf: 'end', paddingBottom: '2px' }}>
                     <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>{active.label}</span>
@@ -75,10 +75,10 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                     </span>
                 </div>
             ) : (
-                <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', flexBasis: '100%', order: 5 }}>
                     <TraceAxisField title="Rows" axis={props.rowAxis} onChange={props.onRowAxis} kindOptions={props.kindOptions} selection={props.rowSelection} />
                     <TraceAxisField title="Columns" axis={props.columnAxis} onChange={props.onColumnAxis} kindOptions={props.kindOptions} selection={props.columnSelection} />
-                </>
+                </div>
             )}
             <div style={{ display: 'grid', gap: '3px' }}>
                 <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>Relations</span>

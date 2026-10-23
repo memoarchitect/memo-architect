@@ -29,6 +29,13 @@ describe('selectAxis', () => {
         expect(selectAxis(null, types('Requirement'))).toEqual([]);
     });
 
+    it('narrows an axis by part of a name, with or without types', () => {
+        const model = { elements: { a: element('a', 'K', 'Lidar'), b: element('b', 'K', 'Nav'), c: element('c', 'J', 'Navigator') } } as unknown as MemoModelDTO;
+        expect(selectAxis(model, { kinds: ['K'], contains: 'nav', query: '' })).toEqual(['b']);
+        expect(selectAxis(model, { kinds: [], contains: 'NAV', query: '' })).toEqual(['c', 'b']);
+        expect(selectAxis(model, { kinds: [], contains: '', query: '' })).toEqual([]);
+    });
+
     it('selects a type, ordered by type then name', () => {
         expect(selectAxis(model, types('Requirement', 'TestCase'))).toEqual(['r2', 'r1', 't1']);
     });
@@ -167,8 +174,11 @@ describe('a selection saved as a view', () => {
         const query = 'kind: Requirement\nwhere: requirementType == "RequirementTypeKind::software"';
         expect(axisFromQuery(query)).toEqual({ kinds: [], query, advanced: true });
         expect(axisToQuery(axisFromQuery(query))).toBe(query);
-        // a name condition (an older view) is a query too
-        expect(axisFromQuery('kind: A\nwhere: name contains "x"').advanced).toBe(true);
+        // a name condition is a field beside the types, and writes back as the same query
+        const named = axisFromQuery('kind: A\nwhere: name contains "x"');
+        expect(named).toMatchObject({ kinds: ['A'], contains: 'x' });
+        expect(named.advanced).toBeUndefined();
+        expect(axisToQuery(named)).toBe('kind: A\nwhere: name contains "x"');
         // nothing saved for an axis opens as an empty type picker
         expect(axisFromQuery(undefined)).toEqual({ kinds: [], query: '' });
     });
