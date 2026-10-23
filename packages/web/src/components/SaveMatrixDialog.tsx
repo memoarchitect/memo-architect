@@ -4,15 +4,8 @@
 // being saved: the caller does the saving and says whether it worked.
 
 import { useState } from 'react';
+import { ActionButton, ControlIcon } from './TraceControls';
 import { COLOR, FONT } from '../styles/tokens';
-
-export const saveButtonStyle = (enabled: boolean, primary: boolean): React.CSSProperties => ({
-    padding: '5px 14px', borderRadius: '6px', fontSize: FONT.xs, fontWeight: 600,
-    border: `1px solid ${enabled && primary ? COLOR.accent : COLOR.border}`,
-    background: enabled && primary ? COLOR.accent : COLOR.surface,
-    color: enabled && primary ? '#fff' : COLOR.muted,
-    cursor: enabled ? 'pointer' : 'not-allowed',
-});
 
 /** Name, and optionally the package, for a view being saved. */
 export function SaveMatrixDialog({ packages, busy, error, initialName, initialPackage, onSubmit, onClose }: {
@@ -47,10 +40,10 @@ export function SaveMatrixDialog({ packages, busy, error, initialName, initialPa
                 </label>
                 {error && <div role="alert" style={{ fontSize: FONT.xs, color: '#B91C1C' }}>{error}</div>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button type="button" onClick={onClose} disabled={busy} style={saveButtonStyle(!busy, false)}>Cancel</button>
-                    <button type="submit" disabled={!trimmed || !validPackage || busy} style={saveButtonStyle(Boolean(trimmed) && validPackage && !busy, true)}>
+                    <ActionButton onClick={onClose} disabled={busy} icon={ControlIcon.close}>Cancel</ActionButton>
+                    <ActionButton type="submit" variant="primary" icon={ControlIcon.save} disabled={!trimmed || !validPackage || busy}>
                         {busy ? 'Saving…' : 'Save'}
-                    </button>
+                    </ActionButton>
                 </div>
             </form>
         </div>

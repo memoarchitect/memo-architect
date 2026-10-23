@@ -65,9 +65,9 @@ describe('the remembered display choices', () => {
         expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
         saveDisplay({ view: 'matrix', rowFilter: 'empty', columnFilter: 'linked' }, storage);
         expect(loadDisplay(storage)).toEqual({ view: 'matrix', rowFilter: 'empty', columnFilter: 'linked' });
-        storage.setItem('memo-architect.traceability-display.v1', '{not json');
+        storage.setItem('memo-architect.traceability-display.v2', '{not json');
         expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
-        storage.setItem('memo-architect.traceability-display.v1', JSON.stringify({ view: 'x', rowFilter: 'bogus' }));
+        storage.setItem('memo-architect.traceability-display.v2', JSON.stringify({ view: 'x', rowFilter: 'bogus' }));
         expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
     });
 });

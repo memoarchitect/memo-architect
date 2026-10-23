@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import { MatrixSystemSelect } from './MatrixSystemSelect';
 import { TraceAxisField } from './TraceAxisField';
 import { TypeFilterSelect, type TypeFilterOption } from './TypeFilterSelect';
-import { saveButtonStyle } from './SaveMatrixDialog';
+import { ActionButton, ControlIcon, TextAction } from './TraceControls';
 import type { TracePreset } from '../lib/trace-presets';
 import type { AxisSelection } from '../lib/trace-axis';
 import type { TraceAxisIds } from '../lib/use-trace-axis';
@@ -71,9 +71,7 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                                 ? 'Counting…'
                                 : `${props.rowSelection.ids.length.toLocaleString()} rows × ${props.columnSelection.ids.length.toLocaleString()} columns`)}
                         {' · '}
-                        <button type="button" onClick={onCustomize} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: COLOR.accentDark, fontWeight: 600, fontSize: FONT.xs }}>
-                            Customize
-                        </button>
+                        <TextAction onClick={onCustomize} title="Pick the rows and columns by hand, starting from this trace's">Customize</TextAction>
                     </span>
                 </div>
             ) : (
@@ -90,22 +88,15 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                 />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'center' }}>
-                <button
-                    type="button" onClick={onBuild} disabled={!canBuild || building}
-                    style={{
-                        padding: '7px 16px', borderRadius: '6px', fontSize: FONT.sm, fontWeight: 600,
-                        border: `1px solid ${canBuild ? COLOR.accent : COLOR.border}`,
-                        background: canBuild && stale ? COLOR.accent : COLOR.surface,
-                        color: canBuild && stale ? '#fff' : COLOR.muted,
-                        cursor: canBuild && !building ? 'pointer' : 'not-allowed',
-                    }}
+                <ActionButton
+                    onClick={onBuild} disabled={!canBuild || building} variant={stale ? 'primary' : 'secondary'}
+                    icon={built && !stale ? ControlIcon.rebuild : ControlIcon.build}
                 >
-                    {building ? 'Building…' : built && !stale ? 'Rebuild' : 'Build matrix'}
-                </button>
+                    {building ? 'Building…' : built && !stale ? 'Rebuild' : 'Build'}
+                </ActionButton>
                 {props.actions}
             </div>
         </div>
     );
 }
 
-export { saveButtonStyle };
