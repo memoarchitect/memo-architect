@@ -36,6 +36,8 @@ interface Props {
     selectedId?: string;
     /** `created` is true for a definition just made here, which opens in editing mode. */
     onSelect: (elementId: string | null, created?: boolean) => void;
+    /** When given, New hands over to the screen (which builds the matrix there) instead of opening the create dialog. */
+    onNew?: (packageName?: string) => void;
 }
 
 const lastSegment = (qualifiedName: string) => qualifiedName.split('::').pop() ?? qualifiedName;
@@ -45,7 +47,7 @@ const iconButton: React.CSSProperties = {
     fontSize: FONT.xs, color: COLOR.muted, lineHeight: 1,
 };
 
-export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, onSelect }: Props) {
+export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, onSelect, onNew }: Props) {
     const viewDefinition = MATRIX_VIEW_DEFINITIONS[screen];
     const model = useScopedModel();
     const connected = useModelStore(s => s.connected);
@@ -92,7 +94,7 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         setDialogError(null);
         setDialog({ mode, definition, packageName });
     };
-    const create = (packageName?: string) => openDialog('create', undefined, packageName);
+    const create = (packageName?: string) => (onNew ? onNew(packageName) : openDialog('create', undefined, packageName));
     const rename = (definition: DiagramDTO) => openDialog('rename', definition);
     const move = (definition: DiagramDTO) => openDialog('move', definition);
 

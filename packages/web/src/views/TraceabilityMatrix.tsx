@@ -93,11 +93,16 @@ export function TraceabilityMatrix() {
     const parents = useMemo(() => kindParents(availableOntologies), [availableOntologies]);
     const registries = useMemo(() => getRegistries(model), [model]);
 
-    // The selection: restored from the last visit, applied by Build.
+    // The selection, applied by Build. Only the display choices are remembered from the last visit: a selection
+    // worth keeping is saved as a view, and opens from the panel.
     const restored = useRef(loadSelection());
-    const [rowAxis, setRowAxis] = useState<AxisSelection>(restored.current?.rows ?? EMPTY_AXIS);
-    const [columnAxis, setColumnAxis] = useState<AxisSelection>(restored.current?.columns ?? EMPTY_AXIS);
-    const [linkTypes, setLinkTypes] = useState<string[]>(restored.current?.linkTypes ?? []);
+    const [rowAxis, setRowAxis] = useState<AxisSelection>(EMPTY_AXIS);
+    const [columnAxis, setColumnAxis] = useState<AxisSelection>(EMPTY_AXIS);
+    const [linkTypes, setLinkTypes] = useState<string[]>([]);
+    // The builder (axes, relations, Build, Save) is out of the way until New or Edit view asks for it.
+    const [builderOpen, setBuilderOpen] = useState(false);
+    /** The package a New started in, offered when the matrix is saved. */
+    const [newPackage, setNewPackage] = useState('');
     const [view, setView] = useState<TraceView>(restored.current?.view ?? 'matrix');
     const [hideEmptyRows, setHideEmptyRows] = useState(restored.current?.hideEmptyRows ?? false);
     const [hideEmptyColumns, setHideEmptyColumns] = useState(restored.current?.hideEmptyColumns ?? false);
@@ -176,19 +181,12 @@ export function TraceabilityMatrix() {
         setCommitted({ rowIds, columnIds, linkTypes });
     }, [canBuild, rowAxis, columnAxis, linkTypes, rowIds, columnIds]);
 
-    // Coming back with a remembered selection builds it, once the model is there.
-    const autoBuilt = useRef(false);
-    useEffect(() => {
-        if (autoBuilt.current || !model || kindOptions.length === 0) return;
-        autoBuilt.current = true;
-        if (restored.current && canBuild) build();
-    }, [model, kindOptions, canBuild, build]);
-
     // Opening a saved view puts its rows, columns and relations in the pickers and builds it. A view saved
     // with a hand-written query or picked elements cannot be shown as fields, so its axes are evaluated.
     const openedId = definition?.elementId;
     useEffect(() => {
         if (!definition) { setCustomNote(null); return undefined; }
+        setBuilderOpen(false);
         const matrix = definition.matrix ?? {};
         const rows = axisFromQuery(matrix.rowAxis?.query);
         const columns = axisFromQuery(matrix.columnAxis?.query);
@@ -277,6 +275,25 @@ export function TraceabilityMatrix() {
             setSaving(false);
         }
     }, [packageChoices, createPackage, createMatrixView, currentMatrix, setActiveView]);
+
+    /** New: an empty selection, with the builder open to fill it in. */
+    const startNew = useCallback((packageName?: string) => {
+        setActiveView({ type: 'traceability' });
+        setRowAxis(EMPTY_AXIS);
+        setColumnAxis(EMPTY_AXIS);
+        setLinkTypes([]);
+        setCommitted(null);
+        setResult(null);
+        setProgress(null);
+        setRefusal(null);
+        setCustomNote(null);
+        setStatus(null);
+        setFocus(null);
+        setExpandedRows(new Set());
+        setExpandedColumns(new Set());
+        setNewPackage(packageName ?? '');
+        setBuilderOpen(true);
+    }, [setActiveView]);
 
     // ── What is linked, and what is shown ────────────────────────────────────
 
@@ -523,7 +540,9 @@ export function TraceabilityMatrix() {
     const message = refusal
         ?? limit
         ?? (rowIds.length === 0 || columnIds.length === 0
-            ? 'Choose the element types for the rows and the columns, then Build matrix.'
+            ? (builderOpen
+                ? 'Choose the element types for the rows and the columns, then Build matrix.'
+                : 'Select a traceability matrix on the left, or click + New to create one.')
             : null);
 
     return (
@@ -533,10 +552,13 @@ export function TraceabilityMatrix() {
             screen="traceability" noun="traceability matrix" plural="traceability matrices" title="Traceability matrices"
             selectedId={definitionId}
             onSelect={id => setActiveView(id ? { type: 'traceability', definitionId: id } : { type: 'traceability' })}
+            onNew={startNew}
         />
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#FAFAF8', position: 'relative', minWidth: 0 }}>
-            {/* ── Choose rows and columns ── */}
+            {(builderOpen || committed || building || status || customNote) && (
             <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface }}>
+                {/* ── Build a matrix: shown by New, or by Edit view on a saved one ── */}
+                {builderOpen && (
                 <div className="flex items-end gap-4 px-4 py-3" style={{ flexWrap: 'wrap' }}>
                     <AxisPicker
                         label="Rows" axis={rowAxis} onChange={setRowAxis} options={kindOptions} count={rowIds.length}
@@ -565,6 +587,61 @@ export function TraceabilityMatrix() {
                     >
                         {building ? 'Building…' : result && !stale ? 'Rebuild' : 'Build matrix'}
                     </button>
+                    <span style={{ flex: 1 }} />
+                    {definition && (
+                        <button
+                            type="button" onClick={() => { void saveChanges(); }} disabled={!savable || !unsaved || saving}
+                            title={unsaved ? `Write these rows, columns and relations to “${definition.name}”` : 'Nothing has changed since it was saved'}
+                            style={saveButton(savable && unsaved && !saving, true)}
+                        >
+                            {saving ? 'Saving…' : 'Save'}
+                        </button>
+                    )}
+                    <button
+                        type="button" onClick={() => { setSaveError(null); setSaveDialog(true); }} disabled={!savable || saving}
+                        title={connected
+                            ? 'Keep this selection as a matrix in the model; it is listed in the panel on the left'
+                            : 'The dev server is unreachable, so nothing can be written to the model.'}
+                        style={saveButton(savable && !saving, !definition)}
+                    >
+                        {definition ? 'Save as…' : 'Save'}
+                    </button>
+                    {committed && (
+                        <button type="button" onClick={() => setBuilderOpen(false)} style={saveButton(true, false)} title="Hide these options">Done</button>
+                    )}
+                </div>
+                )}
+                {/* ── How the built matrix is shown ── */}
+                {committed && (
+                <div className="flex items-center gap-4 px-4 py-2" style={{ flexWrap: 'wrap', borderTop: builderOpen ? `1px solid ${COLOR.borderLight}` : undefined }}>
+                    {definition && (
+                        <span style={{ fontSize: FONT.xs, color: COLOR.muted }} title={definition.elementId}>
+                            <strong style={{ color: COLOR.primary, fontSize: FONT.sm }}>{definition.name}</strong>{unsaved ? ' · unsaved changes' : ''}
+                        </span>
+                    )}
+                    {definition && !builderOpen && (
+                        <button type="button" onClick={() => setBuilderOpen(true)} style={saveButton(connected, false)} title="Change the rows, columns and relations">Edit view</button>
+                    )}
+                    <div role="group" aria-label="View" style={{ display: 'inline-flex', border: `1px solid ${COLOR.border}`, borderRadius: '6px', overflow: 'hidden' }}>
+                        {(['matrix', 'list'] as const).map(option => (
+                            <button
+                                key={option} type="button" onClick={() => setView(option)} aria-pressed={view === option}
+                                title={option === 'matrix' ? 'Rows against columns' : 'Each row with the items it links to'}
+                                style={{
+                                    padding: '4px 14px', fontSize: FONT.xs, fontWeight: 600, border: 'none', cursor: 'pointer',
+                                    background: view === option ? COLOR.accent : COLOR.surface,
+                                    color: view === option ? '#fff' : COLOR.muted,
+                                }}
+                            >
+                                {option === 'matrix' ? 'Matrix' : 'List'}
+                            </button>
+                        ))}
+                    </div>
+                    <EmptyToggle label="Hide empty rows" count={emptyRows} checked={hideEmptyRows} onChange={setHideEmptyRows} disabled={!committed} />
+                    <EmptyToggle
+                        label="Hide empty columns" count={emptyColumns} checked={hideEmptyColumns} onChange={setHideEmptyColumns}
+                        disabled={!committed || view === 'list'}
+                    />
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: FONT.xs, color: COLOR.muted }} title="Cell size">
                         Zoom
                         <input type="range" min={14} max={44} step={2} value={cellSize} onChange={event => setCellSize(Number(event.target.value))} style={{ width: '80px', accentColor: COLOR.accent }} />
@@ -590,53 +667,7 @@ export function TraceabilityMatrix() {
                         Edit trace
                     </label>
                 </div>
-                {/* ── How it is shown ── */}
-                <div className="flex items-center gap-4 px-4 pb-3" style={{ flexWrap: 'wrap' }}>
-                    <div role="group" aria-label="View" style={{ display: 'inline-flex', border: `1px solid ${COLOR.border}`, borderRadius: '6px', overflow: 'hidden' }}>
-                        {(['matrix', 'list'] as const).map(option => (
-                            <button
-                                key={option} type="button" onClick={() => setView(option)} aria-pressed={view === option}
-                                title={option === 'matrix' ? 'Rows against columns' : 'Each row with the items it links to'}
-                                style={{
-                                    padding: '4px 14px', fontSize: FONT.xs, fontWeight: 600, border: 'none', cursor: 'pointer',
-                                    background: view === option ? COLOR.accent : COLOR.surface,
-                                    color: view === option ? '#fff' : COLOR.muted,
-                                }}
-                            >
-                                {option === 'matrix' ? 'Matrix' : 'List'}
-                            </button>
-                        ))}
-                    </div>
-                    <EmptyToggle label="Hide empty rows" count={emptyRows} checked={hideEmptyRows} onChange={setHideEmptyRows} disabled={!committed} />
-                    <EmptyToggle
-                        label="Hide empty columns" count={emptyColumns} checked={hideEmptyColumns} onChange={setHideEmptyColumns}
-                        disabled={!committed || view === 'list'}
-                    />
-                    <span style={{ flex: 1 }} />
-                    {definition && (
-                        <span style={{ fontSize: FONT.xs, color: COLOR.muted }} title={definition.elementId}>
-                            Saved view <strong style={{ color: COLOR.primary }}>{definition.name}</strong>{unsaved ? ' · unsaved changes' : ''}
-                        </span>
-                    )}
-                    {definition && (
-                        <button
-                            type="button" onClick={() => { void saveChanges(); }} disabled={!savable || !unsaved || saving}
-                            title={unsaved ? `Write these rows, columns and relations to “${definition.name}”` : 'Nothing has changed since it was saved'}
-                            style={saveButton(savable && unsaved && !saving, true)}
-                        >
-                            {saving ? 'Saving…' : 'Save'}
-                        </button>
-                    )}
-                    <button
-                        type="button" onClick={() => { setSaveError(null); setSaveDialog(true); }} disabled={!savable || saving}
-                        title={connected
-                            ? 'Keep this selection as a view in the model; it is listed under Traceability matrices'
-                            : 'The dev server is unreachable, so nothing can be written to the model.'}
-                        style={saveButton(savable && !saving, !definition)}
-                    >
-                        {definition ? 'Save as…' : 'Save view…'}
-                    </button>
-                </div>
+                )}
                 {customNote && (
                     <div style={{ padding: '5px 16px', fontSize: '11px', color: '#92400E', background: '#FFFBEB', borderTop: `1px solid ${COLOR.borderLight}` }}>{customNote}</div>
                 )}
@@ -654,6 +685,7 @@ export function TraceabilityMatrix() {
                     </div>
                 )}
             </div>
+            )}
 
             {/* ── Matrix ── */}
             <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, opacity: view === 'matrix' && building && result ? 0.5 : 1 }}>
@@ -815,7 +847,7 @@ export function TraceabilityMatrix() {
             {saveDialog && (
                 <SaveViewDialog
                     packages={packageChoices} busy={saving} error={saveError}
-                    initialName={definition ? `${definition.name} copy` : ''}
+                    initialName={definition ? `${definition.name} copy` : ''} initialPackage={definition ? '' : newPackage}
                     onSubmit={value => { void saveAsNew(value); }} onClose={() => setSaveDialog(false)}
                 />
             )}
@@ -833,12 +865,12 @@ const saveButton = (enabled: boolean, primary: boolean): React.CSSProperties => 
 });
 
 /** Name, and optionally the package, for a view being saved. */
-function SaveViewDialog({ packages, busy, error, initialName, onSubmit, onClose }: {
-    packages: string[]; busy: boolean; error: string | null; initialName: string;
+function SaveViewDialog({ packages, busy, error, initialName, initialPackage, onSubmit, onClose }: {
+    packages: string[]; busy: boolean; error: string | null; initialName: string; initialPackage: string;
     onSubmit: (value: { name: string; package: string }) => void; onClose: () => void;
 }) {
     const [name, setName] = useState(initialName);
-    const [packageName, setPackageName] = useState('');
+    const [packageName, setPackageName] = useState(initialPackage);
     const trimmed = name.trim();
     const validPackage = packageName === '' || /^[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*$/.test(packageName);
     const field: React.CSSProperties = {
@@ -852,7 +884,7 @@ function SaveViewDialog({ packages, busy, error, initialName, onSubmit, onClose 
                 onSubmit={event => { event.preventDefault(); if (trimmed && validPackage && !busy) onSubmit({ name: trimmed, package: packageName }); }}
                 style={{ width: '380px', maxWidth: '92vw', display: 'grid', gap: '12px', padding: '18px', borderRadius: '10px', background: COLOR.surface, boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }}
             >
-                <div style={{ fontSize: FONT.md, fontWeight: 700, color: COLOR.primary }}>Save view</div>
+                <div style={{ fontSize: FONT.md, fontWeight: 700, color: COLOR.primary }}>Save traceability matrix</div>
                 <label style={{ display: 'grid', gap: '4px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.secondary }}>
                     Name
                     <input autoFocus value={name} onChange={event => setName(event.target.value)} placeholder="Needs to requirements" style={field} />
