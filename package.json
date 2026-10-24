@@ -48,10 +48,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",
+    "exceljs": "^4.4.0",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
-    "tailwind-merge": "^3.6.0",
-    "xlsx": "^0.18.5"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@dagrejs/dagre": "^2.0.0",
@@ -91,5 +91,10 @@
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=26.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion@2": ">=2.1.7 <3"
+    }
   }
 }

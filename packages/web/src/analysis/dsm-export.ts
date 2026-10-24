@@ -59,7 +59,7 @@ export function downloadDsmCsv(result: HierarchicalDsmResult, filename = 'memo-d
  * and its outline controls expand either axis independently.
  */
 export async function downloadDsmXlsx(result: HierarchicalDsmResult, filename = 'memo-dsm.xlsx'): Promise<void> {
-    const XLSX = await import('xlsx');
+    const { Workbook } = await import('exceljs');
     const values: (string | number)[][] = [[
         'Row', 'Element type', 'Row index',
         ...result.columns.map(column => `${column.index}. ${column.node.name}`),
@@ -80,23 +80,23 @@ export async function downloadDsmXlsx(result: HierarchicalDsmResult, filename = 
         values.push(line);
     });
 
-    const sheet = XLSX.utils.aoa_to_sheet(values);
-    sheet['!rows'] = [
-        { hpx: 24 },
-        ...result.rows.map(row => ({ level: Math.min(7, row.depth), hidden: row.depth > 0 })),
-    ];
-    sheet['!cols'] = [
-        { wch: 34 }, { wch: 22 }, { wch: 11 },
-        ...result.columns.map(column => ({
-            wch: Math.max(8, Math.min(26, column.node.name.length + 2)),
-            level: Math.min(7, column.depth),
-            hidden: column.depth > 0,
-        })),
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, 'DSM');
-    const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', compression: true });
+    const workbook = new Workbook();
+    const sheet = workbook.addWorksheet('DSM');
+    values.forEach(line => sheet.addRow(line));
+    sheet.getRow(1).height = 18;
+    result.rows.forEach((row, rowIndex) => {
+        const line = sheet.getRow(rowIndex + 2);
+        line.outlineLevel = Math.min(7, row.depth);
+        line.hidden = row.depth > 0;
+    });
+    [{ width: 34 }, { width: 22 }, { width: 11 }].forEach((spec, index) => { sheet.getColumn(index + 1).width = spec.width; });
+    result.columns.forEach((column, index) => {
+        const target = sheet.getColumn(index + 4);
+        target.width = Math.max(8, Math.min(26, column.node.name.length + 2));
+        target.outlineLevel = Math.min(7, column.depth);
+        target.hidden = column.depth > 0;
+    });
+    const bytes = await workbook.xlsx.writeBuffer();
     const url = URL.createObjectURL(new Blob([bytes], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     }));
