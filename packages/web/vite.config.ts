@@ -36,6 +36,11 @@ export default defineConfig({
                 '**/*.sysml',
                 '**/.memo/**',
                 '**/memo.lock.yaml',
+                // Files the server itself writes while the app is open: ids on
+                // first open, preferences, and layout sidecars.
+                '**/memo.identity.yaml',
+                '**/memo.user.yaml',
+                '**/*.viewlayout',
             ],
         },
     },
