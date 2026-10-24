@@ -9,7 +9,7 @@ import {
 } from '../commands/example.js';
 import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-grants.js';
 import {
-    applyToolchainCliOptions, defaultRegistry, pinnedTarget, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError,
+    applyToolchainCliOptions, defaultRegistry, pinnedTarget, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError, UnknownProviderError,
 } from '@memoarchitect/tools';
 
 const program = new Command();
@@ -187,7 +187,7 @@ program
 // A project whose settings name no compiler is told what to set, not shown a
 // stack: Architect chooses none for it. Anything else is still a crash.
 program.parseAsync().catch((error: unknown) => {
-    if (error instanceof ToolchainNotConfiguredError || error instanceof ProjectNamesUserSettingError || error instanceof ConfigSettingError) {
+    if (error instanceof ToolchainNotConfiguredError || error instanceof UnknownProviderError || error instanceof ProjectNamesUserSettingError || error instanceof ConfigSettingError) {
         console.error(`\n❌ ${error.message}\n`);
         process.exit(1);
     }
