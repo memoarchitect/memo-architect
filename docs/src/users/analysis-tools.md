@@ -18,7 +18,7 @@ at `http://127.0.0.1:8888`. New projects created with `memo-architect init` cont
 
 The samples use standard SysML v2 types and read the model through
 `analysis/memo_model.py`, which compiles the project with its compiler
-(`toolchain.compiler`: the project's, or the one you chose for yourself), as every MEMO
+(`toolchain.compiler`: the project's, or your own default where the project names none), as every MEMO
 command does: change it and the notebooks follow. Start the local service with:
 
 ```bash
