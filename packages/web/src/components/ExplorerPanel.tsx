@@ -693,7 +693,7 @@ const ExpandScopeContext = createContext('');
 /** The elements more than one system holds. They carry a Shared badge in every explorer mode. */
 const SharedIdsContext = createContext<ReadonlySet<string>>(new Set());
 
-function RecursiveTree({
+export function RecursiveTree({
     nodes,
     level,
     compose = 0,
