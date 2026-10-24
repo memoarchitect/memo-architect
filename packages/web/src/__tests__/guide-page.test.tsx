@@ -5,6 +5,7 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react-dom/test-utils';
 import { Guide } from '../views/Guide';
 import { groupSteps, nextStep, stepsForRole, words, type GuideResult, type GuideStepStatus } from '../lib/guide-view';
@@ -55,7 +56,7 @@ function render(): HTMLElement {
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
-    act(() => { root!.render(createElement(Guide)); });
+    act(() => { root!.render(createElement(MemoryRouter, null, createElement(Guide))); });
     return container;
 }
 const settle = () => act(async () => { await new Promise(done => setTimeout(done, 0)); });

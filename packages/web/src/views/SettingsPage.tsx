@@ -6,6 +6,7 @@
 // (this person's `memo.user.yaml`, or the model's own settings file for the compiler).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { confirmDialog } from '../components/AppDialogs';
 import { useMemo } from 'react';
 import { useModelStore, type DhfSettings } from '../store/model-store';
 import { CompilerSettings } from '../components/CompilerSettings';
@@ -122,16 +123,18 @@ function MethodologySection() {
     const effective = methodology?.effective;
     const chosen = effective?.chain[effective.chain.length - 1];
 
-    function change(name: string, on: boolean) {
+    async function change(name: string, on: boolean) {
         toggle(name);
         const next = new Set(selected);
         if (on) next.add(name); else next.delete(name);
         if (!on) {
             // `check` reads the store after the toggle; keep the elements that depend on this package.
             const orphanedElements = (check().orphanedElements ?? []).filter(element => element.fromOntology === name);
-            if (orphanedElements.length > 0 && !window.confirm(
-                `${orphanedElements.length} element(s) use kinds that ${name} defines. They stay in the model but lose their kind. Turn it off?`,
-            )) { toggle(name); return; }
+            if (orphanedElements.length > 0 && !await confirmDialog({
+                title: `Turn off ${name}?`,
+                message: `${orphanedElements.length} element(s) use kinds that ${name} defines. They stay in the model but lose their kind.`,
+                confirmLabel: 'Turn off',
+            })) { toggle(name); return; }
         }
         sendOntologySelection([...next]);
     }
