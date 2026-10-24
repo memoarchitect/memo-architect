@@ -478,7 +478,7 @@ export interface ModelState {
         /** Relations it draws, written as `includeRelationshipKinds`. */
         relationshipTypes?: string[];
         activate?: boolean;
-    }) => string;
+    }) => string | Promise<string | undefined>;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     addElementToDiagram: (diagramId: string, elementId: string) => void;
     deleteDiagram: (diagramId: string) => void;
@@ -1297,22 +1297,45 @@ export const useModelStore = create<ModelState>((set, get) => ({
         selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
     })),
     createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, relationshipTypes, activate = true }) => {
-        const id = requestedId ?? `diag_${Math.random().toString(36).substr(2, 9)}`;
-        const diagram: DiagramDTO = {
-            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds,
+        const selection = {
             ...(elementKinds?.length ? { elementKinds } : {}),
             ...(relationshipTypes?.length ? { relationshipTypes } : {}),
+        };
+        if (requestedId === undefined) {
+            // Architect generates no ids: the server declares the view and names
+            // it, and the model then reports the element it made.
+            return (async () => {
+                try {
+                    const result = await requestDiagramCreate({ name, diagramType, viewKind, viewpointId, elementIds, ...selection });
+                    if (!result.success) return undefined;
+                    const elementId = result.qualifiedName;
+                    const listed = () => get().model?.diagrams?.find(d => d.elementId === elementId);
+                    if (elementId && !listed()) {
+                        await new Promise<void>(resolve => {
+                            const stop = useModelStore.subscribe(() => { if (listed()) { stop(); resolve(); } });
+                            setTimeout(() => { stop(); resolve(); }, 120_000);
+                        });
+                    }
+                    const diagram = listed();
+                    if (diagram && activate) {
+                        set({ selectedDiagramId: diagram.id, activeView: { type: 'diagram', diagramId: diagram.id } });
+                    }
+                    return diagram?.id;
+                } catch {
+                    return undefined;
+                }
+            })();
+        }
+        const id = requestedId;
+        const diagram: DiagramDTO = {
+            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds, ...selection,
         };
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
             selectedDiagramId: activate ? id : s.selectedDiagramId,
             activeView: activate ? { type: 'diagram', diagramId: id } : s.activeView,
         }));
-        sendDiagramCreate({
-            id, name, diagramType, viewKind, viewpointId, elementIds,
-            ...(elementKinds?.length ? { elementKinds } : {}),
-            ...(relationshipTypes?.length ? { relationshipTypes } : {}),
-        });
+        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds, ...selection });
         return id;
     },
     /**
