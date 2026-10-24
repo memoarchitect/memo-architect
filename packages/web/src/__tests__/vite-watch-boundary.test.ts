@@ -37,6 +37,12 @@ describe('vite watch boundary', () => {
     });
 });
 
+describe('files the server writes', () => {
+    it.each(['**/memo.identity.yaml', '**/memo.user.yaml', '**/*.viewlayout'])('is not watched: %s', (pattern) => {
+        expect(config).toContain(pattern);
+    });
+});
+
 describe('no full-page reload path', () => {
     it('never calls window.location.reload in the web app', async () => {
         // Section 13.2: a manual full-page reload is a recovery fallback for a

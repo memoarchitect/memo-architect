@@ -132,7 +132,9 @@ const runInHouse = (
     priority: 'long-first' | 'short-first',
 ): Score => {
     const started = performance.now();
-    const routes = routeOrthogonalEdges(requests, obstacles, 28, priority);
+    // The refine phase is bounded by wall-clock time in the product; here it is not,
+    // so the crossing count below does not depend on how busy the machine is.
+    const routes = routeOrthogonalEdges(requests, obstacles, 28, priority, { refineBudgetMs: Infinity });
     return score(routes, requests, obstacles, performance.now() - started);
 };
 
