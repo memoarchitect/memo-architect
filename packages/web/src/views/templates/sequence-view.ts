@@ -183,7 +183,9 @@ export function buildSequenceModel(
             }));
 
     const scenarioNameFor = (chain: MemoElement): string | undefined => {
-        const rel = relationshipsOfType(model, 'realizesScenario').find(r => r.sourceId === chain.id);
+        // A chain realizes its scenario by the native `#refinement dependency`, which is `realizes`.
+        const rel = relationshipsOfType(model, 'realizes').find(r => r.sourceId === chain.id
+            && /scenario/i.test(model.elements[r.targetId]?.kind ?? ''));
         return rel ? model.elements[rel.targetId]?.name : undefined;
     };
 

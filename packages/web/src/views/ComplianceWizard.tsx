@@ -31,7 +31,7 @@ const STANDARDS: ComplianceStandard[] = [
             { id: 'summary', label: 'Summary', description: 'Review compliance status' },
         ],
         requiredKinds: ['Hazard', 'HazardousSituation', 'Harm', 'RiskControlMeasure'],
-        requiredRelationships: ['causes', 'leadsTo', 'mitigates'],
+        requiredRelationships: ['causes', 'leadsToHarm', 'mitigates'],
     },
     {
         id: 'iec-62304',
@@ -45,7 +45,7 @@ const STANDARDS: ComplianceStandard[] = [
             { id: 'summary', label: 'Summary', description: 'Review compliance status' },
         ],
         requiredKinds: ['SoftwareComponent', 'SoftwareModule', 'Requirement', 'Test'],
-        requiredRelationships: ['decomposedBy', 'traceTo', 'verify'],
+        requiredRelationships: ['composes', 'derivesFrom', 'verifiedBy'],
     },
 ];
 
@@ -101,9 +101,9 @@ function checkISO14971(model: ReturnType<typeof useModelStore.getState>['model']
         elementIds: unmitigated.map(e => e.id),
     });
 
-    // Check verification
+    // Check verification. `verifiedBy` runs from what is verified to its verification case.
     const verifiedControls = new Set(
-        relationshipsOfType(model, 'verify').map(r => r.targetId)
+        relationshipsOfType(model, 'verifiedBy').map(r => r.sourceId)
     );
     const unverified = controls.filter(c => !verifiedControls.has(c.id));
     checks.push({
@@ -139,9 +139,10 @@ function checkIEC62304(model: ReturnType<typeof useModelStore.getState>['model']
         elementIds: swReqs.map(e => e.id),
     });
 
-    // Check traceability
+    // Check traceability: a requirement traces upward when it derives from another one (`derivesFrom` runs from the
+    // derived requirement to its driver).
     const tracedReqs = new Set(
-        relationshipsOfType(model, 'traceTo').map(r => r.sourceId)
+        relationshipsOfType(model, 'derivesFrom').map(r => r.sourceId)
     );
     const untracedReqs = swReqs.filter(r => !tracedReqs.has(r.id));
     checks.push({

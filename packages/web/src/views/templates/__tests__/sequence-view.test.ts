@@ -98,6 +98,18 @@ describe('fragments', () => {
 });
 
 describe('buildSequenceModel', () => {
+    it('names a realized scenario, and does not take any other realization for one', () => {
+        const chain = el('fc1', { kind: 'FunctionalChain', name: 'BolusChain' });
+        const scenario = el('ss1', { kind: 'SystemScenario', name: 'BolusDuringBasal' });
+        const useCase = el('uc1', { kind: 'UseCase', name: 'GiveBolus' });
+        const s1 = step('s1', '1', 'FUNC-001');
+        const only = buildSequenceModel(model([chain, useCase, s1], [rel('includesStep', 'fc1', 's1'), rel('realizes', 'fc1', 'uc1')]));
+        expect(only.sections[0].scenario).toBeUndefined();
+        const both = buildSequenceModel(model([chain, useCase, scenario, s1], [
+            rel('includesStep', 'fc1', 's1'), rel('realizes', 'fc1', 'uc1'), rel('realizes', 'fc1', 'ss1')]));
+        expect(both.sections[0].scenario).toBe('BolusDuringBasal');
+    });
+
     it('groups steps per chain via IncludesStep edges, ordered by stepOrder', () => {
         const chain = el('fc1', { kind: 'FunctionalChain', name: 'BolusChain' });
         const scenario = el('ss1', { kind: 'SystemScenario', name: 'BolusDuringBasal' });
@@ -108,7 +120,7 @@ describe('buildSequenceModel', () => {
             rel('includesStep', 'fc1', 's1'),
             rel('includesStep', 'fc1', 's2'),
             rel('includesStep', 'fc1', 's3'),
-            rel('realizesScenario', 'fc1', 'ss1'),
+            rel('realizes', 'fc1', 'ss1'),
         ]);
         const seq = buildSequenceModel(m);
         expect(seq.sections).toHaveLength(1);
