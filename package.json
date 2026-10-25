@@ -1,7 +1,7 @@
 {
   "name": "@memoarchitect/architect",
   "version": "0.16.1",
-  "description": "MEMO Architect \u2014 interactive workbench and distributable viewer for medical device systems engineering",
+  "description": "MEMO Architect — interactive workbench and distributable viewer for medical device systems engineering",
   "type": "module",
   "bin": {
     "memo-architect": "lib/bin/memo-architect.js"
@@ -51,6 +51,7 @@
     "fflate": "^0.8.3",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
+    "playwright-core": "^1.64.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
