@@ -24,6 +24,7 @@
 // output survives. Styling lives in document-theme.ts, not here.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { columnCell, columnLabel, parseColumns } from './query-columns';
 import { interfacesBetween, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { DhfSettings, DhfDoc } from '../store/model-store';
 
@@ -284,10 +285,11 @@ function resolveDirectives(
             return `<div class="query-preview count"><strong>${els.length}</strong><span>${escapeHtml(labelStr)}</span></div>`;
         }
 
-        const cols = ['name', 'kind', 'layer'];
-        const header = cols.map(c => `<th>${c}</th>`).join('');
+        // The columns the block names, each optionally `in <unit>`; name, kind and layer when it names none.
+        const cols = parseColumns(get('columns:')) ?? [{ field: 'name' }, { field: 'kind' }, { field: 'layer' }];
+        const header = cols.map(c => `<th>${escapeHtml(columnLabel(c))}</th>`).join('');
         const rows = els.slice(0, 10).map(el => {
-            const cells = cols.map(c => `<td>${escapeHtml(String((el as unknown as Record<string, unknown>)[c] ?? '—'))}</td>`).join('');
+            const cells = cols.map(c => `<td>${escapeHtml(columnCell(el, c, model.registries?.unitTable))}</td>`).join('');
             return `<tr>${cells}</tr>`;
         }).join('');
         const more = els.length > 10 ? `<tr><td colspan="${cols.length}" style="color:#9CA3AF;font-size:11px">…and ${els.length - 10} more</td></tr>` : '';

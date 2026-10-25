@@ -31,12 +31,12 @@ afterEach(() => {
 
 describe('QuantityHint', () => {
     it('reads 20 [milli*second] as 20 ms from the shipped symbols', () => {
-        useModelStore.setState({ model: { registries: { relationships: [], kinds: [], unitSymbols: { prefixes: { milli: 'm' }, units: { second: 's' } } } } } as never);
+        useModelStore.setState({ model: { registries: { relationships: [], kinds: [], unitTable: { prefixes: {}, units: {}, symbols: { prefixes: { milli: 'm' }, units: { second: 's' } } } } } } as never);
         expect(render('20 [milli*second]').textContent).toBe('= 20 ms');
     });
 
     it('shows nothing for text that is not a quantity, or when the model ships no symbols', () => {
-        useModelStore.setState({ model: { registries: { relationships: [], kinds: [], unitSymbols: { prefixes: {}, units: {} } } } } as never);
+        useModelStore.setState({ model: { registries: { relationships: [], kinds: [], unitTable: { prefixes: {}, units: {}, symbols: { prefixes: {}, units: {} } } } } } as never);
         expect(render('clinician').innerHTML).toBe('');
         act(() => { root!.unmount(); }); container!.remove();
         useModelStore.setState({ model: { registries: { relationships: [], kinds: [] } } } as never);

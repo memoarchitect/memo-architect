@@ -102,6 +102,17 @@ describe('renderDhfDocumentHtml', () => {
         expect(html).toContain('query-preview');
     });
 
+    it('shows a quantity column in the named unit, as the exported document does', () => {
+        const withUnits = {
+            elements: { C1: { id: 'C1', name: 'Loop', kind: 'SoftwareComponent', layer: 'implementation', attributes: { wcetMs: '1 [s]' } } },
+            registries: { relationships: [], kinds: [], unitTable: { prefixes: { milli: 0.001 }, units: { second: { factor: 1, powers: { s: 1 } }, s: { factor: 1, powers: { s: 1 } } }, symbols: { prefixes: {}, units: {} } } },
+        } as unknown as MemoModelDTO;
+        const md = '```memo-query\nkind: SoftwareComponent\ncolumns: name, wcetMs in milli*second\n```';
+        const html = renderDhfDocumentHtml(md, withUnits, settings(), doc());
+        expect(html).toContain('<th>wcetMs (milli*second)</th>');
+        expect(html).toContain('<td>1000</td>');
+    });
+
     it('renders memo-query count display', () => {
         const md = '```memo-query\nkind: Hazard\ndisplay: count\nlabel: Total hazards\n```';
         const html = renderDhfDocumentHtml(md, model, settings(), doc());
