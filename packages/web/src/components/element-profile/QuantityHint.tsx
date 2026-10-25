@@ -7,7 +7,7 @@ import { useModelStore } from '../../store/model-store';
  * kept here). Nothing renders for a value that is not a quantity.
  */
 export function QuantityHint({ value, fontSize = 10 }: { value: string; fontSize?: number }) {
-    const symbols = useModelStore(s => s.model?.registries?.unitSymbols);
+    const symbols = useModelStore(s => s.model?.registries?.unitTable?.symbols);
     const shown = formatQuantity(value, symbols);
     if (!shown) return null;
     return <div data-testid="quantity-hint" style={{ color: '#6B7280', fontSize, marginTop: 2 }}>= {shown}</div>;
