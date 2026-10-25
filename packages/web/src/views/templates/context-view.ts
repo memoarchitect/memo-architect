@@ -71,6 +71,34 @@ export interface ContextViewOptions {
     edgeStyle?: UseCaseEdgeStyle;
     /** Relationship kinds selected by the authored view. */
     relationshipTypes?: string[];
+    /**
+     * The view's authored `subjectElement`: what the view is about. It names the system of interest and
+     * wins over every inference below. Matched on the element's id, short name or name.
+     */
+    subjectElement?: string;
+}
+
+/**
+ * The system of interest of a context view, in order: the view's own `subjectElement`; the one element
+ * flagged `isSystemOfInterest` (or, among several, the most connected, ties broken by id, never by the
+ * order the elements arrived in); and with no flag at all the most connected element. A name that
+ * happens to contain "system" decides nothing: an external `hospitalEpRecordingSystem` is not the hub.
+ */
+export function systemOfInterestOf(
+    elements: MemoElement[],
+    degree: (element: MemoElement) => number,
+    subjectElement?: string,
+): MemoElement {
+    const named = subjectElement?.trim();
+    if (named) {
+        const authored = elements.find(element => element.id === named || element.shortName === named
+            || element.name === named || element.id.endsWith(`::${named}`));
+        if (authored) return authored;
+    }
+    const mostConnected = (candidates: MemoElement[]) =>
+        [...candidates].sort((a, b) => degree(b) - degree(a) || a.id.localeCompare(b.id))[0];
+    const flagged = elements.filter(isSystemOfInterest);
+    return mostConnected(flagged.length > 0 ? flagged : elements);
 }
 
 /**
@@ -123,9 +151,7 @@ export function computeContextViewLayout(
     if (elements.length === 0) return { nodes: [], edges: [] };
 
     const degree = (element: MemoElement) => relationships.filter(rel => rel.sourceId === element.id || rel.targetId === element.id).length;
-    const system = elements.find(isSystemOfInterest)
-        ?? elements.find(element => /system/i.test(element.name))
-        ?? [...elements].sort((a, b) => degree(b) - degree(a))[0];
+    const system = systemOfInterestOf(elements, degree, options.subjectElement);
     const external = elements.filter(element => element.id !== system.id);
     const shownIds = new Set([system.id, ...external.map(element => element.id)]);
     const exchanges = relationships.filter(rel => shownIds.has(rel.sourceId) && shownIds.has(rel.targetId));

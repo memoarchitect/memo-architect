@@ -122,6 +122,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
     } else if (diagramProfile === 'context' && diagram) {
         result = computeContextViewLayout(model, diagram.name, {
             viewpointFilter,
+            subjectElement: diagram.properties?.subjectElement,
             relationshipTypes: diagram.relationshipTypes,
         });
     } else if (diagramProfile === 'interconnection') {
