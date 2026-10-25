@@ -12,6 +12,7 @@ import { confirmElementDelete } from './confirm-destructive';
 import { SelectionStyleSection } from './SelectionStyleSection';
 import { EditableValue, ReadOnlyValue } from './element-profile/ProfileValue';
 import { attributeEditability, isEditable } from './element-profile/editability';
+import { QuantityHint } from './element-profile/QuantityHint';
 import type { Density } from './element-profile/density';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
@@ -466,6 +467,7 @@ function ElementProperties() {
                                                     mono={key !== 'kind' && key !== 'layer'}
                                                 />
                                             )}
+                                            <QuantityHint value={String(value ?? '')} />
                                         </div>
                                     </div>
                                 );

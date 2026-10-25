@@ -17,6 +17,7 @@
 import { useMemo, useState } from 'react';
 import { escapeHtml, renderMarkdownBody } from '../dhf/document-renderer';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
+import { QuantityHint } from '../components/element-profile/QuantityHint';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import {
@@ -393,6 +394,7 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                         <div style={{ color: COLOR.secondary, fontSize: FONT.sm, fontWeight: 600 }}>{key}</div>
                                         <div style={{ color: COLOR.faint, fontSize: '10px' }}>Editable</div>
                                     </div>
+                                    <div style={{ minWidth: 0 }}>
                                     {writable ? <EditableValue
                                         value={String(value ?? '')}
                                         onSave={next => saveAttribute(key, next)}
@@ -404,6 +406,8 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                         editability={{ kind: 'derived', reason: `This ${declaration?.origin ?? 'library'} declaration is read-only.` }}
                                         density={DENSITY}
                                     />}
+                                    <QuantityHint value={String(value ?? '')} fontSize={11} />
+                                    </div>
                                 </div>
                             ))}
                         </div>
