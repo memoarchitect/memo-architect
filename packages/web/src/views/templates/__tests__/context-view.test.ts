@@ -160,4 +160,34 @@ describe('system context view template', () => {
         expect(layout.nodes.map(node => node.id)).not.toContain('network');
         expect(layout.edges.map(edge => edge.id)).toEqual(['shown']);
     });
+
+    describe('the system of interest', () => {
+        const hospital = element('hospitalEpRecordingSystem', 'OperationalEntity', 'Hospital EP Recording System');
+        const product = element('afferaSystem', 'OperationalEntity', 'Affera Ablation and Mapping System');
+        const doc = element('doc', 'User', 'Physician');
+        const relationships = [
+            { id: 'r1', type: 'flow', sourceId: 'hospitalEpRecordingSystem', targetId: 'afferaSystem' },
+            { id: 'r2', type: 'connect', sourceId: 'doc', targetId: 'afferaSystem' },
+        ];
+        const hub = (layout: ReturnType<typeof computeContextViewLayout>) => layout.nodes.find(n => n.type === 'contextSystem')?.id;
+
+        it('is the view\'s subjectElement, whatever the ids say', () => {
+            // The hospital recorder is listed first and has "system" in its name: it used to win.
+            const layout = computeContextViewLayout(model({ hospital, product, doc }, relationships), 'Context',
+                { subjectElement: 'afferaSystem' });
+            expect(hub(layout)).toBe('afferaSystem');
+        });
+
+        it('is not picked because its name contains "system"', () => {
+            // No subject, no flag: the most connected element, not the first with "system" in its name.
+            const layout = computeContextViewLayout(model({ hospital, product, doc }, relationships), 'Context');
+            expect(hub(layout)).toBe('afferaSystem');
+        });
+
+        it('is the one flagged element, over a more connected one', () => {
+            const flagged = element('hospitalEpRecordingSystem', 'OperationalEntity', 'Hospital', { isSystemOfInterest: 'true' });
+            const layout = computeContextViewLayout(model({ flagged, product, doc }, relationships), 'Context');
+            expect(hub(layout)).toBe('hospitalEpRecordingSystem');
+        });
+    });
 });

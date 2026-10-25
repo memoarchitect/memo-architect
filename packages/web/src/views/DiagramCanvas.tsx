@@ -2510,6 +2510,7 @@ function DiagramCanvasInner() {
                 },
                 context: {
                     systemName: selectedDiagram?.name,
+                    subjectElement: selectedDiagram?.properties?.subjectElement,
                     edgeStyle: useCaseEdgeStyle,
                     viewpointFilter,
                     relationshipTypes: selectedDiagram?.relationshipTypes,
