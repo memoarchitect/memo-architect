@@ -151,7 +151,6 @@ export type ActiveView =
     | { type: 'tabular'; viewpointId?: string; diagramId?: string }  // #14: element spreadsheet
     | { type: 'scenario-editor' }
     | { type: 'model-diff' }
-    | { type: 'compliance-wizard' }
     | { type: 'statistics' }
     | { type: 'dhf-dashboard' }
     | { type: 'dhf-document'; docId: string }

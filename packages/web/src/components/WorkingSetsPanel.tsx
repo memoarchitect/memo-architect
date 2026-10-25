@@ -67,7 +67,6 @@ export function WorkingSetsPanel() {
             case 'ontology': return 'Ontology';
             case 'scenario-editor': return 'Use Cases';
             case 'model-diff': return 'Diff';
-            case 'compliance-wizard': return 'Compliance';
             case 'statistics': return 'Stats';
             default: return 'Welcome';
         }

@@ -186,9 +186,9 @@ The Consistency Panel provides real-time feedback on logical gaps in your model 
 - **Requirement Orphans:** Identification of requirements that do not have a parent (Need) or a child (Design Output).
 
 ### Usage
-- Open **Tools → Compliance Wizard**.
-- The **Problems** panel at the bottom will display a list of consistency violations.
+- The **Problems** panel at the bottom lists consistency violations.
 - Click any violation to navigate to the offending element in the **Model Explorer**.
+- Conformance to a standard is the standards report, not this panel: `memo validate --standards` prints it, and the Documents dashboard shows its checklist.
 
 ---
 
