@@ -79,7 +79,7 @@ function contentBounds(viewport: HTMLElement): DiagramContentBounds {
 }
 
 /** Serialize the canvas to an SVG data URL at full diagram extent. */
-async function captureSvgDataUrl(
+export async function captureSvgDataUrl(
     container: HTMLElement,
 ): Promise<{ dataUrl: string; width: number; height: number }> {
     const viewport = container.querySelector<HTMLElement>('.react-flow__viewport');

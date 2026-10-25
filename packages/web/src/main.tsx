@@ -4,6 +4,7 @@ import { BrowserRouter, HashRouter } from 'react-router-dom';
 import { App } from './App';
 import { AppDialogHost } from './components/AppDialogs';
 import './index.css';
+import './diagram/headless-render';
 
 // Path routing needs a server that can answer every path with the same
 // document. A viewer opened off disk has no server: `file://` resolves a path

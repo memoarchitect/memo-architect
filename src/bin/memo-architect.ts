@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { ConfigSettingError, configGetCommand, configSetCommand, configUnsetCommand } from '../commands/config.js';
 import { architectDevCommand } from '../commands/dev.js';
+import { renderDiagramsWithChromium } from '../commands/render-diagrams.js';
 import {
     architectExampleCommand, listArchitectExamples,
 } from '../commands/example.js';
@@ -130,7 +131,7 @@ defaultRegistry,
 // project (create it, author, package, export, the AI helpers, the regulatory
 // workbench) is registered from MEMO Tools' implementations here. Choosing the
 // compiler is Architect's own.
-registerProjectCommands(program);
+registerProjectCommands(program, { diagramRenderer: renderDiagramsWithChromium });
 
 const configCommand = program
     .command('config')
