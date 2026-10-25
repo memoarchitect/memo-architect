@@ -48,12 +48,12 @@ describe('memo-architect config', () => {
         expect(out.join('\n')).toContain('commit it');
     });
 
-    it('shows the layer that decided: yours over the project\'s', () => {
+    it('shows the layer that decided: the project\'s over yours', () => {
         configSetCommand('compiler', 'opensysml', { root: project });
         configSetCommand('compiler', 'syside');
         out.length = 0;
         configGetCommand('compiler', { projectRoot: project });
-        expect(out.join('\n')).toMatch(/syside\s+\(user settings; overrides project: opensysml\)/);
+        expect(out.join('\n')).toMatch(/opensysml\s+\(project; overrides user settings: syside\)/);
     });
 
     it('lists the choice of compiler only, unless asked for the low-level overrides', () => {
