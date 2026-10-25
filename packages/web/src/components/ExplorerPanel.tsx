@@ -507,7 +507,7 @@ function TabBar({ active, onChange }: { active: ExplorerTab; onChange: (tab: Exp
 
 // ─── Model Tree Persistence ─────────────────────────────────────────────────
 
-interface TreeNode {
+export interface TreeNode {
     /** `f:<qualified name>` for a package, the element id for an element. */
     id: string;
     name: string;

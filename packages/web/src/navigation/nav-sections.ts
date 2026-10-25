@@ -52,7 +52,6 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     traceability: 'model',
     'suspect-links': 'advanced',
     statistics: 'advanced',
-    'compliance-wizard': 'advanced',
     'review-dashboard': 'advanced',
     change: 'advanced',
     'model-diff': 'model',
@@ -135,7 +134,6 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'dsm', label: 'Design Structure Matrix', icon: '▤', section: 'advanced', target: { view: { type: 'dsm' } }, feature: 'analysis' },
     { id: 'analysis', label: 'Analysis Notebooks', icon: '⌁', section: 'advanced', target: { view: { type: 'analysis' } }, feature: 'analysis' },
     { id: 'review-dashboard', label: 'Design Review', icon: '📋', section: 'advanced', target: { view: { type: 'review-dashboard' } }, feature: 'model-tools' },
-    { id: 'compliance-wizard', label: 'Compliance Wizard', icon: '☑', section: 'advanced', target: { view: { type: 'compliance-wizard' } }, feature: 'model-tools' },
     { id: 'statistics', label: 'Statistics', icon: '⊠', section: 'advanced', target: { view: { type: 'statistics' } }, feature: 'model-tools' },
 
     { id: 'settings', label: 'Settings', icon: '⚙', section: 'settings', target: { view: { type: 'settings' } } },

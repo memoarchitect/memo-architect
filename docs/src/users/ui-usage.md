@@ -18,7 +18,7 @@ The workbench gives the same model three complementary entry points:
 
 The top navigation also carries **Documents**, **Use Cases**, **Ontology**, **Import**, and a
 **Tools** menu holding the cross-cutting analyses (Design Structure Matrix, Traceability
-Matrix, Statistics Dashboard, Compliance Wizard, and Model Diff).
+Matrix, Statistics Dashboard, and Model Diff).
 
 ## A five-minute review
 

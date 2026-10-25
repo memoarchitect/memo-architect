@@ -47,7 +47,7 @@ describe('the navigation', () => {
         for (const id of [
             // The Model Explorer is opened by its domains: one entry each.
             'dashboard', 'domain-architecture', 'domain-assurance', 'diagram', 'ui-screens', 'dhf', 'scenario', 'ai',
-            'ontology', 'import', 'traceability', 'statistics', 'compliance-wizard', 'model-diff',
+            'ontology', 'import', 'traceability', 'statistics', 'model-diff',
             'review-dashboard', 'dashboards', 'guide', 'analysis', 'dsm', 'settings',
         ]) expect(ids, id).toContain(id);
     });

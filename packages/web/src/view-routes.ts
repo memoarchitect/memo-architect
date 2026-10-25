@@ -33,7 +33,6 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     variability: '/variability',
     'scenario-editor': '/use-cases',
     'model-diff': '/diff',
-    'compliance-wizard': '/compliance',
     statistics: '/statistics',
     'dhf-dashboard': '/documents',
     'dhf-dashboard-legacy': '/documents/legacy',

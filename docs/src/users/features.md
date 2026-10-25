@@ -146,7 +146,6 @@ surfaces:
 | Design Structure Matrix | Review dependencies and connected clusters |
 | Traceability Matrix | Compare coverage across source and target model families |
 | Statistics Dashboard | Inspect model-wide counts and distributions |
-| Compliance Wizard | Find consistency and compliance candidates for review |
 | Model Diff | Compare model states and changed engineering content |
 | Review Dashboard | Collect review-oriented status in one workspace |
 | Guide | Where the model stands against its method: each step done, open or blocked for a workspace, and the next step |

@@ -29,7 +29,6 @@ const OntologyViewer = lazy(() => import('./views/ontology/OntologyViewer').then
 const TraceabilityMatrix = lazy(() => import('./views/TraceabilityMatrix').then(m => ({ default: m.TraceabilityMatrix })));
 const ScenarioEditor = lazy(() => import('./views/ScenarioEditor').then(m => ({ default: m.ScenarioEditor })));
 const ModelDiff = lazy(() => import('./views/ModelDiff').then(m => ({ default: m.ModelDiff })));
-const ComplianceWizard = lazy(() => import('./views/ComplianceWizard').then(m => ({ default: m.ComplianceWizard })));
 const StatisticsDashboard = lazy(() => import('./views/StatisticsDashboard').then(m => ({ default: m.StatisticsDashboard })));
 const DhfDashboard = lazy(() => import('./views/DhfDashboard').then(m => ({ default: m.DhfDashboard })));
 const DhfWorkbench = lazy(() => import('./views/DhfWorkbench').then(m => ({ default: m.DhfWorkbench })));
@@ -99,8 +98,6 @@ function UnifiedCanvas() {
                 return <ScenarioEditor />;
             case 'model-diff':
                 return isFeatureEnabled('model-tools') ? <ModelDiff /> : <Dashboard />;
-            case 'compliance-wizard':
-                return isFeatureEnabled('model-tools') ? <ComplianceWizard /> : <Dashboard />;
             case 'statistics':
                 return isFeatureEnabled('model-tools') ? <StatisticsDashboard /> : <Dashboard />;
             case 'dhf-dashboard':
@@ -345,7 +342,7 @@ export function App() {
     // previous page left open (Viewpoints, say) would sit next to Settings and mean nothing there.
     const standalonePages: ReadonlySet<string> = new Set([
         'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
-        'statistics', 'compliance-wizard', 'review-dashboard', 'import',
+        'statistics', 'review-dashboard', 'import',
     ]);
     const showExplorer = !standalonePages.has(activeView.type)
         && activeView.type !== 'dsm'
