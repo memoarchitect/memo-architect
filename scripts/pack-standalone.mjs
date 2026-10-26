@@ -14,7 +14,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'dist-standalone');
 const windows = process.platform === 'win32';
 
-/** npm, corepack and the package-bin shims are .cmd files on Windows, which only a shell can start. */
+/** npm, pnpm and the package-bin shims are .cmd files on Windows, which only a shell can start. */
 function sh(command, args, cwd) {
     const result = spawnSync(command, args, { cwd, stdio: ['ignore', 'ignore', 'inherit'], shell: windows });
     if (result.status !== 0) {
@@ -26,13 +26,13 @@ const bin = (dir, name) => join(dir, 'node_modules', '.bin', name);
 const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 
 console.log('▸ Building Architect against published npm dependencies');
-sh('corepack', ['pnpm', 'run', 'build'], ROOT);
+sh('pnpm', ['run', 'build'], ROOT);
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
 console.log(`▸ Packing ${manifest.name}`);
-sh('corepack', ['pnpm', 'pack', '--pack-destination', OUT], ROOT);
+sh('pnpm', ['pack', '--pack-destination', OUT], ROOT);
 
 const spec = name => `${name}@${manifest.dependencies[name]}`;
 sh('npm', ['pack', spec('@memoarchitect/ontology'), spec('@memoarchitect/tools')], OUT);

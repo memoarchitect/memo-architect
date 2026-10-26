@@ -13,7 +13,7 @@ build:
   stage: build
   image: node:26
   script:
-    - corepack enable
+    - npm install --global pnpm@9.15.0
     - pnpm install --frozen-lockfile
     - pnpm run version:check
     - pnpm run build
@@ -27,7 +27,7 @@ test:
   stage: test
   image: node:26
   script:
-    - corepack enable
+    - npm install --global pnpm@9.15.0
     - pnpm install --frozen-lockfile
     - export OPENSYSML_BINARY="$(find "$PWD/node_modules/.pnpm" -path '*opensysml-sysml-grpc-linux-*/bin/sysml-grpc' | head -1)"
     - test -x "$OPENSYSML_BINARY" || { echo "sysml-grpc for this platform was not installed"; exit 1; }
