@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import {
     collectActionFlowActions, collectNestedActionFlowActions,
-    actionPortNames, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
+    actionPortNames, parameterOfHandle, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
     classifyFlowItem, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
     findFloatingActions, flatExpandedGroups, findFeedbackSuccessionIds, computeActionFlowViewLayout,
 } from '../actionflow-view';
@@ -147,6 +147,7 @@ describe('actionPortNames', () => {
         const def = el('AcquireSensorData', {
             kind: 'ActionDefinition',
             construct: 'action',
+            isDefinition: true,
             parameters: [
                 { name: 'trigger', direction: 'in', type: 'Signal' },
                 { name: 'sensorStatus', direction: 'out', type: 'SensorStatusVector' },
@@ -157,6 +158,15 @@ describe('actionPortNames', () => {
         const ports = actionPortNames(usage, model([def, usage]));
         expect(ports.inPorts).toEqual(['trigger', 'buffer']);
         expect(ports.outPorts).toEqual(['sensorStatus', 'buffer']);
+    });
+
+    it('resolves the typing definition when the model keys it by qualified id', () => {
+        const def = el('P::Acquire', {
+            shortName: 'Acquire', name: 'Acquire', kind: 'ActionDefinition', construct: 'action', isDefinition: true,
+            parameters: [{ name: 'reading', direction: 'out', type: 'Reading' }],
+        });
+        const usage = el('P::flow::a1', { attributes: { actionType: 'Acquire', usageType: 'Acquire' } });
+        expect(actionPortNames(usage, model([def, usage]))).toEqual({ inPorts: [], outPorts: ['reading'] });
     });
 
     it('falls back to the usage\'s own parameters when untyped', () => {
@@ -613,5 +623,16 @@ describe('computeActionFlowViewLayout: feedback loops', () => {
 
         expect(final.position.x).toBeGreaterThanOrEqual(lane.position.x);
         expect(final.position.x + finalWidth).toBeLessThanOrEqual(lane.position.x + laneWidth);
+    });
+});
+
+describe('parameterOfHandle', () => {
+    it('names the parameter of an action-flow pin and nothing else', () => {
+        expect(parameterOfHandle('in:dose')).toBe('dose');
+        expect(parameterOfHandle('out:result')).toBe('result');
+        expect(parameterOfHandle('P::a::p')).toBeUndefined();
+        expect(parameterOfHandle('right')).toBeUndefined();
+        expect(parameterOfHandle('in::x')).toBeUndefined();
+        expect(parameterOfHandle(null)).toBeUndefined();
     });
 });

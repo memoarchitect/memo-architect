@@ -15,7 +15,7 @@ import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { CONTROL_IN, CONTROL_OUT } from '../ActionFlowNode';
-import { COMPOSITION_REL_TYPES } from './composition-tree';
+import { COMPOSITION_REL_TYPES, definitionIndex, resolveDefinition } from './composition-tree';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
 
 /**
@@ -239,14 +239,26 @@ export function collectNestedActionFlowActions(
 export function actionPortNames(
     el: MemoElement,
     model: MemoModelDTO,
+    definitions: ReadonlyMap<string, MemoElement> = definitionIndex(model.elements),
 ): { inPorts: string[]; outPorts: string[] } {
-    const typeRef = el.attributes['actionType'];
-    const def = typeRef ? model.elements[typeRef] : undefined;
-    const params = (def?.construct === 'action' ? def.parameters : el.parameters) ?? [];
+    // `actionType` is the type's own name and `model.elements` is keyed by qualified id, so the type is
+    // resolved the way every other view resolves a usage's definition, not looked up by that name as an id.
+    const def = resolveDefinition(el, definitions);
+    const params = (def?.construct === 'action' && def !== el ? def.parameters : undefined) ?? el.parameters ?? [];
     return {
         inPorts: params.filter(p => p.direction === 'in' || p.direction === 'inout').map(p => p.name),
         outPorts: params.filter(p => p.direction === 'out' || p.direction === 'inout').map(p => p.name),
     };
+}
+
+/**
+ * The parameter an action-flow pin handle names (`in:dose`, `out:result`), or undefined for a handle that is
+ * not a pin. A pin is a parameter of the action, which the model holds as a feature of it and not as an element,
+ * so a flow drawn between two pins is addressed by the action and the parameter's name.
+ */
+export function parameterOfHandle(handleId: string | null | undefined): string | undefined {
+    const match = /^(?:in|out):([^:].*)$/.exec(handleId ?? '');
+    return match?.[1];
 }
 
 // ─── Swimlanes ───────────────────────────────────────────────────────────────
@@ -692,7 +704,8 @@ export async function computeActionFlowViewLayout(
     const layoutSuccs = visibleSuccs.filter(rel => !feedbackSuccessionIds.has(rel.id));
 
     // ── ELK layered left-to-right layout ──
-    const portsByAction = new Map(actions.map(el => [el.id, actionPortNames(el, model)]));
+    const definitions = definitionIndex(model.elements);
+    const portsByAction = new Map(actions.map(el => [el.id, actionPortNames(el, model, definitions)]));
     const actionById = new Map(actions.map(el => [el.id, el]));
 
     // Nested mode: a composite becomes an ELK container. Its own start/done
