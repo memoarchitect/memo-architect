@@ -20,6 +20,7 @@ import { useModelStore, getRelationshipsForElement } from '../store/model-store'
 import { QuantityHint } from '../components/element-profile/QuantityHint';
 import { LAYER_COLORS } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
+import { elementRef } from '../lib/trace-labels';
 import {
     EditabilityLegend, EditableValue, ProfileField, ProfileSection, ReadOnlyValue,
 } from '../components/element-profile/ProfileValue';
@@ -301,12 +302,12 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                                 {groupLabel.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                             </span>
                         )}
-                        {element.shortId && (
+                        {elementRef(element) && (
                             <span style={{
                                 marginLeft: 'auto', color: COLOR.faint, fontSize: FONT.xs,
                                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                             }}>
-                                {element.shortId}
+                                {elementRef(element)}
                             </span>
                         )}
                     </div>
