@@ -123,7 +123,7 @@ export async function captureSvgDataUrl(
 }
 
 /** Draw an SVG data URL onto a raster canvas at `scale`. */
-async function rasterize(dataUrl: string, width: number, height: number, scale: number): Promise<HTMLCanvasElement> {
+export async function rasterize(dataUrl: string, width: number, height: number, scale: number): Promise<HTMLCanvasElement> {
     const image = new Image();
     image.src = dataUrl;
     await image.decode();
