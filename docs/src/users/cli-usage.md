@@ -52,6 +52,24 @@ A writable local ontology checkout is opened in place. An example from an
 installed package is copied to a disposable directory automatically so a
 dependency is never modified.
 
+## Start only JupyterLab
+
+```bash
+memo-architect jupyter
+```
+
+Starts JupyterLab for the project in the current directory (its `analysis` folder) without
+the workbench. It prints the URL, runs in the foreground, and stops JupyterLab on Ctrl-C or
+SIGTERM. `memo-architect dev` already starts Jupyter for you when you open the Analysis
+view; this command is for using JupyterLab alone.
+
+| Option | Default | Meaning |
+|---|---:|---|
+| `-p, --port <port>` | a free port | Port for JupyterLab. |
+
+Architect finds `jupyter` on `PATH`; set `MEMO_JUPYTER_BIN` to use another executable.
+See [Analysis Tools](analysis-tools.md#jupyter-starts-for-you).
+
 ## Build a static viewer
 
 ```bash
