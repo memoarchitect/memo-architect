@@ -65,7 +65,7 @@ Saving ontology selection (Ontology Viewer UI) writes files to disk (`model/onto
 - Zero mid-session ontology mutation — no silent state corruption.
 - Simpler rebuild path: `rebuildProject()` is a pure hot path with no I/O beyond parsing project SysML files.
 - Deterministic: sequential page loads against the same disk state produce identical model DTOs (modulo build counter in version string).
-- CI guard (`scripts/check-no-ontology-cache.sh`) prevents regression.
+- CI guard (`scripts/check-no-ontology-cache.mjs`) prevents regression.
 
 **Negative:**
 - Editing an ontology package source file requires restarting the dev server. This is expected and acceptable — ontology changes are infrequent compared to project model edits.
