@@ -375,6 +375,9 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                             <div key={`in-${port}`} style={{
                                 fontSize: FONT.badge, color: '#6B7280', paddingLeft: '8px',
                                 display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
+                                // The handle is placed against the row, not the card, so a pin can be
+                                // grabbed apart from the control handle that sits mid-edge.
+                                position: 'relative',
                             }}>
                                 {/* The pin *is* the handle. An item flow addresses
                                     `in:<parameter>`, and React Flow drops any edge
@@ -399,6 +402,7 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                             <div key={`out-${port}`} style={{
                                 fontSize: FONT.badge, color: '#6B7280', paddingRight: '8px',
                                 display: 'flex', alignItems: 'center', height: `${portHeight}px`, gap: '4px',
+                                position: 'relative',
                             }}>
                                 {port}
                                 <Handle

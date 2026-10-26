@@ -62,7 +62,7 @@ import {
     INTERCONNECTION_PORT_SIZE, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
     type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
-import { commonDisplayLevels, findFloatingActions, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
+import { commonDisplayLevels, findFloatingActions, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { bendConnector, type Wall } from './templates/connector-bend';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
@@ -951,6 +951,8 @@ function DiagramCanvasInner() {
     const [relPicker, setRelPicker] = useState<{
         x: number; y: number;
         sourceElement: MemoElement; targetElement: MemoElement;
+        /** The parameter each drawn end is, when the edge was drawn between two action-flow pins. */
+        sourceFeature?: string; targetFeature?: string;
     } | null>(null);
 
     // Context menu state
@@ -2921,6 +2923,8 @@ function DiagramCanvasInner() {
             y: window.innerHeight / 2 - 160,
             sourceElement: sourceEl,
             targetElement: targetEl,
+            sourceFeature: parameterOfHandle(sourceHandle),
+            targetFeature: parameterOfHandle(targetHandle),
         });
     }, [connectionEndpoint]);
 
@@ -2972,6 +2976,10 @@ function DiagramCanvasInner() {
         if (!relPicker || !selectedDiagramId) { setRelPicker(null); return; }
 
         const drawnFromId = relPicker.sourceElement.id;
+        // A choice that reverses the drawn edge puts the dragged-to element on the source end, and its pin with it.
+        const reversed = choice.sourceId !== drawnFromId;
+        const sourceFeature = reversed ? relPicker.targetFeature : relPicker.sourceFeature;
+        const targetFeature = reversed ? relPicker.sourceFeature : relPicker.targetFeature;
         setRelPicker(null);
 
         const outcome = await createRelationship({
@@ -2980,6 +2988,8 @@ function DiagramCanvasInner() {
             targetId: choice.targetId,
             direction: choice.direction,
             flowItem: choice.flowItem,
+            ...(sourceFeature ? { sourceFeature } : {}),
+            ...(targetFeature ? { targetFeature } : {}),
             selectedElementId: drawnFromId,
             diagramId: selectedDiagramId,
         });
@@ -2995,6 +3005,8 @@ function DiagramCanvasInner() {
         // keyed on it would reference a node that does not exist. Those views
         // wait for the rebuild, which re-derives the connector against the
         // owning boxes and the correct port handles.
+        // The same holds for a flow between pins: the rebuild draws it on the right pin handles.
+        if (sourceFeature || targetFeature) return;
         const endpointsAreNodes = nodesRef.current.some(n => n.id === choice.sourceId)
             && nodesRef.current.some(n => n.id === choice.targetId);
         if (!endpointsAreNodes) return;
