@@ -22,7 +22,7 @@ import { notationSceneToSvg, projectLayoutToNotationScene } from '../notation-sc
 
 const GOLDEN = join(__dirname, 'action-flow-golden.svg');
 
-const FILE = 'model/sysml_v2_activity_example.sysml';
+const FILE = 'model/catalog/sysml_v2_activity_example.sysml';
 
 function node(id: string, kind: string, name = id): MemoElement {
     return {

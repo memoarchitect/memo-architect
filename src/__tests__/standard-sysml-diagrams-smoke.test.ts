@@ -10,7 +10,7 @@ describe('memo-architect --example standard-sysml-diagrams', () => {
     it('ships the runnable action-flow model with its source identities', () => {
         expect(listArchitectExamples()).toContain('standard-sysml-diagrams');
         const ontologyRoot = dirname(require.resolve('@memoarchitect/ontology/package.json'));
-        const source = readFileSync(join(ontologyRoot, 'examples/sysml-diagram-samples/model/sysml_v2_activity_example.sysml'), 'utf8');
+        const source = readFileSync(join(ontologyRoot, 'examples/sysml-diagram-samples/model/catalog/sysml_v2_activity_example.sysml'), 'utf8');
         expect(source).toContain('FulfillOrder');
         expect(source).toContain('receiveOrder');
         expect(source).toContain('routeOrder');
