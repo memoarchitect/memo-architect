@@ -30,6 +30,7 @@ import { MemoMarkdownView } from '../components/memo-markdown/MemoMarkdownView';
 import { DASHBOARD_WIDGETS } from './Dashboard';
 import { documentThemeCss } from '../dhf/document-theme';
 import { exportDocumentWord, exportDocumentPdf, exportDocumentHtml, exportDocumentMarkdown } from '../dhf/document-export';
+import { alertDialog } from '../components/AppDialogs';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 
 const DhfSettingsPanel = lazy(() =>
@@ -360,7 +361,10 @@ function ExportButton({ doc, model, settings }: {
     const [open, setOpen] = useState(false);
 
     const items: Array<{ label: string; hint: string; run: () => void }> = [
-        { label: 'Word (.doc)', hint: 'Opens in Word / Pages', run: () => exportDocumentWord(doc, model, settings) },
+        { label: 'Word (.docx)', hint: 'Opens in Word / Pages, with the views drawn in', run: async () => {
+            const notDrawn = await exportDocumentWord(doc, model, settings);
+            if (notDrawn.length > 0) await alertDialog(`The Word file was saved. These views were not drawn, so each is a note in it:\n${notDrawn.map(n => `\u2022 ${n}`).join('\n')}`, 'Some views were not drawn');
+        } },
         { label: 'PDF', hint: 'Via the print dialog', run: () => exportDocumentPdf(doc, model, settings) },
         { label: 'HTML', hint: 'Standalone web page', run: () => exportDocumentHtml(doc, model, settings) },
         { label: 'Markdown', hint: 'Raw document source', run: () => exportDocumentMarkdown(doc) },

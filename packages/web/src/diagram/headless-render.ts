@@ -29,7 +29,7 @@ const SETTLE_POLL_MS = 150;
 const SETTLE_TIMEOUT_MS = 20_000;
 
 /** Wait until the canvas holds nodes and their number stops changing: the view has finished mounting. */
-async function settled(): Promise<boolean> {
+export async function settled(): Promise<boolean> {
     const deadline = Date.now() + SETTLE_TIMEOUT_MS;
     let last = -1;
     let stable = 0;
