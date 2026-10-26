@@ -29,6 +29,7 @@ import { TypeFilterSelect } from '../TypeFilterSelect';
 import { ProfileSection } from './ProfileValue';
 import { RelationshipBoard } from './RelationshipBoard';
 import { densityTokens, type Density } from './density';
+import { isRemovable } from '../../lib/relationship-removable';
 
 /** Outcome banner shown under the relationship list after a mutation. */
 interface RelationshipStatus {
@@ -366,7 +367,7 @@ function LinkedElementRow({
     const t = densityTokens(density);
 
     // Filter to named connections for mass deletion
-    const removableLinks = links.filter(l => deletable && l.rel.named === true);
+    const removableLinks = links.filter(l => deletable && isRemovable(l.rel));
 
     const options = useMemo(() => {
         if (!sourceElement || !opposite) return [];
@@ -508,7 +509,7 @@ function LinkedElementRow({
                 <div className="px-3 pb-2 space-y-2" style={{ borderTop: `1px solid ${COLOR.borderLight}`, paddingTop: 7 }}>
                     {links.map(({ rel: relationship, direction }, i) => {
                         const definition = findRelationshipDefinition(relationship.type, registries);
-                        const removable = deletable && relationship.named === true;
+                        const removable = deletable && isRemovable(relationship);
                         return (
                             <div key={relationship.id} style={{ fontSize: '10px', color: '#6B7280', marginTop: i > 0 ? 8 : 0, paddingTop: i > 0 ? 8 : 0, borderTop: i > 0 ? `1px dashed ${COLOR.borderLight}` : 'none' }}>
                                 <DetailLine label="Kind" value={definition?.label ?? relationship.type} valueColor={color} />
@@ -519,9 +520,9 @@ function LinkedElementRow({
                                 />
                                 <DetailLine label="ID" value={relationship.id} mono />
                                 <DetailLine label="Source" value={relationship.file || '—'} mono />
-                                {!relationship.named && (
+                                {!isRemovable(relationship) && (
                                     <div style={{ color: '#D97706', marginTop: 4 }}>
-                                        Anonymous connection — name it in SysML to allow deletion from here.
+                                        Anonymous connection with no recorded source range — name it in SysML to allow deletion from here.
                                     </div>
                                 )}
                                 {removable && (
