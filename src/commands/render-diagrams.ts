@@ -12,7 +12,7 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-    buildProjectSnapshot, loadViewLayouts, savedNodeIdResolver, serializeForInlineScript,
+    loadViewLayouts, savedNodeIdResolver, serializeForInlineScript,
     type DiagramImage, type DiagramRenderer,
 } from '@memoarchitect/tools';
 import { chromium, type Browser } from 'playwright-core';
@@ -69,7 +69,7 @@ async function launchBrowser(): Promise<Browser> {
     );
 }
 
-export const renderDiagramsWithChromium: DiagramRenderer = async (refs, outDir) => {
+export const renderDiagramsWithChromium: DiagramRenderer = async (refs, outDir, source) => {
     const images: Record<string, DiagramImage> = {};
     const warnings: string[] = [];
 
@@ -77,12 +77,13 @@ export const renderDiagramsWithChromium: DiagramRenderer = async (refs, outDir) 
     if (!existsSync(sourceHtml)) {
         throw new Error('the standalone Architect viewer is missing; run `pnpm run build:client:standalone`.');
     }
-    const snapshot = await buildProjectSnapshot();
-    const layouts = loadViewLayouts(snapshot.projectRoot, snapshot.model.diagrams ?? [], savedNodeIdResolver(snapshot.model as never));
+    // The model and the project it was read from are the caller's: a pinned release draws its own commit, with
+    // that commit's authored layouts, not the working directory's.
+    const layouts = loadViewLayouts(source.projectRoot, source.model.diagrams ?? [], savedNodeIdResolver(source.model as never));
 
     const scratch = mkdtempSync(join(tmpdir(), 'memo-render-'));
     const page = join(scratch, 'index.html');
-    const payload = serializeForInlineScript({ model: snapshot.model, validation: snapshot.validation, completeness: snapshot.completeness });
+    const payload = serializeForInlineScript({ model: source.model, validation: source.validation, completeness: source.completeness });
     writeFileSync(page, readFileSync(sourceHtml, 'utf8').replace('</head>', () => `<script>window.__MEMO_DATA__=${payload};</script>\n</head>`));
 
     const browser = await launchBrowser();
