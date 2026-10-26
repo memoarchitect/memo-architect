@@ -1,3 +1,4 @@
+import { elementRef } from '../lib/trace-labels';
 import { useModelStore, getDiagram } from '../store/model-store';
 import type { ViewKind } from '@memoarchitect/tools/browser';
 import { viewNaming } from '../constants';
@@ -62,7 +63,7 @@ export function Breadcrumb() {
             const elementId = (activeView as { type: 'element-detail'; elementId: string }).elementId;
             const el = model?.elements[elementId];
             if (el) {
-                const shortId = el.shortId ?? el.id;
+                const shortId = elementRef(el) ?? el.id;
                 const family = el.idFamily ?? '';
                 crumbs.push({
                     label: 'Catalog',
