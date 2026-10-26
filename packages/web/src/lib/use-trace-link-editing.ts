@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { legalRelationshipTypes, type LegalRelationshipOption, type MemoModelDTO, type MemoRelationship } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
 import type { DsmAggregateCell, DsmAxisEntry } from '../analysis/dsm-hierarchy';
+import { isRemovable } from './relationship-removable';
 
 export interface CellFocus {
     row: DsmAxisEntry;
@@ -128,8 +129,8 @@ export function useTraceLinkEditing({ model, activeTypes, editing }: TraceLinkEd
             && ((rel.sourceId === row.node.id && rel.targetId === column.node.id)
                 || (rel.sourceId === column.node.id && rel.targetId === row.node.id)));
         if (existing) {
-            if (existing.named === false) {
-                setStatus({ kind: 'error', message: 'This trace has no declared name, so it cannot be removed until it is named in SysML.' });
+            if (!isRemovable(existing)) {
+                setStatus({ kind: 'error', message: 'This trace has neither a declared name nor a recorded source range, so it cannot be removed from here.' });
                 return;
             }
             await removeLink(existing.id);

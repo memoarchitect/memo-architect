@@ -8,6 +8,7 @@ import type { LegalRelationshipOption, MemoModelDTO, MemoRelationship } from '@m
 import type { CellFocus } from '../lib/use-trace-link-editing';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
+import { isRemovable } from '../lib/relationship-removable';
 
 export function TraceLinkInspector({
     model, focus, editing, busy, editable, relationships, legalOptions, rankedOptions, traceTypes,
@@ -54,16 +55,16 @@ export function TraceLinkInspector({
                                 </span>
                                 {editing && (
                                     <button
-                                        disabled={busy || rel.named === false}
+                                        disabled={busy || !isRemovable(rel)}
                                         onClick={() => onRemove(rel.id)}
-                                        title={rel.named === false
-                                            ? 'This connection has no declared name, so it cannot be addressed for deletion. Name it in the source first.'
+                                        title={!isRemovable(rel)
+                                            ? 'This connection has neither a declared name nor a recorded source range, so it cannot be addressed for deletion.'
                                             : 'Remove this trace link'}
                                         style={{
                                             fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
                                             border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C',
-                                            cursor: busy || rel.named === false ? 'not-allowed' : 'pointer',
-                                            opacity: rel.named === false ? 0.5 : 1,
+                                            cursor: busy || !isRemovable(rel) ? 'not-allowed' : 'pointer',
+                                            opacity: !isRemovable(rel) ? 0.5 : 1,
                                         }}
                                     >
                                         Remove
