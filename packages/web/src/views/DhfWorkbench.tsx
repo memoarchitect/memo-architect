@@ -360,13 +360,16 @@ function ExportButton({ doc, model, settings }: {
 }) {
     const [open, setOpen] = useState(false);
 
+    // A view that cannot be drawn is a note in the file; say which, so it is not found by reading the file.
+    const tell = async (what: string, notDrawn: Promise<string[]>) => {
+        const list = await notDrawn;
+        if (list.length > 0) await alertDialog(`The ${what} was made. These views were not drawn, so each is a note in it:\n${list.map(n => `\u2022 ${n}`).join('\n')}`, 'Some views were not drawn');
+    };
+
     const items: Array<{ label: string; hint: string; run: () => void }> = [
-        { label: 'Word (.docx)', hint: 'Opens in Word / Pages, with the views drawn in', run: async () => {
-            const notDrawn = await exportDocumentWord(doc, model, settings);
-            if (notDrawn.length > 0) await alertDialog(`The Word file was saved. These views were not drawn, so each is a note in it:\n${notDrawn.map(n => `\u2022 ${n}`).join('\n')}`, 'Some views were not drawn');
-        } },
-        { label: 'PDF', hint: 'Via the print dialog', run: () => exportDocumentPdf(doc, model, settings) },
-        { label: 'HTML', hint: 'Standalone web page', run: () => exportDocumentHtml(doc, model, settings) },
+        { label: 'Word (.docx)', hint: 'Opens in Word / Pages, with the views drawn in', run: () => { void tell('Word file', exportDocumentWord(doc, model, settings)); } },
+        { label: 'PDF', hint: 'Via the print dialog, with the views drawn in', run: () => { void tell('PDF', exportDocumentPdf(doc, model, settings)); } },
+        { label: 'HTML', hint: 'Standalone web page, with the views drawn in', run: () => { void tell('HTML file', exportDocumentHtml(doc, model, settings)); } },
         { label: 'Markdown', hint: 'Raw document source', run: () => exportDocumentMarkdown(doc) },
     ];
 
