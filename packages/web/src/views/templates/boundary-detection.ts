@@ -63,6 +63,12 @@ const MAX_AREA = 0.9;
 /** Boxes within this L1 distance of each other describe the same thing. */
 const DUPLICATE_DISTANCE = 0.035;
 
+/** A fill inset inside its own border is the same box when it is this close and nearly as large. */
+const INSET_DISTANCE = 0.09;
+
+/** Below this a box is the density floor talking, not a boundary. */
+const MIN_CONFIDENCE = 0.5;
+
 const MAX_PROPOSALS = 40;
 
 const contains = (outer: Rect, inner: Rect, margin = 0.006) =>
@@ -186,20 +192,124 @@ function segment(buffer: PixelBuffer, options: PassOptions): Array<{ bounds: Rec
     return found;
 }
 
+
+/**
+ * Flat-colour regions: the panels, bars and buttons of a screen.
+ *
+ * A card with a hairline border over a near-identical background has almost
+ * no gradient, so the edge passes cannot see it, and worse, they join two
+ * neighbouring cards into one box. A card is nonetheless a flat fill: grow a
+ * region over pixels that stay within a few levels of the seed colour and its
+ * bounding box is the panel. The page background is the region that spans the
+ * image and is dropped; fills split by a divider rule are rejoined.
+ */
+const FLAT_TOLERANCE = 6;
+const FLAT_MIN_AREA = 0.004;
+const FLAT_MIN_FILL = 0.45;
+
+function flatRegions({ data, width, height }: PixelBuffer): Array<{ bounds: Rect; confidence: number }> {
+    const total = width * height;
+    const visited = new Uint8Array(total);
+    const stack: number[] = [];
+    const comps: Array<{ minX: number; minY: number; maxX: number; maxY: number; count: number; rgb: number[] }> = [];
+    const channel = (index: number, c: number) => data[index * 4 + c];
+    for (let seed = 0; seed < total; seed++) {
+        if (visited[seed]) continue;
+        const rgb = [channel(seed, 0), channel(seed, 1), channel(seed, 2)];
+        visited[seed] = 1;
+        stack.push(seed);
+        const comp = { minX: width, minY: height, maxX: -1, maxY: -1, count: 0, rgb };
+        while (stack.length) {
+            const current = stack.pop()!;
+            const x = current % width, y = (current - x) / width;
+            if (x < comp.minX) comp.minX = x;
+            if (x > comp.maxX) comp.maxX = x;
+            if (y < comp.minY) comp.minY = y;
+            if (y > comp.maxY) comp.maxY = y;
+            comp.count++;
+            const neighbours = [x > 0 ? current - 1 : -1, x < width - 1 ? current + 1 : -1, y > 0 ? current - width : -1, y < height - 1 ? current + width : -1];
+            for (const next of neighbours) {
+                if (next < 0 || visited[next]) continue;
+                if (Math.abs(channel(next, 0) - rgb[0]) > FLAT_TOLERANCE
+                    || Math.abs(channel(next, 1) - rgb[1]) > FLAT_TOLERANCE
+                    || Math.abs(channel(next, 2) - rgb[2]) > FLAT_TOLERANCE) continue;
+                visited[next] = 1;
+                stack.push(next);
+            }
+        }
+        if (comp.count >= FLAT_MIN_AREA * total) comps.push(comp);
+    }
+    const sameFill = (a: number[], b: number[]) => a.every((v, i) => Math.abs(v - b[i]) <= FLAT_TOLERANCE);
+    const rect = (c: typeof comps[number]): Rect => ({
+        x: c.minX / width, y: c.minY / height, width: (c.maxX - c.minX + 1) / width, height: (c.maxY - c.minY + 1) / height,
+    });
+    // The page background spans the image; it is the canvas, not a region on it.
+    const sides = (c: typeof comps[number]) => (c.minX === 0 ? 1 : 0) + (c.minY === 0 ? 1 : 0) + (c.maxX === width - 1 ? 1 : 0) + (c.maxY === height - 1 ? 1 : 0);
+    const regions = comps.filter(c => !(c.count > 0.35 * total && sides(c) >= 2));
+    // Rejoin a fill that a divider rule split, but never swallow a nested control.
+    const adjacent = (a: Rect, b: Rect) => {
+        const gap = 4 / Math.min(width, height);
+        const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+        const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+        return !contains(a, b) && !contains(b, a)
+            && ((overlapX > 0.5 * Math.min(a.width, b.width) && overlapY > -gap)
+                || (overlapY > 0.5 * Math.min(a.height, b.height) && overlapX > -gap));
+    };
+    const merged: Array<{ bounds: Rect; rgb: number[]; count: number; box: typeof comps[number] }> = [];
+    for (const comp of regions) {
+        const box = rect(comp);
+        const into = merged.find(m => sameFill(m.rgb, comp.rgb) && adjacent(m.bounds, box));
+        if (!into) { merged.push({ bounds: box, rgb: comp.rgb, count: comp.count, box: comp }); continue; }
+        const x0 = Math.min(into.bounds.x, box.x), y0 = Math.min(into.bounds.y, box.y);
+        const x1 = Math.max(into.bounds.x + into.bounds.width, box.x + box.width);
+        const y1 = Math.max(into.bounds.y + into.bounds.height, box.y + box.height);
+        into.bounds = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+        into.count += comp.count;
+    }
+    return merged
+        .filter(m => m.count >= FLAT_MIN_FILL * m.bounds.width * width * m.bounds.height * height
+            && area(m.bounds) >= FLAT_MIN_AREA && area(m.bounds) <= MAX_AREA)
+        .map(m => ({ bounds: m.bounds, confidence: 0.9 }));
+}
+
+/** A rule or divider is a line, not a region: nobody labels a hairline. */
+const isHairline = (rect: Rect) => Math.min(rect.width, rect.height) < 0.03 && Math.max(rect.width, rect.height) / Math.min(rect.width, rect.height) > 12;
+
+/**
+ * An edge-pass box that cuts across the panels is two things stuck together,
+ * or half of one. It either overlaps a panel without containing or being
+ * contained by it, or it spans several sibling panels.
+ */
+function straddles(candidate: Rect, panels: Rect[]): boolean {
+    let spanned = 0;
+    for (const panel of panels) {
+        if (contains(candidate, panel, 0.012)) {
+            if (area(candidate) > area(panel) * 1.3) spanned++;
+            continue;
+        }
+        if (contains(panel, candidate, 0.012)) continue;
+        const w = Math.min(candidate.x + candidate.width, panel.x + panel.width) - Math.max(candidate.x, panel.x);
+        const h = Math.min(candidate.y + candidate.height, panel.y + panel.height) - Math.max(candidate.y, panel.y);
+        if (w > 0 && h > 0 && w * h > 0.15 * Math.min(area(candidate), area(panel))) return true;
+    }
+    return spanned >= 2;
+}
+
 /**
  * Deterministic edge-component detector for UI boundary proposals.
  *
- * Scored against the regions reviewers authored by hand on six Affera captures,
- * a match being IoU > 0.3: 25 of 45, against 8 of 45 for the luminance-and-
- * dilated-bounds detector this replaces, with no screen scoring worse. On the
- * login screen, 6 of 6 against 3 of 6. The detected Power Off button lands at
- * 0.8672/0.0300/0.1141/0.0675 where a reviewer drew
- * 0.8669/0.0314/0.1138/0.0672 — IoU 0.957.
+ * Three kinds of evidence, in this order: flat-colour panels (cards, bars, buttons),
+ * then the coarse and fine edge passes for text runs and controls. Edge boxes that
+ * cut across a panel, hairlines, and boxes below `MIN_CONFIDENCE` are dropped.
  *
- * A further pass that trimmed background rows off each edge was written, tested
- * and rejected: it raised the mean marginally and pulled that same box to 0.908
- * by eating the antialiasing on its rounded corners. Measuring on the undilated
- * mask is what makes a box tight; nothing further was needed.
+ * Measured 2026-10-26 on the ui-screen-regions captures (1024x600): the edge
+ * passes alone returned the two cards as ONE box, stretched the header over the
+ * cards' tops and returned no standalone card; with the flat-panel pass both
+ * cards, the header bar, the drug selector and the Settings bar are each found.
+ * The earlier figures for this detector (25 of 45 hand-authored regions on six
+ * Affera captures) were taken before the panel pass and `MIN_CONFIDENCE`, and
+ * those captures are not in this workspace, so they are NOT re-measured: see the
+ * board row "Region detection is measured on two captures only".
  */
 export function detectBoundaryRegions(buffer: PixelBuffer): DetectedBoundary[] {
     const { data, width, height } = buffer;
@@ -207,11 +317,18 @@ export function detectBoundaryRegions(buffer: PixelBuffer): DetectedBoundary[] {
 
     // Coarse first, so that where a panel and its contents describe the same
     // box, the panel is the one kept.
-    const candidates = [...segment(buffer, COARSE), ...segment(buffer, FINE)];
+    const panels = flatRegions(buffer);
+    const panelRects = panels.map(panel => panel.bounds).filter(rect => area(rect) >= 0.02);
+    const edgeBoxes = [...segment(buffer, COARSE), ...segment(buffer, FINE)]
+        .filter(box => box.confidence >= MIN_CONFIDENCE && !isHairline(box.bounds) && !straddles(box.bounds, panelRects));
+    const candidates = [...panels.filter(panel => !isHairline(panel.bounds)), ...edgeBoxes];
 
     const kept: Array<{ bounds: Rect; confidence: number }> = [];
     for (const candidate of candidates.sort((a, b) => area(b.bounds) - area(a.bounds))) {
-        if (kept.some(existing => l1(existing.bounds, candidate.bounds) < DUPLICATE_DISTANCE)) continue;
+        // A control's border and its fill are one thing seen twice: the fill sits just inside the border.
+        const sameThing = (outer: Rect, inner: Rect) => l1(outer, inner) < DUPLICATE_DISTANCE
+            || (l1(outer, inner) < INSET_DISTANCE && contains(outer, inner, 0.006) && area(outer) < area(inner) * 1.4);
+        if (kept.some(existing => sameThing(existing.bounds, candidate.bounds))) continue;
         kept.push(candidate);
         if (kept.length >= MAX_PROPOSALS) break;
     }

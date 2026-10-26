@@ -35,6 +35,8 @@ describe('UI Screens stable ID allocation', () => {
         expect(usageIdentifier('UIE-012', 'uiElement', [])).toBe('uiElement12');
         expect(usageIdentifier('UIE-012', 'uiElement', [element('uiElement12')])).toBe('uiElement12_2');
         expect(usageIdentifier('UIA-009', 'uiAsset', [])).toBe('uiAsset9');
+        // The model keys a usage by its qualified id; the name collides all the same.
+        expect(usageIdentifier('UIE-012', 'uiElement', [element('pkg::screen::uiElement12')])).toBe('uiElement12_2');
     });
 });
 

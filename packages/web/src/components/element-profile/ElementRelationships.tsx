@@ -9,8 +9,10 @@
 // the section entirely when an element had none, which is exactly when you most
 // want to add one.
 //
-// "Expand" opens the RelationshipBoard inline rather than in a modal: the
-// element stays on screen, and following a link is a normal navigation.
+// The profile shows a summary — how many links, to which kinds — and the
+// "Traceability" button opens the full list in a popup, where every link reads
+// as its id and its title. The list used to sit inline and bury the rest of the
+// profile under it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,7 +29,7 @@ import { COLOR, FONT } from '../../styles/tokens';
 import { RelationshipQuickAdd } from '../RelationshipQuickAdd';
 import { TypeFilterSelect } from '../TypeFilterSelect';
 import { ProfileSection } from './ProfileValue';
-import { RelationshipBoard } from './RelationshipBoard';
+import { elementIdTitle, elementRef } from '../../lib/trace-labels';
 import { densityTokens, type Density } from './density';
 import { isRemovable } from '../../lib/relationship-removable';
 
@@ -58,17 +60,15 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
     const addElementToDiagram = useModelStore(s => s.addElementToDiagram);
 
     const [expanded, setExpanded] = useState(false);
+    // A kind chip opens the popup already narrowed to that kind.
+    const [dialogQuery, setDialogQuery] = useState('');
     const [status, setStatus] = useState<RelationshipStatus | null>(null);
-    // Every kind of counterpart is shown until the person narrows it: a default list of five kinds hid the
-    // links a person came to see (a test case, a hazard, a component) behind a filter they had not set.
-    const [chosenKinds, setChosenKinds] = useState<string[] | null>(null);
 
     const registries = useMemo(() => getRegistries(model), [model]);
 
     // Reset transient state whenever the inspected element changes.
     useEffect(() => {
         setStatus(null); setExpanded(false);
-        setChosenKinds(null);
     }, [element.id]);
 
     const mine = pendingRelationships.filter(p =>
@@ -142,11 +142,7 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
     const inwardGroups = useMemo(() => groupsOf(incoming, 'incoming'), [incoming, model]);   // eslint-disable-line react-hooks/exhaustive-deps
 
     const allKinds = [...new Set([...outwardGroups.keys(), ...inwardGroups.keys()])].sort();
-    const visibleKinds = chosenKinds ?? allKinds;
-    const shown = (groups: Links) => new Map([...groups.entries()].filter(([kind]) => visibleKinds.includes(kind)));
-    const visibleOutward = shown(outwardGroups);
-    const visibleInward = shown(inwardGroups);
-    const visibleGroups = new Map([...visibleOutward, ...visibleInward]);
+    const countOfKind = (kind: string) => (outwardGroups.get(kind)?.size ?? 0) + (inwardGroups.get(kind)?.size ?? 0);
 
     if (!model) return null;
 
@@ -157,40 +153,19 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                 count={total}
                 density={density}
                 collapsible={density === 'panel'}
-                actions={
-                    <div className="flex items-center gap-1">
-                        {total > 0 && (
-                            <button
-                                onClick={() => setExpanded(true)}
-                                style={{
-                                    width: 24, height: 24, borderRadius: '4px',
-                                    background: 'transparent',
-                                    color: '#6B7280',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}
-                                title="View Details (Rich Grid)"
-                                aria-label="View Details"
-                                onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                            </button>
-                        )}
-                        {total > 0 && (
-                            <TypeFilterSelect
-                                label=""
-                                options={allKinds.map(kind => ({ value: kind, label: kind }))}
-                                selected={visibleKinds}
-                                onChange={setChosenKinds}
-                                allLabel="None"
-                                iconOnly={true}
-                                align="right"
-                            />
-                        )}
-                    </div>
-                }
+                actions={total > 0 ? (
+                    <button
+                        onClick={() => { setDialogQuery(''); setExpanded(true); }}
+                        style={{
+                            padding: '4px 10px', borderRadius: 6, border: `1px solid ${COLOR.border}`, background: COLOR.surface,
+                            color: COLOR.primary, fontSize: FONT.xs, fontWeight: 600, cursor: 'pointer',
+                        }}
+                        title="Open the traceability of this element"
+                        aria-label="Open traceability"
+                    >
+                        Traceability
+                    </button>
+                ) : undefined}
             >
                 <div style={{ marginBottom: density === 'page' ? 14 : 8, maxWidth: density === 'page' ? 720 : undefined }}>
                     <RelationshipQuickAdd
@@ -203,70 +178,40 @@ export function ElementRelationships({ element, outgoing, incoming, density }: {
                 </div>
 
                 {expanded && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ padding: '2rem' }} onClick={() => setExpanded(false)}>
-                        <div className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden w-full max-w-5xl max-h-full" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200 bg-gray-50/50">
-                                <h2 className="text-lg font-bold text-gray-900">Element Relationships</h2>
-                                <button onClick={() => setExpanded(false)} className="text-gray-400 hover:text-gray-700 font-bold px-2 py-1 bg-transparent border-none cursor-pointer">✕</button>
-                            </div>
-                            <div className="flex-1 overflow-auto p-6 bg-gray-50/30">
-                                <RelationshipBoard
-                                    element={element} model={model} registries={registries}
-                                    outgoing={outgoing} incoming={incoming} density={density}
-                                    onNavigate={id => { setExpanded(false); selectElement(id); }}
-                                    onCreate={createRelationship}
-                                    onDelete={handleDelete}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <TraceabilityDialog
+                        initialQuery={dialogQuery}
+                        element={element} model={model} registries={registries}
+                        outward={outwardGroups} inward={inwardGroups}
+                        deletable={connected} density={density}
+                        onClose={() => setExpanded(false)}
+                        onNavigate={id => { setExpanded(false); selectElement(id); }}
+                        onCreate={createRelationship}
+                        onDelete={handleDelete}
+                    />
                 )}
 
                 {total === 0 && mine.length === 0 && (
                     <div style={{ fontSize: densityTokens(density).meta, color: COLOR.faint, padding: '2px 0 6px' }}>
-                        No relationships yet — add the first one below.
+                        No relationships yet — add the first one above.
                     </div>
                 )}
 
-                {total > 0 && visibleGroups.size > 0 && (
-                    <div className="flex items-center justify-between" style={{ marginBottom: 12, marginTop: 12, borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Existing Links</span>
+                {total > 0 && (
+                    <div data-testid="links-summary" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        <span style={{ fontSize: FONT.xs, color: COLOR.muted, alignSelf: 'center', marginRight: 4 }}>
+                            {outgoing.length} outward · {incoming.length} inward
+                        </span>
+                        {allKinds.map(kind => (
+                            <button key={kind} onClick={() => { setDialogQuery(kind); setExpanded(true); }} title={`Show ${kind} links`}
+                                style={{
+                                    padding: '2px 8px', borderRadius: 999, border: `1px solid ${COLOR.borderLight}`, background: COLOR.surfaceAlt,
+                                    color: COLOR.primary, fontSize: FONT.xs, cursor: 'pointer',
+                                }}>
+                                {kind} <strong>{countOfKind(kind)}</strong>
+                            </button>
+                        ))}
                     </div>
                 )}
-
-                {([['Outward', 'what this element points to', visibleOutward], ['Inward', 'what points to this element', visibleInward]] as const).map(([title, hint, groups]) => groups.size === 0 ? null : (
-                    <div key={title} data-testid={`links-${title.toLowerCase()}`} style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '4px 0 8px' }} title={hint}>
-                            {title} <span style={{ fontWeight: 400, textTransform: 'none' }}>· {hint}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {[...groups.entries()].map(([groupName, itemsMap]) => (
-                        <div key={`${title}|${groupName}`}>
-                            <div style={{ fontSize: '10px', color: COLOR.muted, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 6 }}>
-                                {groupName}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {[...itemsMap.entries()].map(([oppositeId, links]) => (
-                                    <LinkedElementRow
-                                        key={oppositeId}
-                                        sourceElement={element}
-                                        oppositeId={oppositeId}
-                                        links={links}
-                                        model={model}
-                                        registries={registries}
-                                        density={density}
-                                        deletable={connected}
-                                        onNavigate={() => selectElement(oppositeId)}
-                                        onCreate={createRelationship}
-                                        onDelete={handleDelete}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
 
                 {mine.map(pending => (
                     <PendingRelationshipRow
@@ -339,6 +284,129 @@ function StatusBanner({ status, onAddToView, onDismiss, model }: {
                     Relationship created. Add {elementName} to this view?
                 </button>
             )}
+        </div>
+    );
+}
+
+type LinkGroups = Map<string, Map<string, { rel: MemoRelationship; direction: RelationshipDirection }[]>>;
+
+/** The full traceability of one element: every link, grouped by direction then kind, each read as id + title. */
+function TraceabilityDialog({ initialQuery = '', element, model, registries, outward, inward, deletable, density, onClose, onNavigate, onCreate, onDelete }: {
+    initialQuery?: string;
+    element: MemoElement;
+    model: MemoModelDTO;
+    registries: OntologyRegistriesDTO;
+    outward: LinkGroups;
+    inward: LinkGroups;
+    deletable: boolean;
+    density: Density;
+    onClose: () => void;
+    onNavigate: (id: string) => void;
+    onCreate?: (req: any) => void;
+    onDelete: (id: string) => void;
+}) {
+    const [direction, setDirection] = useState<'all' | 'outgoing' | 'incoming'>('all');
+    const [query, setQuery] = useState(initialQuery);
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const needle = query.trim().toLowerCase();
+    const matches = (id: string) => {
+        const linked = model.elements[id];
+        return !needle || [elementRef(linked), linked?.name, linked?.kind, id].filter(Boolean).join(' ').toLowerCase().includes(needle);
+    };
+    const sections = ([
+        ['outgoing', 'Outward', 'what this element points to', outward],
+        ['incoming', 'Inward', 'what points to this element', inward],
+    ] as const).filter(([key]) => direction === 'all' || direction === key);
+    const countOf = (groups: LinkGroups) => [...groups.values()].reduce((sum, group) => sum + group.size, 0);
+
+    const tab = (key: typeof direction, label: string, count: number) => (
+        <button key={key} onClick={() => setDirection(key)} aria-pressed={direction === key}
+            style={{
+                padding: '5px 12px', borderRadius: 999, fontSize: FONT.xs, fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${direction === key ? COLOR.primary : COLOR.border}`,
+                background: direction === key ? COLOR.primary : COLOR.surface,
+                color: direction === key ? '#fff' : COLOR.primary,
+            }}>
+            {label} <span style={{ opacity: 0.7 }}>{count}</span>
+        </button>
+    );
+
+    return (
+        <div role="dialog" aria-modal="true" aria-label="Traceability" onClick={onClose}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div onClick={event => event.stopPropagation()}
+                style={{
+                    width: 'min(760px, 100%)', maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                    background: COLOR.surface, borderRadius: 14, boxShadow: '0 24px 60px rgba(15,23,42,0.28)',
+                }}>
+                <div style={{ padding: '18px 22px 14px', borderBottom: `1px solid ${COLOR.borderLight}` }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: COLOR.faint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Traceability</div>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2, minWidth: 0 }}>
+                                {(() => {
+                                    const { id, title } = elementIdTitle(element, element.id);
+                                    return <>
+                                        {id && <span className="font-mono" style={{ fontSize: 13, color: COLOR.muted, flexShrink: 0 }}>{id}</span>}
+                                        <span className="truncate" style={{ fontSize: 18, fontWeight: 700, color: COLOR.primary }}>{title}</span>
+                                    </>;
+                                })()}
+                            </div>
+                        </div>
+                        <button onClick={onClose} aria-label="Close traceability"
+                            style={{ width: 30, height: 30, border: 0, borderRadius: 8, background: COLOR.surfaceAlt, color: COLOR.muted, cursor: 'pointer', fontSize: 16 }}>×</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                        {tab('all', 'All', countOf(outward) + countOf(inward))}
+                        {tab('outgoing', 'Outward', countOf(outward))}
+                        {tab('incoming', 'Inward', countOf(inward))}
+                        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter by id or title…" aria-label="Filter links"
+                            style={{ marginLeft: 'auto', width: 220, padding: '6px 10px', borderRadius: 8, border: `1px solid ${COLOR.border}`, fontSize: FONT.sm, outline: 'none' }} />
+                    </div>
+                </div>
+                <div style={{ overflow: 'auto', padding: '8px 22px 20px' }}>
+                    {sections.map(([key, title, hint, groups]) => {
+                        const kinds = [...groups.entries()]
+                            .map(([kind, items]) => [kind, [...items.entries()].filter(([id]) => matches(id))] as const)
+                            .filter(([, items]) => items.length > 0);
+                        if (kinds.length === 0) return null;
+                        return (
+                            <section key={key} data-testid={`links-${key === 'outgoing' ? 'outward' : 'inward'}`}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: COLOR.muted, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '16px 0 8px' }}>
+                                    {title} <span style={{ fontWeight: 400, textTransform: 'none' }}>· {hint}</span>
+                                </div>
+                                {kinds.map(([kind, items]) => (
+                                    <div key={kind} style={{ marginBottom: 12 }}>
+                                        <div style={{ fontSize: 11, color: COLOR.faint, fontWeight: 600, margin: '0 0 6px 2px' }}>{kind} · {items.length}</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            {items.map(([oppositeId, links]) => (
+                                                <LinkedElementRow
+                                                    key={oppositeId}
+                                                    sourceElement={element}
+                                                    oppositeId={oppositeId}
+                                                    links={links}
+                                                    model={model}
+                                                    registries={registries}
+                                                    density={density}
+                                                    deletable={deletable}
+                                                    onNavigate={() => onNavigate(oppositeId)}
+                                                    onCreate={onCreate}
+                                                    onDelete={onDelete}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </section>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 }
@@ -431,9 +499,13 @@ function LinkedElementRow({
                 <button onClick={onNavigate} className="text-left flex items-center gap-1.5" style={{
                     display: 'flex', flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 }} title={`Go to ${opposite?.name ?? oppositeId}`}>
-                    <strong className="truncate font-mono" style={{ color: COLOR.primary, fontSize: '11px', fontWeight: 600 }}>
-                        {opposite?.shortId ?? oppositeId}
-                    </strong>
+                    {(() => {
+                        const { id, title } = elementIdTitle(opposite, oppositeId);
+                        return <>
+                            {id && <span className="font-mono" style={{ flexShrink: 0, color: COLOR.muted, background: COLOR.surfaceAlt, padding: '1px 6px', borderRadius: 5, fontSize: '11px', fontWeight: 600 }}>{id}</span>}
+                            <span className="truncate" style={{ color: COLOR.primary, fontSize: 13, fontWeight: 600 }}>{title}</span>
+                        </>;
+                    })()}
                     {links.length > 1 && (
                         <span style={{ fontSize: '10px', color: '#9CA3AF', background: '#F3F4F6', padding: '1px 4px', borderRadius: 4, fontWeight: 600 }}>
                             {links.length}

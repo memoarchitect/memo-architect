@@ -12,11 +12,32 @@ const matrixRef = (element: { attributes?: Record<string, unknown> }): string | 
     return typeof source === 'string' ? /^Matrix\s+([A-Z]+-\d+)/.exec(source)?.[1] : undefined;
 };
 
+/** The id an element is read by in a trace: its authored reference, else the compiled display id, else the short id. */
+export function elementRef(
+    element: (Pick<MemoElement, 'displayId' | 'shortId'> & { attributes?: Record<string, unknown> }) | undefined,
+): string | undefined {
+    if (!element) return undefined;
+    return (element.attributes && matrixRef(element)) ?? element.displayId ?? element.shortId;
+}
+
+/**
+ * An element as an id and a title, for surfaces that draw the id in its own chip. The id is absent when
+ * the name already begins with it, which is the same guard `elementLabel` applies.
+ */
+export function elementIdTitle(
+    element: (Pick<MemoElement, 'displayId' | 'shortId' | 'name'> & { attributes?: Record<string, unknown> }) | undefined,
+    fallback: string,
+): { id?: string; title: string } {
+    if (!element) return { title: fallback };
+    const id = elementRef(element);
+    return id && !element.name.startsWith(id) ? { id, title: element.name } : { title: element.name };
+}
+
 export function elementLabel(
     element: (Pick<MemoElement, 'displayId' | 'shortId' | 'name'> & { attributes?: Record<string, unknown> }) | undefined,
     fallback: string,
 ): string {
     if (!element) return fallback;
-    const id = (element.attributes && matrixRef(element)) ?? element.displayId ?? element.shortId;
+    const id = elementRef(element);
     return id && !element.name.startsWith(id) ? `${id} ${element.name}` : element.name;
 }

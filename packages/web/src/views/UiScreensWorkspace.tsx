@@ -94,7 +94,7 @@ function fileData(file: File): Promise<{ base64: string; width: number; height: 
 
 export function nextUiElementId(elements: MemoElement[]): string {
     const highest = elements.reduce((max, element) => {
-        const numbers = [element.id, element.shortId, element.attributes.id]
+        const numbers = [element.id, element.shortId, element.attributes.id, element.attributes.providedId]
             .map(value => /^UIE-(\d+)$/i.exec(value ?? ''))
             .filter((match): match is RegExpExecArray => !!match)
             .map(match => Number(match[1]));
@@ -105,7 +105,7 @@ export function nextUiElementId(elements: MemoElement[]): string {
 
 export function nextUiAssetId(captures: MemoElement[]): string {
     const highest = captures.reduce((max, capture) => {
-        const numbers = [capture.id, capture.shortId, capture.attributes.id]
+        const numbers = [capture.id, capture.shortId, capture.attributes.id, capture.attributes.providedId]
             .map(value => /^UIA-(\d+)$/i.exec(value ?? ''))
             .filter((match): match is RegExpExecArray => !!match)
             .map(match => Number(match[1]));
@@ -117,7 +117,8 @@ export function nextUiAssetId(captures: MemoElement[]): string {
 export function usageIdentifier(stableId: string, prefix: string, elements: MemoElement[]): string {
     const suffix = stableId.match(/(\d+)$/)?.[1] ?? '1';
     const base = `${prefix}${Number(suffix)}`;
-    const ids = new Set(elements.map(element => element.id));
+    // An id is qualified (`pkg::owner::name`) but a usage identifier is the bare name, so compare names.
+    const ids = new Set(elements.map(element => element.id.split('::').pop()));
     if (!ids.has(base)) return base;
     let counter = 2;
     while (ids.has(`${base}_${counter}`)) counter++;
@@ -162,13 +163,25 @@ export function screenForLayout(layout: { id: string; name: string }, screens: M
  */
 const MODEL_ARRIVAL_TIMEOUT_MS = 90_000;
 
-async function waitForElement(id: string, optimistic: MemoElement | undefined): Promise<void> {
+/**
+ * Wait for a created element to come back in the rebuilt model, and return the id it has THERE.
+ *
+ * The id sent is the usage name; the rebuilt model keys the element by its qualified id
+ * (`pkg::owner::name`). Waiting on the bare name never saw the saved element arrive, so a region was written
+ * to source and then reported as never saved, and nothing was attached to its screen.
+ */
+async function waitForElement(id: string, optimistic: MemoElement | undefined): Promise<string> {
     const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
     while (Date.now() < deadline) {
-        const current = useModelStore.getState().model?.elements[id];
+        const failure = useModelStore.getState().failedCreates[id];
+        if (failure) throw new Error(`The region was not saved: ${failure}`);
+        const elements = useModelStore.getState().model?.elements ?? {};
+        const qualified = Object.keys(elements).find(key => key.endsWith(`::${id}`));
+        if (qualified) return qualified;
         // createModelElement inserts an optimistic copy immediately. Relationships
         // must wait for the server rebuild, where legality sees the new endpoint.
-        if (current && current !== optimistic) return;
+        const current = elements[id];
+        if (current && current !== optimistic) return id;
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     throw new Error('The new element was saved, but the rebuilt model did not arrive.');
@@ -493,9 +506,8 @@ export function UiScreensWorkspace() {
         setStatus('Creating UI screen…');
         try {
             const stableId = nextUiElementId(uiElements);
-            const elementId = usageIdentifier(stableId, 'uiElement', uiElements);
             const optimisticId = createModelElement({
-                id: elementId,
+                id: usageIdentifier(stableId, 'uiElement', uiElements),
                 name,
                 kind: 'UIElement',
                 construct: 'part',
@@ -510,7 +522,7 @@ export function UiScreensWorkspace() {
                 file: screen?.file || 'model/generated.sysml',
                 doc: '',
                 attributes: {
-                    id: stableId,
+                    providedId: stableId,
                     description: `Root user-interface screen ${name}.`,
                     formKind: 'UIElementFormKind::screen',
                     disclosureKind: 'UIDisclosureKind::inline',
@@ -518,7 +530,7 @@ export function UiScreensWorkspace() {
                     'bounds.x': '0', 'bounds.y': '0', 'bounds.width': '1', 'bounds.height': '1',
                 },
             });
-            await waitForElement(optimisticId, useModelStore.getState().model?.elements[optimisticId]);
+            const elementId = await waitForElement(optimisticId, useModelStore.getState().model?.elements[optimisticId]);
             const viewpointId = model.viewpoints?.find(viewpoint =>
                 viewpoint.label.toLowerCase().includes('ui layout'))?.id ?? '__model';
             createDiagram({
@@ -583,18 +595,27 @@ export function UiScreensWorkspace() {
         }
         setStatus('Saving region…');
         try {
-            const stableId = nextUiElementId(uiElements);
-            const id = usageIdentifier(stableId, 'uiElement', uiElements);
+            // Read the model as it is NOW, not as this render saw it: accepting several regions in a row
+            // would otherwise hand each one the same id, and the later ones would be reported saved on the
+            // strength of the first.
+            const liveElements = Object.values(useModelStore.getState().model?.elements ?? {}).filter(element => element.kind === 'UIElement');
+            const stableId = nextUiElementId(liveElements);
+            const id = usageIdentifier(stableId, 'uiElement', liveElements);
+            // A region belongs INSIDE its parent: containment is the part tree, so it is declared in the
+            // parent's body, in the parent's file. There is no separate link to author afterwards.
+            const parentId = options.parentElementId ?? screen.id;
+            const parent = useModelStore.getState().model?.elements[parentId];
             createModelElement({
                 id,
                 name: options.name?.trim() || `Region ${stableId}`,
                 kind: 'UIElement',
                 construct: 'part',
                 layer: screen.layer,
-                file: screen.file || 'model/generated.sysml',
+                file: parent?.file || screen.file || 'model/generated.sysml',
+                package: parentId,
                 doc: '',
                 attributes: {
-                    id: stableId,
+                    providedId: stableId,
                     ...boundsAttributes(bounds),
                     formKind: 'UIElementFormKind::panel',
                     disclosureKind: 'UIDisclosureKind::inline',
@@ -605,11 +626,10 @@ export function UiScreensWorkspace() {
                     boundaryOpacity: '0.12',
                 },
             });
-            await waitForElement(id, useModelStore.getState().model?.elements[id]);
-            await createLink('Composes', options.parentElementId ?? screen.id, id);
+            const savedId = await waitForElement(id, useModelStore.getState().model?.elements[id]);
             setDrawMode(false);
             setStatus('Region saved.');
-            return id;
+            return savedId;
         } catch (error) {
             setStatus(error instanceof Error ? error.message : String(error));
             return undefined;
@@ -647,7 +667,7 @@ export function UiScreensWorkspace() {
                 file: screen.file || 'model/generated.sysml',
                 doc: '',
                 attributes: {
-                    id: stableId,
+                    providedId: stableId,
                     imageUri: saved.imageUri,
                     imageHash: saved.imageHash,
                     pixelWidth: String(data.width),
@@ -656,16 +676,20 @@ export function UiScreensWorkspace() {
                     captureContext: selected.name,
                 },
             });
-            await waitForElement(id, useModelStore.getState().model?.elements[id]);
-            await createLink('CapturesScreen', id, screen.id);
+            const savedId = await waitForElement(id, useModelStore.getState().model?.elements[id]);
+            await createLink('CapturesScreen', savedId, screen.id);
             // Normalized bounds migrate to a new capture. Automatically detected
             // regions must be reviewed again; manual regions keep their disposition.
             for (const element of uiElements) {
-                if (element.attributes.detectionMethod?.endsWith('automatic')) {
-                    persistElementAttributes(element.id, { confirmedBy: '', confirmedAt: '' });
+                if (/::automatic(Confirmed)?$/.test(element.attributes.detectionMethod ?? '')) {
+                    // Back to `automatic`, not just cleared: a box reads as awaiting review when it is
+                    // `automatic` with no confirmer, and `automaticConfirmed` would keep claiming a human agreed.
+                    persistElementAttributes(element.id, {
+                        detectionMethod: 'BoundsDetectionKind::automatic', confirmedBy: '', confirmedAt: '',
+                    });
                 }
             }
-            setCaptureId(id);
+            setCaptureId(savedId);
             setStatus('Capture saved; automatic regions require confirmation.');
         } catch (error) {
             setStatus(error instanceof Error ? error.message : String(error));
@@ -694,7 +718,7 @@ export function UiScreensWorkspace() {
         }
     };
 
-    const acceptProposal = async (proposalId: string): Promise<string | undefined> => {
+    const acceptProposal = async (proposalId: string, name?: string): Promise<string | undefined> => {
         const existing = proposalElementIds.current.get(proposalId);
         if (existing) return existing;
         const proposal = proposals.find(candidate => candidate.id === proposalId);
@@ -710,6 +734,7 @@ export function UiScreensWorkspace() {
         }
         const elementId = await createRegion(authoredBounds, {
             parentElementId,
+            name: name?.trim() || undefined,
             automatic: true,
             confidence: proposal.confidence,
         });
@@ -719,6 +744,11 @@ export function UiScreensWorkspace() {
                 candidate.id === proposalId ? { ...candidate, status: 'accepted' } : candidate));
         }
         return elementId;
+    };
+
+    // Parents are accepted before their children, which acceptProposal also guarantees.
+    const acceptAllProposals = async () => {
+        for (const proposal of proposals.filter(candidate => candidate.status === 'pending')) await acceptProposal(proposal.id);
     };
 
     const rejectProposal = (proposalId: string) => {
@@ -858,6 +888,10 @@ export function UiScreensWorkspace() {
                             <IconToggle icon={<Icon.detect />} label="Detect" active={proposals.some(proposal => proposal.status === 'pending')}
                                 badge={proposals.filter(proposal => proposal.status === 'pending').length || undefined}
                                 onClick={() => void detectRegions()} title="Propose nested regions from detected image boundaries" />
+                            {proposals.some(proposal => proposal.status === 'pending') && (
+                                <IconButton icon={<span aria-hidden>✓</span>} label="Accept all" onClick={() => void acceptAllProposals()}
+                                    title="Accept every pending detected region" />
+                            )}
                             {status && <span role="status" className="truncate" style={{ marginLeft: 'auto', fontSize: FONT.xs, color: '#6B7280', maxWidth: 180 }}>{status}</span>}
                           </div>
                         </div>
@@ -889,7 +923,7 @@ export function UiScreensWorkspace() {
                                 drawMode={drawMode}
                                 newElementDefaultName={`Region ${nextUiElementId(uiElements)}`}
                                 proposals={proposals}
-                                onAcceptProposal={id => void acceptProposal(id)}
+                                onAcceptProposal={(id, name) => void acceptProposal(id, name)}
                                 onRejectProposal={rejectProposal}
                                 onCreateBounds={(bounds, name) => void createRegion(bounds, { name })}
                                 onBoundsChange={(id, bounds) => persistElementAttributes(id, boundsAttributes(bounds))}

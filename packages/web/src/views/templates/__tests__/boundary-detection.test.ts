@@ -114,4 +114,33 @@ describe('detectBoundaryRegions', () => {
         expect(detectBoundaryRegions({ data: new Uint8ClampedArray(), width: 0, height: 0 })).toEqual([]);
         expect(detectBoundaryRegions({ data: new Uint8ClampedArray(7 * 7 * 4), width: 7, height: 7 })).toEqual([]);
     });
+
+    // The ui-screen-regions infusion-pump capture: a navy header over two white
+    // cards whose hairline borders barely differ from the grey page. Measured on
+    // the real capture the edge passes returned the two cards as ONE box and
+    // stretched the header over the cards' tops.
+    it('finds faint-bordered sibling cards separately, and the header bar', () => {
+        const buffer = image(320, 188, 247);
+        fill(buffer, 0, 0, 320, 18, [10, 38, 71]);
+        fill(buffer, 8, 26, 148, 120, [255, 255, 255]);
+        fill(buffer, 164, 26, 148, 120, [255, 255, 255]);
+        outline(buffer, 8, 26, 148, 120, 232);
+        outline(buffer, 164, 26, 148, 120, 232);
+
+        const regions = detectBoundaryRegions(buffer).map(region => region.bounds);
+        const near = (x: number, y: number, w: number, h: number) => regions.some(r =>
+            Math.abs(r.x - x) < 0.03 && Math.abs(r.y - y) < 0.03 && Math.abs(r.width - w) < 0.03 && Math.abs(r.height - h) < 0.03);
+
+        expect(near(8 / 320, 26 / 188, 148 / 320, 120 / 188)).toBe(true);
+        expect(near(164 / 320, 26 / 188, 148 / 320, 120 / 188)).toBe(true);
+        expect(near(0, 0, 1, 18 / 188)).toBe(true);
+        // nothing may span both cards
+        expect(regions.some(r => r.x < 0.1 && r.x + r.width > 0.9 && r.y > 0.1 && r.height > 0.3)).toBe(false);
+    });
+
+    it('does not propose a divider rule as a region', () => {
+        const buffer = image(320, 188, 255);
+        fill(buffer, 10, 90, 300, 2, [210, 210, 210]);
+        expect(detectBoundaryRegions(buffer).filter(r => r.bounds.height < 0.03 && r.bounds.width > 0.5)).toEqual([]);
+    });
 });

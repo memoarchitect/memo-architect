@@ -34,7 +34,7 @@ interface ScreenLayoutViewProps {
     onCreateBounds?: (bounds: Rect, name: string) => void;
     onBoundsChange?: (elementId: string, bounds: Rect) => void;
     proposals?: ScreenRegionProposal[];
-    onAcceptProposal?: (id: string) => void;
+    onAcceptProposal?: (id: string, name?: string) => void;
     onRejectProposal?: (id: string) => void;
 }
 
@@ -96,6 +96,8 @@ export function ScreenLayoutView({
     const [gesture, setGesture] = useState<Gesture | null>(null);
     const [boundaryDraft, setBoundaryDraft] = useState<BoundaryDraft | null>(null);
     const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
+    // The proposal whose label field is open: one at a time, or twenty boxes each carry a text field.
+    const [activeProposal, setActiveProposal] = useState<string | null>(null);
     const frameRef = useRef<HTMLDivElement>(null);
     const activeCaptureId = trail[trail.length - 1] ?? captureId;
 
@@ -290,7 +292,10 @@ export function ScreenLayoutView({
                     onPointerCancel={() => setGesture(null)}
                     style={{
                         position: 'relative', width: '100%', maxWidth: 900,
-                        paddingBottom: `${aspect * 100}%`, margin: '0 auto',
+                        // aspect-ratio, not a padding-bottom percentage: that percentage is of the PARENT's width,
+                        // and the frame is capped at 900px, so on a wide pane the frame grew taller than the capture
+                        // and every box drifted off the control it marks.
+                        aspectRatio: `1 / ${aspect}`, margin: '0 auto',
                         background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 8,
                         backgroundImage: scene.imageUri ? `url(${scene.imageUri})` : undefined,
                         backgroundSize: 'contain', backgroundRepeat: 'no-repeat',
@@ -420,13 +425,21 @@ export function ScreenLayoutView({
                             border: '2px dashed #2563EB', borderRadius: 3, background: '#2563EB12',
                             pointerEvents: 'none',
                         }}>
-                            <span style={{
+                            <span onMouseEnter={() => setActiveProposal(proposal.id)}
+                                onMouseLeave={event => { if (document.activeElement?.parentElement !== event.currentTarget) setActiveProposal(null); }}
+                                style={{
                                 position: 'absolute', top: 2, right: 2, display: 'inline-flex', gap: 3,
                                 pointerEvents: 'auto', background: '#FFFFFFEE', padding: 2, borderRadius: 5,
                                 boxShadow: '0 1px 4px rgba(0,0,0,0.16)',
                             }}>
+                                {activeProposal === proposal.id && <input aria-label={`Label for detected region ${proposal.id}`} placeholder="Label" defaultValue=""
+                                    onFocus={() => setActiveProposal(proposal.id)}
+                                    onPointerDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()}
+                                    onKeyDown={event => { if (event.key === 'Enter') { event.stopPropagation(); onAcceptProposal?.(proposal.id, event.currentTarget.value); } }}
+                                    style={{ width: 96, height: 20, border: '1px solid #CBD5E1', borderRadius: 4, padding: '0 5px', fontSize: 11 }} />}
                                 <button type="button" aria-label={`Accept detected region ${proposal.id}`}
-                                    onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onAcceptProposal?.(proposal.id); }}
+                                    onPointerDown={event => event.stopPropagation()}
+                                    onClick={event => { event.stopPropagation(); onAcceptProposal?.(proposal.id, (event.currentTarget.previousElementSibling as HTMLInputElement | null)?.value); }}
                                     title="Accept region" style={{ width: 22, height: 20, border: 0, borderRadius: 4, background: '#DCFCE7', color: '#15803D', cursor: 'pointer' }}>✓</button>
                                 <button type="button" aria-label={`Reject detected region ${proposal.id}`}
                                     onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onRejectProposal?.(proposal.id); }}
