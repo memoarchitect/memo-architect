@@ -19,7 +19,7 @@ import { chromium, type Browser } from 'playwright-core';
 
 /** The function `diagram/headless-render.ts` installs in the page; this program has no DOM types. */
 interface PageHook {
-    __memoRenderDiagram(ref: string, layouts: unknown): Promise<{ ok: true; svg: string } | { ok: false; reason: string }>;
+    __memoRenderDiagram(ref: string, layouts: unknown): Promise<{ ok: true; svg: string; png: string } | { ok: false; reason: string }>;
 }
 
 function architectPackageRoot(): string {
@@ -102,7 +102,9 @@ export const renderDiagramsWithChromium: DiagramRenderer = async (refs, outDir, 
             mkdirSync(outDir, { recursive: true });
             const file = join(outDir, `${stem}.svg`);
             writeFileSync(file, result.svg, 'utf8');
-            images[ref] = { file };
+            const png = join(outDir, `${stem}.png`);
+            writeFileSync(png, Buffer.from(result.png, 'base64'));
+            images[ref] = { file, png };
         }
     } finally {
         await browser.close();

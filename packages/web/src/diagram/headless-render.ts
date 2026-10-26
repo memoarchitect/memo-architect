@@ -12,11 +12,11 @@
 
 import type { DiagramLayout } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
-import { captureSvgDataUrl } from './export-diagram';
+import { captureSvgDataUrl, rasterize } from './export-diagram';
 import { resolveDiagramRef } from './resolve-diagram-ref';
 
 export type HeadlessDiagram =
-    | { ok: true; svg: string; width: number; height: number; diagramId: string }
+    | { ok: true; svg: string; /** The same picture as PNG, base64: what a Word file can hold. */ png: string; width: number; height: number; diagramId: string }
     | { ok: false; reason: string };
 
 declare global {
@@ -62,7 +62,9 @@ export async function renderDiagramForDriver(ref: string, layouts: Record<string
     const svg = dataUrl.startsWith('data:image/svg+xml;base64,')
         ? atob(dataUrl.slice(comma + 1))
         : decodeURIComponent(dataUrl.slice(comma + 1));
-    return { ok: true, svg, width, height, diagramId: diagram.id };
+    const canvas = await rasterize(dataUrl, width, height, 2);
+    const png = canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+    return { ok: true, svg, png, width, height, diagramId: diagram.id };
 }
 
 if (typeof window !== 'undefined') window.__memoRenderDiagram = renderDiagramForDriver;
