@@ -453,7 +453,9 @@ export interface ModelState {
     /** Remove a package declaration, lifting its members into the enclosing scope. */
     deletePackage: (qualifiedName: string) => Promise<PackageMutationResult>;
     addElement: (kind: string, name: string, targetPackage: string) => void;
-    createModelElement: (element: Omit<MemoElement, 'id'> & { id?: string }) => string;
+    createModelElement: (element: Omit<MemoElement, 'id'> & { id?: string; package?: string }) => string;
+    /** Why a created element's write failed, by element id. The optimistic copy is gone by then. */
+    failedCreates: Record<string, string>;
     persistElementAttributes: (elementId: string, attributes: Record<string, string>) => void;
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
@@ -817,6 +819,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
     // Relationship authoring
     pendingRelationships: [],
+    failedCreates: {},
 
     /**
      * Create a model relationship through the server.
@@ -1272,8 +1275,18 @@ export const useModelStore = create<ModelState>((set, get) => ({
                 ? { ...state.model, elements: { ...state.model.elements, [id]: created } }
                 : null,
             selectedElementId: id,
+            failedCreates: Object.fromEntries(Object.entries(state.failedCreates).filter(([key]) => key !== id)),
         }));
-        sendElementCreate(created);
+        // The write is asynchronous and can be refused or never sent. Roll the optimistic copy back and record
+        // why, so a caller waiting on the element learns of it instead of waiting for a model that will not arrive.
+        const rollBack = (reason: string) => set((state) => {
+            if (!state.model?.elements[id]) return { failedCreates: { ...state.failedCreates, [id]: reason } };
+            const { [id]: _removed, ...rest } = state.model.elements;
+            return { model: { ...state.model, elements: rest }, failedCreates: { ...state.failedCreates, [id]: reason } };
+        });
+        sendElementCreate(created)
+            .then(result => { if (!result.success) rollBack(result.error ?? 'The server refused the new element.'); })
+            .catch(error => rollBack(error instanceof Error ? error.message : String(error)));
         return id;
     },
     persistElementAttributes: (elementId, attributes) => {
