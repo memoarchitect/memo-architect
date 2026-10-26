@@ -4,8 +4,9 @@ MEMO includes a suite of advanced analysis tools for design verification, depend
 
 ## Jupyter notebooks
 
-**Analysis → Jupyter Notebooks** opens the project's live JupyterLab workspace
-at `http://127.0.0.1:8888`. New projects created with `memo-architect init` contain an
+**Analysis → Jupyter Notebooks** opens the project's live JupyterLab workspace. Architect
+starts JupyterLab itself the first time you open the view (see
+[Jupyter starts for you](#jupyter-starts-for-you)). New projects created with `memo-architect init` contain an
 `analysis/Samples` folder with seven sample notebooks:
 
 - model overview and semantic composition;
@@ -19,13 +20,39 @@ at `http://127.0.0.1:8888`. New projects created with `memo-architect init` cont
 The samples use standard SysML v2 types and read the model through
 `analysis/memo_model.py`, which compiles the project with its compiler
 (`toolchain.compiler`: the project's, or your own default where the project names none), as every MEMO
-command does: change it and the notebooks follow. Start the local service with:
+command does: change it and the notebooks follow.
+
+### Jupyter starts for you
+
+When you open the view under `memo-architect dev` (or `--example`), Architect starts
+JupyterLab for the project, serving its `analysis` folder, and connects the view to it.
+There is nothing to run.
+
+- **Port and token.** The port is a free one picked at start, bound to `127.0.0.1` only. A
+  random token protects the server, so other local users cannot use it; it is passed to
+  Jupyter in its environment (not on the command line), and the page's
+  **Open live JupyterLab** link carries it.
+- **It stops with Architect.** When `memo-architect dev` exits (Ctrl-C, SIGTERM, or the
+  browser closing) the JupyterLab it started is stopped, kernels included. A JupyterLab
+  you started yourself, serving the same `analysis` folder, is reused and never stopped.
+- **Not installed.** If JupyterLab cannot be found the view says so and how to install it
+  (`pip install jupyterlab`). Architect looks for `jupyter` on `PATH`; set
+  `MEMO_JUPYTER_BIN` to the executable when it is installed somewhere else (for example
+  `pip install --user` on macOS puts it in `~/Library/Python/<version>/bin`).
+- **Static viewers.** A viewer made with `memo-architect build` has no Architect process
+  to run Jupyter, so it connects to a JupyterLab you started on `http://127.0.0.1:8888`:
+  `cd analysis && jupyter lab --port 8888`.
+
+To run only JupyterLab, without the workbench:
 
 ```bash
-source analysis/.venv/bin/activate
-cd analysis
-jupyter lab --port 8888
+cd my-device
+memo-architect jupyter
 ```
+
+It prints the URL (with the token), stays in the foreground, and stops JupyterLab on
+Ctrl-C. `-p, --port <port>` fixes the port. If a JupyterLab is already serving the
+project's `analysis` folder it prints that one and exits, leaving it running.
 
 The `memo` command must be on `PATH` there (or `MEMO_CLI` set to the command
 that runs it), with whatever the selected compiler needs: `memo compile --probe`

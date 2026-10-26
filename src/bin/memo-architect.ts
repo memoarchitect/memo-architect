@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { ConfigSettingError, configGetCommand, configSetCommand, configUnsetCommand } from '../commands/config.js';
 import { architectDevCommand } from '../commands/dev.js';
+import { architectJupyterCommand } from '../commands/jupyter.js';
 import { renderDiagramsWithChromium } from '../commands/render-diagrams.js';
 import {
     architectExampleCommand, listArchitectExamples,
@@ -167,6 +168,16 @@ program
     .command('examples')
     .description('List the bundled examples (same as --list)')
     .action(printExamples);
+
+program
+    .command('jupyter')
+    .description('Start only JupyterLab for this project (its analysis folder), in the foreground; stops on Ctrl-C')
+    .option('-p, --port <port>', 'Port for Jupyter (a free one when omitted)')
+    .action(async (options: { port?: string }) => {
+        process.exitCode = await architectJupyterCommand({
+            port: options.port === undefined ? undefined : Number.parseInt(options.port, 10),
+        });
+    });
 
 program
     .command('build')

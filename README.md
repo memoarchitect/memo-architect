@@ -71,14 +71,10 @@ interaction; it does not maintain a second engineering model.
 Projects created with `memo-architect init` include seven notebooks under
 `analysis/Samples/`: overview and quality reports, architecture hotspots,
 change-impact exploration, charts, an SVG ownership graph, and an inventory
-table with CSV export. Start JupyterLab from the project and select
-**Analysis → Jupyter Notebooks** in Architect:
-
-```bash
-source analysis/.venv/bin/activate
-cd analysis
-jupyter lab --port 8888
-```
+table with CSV export. Select **Analysis → Jupyter Notebooks** in Architect: it starts
+JupyterLab for the project itself (on a free port, protected by a token) and stops it when
+Architect exits. `memo-architect jupyter` starts only JupyterLab. JupyterLab must be
+installed (`pip install jupyterlab`); set `MEMO_JUPYTER_BIN` if `jupyter` is not on `PATH`.
 
 The notebooks use the licensed Syside Python API and automatically locate the
 project's nearest `model/` or `src/` tree.

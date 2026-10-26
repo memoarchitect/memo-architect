@@ -3,6 +3,10 @@ import { alertDialog, askConfirm, askText } from '../components/AppDialogs';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import { MemoBrandMark } from '../components/MemoBrandMark';
+import {
+    ensureJupyter, jupyterHeaders, jupyterIsManaged, jupyterNotebookLink, JupyterUnavailableError,
+    type JupyterConnection,
+} from '../analysis/jupyter-client';
 
 type Folder = { id: string; name: string };
 type StarterTemplate = 'custom' | 'part-inventory' | 'requirements-review' | 'ownership-tree' | 'sysml-part-api';
@@ -125,21 +129,30 @@ function notebookFileName(notebook: Notebook): string {
     return `${notebook.title.replace(/[^a-z0-9_-]+/gi, '-') || 'memo-analysis'}.ipynb`;
 }
 
-async function saveLiveNotebook(notebook: Notebook, modelSnapshot: unknown) {
+async function saveLiveNotebook(connection: JupyterConnection, notebook: Notebook, modelSnapshot: unknown) {
     const name = notebookFileName(notebook);
     const content = notebookDocument(notebook.title, notebook.template ?? 'custom', modelSnapshot);
-    const response = await fetch(`http://127.0.0.1:8888/api/contents/${encodeURIComponent(name)}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(`${connection.url}/api/contents/${encodeURIComponent(name)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...jupyterHeaders(connection) },
         body: JSON.stringify({ type: 'notebook', format: 'json', content }),
     });
-    if (!response.ok) throw new Error('JupyterLab is not available at 127.0.0.1:8888.');
+    if (!response.ok) throw new JupyterUnavailableError(`JupyterLab is not available at ${connection.url}.`, 'unreachable');
 }
 
-async function liveNotebookExists(notebook: Notebook): Promise<boolean> {
-    const response = await fetch(`http://127.0.0.1:8888/api/contents/${encodeURIComponent(notebookFileName(notebook))}?content=0`);
+async function liveNotebookExists(connection: JupyterConnection, notebook: Notebook): Promise<boolean> {
+    const response = await fetch(`${connection.url}/api/contents/${encodeURIComponent(notebookFileName(notebook))}?content=0`, {
+        headers: jupyterHeaders(connection),
+    });
     if (response.status === 404) return false;
-    if (!response.ok) throw new Error('JupyterLab is not available at 127.0.0.1:8888.');
+    if (!response.ok) throw new JupyterUnavailableError(`JupyterLab is not available at ${connection.url}.`, 'unreachable');
     return true;
+}
+
+/** Make sure the notebook exists in the live Jupyter, starting Jupyter first when Architect can. */
+async function prepareLiveNotebook(notebook: Notebook, modelSnapshot: unknown, create: boolean): Promise<JupyterConnection> {
+    const connection = await ensureJupyter();
+    if (create || !(await liveNotebookExists(connection, notebook))) await saveLiveNotebook(connection, notebook, modelSnapshot);
+    return connection;
 }
 
 /**
@@ -156,7 +169,8 @@ export function AnalysisWorkspace() {
     const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(
         () => loadLibrary().notebooks.at(-1)?.id ?? null,
     );
-    const [liveError, setLiveError] = useState<string | null>(null);
+    const [liveError, setLiveError] = useState<{ message: string; kind: JupyterUnavailableError['kind'] } | null>(null);
+    const [connection, setConnection] = useState<JupyterConnection | null>(null);
     const [liveReadyId, setLiveReadyId] = useState<string | null>(null);
 
     useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(library)); }, [library]);
@@ -167,13 +181,29 @@ export function AnalysisWorkspace() {
     );
     const selectedNotebook = library.notebooks.find(notebook => notebook.id === selectedNotebookId) ?? null;
 
+    function issueOf(error: unknown) {
+        return {
+            message: error instanceof Error ? error.message : 'JupyterLab is not available.',
+            kind: error instanceof JupyterUnavailableError ? error.kind : 'unreachable' as const,
+        };
+    }
+
+    // Opening the view starts Jupyter, when Architect can, before any notebook is chosen.
     useEffect(() => {
-        if (!selectedNotebook) return;
+        void ensureJupyter().then(setConnection).catch(error => setLiveError(issueOf(error)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    function connectNotebook(notebook: Notebook, create: boolean) {
         setLiveReadyId(null);
         setLiveError(null);
-        void liveNotebookExists(selectedNotebook)
-            .then(exists => exists ? setLiveReadyId(selectedNotebook.id) : saveLiveNotebook(selectedNotebook, model).then(() => setLiveReadyId(selectedNotebook.id)))
-            .catch(error => setLiveError(error.message));
+        void prepareLiveNotebook(notebook, model, create)
+            .then(ready => { setConnection(ready); setLiveReadyId(notebook.id); })
+            .catch(error => setLiveError(issueOf(error)));
+    }
+
+    useEffect(() => {
+        if (selectedNotebook) connectNotebook(selectedNotebook, false);
     // Save once per notebook selection. Model updates must not create a
     // save/rebuild loop through the project file watcher.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,20 +232,11 @@ export function AnalysisWorkspace() {
         };
         setLibrary(current => ({ ...current, notebooks: [...current.notebooks, notebook] }));
         setSelectedNotebookId(notebook.id);
-        setLiveReadyId(null);
-        setLiveError(null);
-        void saveLiveNotebook(notebook, model)
-            .then(() => setLiveReadyId(notebook.id))
-            .catch(error => setLiveError(error.message));
+        connectNotebook(notebook, true);
     }
 
     function retryLiveNotebook() {
-        if (!selectedNotebook) return;
-        setLiveError(null);
-        setLiveReadyId(null);
-        void liveNotebookExists(selectedNotebook)
-            .then(exists => exists ? setLiveReadyId(selectedNotebook.id) : saveLiveNotebook(selectedNotebook, model).then(() => setLiveReadyId(selectedNotebook.id)))
-            .catch(error => setLiveError(error.message));
+        if (selectedNotebook) connectNotebook(selectedNotebook, false);
     }
 
     const buttonStyle: React.CSSProperties = {
@@ -227,7 +248,7 @@ export function AnalysisWorkspace() {
         <div className="flex flex-1 overflow-hidden" style={{ background: '#F7F7F5' }}>
             <aside style={{ width: 280, flexShrink: 0, borderRight: '1px solid #D9E2E7', background: '#FFF', padding: 16, overflow: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <div><div style={{ fontWeight: 700, color: '#173B4E' }}>Jupyter notebooks</div><div style={{ fontSize: 12, color: '#71889A', marginTop: 3 }}>Python analysis workspace</div></div>
+                    <div><div style={{ fontWeight: 700, color: '#173B4E' }}>Jupyter notebooks</div><div style={{ fontSize: 12, color: '#71889A', marginTop: 3 }}>{jupyterIsManaged() ? (liveError ? 'JupyterLab unavailable' : connection ? 'JupyterLab running' : 'Starting JupyterLab…') : 'Python analysis workspace'}</div></div>
                     <button title="New folder" onClick={addFolder} style={buttonStyle}>+ Folder</button>
                 </div>
                 <div style={{ marginBottom: 14 }}>
@@ -286,8 +307,12 @@ export function AnalysisWorkspace() {
 
                     <section style={{ background: '#FFF', border: '1px solid #D9E6E9', borderRadius: 10, padding: 20 }}>
                         {selectedNotebook ? <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}><div><h2 style={{ margin: 0, color: '#173B4E', fontSize: 18 }}>{selectedNotebook.title}</h2><div style={{ color: '#7892A1', fontSize: 12, marginTop: 5 }}>{liveReadyId === selectedNotebook.id ? 'Saved and ready in local JupyterLab' : 'Preparing live notebook…'}</div></div>{liveReadyId === selectedNotebook.id ? <a href={`http://127.0.0.1:8888/lab/tree/${encodeURIComponent(notebookFileName(selectedNotebook))}`} target="_blank" rel="noopener noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>▶ Open live JupyterLab</a> : <button disabled style={{ ...buttonStyle, opacity: .55, cursor: 'wait' }}>Preparing…</button>}</div>
-                            {liveError && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 7, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.55 }}><strong>Start JupyterLab first.</strong> From the model’s <code>analysis</code> folder, run <code style={{ padding: '1px 4px', borderRadius: 3, background: '#FEF3C7' }}>jupyter lab --port 8888</code>, then return here and retry. Architect cannot start a local process from the browser automatically. <button onClick={retryLiveNotebook} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#176B55', fontWeight: 700, cursor: 'pointer' }}>Retry connection</button></div>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}><div><h2 style={{ margin: 0, color: '#173B4E', fontSize: 18 }}>{selectedNotebook.title}</h2><div style={{ color: '#7892A1', fontSize: 12, marginTop: 5 }}>{liveReadyId === selectedNotebook.id ? 'Saved and ready in local JupyterLab' : jupyterIsManaged() ? 'Starting JupyterLab and preparing the notebook…' : 'Preparing live notebook…'}</div></div>{liveReadyId === selectedNotebook.id ? <a href={jupyterNotebookLink(connection!, notebookFileName(selectedNotebook))} target="_blank" rel="noopener noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>▶ Open live JupyterLab</a> : <button disabled style={{ ...buttonStyle, opacity: .55, cursor: 'wait' }}>Preparing…</button>}</div>
+                            {liveError && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 7, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                                {jupyterIsManaged()
+                                    ? <><strong>{liveError.kind === 'not-installed' ? 'JupyterLab is not installed.' : 'Architect could not start JupyterLab.'}</strong> {liveError.message}</>
+                                    : <><strong>Start JupyterLab first.</strong> This viewer cannot start it. From the model’s <code style={{ padding: '1px 4px', borderRadius: 3, background: '#FEF3C7' }}>analysis</code> folder, run <code style={{ padding: '1px 4px', borderRadius: 3, background: '#FEF3C7' }}>jupyter lab --port 8888</code>, then return here and retry.</>}
+                                <button onClick={retryLiveNotebook} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#176B55', fontWeight: 700, cursor: 'pointer' }}>Retry connection</button></div>}
                             <pre style={{ whiteSpace: 'pre-wrap', margin: '18px 0 0', padding: 14, borderRadius: 7, background: '#102A3A', color: '#BDEFE1', fontSize: 12, lineHeight: 1.55 }}>{`elements = list(model.get('elements', {}).values())\nparts = [e for e in elements if 'part' in (e.get('kind', '') + ' ' + e.get('construct', '')).lower()]\n[(p.get('shortId'), p.get('name'), p.get('kind')) for p in parts[:100]]`}</pre>
                         </> : <div style={{ color: '#587487', lineHeight: 1.6 }}><strong style={{ color: '#173B4E' }}>Start an analysis notebook.</strong><br />Choose a starter to create it instantly, then open it in live JupyterLab.</div>}
                     </section>

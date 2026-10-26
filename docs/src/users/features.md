@@ -101,7 +101,8 @@ Use this area to answer:
 **Purpose:** perform reproducible Python analysis directly against textual SysML
 v2 models.
 
-Choose **Analysis → Jupyter Notebooks** to open the live local JupyterLab server.
+Choose **Analysis → Jupyter Notebooks** to open the live local JupyterLab server;
+Architect starts it for you and stops it when it exits.
 Every project created by `memo-architect init` includes `analysis/Samples/README.md` and
 seven model-independent notebooks:
 
@@ -116,8 +117,8 @@ seven model-independent notebooks:
 | Model inventory table | HTML inventory with filters and CSV export |
 
 The samples read the model through `analysis/memo_model.py`, compiled by the
-compiler (`toolchain.compiler`: the project's, or your own default, set with the **Compiler** control in the toolbar or `memo-architect config set compiler`, where the project names none). Start JupyterLab from
-`analysis/` on port 8888 before opening the menu.
+compiler (`toolchain.compiler`: the project's, or your own default, set with the **Compiler** control in the toolbar or `memo-architect config set compiler`, where the project names none). See [Analysis Tools](analysis-tools.md#jupyter-starts-for-you)
+for how Jupyter is started and what to do when it is not installed.
 
 See [Analysis Tools](analysis-tools.md).
 

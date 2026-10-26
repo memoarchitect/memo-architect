@@ -6,6 +6,10 @@ import { once } from 'node:events';
 import { promisify } from 'node:util';
 import { startProjectServer, type PinnedInfo } from '@memoarchitect/tools';
 import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
+import { JupyterManager } from '../jupyter.js';
+import {
+    injectJupyterControl, JUPYTER_CONTROL_ENV, startJupyterControl, type JupyterControlInfo,
+} from '../jupyter-control.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -100,6 +104,24 @@ export function supervisedChildArgs(
     return args;
 }
 
+/**
+ * The client HTML rewrite: Architect's feature grants, and the Jupyter control
+ * endpoint when the supervisor passed one down. Both are spliced in before the
+ * bundle so the first paint already knows them.
+ */
+function clientHtmlTransform(options: ArchitectDevOptions): ((html: string) => string) | undefined {
+    let control: JupyterControlInfo | undefined;
+    try {
+        control = process.env[JUPYTER_CONTROL_ENV]
+            ? JSON.parse(process.env[JUPYTER_CONTROL_ENV]!) as JupyterControlInfo : undefined;
+    } catch { /* a malformed value means no Jupyter control, not a failed start */ }
+    if (!options.featureGrants && !control) return undefined;
+    return html => {
+        const granted = options.featureGrants ? injectFeatureGrants(html, options.featureGrants) : html;
+        return control ? injectJupyterControl(granted, control) : granted;
+    };
+}
+
 export async function architectDevCommand(options: ArchitectDevOptions): Promise<void> {
     if (options.pinned) {
         process.chdir(options.pinned.dir);
@@ -128,33 +150,51 @@ export async function architectDevCommand(options: ArchitectDevOptions): Promise
                 + `Starting another server on http://127.0.0.1:${port}.\n`,
             );
         }
+        // The supervisor owns the session's life, so it owns Jupyter: a relaunch of the runtime
+        // child (exit 75) must not restart it, and every way out of this function stops it.
+        const appOrigins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
+        const jupyter = new JupyterManager({ root: resolve(process.cwd(), 'analysis'), appOrigins });
+        const jupyterControl = await startJupyterControl(jupyter, appOrigins);
+        process.once('exit', () => jupyter.stopSync());
         let stopping = false;
         let firstStart = true;
         let restartStartedAt: number | undefined;
         let child: ReturnType<typeof spawn> | undefined;
-        const stop = () => { stopping = true; child?.kill('SIGTERM'); };
-        process.once('SIGINT', stop);
-        process.once('SIGTERM', stop);
+        const stop = () => {
+            // A second signal means "now": the default action would skip the exit handler and
+            // leave Jupyter, which has its own process group, running.
+            if (stopping) { jupyter.stopSync(); process.exit(1); }
+            stopping = true;
+            child?.kill('SIGTERM');
+        };
+        process.on('SIGINT', stop);
+        process.on('SIGTERM', stop);
 
-        while (!stopping) {
-            const args = supervisedChildArgs(process.argv[1], { ...options, port }, firstStart);
-            child = spawn(process.execPath, args, {
-                cwd: process.cwd(), stdio: 'inherit',
-                env: {
-                    ...process.env,
-                    MEMO_ARCHITECT_RUNTIME_CHILD: '1',
-                    ...(restartStartedAt ? { MEMO_RUNTIME_RESTART_STARTED_AT: String(restartStartedAt) } : {}),
-                },
-            });
-            firstStart = false;
-            const [code] = await once(child, 'exit') as [number | null];
-            child = undefined;
-            if (stopping || code !== 75) {
-                if (code && code !== 0) process.exitCode = code;
-                break;
+        try {
+            while (!stopping) {
+                const args = supervisedChildArgs(process.argv[1], { ...options, port }, firstStart);
+                child = spawn(process.execPath, args, {
+                    cwd: process.cwd(), stdio: 'inherit',
+                    env: {
+                        ...process.env,
+                        MEMO_ARCHITECT_RUNTIME_CHILD: '1',
+                        [JUPYTER_CONTROL_ENV]: JSON.stringify({ url: jupyterControl.url, token: jupyterControl.token }),
+                        ...(restartStartedAt ? { MEMO_RUNTIME_RESTART_STARTED_AT: String(restartStartedAt) } : {}),
+                    },
+                });
+                firstStart = false;
+                const [code] = await once(child, 'exit') as [number | null];
+                child = undefined;
+                if (stopping || code !== 75) {
+                    if (code && code !== 0) process.exitCode = code;
+                    break;
+                }
+                restartStartedAt = Date.now();
+                process.stderr.write('  Reusable semantics changed; relaunching model runtime...\n');
             }
-            restartStartedAt = Date.now();
-            process.stderr.write('  Reusable semantics changed; relaunching model runtime...\n');
+        } finally {
+            await jupyter.stop();
+            await jupyterControl.close();
         }
         return;
     }
@@ -172,8 +212,6 @@ export async function architectDevCommand(options: ArchitectDevOptions): Promise
             args: [...(options.toolchainArgv ?? []), ...(options.featureGrants?.experimental === true ? ['--experimental'] : [])],
         },
         // Tools serves the shell; Architect decides what goes into it.
-        transformClientHtml: options.featureGrants
-            ? html => injectFeatureGrants(html, options.featureGrants!)
-            : undefined,
+        transformClientHtml: clientHtmlTransform(options),
     });
 }
