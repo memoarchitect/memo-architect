@@ -9,6 +9,7 @@ import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
+import { MethodPanel } from './components/MethodPanel';
 import { BulkEditPanel } from './components/BulkEditPanel';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
@@ -344,6 +345,20 @@ export function App() {
         'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
         'statistics', 'review-dashboard', 'import',
     ]);
+    // The Method panel stays open across pages once opened, as the explorer does, and is remembered per browser.
+    const [methodOpen, setMethodOpen] = useState(() => {
+        try { return localStorage.getItem('memo.methodPanel') === 'open'; } catch { return false; }
+    });
+    useEffect(() => {
+        const toggle = () => setMethodOpen(open => !open);
+        window.addEventListener('memo:toggle-method', toggle);
+        return () => window.removeEventListener('memo:toggle-method', toggle);
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem('memo.methodPanel', methodOpen ? 'open' : 'closed'); } catch { /* the panel still works */ }
+    }, [methodOpen]);
+    const showMethod = methodOpen && isFeatureEnabled('guide') && activeView.type !== 'guide';
+
     const showExplorer = !standalonePages.has(activeView.type)
         && activeView.type !== 'dsm'
         && activeView.type !== 'traceability'
@@ -521,6 +536,9 @@ export function App() {
                         ? <BulkEditPanel />
                         : <UnifiedPropertiesPanel />
                 )}
+
+                {/* Right edge: the method beside the work, when opened from the toolbar */}
+                {showMethod && <MethodPanel onClose={() => setMethodOpen(false)} />}
             </div>
 
             {/* Bottom panel: Problems + Completeness (unified, collapsible) */}
