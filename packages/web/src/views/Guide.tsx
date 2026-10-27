@@ -2,24 +2,33 @@
 //
 // Where the model stands against its method (plan A5). The method's steps are the methodology's own
 // (`MethodologyWorkflowStep`, the default method and a family's on top of it); the server judges each
-// against the chosen workspace, and this page shows them by level and stage as done, open or blocked,
-// with what is missing and the next step to take. A role chooses which steps are shown. Opening a step
-// goes to the viewpoint the method names for it.
+// against the chosen workspace, and this page shows them by level and stage. Teams work each layer
+// independently: a step is done, open (this team has something to do), waiting (only on another team's
+// work) or without a criterion, with its own work and its links to other layers shown apart. The method's
+// order is shown as which step feeds which, never as a gate. A role chooses which steps are shown.
+// Opening a step goes to the viewpoint the method names for it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { requestGuide } from '../store/ws-client';
-import { groupSteps, nextStep, stepsForRole, words, type GuideStepStatus } from '../lib/guide-view';
+import { groupSteps, nextStep, stepsForRole, words, type GuideLinkStatus, type GuideStepStatus } from '../lib/guide-view';
 import { roleLabel } from '../lib/role-viewpoints';
 import { COLOR, FONT } from '../styles/tokens';
 
 const STATE_STYLE: Record<GuideStepStatus['state'], { label: string; color: string; background: string }> = {
     done: { label: 'Done', color: '#1B7F4B', background: '#E6F4EC' },
     open: { label: 'Open', color: '#1D4ED8', background: '#E8EEFB' },
-    blocked: { label: 'Blocked', color: '#92400E', background: '#FDF2E3' },
+    waiting: { label: 'Waiting on another team', color: '#5B6472', background: '#EEF0F3' },
     'no-criterion': { label: 'No done criterion', color: '#6B7280', background: '#F1F1EE' },
+};
+
+const LINK_TEXT: Record<GuideLinkStatus['state'], (link: GuideLinkStatus, label: (id: string) => string) => string> = {
+    linked: () => 'linked',
+    ready: link => `${link.unlinked.length} ready to link`,
+    waiting: (link, label) => link.waitingFor.length > 0 ? `waits for ${link.waitingFor.map(label).join(', ')}` : 'nothing to judge yet',
+    unknown: () => 'not in the rule set',
 };
 
 export function Guide() {
@@ -72,7 +81,7 @@ export function Guide() {
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>Guide</h1>
             <p style={{ fontSize: FONT.sm, color: COLOR.muted, margin: '0 0 12px', maxWidth: 780 }}>
                 {guide?.workspace ? `${guide.workspace} (${guide.scope === 'sos' ? 'system of systems' : 'system'}). ` : 'The whole model. '}
-                Each step is done when the elements it produces exist and the rules that finish it have something to judge and no finding. Choose a workspace above to see one system's steps.
+                Each layer is worked independently. A step is done when the elements it produces exist and its links to other layers are made; a link whose other side does not exist yet waits on that team, and holds nobody back. Choose a workspace above to see one system's steps.
                 {role && !allRoles && ` Showing the steps for ${roleLabel(role)}.`}
             </p>
             {problem && <p data-testid="guide-problem" style={{ fontSize: FONT.sm, color: '#B42318' }}>{problem}</p>}
@@ -88,7 +97,7 @@ export function Guide() {
                             {next.reasons.length > 0 && <div style={{ fontSize: FONT.xs, color: COLOR.muted }}>Missing: {next.reasons.join('; ')}.</div>}
                             <button data-testid="open-next" onClick={() => open(next)} style={{ marginTop: 8, fontSize: FONT.xs, padding: '3px 10px', borderRadius: 6, border: `1px solid ${COLOR.border}`, background: '#fff', cursor: 'pointer' }}>Open {next.guideViewpoint ? words(next.guideViewpoint.replace(/^vp/, '')) : 'views'}</button>
                         </>
-                    ) : <div style={{ fontSize: FONT.sm }}>No step is open: every step shown is done, blocked behind one that is not, or states no done criterion.</div>}
+                    ) : <div style={{ fontSize: FONT.sm }}>No step is open: every step shown is done, waiting on another team's work, or states no done criterion.</div>}
                 </div>
             )}
 
@@ -112,8 +121,14 @@ export function Guide() {
                                         {step.outputs.map(o => `${o.kind}: ${o.count}${o.untracedImports > 0 ? ` (+${o.untracedImports} imported, not traced)` : ''}`).join(' · ')}
                                         {step.rules.length > 0 && step.rules.map(r => ` · ${r.rule}: ${!r.known ? 'not in the rule set' : r.subjects === 0 ? 'nothing to judge' : r.violations > 0 ? `${r.violations} finding(s)` : 'clean'}`).join('')}
                                     </div>
-                                    {step.state === 'blocked' && <div style={{ fontSize: FONT.xs, color: '#92400E' }}>Waiting for: {step.blockedBy.map(id => byId.get(id)?.label ?? id).join(', ')}.</div>}
+                                    {step.links.length > 0 && (
+                                        <div data-testid="guide-links" style={{ fontSize: FONT.xs, color: COLOR.muted }}>
+                                            Links: {step.links.map(l => `${l.rule}: ${LINK_TEXT[l.state](l, id => byId.get(id)?.label ?? id)}`).join(' · ')}
+                                        </div>
+                                    )}
                                     {step.state === 'open' && step.reasons.length > 0 && <div style={{ fontSize: FONT.xs, color: COLOR.muted }}>Missing: {step.reasons.join('; ')}.</div>}
+                                    {step.waiting.length > 0 && <div style={{ fontSize: FONT.xs, color: '#5B6472' }}>Waiting on another team: {step.waiting.join('; ')}.</div>}
+                                    {step.predecessors.length > 0 && <div style={{ fontSize: FONT.xs, color: COLOR.muted }}>Fed by: {step.predecessors.map(id => byId.get(id)?.label ?? id).join(', ')}.</div>}
                                     {step.state === 'no-criterion' && <div style={{ fontSize: FONT.xs, color: COLOR.muted }}>This step names no output and no rule, so it is not reported as done.</div>}
                                 </div>
                             ))}
