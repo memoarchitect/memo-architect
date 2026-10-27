@@ -9,6 +9,7 @@ import type { GuideResultMessage } from '@memoarchitect/tools/browser';
 
 export type GuideResult = GuideResultMessage['payload'];
 export type GuideStepStatus = GuideResult['steps'][number];
+export type GuideLinkStatus = GuideStepStatus['links'][number];
 
 export interface StageGroup { stage: string; steps: GuideStepStatus[] }
 export interface LevelGroup { level: string; stages: StageGroup[] }
