@@ -158,10 +158,11 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                     .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow')
                     .map(workflow => [workflow.id, workflow] as const)).values()];
                 // A workflow owns its scenarios by nesting them, so each scenario can
-                // own the operative actions on its path; the builder records that
-                // as `parentAction`.
+                // own the operative actions on its path. A workflow is the analysis of
+                // a body of work, a part, so the builder records it as the scenario's
+                // `owner`; one written as an action is its `parentAction`.
                 const scenariosOfWorkflow = (workflow: MemoElement) => elements.filter(
-                    candidate => candidate.kind.endsWith('Scenario') && candidate.parentAction === workflow.id);
+                    candidate => candidate.kind.endsWith('Scenario') && (candidate.owner ?? candidate.parentAction) === workflow.id);
                 // Nominal first: the expected path is what a reader needs before
                 // the exceptions, and ScenarioKind defaults to nominal when unset.
                 const nominalFirst = (a: MemoElement, b: MemoElement) => {
