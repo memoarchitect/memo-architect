@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { PinnedBanner } from './PinnedBanner';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 export function WorkbenchToolbar() {
     const model = useModelStore(s => s.model);
@@ -53,6 +54,17 @@ export function WorkbenchToolbar() {
             </button>
 
             <div className="flex-1" />
+
+            {isFeatureEnabled('guide') && (
+                <button
+                    data-testid="toggle-method"
+                    onClick={() => window.dispatchEvent(new Event('memo:toggle-method'))}
+                    title="Show or hide the method: what each team can do next"
+                    style={{ background: 'rgba(45,212,168,0.12)', border: '1px solid rgba(45,212,168,0.35)', color: '#2DD4A8', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                    Method
+                </button>
+            )}
 
             {(metadata?.modelName || metadata?.gitUser) && (
                 <span

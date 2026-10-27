@@ -9,10 +9,9 @@
 // Opening a step goes to the viewpoint the method names for it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { useModelStore } from '../store/model-store';
-import { requestGuide } from '../store/ws-client';
+import { useGuideEvaluation, useOpenStep } from '../lib/use-guide';
 import { groupSteps, nextStep, stepsForRole, words, type GuideLinkStatus, type GuideStepStatus } from '../lib/guide-view';
 import { roleLabel } from '../lib/role-viewpoints';
 import { COLOR, FONT } from '../styles/tokens';
@@ -33,42 +32,15 @@ const LINK_TEXT: Record<GuideLinkStatus['state'], (link: GuideLinkStatus, label:
 
 export function Guide() {
     const guide = useModelStore(s => s.guide);
-    const model = useModelStore(s => s.model);
-    const workspace = useModelStore(s => s.workspace);
     const role = useModelStore(s => s.role);
-    const connected = useModelStore(s => s.connected);
-    const selectViewpoint = useModelStore(s => s.selectViewpoint);
-    const setActiveMode = useModelStore(s => s.setActiveMode);
-    const setActiveView = useModelStore(s => s.setActiveView);
-    const navigate = useNavigate();
-    const setExplorerTab = useModelStore(s => s.setExplorerTab);
     const [allRoles, setAllRoles] = useState(false);
-    const [problem, setProblem] = useState<string | null>(null);
-    const revision = model?.revision;
-
-    useEffect(() => {
-        if (!connected) return;
-        let current = true;
-        requestGuide(workspace ? model?.elements[workspace]?.name ?? workspace : null)
-            .then(result => { if (current) setProblem(result.error ?? null); })
-            .catch(error => { if (current) setProblem(error instanceof Error ? error.message : String(error)); });
-        return () => { current = false; };
-    }, [connected, workspace, revision]); // eslint-disable-line react-hooks/exhaustive-deps
+    const problem = useGuideEvaluation();
+    const open = useOpenStep();
 
     const shown = useMemo(() => stepsForRole(guide?.steps ?? [], allRoles ? null : role), [guide, role, allRoles]);
     const groups = useMemo(() => groupSteps(shown), [shown]);
     const next = nextStep(shown);
     const byId = new Map((guide?.steps ?? []).map(step => [step.id, step]));
-
-    const open = (step: GuideStepStatus) => {
-        const viewpoint = step.guideViewpoint ? model?.viewpoints?.find(v => v.name === step.guideViewpoint || v.id === step.guideViewpoint) : undefined;
-        if (viewpoint) selectViewpoint(viewpoint.id);
-        setActiveMode('diagram');
-        setExplorerTab('views');
-        setActiveView({ type: 'welcome' });
-        // The viewpoints index has its own address; opening a step lands on it.
-        navigate('/viewpoints');
-    };
 
     const chip = (state: GuideStepStatus['state']) => (
         <span style={{ fontSize: FONT.xs, fontWeight: 600, padding: '1px 8px', borderRadius: 10, color: STATE_STYLE[state].color, background: STATE_STYLE[state].background }}>
