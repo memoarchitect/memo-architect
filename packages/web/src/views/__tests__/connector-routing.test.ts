@@ -209,7 +209,7 @@ it('separates unrelated facing terminal stubs in a narrow corridor',()=>{
 
 
 it('escapes the span-order local minimum on a regular multi-terminal grid', async()=>{
- const {routeMetrics}=await import('./session8-metrics');
+ const {routeMetrics}=await import('./route-metrics');
  const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,position:{x:(i%4)*300,y:Math.floor(i/4)*210},width:150,height:110}));
  const obstacles=nodes.map(n=>({id:n.id,x:n.position.x,y:n.position.y,width:n.width,height:n.height}));
  const requests:OrthogonalRouteRequest[]=Array.from({length:14},(_,i)=>{const a=(i*3+3)%12,b=(i*7+3)%12;return{id:'e'+i,sourceNodeId:'n'+a,targetNodeId:'n'+b,

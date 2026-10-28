@@ -1,4 +1,4 @@
-// Original MEMO routing stress fixture inspired by GfSE VehicleConfiguration_b.
+// Original MEMO internal block diagram example inspired by GfSE VehicleConfiguration_b.
 // See README.md for attribution and deliberately added control/power wiring.
 package memo_vehicle_routing {
     private import memo_core_common::*;

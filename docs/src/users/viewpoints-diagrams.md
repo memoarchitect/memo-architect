@@ -103,6 +103,27 @@ used by Architect:
 Legacy diagram codes such as `bdd`, `ibd`, `afd`, `ofd`, `ffd`, `stm`, and
 `seq` select a concrete presentation template within those kinds.
 
+## Editing an internal block diagram
+
+In an interconnection (IBD) view:
+
+- Drag a part by its title to move it. Its inner parts, their ports and the
+  connectors attached to them move with it. A part dropped on top of another
+  lands at the nearest free place beside it.
+- Drag a port to slide it along its part's walls and round its corners. Dragged
+  onto or past another port, it takes the nearest free place, so ports never
+  overlap.
+- Connectors are routed with right-angled (Manhattan) routes, and are routed
+  again whenever a part or port they touch moves. They keep clear of parts and
+  ports they do not connect.
+- **Routing type** on the toolbar changes how connectors are drawn; Manhattan
+  is the default. With **Routing mode** set to Manual, connectors keep the bends
+  you draw; moving a part asks before replacing them, and Undo restores them.
+
+The layout is saved inside the view's own source, so it travels with the model.
+`examples/vehicle-ibd` in the Architect repository is a dense IBD to try this
+on: run `pnpm example:vehicle`.
+
 ## Behaviour navigation
 
 Composite state and activity views support folding and drill-down without
