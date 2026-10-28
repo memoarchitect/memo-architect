@@ -10,7 +10,7 @@ export type RoutingLayout = DiagramLayout;
 export function ibdRouting(layout?: DiagramLayout): { type: IbdRoutingType; mode: IbdRoutingMode } {
     const canvas = layout?.canvas;
     return {
-        type: canvas?.routingType ?? 'orthogonal',
+        type: canvas?.routingType ?? 'manhattan',
         mode: canvas?.routingMode ?? (Object.values(layout?.edges ?? {}).some(edge => edge.points?.length && (edge as typeof edge & {manualRoute?:boolean}).manualRoute !== false)
             ? 'manual' : 'automatic'),
     };
@@ -57,20 +57,6 @@ export function mergeRenderedLayout(previous: DiagramLayout, rendered: DiagramLa
         edges: { ...previous.edges, ...rendered.edges },
         annotations: { ...previous.annotations, ...rendered.annotations },
         canvas: { ...previous.canvas, ...rendered.canvas } };
-}
-
-/** A native renderer owns known geometry, not opaque fields on saved entries.
- * Arrays (X6 vertices) are complete values; object entries retain extension keys.
- */
-export function mergeNativeEntries<T>(previous: Record<string, T> | undefined,
-    rendered: Record<string, T>): Record<string, T> {
-    const result = { ...previous };
-    for (const [id, value] of Object.entries(rendered)) {
-        const old = previous?.[id];
-        result[id] = old && value && typeof old === 'object' && typeof value === 'object'
-            && !Array.isArray(old) && !Array.isArray(value) ? mergeNativeEntries(old as Record<string, unknown>, value as Record<string, unknown>) as T : value;
-    }
-    return result;
 }
 
 

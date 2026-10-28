@@ -4,12 +4,12 @@ import { ibdRouting, reconnectRoute, orthogonalizeRoute, attachedRoute } from '.
 describe('IBD routing compatibility and endpoint movement', () => {
     it('opens existing diagrams with saved bends in manual mode', () => {
         expect(ibdRouting({ nodes: {}, edges: { wire: { points: [{ x: 0, y: 0 }, { x: 20, y: 30 }, { x: 80, y: 30 }] } } }))
-            .toEqual({ type: 'orthogonal', mode: 'manual' });
-        expect(ibdRouting()).toEqual({ type: 'orthogonal', mode: 'automatic' });
+            .toEqual({ type: 'manhattan', mode: 'manual' });
+        expect(ibdRouting()).toEqual({ type: 'manhattan', mode: 'automatic' });
     });
     it('does not infer manual bends from persisted automatic geometry', () => {
         const layout = {nodes:{},edges:{wire:{points:[{x:0,y:0},{x:80,y:0}],manualRoute:false}}};
-        expect(ibdRouting(layout)).toEqual({type:'orthogonal',mode:'automatic'});
+        expect(ibdRouting(layout)).toEqual({type:'manhattan',mode:'automatic'});
     });
     it('preserves an explicit saved rounded choice', () => {
         expect(ibdRouting({ nodes: {}, edges: {}, canvas: { routingType: 'rounded' } }).type).toBe('rounded');
