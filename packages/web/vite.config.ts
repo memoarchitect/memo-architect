@@ -23,7 +23,6 @@ export default defineConfig({
         // pnpm can hoist the worker above Architect's own workspace boundary.
         // Permit that dependency explicitly so ELK workers load in worktrees.
         fs: { allow: [searchForWorkspaceRoot(fileURLToPath(new URL('.', import.meta.url))), dirname(require.resolve('elkjs/package.json'))] },
-        ...(process.env.MEMO_PILOT_HMR_PORT ? { hmr: { host: "127.0.0.1", port: Number(process.env.MEMO_PILOT_HMR_PORT) } } : {}),
         watch: {
             // Model source is NOT application source (design section 13.2).
             //

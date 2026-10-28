@@ -277,6 +277,23 @@ interface MovementRouting {
 }
 
 /**
+ * Reroute the connectors a move affects. When that would replace hand-drawn
+ * bends, the user is asked first; null means they kept the bends, and the
+ * caller reverts the move.
+ */
+async function rerouteAfterMove(nodes: FlowNode[], edges: FlowEdge[], before: MovementGeometry,
+    forcedPortSize: number | undefined, routingType: IbdRoutingType, title: string): Promise<FlowEdge[] | null> {
+    let manual: string[] = [];
+    const routed = reroutePositionedEdges(nodes, edges, 'tidy', forcedPortSize, routingType, false,
+        { before, replaceManual: ids => { manual = ids; return false; } });
+    if (!manual.length) return routed;
+    const replace = await confirmDialog({ title, confirmLabel: 'Replace bends',
+        message: `This replaces the hand-drawn bends on ${manual.length} connector${manual.length === 1 ? '' : 's'}. Undo restores them.` });
+    return replace ? reroutePositionedEdges(nodes, edges, 'tidy', forcedPortSize, routingType, false,
+        { before, replaceManual: () => true }) : null;
+}
+
+/**
  * Route around parts grown over their ports. Where that closes a gap a connector
  * needs, the router falls back to a line through a part; such connectors are
  * routed again around the bare parts, which beats crossing one.
@@ -1325,7 +1342,7 @@ function DiagramCanvasInner() {
     const ibdResizeStartRef = useRef<FlowNode[] | null>(null);
     const ibdResizeGeometryRef = useRef<MovementGeometry | null>(null);
     const ibdResizeAutomaticRef = useRef(false);
-    const handleIbdResize = useCallback<IbdResizeHandler>((phase, proposal) => {
+    const handleIbdResize = useCallback<IbdResizeHandler>(async (phase, proposal) => {
         if (readOnly || !selectedDiagramId) return;
         if (phase === 'start') {
             ibdResizeStartRef.current = nodesRef.current;
@@ -1357,16 +1374,9 @@ function DiagramCanvasInner() {
         // The resize solver owns size/containment. No global reflow may expand
         // an owner, align a saved port, or alter the stationary-child contract.
         const next = repositionNestedPins(snapPortsToWall(raw, activeRendererRef.current.forcedPortSize));
-        let cancelled = false;
-        const routed = reroutePositionedEdges(next, edgesRef.current, 'tidy',
-            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
-                before, replaceManual: ids => {
-                    const accepted = window.confirm(`Resize this part? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`);
-                    cancelled = !accepted;
-                    return accepted;
-                },
-            });
-        if (cancelled) {
+        const routed = await rerouteAfterMove(next, edgesRef.current, before,
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, 'Resize this part?');
+        if (!routed) {
             restore(before, movementGeometryChanges(before, captureMovementGeometry(nodesRef.current, edgesRef.current)));
             return;
         }
@@ -2418,17 +2428,13 @@ function DiagramCanvasInner() {
      * part of the document here, once, on release — so a rebuild no longer throws
      * the drag away, and the websocket sees one update instead of one per frame.
      */
-    const commitInterconnectionPort = useCallback((ownerId: string, portId: string) => {
+    const commitInterconnectionPort = useCallback(async (ownerId: string, portId: string) => {
         const start = portGestureRef.current;
         if (!selectedDiagramId || readOnly || !start || start.ownerId !== ownerId || start.portId !== portId) return;
         flushGeometryUpdate(start.geometry);
-        let accepted = true;
-        const finalized = reroutePositionedEdges(nodesRef.current, edgesRef.current, 'tidy',
-            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
-                before: start.geometry,
-                replaceManual: ids => accepted = window.confirm(`Move this port? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`),
-            });
-        if (!accepted) {
+        const finalized = await rerouteAfterMove(nodesRef.current, edgesRef.current, start.geometry,
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, 'Move this port?');
+        if (!finalized) {
             portGestureRef.current = null;
             const changed = movementGeometryChanges(start.geometry, captureMovementGeometry(nodesRef.current, edgesRef.current));
             const restored = restoreMovementGeometry(nodesRef.current, edgesRef.current, start.geometry, changed);
@@ -2658,10 +2664,11 @@ function DiagramCanvasInner() {
         pushUndo({ do: () => applyRouteSnapshot(after), undo: () => applyRouteSnapshot(before) });
     }, [readOnly, captureRouteSnapshot, applyRouteSnapshot, pushUndo]);
 
-    const shortenPortRoutes = useCallback((includeSaved = false) => {
+    const shortenPortRoutes = useCallback(async (includeSaved = false) => {
         if (readOnly || !selectedDiagramId || routingRef.current.mode !== 'automatic') return;
+        if (includeSaved && !await confirmDialog({ title: 'Automatically place all ports?', confirmLabel: 'Place ports',
+            message: 'This replaces the saved positions and walls of ordinary ports. Parts keep their positions and sizes. Undo restores the previous placement.' })) return;
         const layout = useModelStore.getState().diagramLayouts[selectedDiagramId];
-        if (includeSaved && !window.confirm('Automatically place all ordinary ports? This replaces their saved positions and wall choices. Part positions and sizes stay fixed. Undo restores the previous placement.')) return;
         const before = captureMovementGeometry(nodesRef.current, edgesRef.current);
         const evaluate = (nodes: FlowNode[], cheap = false, quick = false) => {
             const edges = reroutePositionedEdges(nodes, edgesRef.current, cheap || quick ? 'direct' : activeRendererRef.current.routeQuality,
@@ -3521,7 +3528,7 @@ function DiagramCanvasInner() {
         };
     }, [selectedDiagramId]);
 
-    const onNodeDragStop = useCallback((_: RFAny, node: FlowNode) => {
+    const onNodeDragStop = useCallback(async (_: RFAny, node: FlowNode) => {
         const start = nodeDragStartRef.current;
         nodeDragStartRef.current = null;
         // A press that did not move the node is a click for the inspector, not
@@ -3576,13 +3583,9 @@ function DiagramCanvasInner() {
             nodesRef.current = nodesRef.current.map(other => other.id === node.id ? { ...other, position: placed } : other);
             setNodes(nodesRef.current);
         }
-        let accepted = true;
-        const finalized = reroutePositionedEdges(nodesRef.current, edgesRef.current, 'tidy',
-            activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {
-                before: start.geometry,
-                replaceManual: ids => accepted = window.confirm(`Move this part? This replaces manual bends on ${ids.length} affected connector(s). Undo restores them exactly.`),
-            });
-        if (!accepted) {
+        const finalized = await rerouteAfterMove(nodesRef.current, edgesRef.current, start.geometry,
+            activeRendererRef.current.forcedPortSize, routingRef.current.type, 'Move this part?');
+        if (!finalized) {
             restoreMovementSnapshot(start.geometry, movementGeometryChanges(start.geometry,
                 captureMovementGeometry(nodesRef.current, edgesRef.current)));
             return;

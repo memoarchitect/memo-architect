@@ -1,4 +1,24 @@
 import { defineConfig } from '@playwright/test';
-const output = process.env.MEMO_BASELINE_OUTPUT ?? 'artifacts/ibd-baseline';
-const port = Number(process.env.MEMO_PILOT_PORT ?? 32117);
-export default defineConfig({testDir:'tests/browser',testMatch:process.env.MEMO_SESSION9_COMBINED==='1'?'session9-combined.spec.ts':process.env.MEMO_SESSION9_SAVES==='1'?'session9-saves.spec.ts':process.env.MEMO_SESSION8_MOVEMENT==='1'?'movement-routing.spec.ts':process.env.MEMO_SESSION8_PERIMETER==='1'?'perimeter.spec.ts':process.env.MEMO_SESSION8==='1'?'readability.spec.ts':process.env.MEMO_SESSION7==='1'?'renderers.spec.ts':process.env.MEMO_SESSION6==='1'?'routing.spec.ts':process.env.MEMO_UNDO_DIAGNOSTIC==='1'?'undo-diagnostic.spec.ts':process.env.MEMO_SESSION5_FIXTURE==='1'?'acquisition.spec.ts':process.env.MEMO_SESSION4_FIXTURE==='1'?'resize.spec.ts':process.env.MEMO_SESSION2_FIXTURE==='1'?'ownership.spec.ts':'baseline.spec.ts',workers:1,fullyParallel:false,timeout:180000,outputDir:`${output}/traces`,reporter:[['list'],['json',{outputFile:`${output}/results.json`}]],use:{headless:process.env.MEMO_SESSION9_HEADED!=='1',actionTimeout:8000,baseURL:`http://127.0.0.1:${port}`,viewport:{width:1440,height:900},trace:'on',screenshot:'on',video:'off'},webServer:{command:'node tests/browser/server.mjs',url:`http://127.0.0.1:${port}`,reuseExistingServer:false,timeout:180000}});
+
+// Browser tests drive the built Architect (`pnpm build` first) on the vehicle
+// example. PLAYWRIGHT_CHROMIUM names a Chromium to use instead of Playwright's
+// own download, for machines that ship one.
+const port = Number(process.env.MEMO_TEST_PORT ?? 32117);
+
+export default defineConfig({
+    testDir: 'tests/browser',
+    workers: 1,
+    timeout: 120_000,
+    use: {
+        baseURL: `http://127.0.0.1:${port}`,
+        viewport: { width: 1600, height: 1000 },
+        trace: 'retain-on-failure',
+        launchOptions: process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {},
+    },
+    webServer: {
+        command: `node tests/browser/server.mjs ${port}`,
+        url: `http://127.0.0.1:${port}`,
+        reuseExistingServer: false,
+        timeout: 120_000,
+    },
+});

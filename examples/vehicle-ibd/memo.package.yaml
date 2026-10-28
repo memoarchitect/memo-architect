@@ -1,6 +1,7 @@
-name: vehicle-routing-pilot
+name: vehicle-ibd
 version: 1.0.0
 entrypoint: model/methodology/project.sysml
 include: [model]
 toolchain:
-  validator: syside
+  compiler: opensysml
+  validator: opensysml

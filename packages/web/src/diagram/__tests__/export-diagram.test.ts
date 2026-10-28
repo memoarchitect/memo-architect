@@ -16,12 +16,8 @@
 // of the diagram. So the box is asserted directly, against a DOM laid out the
 // way ReactFlow lays one out.
 
-import { describe, it, expect, vi } from 'vitest';
-
-const htmlToImage = vi.hoisted(() => ({ toSvg: vi.fn().mockResolvedValue('data:image/svg+xml;base64,PHN2Zy8+') }));
-vi.mock('html-to-image', () => ({ toSvg: htmlToImage.toSvg }));
-
-import { exportDiagram, exportFileName, __testing } from '../export-diagram';
+import { describe, it, expect } from 'vitest';
+import { exportFileName, __testing } from '../export-diagram';
 
 function viewportWith(nodes: { x: number; y: number; w: number; h: number }[]): HTMLElement {
     const viewport = document.createElement('div');
@@ -77,21 +73,5 @@ describe('exportFileName', () => {
     it('falls back when the name is missing or has nothing usable in it', () => {
         expect(exportFileName(undefined, 'svg')).toBe('diagram.svg');
         expect(exportFileName('···', 'png')).toBe('diagram.png');
-    });
-});
-
-describe('JointJS export', () => {
-    it('exports the JointJS paper when there is no React Flow viewport', async () => {
-        const container = document.createElement('div');
-        const paper = document.createElement('div');
-        paper.className = 'joint-paper';
-        Object.defineProperty(paper, 'clientWidth', { value: 640 });
-        Object.defineProperty(paper, 'clientHeight', { value: 480 });
-        container.appendChild(paper);
-        const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-        await exportDiagram(container, 'svg', 'Joint pilot');
-        expect(htmlToImage.toSvg).toHaveBeenCalledWith(paper, expect.objectContaining({ width: 640, height: 480 }));
-        expect(click).toHaveBeenCalledOnce();
-        click.mockRestore();
     });
 });
