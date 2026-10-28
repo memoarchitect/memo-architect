@@ -23,8 +23,9 @@ import { roleLabel } from '../lib/role-viewpoints';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
 
+// Architect's tokens (index.css :root) where it has them; the teal shades are the mockup's.
 const INK = '#0f766e';
-const TITLE = '#1B3A4B';
+const TITLE = 'var(--color-hero-from)';
 const SOFT_TEAL = '#e8f8f3';
 const SOFT_BLUE = '#eef3fb';
 const HISTORY = 'history';
@@ -78,7 +79,7 @@ export function MethodMap() {
     const systemName = chosen?.name ?? 'the whole model';
 
     return (
-        <div data-testid="method-map" style={{ flex: 1, display: 'flex', minHeight: 0, background: '#F7F7F5', color: '#1a1a1a' }}>
+        <div data-testid="method-map" style={{ flex: 1, display: 'flex', minHeight: 0, background: 'var(--color-bg)', color: 'var(--color-text)' }}>
             <aside data-testid="scope-tree" style={{ width: 230, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, background: '#FFFFFF', padding: '14px 10px', overflow: 'auto' }}>
                 <div style={{ fontSize: 11, color: COLOR.faint, fontWeight: 600, letterSpacing: '0.06em', margin: '0 4px 8px' }}>SCOPE</div>
                 {tree.roots.length === 0 && <div style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '0 4px' }}>The model declares no system yet.</div>}
@@ -185,7 +186,7 @@ function QtTab({ id, active, onClick, title, note }: { id: string; active: boole
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', cursor: 'pointer', font: 'inherit',
                 border: `1px solid ${COLOR.border}`, borderBottom: active ? '1px solid #fff' : `1px solid ${COLOR.border}`,
                 borderTop: active ? `3px solid ${TITLE}` : `1px solid ${COLOR.border}`, borderRadius: '8px 8px 0 0',
-                background: active ? '#fff' : '#F0F0ED', position: 'relative', zIndex: active ? 2 : 1, color: active ? TITLE : COLOR.muted }}>
+                background: active ? '#fff' : 'var(--color-surface-alt)', position: 'relative', zIndex: active ? 2 : 1, color: active ? TITLE : COLOR.muted }}>
             <span style={{ fontSize: FONT.md, fontWeight: 700 }}>{title}</span>
             <span style={{ fontSize: 11, color: COLOR.muted }}>{note}</span>
         </button>
