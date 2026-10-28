@@ -9,7 +9,8 @@ const POWERTRAIN = V + 'powertrain', ENGINE = POWERTRAIN + '::engine', TRANSMISS
 
 async function openDiagram(page: Page) {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Skip tour' }).click();
+    const skip = page.getByRole('button', { name: 'Skip tour' });
+    if (await skip.waitFor({ timeout: 5_000 }).then(() => true, () => false)) await skip.click();
     await page.getByText('All views', { exact: true }).click();
     await page.getByText('Vehicle interconnection', { exact: true }).first().click();
     await expect(page.locator('.react-flow__edge').first()).toBeVisible({ timeout: 30_000 });
@@ -110,4 +111,71 @@ test('replacing hand-drawn bends asks first, in the app\'s own dialog', async ({
     await settle(page);
     const kept = await geometry(page);
     expect(kept.parts[ENGINE].y).toBeCloseTo(before.parts[ENGINE].y, 0);
+});
+
+/** A point on the connector's line that the pointer actually reaches. */
+async function pointOnConnector(page: Page, index: number | string) {
+    return page.evaluate(i => {
+        const groups = [...document.querySelectorAll<SVGGElement>('.react-flow__edge')];
+        for (const group of typeof i === 'string' ? groups.filter(g => g.dataset.id === i) : groups.slice(i)) {
+            const path = group.querySelector<SVGPathElement>('.react-flow__edge-path')!, length = path.getTotalLength(), m = path.getScreenCTM()!;
+            for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.1, 0.9, 0.05, 0.95]) {
+                const q = path.getPointAtLength(length * f), p = new DOMPoint(q.x, q.y).matrixTransform(m);
+                if (document.elementFromPoint(p.x, p.y)?.closest('.react-flow__edge') === group) return { id: group.dataset.id!, x: p.x, y: p.y };
+            }
+        }
+        return null;
+    }, index);
+}
+
+const pathOf = (page: Page, id: string) => page.locator(`.react-flow__edge[data-id="${id}"] .react-flow__edge-path`).getAttribute('d');
+const segments = (d: string | null) => (d?.match(/[LQCA]/g) ?? []).length;
+
+test('selected connectors take their own routing type, kept on reload and undoable', async ({ page }) => {
+    await openDiagram(page);
+    const a = (await pointOnConnector(page, 0))!, b = (await pointOnConnector(page, 5))!;
+    const untouched = (await pointOnConnector(page, 12))!;
+    const untouchedBefore = await pathOf(page, untouched.id);
+    await page.mouse.click(a.x, a.y);
+    await page.keyboard.down('Control'); await page.mouse.click(b.x, b.y); await page.keyboard.up('Control');
+    const control = page.getByLabel('Selected connector routing');
+    await expect(page.getByText('2 selected connectors')).toBeVisible();
+    await control.selectOption('straight');
+    await settle(page);
+    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+    expect(await pathOf(page, untouched.id)).toBe(untouchedBefore);
+    // Back to the diagram's routing, then Undo returns them to straight.
+    await control.selectOption('diagram');
+    await settle(page);
+    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBeGreaterThan(1);
+    await page.getByTitle('Undo last diagram edit').click();
+    await settle(page);
+    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+    // The choice is saved with the view.
+    await openDiagram(page);
+    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+});
+
+test('auto-route and reset to the default layout can both be undone', async ({ page }) => {
+    await openDiagram(page);
+    await page.getByLabel('IBD routing mode').selectOption('manual');
+    await settle(page);
+    await page.getByRole('button', { name: 'Auto-route all' }).click();
+    await page.getByRole('dialog', { name: 'Auto-route connectors?' }).getByRole('button', { name: 'Auto-route' }).click();
+    await settle(page);
+    expectCleanConnectors(await geometry(page));
+    const header = (await page.locator(`.react-flow__node[data-id="${ENGINE}"] [data-ibd-header]`).first().boundingBox())!;
+    await drag(page, { x: header.x + 30, y: header.y + header.height / 2 }, { x: header.x + 30, y: header.y + header.height / 2 - 6 });
+    await page.getByRole('dialog').getByRole('button', { name: 'Replace bends' }).click().catch(() => {});
+    await settle(page);
+    const moved = await geometry(page);
+    // The viewport refits after each step, so compare the engine's place within its powertrain.
+    const offset = (g: IbdGeometry) => [Math.round(g.parts[ENGINE].x - g.parts[POWERTRAIN].x), Math.round(g.parts[ENGINE].y - g.parts[POWERTRAIN].y)];
+    await page.getByTitle('Reset this view to its default layout').click();
+    await page.waitForTimeout(2500);
+    expect(offset(await geometry(page))).not.toEqual(offset(moved));
+    await page.getByTitle('Undo last diagram edit').click();
+    await page.waitForTimeout(2500);
+    const restored = await geometry(page);
+    expect(offset(restored)).toEqual(offset(moved));
 });

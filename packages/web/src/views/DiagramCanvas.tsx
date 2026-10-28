@@ -7,7 +7,7 @@ import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-po
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
 import { restoreIbdGeometry, type IbdResizeHandler } from '../diagram/ibd-resize-integration';
-import { ibdRouting, withIbdRouting, mergeRenderedLayout, reconnectRoute, type RoutingLayout, type IbdRoutingType, type IbdRoutingMode } from '../diagram/ibd-routing';
+import { IBD_ROUTING_TYPES, ibdRouting, withIbdRouting, mergeRenderedLayout, reconnectRoute, type RoutingLayout, type IbdRoutingType, type IbdRoutingMode } from '../diagram/ibd-routing';
 import { IbdRoutingControls } from '../diagram/toolbars/IbdRoutingControls';
 // ─── DiagramCanvas ────────────────────────────────────────────────────────────
 //
@@ -243,12 +243,13 @@ const OPPOSITE_SIDE: Record<PortSide, PortSide> = {
 /** One owner for rendered edge persistence, including automatic movement
  * geometry. Opaque fields remain alongside the geometry this client owns. */
 function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][string]) {
-    const { points: _points, manualRoute: _manual, routingType: _type, labelPoint: _label,
+    const { points: _points, manualRoute: _manual, routingType: _type, routingOverride: _override, labelPoint: _label,
         manualLanding: _landing, sourceSide: _ss, targetSide: _ts, sourceT: _st, targetT: _tt, sourceOffset: oldSourceOffset, targetOffset: oldTargetOffset,
         ...opaque } = (previous ?? {}) as Record<string, unknown>;
     const points = edge.data?.points as Array<{x:number;y:number}> | undefined;
-    if (!points?.length) return opaque;
-    return { ...opaque, points: points.map(point => ({ ...point })),
+    const override: Record<string, unknown> = edge.data?.routingOverride ? { routingOverride: edge.data.routingOverride } : {};
+    if (!points?.length) return { ...opaque, ...override };
+    return { ...opaque, ...override, points: points.map(point => ({ ...point })),
         manualRoute: Boolean(edge.data?.manualRoute), routingType: edge.data?.routingType,
         ...(edge.data?.labelPoint ? { labelPoint: edge.data.labelPoint } : {}),
         source: edge.source, target: edge.target,
@@ -471,13 +472,24 @@ function reroutePositionedEdges(
         else if (edge.data?.manualRoute && !replacingManual)
             fixedRoutes.set(edge.id, reconnectRoute(points, request.source, request.target));
     }
+    // A connector may carry its own routing type; the rest follow the diagram's.
+    const edgeById = new Map(edges.map(edge => [edge.id, edge]));
+    const typeOf = (id: string) => (edgeById.get(id)?.data?.routingOverride as IbdRoutingType | undefined) ?? routingType;
+    const avoidsParts = (type: IbdRoutingType) => type === 'manhattan' || type === 'orthogonal' && (quality === 'tidy' || Boolean(movement));
     const automaticRequests = requests.filter(request => !fixedRoutes.has(request.id));
-    const routes = movement || routingType === 'manhattan' || routingType === 'orthogonal' && quality === 'tidy'
-        ? routeClearOfPorts(requests, obstacles, partObstacles, quality, fixedRoutes)
-        : routingType === 'straight' || routingType === 'arc'
-        ? new Map(automaticRequests.map(request => [request.id, [request.source, request.target]]))
-        : routingType === 'elbow' ? new Map(automaticRequests.map(r => [r.id, elbowRoute(r.source, r.target, r.sourceSide, r.targetSide)]))
-        : routeDirectOrthogonalEdges(automaticRequests);
+    const routerRequests = automaticRequests.filter(request => avoidsParts(typeOf(request.id)));
+    const routes = routerRequests.length
+        ? routeClearOfPorts(requests.filter(request => fixedRoutes.has(request.id) || avoidsParts(typeOf(request.id))),
+            obstacles, partObstacles, quality, fixedRoutes)
+        : new Map<string, Array<{ x: number; y: number }>>();
+    const direct = automaticRequests.filter(request => !avoidsParts(typeOf(request.id)));
+    for (const request of direct) {
+        const type = typeOf(request.id);
+        if (type === 'straight' || type === 'arc') routes.set(request.id, [request.source, request.target]);
+        else if (type === 'elbow') routes.set(request.id, elbowRoute(request.source, request.target, request.sourceSide, request.targetSide));
+    }
+    const shaped = direct.filter(request => !['straight', 'arc', 'elbow'].includes(typeOf(request.id)));
+    if (shaped.length) for (const [id, points] of routeDirectOrthogonalEdges(shaped)) routes.set(id, points);
     // A label anchor is a point on the route it belongs to. Once the route has
     // been replanned the old anchor describes a line that no longer exists, and
     // the label is left stranded in empty space. Drop it, and the edge falls
@@ -491,7 +503,7 @@ function reroutePositionedEdges(
         const automaticRoute = automaticMovement || !edge.data?.manualRoute;
         const sourceOrigin = absOf(edge.source), targetOrigin = absOf(edge.target);
         return { ...edge, data: { ...data, points,
-            routingType: automaticMovement ? 'manhattan' : movement ? edge.data?.routingType ?? routingType : routingType,
+            routingType: automaticRoute ? typeOf(edge.id) : edge.data?.routingType ?? typeOf(edge.id),
             ...(automaticRoute ? { manualRoute: false, manualLanding: undefined, sourceT: undefined, targetT: undefined,
                 sourceOffset: { ...(edge.data?.sourceOffset as object),
                     x: request!.source.x-sourceOrigin.x, y: request!.source.y-sourceOrigin.y,
@@ -2171,16 +2183,22 @@ function DiagramCanvasInner() {
      */
     const resetViewToDefault = useCallback(() => {
         if (!selectedDiagramId) return;
-        const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        const diagramId = selectedDiagramId;
+        const previous = useModelStore.getState().diagramLayouts[diagramId] ?? { nodes: {}, edges: {} };
         const { pan: _pan, zoom: _zoom, ...canvas } = previous.canvas ?? {};
-        const layout: DiagramLayout = { nodes: {}, edges: {}, canvas: { ...canvas, autoLayout: true } };
-        preservedViewportRef.current = null;
-        mergeDiagramLayouts({ [selectedDiagramId]: layout });
-        sendDiagramLayoutUpdate(selectedDiagramId, layout);
-        positionCacheRef.current.clear();
-        setRelayoutNonce(value => value + 1);
-        window.setTimeout(() => fitDiagramFrame(300), 250);
-    }, [selectedDiagramId, mergeDiagramLayouts, fitDiagramFrame]);
+        const show = (layout: DiagramLayout) => {
+            preservedViewportRef.current = null;
+            mergeDiagramLayouts({ [diagramId]: layout });
+            sendDiagramLayoutUpdate(diagramId, layout);
+            positionCacheRef.current.clear();
+            setRelayoutNonce(value => value + 1);
+            window.setTimeout(() => fitDiagramFrame(300), 250);
+        };
+        const reset: DiagramLayout = { nodes: {}, edges: {}, canvas: { ...canvas, autoLayout: true } };
+        show(reset);
+        // An automatic re-layout discards every hand placement, so it is undoable.
+        pushUndo({ do: () => show(reset), undo: () => show(previous) });
+    }, [selectedDiagramId, mergeDiagramLayouts, fitDiagramFrame, pushUndo]);
 
     /** Restore the model-derived UCD geometry and its best-fit viewport. */
     const autoArrangeUseCase = useCallback(() => {
@@ -2550,7 +2568,9 @@ function DiagramCanvasInner() {
         const settings = withIbdRouting(previous, snapshot.routing);
         const layout: DiagramLayout = { ...settings, edges: { ...settings.edges,
             ...Object.fromEntries(restored.edges.filter(edge => persist !== 'settings'
-                || typeof (settings.edges[edge.id] as Record<string,unknown> | undefined)?.manualRoute === 'boolean')
+                || typeof (settings.edges[edge.id] as Record<string,unknown> | undefined)?.manualRoute === 'boolean'
+                || edge.data?.routingOverride !== undefined
+                || (settings.edges[edge.id] as Record<string,unknown> | undefined)?.routingOverride !== undefined)
                 .map(edge => [edge.id, captureEdgeLayout(edge, settings.edges[edge.id])])),
         } };
         if (persist === 'settings') routeCancelledRenderRef.current = true;
@@ -2581,7 +2601,8 @@ function DiagramCanvasInner() {
         const nextRouting = { ...before.routing, ...patch };
         if (JSON.stringify(nextRouting) === JSON.stringify(before.routing)) return;
         const updated = edgesRef.current.map(edge => ({ ...edge, data: { ...edge.data,
-            routingType: nextRouting.type, manualRoute: nextRouting.mode === 'manual' } }));
+            routingType: (edge.data?.routingOverride as IbdRoutingType | undefined) ?? nextRouting.type,
+            manualRoute: nextRouting.mode === 'manual' } }));
         // Manual type changes keep the authored points byte-for-byte.
         const routed = nextRouting.mode === 'manual' ? updated
             : reroutePositionedEdges(nodesRef.current, updated, activeRendererRef.current.routeQuality,
@@ -2663,6 +2684,53 @@ function DiagramCanvasInner() {
         applyRouteSnapshot(after);
         pushUndo({ do: () => applyRouteSnapshot(after), undo: () => applyRouteSnapshot(before) });
     }, [readOnly, captureRouteSnapshot, applyRouteSnapshot, pushUndo]);
+
+    /**
+     * Give the chosen connectors their own routing type, or (with no type) let
+     * them follow the diagram's again. They are routed afresh; the others keep
+     * their routes. One undo step.
+     */
+    const setConnectorRouting = useCallback((edgeIds: string[], type: IbdRoutingType | undefined) => {
+        if (readOnly || !edgeIds.length) return;
+        const before = captureRouteSnapshot(), chosen = new Set(edgeIds);
+        const updated = edgesRef.current.map(edge => chosen.has(edge.id) ? { ...edge, data: { ...edge.data,
+            routingOverride: type, routingType: type ?? routingRef.current.type, manualRoute: false } } : edge);
+        const others = new Set(updated.filter(edge => !chosen.has(edge.id)).map(edge => edge.id));
+        const routed = reroutePositionedEdges(nodesRef.current, updated, 'tidy', activeRendererRef.current.forcedPortSize,
+            routingRef.current.type, false, undefined, others);
+        const after: RouteSnapshot = { routing: before.routing, geometry: captureMovementGeometry([], routed) };
+        applyRouteSnapshot(after, 'settings');
+        pushUndo({ do: () => applyRouteSnapshot(after, 'settings'), undo: () => applyRouteSnapshot(before, 'settings') });
+    }, [readOnly, captureRouteSnapshot, applyRouteSnapshot, pushUndo]);
+
+    /**
+     * Route the chosen connectors (all of them when none is chosen) automatically,
+     * replacing hand-drawn bends. Each connector keeps its routing type. Undo
+     * restores the routes as they were.
+     */
+    const autoRouteConnectors = useCallback(async (edgeIds: string[]) => {
+        if (readOnly) return;
+        const chosen = new Set(edgeIds.length ? edgeIds : edgesRef.current.map(edge => edge.id));
+        const manual = edgesRef.current.filter(edge => chosen.has(edge.id) && edge.data?.manualRoute).length;
+        if (manual && !await confirmDialog({ title: 'Auto-route connectors?', confirmLabel: 'Auto-route',
+            message: `This replaces the hand-drawn bends on ${manual} connector${manual === 1 ? '' : 's'}. Undo restores them.` })) return;
+        const before = captureRouteSnapshot();
+        const updated = edgesRef.current.map(edge => chosen.has(edge.id)
+            ? { ...edge, data: { ...edge.data, manualRoute: false } } : edge);
+        const others = new Set(updated.filter(edge => !chosen.has(edge.id)).map(edge => edge.id));
+        const routed = reroutePositionedEdges(nodesRef.current, updated, 'tidy', activeRendererRef.current.forcedPortSize,
+            routingRef.current.type, false, undefined, others);
+        const after: RouteSnapshot = { routing: before.routing, geometry: captureMovementGeometry([], routed) };
+        applyRouteSnapshot(after, 'settings');
+        pushUndo({ do: () => applyRouteSnapshot(after, 'settings'), undo: () => applyRouteSnapshot(before, 'settings') });
+    }, [readOnly, captureRouteSnapshot, applyRouteSnapshot, pushUndo]);
+
+    const selectedConnectorIds = useMemo(() => edges.filter(edge => edge.selected).map(edge => edge.id), [edges]);
+    const selectedConnectorRouting = useMemo(() => {
+        const types = new Set(edges.filter(edge => edge.selected)
+            .map(edge => (edge.data?.routingOverride as IbdRoutingType | undefined) ?? 'diagram'));
+        return types.size === 1 ? [...types][0] as IbdRoutingType | 'diagram' : 'mixed';
+    }, [edges]);
 
     const shortenPortRoutes = useCallback(async (includeSaved = false) => {
         if (readOnly || !selectedDiagramId || routingRef.current.mode !== 'automatic') return;
@@ -2857,8 +2925,10 @@ function DiagramCanvasInner() {
                 );
                 const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
                 const savedRouting = savedEdge as (typeof savedEdge & {
-                    manualRoute?: boolean; routingType?: string; labelPoint?: {x:number;y:number}; sourceOffset?: object; targetOffset?: object;
+                    manualRoute?: boolean; routingType?: string; routingOverride?: IbdRoutingType; labelPoint?: {x:number;y:number}; sourceOffset?: object; targetOffset?: object;
                 }) | undefined;
+                const override = savedRouting?.routingOverride && IBD_ROUTING_TYPES.includes(savedRouting.routingOverride)
+                    ? savedRouting.routingOverride : undefined;
                 const ownsPoints = Boolean(savedPoints?.length && (
                     typeof savedRouting?.manualRoute === 'boolean' || routingRef.current.mode === 'manual'));
                 return {
@@ -2870,7 +2940,8 @@ function DiagramCanvasInner() {
                     reconnectable: Boolean(semanticRelationship?.sourceRange),
                     data: {
                         ...edge.data,
-                        routingType: ownsPoints ? savedRouting?.routingType ?? routingRef.current.type : routingRef.current.type,
+                        routingOverride: override,
+                        routingType: override ?? (ownsPoints ? savedRouting?.routingType ?? routingRef.current.type : routingRef.current.type),
                         manualRoute: ownsPoints ? savedRouting?.manualRoute ?? true : routingRef.current.mode === 'manual',
                         ...(ownsPoints ? { points: savedPoints,
                             ...(savedEdge?.sourceSide ? {sourceSide:savedEdge.sourceSide} : {}),
@@ -2905,9 +2976,12 @@ function DiagramCanvasInner() {
                         onSelect: readOnly ? undefined : (event: React.MouseEvent<SVGPathElement>) => {
                             event.stopPropagation();
                             if (Date.now() < suppressInspectUntilRef.current) return;
+                            // Shift, Ctrl or Cmd adds the connector to (or takes it out
+                            // of) the selection, so several can be routed together.
+                            const adding = event.shiftKey || event.ctrlKey || event.metaKey;
                             setEdges(previous => previous.map(candidate => ({
                                 ...candidate,
-                                selected: candidate.id === edge.id,
+                                selected: candidate.id === edge.id ? !(adding && candidate.selected) : adding && Boolean(candidate.selected),
                             })));
                         },
                     },
@@ -3757,6 +3831,9 @@ function DiagramCanvasInner() {
         // Selecting an IBD connector exposes its draggable orthogonal segment
         // handles. Keep selection in controlled edge state so it survives the
         // next route render.
+        // With Shift, Ctrl or Cmd held React Flow itself adds the connector to
+        // the selection, so several can be given a routing type together.
+        if (event?.shiftKey || event?.ctrlKey || event?.metaKey) return;
         setEdges(previous => previous.map(candidate => ({
             ...candidate,
             selected: candidate.id === edge.id,
@@ -4027,7 +4104,10 @@ function DiagramCanvasInner() {
         ibdRoutingControls: <IbdRoutingControls type={routing.type} mode={routePreviewMode ?? routing.mode}
             onShortenPorts={readOnly ? undefined : () => shortenPortRoutes(false)}
             onPlaceAllPorts={readOnly ? undefined : () => shortenPortRoutes(true)}
-            onTypeChange={type => changeIbdRouting({ type })} onModeChange={mode => changeIbdRouting({ mode })} />,
+            onTypeChange={type => changeIbdRouting({ type })} onModeChange={mode => changeIbdRouting({ mode })}
+            selectedConnectors={selectedConnectorIds.length} selectedRouting={selectedConnectorRouting}
+            onSelectedRoutingChange={readOnly ? undefined : type => setConnectorRouting(selectedConnectorIds, type)}
+            onAutoRoute={readOnly ? undefined : () => autoRouteConnectors(selectedConnectorIds)} />,
         swimlanesOn, setSwimlanesOn, actionFlowHasStages,
         actionFlowLaneGrouping, setActionFlowLaneGrouping,
         actionFlowDisplayLevels, actionFlowLevelsOpen, setActionFlowLevelsOpen,
