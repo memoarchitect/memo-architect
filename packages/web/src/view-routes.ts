@@ -40,7 +40,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     ask: '/ask',
     'sysml-generator': '/generate',
     'review-dashboard': '/review',
-    guide: '/guide',
+    guide: '/method',
     import: '/import',
     analysis: '/analysis',
     'ui-screens': '/ui-screens',
@@ -59,8 +59,9 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
 const ALIAS_PATHS: Record<string, string> = {
     '/dashboard': 'dashboard',
     '/scenarios': 'scenario-editor',
-    // The Workflow Wizard this page replaced.
+    // The Workflow Wizard, then the Guide page, that the method map replaced.
     '/workflow': 'guide',
+    '/guide': 'guide',
 };
 
 /** Reverse of STATIC_VIEW_PATHS, plus the aliases. Built once. */

@@ -9,7 +9,6 @@ import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
-import { MethodPanel } from './components/MethodPanel';
 import { BulkEditPanel } from './components/BulkEditPanel';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
@@ -41,7 +40,7 @@ const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m
 const CustomDashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.CustomDashboard })));
 const DashboardList = lazy(() => import('./views/DashboardList').then(m => ({ default: m.DashboardList })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
-const GuidePage = lazy(() => import('./views/Guide').then(m => ({ default: m.Guide })));
+const MethodMapPage = lazy(() => import('./views/MethodMap').then(m => ({ default: m.MethodMap })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
@@ -125,7 +124,7 @@ function UnifiedCanvas() {
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
             case 'guide':
-                return isFeatureEnabled('guide') ? <GuidePage /> : <Dashboard />;
+                return isFeatureEnabled('guide') ? <MethodMapPage /> : <Dashboard />;
             case 'import':
                 return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
             case 'analysis':
@@ -349,19 +348,6 @@ export function App() {
         'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
         'statistics', 'review-dashboard', 'import',
     ]);
-    // The Method panel stays open across pages once opened, as the explorer does, and is remembered per browser.
-    const [methodOpen, setMethodOpen] = useState(() => {
-        try { return localStorage.getItem('memo.methodPanel') === 'open'; } catch { return false; }
-    });
-    useEffect(() => {
-        const toggle = () => setMethodOpen(open => !open);
-        window.addEventListener('memo:toggle-method', toggle);
-        return () => window.removeEventListener('memo:toggle-method', toggle);
-    }, []);
-    useEffect(() => {
-        try { localStorage.setItem('memo.methodPanel', methodOpen ? 'open' : 'closed'); } catch { /* the panel still works */ }
-    }, [methodOpen]);
-    const showMethod = methodOpen && isFeatureEnabled('guide') && activeView.type !== 'guide';
 
     const showExplorer = !standalonePages.has(activeView.type)
         && activeView.type !== 'dsm'
@@ -550,7 +536,6 @@ export function App() {
                 )}
 
                 {/* Right edge: the method beside the work, when opened from the toolbar */}
-                {showMethod && <MethodPanel onClose={() => setMethodOpen(false)} />}
             </div>
 
             {/* Bottom panel: Problems + Completeness (unified, collapsible) */}

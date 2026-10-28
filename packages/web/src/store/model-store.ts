@@ -163,7 +163,7 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
-    | { type: 'guide' }               // the Guide: where the model stands against its method
+    | { type: 'guide' }               // the method map (Pathways): the method's rows, and where to start
     | { type: 'import' }
     | { type: 'analysis' }
     | { type: 'ui-screens' }
@@ -560,6 +560,12 @@ export interface ModelState {
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
     applyUserPreferences: (preferences: UserPreferencesDTO) => void;
+    /** Pathways, guided modelling: on unless this person switched it off. Saved with their choices. */
+    pathways: boolean;
+    setPathways: (on: boolean) => void;
+    /** The method step this person last opened, by its qualified name, or null: where they continue. */
+    lastStep: string | null;
+    setLastStep: (step: string | null) => void;
     /** The experimental features this person switched on in Settings. */
     /** Package folders in the Model Explorer: on by default; off lists elements by kind alone. */
     packageFolders: boolean;
@@ -638,10 +644,12 @@ const RECENT_LIMIT = 10;
 /** The choices one person keeps for this model, as they are saved. */
 export function preferencesOf(state: {
     role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
-    favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
+    pathways: boolean; lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
 }): UserPreferencesDTO {
     return {
         ...(state.packageFolders ? {} : { packageFolders: false }),
+        ...(state.pathways ? {} : { pathways: false }),
+        ...(state.lastStep ? { lastStep: state.lastStep } : {}),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: state.workspace } : {}),
@@ -777,6 +785,17 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set({ packageFolders });
         saveChoices(get());
     },
+    pathways: true,
+    setPathways: (pathways) => {
+        set({ pathways });
+        sendUserPreferencesSave(preferencesOf(get()));
+    },
+    lastStep: null,
+    setLastStep: (lastStep) => {
+        if (get().lastStep === lastStep) return;
+        set({ lastStep });
+        sendUserPreferencesSave(preferencesOf(get()));
+    },
     features: [],
     favorites: [],
     recentViews: [],
@@ -800,6 +819,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             recentViews: preferences.recentViews ?? [],
             recentlyVisited: preferences.recentElements ?? [],
             preferencesLoaded: true,
+            pathways: preferences.pathways !== false, lastStep: preferences.lastStep ?? null,
         });
     },
     setFeatureEnabled: (id, enabled) => {

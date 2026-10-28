@@ -111,7 +111,7 @@ export interface NavEntry {
 export const NAV_ENTRIES: readonly NavEntry[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '⌂', section: 'guide', target: { mode: 'dashboard' } },
     { id: 'dashboards', label: 'Custom Dashboards', icon: '🧩', section: 'guide', target: { view: { type: 'dashboards' } }, feature: 'custom-dashboards' },
-    { id: 'guide', label: 'Guide', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } }, feature: 'guide' },
+    { id: 'guide', label: 'Method map', icon: '🧭', section: 'guide', target: { view: { type: 'guide' } }, feature: 'guide' },
 
     // The model is opened by its domains, the top-level groups of the Model Explorer: each entry opens the
     // explorer on that one domain (and the explorer offers the whole tree again).
