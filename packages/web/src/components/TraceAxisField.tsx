@@ -11,11 +11,12 @@ import type { TraceAxisIds } from '../lib/use-trace-axis';
 
 const toFilter = (axis: AxisSelection): FilterState => ({ kinds: axis.kinds, contains: axis.contains ?? '', advanced: Boolean(axis.advanced), raw: axis.query });
 
-export function TraceAxisField({ title, axis, onChange, kindOptions, selection }: {
+export function TraceAxisField({ title, axis, onChange, kindOptions, kindParents, selection }: {
     title: string;
     axis: AxisSelection;
     onChange: (next: AxisSelection) => void;
     kindOptions: TypeFilterOption[];
+    kindParents?: ReadonlyMap<string, string>;
     selection: TraceAxisIds;
 }) {
     return (
@@ -24,6 +25,7 @@ export function TraceAxisField({ title, axis, onChange, kindOptions, selection }
                 title={title}
                 filter={toFilter(axis)}
                 kindOptions={kindOptions}
+                kindParents={kindParents}
                 emptyHint="Choose element types, or part of a name."
                 counting={selection.counting}
                 evaluation={{ query: axisToQuery(axis), count: selection.ids.length, preview: [], error: selection.error }}

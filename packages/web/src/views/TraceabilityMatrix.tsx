@@ -72,7 +72,8 @@ export function TraceabilityMatrix() {
         const taxonomy = explorerTaxonomy(availableOntologies).byKind;
         return OntologyKindCatalog.of(model, name => taxonomy.has(name));
     }, [model, availableOntologies]);
-    const kindOptions = useMemo(() => catalog.options(), [catalog]);
+    const hierarchy = useMemo(() => catalog.hierarchy(), [catalog]);
+    const kindOptions = hierarchy.options;
     const linkOptions = useMemo<TypeFilterOption[]>(() => {
         if (!model) return [];
         const counts = new Map<string, number>();
@@ -232,7 +233,7 @@ export function TraceabilityMatrix() {
                                 rowAxis={draft.rowAxis} columnAxis={draft.columnAxis}
                                 onRowAxis={draft.setRowAxis} onColumnAxis={draft.setColumnAxis}
                                 rowSelection={rowSelection} columnSelection={columnSelection}
-                                kindOptions={kindOptions} linkOptions={linkOptions}
+                                kindOptions={kindOptions} kindParents={hierarchy.parentOf} linkOptions={linkOptions}
                                 linkTypes={draft.linkTypes} onLinkTypes={draft.setLinkTypes}
                                 canBuild={canBuild} stale={stale} built={Boolean(matrix.result)} building={building}
                                 onBuild={build}
