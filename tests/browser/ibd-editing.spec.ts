@@ -7,18 +7,34 @@ import { readIbdGeometry, type IbdGeometry } from './ibd-geometry';
 const V = 'memo_vehicle_routing::vehicle::';
 const POWERTRAIN = V + 'powertrain', ENGINE = POWERTRAIN + '::engine', TRANSMISSION = POWERTRAIN + '::transmission';
 
-async function openDiagram(page: Page) {
+/** Open the diagram; unless `keep`, start from its default layout and routing,
+ * since every test edits the same served copy. */
+async function openDiagram(page: Page, keep = false) {
     await page.goto('/');
     const skip = page.getByRole('button', { name: 'Skip tour' });
     if (await skip.waitFor({ timeout: 5_000 }).then(() => true, () => false)) await skip.click();
     await page.getByText('All views', { exact: true }).click();
     await page.getByText('Vehicle interconnection', { exact: true }).first().click();
     await expect(page.locator('.react-flow__edge').first()).toBeVisible({ timeout: 30_000 });
+    if (!keep) {
+        await page.getByLabel('IBD routing mode').selectOption('automatic');
+        await page.getByLabel('IBD routing type').selectOption('manhattan');
+        await page.getByTitle('Reset this view to its default layout').click();
+    }
     await settle(page);
 }
 
+/** Wait until layout and routing have finished: connector paths stop changing. */
 async function settle(page: Page) {
-    await page.waitForTimeout(1200);
+    await expect(page.getByRole('progressbar', { name: 'Laying out the diagram' })).toHaveCount(0, { timeout: 30_000 });
+    const paths = () => page.locator('.react-flow__edge-path').evaluateAll(es => es.map(e => e.getAttribute('d')).join('|'));
+    let last = await paths();
+    for (let i = 0; i < 30; i++) {
+        await page.waitForTimeout(700);
+        const now = await paths();
+        if (now === last) return;
+        last = now;
+    }
 }
 
 const geometry = (page: Page) => page.evaluate(readIbdGeometry);
@@ -129,31 +145,46 @@ async function pointOnConnector(page: Page, index: number | string) {
 }
 
 const pathOf = (page: Page, id: string) => page.locator(`.react-flow__edge[data-id="${id}"] .react-flow__edge-path`).getAttribute('d');
-const segments = (d: string | null) => (d?.match(/[LQCA]/g) ?? []).length;
+/** How far a connector strays from the straight line between its ends; crossing hops stray a few pixels. */
+const deviation = (page: Page, id: string) => page.locator(`.react-flow__edge[data-id="${id}"] .react-flow__edge-path`).evaluate(el => {
+    const path = el as SVGPathElement, length = path.getTotalLength();
+    const a = path.getPointAtLength(0), b = path.getPointAtLength(length), span = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    let worst = 0;
+    for (let i = 1; i < 60; i++) {
+        const p = path.getPointAtLength(length * i / 60);
+        worst = Math.max(worst, Math.abs((b.x - a.x) * (a.y - p.y) - (a.x - p.x) * (b.y - a.y)) / span);
+    }
+    return worst;
+});
+const isStraight = async (page: Page, id: string) => (await deviation(page, id)) < 10;
 
 test('selected connectors take their own routing type, kept on reload and undoable', async ({ page }) => {
     await openDiagram(page);
-    const a = (await pointOnConnector(page, 0))!, b = (await pointOnConnector(page, 5))!;
+    const a = (await pointOnConnector(page, 0))!;
     const untouched = (await pointOnConnector(page, 12))!;
     const untouchedBefore = await pathOf(page, untouched.id);
     await page.mouse.click(a.x, a.y);
+    // Selecting a connector raises it, so find the second one's point afterwards.
+    const b = (await pointOnConnector(page, 5))!;
     await page.keyboard.down('Control'); await page.mouse.click(b.x, b.y); await page.keyboard.up('Control');
+    expect(await page.locator('.react-flow__edge.selected').evaluateAll(es => es.map(e => (e as HTMLElement).dataset.id).sort()))
+        .toEqual([a.id, b.id].sort());
     const control = page.getByLabel('Selected connector routing');
     await expect(page.getByText('2 selected connectors')).toBeVisible();
     await control.selectOption('straight');
     await settle(page);
-    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+    for (const id of [a.id, b.id]) expect(await isStraight(page, id)).toBe(true);
     expect(await pathOf(page, untouched.id)).toBe(untouchedBefore);
     // Back to the diagram's routing, then Undo returns them to straight.
     await control.selectOption('diagram');
     await settle(page);
-    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBeGreaterThan(1);
+    for (const id of [a.id, b.id]) expect(await isStraight(page, id)).toBe(false);
     await page.getByTitle('Undo last diagram edit').click();
     await settle(page);
-    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+    for (const id of [a.id, b.id]) expect(await isStraight(page, id)).toBe(true);
     // The choice is saved with the view.
-    await openDiagram(page);
-    for (const id of [a.id, b.id]) expect(segments(await pathOf(page, id))).toBe(1);
+    await openDiagram(page, true);
+    for (const id of [a.id, b.id]) expect(await isStraight(page, id)).toBe(true);
 });
 
 test('auto-route and reset to the default layout can both be undone', async ({ page }) => {
@@ -164,18 +195,80 @@ test('auto-route and reset to the default layout can both be undone', async ({ p
     await page.getByRole('dialog', { name: 'Auto-route connectors?' }).getByRole('button', { name: 'Auto-route' }).click();
     await settle(page);
     expectCleanConnectors(await geometry(page));
-    const header = (await page.locator(`.react-flow__node[data-id="${ENGINE}"] [data-ibd-header]`).first().boundingBox())!;
-    await drag(page, { x: header.x + 30, y: header.y + header.height / 2 }, { x: header.x + 30, y: header.y + header.height / 2 - 6 });
-    await page.getByRole('dialog').getByRole('button', { name: 'Replace bends' }).click().catch(() => {});
+    const DRIVER = 'memo_vehicle_routing::driver', VEHICLE = 'memo_vehicle_routing::vehicle';
+    const header = (await page.locator(`.react-flow__node[data-id="${DRIVER}"] [data-ibd-header]`).first().boundingBox())!;
+    await drag(page, { x: header.x + 30, y: header.y + header.height / 2 }, { x: header.x - 90, y: header.y + header.height / 2 - 20 });
+    await page.getByRole('dialog').getByRole('button', { name: 'Replace bends' }).click({ timeout: 3_000 }).catch(() => {});
     await settle(page);
     const moved = await geometry(page);
-    // The viewport refits after each step, so compare the engine's place within its powertrain.
-    const offset = (g: IbdGeometry) => [Math.round(g.parts[ENGINE].x - g.parts[POWERTRAIN].x), Math.round(g.parts[ENGINE].y - g.parts[POWERTRAIN].y)];
+    // The viewport refits after each step, so compare the driver's place relative to the vehicle.
+    const offset = (g: IbdGeometry) => [Math.round((g.parts[DRIVER].x - g.parts[VEHICLE].x) / g.parts[VEHICLE].w * 100),
+        Math.round((g.parts[DRIVER].y - g.parts[VEHICLE].y) / g.parts[VEHICLE].w * 100)];
     await page.getByTitle('Reset this view to its default layout').click();
-    await page.waitForTimeout(2500);
+    await settle(page);
     expect(offset(await geometry(page))).not.toEqual(offset(moved));
     await page.getByTitle('Undo last diagram edit').click();
-    await page.waitForTimeout(2500);
+    await settle(page);
     const restored = await geometry(page);
     expect(offset(restored)).toEqual(offset(moved));
+});
+
+test('a part resizes by its sides (one direction) and by its corners (both), never onto a neighbour', async ({ page }) => {
+    await openDiagram(page);
+    const DRIVER = 'memo_vehicle_routing::driver';
+    const node = page.locator(`.react-flow__node[data-id="${DRIVER}"]`);
+    const header = (await node.locator('[data-ibd-header]').first().boundingBox())!;
+    await page.mouse.click(header.x + 20, header.y + header.height / 2);
+    const grip = async (position: string) => (await node.locator(`.react-flow__resize-control.${position.split(' ').join('.')}`).first().boundingBox())!;
+    const size = async () => { const b = (await node.boundingBox())!; return { w: Math.round(b.width), h: Math.round(b.height) }; };
+    const resize = async (position: string, dx: number, dy: number) => {
+        const g = await grip(position), from = { x: g.x + g.width / 2, y: g.y + g.height / 2 };
+        await drag(page, from, { x: from.x + dx, y: from.y + dy });
+    };
+    let before = await size();
+    await resize('right', 40, 0);
+    let after = await size();
+    expect(after.w).toBeGreaterThan(before.w + 20); expect(after.h).toBe(before.h);
+    before = after;
+    await resize('bottom', 0, 40);
+    after = await size();
+    expect(after.h).toBeGreaterThan(before.h + 20); expect(after.w).toBe(before.w);
+    before = after;
+    // Driver controls sits above the vehicle, so the free corner is the top one.
+    await resize('top right', 30, -30);
+    after = await size();
+    expect(after.w).toBeGreaterThan(before.w + 15); expect(after.h).toBeGreaterThan(before.h + 15);
+    expectCleanConnectors(await geometry(page));
+});
+
+test('spacing between parts and between ports grows and shrinks, and undoes', async ({ page }) => {
+    await openDiagram(page);
+    // The viewport refits, so measure within the powertrain.
+    const gap = (g: IbdGeometry) => (g.parts[TRANSMISSION].y - (g.parts[ENGINE].y + g.parts[ENGINE].h)) / g.parts[POWERTRAIN].w;
+    const start = await geometry(page);
+    await page.getByLabel('More space between parts').click();
+    await settle(page);
+    let g = await geometry(page);
+    expect(gap(g)).toBeGreaterThan(gap(start));
+    expectCleanConnectors(g);
+    await page.getByTitle('Undo last diagram edit').click();
+    await settle(page);
+    expect(gap(await geometry(page))).toBeCloseTo(gap(start), 3);
+
+    const header = (await page.locator(`.react-flow__node[data-id="${ENGINE}"] [data-ibd-header]`).first().boundingBox())!;
+    await page.mouse.click(header.x + 20, header.y + header.height / 2);
+    const portGap = (g: IbdGeometry) => {
+        const ys = Object.values(g.ports).filter(port => port.owner === ENGINE && Math.abs(port.x - g.parts[ENGINE].x) < port.w).map(port => port.y).sort((a, b) => a - b);
+        return (ys[1] - ys[0]) / g.parts[POWERTRAIN].w;
+    };
+    const before = await geometry(page);
+    await page.getByLabel('More space between ports').click();
+    await settle(page);
+    g = await geometry(page);
+    expect(portGap(g)).toBeGreaterThan(portGap(before));
+    expectCleanConnectors(g);
+    await page.getByLabel('Less space between ports').click();
+    await page.getByLabel('Less space between ports').click();
+    await settle(page);
+    expectCleanConnectors(await geometry(page));
 });

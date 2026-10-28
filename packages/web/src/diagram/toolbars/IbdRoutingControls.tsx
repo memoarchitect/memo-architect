@@ -3,7 +3,7 @@ import { IBD_ROUTING_TYPES, type IbdRoutingMode, type IbdRoutingType } from '../
 const label = (type: IbdRoutingType) => type[0].toUpperCase() + type.slice(1);
 
 export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onShortenPorts, onPlaceAllPorts,
-    selectedConnectors = 0, selectedRouting = 'diagram', onSelectedRoutingChange, onAutoRoute }: {
+    selectedConnectors = 0, selectedRouting = 'diagram', onSelectedRoutingChange, onAutoRoute, onSpacing }: {
     onShortenPorts?: () => void;
     onPlaceAllPorts?: () => void;
     type: IbdRoutingType; mode: IbdRoutingMode;
@@ -15,6 +15,8 @@ export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onS
     /** Undefined clears the selected connectors' own type. */
     onSelectedRoutingChange?: (type: IbdRoutingType | undefined) => void;
     onAutoRoute?: () => void;
+    /** Add (more) or remove space between parts, or between ports. */
+    onSpacing?: (target: 'parts' | 'ports', more: boolean) => void;
 }) {
     return <div className="flex flex-wrap items-center gap-2 text-xs">
         <label>Routing type <select aria-label="IBD routing type" value={type}
@@ -39,6 +41,13 @@ export function IbdRoutingControls({ type, mode, onTypeChange, onModeChange, onS
             title={selectedConnectors ? 'Route the selected connectors automatically, replacing hand-drawn bends; Undo restores them'
                 : 'Route every connector automatically, replacing hand-drawn bends; Undo restores them'}
             className="rounded border px-2 py-1">{selectedConnectors ? 'Auto-route selected' : 'Auto-route all'}</button>}
+        {onSpacing && (['parts', 'ports'] as const).map(target => <span key={target} className="inline-flex items-center gap-1">
+            {target === 'parts' ? 'Part spacing' : 'Port spacing'}
+            {([false, true] as const).map(more => <button key={String(more)} type="button" onClick={() => onSpacing(target, more)}
+                aria-label={`${more ? 'More' : 'Less'} space between ${target}`}
+                title={`${more ? 'Add' : 'Remove'} space between ${target === 'parts' ? 'the selected parts, their neighbours and their contents' : 'the ports on the selected parts'} (everywhere when nothing is selected)`}
+                className="rounded border px-2 py-1">{more ? '+' : '−'}</button>)}
+        </span>)}
         {onShortenPorts && <button type="button" disabled={mode !== 'automatic'} onClick={onShortenPorts}
             title="Shorten routes by moving unsaved ordinary ports around their owner perimeters; saved positions stay fixed"
             className="rounded border px-2 py-1 disabled:opacity-40">Shorten automatic port routes</button>}

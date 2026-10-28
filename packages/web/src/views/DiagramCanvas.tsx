@@ -1,5 +1,6 @@
 import { affectedMovementRoutes, routeEntersBody } from '../diagram/ibd-movement-routing';
 import { nearestFreePosition } from '../diagram/nearest-free-position';
+import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
 import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
 import { rendererModel } from '../diagram/renderer-model';
@@ -317,6 +318,9 @@ function routeClearOfPorts(
     for (const request of blocked) { const points = retried.get(request.id); if (points) routes.set(request.id, points); }
     return routes;
 }
+
+/** Space added or removed per gap by one press of a spacing control. */
+const SPACING_STEP = 24;
 
 function reroutePositionedEdges(
     nodes: FlowNode[],
@@ -3689,6 +3693,66 @@ function DiagramCanvasInner() {
         pushUndo({ do: () => apply(after, false), undo: () => apply(before, start.autoLayout) });
     }, [selectedDiagramId, pushUndo, setNodes, setEdges, mergeDiagramLayouts, flushGeometryUpdate, restoreMovementSnapshot]);
 
+    /**
+     * Add space (positive step) or remove it (negative) between parts, or
+     * between the ports on parts' walls. With parts selected it applies to
+     * them, their neighbours and their contents; otherwise to the whole
+     * diagram. Connectors reroute, and the change is one undo step.
+     */
+    const changeSpacing = useCallback(async (target: 'parts' | 'ports', step: number) => {
+        if (readOnly || !selectedDiagramId) return;
+        const diagramId = selectedDiagramId;
+        const forced = activeRendererRef.current.forcedPortSize;
+        const parts = nodesRef.current.filter(node => node.type !== 'annotationNode' && !node.hidden);
+        const size = (node: FlowNode) => ({
+            width: Number(node.width ?? (node.style as { width?: number })?.width ?? node.measured?.width ?? 0),
+            height: Number(node.height ?? (node.style as { height?: number })?.height ?? node.measured?.height ?? 0),
+        });
+        const input: SpacingPart[] = parts.map(node => ({ id: node.id, parentId: node.parentId, ...node.position, ...size(node),
+            ports: ((node.data as { ports?: PortInfo[] }).ports ?? []).filter(port => port.side)
+                .map(port => ({ id: port.id, x: port.x, y: port.y, side: port.side as SpacingSide,
+                    size: portWallSpan(port, forced), nested: port.nested })) }));
+        const selected = parts.filter(node => node.selected).map(node => node.id);
+        const spaced = target === 'parts'
+            ? spaceParts(input, new Set(selected.length ? selected.flatMap(id => [parts.find(node => node.id === id)?.parentId, id])
+                : [undefined, ...parts.map(node => node.id)]), step)
+            : spacePorts(input, new Set(selected.length ? selected : parts.map(node => node.id)), step);
+        const byId = new Map(spaced.map(part => [part.id, part]));
+        const before = captureMovementGeometry(nodesRef.current, edgesRef.current);
+        const next = nodesRef.current.map(node => {
+            const part = byId.get(node.id);
+            if (!part) return node;
+            const old = size(node), resized = part.width !== old.width || part.height !== old.height;
+            const ports = new Map((part.ports ?? []).map(port => [port.id, port]));
+            return { ...node, position: { x: part.x, y: part.y },
+                ...(resized ? { width: part.width, height: part.height, style: { ...node.style, width: part.width, height: part.height } } : {}),
+                data: { ...node.data, ports: ((node.data as { ports?: PortInfo[] }).ports)?.map(port => {
+                    const moved = ports.get(port.id);
+                    return moved ? { ...port, x: moved.x, y: moved.y } : port;
+                }) } };
+        });
+        if (!movementGeometryChanges(before, captureMovementGeometry(next, edgesRef.current)).nodes.size) return;
+        nodesRef.current = next; setNodes(next);
+        const routed = await rerouteAfterMove(next, edgesRef.current, before, forced, routingRef.current.type, 'Change spacing?');
+        if (!routed) {
+            restoreMovementSnapshot(before, movementGeometryChanges(before, captureMovementGeometry(nodesRef.current, edgesRef.current)));
+            return;
+        }
+        edgesRef.current = routed; setEdges(routed);
+        const after = captureMovementGeometry(nodesRef.current, edgesRef.current);
+        const changed = movementGeometryChanges(before, after);
+        const previousAutomatic = useModelStore.getState().diagramLayouts[diagramId]?.canvas?.autoLayout !== false;
+        const apply = (geometry: MovementGeometry, autoLayout: boolean) => {
+            const restored = restoreMovementSnapshot(geometry, changed);
+            for (const node of restored.nodes) if (changed.nodes.has(node.id)) positionCacheRef.current.set(node.id, { ...node.position });
+            const previous = useModelStore.getState().diagramLayouts[diagramId] ?? { nodes: {}, edges: {} };
+            mergeDiagramLayouts({ [diagramId]: { ...previous, canvas: { ...previous.canvas, autoLayout } } });
+            setLayoutEditVersion(version => version + 1);
+        };
+        apply(after, false);
+        pushUndo({ do: () => apply(after, false), undo: () => apply(before, previousAutomatic) });
+    }, [readOnly, selectedDiagramId, setNodes, setEdges, mergeDiagramLayouts, restoreMovementSnapshot, pushUndo]);
+
     // ─── Node resize + live orthogonal re-routing ─────────────────────────────
 
     const onNodesChangeWithResize = useCallback((changes: NodeChange<FlowNode>[]) => {
@@ -4107,7 +4171,8 @@ function DiagramCanvasInner() {
             onTypeChange={type => changeIbdRouting({ type })} onModeChange={mode => changeIbdRouting({ mode })}
             selectedConnectors={selectedConnectorIds.length} selectedRouting={selectedConnectorRouting}
             onSelectedRoutingChange={readOnly ? undefined : type => setConnectorRouting(selectedConnectorIds, type)}
-            onAutoRoute={readOnly ? undefined : () => autoRouteConnectors(selectedConnectorIds)} />,
+            onAutoRoute={readOnly ? undefined : () => autoRouteConnectors(selectedConnectorIds)}
+            onSpacing={readOnly ? undefined : (target, more) => changeSpacing(target, more ? SPACING_STEP : -SPACING_STEP)} />,
         swimlanesOn, setSwimlanesOn, actionFlowHasStages,
         actionFlowLaneGrouping, setActionFlowLaneGrouping,
         actionFlowDisplayLevels, actionFlowLevelsOpen, setActionFlowLevelsOpen,
@@ -4605,7 +4670,7 @@ function DiagramCanvasInner() {
 
                 {/* ELK layout progress bar (#44) */}
                 {isLayouting && (
-                    <div
+                    <div role="progressbar" aria-label="Laying out the diagram"
                         style={{
                             position: 'absolute', top: 0, left: 0, right: 0, height: '2px', zIndex: 20,
                             background: `linear-gradient(90deg, ${COLOR.accent} 0%, ${COLOR.accent}80 50%, transparent 100%)`,

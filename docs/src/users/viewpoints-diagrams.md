@@ -116,9 +116,24 @@ In an interconnection (IBD) view:
 - Connectors are routed with right-angled (Manhattan) routes, and are routed
   again whenever a part or port they touch moves. They keep clear of parts and
   ports they do not connect.
-- **Routing type** on the toolbar changes how connectors are drawn; Manhattan
-  is the default. With **Routing mode** set to Manual, connectors keep the bends
-  you draw; moving a part asks before replacing them, and Undo restores them.
+- **Routing type** on the toolbar changes how connectors are drawn: Manhattan
+  (the default), orthogonal, straight, elbow, rounded, curved or arc. With
+  **Routing mode** set to Manual, connectors keep the bends you draw; moving a
+  part asks before replacing them, and Undo restores them.
+- Click a connector, and Shift-, Ctrl- or Cmd-click more, to give just those
+  connectors their own routing type, or set them back to **As diagram**.
+- **Auto-route** reroutes the selected connectors (all of them when none is
+  selected) automatically.
+- Drag a part's side to change its width or height, or a corner to change
+  both. A part cannot be resized over its neighbours.
+- **Part spacing** − / + removes or adds space between parts: the selected parts,
+  their neighbours and their contents, or the whole diagram when nothing is
+  selected. Containers grow to fit, and what lies beyond them moves along.
+  **Port spacing** does the same for the ports on the selected parts' walls,
+  growing a part whose wall runs out of room. Use them after an automatic
+  layout to open it up.
+- Every automatic change (auto-route, port placement, spacing, and **Reset this
+  view to its default layout**) is a single step that Undo reverses.
 
 The layout is saved inside the view's own source, so it travels with the model.
 `examples/vehicle-ibd` in the Architect repository is a dense IBD to try this
