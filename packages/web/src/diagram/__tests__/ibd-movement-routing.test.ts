@@ -42,3 +42,12 @@ it('detects an expanded endpoint owner swallowing an otherwise stationary route 
  expect(routeEntersBody(points,{id:'owner',x:0,y:0,width:200,height:100})).toBe(true);
  expect(affectedMovementRoutes([request],[{...node,width:200}],before).has('wire')).toBe(true);
 });
+
+it('reroutes a stationary connector that a moved port now sits on, but not the port\'s own connector',()=>{
+ const port={id:'p',x:40,y:-16,size:32,side:'top'};
+ const node={id:'owner',position:{x:0,y:100},width:120,height:80,data:{ports:[port]}};
+ const passing=[{x:0,y:90},{x:200,y:90}], own=[{x:56,y:84},{x:56,y:20}];
+ const before=captureMovementGeometry([{...node,data:{ports:[{...port,x:-16,y:20,side:'left'}]}}],[{id:'passing',source:'a',target:'b',data:{points:passing}},{id:'own',source:'owner',target:'c',data:{points:own}}]);
+ const requests:OrthogonalRouteRequest[]=[{id:'passing',sourceNodeId:'a',targetNodeId:'b',source:passing[0],target:passing[1]},{id:'own',sourceNodeId:'owner',targetNodeId:'c',source:own[0],target:own[1]}];
+ expect([...affectedMovementRoutes(requests,[node],before)]).toEqual(['passing']);
+});

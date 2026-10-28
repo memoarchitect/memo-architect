@@ -38,6 +38,30 @@ export function legalPortSlot(port:Port, peers:Port[], side:PortSide, along:numb
     return vertical?{x:cross,y:value,side}:{x:value,y:cross,side};
 }
 
+/** Where a port the user is dragging lands on `side`. It may sit anywhere along
+ * the wall except the corners and, on a side wall, the header row. A peer on
+ * the same wall is never overlapped: the port takes the nearest free slot, so
+ * dragging past a peer hops over it. Null only when the wall has no free slot.
+ */
+export function draggedPortSlot(port:Port, peers:Port[], side:PortSide, along:number,
+    width:number, height:number):{x:number;y:number;side:PortSide}|null {
+    const vertical=side==='left'||side==='right', size=port.size??32, span=port.wallSpan??size;
+    const length=vertical?height:width, gap=4;
+    const min=vertical?Math.min(HEADER_ROW,Math.max(gap,(length-span)/2)):gap, max=length-span-gap;
+    if(max<min)return null;
+    const cross=side==='left'?-size/2:side==='right'?width-size/2:side==='top'?-size/2:height-size/2;
+    const blocked=peers.filter(p=>p.id!==port.id&&!p.nested&&p.side===side)
+        .map(p=>{const a=vertical?p.y:p.x;return[a-span-gap,a+(p.wallSpan??p.size??32)+gap] as [number,number]});
+    const free=(v:number)=>v>=min-1e-8&&v<=max+1e-8&&!blocked.some(([a,b])=>v>a+1e-8&&v<b-1e-8);
+    const best=[Math.max(min,Math.min(max,along)),...blocked.flat()].filter(free)
+        .sort((a,b)=>Math.abs(a-along)-Math.abs(b-along)||a-b)[0];
+    if(best===undefined)return null;
+    return vertical?{x:cross,y:best,side}:{x:best,y:cross,side};
+}
+
+/** Side-wall ports stay below a part's name row. */
+const HEADER_ROW=24;
+
 /** Proposed glyph and caption envelopes relative to the port's origin. */
 export function measurePortEnvelopes(owner:HTMLElement,port:HTMLElement,size:number,
     placement:CSSProperties,zoom:number):PortConstraintRect[]{
