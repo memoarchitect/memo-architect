@@ -1,6 +1,7 @@
-import { affectedMovementRoutes } from '../diagram/ibd-movement-routing';
+import { affectedMovementRoutes, routeEntersBody } from '../diagram/ibd-movement-routing';
+import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
-import { legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
+import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
 import { rendererModel } from '../diagram/renderer-model';
 import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
@@ -58,6 +59,7 @@ import {
 } from './arrange';
 import { FONT, COLOR } from '../styles/tokens';
 import { routeOrthogonalEdges, routeDirectOrthogonalEdges, placeConnectorLabels } from './layout';
+import type { OrthogonalRouteRequest, RouteObstacle } from './orthogonal-router';
 import { ConnectorHoverStyles, connectorEndpoints, setConnectorHover } from './connector-hover';
 import {
     resolveGeneralMode, buildGeneralViewTree,
@@ -274,6 +276,30 @@ interface MovementRouting {
     replaceManual?: (edgeIds: string[]) => boolean;
 }
 
+/**
+ * Route around parts grown over their ports. Where that closes a gap a connector
+ * needs, the router falls back to a line through a part; such connectors are
+ * routed again around the bare parts, which beats crossing one.
+ */
+function routeClearOfPorts(
+    requests: OrthogonalRouteRequest[], clearOfPorts: RouteObstacle[], parts: RouteObstacle[],
+    quality: RouteQuality, fixedRoutes: Map<string, Array<{ x: number; y: number }>>,
+): Map<string, Array<{ x: number; y: number }>> {
+    const options = quality === 'tidy' ? {} : { refineRounds: 0 };
+    const routes = routeOrthogonalEdges(requests, clearOfPorts, 18, 'long-first', { ...options, fixedRoutes });
+    const blocked = requests.filter(request => {
+        if (fixedRoutes.has(request.id)) return false;
+        const points = routes.get(request.id), allowed = new Set([...(request.sourceAncestorIds ?? []), ...(request.targetAncestorIds ?? [])]);
+        return points && parts.some(part => !allowed.has(part.id) && routeEntersBody(points, part));
+    });
+    if (!blocked.length) return routes;
+    const kept = new Map(fixedRoutes);
+    for (const [id, points] of routes) if (!blocked.some(request => request.id === id)) kept.set(id, points);
+    const retried = routeOrthogonalEdges(requests, parts, 18, 'long-first', { ...options, fixedRoutes: kept });
+    for (const request of blocked) { const points = retried.get(request.id); if (points) routes.set(request.id, points); }
+    return routes;
+}
+
 function reroutePositionedEdges(
     nodes: FlowNode[],
     edges: FlowEdge[],
@@ -394,12 +420,25 @@ function reroutePositionedEdges(
     // endpoints, so a route to a child still leaves its own parent freely while
     // being kept out of every unrelated board. The diagram FRAME is the drawing
     // surface itself and encloses everything, so it is never an obstacle.
-    const obstacles = nodes
-        .filter(node => {
-            const data = node.data as { isFrame?: boolean };
-            return !data.isFrame && node.type !== 'annotationNode';
+    const bodies = nodes.filter(node => {
+        const data = node.data as { isFrame?: boolean };
+        return !data.isFrame && node.type !== 'annotationNode';
+    });
+    const partObstacles = bodies.map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }))
+        .filter(o => o.width > 0 && o.height > 0);
+    const obstacles = bodies
+        .map(node => {
+            // Ports straddle their part's wall. Grow the part's box over the ports
+            // on each wall so a connector skirting the part also clears them; a
+            // port's own connector starts at its outer face, on that boundary.
+            const origin = absOf(node.id), size = sizeOf(node), reach = { left: 0, right: 0, top: 0, bottom: 0 };
+            for (const port of (node.data as { ports?: PortInfo[] }).ports ?? []) {
+                if (port.nested || !port.side) continue;
+                reach[port.side] = Math.max(reach[port.side], renderedPortSize(port, forcedPortSize) / 2);
+            }
+            return { id: node.id, x: origin.x - reach.left, y: origin.y - reach.top,
+                width: size.width + reach.left + reach.right, height: size.height + reach.top + reach.bottom };
         })
-        .map(node => ({ id: node.id, ...absOf(node.id), ...sizeOf(node) }))
         .filter(o => o.width > 0 && o.height > 0);
     const requestById = new Map(requests.map(request => [request.id, request]));
     const affected = movement ? affectedMovementRoutes(requests, nodes, movement.before) : undefined;
@@ -417,9 +456,7 @@ function reroutePositionedEdges(
     }
     const automaticRequests = requests.filter(request => !fixedRoutes.has(request.id));
     const routes = movement || routingType === 'manhattan' || routingType === 'orthogonal' && quality === 'tidy'
-        ? routeOrthogonalEdges(requests, obstacles, 18, 'long-first', {
-            ...(quality === 'tidy' ? {} : { refineRounds: 0 }), fixedRoutes,
-        })
+        ? routeClearOfPorts(requests, obstacles, partObstacles, quality, fixedRoutes)
         : routingType === 'straight' || routingType === 'arc'
         ? new Map(automaticRequests.map(request => [request.id, [request.source, request.target]]))
         : routingType === 'elbow' ? new Map(automaticRequests.map(r => [r.id, elbowRoute(r.source, r.target, r.sourceSide, r.targetSide)]))
@@ -2312,21 +2349,10 @@ function DiagramCanvasInner() {
         if (!owner || !target) return;
         if (!target.nested && activeRendererRef.current.multiWallPortDrag) {
             const requestedSide = side ?? target.side;
-            const size = renderedPortSize(target, activeRendererRef.current.forcedPortSize);
             const width = Number(owner.width ?? owner.style?.width), height = Number(owner.height ?? owner.style?.height);
-            const proposed = { ...target, side: requestedSide,
-                x: requestedSide === 'left' ? -size/2 : requestedSide === 'right' ? width-size/2 : y,
-                y: requestedSide === 'top' ? -size/2 : requestedSide === 'bottom' ? height-size/2 : y };
-            const elements = [...document.querySelectorAll<HTMLElement>('.react-flow__node')];
-            const ownerElement = elements.find(el => el.dataset.id === ownerId);
-            const portElement = ownerElement && [...ownerElement.querySelectorAll<HTMLElement>('[data-ibd-port]')].find(el => el.dataset.ibdPort === portId);
-            const ancestors = new Set<string>();let parent = owner.parentId;
-            while(parent && !ancestors.has(parent)){ancestors.add(parent);parent=nodesRef.current.find(n=>n.id===parent)?.parentId;}
-            const bounds = ownerElement && portElement ? measuredPortBounds(ownerElement, portElement, size,
-                activeRendererRef.current.portLabelPlacement(proposed, { labelOffset: size + PORT_LABEL_OFFSET }), ancestors, getViewport().zoom) : undefined;
-            const slot = legalPortSlot({ ...target, wallSpan: portWallSpan(target) },
+            const slot = draggedPortSlot({ ...target, wallSpan: portWallSpan(target) },
                 ((owner.data.ports ?? []) as PortInfo[]).map(port => ({ ...port, wallSpan: portWallSpan(port) })),
-                requestedSide, y, width, height, bounds);
+                requestedSide, y, width, height);
             if (!slot) return;
             side = slot.side;
             y = side === 'left' || side === 'right' ? slot.y : slot.x;
@@ -3518,29 +3544,38 @@ function DiagramCanvasInner() {
         if (node.type === 'annotationNode') { setLayoutEditVersion(version => version + 1); return; }
 
         // A part may not be dropped overlapping a sibling — only a parent may
-        // contain a child. An overlapping drop reverts to where the drag began.
+        // contain a child. An overlapping drop lands at the nearest free spot
+        // beside the sibling, and reverts only when the parent has no room.
+        let landing: { x: number; y: number } | null = null;
         if (activeRendererRef.current.preventPartOverlap && start) {
             const sizeOf = (n: FlowNode) => ({
-                w: Number(n.width ?? (n.style as { width?: number })?.width ?? n.measured?.width ?? 0),
-                h: Number(n.height ?? (n.style as { height?: number })?.height ?? n.measured?.height ?? 0),
+                width: Number(n.width ?? (n.style as { width?: number })?.width ?? n.measured?.width ?? 0),
+                height: Number(n.height ?? (n.style as { height?: number })?.height ?? n.measured?.height ?? 0),
             });
             const self = sizeOf(node);
-            const gap = 4;
-            const overlaps = nodesRef.current.some(other => {
-                if (other.id === node.id || other.parentId !== node.parentId || other.hidden || other.type === 'annotationNode') return false;
-                const os = sizeOf(other);
-                if (self.w <= 0 || self.h <= 0 || os.w <= 0 || os.h <= 0) return false;
-                return x < other.position.x + os.w + gap && x + self.w + gap > other.position.x
-                    && y < other.position.y + os.h + gap && y + self.h + gap > other.position.y;
-            });
-            if (overlaps) {
-                restoreMovementSnapshot(start.geometry,
-                    movementGeometryChanges(start.geometry, captureMovementGeometry(nodesRef.current, edgesRef.current)));
-                return;
+            const siblings = nodesRef.current.filter(other => other.id !== node.id && other.parentId === node.parentId
+                && !other.hidden && other.type !== 'annotationNode')
+                .map(other => ({ ...other.position, ...sizeOf(other) }))
+                .filter(other => other.width > 0 && other.height > 0);
+            const parent = node.parentId ? nodesRef.current.find(other => other.id === node.parentId) : undefined;
+            const parentSize = parent && sizeOf(parent);
+            if (self.width > 0 && self.height > 0) {
+                landing = nearestFreePosition({ x, y }, self, siblings, 4,
+                    parentSize && parentSize.width > 0 ? { x: 0, y: 0, ...parentSize } : undefined);
+                if (!landing) {
+                    restoreMovementSnapshot(start.geometry,
+                        movementGeometryChanges(start.geometry, captureMovementGeometry(nodesRef.current, edgesRef.current)));
+                    return;
+                }
             }
         }
         // Finish any queued live node/port/endpoint work before freezing the drop.
         flushGeometryUpdate(start.geometry);
+        if (landing && (landing.x !== x || landing.y !== y)) {
+            const placed = landing;
+            nodesRef.current = nodesRef.current.map(other => other.id === node.id ? { ...other, position: placed } : other);
+            setNodes(nodesRef.current);
+        }
         let accepted = true;
         const finalized = reroutePositionedEdges(nodesRef.current, edgesRef.current, 'tidy',
             activeRendererRef.current.forcedPortSize, routingRef.current.type, false, {

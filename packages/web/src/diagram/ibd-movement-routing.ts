@@ -45,6 +45,20 @@ export function affectedMovementRoutes(
             && Math.abs(width-oldWidth)<1e-8 && Math.abs(height-oldHeight)<1e-8) return [];
         return [{ id:node.id, ...b, width, height }];
     });
+    // A port moved along its wall can land on a connector that does not end at
+    // it; that connector is affected too. Its own connectors end on its box.
+    const movedPorts: RouteObstacle[] = nodes.flatMap(node => {
+        if (node.hidden) return [];
+        const oldPorts = new Map((oldNodes.get(node.id)?.ports ?? []).map(port => [port.id, port]));
+        const origin = absolute(node.id, false);
+        return ((node.data.ports ?? []) as Array<{ id: string; x: number; y: number; side?: string; size?: number }>)
+            .filter(port => { const old = oldPorts.get(port.id);
+                return !old || old.x !== port.x || old.y !== port.y || old.side !== port.side; })
+            .map(port => ({ id: port.id, x: origin.x + port.x, y: origin.y + port.y,
+                width: port.size ?? 32, height: port.size ?? 32 }));
+    });
+    const touches = (p: RoutePoint, box: RouteObstacle) => p.x >= box.x - 1 && p.x <= box.x + box.width + 1
+        && p.y >= box.y - 1 && p.y <= box.y + box.height + 1;
     const near = (a:RoutePoint,b:RoutePoint) => Math.abs(a.x-b.x)<1e-8 && Math.abs(a.y-b.y)<1e-8;
     return new Set(requests.filter(request => {
         const old=oldEdges.get(request.id), points=old?.points as RoutePoint[]|undefined;
@@ -52,6 +66,7 @@ export function affectedMovementRoutes(
             || old?.sourceSide !== request.sourceSide || old?.targetSide !== request.targetSide) return true;
         const ancestors = new Set([
             ...(request.sourceAncestorIds??[]),...(request.targetAncestorIds??[])]);
-        return moved.some(box => !ancestors.has(box.id) && routeEntersBody(points,box));
+        return moved.some(box => !ancestors.has(box.id) && routeEntersBody(points,box))
+            || movedPorts.some(box => !touches(request.source,box) && !touches(request.target,box) && routeEntersBody(points,box));
     }).map(request => request.id));
 }
