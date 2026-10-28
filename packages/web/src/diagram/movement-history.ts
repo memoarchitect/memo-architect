@@ -2,7 +2,7 @@ import type { Edge, Node } from '@xyflow/react';
 
 const portKeys = ['x', 'y', 'side', 'size', 'alongOffset', 'faceOuter'] as const;
 const edgeKeys = ['points', 'sourceOffset', 'targetOffset', 'sourceSide', 'targetSide',
-    'sourceT', 'targetT', 'manualLanding', 'manualRoute', 'routingType', 'labelPoint'] as const;
+    'sourceT', 'targetT', 'manualLanding', 'manualRoute', 'routingType', 'routingOverride', 'labelPoint'] as const;
 type Fields = Record<string, unknown>;
 interface NodeGeometry {
     id: string;
