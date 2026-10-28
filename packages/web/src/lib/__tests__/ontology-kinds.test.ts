@@ -100,3 +100,30 @@ describe('OntologyKindCatalog.of', () => {
         expect(OntologyKindCatalog.of(null).options()).toEqual([]);
     });
 });
+
+describe('OntologyKindCatalog hierarchy', () => {
+    const anatomy = (name: string, superType?: string, extra: Partial<RegistryKind> = {}) =>
+        kind(name, { superType, namespace: ['vocabulary'], ...extra });
+    const registry: RegistryKind[] = [
+        anatomy('AnatomyEntity', 'MemoPart', { isAbstract: true }),
+        anatomy('AnatomicalEntity', 'AnatomyEntity'),
+        anatomy('Organ', 'AnatomicalEntity'),
+        anatomy('Stomach', 'Organ'),
+        anatomy('Jejunum', 'Organ'),
+        kind('MemoPart', { isAbstract: true, namespace: ['core', 'common'] }),
+    ];
+    const tree = new OntologyKindCatalog(registry, ['Stomach', 'Jejunum', 'Stomach']).hierarchy();
+
+    it('puts each type under the type it specializes, headings included, and stops where the domain ends', () => {
+        expect(tree.parentOf.get('Stomach')).toBe('Organ');
+        expect(tree.parentOf.get('Jejunum')).toBe('Organ');
+        expect(tree.parentOf.get('Organ')).toBe('AnatomicalEntity');
+        expect(tree.parentOf.get('AnatomicalEntity')).toBe('AnatomyEntity');
+        expect(tree.parentOf.has('AnatomyEntity')).toBe(false); // MemoPart is another domain
+        expect(tree.options.map(option => option.value).sort()).toEqual(['AnatomicalEntity', 'AnatomyEntity', 'Jejunum', 'Organ', 'Stomach']);
+    });
+
+    it('counts a heading by the elements beneath it', () => {
+        expect(tree.options.find(option => option.value === 'Organ')?.hint).toBe('3');
+    });
+});

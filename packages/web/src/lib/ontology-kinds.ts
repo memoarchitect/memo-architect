@@ -111,6 +111,35 @@ export class OntologyKindCatalog implements KindCatalog {
             .sort((a, b) => a.name.localeCompare(b.name));
     }
 
+    /**
+     * The same options as a tree: each type under the type it specializes, within its domain, so a family such as
+     * anatomy opens from its root (`AnatomyEntity`, then organ, then stomach) instead of listing every class flat.
+     * A type that no element is exactly of but that holds others stays as a heading; the climb stops where the
+     * specialization leaves the domain (into `MemoPart`), because that root would hold the whole model.
+     */
+    hierarchy(): { options: TypeFilterOption[]; parentOf: Map<string, string> } {
+        const domainOf = (kind: RegistryKind) => kind.namespace?.[0] ?? kind.layer ?? 'other';
+        const included = new Map<string, RegistryKind>();
+        const parentOf = new Map<string, string>();
+        for (const kind of this.elementKinds()) {
+            let current: RegistryKind | undefined = kind;
+            while (current && !included.has(current.name)) {
+                included.set(current.name, current);
+                const parent: RegistryKind | undefined = current.superType ? this.byName.get(current.superType) : undefined;
+                if (!parent || domainOf(parent) !== domainOf(current) || NOT_ELEMENT_TYPES.test(parent.construct ?? '') || !this.isOntology(parent)) break;
+                parentOf.set(current.name, parent.name);
+                current = parent;
+            }
+        }
+        const options = [...included.values()]
+            .map(kind => ({ kind, group: titleCase(domainOf(kind)) }))
+            .sort((a, b) => a.group.localeCompare(b.group) || (a.kind.label ?? a.kind.name).localeCompare(b.kind.label ?? b.kind.name))
+            .map(({ kind, group }) => ({
+                value: kind.name, label: kind.label ?? kind.name, group, hint: String(this.total(kind.name)), keywords: kind.name,
+            }));
+        return { options, parentOf };
+    }
+
     /** One option per type, grouped under its ontology domain, with its element count. */
     options(): TypeFilterOption[] {
         return this.elementKinds()

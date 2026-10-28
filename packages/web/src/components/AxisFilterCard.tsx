@@ -23,9 +23,11 @@ export const NO_FILTER: FilterState = { kinds: [], contains: '', advanced: false
 export const queryOf = (filter: FilterState) => (filter.advanced ? filter.raw.trim() : queryFromFilter(filter.kinds, filter.contains));
 
 /** One axis: what to list, counted live. */
-export function AxisFilterCard({ title, filter, onChange, kindOptions, evaluation, counting, showName = true, emptyHint = 'No filter: decided after it is created.' }: {
+export function AxisFilterCard({ title, filter, onChange, kindOptions, kindParents, evaluation, counting, showName = true, emptyHint = 'No filter: decided after it is created.' }: {
     title: string; filter: FilterState; onChange: (next: FilterState) => void;
     kindOptions: TypeFilterOption[]; evaluation?: AxisEvaluation; counting: boolean;
+    /** Each type's parent, when the types are to be offered as a hierarchy. */
+    kindParents?: ReadonlyMap<string, string>;
     /** Offer "Name contains" beside the types. A screen that selects by type or query alone leaves it out. */
     showName?: boolean;
     /** What is said under an axis with nothing chosen. */
@@ -56,7 +58,7 @@ export function AxisFilterCard({ title, filter, onChange, kindOptions, evaluatio
                     <div style={{ display: 'grid', gap: '3px' }}>
                         <span style={caption}>Element types</span>
                         <TypeFilterSelect
-                            label="" allLabel="Choose types…" options={kindOptions} selected={filter.kinds}
+                            label="" allLabel="Choose types…" options={kindOptions} parentOf={kindParents} selected={filter.kinds}
                             onChange={kinds => onChange({ ...filter, kinds })} width={210} describedAs={`${title} element types`}
                             placeholder="Find a type…"
                         />

@@ -29,6 +29,7 @@ export interface TraceBuilderBarProps {
     rowSelection: TraceAxisIds;
     columnSelection: TraceAxisIds;
     kindOptions: TypeFilterOption[];
+    kindParents?: ReadonlyMap<string, string>;
     linkOptions: TypeFilterOption[];
     linkTypes: string[];
     onLinkTypes: (types: string[]) => void;
@@ -76,8 +77,8 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', flexBasis: '100%', order: 5 }}>
-                    <TraceAxisField title="Rows" axis={props.rowAxis} onChange={props.onRowAxis} kindOptions={props.kindOptions} selection={props.rowSelection} />
-                    <TraceAxisField title="Columns" axis={props.columnAxis} onChange={props.onColumnAxis} kindOptions={props.kindOptions} selection={props.columnSelection} />
+                    <TraceAxisField title="Rows" axis={props.rowAxis} onChange={props.onRowAxis} kindOptions={props.kindOptions} kindParents={props.kindParents} selection={props.rowSelection} />
+                    <TraceAxisField title="Columns" axis={props.columnAxis} onChange={props.onColumnAxis} kindOptions={props.kindOptions} kindParents={props.kindParents} selection={props.columnSelection} />
                 </div>
             )}
             <div style={{ display: 'grid', gap: '3px' }}>
