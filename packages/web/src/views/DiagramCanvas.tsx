@@ -8,7 +8,6 @@ import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeomet
 import { restoreIbdGeometry, type IbdResizeHandler } from '../diagram/ibd-resize-integration';
 import { ibdRouting, withIbdRouting, mergeRenderedLayout, reconnectRoute, type RoutingLayout, type IbdRoutingType, type IbdRoutingMode } from '../diagram/ibd-routing';
 import { IbdRoutingControls } from '../diagram/toolbars/IbdRoutingControls';
-import { registerComparisonSource, diagramRendererId, JOINTJS_RENDERER_ID, type PilotLayout } from '../diagram/diagram-renderer-selection';
 // ─── DiagramCanvas ────────────────────────────────────────────────────────────
 //
 // Interactive diagram canvas with:
@@ -28,7 +27,6 @@ import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarge
 import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
-import { useSyncExternalStore } from 'react';
 import {
     ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, MiniMap,
     useNodesState, useEdgesState, useReactFlow, useUpdateNodeInternals, addEdge,
@@ -111,8 +109,6 @@ import { resolveLegend } from './templates/legend';
 import { landingsFromPoints, type Side as DiagramEdgeSide } from './templates/landing-rules';
 import { declaredSubject, definitionIndex, resolveDefinition } from './templates/composition-tree';
 import { toolbarOperationsFor } from './diagram-toolbar-capabilities';
-import { JointJsCanvas } from '../diagram/renderers/jointjs/JointJsCanvas';
-import { selectedRendererId, subscribeRendererSelection } from '../diagram/renderer-selection';
 
 /** The view's own element, which carries the `expose` naming its subject. */
 const viewElementOf = (
@@ -1155,15 +1151,6 @@ function DiagramCanvasInner() {
     };
 
     const isIbdView = (selectedDiagram?.viewKind ?? diagramMeta?.viewKind) === 'interconnection';
-    const inheritedRendererId = useSyncExternalStore(subscribeRendererSelection, selectedRendererId, selectedRendererId);
-    const jointJsActive = isIbdView && diagramRendererId(currentLayout as PilotLayout | undefined, inheritedRendererId, true) === JOINTJS_RENDERER_ID;
-    useEffect(() => {
-        if (!selectedDiagramId || readOnly || jointJsActive) return;
-        return registerComparisonSource(selectedDiagramId, () => ({
-            nodes: nodesRef.current.map(node => ({ ...node, data: { ...node.data } })),
-            edges: edgesRef.current.map(edge => ({ ...edge, data: { ...edge.data } })),
-        }));
-    }, [selectedDiagramId, readOnly, jointJsActive]);
     const activeRenderer = resolveInterconnectionRenderer(
         declaredEnum('rendererProfile') ?? (isIbdView ? 'ibd' : undefined),
     );
@@ -3213,10 +3200,10 @@ function DiagramCanvasInner() {
                 fitDiagramFrame(400);
             }
         };
-        if (readOnly || jointJsActive) return;
+        if (readOnly) return;
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [readOnly, fitDiagramFrame, dismissSelectionTools, undoLastDiagramEdit, redoLastDiagramEdit, jointJsActive]);
+    }, [readOnly, fitDiagramFrame, dismissSelectionTools, undoLastDiagramEdit, redoLastDiagramEdit]);
 
     // ─── Drag/drop from palette ───────────────────────────────────────────────
 
@@ -3999,7 +3986,7 @@ function DiagramCanvasInner() {
         gridVisible, setGridVisible, setSnapEnabled,
         exportMenuOpen, setExportMenuOpen, exportBusy, exportError, setExportError, downloadDiagram,
         tidyConnectors, autoLayoutEnabled, markManualLayout, mergeDiagramLayouts, setRelayoutNonce,
-        ibdRoutingControls: jointJsActive ? <span>JointJS uses native routing and segment tools. Shared routing types, resize and Undo are unavailable.</span> : <IbdRoutingControls type={routing.type} mode={routePreviewMode ?? routing.mode}
+        ibdRoutingControls: <IbdRoutingControls type={routing.type} mode={routePreviewMode ?? routing.mode}
             onShortenPorts={readOnly ? undefined : () => shortenPortRoutes(false)}
             onPlaceAllPorts={readOnly ? undefined : () => shortenPortRoutes(true)}
             onTypeChange={type => changeIbdRouting({ type })} onModeChange={mode => changeIbdRouting({ mode })} />,
@@ -4149,7 +4136,7 @@ function DiagramCanvasInner() {
                 </aside>}
 
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
-                {viewKind === 'interconnection' && toolbarCollapsed && !readOnly && !jointJsActive && (
+                {viewKind === 'interconnection' && toolbarCollapsed && !readOnly && (
                     <div className="shrink-0 border-b bg-white px-3 py-2" aria-label="IBD routing controls">
                         {toolbarCtx.ibdRoutingControls}
                     </div>
@@ -4158,7 +4145,7 @@ function DiagramCanvasInner() {
                 {/* Palette drop and double-click-to-create author model
                     elements, so they answer to the same rule as drawing a
                     connector: a view reads the model, it does not write one. */}
-                <div ref={canvasRef} className={`flex-1 min-h-0 ${jointJsActive ? 'flex flex-col' : 'relative'}`}
+                <div ref={canvasRef} className="flex-1 relative min-h-0"
                     onDragOver={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onDragOver}
                     onDrop={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onDrop}
                     onDoubleClick={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onPaneDoubleClick}
@@ -4510,22 +4497,7 @@ function DiagramCanvasInner() {
                     />
                 )}
 
-                {jointJsActive ? <JointJsCanvas
-                    embedded
-                    readOnly={readOnly}
-                    gridVisible={gridVisible}
-                    refreshKey={layoutEditVersion}
-                    collapsedNodes={collapsedInterconnectionNodes}
-                    focusId={focusedInterconnectionId}
-                    onFocus={setFocusedInterconnectionId}
-                    isFullscreen={isCanvasFullscreen}
-                    onToggleFullscreen={() => {
-                        const canvas = canvasRef.current;
-                        if (!canvas) return;
-                        if (document.fullscreenElement) void document.exitFullscreen();
-                        else void canvas.requestFullscreen?.();
-                    }}
-                /> : <ReactFlow
+                <ReactFlow
                     className="memo-diagram-canvas"
 
                     nodes={nodes}
@@ -4683,7 +4655,7 @@ function DiagramCanvasInner() {
                             }}
                         >{miniMapOpen ? '\u2013' : '\u25A2'}</button>
                     )}
-                </ReactFlow>}
+                </ReactFlow>
             </div>
             </div>
             </div>

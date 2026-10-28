@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiagramLayout } from '@memoarchitect/tools/browser';
-import { withIbdRouting, mergeRenderedLayout, mergeNativeEntries, ibdRouting } from '../ibd-routing';
+import { withIbdRouting, mergeRenderedLayout, ibdRouting } from '../ibd-routing';
 import { LayoutSaveObservation } from '../layout-save-observation';
 
 const seed = () => ({
@@ -8,12 +8,11 @@ const seed = () => ({
     nodes: { hidden: { x: -40, y: 20 }, shown: { x: 10, y: 20 } },
     edges: { wire: { points: [{ x: 1, y: 2 }, { x: 30, y: 40 }] } },
     canvas: { autoLayout: true, zoom: 0.75, pan: { x: -10, y: 5 },
-        jointjs: { nodes: { native: { x: 3, y: 4 } } },
-        x6: { nodes: { native: { x: 7, y: 8 } } }, futureCanvas: { keep: true } },
+        plugin: { nodes: { native: { x: 3, y: 4 } } }, futureCanvas: { keep: true } },
 }) as DiagramLayout;
 
 describe('layout ownership boundaries', () => {
-    it('routing settings retain placement, legacy points, viewport and native snapshots', () => {
+    it('routing settings retain placement, legacy points, viewport and unknown canvas fields', () => {
         const original = seed();
         const manual = withIbdRouting(original, { mode: 'manual' });
         const typed = withIbdRouting(manual, { type: 'arc' });
@@ -31,12 +30,6 @@ describe('layout ownership boundaries', () => {
         expect(updated.canvas).toEqual({ ...original.canvas, autoLayout: false });
         expect((updated as any).future).toEqual({ keep: true });
         expect(ibdRouting(updated).mode).toBe('automatic');
-    });
-    it('native geometry writes retain opaque entry fields and hidden entries but replace vertex arrays', () => {
-        expect(mergeNativeEntries<Record<string, unknown>>({ shown: { x: 1, y: 2, opaque: { keep: true }, ports: { pin: { x: 2, future: true } } }, hidden: { x: -3, y: 4 } },
-            { shown: { x: 50, y: 60, ports: { pin: { x: 5 } } } })).toEqual({ shown: { x: 50, y: 60, opaque: { keep: true }, ports: { pin: { x: 5, future: true } } }, hidden: { x: -3, y: 4 } });
-        expect(mergeNativeEntries({ wire: [{ x: 1, y: 2 }] }, { wire: [{ x: 5, y: 6 }] }))
-            .toEqual({ wire: [{ x: 5, y: 6 }] });
     });
     it('sent is pending; only the current completed save can become saved', () => {
         const tracker = new LayoutSaveObservation(), a = seed();
