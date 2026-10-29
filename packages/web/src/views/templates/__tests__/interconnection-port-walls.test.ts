@@ -133,6 +133,20 @@ describe('declared port walls drive automatic layout', () => {
         }
     });
 
+    it('lands a connector on the pin its end names, and on the connector body when it names none', async () => {
+        const model = pumpLikeModel() as unknown as { relationships: Array<Record<string, unknown>> };
+        model.relationships.push(
+            { ...rel('p1', 'ExchangesWith', 'dataOut', 'servicePanel'), targetEnd: 'powerSwitch' },
+            rel('p2', 'ExchangesWith', 'rs485Wall', 'servicePanel'),
+        );
+        const { edges } = await computeInterconnectionLayout(model as unknown as MemoModelDTO, {
+            portWalls: new Map<string, PortSide>([['servicePanel', 'bottom']]),
+        });
+        const edge = (id: string) => edges.find(e => e.id === id)!;
+        expect((edge('p1').data as { targetPortId?: string }).targetPortId).toBe('powerSwitch');
+        expect((edge('p2').data as { targetPortId?: string }).targetPortId).toBe('servicePanel');
+    });
+
     it('leaves an undeclared model laid out exactly as before', async () => {
         const plain = await computeInterconnectionLayout(pumpLikeModel());
         for (const p of portsOf(plain.nodes as never, 'case')) {
