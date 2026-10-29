@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@memoarchitect/ontology": "0.16.4",
-    "@memoarchitect/tools": "0.16.4",
+    "@memoarchitect/tools": "0.16.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "commander": "^12.1.0",
