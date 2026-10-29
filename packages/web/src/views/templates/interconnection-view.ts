@@ -1505,12 +1505,22 @@ export async function computeInterconnectionLayout(
         return result;
     };
     type EdgeDraft = { edge: Edge; route: OrthogonalRouteRequest };
+    /** The nested pin of `portId` that a connector's end names, when it names one. */
+    const pinNamed = (portId: string, end: string | undefined): string | undefined => {
+        if (!end) return undefined;
+        for (const [child, parent] of parentPort) {
+            if (parent === portId && (portEls.get(child)?.name === end || child.endsWith(`::${end}`))) return child;
+        }
+        return undefined;
+    };
     const edgeDrafts: EdgeDraft[] = connectors.flatMap((rel, i) => {
         const source = portEls.has(rel.sourceId) ? portOwner.get(rel.sourceId)! : rel.sourceId;
         const target = portEls.has(rel.targetId) ? portOwner.get(rel.targetId)! : rel.targetId;
         if (!layouts.has(source) || !layouts.has(target)) return [];
-        const sourcePort = renderedPort(rel.sourceId) ?? visiblePortForPart(source, target, 'source');
-        const targetPort = renderedPort(rel.targetId) ?? visiblePortForPart(target, source, 'target');
+        // A flow written to `connector.pin` names its pin in the end; the relationship's id stays the connector's, so
+        // the connector would otherwise land on the connector's body instead of on the pin it was drawn to.
+        const sourcePort = renderedPort(pinNamed(rel.sourceId, rel.sourceEnd) ?? rel.sourceId) ?? visiblePortForPart(source, target, 'source');
+        const targetPort = renderedPort(pinNamed(rel.targetId, rel.targetEnd) ?? rel.targetId) ?? visiblePortForPart(target, source, 'target');
         // Colour by transported item; the legend explains the categories.
         const flowKind = classifyIbdFlow(rel.flowItem, rel.type);
         const flowColor = IBD_FLOW_COLORS[flowKind];
