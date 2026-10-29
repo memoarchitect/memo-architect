@@ -71,7 +71,7 @@ import {
 } from './templates/composition-tree';
 
 import {
-    PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide,
+    PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide, portAnchorOffset,
     INTERCONNECTION_PORT_SIZE, PORT_LABEL_OFFSET, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
     type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
@@ -362,22 +362,9 @@ function reroutePositionedEdges(
         const liveOffset = (nodeId: string, portId: unknown, fallback: unknown, side: unknown) => {
             if (typeof portId === 'string') {
                 const port = ((byId.get(nodeId)?.data as {
-                    ports?: Array<{ id: string; x: number; y: number; size?: number; nestedCount?: number }>;
+                    ports?: PortInfo[];
                 })?.ports ?? []).find(candidate => candidate.id === portId);
-                if (port) {
-                    const size = forcedPortSize ?? port.size ?? INTERCONNECTION_PORT_SIZE;
-                    // Connectors always meet the MIDDLE of a port's OUTER edge — the
-                    // edge its (effective) wall faces. A nested-parent port clusters
-                    // its pins on that same wall now, so its own centre is the anchor
-                    // (no group-centreline shift).
-                    const cx = port.x + size / 2;
-                    const cy = port.y + size / 2;
-                    return side === 'left' ? { x: cx - size / 2, y: cy }
-                        : side === 'right' ? { x: cx + size / 2, y: cy }
-                        : side === 'top' ? { x: cx, y: cy - size / 2 }
-                        : side === 'bottom' ? { x: cx, y: cy + size / 2 }
-                        : { x: cx, y: cy };
-                }
+                if (port) return portAnchorOffset(port, side as PortSide | undefined, forcedPortSize);
             }
             return fallback as { x: number; y: number } | undefined;
         };
