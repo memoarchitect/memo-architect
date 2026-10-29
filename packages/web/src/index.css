@@ -385,3 +385,12 @@ body .react-flow {
     height: 38px;
     padding: 0;
 }
+
+/* The routing controls are dock tiles; with the dock closed they sit in one row, and a spacing pair reads as label then
+   its two steppers on a single line, the same as every other group there. */
+.memo-ibd-spacing { display: grid; gap: 4px; }
+.memo-ibd-spacing__steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.memo-ibd-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.memo-ibd-strip > .memo-diagram-tools__caption { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8CA0B1; margin-left: 6px; }
+.memo-ibd-strip > .memo-ibd-spacing { display: flex; align-items: center; gap: 6px; }
+.memo-ibd-strip > .memo-ibd-spacing .memo-ibd-spacing__steps { display: flex; gap: 6px; }

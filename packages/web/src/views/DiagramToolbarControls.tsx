@@ -29,7 +29,7 @@ export const Icon = {
     arrowUp: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 20V6" /><path d="m6 11 6-6 6 6" /></>),
     panelCollapse: ({ size = 16 }: IconProps) => svg(size, <><path d="M18 4v16" /><path d="m13 7-5 5 5 5" /></>),
     elements: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="6" height="6" rx="1" /><circle cx="17" cy="7" r="3" /><path d="m7 14 4 6H3z" /><path d="m17 14 3 3-3 3-3-3z" /></>),
-    tools: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="1.8" fill="currentColor" /><circle cx="15" cy="12" r="1.8" fill="currentColor" /><circle cx="11" cy="18" r="1.8" fill="currentColor" /></>),
+    tools: ({ size = 16 }: IconProps) => svg(size, <path d="M7 10h3V7L6.5 3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8z" />),
     overlay: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="7" width="12" height="12" rx="1.5" /><rect x="8" y="3" width="12" height="12" rx="1.5" /></>),
     eye: ({ size = 16 }: IconProps) => svg(size, <><path d="M2.5 12s3.4-5 9.5-5 9.5 5 9.5 5-3.4 5-9.5 5-9.5-5-9.5-5Z" /><circle cx="12" cy="12" r="2.2" /></>),
     split: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></>),
@@ -61,6 +61,8 @@ export const Icon = {
         <text x="12" y="15.2" textAnchor="middle" fontSize={text.length > 2 ? 8 : 10} fontWeight={700} fill="currentColor" stroke="none" fontFamily="inherit">{text}</text>
     </>),
     // Connector routing, one glyph per way of drawing a line between two boxes.
+    routeManhattan: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H9v-4h4v-4h2V6h2.4" /></>),
+    routeElbow: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H19V7.6" /></>),
     routeStraight: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.4 16.8 17.6 7.2" /></>),
     routeOrthogonal: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H12V6h5.4" /></>),
     routeRounded: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6.6 18H9a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3h2.4" /></>),
@@ -68,6 +70,11 @@ export const Icon = {
     routeArc: ({ size = 16 }: IconProps) => svg(size, <><circle cx="5" cy="18" r="1.6" /><circle cx="19" cy="6" r="1.6" /><path d="M6 16.6C6 9 11 6 17.6 5.4" /></>),
     /** Save as you type: a disk with the arrow of something that repeats. */
     autosave: ({ size = 16 }: IconProps) => svg(size, <><path d="M5 3h10l3 3v6" /><path d="M8 3v5h6V3" /><path d="M5 3v18h6" /><path d="M21 15a5 5 0 1 0-1.5 3.5" /><path d="M21 12.5V16h-3.5" /></>),
+    captions: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 7h8" /><path d="M4 12h16" /><path d="M4 17h12" /></>),
+    manual: ({ size = 16 }: IconProps) => svg(size, <><path d="M7 4l10 7-4.5 1.2L15 17l-2.2 1-2.4-4.7L7 16z" /></>),
+    automatic: ({ size = 16 }: IconProps) => svg(size, <><path d="M5 19 16 8" /><path d="m14 6 1-3 1 3 3 1-3 1-1 3-1-3-3-1z" /></>),
+    shorten: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 12h6" /><path d="M20 12h-6" /><path d="m8 8 4 4-4 4" transform="translate(-0 0)" /><path d="m16 8-4 4 4 4" /></>),
+    ports: ({ size = 16 }: IconProps) => svg(size, <><rect x="6" y="6" width="12" height="12" rx="1.5" /><rect x="2.5" y="9.5" width="3" height="5" rx=".8" /><rect x="18.5" y="9.5" width="3" height="5" rx=".8" /></>),
     clock: ({ size = 16 }: IconProps) => svg(size, <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></>),
 };
 

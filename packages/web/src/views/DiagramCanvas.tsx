@@ -467,12 +467,25 @@ function reroutePositionedEdges(
     const replacingManual = Boolean(movement?.replaceManual);
     const manualAffected = edges.filter(edge => affected?.has(edge.id) && edge.data?.manualRoute).map(edge => edge.id);
     if (manualAffected.length && movement?.replaceManual && !movement.replaceManual(manualAffected)) return edges;
+    // A saved route belongs to the arrangement it was drawn against. When its ends no longer meet the ports it joins (a
+    // port was moved since), it would hang in empty space, so it gives way to a fresh route instead of being kept.
+    const keepsSavedRoute = (id: string, points: Array<{ x: number; y: number }>) => {
+        if (!fixedEdgeIds?.has(id)) return false;
+        const request = requestById.get(id);
+        if (!request) return true;
+        const near = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
+        return near(points[0], request.source) && near(points[points.length - 1], request.target);
+    };
+    const staleSaved = new Set([...(fixedEdgeIds ?? [])].filter(id => {
+        const saved = edges.find(edge => edge.id === id)?.data?.points as Array<{ x: number; y: number }> | undefined;
+        return Boolean(saved?.length) && !keepsSavedRoute(id, saved!);
+    }));
     const fixedRoutes = new Map<string, Array<{x:number;y:number}>>();
     for (const edge of edges) {
         const request = requestById.get(edge.id);
         const points = edge.data?.points as Array<{x:number;y:number}> | undefined;
         if (!request || !points?.length) continue;
-        if (fixedEdgeIds?.has(edge.id) || affected && !affected.has(edge.id)) fixedRoutes.set(edge.id, points);
+        if (keepsSavedRoute(edge.id, points) || affected && !affected.has(edge.id)) fixedRoutes.set(edge.id, points);
         else if (edge.data?.manualRoute && !replacingManual)
             fixedRoutes.set(edge.id, reconnectRoute(points, request.source, request.target));
     }
@@ -520,7 +533,8 @@ function reroutePositionedEdges(
     };
     const routed = edges.map(edge => {
         const request = requestById.get(edge.id);
-        if (!request || fixedEdgeIds?.has(edge.id) || affected && !affected.has(edge.id)) return edge;
+        const savedPoints = edge.data?.points as Array<{ x: number; y: number }> | undefined;
+        if (!request || savedPoints?.length && keepsSavedRoute(edge.id, savedPoints) || affected && !affected.has(edge.id)) return edge;
         if (edge.data?.manualRoute && !replacingManual) {
             const points = (edge.data.points as Array<{ x: number; y: number }> | undefined) ?? [];
             if (points.length >= 2) return withRoute(edge, reconnectRoute(points, request.source, request.target));
@@ -547,7 +561,7 @@ function reroutePositionedEdges(
         }),
         obstacles,
     );
-    return routed.map(edge => affected && !affected.has(edge.id) || fixedEdgeIds?.has(edge.id) ? edge : labelled.has(edge.id)
+    return routed.map(edge => affected && !affected.has(edge.id) || fixedEdgeIds?.has(edge.id) && !staleSaved.has(edge.id) ? edge : labelled.has(edge.id)
         ? { ...edge, data: { ...edge.data, labelPoint: labelled.get(edge.id) } }
         : edge);
 }
@@ -4320,7 +4334,7 @@ function DiagramCanvasInner() {
 
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
                 {viewKind === 'interconnection' && toolbarCollapsed && !readOnly && (
-                    <div className="shrink-0 border-b bg-white px-3 py-2" aria-label="IBD routing controls">
+                    <div className="memo-ibd-strip shrink-0 border-b bg-white px-3 py-2" aria-label="IBD routing controls">
                         {toolbarCtx.ibdRoutingControls}
                     </div>
                 )}
