@@ -25,7 +25,7 @@ import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
     PORT_LABEL_MAX, PORT_LABEL_OFFSET, PORT_LABEL_STACKED_WIDTH,
-    NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
+    NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH, portAnchorOffset,
 } from './templates/interconnection-view';
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
 
@@ -766,6 +766,18 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     }); } : undefined}
                 >
                     {renderer.nestedPortHousing(p, { showText: showPortText })}
+                    {/* A connector that ends on the port itself, not on one of its pins, meets the middle of this body's
+                        face, so each face carries an anchor with the same ids a plain port's faces carry. */}
+                    {([
+                        { suffix: '', face: p.side },
+                        { suffix: INNER_HANDLE_SUFFIX, face: OPPOSITE_SIDE[p.side] },
+                    ] as const).map(({ suffix, face }) => {
+                        const at = portAnchorOffset(p, face);
+                        return <div key={suffix || 'outer'} aria-hidden style={{ position: 'absolute', left: at.x, top: at.y, width: 0, height: 0, pointerEvents: 'none' }}>
+                            <BaseHandle type="source" id={`${p.id}${suffix}`} position={SIDE_TO_POSITION[face]} style={handlePinStyle(INTERCONNECTION_PORT_SIZE)} isConnectable={false} />
+                            <BaseHandle type="target" id={`${p.id}${suffix}`} position={SIDE_TO_POSITION[face]} style={handlePinStyle(INTERCONNECTION_PORT_SIZE)} isConnectable={false} />
+                        </div>;
+                    })}
                 </div>
             ))}
 

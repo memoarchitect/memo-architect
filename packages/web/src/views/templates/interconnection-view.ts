@@ -230,6 +230,30 @@ export const NESTED_PIN_INSET = 20;
  */
 export const NESTED_HOUSING_DEPTH = PORT_SIZE + 16;
 
+/**
+ * Where a connector meets a port that carries nested pins. Such a port is drawn as a body straddling its owner's wall
+ * (the housing its pins sit on), so a connector that ends on the port itself, not on one of its pins, meets the middle
+ * of that body's face. `side` is the face the connector arrives on. Other ports are met on their own square.
+ */
+export function portAnchorOffset(
+    port: { x: number; y: number; side?: PortSide; size?: number; nestedCount?: number },
+    side: PortSide | undefined,
+    forcedSize?: number,
+): { x: number; y: number } {
+    const size = forcedSize ?? port.size ?? PORT_SIZE;
+    if (!port.nestedCount) {
+        const cx = port.x + size / 2, cy = port.y + size / 2;
+        return side === 'left' ? { x: cx - size / 2, y: cy } : side === 'right' ? { x: cx + size / 2, y: cy }
+            : side === 'top' ? { x: cx, y: cy - size / 2 } : side === 'bottom' ? { x: cx, y: cy + size / 2 } : { x: cx, y: cy };
+    }
+    const vertical = port.side === 'left' || port.side === 'right';
+    const length = (Math.max(port.nestedCount, 1) - 1) * NESTED_PITCH + PORT_SIZE + NESTED_PIN_INSET * 2;
+    const along = (vertical ? port.y : port.x) + length / 2;
+    const cross = vertical ? port.x : port.y;
+    const face = side === 'left' || side === 'top' ? cross : side === 'right' || side === 'bottom' ? cross + NESTED_HOUSING_DEPTH : cross + NESTED_HOUSING_DEPTH / 2;
+    return vertical ? { x: face, y: along } : { x: along, y: face };
+}
+
 export const INTERCONNECTION_HEADER_HEIGHT = 48; // compact container title + separation
 const HEADER_BAND = INTERCONNECTION_HEADER_HEIGHT;
 const LEAF_HEADER = 44;   // one compact header; long names truncate with a tooltip
@@ -1528,16 +1552,11 @@ export async function computeInterconnectionLayout(
             if (portId) {
                 const info = (portInfoByOwner.get(partId) ?? []).find(p => p.id === portId);
                 if (info) {
-                    const size = options?.forcedPortSize ?? info.size ?? PORT_SIZE;
                     // The connector meets the MIDDLE of the port's OUTER edge (the
-                    // edge its wall faces). A nested-parent port clusters its pins on
-                    // that same wall, so its own centre is the anchor.
-                    const cx = abs.x + info.x + size / 2;
-                    const cy = abs.y + info.y + size / 2;
-                    return side === 'left' ? { x: cx - size / 2, y: cy }
-                        : side === 'right' ? { x: cx + size / 2, y: cy }
-                        : side === 'top' ? { x: cx, y: cy - size / 2 }
-                        : { x: cx, y: cy + size / 2 };
+                    // edge its wall faces). A port that nests pins is met on the
+                    // middle of its body's face (see portAnchorOffset).
+                    const at = portAnchorOffset(info, side, options?.forcedPortSize);
+                    return { x: abs.x + at.x, y: abs.y + at.y };
                 }
             }
             return { x: abs.x + (sourceEnd ? l.width : 0), y: abs.y + l.height / 2 };
