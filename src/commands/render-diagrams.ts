@@ -12,7 +12,7 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-    loadViewLayouts, savedNodeIdResolver, serializeForInlineScript,
+    loadViewLayouts, savedNodeIdResolver, portKeyCodec, serializeForInlineScript,
     type DiagramImage, type DiagramRenderer,
 } from '@memoarchitect/tools';
 import { chromium, type Browser } from 'playwright-core';
@@ -79,7 +79,7 @@ export const renderDiagramsWithChromium: DiagramRenderer = async (refs, outDir, 
     }
     // The model and the project it was read from are the caller's: a pinned release draws its own commit, with
     // that commit's authored layouts, not the working directory's.
-    const layouts = loadViewLayouts(source.projectRoot, source.model.diagrams ?? [], savedNodeIdResolver(source.model as never));
+    const layouts = loadViewLayouts(source.projectRoot, source.model.diagrams ?? [], savedNodeIdResolver(source.model as never), portKeyCodec(source.model as never));
 
     const scratch = mkdtempSync(join(tmpdir(), 'memo-render-'));
     const page = join(scratch, 'index.html');

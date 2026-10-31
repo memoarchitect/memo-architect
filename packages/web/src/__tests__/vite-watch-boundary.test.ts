@@ -38,7 +38,7 @@ describe('vite watch boundary', () => {
 });
 
 describe('files the server writes', () => {
-    it.each(['**/memo.identity.yaml', '**/memo.user.yaml', '**/*.viewlayout'])('is not watched: %s', (pattern) => {
+    it.each(['**/memo.identity.yaml', '**/memo.user.yaml'])('is not watched: %s', (pattern) => {
         expect(config).toContain(pattern);
     });
 });

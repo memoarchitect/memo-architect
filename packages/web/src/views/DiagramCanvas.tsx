@@ -47,7 +47,7 @@ import '@xyflow/react/dist/style.css';
 type RFAny = any;
 
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
-import { computeImpact } from '@memoarchitect/tools/browser';
+import { computeImpact, edgeAttachment } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { requestRelationshipUpdate, saveViewDisplay, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
 import { useDiagramEmbed } from '../diagram/diagram-embed-context';
@@ -318,6 +318,9 @@ function routeClearOfPorts(
     for (const request of blocked) { const points = retried.get(request.id); if (points) routes.set(request.id, points); }
     return routes;
 }
+
+/** How long a diagram edit waits in memory before it is written to the view file. */
+const LAYOUT_SAVE_DELAY_MS = 8000;
 
 /** Space added or removed per gap by one press of a spacing control. */
 const SPACING_STEP = 24;
@@ -1419,8 +1422,8 @@ function DiagramCanvasInner() {
     useEffect(() => {
         if (routeCancelledRenderRef.current) { routeCancelledRenderRef.current = false; return; }
         if (portGestureRef.current || routeGestureRef.current || ibdResizeStartRef.current || !selectedDiagramId || isLayouting || nodes.length === 0 || layoutEditVersion === 0) return;
-        const timer = window.setTimeout(() => {
-            if (portGestureRef.current || routeGestureRef.current || ibdResizeStartRef.current) return;
+        const commit = () => {
+            pendingLayoutSaveRef.current = null;
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
             const viewport = getViewport();
             const layout = withContextChildCoordinates(mergeRenderedLayout(previous, {
@@ -1474,9 +1477,24 @@ function DiagramCanvasInner() {
             mergeDiagramLayouts({ [selectedDiagramId]: layout });
             sendDiagramLayoutUpdate(selectedDiagramId, layout);
             setLayoutEditVersion(0);
-        }, 350);
+        };
+        // The edit lives in memory and is written lazily: every write reaches
+        // the view's SysML file, and the rebuild that follows it is what made
+        // editing choppy when it ran after each pause. Leaving the diagram or
+        // the page flushes it, so a long delay never loses an edit.
+        pendingLayoutSaveRef.current = commit;
+        const timer = window.setTimeout(() => {
+            if (portGestureRef.current || routeGestureRef.current || ibdResizeStartRef.current) return;
+            commit();
+        }, LAYOUT_SAVE_DELAY_MS);
         return () => window.clearTimeout(timer);
     }, [selectedDiagramId, autoLayoutEnabled, isLayouting, layoutEditVersion, nodes, edges, getViewport, mergeDiagramLayouts]);
+
+    useEffect(() => {
+        const flush = () => pendingLayoutSaveRef.current?.();
+        window.addEventListener('pagehide', flush);
+        return () => { window.removeEventListener('pagehide', flush); flush(); };
+    }, [selectedDiagramId]);
 
     // Spec view kind (Epic KK): every diagram resolves to one of the 8 kinds
     const viewKind: ViewKind | undefined = selectedDiagram
@@ -1651,6 +1669,7 @@ function DiagramCanvasInner() {
     const [collapsedStateNodes, setCollapsedStateNodes] = useState<Set<string>>(new Set());
     const [focusedStateId, setFocusedStateId] = useState<string | null>(null);
     const [nodeDirections, setNodeDirections] = useState<Map<string, 'vertical' | 'horizontal'>>(new Map());
+    const pendingLayoutSaveRef = useRef<(() => void) | null>(null);
     const positionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
     // Drill-down breadcrumb: composition ancestry of the focused IBD part.
@@ -2922,12 +2941,17 @@ function DiagramCanvasInner() {
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
-                const attachmentMatches = !savedEdge?.source || (
-                    savedEdge.source === edge.source
-                    && savedEdge.target === edge.target
-                    && savedEdge.sourcePortId === edge.data?.sourcePortId
-                    && savedEdge.targetPortId === edge.data?.targetPortId
-                );
+                const currentEnds = { source: edge.source, target: edge.target,
+                    sourcePortId: edge.data?.sourcePortId as string | undefined, targetPortId: edge.data?.targetPortId as string | undefined };
+                // A layout written before the token carried the four ids; one written since carries the token.
+                const attachmentMatches = savedEdge?.attachment !== undefined
+                    ? savedEdge.attachment === edgeAttachment(currentEnds)
+                    : !savedEdge?.source || (
+                        savedEdge.source === currentEnds.source
+                        && savedEdge.target === currentEnds.target
+                        && savedEdge.sourcePortId === currentEnds.sourcePortId
+                        && savedEdge.targetPortId === currentEnds.targetPortId
+                    );
                 const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
                 const savedRouting = savedEdge as (typeof savedEdge & {
                     manualRoute?: boolean; routingType?: string; routingOverride?: IbdRoutingType; labelPoint?: {x:number;y:number}; sourceOffset?: object; targetOffset?: object;

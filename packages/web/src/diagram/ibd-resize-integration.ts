@@ -6,13 +6,13 @@ export type IbdResizeHandler = (phase: IbdResizePhase, nodes: Node[]) => void;
 
 /** A fresh projection of immutable gesture-start geometry, never clamped drift. */
 export function resizeIbdNodes<T extends Node>(start: T[], id: string, direction: ResizeDirection,
-    delta: { x: number; y: number }, minima: ResizeMinimums): T[] | null {
+    delta: { x: number; y: number }, minima: ResizeMinimums, avoidPeers = true): T[] | null {
     const geometry = start.filter(n => n.type !== 'annotationNode').map(n => ({
         id: n.id, parentId: n.parentId, hidden: n.hidden, ...n.position,
         width: Number(n.width ?? n.style?.width ?? n.measured?.width ?? 0),
         height: Number(n.height ?? n.style?.height ?? n.measured?.height ?? 0),
     }));
-    const result = solveIbdResize({ nodes: geometry, id, direction, delta, minima, clearance: 4 });
+    const result = solveIbdResize({ nodes: geometry, id, direction, delta, minima, clearance: 4, avoidPeers });
     if (!result) return null;
     const original = geometry.find(n => n.id === id)!;
     return start.map(n => {

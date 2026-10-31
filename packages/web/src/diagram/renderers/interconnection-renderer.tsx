@@ -418,7 +418,6 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
     override get dragChildrenWithParent(): boolean { return true; }
     override get wallSnapPortsOnResize(): boolean { return true; }
     override get multiWallPortDrag(): boolean { return true; }
-    override get preventPartOverlap(): boolean { return true; }
 }
 
 /** The renderer type used across the app is the base class; every subclass is

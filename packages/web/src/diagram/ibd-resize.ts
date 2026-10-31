@@ -17,6 +17,8 @@ export interface ResizeRequest {
     delta: { x: number; y: number };
     minima?: ResizeMinimums;
     clearance?: number;
+    /** Sibling parts are obstacles unless the notation lets parts overlap. */
+    avoidPeers?: boolean;
 }
 
 export function absoluteResizeRect(node: ResizeNode, nodes: readonly ResizeNode[]): Rect {
@@ -52,7 +54,7 @@ const overlaps = (a: Rect, b: Rect) => Math.min(right(a), right(b)) > Math.max(a
 export function solveIbdResize(request: ResizeRequest): {
     rect: Rect; children: Record<string, { x: number; y: number }>;
 } | null {
-    const { nodes, id, direction, delta, minima = {}, clearance = 0 } = request;
+    const { nodes, id, direction, delta, minima = {}, clearance = 0, avoidPeers = true } = request;
     if (clearance < 0 || !Number.isFinite(clearance)) throw new Error('Invalid clearance');
     const node = nodes.find(n => n.id === id);
     if (!node) throw new Error(`Missing resize node ${id}`);
@@ -94,7 +96,7 @@ export function solveIbdResize(request: ResizeRequest): {
             || (north ? bottom(start) < bottom(c) + clearance : start.y > c.y - header - clearance)) return null;
     }
     let regions: { x: Interval; y: Interval }[] = [{ x: bx, y: by }];
-    for (const peer of nodes.filter(n => n.id !== id && n.parentId === node.parentId && !n.hidden)) {
+    for (const peer of avoidPeers ? nodes.filter(n => n.id !== id && n.parentId === node.parentId && !n.hidden) : []) {
         const p = absoluteResizeRect(peer, nodes);
         if (overlaps(start, p)) {
             // Restrict moving edges only where they can increase intersection.

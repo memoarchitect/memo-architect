@@ -37,7 +37,7 @@ other's chunk.
 | Id | Engine | Capabilities |
 | --- | --- | --- |
 | `memo.renderer.reactflow` (default) | ReactFlow (`@xyflow/react`) | full authoring: editing, palette, undo/redo, minimap, orthogonal route editing |
-| `memo.renderer.maxgraph` | maxGraph (`@maxgraph/core`, draw.io engine lineage) | all view kinds, manual layout (drag → sidecar), SVG export; read-mostly |
+| `memo.renderer.maxgraph` | maxGraph (`@maxgraph/core`, draw.io engine lineage) | all view kinds, manual layout (drag → saved in the view's SysML), SVG export; read-mostly |
 
 Both draw the same model through the same template layouts; only the drawing
 engine differs. The maxGraph provider renders with presentation defaults (no

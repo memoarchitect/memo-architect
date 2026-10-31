@@ -43,10 +43,10 @@ export default defineConfig({
                 '**/.memo/**',
                 '**/memo.lock.yaml',
                 // Files the server itself writes while the app is open: ids on
-                // first open, preferences, and layout sidecars.
+                // first open and preferences. A diagram's layout is written into
+                // its view's `.sysml`, which is ignored above.
                 '**/memo.identity.yaml',
                 '**/memo.user.yaml',
-                '**/*.viewlayout',
             ],
         },
     },

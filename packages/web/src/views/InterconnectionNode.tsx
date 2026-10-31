@@ -639,7 +639,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
         };
         const move = (next: MouseEvent) => {
             const result = resizeIbdNodes(start, id, direction,
-                { x: (next.clientX - source.clientX) / zoom, y: (next.clientY - source.clientY) / zoom }, minima);
+                { x: (next.clientX - source.clientX) / zoom, y: (next.clientY - source.clientY) / zoom }, minima, renderer.preventPartOverlap);
             if (result) { latest = result; publish('update'); }
         };
         const cleanup = () => {

@@ -116,5 +116,9 @@ describe('pure IBD resize geometry', () => {
     it('returns null for mutually impossible hard bounds', () => {
         expect(solveIbdResize({nodes:[{id:'p',x:0,y:0,width:100,height:100},{...leaf,parentId:'p',x:10,y:10,width:80,height:80}],id:'leaf',direction:'e',delta:{x:20,y:0},minima:{title:{width:200,height:20}}})).toBeNull();
     });
+    it('lets a part grow through a sibling when the notation allows overlap', () => {
+        const peer = {id:'peer',x:140,y:30,width:60,height:60};
+        expect(solveIbdResize({nodes:[leaf,peer],id:'leaf',direction:'e',delta:{x:1000,y:0},avoidPeers:false})!.rect.width).toBe(1100);
+    });
 });
 function leafRect() { return {x:20,y:30,width:100,height:80}; }
