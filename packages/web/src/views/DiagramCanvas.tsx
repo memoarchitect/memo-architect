@@ -145,6 +145,18 @@ const LAYOUT_TIMEOUT_MS = 8_000;
 // instead of queuing an ELK job for every one you skimmed past.
 const LAYOUT_SWITCH_DEBOUNCE_MS = 90;
 
+/**
+ * Resolves after the browser has painted once. A layout that finishes in one synchronous task (an interconnection view
+ * lays out and routes without awaiting) blocks the page, so its progress surface only shows if it was painted first.
+ * The timeout covers a hidden tab, where animation frames do not run.
+ */
+function nextPaint(): Promise<void> {
+    return new Promise(resolve => {
+        const fallback = window.setTimeout(resolve, 100);
+        requestAnimationFrame(() => window.setTimeout(() => { window.clearTimeout(fallback); resolve(); }, 0));
+    });
+}
+
 function boundedLayout<T>(promise: Promise<T>, label: string): Promise<T> {
     return new Promise((resolve, reject) => {
         const timer = window.setTimeout(
@@ -2643,8 +2655,14 @@ function DiagramCanvasInner() {
         const next = edgesRef.current.map(edge => {
             const data = { ...edge.data, manualRoute: true };
             if (edge.id !== edgeId) return { ...edge, data };
-            const landings = landingsFromPoints(nodesRef.current, edge, points);
-            return { ...edge, selected: true, data: { ...data, points: points.map(p => ({ ...p })), ...landings } };
+            // An end that belongs to a port stays on it: its point is the one the route already had.
+            const before = edge.data?.points as Array<{ x: number; y: number }> | undefined;
+            const portEnds = { source: Boolean(edge.data?.sourcePortId), target: Boolean(edge.data?.targetPortId) };
+            const tied = points.map((p, i) => before?.length
+                && ((i === 0 && portEnds.source) || (i === points.length - 1 && portEnds.target))
+                ? { ...(i === 0 ? before[0] : before[before.length - 1]) } : { ...p });
+            const landings = landingsFromPoints(nodesRef.current, edge, tied, portEnds);
+            return { ...edge, selected: true, data: { ...data, points: tied, ...landings } };
         });
         edgesRef.current = next;
         setEdges(next);
@@ -3158,7 +3176,14 @@ function DiagramCanvasInner() {
             else apply(result, provider.descriptor.interactive);
         };
 
-        const timer = window.setTimeout(dispatch, LAYOUT_SWITCH_DEBOUNCE_MS);
+        const timer = window.setTimeout(() => {
+            // Show the progress surface, let it paint, then do the work that blocks the page.
+            setIsLayouting(true);
+            void nextPaint().then(() => {
+                if (cancelled) return;
+                try { dispatch(); } catch (err) { setIsLayouting(false); throw err; }
+            });
+        }, LAYOUT_SWITCH_DEBOUNCE_MS);
         return () => { cancelled = true; window.clearTimeout(timer); };
     }, [model, viewpointFilter,
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
@@ -4466,8 +4491,12 @@ function DiagramCanvasInner() {
                 {isLayouting && (
                     <div
                         className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 rounded-full text-xs font-medium"
-                        style={{ background: '#FFFFFF', color: '#6B7280', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                        // Fades in after a short delay, so a quick layout never flashes it; the animation runs
+                        // off the main thread and so still appears while the page is blocked.
+                        style={{ background: '#FFFFFF', color: '#6B7280', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                            animation: 'memo-layout-appear 150ms ease-out 250ms both' }}
                     >
+                        <style>{'@keyframes memo-layout-appear { from { opacity: 0; } to { opacity: 1; } }'}</style>
                         Computing layout…
                     </div>
                 )}

@@ -131,26 +131,33 @@ export interface Landings {
     targetOffset?: Point & { side: Side };
 }
 
-/** The landings a hand-drawn route implies, from its first and last points. */
+/**
+ * The landings a hand-drawn route implies, from its first and last points.
+ *
+ * An end that belongs to a port is tied to that port: it has no landing of its
+ * own on the box, so it can neither be dragged off the port nor remembered
+ * somewhere on the wall. `portEnds` names those ends.
+ */
 export function landingsFromPoints(
     nodes: LayoutNode[] | undefined,
     edge: { source?: string; target?: string } | undefined,
     points: Point[] | undefined,
+    portEnds: { source?: boolean; target?: boolean } = {},
 ): Landings {
     if (!points || points.length < 2 || !edge?.source || !edge?.target) return {};
-    const src = absRectFromTree(nodes, edge.source);
-    const tgt = absRectFromTree(nodes, edge.target);
-    const s = projectToHull(src, points[0]);
-    const t = projectToHull(tgt, points[points.length - 1]);
-    return {
-        manualLanding: true,
-        sourceSide: s.side,
-        sourceT: s.t,
-        targetSide: t.side,
-        targetT: t.t,
-        sourceOffset: offsetFromLanding(src, s.side, s.t),
-        targetOffset: offsetFromLanding(tgt, t.side, t.t),
-    };
+    if (portEnds.source && portEnds.target) return {};
+    const landings: Landings = { manualLanding: true };
+    if (!portEnds.source) {
+        const src = absRectFromTree(nodes, edge.source);
+        const s = projectToHull(src, points[0]);
+        Object.assign(landings, { sourceSide: s.side, sourceT: s.t, sourceOffset: offsetFromLanding(src, s.side, s.t) });
+    }
+    if (!portEnds.target) {
+        const tgt = absRectFromTree(nodes, edge.target);
+        const t = projectToHull(tgt, points[points.length - 1]);
+        Object.assign(landings, { targetSide: t.side, targetT: t.t, targetOffset: offsetFromLanding(tgt, t.side, t.t) });
+    }
+    return landings;
 }
 
 /** A landing the author placed is not the router's to move. */

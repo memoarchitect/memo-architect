@@ -63,6 +63,20 @@ describe('landingsFromPoints', () => {
         expect(land.targetOffset?.x).toBe(0);
     });
 
+    it('gives an end that belongs to a port no landing on the box', () => {
+        const nodes = [
+            { id: 'actor', position: { x: 0, y: 0 }, width: 80, height: 76 },
+            { id: 'sys', position: { x: 200, y: 40 }, width: 240, height: 108 },
+        ];
+        const route = [{ x: 80, y: 38 }, { x: 200, y: 80 }];
+        const edge = { source: 'actor', target: 'sys' };
+        const onePort = landingsFromPoints(nodes, edge, route, { source: true });
+        expect(onePort.sourceSide).toBeUndefined();
+        expect(onePort.sourceOffset).toBeUndefined();
+        expect(onePort.targetSide).toBe('left');
+        expect(landingsFromPoints(nodes, edge, route, { source: true, target: true })).toEqual({});
+    });
+
     it('says nothing when there is no route to read', () => {
         expect(landingsFromPoints([], { source: 'a', target: 'b' }, undefined)).toEqual({});
         expect(landingsFromPoints([], undefined, [{ x: 0, y: 0 }, { x: 1, y: 1 }])).toEqual({});
