@@ -2956,6 +2956,10 @@ function DiagramCanvasInner() {
             // Loading authored geometry never owns permission to move ports or
             // grow their owners. Explicit placement is a separate transaction.
             const placed = hasSavedGeometry ? initialNodes : resolveWallPortOverlaps(initialNodes, forcedSize);
+            // A route written with the attachment token was computed against this arrangement and is still joined to
+            // the ends it was computed for. It is kept, not routed again, which is most of what opening a diagram cost.
+            // Layouts written before the token have no such guarantee and are routed as they always were.
+            const restoredIds = new Set<string>();
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
@@ -2978,6 +2982,8 @@ function DiagramCanvasInner() {
                     ? savedRouting.routingOverride : undefined;
                 const ownsPoints = Boolean(savedPoints?.length && (
                     typeof savedRouting?.manualRoute === 'boolean' || routingRef.current.mode === 'manual'));
+                const restored = !ownsPoints && Boolean(savedPoints?.length) && savedEdge?.attachment !== undefined;
+                if (restored) restoredIds.add(edge.id);
                 return {
                     ...edge,
                     // React Flow's endpoint handles are safe only for one exact
@@ -3011,6 +3017,7 @@ function DiagramCanvasInner() {
                                 targetT: savedEdge.targetT,
                             }
                             : {}),
+                        ...(restored ? { points: savedPoints } : {}),
                         flowAnimation: flowAnimationEnabled,
                         onRouteStart: readOnly ? undefined : beginEdgeRouteMove,
                         onRouteCancel: readOnly ? undefined : cancelEdgeRouteMove,
@@ -3043,10 +3050,10 @@ function DiagramCanvasInner() {
                 ? { ...node, data: { ...node.data, onIbdResize: readOnly ? undefined : handleIbdResize, resizeReadOnly: readOnly } }
                 : node);
             setNodes(interactive ? applyInteractiveData(wired) : wired);
-            const fixedEdgeIds = new Set(preparedEdges.filter(edge => {
+            const fixedEdgeIds = new Set([...preparedEdges.filter(edge => {
                 const saved = savedLayout?.edges?.[edge.id] as {manualRoute?:boolean;points?:unknown} | undefined;
                 return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
-            }).map(edge => edge.id));
+            }).map(edge => edge.id), ...restoredIds]);
             setEdges(reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
                 activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds));
             setIsLayouting(false);
