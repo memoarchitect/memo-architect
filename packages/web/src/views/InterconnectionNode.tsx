@@ -682,6 +682,15 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 position: 'relative',
             }}
         >
+            {selected && !d.resizeReadOnly && (
+                // The grips stand off the box so a port on a corner stays connectable. This frame runs through them, so
+                // they read as the selected box's grips and not as marks floating beside it.
+                <div aria-hidden style={{
+                    position: 'absolute', pointerEvents: 'none', zIndex: 20,
+                    inset: -Math.max(16 / controlZoom, ...ports.map(port => renderer.portSize(port) / 2 + 8 / controlZoom)),
+                    border: `${1 / controlZoom}px dashed #2563EB`, borderRadius: 4 / controlZoom,
+                }} />
+            )}
             {selected && !d.resizeReadOnly && (['top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left', 'top-left'] as const).map(position => {
                 const corner = position.includes('-');
                 // Place discrete owner grips outside the port squares/ring, so
