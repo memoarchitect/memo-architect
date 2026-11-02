@@ -314,8 +314,9 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     : { whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const, lineHeight: 1.25 }),
             }}>
                 {actionStereotype && <div style={{ fontSize: 10, color, fontStyle: 'italic', marginBottom: 2 }}>{actionStereotype}</div>}
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                    <span>{label}</span>
+                {/* The title inherits the header's wrapping: a nowrap here would stop a long name from wrapping and the card would clip it. */}
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, maxWidth: '100%', whiteSpace: 'inherit' }}>
+                    <span style={{ minWidth: 0, overflowWrap: d.flowDirection === 'vertical' ? undefined : 'anywhere' }}>{label}</span>
                     {d.onNavigateToView && (
                         <button
                             aria-label={`Go to ${label} view`}

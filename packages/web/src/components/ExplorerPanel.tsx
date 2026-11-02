@@ -2941,7 +2941,8 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     >
                         <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
                         <FolderIcon open={isExpanded} color={COLOR.muted} pkg={node.id !== '__unpackaged'} />
-                        <span className="flex-1 truncate">{node.name}</span>
+                        {/* A package name is long and what tells two apart is its tail, which a truncating row cuts: wrap it, and the qualified name is the tooltip. */}
+                        <span className="flex-1 min-w-0 break-all" title={node.id === '__unpackaged' ? undefined : node.id}>{node.name}</span>
                         <ExplorerCountBadge count={countIn(node)} color={COLOR.muted} />
                     </button>
                     {isExpanded && (

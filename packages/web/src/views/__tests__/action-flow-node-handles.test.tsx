@@ -49,3 +49,30 @@ describe('ActionFlowNode parameter pins', () => {
         expect(handleIds).toContain('out:validated');
     });
 });
+
+describe('ActionFlowNode title', () => {
+    const title = (flowDirection: string) => {
+        const container = renderNode({
+            label: 'Establish pneumoperitoneum and access', nodeType: 'action',
+            laneColor: '#000000', layerColor: '#000000', inPorts: [], outPorts: [], flowDirection,
+        });
+        // the span that holds the text itself, and the white-space it ends up with
+        const text = [...container.querySelectorAll('span')]
+            .find(span => span.textContent === 'Establish pneumoperitoneum and access' && !span.querySelector('span'))!;
+        let node: HTMLElement | null = text;
+        while (node) {
+            const value = node.style.whiteSpace;
+            if (value && value !== 'inherit') return value;
+            node = node.parentElement;
+        }
+        return 'normal';
+    };
+
+    it('wraps a long name when reading left to right, so the card does not clip it', () => {
+        expect(title('horizontal')).not.toBe('nowrap');
+    });
+
+    it('keeps one line when reading top to bottom, where the name widens its card', () => {
+        expect(title('vertical')).toBe('nowrap');
+    });
+});
