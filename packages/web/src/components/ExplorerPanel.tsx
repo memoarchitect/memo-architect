@@ -2632,6 +2632,11 @@ const REQUIREMENT_TYPE_ATTRIBUTE = 'requirementType';
 /** Where an imported element was in its source: a path of folder names joined by `|`, outermost first. */
 const SOURCE_FOLDER_ATTRIBUTE = 'sourceFolder';
 
+/** A long identifier breaks after its underscores, so a row wraps between words, not inside one. */
+function breakAfterUnderscores(name: string): React.ReactNode[] {
+    return name.split('_').flatMap((word, i, all) => i < all.length - 1 ? [word + '_', <wbr key={i} />] : [word]);
+}
+
 export function buildViewPackageTree(diagrams: PackagedDiagram[], packages: readonly string[] = []): ViewPackageNode[] {
     const root: ViewPackageNode[] = [];
     // A package is a folder whether or not a view is in it yet, so a caller that
@@ -2942,7 +2947,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                         <ChevronIcon expanded={isExpanded} size={12} color={COLOR.muted} />
                         <FolderIcon open={isExpanded} color={COLOR.muted} pkg={node.id !== '__unpackaged'} />
                         {/* A package name is long and what tells two apart is its tail, which a truncating row cuts: wrap it, and the qualified name is the tooltip. */}
-                        <span className="flex-1 min-w-0 break-all" title={node.id === '__unpackaged' ? undefined : node.id}>{node.name}</span>
+                        <span className="flex-1 min-w-0" style={{ overflowWrap: 'anywhere' }} title={node.id === '__unpackaged' ? undefined : node.id}>{breakAfterUnderscores(node.name)}</span>
                         <ExplorerCountBadge count={countIn(node)} color={COLOR.muted} />
                     </button>
                     {isExpanded && (
