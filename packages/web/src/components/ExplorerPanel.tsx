@@ -682,7 +682,7 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
  */
 function folderPackage(id: string): string {
     const inner = /^(?:kf|af):([^|]*)\|/.exec(id);
-    return inner ? inner[1] : id.replace(/^f:/, '');
+    return inner ? inner[1] : id.replace(/^f:/, '').split('|')[0];
 }
 
 /** A folded usage is tinted so it reads as an instance, not a peer definition. */
@@ -1592,8 +1592,9 @@ export function computeExplorerGroupTree(
         const layerTree = (kinds: Map<string, TreeNode[]>): TreeNode[] => {
             const roots = [...kinds.values()].flatMap(kindRoots => kindRoots);
             sortNodes(roots);
-            const forest = (members: TreeNode[]) => buildPackageForest<TreeNode>(members, {
+            const forest = (members: TreeNode[], idScope?: string) => buildPackageForest<TreeNode>(members, {
                 packageFolders: modes?.packageFolders,
+                idScope,
                 packageOf: node => node.element?.package ?? node.element?.attributes?.['elementPackage'],
                 kindOf: node => node.element?.kind ?? '',
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
@@ -1624,7 +1625,7 @@ export function computeExplorerGroupTree(
                     .sort((a, b) => (kindOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (kindOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b));
                 return kinds.map(kind => {
                     const ofKind = members.filter(node => (node.element?.kind ?? '') === kind);
-                    return { id: `kt:${kind}`, name: kindFolderLabel(kind, ofKind.length), type: 'folder' as const, children: forest(ofKind) };
+                    return { id: `kt:${kind}`, name: kindFolderLabel(kind, ofKind.length), type: 'folder' as const, children: forest(ofKind, kind) };
                 });
             };
             const typed = roots.filter(node => typeOf(node));

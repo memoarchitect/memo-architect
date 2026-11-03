@@ -28,6 +28,8 @@ export interface ForestNode {
 export interface ForestOptions<N extends ForestNode> {
     /** False skips the package folders: the roots are listed by kind alone. Undefined or true keeps them. */
     packageFolders?: boolean;
+    /** Added to every package folder's id (`f:<package>|<scope>`), so one package listed under two type folders is two folders, not one that opens and closes together. */
+    idScope?: string;
     /** The qualified name of the package that declares the element. */
     packageOf: (node: N) => string | undefined;
     kindOf: (node: N) => string;
@@ -134,7 +136,7 @@ export function buildPackageForest<N extends ForestNode>(roots: readonly N[], op
             members = nestByFolderPath(splitByAttribute(branch.direct, branch.id), branch.id);
         }
         const inner = [...branch.children].sort((a, b) => a.name.localeCompare(b.name)).map(render);
-        return options.folder(`f:${branch.id}`, branch.name, [...members, ...inner]);
+        return options.folder(options.idScope ? `f:${branch.id}|${options.idScope}` : `f:${branch.id}`, branch.name, [...members, ...inner]);
     };
 
     return [...top, ...[...forest].sort((a, b) => a.name.localeCompare(b.name)).map(render)];

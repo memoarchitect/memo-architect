@@ -25,6 +25,15 @@ describe('a layer as the packages that hold it', () => {
         expect(forest[1].children[0].id).toBe('f:sw::folder_x');
     });
 
+    it('gives one package listed under two type folders an id of its own under each', () => {
+        const scoped = (kind: string) => buildPackageForest([el('x', 'p', kind)], {
+            idScope: kind, packageOf: n => n.pkg, kindOf: n => n.kind ?? '', kindRank: () => 0,
+            kindLabel: k => k, folder: (id, name, children) => ({ id, name, type: 'folder', children }),
+        })[0].id;
+        expect(scoped('Need')).toBe('f:p|Need');
+        expect(scoped('Requirement')).toBe('f:p|Requirement');
+    });
+
     it('makes no package where the layer has no element, and lists an element with no package at the top', () => {
         expect(shape(build([el('lonely'), el('a', 'p')]))).toEqual(['lonely', { 'f:p': ['a'] }]);
         expect(build([])).toEqual([]);
