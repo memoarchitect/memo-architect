@@ -8,10 +8,11 @@
 //   - Start/Done pseudo-nodes with UML activity diagram styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { memo, useState } from 'react';
+import { createContext, memo, useContext, useState } from 'react';
 import { Handle, Position, useStore, type NodeProps } from '@xyflow/react';
-import type { MemoElement, ActionParameter } from '@memoarchitect/tools/browser';
+import { formatQuantity, type MemoElement, type ActionParameter } from '@memoarchitect/tools/browser';
 import { SHADOW, RADIUS, FONT } from '../styles/tokens';
+import { useModelStore } from '../store/model-store';
 
 /**
  * Ids of the card-edge handles every activity node carries, one per direction.
@@ -60,6 +61,56 @@ export interface ActionFlowNodeData {
     /** Navigate to a separate view whose subject is this element. */
     onNavigateToView?: () => void;
     flowDirection?: 'horizontal' | 'vertical';
+    /** What each variant does with this step, when variants refine it. */
+    variantRows?: ActionFlowVariantRow[];
+}
+
+export interface ActionFlowVariantRow {
+    variantId: string;
+    label: string;
+    color: string;
+    /** `expectedDuration` as the model writes it. */
+    duration?: string;
+}
+
+/**
+ * Which variants the diagram is showing, and which one the pointer is on.
+ *
+ * Read by the cards, not passed through their data: switching a variant must
+ * not re-run the layout, because the rows are always there and only change how
+ * they are drawn.
+ */
+export interface ActionFlowVariantState {
+    off: ReadonlySet<string>;
+    hover?: string;
+}
+export const ActionFlowVariantContext = createContext<ActionFlowVariantState>({ off: new Set() });
+
+/** The variant rows on a step: one line per variant, quiet when that variant is off. */
+function VariantRows({ rows }: { rows: ActionFlowVariantRow[] }) {
+    const { off, hover } = useContext(ActionFlowVariantContext);
+    const symbols = useModelStore(s => s.model?.registries?.unitTable?.symbols);
+    return (
+        <div data-testid="variant-rows" style={{ padding: '4px 10px 6px', borderTop: '1px solid #F3F4F6' }}>
+            {rows.map(row => {
+                const isOff = off.has(row.variantId);
+                const dimmed = isOff || (hover !== undefined && hover !== row.variantId);
+                return (
+                    <div key={row.variantId} data-variant={row.variantId} data-off={isOff || undefined}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6, height: 20, fontSize: FONT.badge,
+                            color: '#374151', opacity: dimmed ? (isOff ? 0.3 : 0.5) : 1,
+                            fontWeight: hover === row.variantId ? 700 : 400,
+                            transition: 'opacity 120ms',
+                        }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0, background: row.color }} />
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.label}</span>
+                        {row.duration && <span style={{ whiteSpace: 'nowrap' }}>{formatQuantity(row.duration, symbols) ?? row.duration}</span>}
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 /** Drill-in affordance for a composite action — the visible twin of double-click. */
@@ -428,6 +479,8 @@ function ActionFlowNodeInner({ data, selected }: NodeProps) {
                     {'\u2192'} {d.allocatedTo}
                 </div>
             )}
+
+            {d.variantRows && d.variantRows.length > 0 && <VariantRows rows={d.variantRows} />}
 
             {/* Handles for edges */}
             <Handle id={CONTROL_IN} type="target" position={d.flowDirection === 'vertical' ? Position.Top : Position.Left}

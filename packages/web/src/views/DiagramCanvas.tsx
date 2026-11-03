@@ -93,7 +93,7 @@ import {
     InterconnectionRendererContext, resolveInterconnectionRenderer,
     baseInterconnectionRenderer,
 } from '../diagram/renderers/interconnection-renderer';
-import { ActionFlowNode, ActionFlowLaneNode, ActionFlowLaneLabelNode } from './ActionFlowNode';
+import { ActionFlowNode, ActionFlowLaneNode, ActionFlowLaneLabelNode, ActionFlowVariantContext, type ActionFlowNodeData, type ActionFlowVariantRow } from './ActionFlowNode';
 import { StateNode } from './StateNode';
 import { SeqLifelineNode, SeqSectionNode, SeqOccurrenceNode, SeqFragmentNode } from './SequenceNodes';
 import { UseCaseActorNode, UseCaseBoundaryNode, UseCaseNode } from './UseCaseNodes';
@@ -1090,6 +1090,20 @@ function DiagramCanvasInner() {
     const [swimlanesOn, setSwimlanesOn] = useState(true);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(true);
+    // Variants the viewer has switched off, and the one the pointer is on. Cards
+    // read these from context, so neither re-runs the layout.
+    const [variantsOff, setVariantsOff] = useState<ReadonlySet<string>>(new Set());
+    const [variantHover, setVariantHover] = useState<string | undefined>();
+    const variantState = useMemo(() => ({ off: variantsOff, hover: variantHover }), [variantsOff, variantHover]);
+    const flowVariants = useMemo(() => {
+        const seen = new Map<string, Pick<ActionFlowVariantRow, 'label' | 'color'>>();
+        for (const node of nodes) {
+            for (const row of (node.data as unknown as ActionFlowNodeData).variantRows ?? []) {
+                if (!seen.has(row.variantId)) seen.set(row.variantId, { label: row.label, color: row.color });
+            }
+        }
+        return [...seen].map(([id, v]) => ({ id, ...v }));
+    }, [nodes]);
     const [actionFlowLegendPlacement, setActionFlowLegendPlacement] = useState<'overlay' | 'above'>('overlay');
     const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>('allocation');
 
@@ -4741,6 +4755,7 @@ function DiagramCanvasInner() {
                     />
                 )}
 
+                <ActionFlowVariantContext.Provider value={variantState}>
                 <ReactFlow
                     className="memo-diagram-canvas"
 
@@ -4900,6 +4915,45 @@ function DiagramCanvasInner() {
                         >{miniMapOpen ? '\u2013' : '\u25A2'}</button>
                     )}
                 </ReactFlow>
+                </ActionFlowVariantContext.Provider>
+
+                {viewKind === 'actionflow' && flowVariants.length > 0 && (
+                    <div role="group" aria-label="Show variants" data-testid="variant-chips"
+                        className="absolute z-10 flex items-center gap-2 px-3 py-1.5"
+                        style={{
+                            bottom: 12, left: 12,
+                            background: 'rgba(255,255,255,0.96)', border: '1px solid #D1D5DB',
+                            borderRadius: 18, fontSize: FONT.xs, color: '#374151',
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)',
+                        }}>
+                        <span style={{ fontWeight: 600, color: '#6B7280' }}>Show variants</span>
+                        {flowVariants.map(variant => {
+                            const on = !variantsOff.has(variant.id);
+                            return (
+                                <button key={variant.id} type="button" aria-pressed={on}
+                                    onMouseEnter={() => setVariantHover(variant.id)}
+                                    onMouseLeave={() => setVariantHover(undefined)}
+                                    onClick={() => setVariantsOff(previous => {
+                                        const next = new Set(previous);
+                                        if (next.has(variant.id)) next.delete(variant.id); else next.add(variant.id);
+                                        return next;
+                                    })}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', whiteSpace: 'nowrap',
+                                        borderRadius: 14, cursor: 'pointer', fontWeight: on ? 700 : 400,
+                                        background: on ? '#FFFFFF' : '#FAFAF8', color: on ? '#1a1a1a' : '#6B7280',
+                                        border: on ? `2px solid ${variant.color}` : '1.5px dashed #B4B2A9',
+                                    }}>
+                                    <span style={{
+                                        width: 9, height: 9, borderRadius: 5, boxSizing: 'border-box',
+                                        background: on ? variant.color : 'transparent', border: `1.5px solid ${variant.color}`,
+                                    }} />
+                                    {variant.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
             </div>
             </div>

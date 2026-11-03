@@ -16,7 +16,7 @@ import { elk, type LayoutResult } from '../layout';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { CONTROL_IN, CONTROL_OUT } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES, definitionIndex, resolveDefinition } from './composition-tree';
-import { relationshipsOfType } from '@memoarchitect/tools/browser';
+import { relationshipsOfType, variantOverlay } from '@memoarchitect/tools/browser';
 
 /**
  * Which activity symbol an element draws as.
@@ -377,6 +377,12 @@ export function assignLanes(
 const PORT_ROW_HEIGHT = 18;
 const HEADER_HEIGHT = 36;
 const ALLOC_BADGE_HEIGHT = 20;
+/** One variant's line on a step it refines. */
+const VARIANT_ROW_HEIGHT = 20;
+
+/** Colours for variants, in the order the overlay lists them. */
+export const VARIANT_COLORS = ['#0F8F7A', '#B86E00', '#6B4FBB', '#B4357A', '#2B6CB0'] as const;
+export const variantColor = (index: number) => VARIANT_COLORS[index % VARIANT_COLORS.length];
 const LANE_PADDING = 36;
 const LANE_GAP = 16;
 const LANE_LABEL_WIDTH = 120;
@@ -452,6 +458,7 @@ function uniformCardExtent(
     portsByAction: Map<string, { inPorts: string[]; outPorts: string[] }>,
     direction: 'horizontal' | 'vertical',
     registries?: OntologyRegistriesDTO,
+    variantRows: ReadonlyMap<string, number> = new Map(),
 ): number {
     const cards = actions.filter(el => {
         const type = activityNodeType(el, registries);
@@ -465,17 +472,19 @@ function uniformCardExtent(
     // Vertical: the shared dimension is height, so take the tallest card at its
     // own natural width — no wrapping, since wrapping is what would make a card
     // taller than the height they all share.
-    return Math.max(...cards.map(el => cardBodyHeight(portsByAction.get(el.id), el) + HEADER_HEIGHT));
+    return Math.max(...cards.map(el => cardBodyHeight(portsByAction.get(el.id), el, variantRows.get(el.id)) + HEADER_HEIGHT));
 }
 
 /** Height below the title: port rows and the allocation badge. */
 function cardBodyHeight(
     ports: { inPorts: string[]; outPorts: string[] } | undefined,
     el: MemoElement,
+    variantRows = 0,
 ): number {
     const portCount = Math.max(ports?.inPorts.length ?? 0, ports?.outPorts.length ?? 0, 0);
     const rows = portCount * PORT_ROW_HEIGHT;
-    return rows + (rows > 0 ? 8 : 0) + (el.allocatedTo ? ALLOC_BADGE_HEIGHT : 0);
+    return rows + (rows > 0 ? 8 : 0) + (el.allocatedTo ? ALLOC_BADGE_HEIGHT : 0)
+        + (variantRows > 0 ? variantRows * VARIANT_ROW_HEIGHT + 8 : 0);
 }
 
 function nodeSize(
@@ -484,6 +493,7 @@ function nodeSize(
     direction: 'horizontal' | 'vertical',
     registries?: OntologyRegistriesDTO,
     uniformExtent?: number,
+    variantRows = 0,
 ) {
     const type = activityNodeType(el, registries);
     // The diamond is 64×64; the name is drawn below it (6px gap + ~16px per
@@ -510,7 +520,7 @@ function nodeSize(
             ? { width: CONTROL_BAR_LONG, height: CONTROL_BAR_THICK }
             : { width: CONTROL_BAR_THICK, height: CONTROL_BAR_LONG };
     }
-    const body = cardBodyHeight(ports, el);
+    const body = cardBodyHeight(ports, el, variantRows);
     if (direction === 'vertical') {
         // Flipped: heights match and the name widens its own card.
         return {
@@ -754,11 +764,14 @@ export async function computeActionFlowViewLayout(
 
     // One shared card dimension for the whole diagram, so steps line up on the
     // axis the flow is read along.
-    const cardExtent = uniformCardExtent(actions, portsByAction, direction, model.registries);
+    // Variants that refine a step show as rows on its card, so the card reserves them.
+    const overlay = variantOverlay(model, actions.map(action => action.id));
+    const variantRowCount = new Map([...overlay.rows].map(([id, rows]) => [id, rows.length] as const));
+    const cardExtent = uniformCardExtent(actions, portsByAction, direction, model.registries, variantRowCount);
     const leafBox = (id: string) => {
         const el = actionById.get(id);
         return el
-            ? nodeSize(el, portsByAction.get(id)!, direction, model.registries, cardExtent)
+            ? nodeSize(el, portsByAction.get(id)!, direction, model.registries, cardExtent, variantRowCount.get(id))
             : { width: PSEUDO_NODE_SIZE, height: PSEUDO_NODE_SIZE };
     };
     const allElkEdges: ElkEdge[] = [...visibleFlows, ...layoutSuccs].map((rel, i) => ({
@@ -1272,6 +1285,12 @@ export async function computeActionFlowViewLayout(
             canDrill: options?.canDrillIn?.(el.id) ?? false,
             isExpanded: options?.expandedActionIds?.has(el.id) ?? false,
             isFrame,
+            variantRows: overlay.rows.get(el.id)?.map(row => ({
+                variantId: row.variantId,
+                label: overlay.variants.find(v => v.id === row.variantId)?.label ?? row.variantId,
+                color: variantColor(overlay.variants.findIndex(v => v.id === row.variantId)),
+                duration: row.duration,
+            })),
             onToggleExpand: options?.onToggleAction
                 ? () => options.onToggleAction!(el.id)
                 : undefined,
