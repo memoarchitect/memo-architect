@@ -1,7 +1,8 @@
 // ─── A layer, as the packages that hold it ───────────────────────────────────
 //
-// The Model Explorer reads domain, then layer, then package, then the ownership hierarchy. This is
-// the part below the layer: the elements of one layer, in the packages that declare them.
+// The Model Explorer reads domain, then layer, then element type, then package, then the ownership
+// hierarchy. This is the package part: the elements of one type, in the packages that declare them
+// (ExplorerPanel puts the type folder above it).
 //
 //   * A package is a folder, nested by its qualified name (`a::b::c` is c inside b inside a). A
 //     chain with one child is not collapsed: the owning package is a node the reader looks for.

@@ -1616,8 +1616,19 @@ export function computeExplorerGroupTree(
             // present comes first, above any package: requirements group by type whatever package declares
             // them and whether packages show. What has no type is listed as before.
             const typeOf = (node: TreeNode) => node.element?.attributes?.[REQUIREMENT_TYPE_ATTRIBUTE]?.split('::').pop();
+            // The element type comes first and the package below it: a reader looks for "workflows", then for which
+            // package they are in. With package folders off the forest already lists by kind alone.
+            const byKind = (members: TreeNode[]): TreeNode[] => {
+                if (modes?.packageFolders === false) return forest(members);
+                const kinds = [...new Set(members.map(node => node.element?.kind ?? ''))]
+                    .sort((a, b) => (kindOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (kindOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b));
+                return kinds.map(kind => {
+                    const ofKind = members.filter(node => (node.element?.kind ?? '') === kind);
+                    return { id: `kt:${kind}`, name: kindFolderLabel(kind, ofKind.length), type: 'folder' as const, children: forest(ofKind) };
+                });
+            };
             const typed = roots.filter(node => typeOf(node));
-            if (typed.length === 0) return forest(roots);
+            if (typed.length === 0) return byKind(roots);
             const types = [...new Set(typed.map(node => typeOf(node)!))].sort();
             const typeLabel = (type: string) => (type.length <= 3 ? type.toUpperCase() : type.charAt(0).toUpperCase() + type.slice(1));
             // What has no type (the user needs) is listed by its own kind, not by whichever package holds it.
@@ -1627,7 +1638,7 @@ export function computeExplorerGroupTree(
             return [
                 ...types.map(type => ({
                     id: `rt:${type}`, name: typeLabel(type), type: 'folder' as const,
-                    children: forest(typed.filter(node => typeOf(node) === type)),
+                    children: byKind(typed.filter(node => typeOf(node) === type)),
                 })),
                 ...untypedKinds.map(kind => ({
                     id: `uk:${kind}`, name: kindFolderLabel(kind, 0), type: 'folder' as const,
