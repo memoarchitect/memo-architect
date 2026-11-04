@@ -10,6 +10,8 @@
 //                V/H direction (memo-sysmlv4 decomposition mode)
 //   containment  nested blocks with expand/collapse (memo-sysmlv4
 //                containment mode)
+//   table        the same hierarchy as collapsible outline rows (HTML, not
+//                a canvas; see bdd-table.ts and BddTableView.tsx)
 //
 // Tree and containment derive their hierarchy from the composition
 // relationships among the view's own selection, so any General view —
@@ -29,9 +31,9 @@ import {
 import { toModelTypeSet } from '@memoarchitect/tools/browser';
 import { resolveLegend } from './legend';
 
-export type GeneralViewMode = 'graph' | 'tree' | 'containment';
+export type GeneralViewMode = 'graph' | 'tree' | 'containment' | 'table';
 
-export const GENERAL_VIEW_MODES: readonly GeneralViewMode[] = ['graph', 'tree', 'containment'];
+export const GENERAL_VIEW_MODES: readonly GeneralViewMode[] = ['graph', 'tree', 'containment', 'table'];
 
 /**
  * Initial mode for a view: honors a declared `layoutHint` presentation
@@ -49,7 +51,7 @@ export function resolveGeneralMode(
     hasHierarchy = true,
 ): GeneralViewMode {
     const hint = properties?.layoutHint;
-    const declared = hint === 'tree' || hint === 'containment' || hint === 'graph' ? hint : 'graph';
+    const declared = hint === 'tree' || hint === 'containment' || hint === 'table' || hint === 'graph' ? hint : 'graph';
     return declared !== 'graph' && !hasHierarchy ? 'graph' : declared;
 }
 
@@ -192,6 +194,8 @@ export async function computeGeneralViewLayout(
     model: MemoModelDTO,
     options: GeneralViewOptions,
 ): Promise<LayoutResult> {
+    // A table is rows in HTML, not a canvas layout; nothing here positions it.
+    if (options.mode === 'table') return { nodes: [], edges: [] } as unknown as LayoutResult;
     if (options.mode === 'graph') {
         return computeLayout(model, {
             viewpointFilter: generalViewFilter(options.viewpointFilter),

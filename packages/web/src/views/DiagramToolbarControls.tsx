@@ -49,6 +49,14 @@ export const Icon = {
     plus: ({ size = 16 }: IconProps) => svg(size, <><path d="M12 5v14" /><path d="M5 12h14" /></>),
     minus: ({ size = 16 }: IconProps) => svg(size, <path d="M5 12h14" />),
     library: ({ size = 16 }: IconProps) => svg(size, <><rect x="4" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="M17 5l3 14" /></>),
+    // View modes of a block diagram, each drawn as the thing it shows.
+    modeGraph: ({ size = 16 }: IconProps) => svg(size, <><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="8" r="2.5" /><circle cx="9" cy="18" r="2.5" /><path d="m8.4 7 7.2.7M7 8.3l1.5 7.3M16.6 10l-5.5 6.5" /></>),
+    modeTree: ({ size = 16 }: IconProps) => svg(size, <><rect x="9" y="3" width="6" height="4" rx="1" /><rect x="3" y="17" width="6" height="4" rx="1" /><rect x="15" y="17" width="6" height="4" rx="1" /><path d="M12 7v5M6 17v-5h12v5" /></>),
+    modeNested: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="4" width="18" height="16" rx="2" /><rect x="6.5" y="9" width="5" height="7" rx="1" /><rect x="13" y="9" width="5" height="7" rx="1" /></>),
+    modeTable: ({ size = 16 }: IconProps) => svg(size, <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9.5h18M3 14.8h18M9 9.5V20" /></>),
+    // Outline controls: whole branches opening and closing, as in a spreadsheet's grouped rows.
+    rowsExpand: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 5h16M4 12h16M4 19h16" /><path d="m9 8 3 2.5L15 8" /></>),
+    rowsCollapse: ({ size = 16 }: IconProps) => svg(size, <><path d="M4 5h16M4 12h16M4 19h16" /><path d="m9 9.5 3-2.5 3 2.5" /></>),
     detect: ({ size = 16 }: IconProps) => svg(size, <><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" /><rect x="7" y="8" width="10" height="8" rx="1.5" strokeDasharray="2 2" /></>),
     // Two connectors settling into parallel orthogonal lanes.
     tidy: ({ size = 16 }: IconProps) => svg(size, <><path d="M3 7h6l4-4h8" /><path d="M3 17h6l4 4h8" /><circle cx="3" cy="7" r="1.3" /><circle cx="3" cy="17" r="1.3" /></>),
@@ -210,6 +218,31 @@ export function IconToggle({ icon, label, onClick, active = false, title, badge,
                 }}>{badge}</span>
             )}
         </button>
+    );
+}
+
+// ─── Dropdown (native select, styled like the toggles) ───────────────────────
+export function ToolbarSelect({ value, options, onChange, title, ariaLabel }: {
+    value: string;
+    options: ReadonlyArray<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+    title?: string;
+    ariaLabel: string;
+}) {
+    return (
+        <select
+            value={value}
+            title={title}
+            aria-label={ariaLabel}
+            onChange={event => onChange(event.target.value)}
+            className="text-xs font-semibold"
+            style={{
+                padding: '5px 8px', borderRadius: 9, border: '1px solid #E2E1DB', background: '#FFFFFF',
+                color: IDLE_FG, cursor: 'pointer',
+            }}
+        >
+            {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
     );
 }
 

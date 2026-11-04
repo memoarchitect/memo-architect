@@ -108,6 +108,8 @@ import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicke
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon } from './DiagramToolbarControls';
+import { BddTableView } from './BddTableView';
+import { allBranchIds, branchIdsToLevel, treeDepth } from './templates/bdd-table';
 import { resolveLegend } from './templates/legend';
 import { landingsFromPoints, type Side as DiagramEdgeSide } from './templates/landing-rules';
 import { declaredSubject, definitionIndex, resolveDefinition } from './templates/composition-tree';
@@ -1769,7 +1771,7 @@ function DiagramCanvasInner() {
         // A `layoutHint: tree` on a selection that composes nothing draws a row
         // of orphan boxes; ask the tree itself whether there is one.
         const hint = selectedDiagram?.properties?.layoutHint;
-        const wantsUsageLevel = hint === 'tree' || hint === 'containment';
+        const wantsUsageLevel = hint === 'tree' || hint === 'containment' || hint === 'table';
         const generalTree = model
             ? buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes,
                 viewElementOf(model, selectedDiagram), wantsUsageLevel)
@@ -2116,8 +2118,8 @@ function DiagramCanvasInner() {
         if (!model) return undefined;
         const hint = selectedDiagram?.properties?.layoutHint;
         return buildGeneralViewTree(model, viewpointFilter, selectedDiagram?.relationshipTypes, viewElementOf(model, selectedDiagram),
-            hint === 'tree' || hint === 'containment');
-    }, [model, viewpointFilter, selectedDiagram?.relationshipTypes, selectedDiagram?.properties?.layoutHint]);
+            hint === 'tree' || hint === 'containment' || hint === 'table' || generalMode === 'table');
+    }, [model, viewpointFilter, selectedDiagram?.relationshipTypes, selectedDiagram?.properties?.layoutHint, generalMode]);
 
     const toggleExpand = useCallback((nodeId: string) => {
         setExpandedNodes(prev => {
@@ -2218,6 +2220,36 @@ function DiagramCanvasInner() {
     }, [buildActiveTree]);
 
     const collapseAll = useCallback(() => setExpandedNodes(new Set()), []);
+
+    const outlineDepth = useMemo(() => {
+        if (!isGeneralTemplate || generalMode === 'graph') return 0;
+        const tree = buildActiveTree();
+        return tree ? treeDepth(tree) : 0;
+    }, [isGeneralTemplate, generalMode, buildActiveTree]);
+    const setOutlineLevel = useCallback((level: number) => {
+        const tree = buildActiveTree();
+        if (tree) setExpandedNodes(branchIdsToLevel(tree, level));
+    }, [buildActiveTree]);
+
+    // Which branches are open: expandAll stores leaf ids as well, and a leaf is neither open nor closed.
+    const openBranches = useMemo(() => {
+        const tree = buildActiveTree();
+        if (!tree) return { branches: new Set<string>(), open: new Set<string>() };
+        const branches = allBranchIds(tree);
+        return { branches, open: new Set([...expandedNodes].filter(id => branches.has(id))) };
+    }, [buildActiveTree, expandedNodes]);
+    const sameIds = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every(id => b.has(id));
+    const allExpanded = isGeneralTemplate && generalMode !== 'graph'
+        && openBranches.branches.size > 0 && openBranches.open.size === openBranches.branches.size;
+    const outlineLevel = useMemo(() => {
+        if (!outlineDepth) return 0;
+        const tree = buildActiveTree();
+        if (!tree) return 0;
+        for (let level = 1; level <= outlineDepth; level++) {
+            if (sameIds(branchIdsToLevel(tree, level), openBranches.open)) return level;
+        }
+        return 0;
+    }, [outlineDepth, buildActiveTree, openBranches]);
 
     const resetLayout = useCallback(() => {
         positionCacheRef.current.clear();
@@ -4270,7 +4302,7 @@ function DiagramCanvasInner() {
         useCaseActors, hiddenUseCaseActorIds, setHiddenUseCaseActorIds,
         allowedGeneralModes, generalMode, setGeneralMode,
         clearPositionCache: () => positionCacheRef.current.clear(),
-        expandAll, collapseAll, resetLayout,
+        expandAll, collapseAll, resetLayout, outlineDepth, outlineLevel, allExpanded, setOutlineLevel,
     };
 
     /** Fit and full screen: shared by the editor's controls and an embed's. */
@@ -4390,6 +4422,17 @@ function DiagramCanvasInner() {
                 </aside>}
 
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                {(() => {
+                    // A general view keeps its mode switcher in every mode, graph included; otherwise choosing
+                    // Graph hands the view to the standard profile, which has no strip, and the way back goes with it.
+                    const stripToolbar = diagramProfile === 'standard' ? resolveDiagramToolbar('general') : activeToolbar;
+                    const strip = !readOnly && isGeneralTemplate ? stripToolbar.renderStrip(toolbarCtx) : null;
+                    return hasToolbarContent(strip) && (
+                        <div className="memo-diagram-strip shrink-0 border-b bg-white px-3 py-2" aria-label="Block diagram controls">
+                            {strip}
+                        </div>
+                    );
+                })()}
                 {viewKind === 'interconnection' && toolbarCollapsed && !readOnly && (
                     <div className="memo-ibd-strip shrink-0 border-b bg-white px-3 py-2" aria-label="IBD routing controls">
                         {toolbarCtx.ibdRoutingControls}
@@ -4755,6 +4798,14 @@ function DiagramCanvasInner() {
                     />
                 )}
 
+                {isGeneralTemplate && generalMode === 'table' && (() => {
+                    const tableTree = buildActiveTree();
+                    return tableTree && (
+                        <BddTableView tree={tableTree} expanded={expandedNodes}
+                            definitions={definitionIndex(model!.elements)}
+                            onToggle={toggleExpand} onInspect={inspectElement} />
+                    );
+                })()}
                 <ActionFlowVariantContext.Provider value={variantState}>
                 <ReactFlow
                     className="memo-diagram-canvas"

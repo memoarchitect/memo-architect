@@ -68,7 +68,7 @@ function makeContext(overrides: Partial<DiagramToolbarContext> = {}): DiagramToo
         useCaseActors: [{ id: 'a1', name: 'Clinician' }], hiddenUseCaseActorIds: new Set(['a1']), setHiddenUseCaseActorIds: noop,
 
         allowedGeneralModes: ['graph', 'tree', 'containment'], generalMode: 'tree', setGeneralMode: noop,
-        clearPositionCache: noop, expandAll: noop, collapseAll: noop, resetLayout: noop,
+        clearPositionCache: noop, expandAll: noop, collapseAll: noop, resetLayout: noop, outlineDepth: 3, outlineLevel: 0, allExpanded: false, setOutlineLevel: noop,
 
         ...overrides,
     };
@@ -177,9 +177,17 @@ describe('toolbar smoke render — every profile renders without throwing', () =
         expect(captions[captions.length - 1]).toBe('Export');
     });
 
-    it('general toolbar renders the mode switcher', () => {
-        const el = renderToolbar(createElement('div', null, new GeneralToolbar().render(makeContext({ viewKind: 'general' }))));
-        expect(el.querySelector('[aria-label="Expand all"]')).toBeTruthy();
+    it('general toolbar keeps its controls in the strip, as named modes with outline controls', () => {
+        const ctx = makeContext({ viewKind: 'general', allowedGeneralModes: ['graph', 'tree', 'containment', 'table'] });
+        const el = renderToolbar(createElement('div', null, new GeneralToolbar().renderStrip(ctx)));
+        expect([...el.querySelectorAll('[role="tab"]')].map(tab => tab.textContent?.trim()))
+            .toEqual(['Graph', 'Tree', 'Nested', 'Table']);
+        // Expand and collapse are one toggle, and the level is a dropdown rather than a row of buttons.
+        expect([...el.querySelectorAll('button[aria-pressed]')].filter(b => b.textContent?.includes('Expand all'))).toHaveLength(1);
+        expect(el.textContent).not.toContain('Collapse all');
+        expect(el.querySelector('select[aria-label="Level"]')).toBeTruthy();
+        // the side dock gets nothing from a general view
+        expect(new GeneralToolbar().renderProfileControls(ctx)).toBeNull();
     });
 
     it('a profile whose supportsToolbarOperation gates are all closed renders no bespoke controls', () => {

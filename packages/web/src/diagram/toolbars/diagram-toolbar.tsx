@@ -35,7 +35,7 @@ import type { PortDisplay } from '../../views/templates/interconnection-view';
 import type { GeneralViewMode } from '../../views/templates/general-view';
 import type { DiagramToolbarOperation } from '../../views/diagram-toolbar-capabilities';
 import type { DiagramProfile } from '../diagram-profile';
-import { Icon, ToolbarSep, Segmented, IconButton, IconToggle, DrillBreadcrumb } from '../../views/DiagramToolbarControls';
+import { Icon, ToolbarSep, Segmented, IconButton, IconToggle, ToolbarSelect, DrillBreadcrumb } from '../../views/DiagramToolbarControls';
 import { useModelStore } from '../../store/model-store';
 import { saveViewDisplay, sendDiagramLayoutUpdate } from '../../store/ws-client';
 
@@ -172,6 +172,13 @@ export interface DiagramToolbarContext {
     expandAll: () => void;
     collapseAll: () => void;
     resetLayout: () => void;
+    /** How many levels the hierarchy reaches, and a way to open it to exactly N of them (a spreadsheet's outline buttons). */
+    outlineDepth: number;
+    /** The level the outline is open to, or 0 when the user has opened it by hand to something that is no level. */
+    outlineLevel: number;
+    /** Whether every branch is open, which is what the expand/collapse toggle shows. */
+    allExpanded: boolean;
+    setOutlineLevel: (level: number) => void;
 }
 
 const nameOf = (model: MemoModelDTO | null, id: string): string => model?.elements[id]?.name ?? id;
@@ -382,6 +389,13 @@ export class BaseDiagramToolbar {
      * cause as a side effect.
      */
     renderTrailingProfileControls(_ctx: DiagramToolbarContext): ReactNode { return null; }
+
+    /**
+     * Controls a profile keeps in the horizontal strip above the drawing
+     * rather than in the side dock; null for a profile that has none. The
+     * strip is a flex row of captioned groups (`memo-diagram-strip`).
+     */
+    renderStrip(_ctx: DiagramToolbarContext): ReactNode { return null; }
 
     /** Full toolbar content, for a caller that has no fixed slot to interleave
      *  (DiagramCanvas instead calls the pieces individually — see above). */
@@ -810,51 +824,52 @@ export class UseCaseToolbar extends BaseDiagramToolbar {
 export class GeneralToolbar extends BaseDiagramToolbar {
     override get profile(): DiagramProfile { return 'general'; }
 
-    override renderProfileControls(ctx: DiagramToolbarContext): ReactNode {
+    /** The modes are named, never icon-only: an icon cannot tell a tree from nested containment. */
+    private static readonly MODES: ReadonlyArray<{ value: GeneralViewMode; label: string; icon: ReactNode; title: string }> = [
+        { value: 'graph', label: 'Graph', icon: <Icon.modeGraph />, title: 'Graph: blocks with their relationships' },
+        { value: 'tree', label: 'Tree', icon: <Icon.modeTree />, title: 'Decomposition tree: each block above its parts' },
+        { value: 'containment', label: 'Nested', icon: <Icon.modeNested />, title: 'Containment: parts drawn inside their whole' },
+        { value: 'table', label: 'Table', icon: <Icon.modeTable />, title: 'Table: one row per block, with collapsible rows' },
+    ];
+
+    override renderStrip(ctx: DiagramToolbarContext): ReactNode {
         if (!ctx.supportsToolbarOperation('generalMode')) return null;
+        const options = GeneralToolbar.MODES.filter(mode => ctx.allowedGeneralModes.includes(mode.value));
+        const hierarchical = ctx.generalMode !== 'graph';
+        const levels = Array.from({ length: ctx.outlineDepth }, (_, index) => index + 1);
         return (
             <>
-                <span style={{ color: '#E5E5E0' }}>|</span>
-                {/* Three modes in a two-column dock of 38px tiles left the
-                    third clipped off the edge, so containment looked as
-                    though it did not exist. Full width, stacked, and each
-                    mode named — an icon cannot tell "tree" from "nested
-                    containment", and captioning three glyphs "View as"
-                    explained neither. */}
-                {ctx.allowedGeneralModes.includes('graph') && (
-                    <IconToggle icon={<Icon.tidy />} active={ctx.generalMode === 'graph'}
-                        onClick={() => { ctx.setGeneralMode('graph'); ctx.clearPositionCache(); }}
-                        title="Relationship graph with compartments" />
-                )}
-                {/* Tree and containment are two ways of drawing the same
-                    hierarchy, so they are one control that swaps between
-                    them — which also keeps the group inside the dock's two
-                    columns, where a third tile was being clipped off the
-                    edge and containment looked as though it did not exist.
-                    The icon shows the mode you are in. */}
-                <IconToggle
-                    icon={ctx.generalMode === 'containment' ? <Icon.rectangle /> : <Icon.library />}
-                    active={ctx.generalMode !== 'graph'}
-                    onClick={() => {
-                        ctx.setGeneralMode(ctx.generalMode === 'tree' ? 'containment' : 'tree');
-                        ctx.clearPositionCache();
-                    }}
-                    title={ctx.generalMode === 'containment'
-                        ? 'Nested containment blocks — switch to the decomposition tree'
-                        : 'Decomposition tree — switch to nested containment blocks'} />
-                {ctx.generalMode !== 'graph' && (
+                {this.renderCaption('View as')}
+                <Segmented<GeneralViewMode>
+                    options={options.map(({ value, label, icon, title }) => ({ value, label, icon, title }))}
+                    value={ctx.generalMode}
+                    onChange={mode => { ctx.setGeneralMode(mode); ctx.clearPositionCache(); }} />
+                {hierarchical && (
                     <>
-                        <IconButton icon={<Icon.expand />} onClick={ctx.expandAll}
-                            title="Expand all nodes" ariaLabel="Expand all" />
-                        <IconButton icon={<Icon.collapse />} onClick={ctx.collapseAll}
-                            title="Collapse all nodes" ariaLabel="Collapse all" />
-                        {ctx.generalMode === 'tree' && (
-                            <button onClick={ctx.resetLayout} className="px-2 py-0.5 text-xs font-medium rounded"
-                                style={{ background: '#F7F7F5', color: '#374151', border: '1px solid #E5E5E0' }}
-                                title="Re-layout the tree from scratch">
-                                ↻ Reset
-                            </button>
+                        {this.renderCaption('Rows')}
+                        <IconToggle icon={ctx.allExpanded ? <Icon.rowsCollapse /> : <Icon.rowsExpand />}
+                            label="Expand all" active={ctx.allExpanded}
+                            onClick={ctx.allExpanded ? ctx.collapseAll : ctx.expandAll}
+                            title={ctx.allExpanded ? 'Every branch is open. Click to close them back to the root.' : 'Open every branch'} />
+                        {levels.length > 1 && (
+                            <>
+                                {this.renderCaption('Level')}
+                                <ToolbarSelect ariaLabel="Level" value={ctx.outlineLevel ? String(ctx.outlineLevel) : 'custom'}
+                                    title="Show the outline down to this level"
+                                    options={[
+                                        ...(ctx.outlineLevel ? [] : [{ value: 'custom', label: 'Custom' }]),
+                                        ...levels.map(level => ({ value: String(level), label: level === 1 ? '1 (root only)' : String(level) })),
+                                    ]}
+                                    onChange={value => { if (value !== 'custom') ctx.setOutlineLevel(Number(value)); }} />
+                            </>
                         )}
+                    </>
+                )}
+                {ctx.generalMode === 'tree' && (
+                    <>
+                        {this.renderCaption('Layout')}
+                        <IconButton icon={<Icon.arrange />} label="Reset layout" onClick={ctx.resetLayout}
+                            title="Re-lay the tree out from scratch" ariaLabel="Reset layout" />
                     </>
                 )}
             </>
